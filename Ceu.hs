@@ -28,7 +28,7 @@ envGet id env =
 
 data Exp
   = Const Val
-  | Var ID
+  | Read ID
   | Umn Exp
   | Add Exp Exp
   | Sub Exp Exp
@@ -56,7 +56,7 @@ evalExp :: Env -> Exp -> (Maybe Val)
 evalExp env e =
   case e of
     Const val -> (Just val)
-    Var id -> envGet id env
+    Read id -> envGet id env
     Umn e -> evalExp1 env e negate
     Add e1 e2 -> evalExp2 env e1 e2 (+)
     Sub e1 e2 -> evalExp2 env e1 e2 (-)
