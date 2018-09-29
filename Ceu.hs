@@ -62,7 +62,6 @@ evalExp env e =
     Sub e1 e2 -> evalExp2 env e1 e2 (-)
 
 -- Program.
--- TODO: Add variables and conditionals.
 data Stmt
   = Write ID Exp
   | AwaitExt Evt
