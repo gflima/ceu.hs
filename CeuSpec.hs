@@ -18,7 +18,7 @@ main = hspec $ do
         nst1 (Write "x" (Const 1), 0, Nothing, [])
           `shouldBe` Just (Nop, 0, Nothing, [("x",1)])
 
-      it "transit: x=1;x=2" $
+      it "transit: [x=1] x=2" $
         nst1 (Write "x" (Const 2), 0, Nothing, [("x",1)])
           `shouldBe` Just (Nop, 0, Nothing, [("x",2),("x",1)])
 
@@ -26,9 +26,13 @@ main = hspec $ do
         nst1 ((Seq Nop (Write "x" (Const 1)), 0, Nothing, []))
           `shouldBe` Just ((Write "x" (Const 1)), 0, Nothing, [])
 
-      it "transit: x=1;y=x+2" $
+      it "transit: [x=1] y=x+2" $
         nst1 (Write "y" (Add (Var "x") (Const 2)), 0, Nothing, [("x",1)])
           `shouldBe` Just (Nop, 0, Nothing, [("y",3),("x",1)])
+
+      it "transit: x=-(5+1)" $
+        nst1 (Write "x" (Umn (Add (Const 5) (Const 1))), 0, Nothing, [])
+          `shouldBe` Just (Nop, 0, Nothing, [("x",-6)])
 
     -- emit-int --
     describe "(EmitInt e')" $ do

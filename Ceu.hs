@@ -34,34 +34,32 @@ data Exp
   | Sub Exp Exp
   deriving (Eq,Show)
 
+evalExp1 :: Env -> Exp -> (Val->Val) -> (Maybe Val)
+evalExp1 env e op =
+  let v = (evalExp env e) in
+    case v of
+      Nothing -> Nothing
+      (Just v') -> Just (op v')
+
+evalExp2 :: Env -> Exp -> Exp -> (Val->Val->Val) -> (Maybe Val)
+evalExp2 env e1 e2 op =
+  let v1 = (evalExp env e1)
+      v2 = (evalExp env e2) in
+    case v1 of
+      Nothing -> Nothing
+      (Just v1') ->
+        case v2 of
+          Nothing -> Nothing
+          (Just v2') -> Just (op v1' v2')
+
 evalExp :: Env -> Exp -> (Maybe Val)
 evalExp env e =
   case e of
     Const val -> (Just val)
     Var id -> envGet id env
-    Umn e ->
-      let v = (evalExp env e) in
-        case v of
-          Nothing -> Nothing
-          (Just v') -> Just (- v')
-    Add e1 e2 ->
-      let v1 = (evalExp env e1)
-          v2 = (evalExp env e2) in
-        case v1 of
-          Nothing -> Nothing
-          (Just v1') ->
-            case v2 of
-              Nothing -> Nothing
-              (Just v2') -> Just (v1' + v2')
-    Sub e1 e2 ->
-      let v1 = (evalExp env e1)
-          v2 = (evalExp env e2) in
-        case v1 of
-          Nothing -> Nothing
-          (Just v1') ->
-            case v2 of
-              Nothing -> Nothing
-              (Just v2') -> Just (v1' - v2')
+    Umn e -> evalExp1 env e negate
+    Add e1 e2 -> evalExp2 env e1 e2 (+)
+    Sub e1 e2 -> evalExp2 env e1 e2 (-)
 
 -- Program.
 -- TODO: Add variables and conditionals.
