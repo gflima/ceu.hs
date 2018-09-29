@@ -18,11 +18,11 @@ type Env = [ (ID,Val) ]         -- head of the list is the most recent bind
 envSet :: String -> Val -> Env -> Env
 envSet id val env = (id,val) : env
 
-envGet :: String -> Env -> Val  -- TODO: assumes variables all exist and are initialized
+envGet :: String -> Env -> (Maybe Val)
 envGet id env =
   case env of
-    [] -> 0
-    (id',val') : env' -> if id==id' then val' else (envGet id env')
+    [] -> Nothing
+    (id',val') : env' -> if id==id' then (Just val') else (envGet id env')
 
 -- Expressions.
 
@@ -34,14 +34,34 @@ data Exp
   | Sub Exp Exp
   deriving (Eq,Show)
 
-evalExp :: Env -> Exp -> Val
+evalExp :: Env -> Exp -> (Maybe Val)
 evalExp env e =
   case e of
-    Const val -> val
+    Const val -> (Just val)
     Var id -> envGet id env
-    Umn e -> - (evalExp env e)
-    Add e1 e2 -> (evalExp env e1) + (evalExp env e2)
-    Sub e1 e2 -> (evalExp env e1) - (evalExp env e2)
+    Umn e ->
+      let v = (evalExp env e) in
+        case v of
+          Nothing -> Nothing
+          (Just v') -> Just (- v')
+    Add e1 e2 ->
+      let v1 = (evalExp env e1)
+          v2 = (evalExp env e2) in
+        case v1 of
+          Nothing -> Nothing
+          (Just v1') ->
+            case v2 of
+              Nothing -> Nothing
+              (Just v2') -> Just (v1' + v2')
+    Sub e1 e2 ->
+      let v1 = (evalExp env e1)
+          v2 = (evalExp env e2) in
+        case v1 of
+          Nothing -> Nothing
+          (Just v1') ->
+            case v2 of
+              Nothing -> Nothing
+              (Just v2') -> Just (v1' - v2')
 
 -- Program.
 -- TODO: Add variables and conditionals.
@@ -133,8 +153,11 @@ nst1Adv d f
 -- Single nested transition.
 nst1 :: Desc -> Maybe Desc
 
-nst1 (Write id exp, n, Nothing, env)  -- write
-  = Just (Nop, n, Nothing, (envSet id (evalExp env exp) env))
+nst1 (Write id exp, n, Nothing, env) -- write
+  = let v = (evalExp env exp) in
+      case v of
+        Nothing -> Nothing
+        (Just v') -> Just (Nop, n, Nothing, (envSet id v' env))
 
 nst1 (EmitInt e, n, Nothing, env)    -- emit-int
   = Just (CanRun n, n, Just e, env)
