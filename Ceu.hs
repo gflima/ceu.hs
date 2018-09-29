@@ -72,6 +72,7 @@ data Stmt
   | EmitInt Evt
   | Break
   | Seq Stmt Stmt
+  | If Exp Stmt Stmt
   | Loop Stmt
   | Every Evt Stmt
   | And Stmt Stmt
@@ -174,6 +175,13 @@ nst1 (Seq Break q, n, Nothing, env)  -- seq-brk
 
 nst1 (Seq p q, n, Nothing, env)      -- seq-adv
   = nst1Adv (p, n, Nothing, env) (\p' -> Seq p' q)
+
+nst1 (If exp p q, n, Nothing, env)
+  = let v = (evalExp env exp) in
+      case v of
+        Nothing -> Nothing
+        (Just v') -> if v' /= 0 then Just (p, n, Nothing, env)
+                                else Just (q, n, Nothing, env)
 
 nst1 (Loop p, n, Nothing, env)       -- loop-expd
   = Just (Loop' p p, n, Nothing, env)

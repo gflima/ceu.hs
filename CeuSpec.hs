@@ -10,6 +10,10 @@ main = hspec $ do
 
     -- write --
     describe "(Write id exp)" $ do
+      it "nothing: x=y undef" $
+        nst1 (Write "x" (Var "y"), 0, Nothing, [])
+          `shouldBe` Nothing
+
       it "transit: x=1" $
         nst1 (Write "x" (Const 1), 0, Nothing, [])
           `shouldBe` Just (Nop, 0, Nothing, [("x",1)])
@@ -92,6 +96,20 @@ main = hspec $ do
 
       it "nothing: isBlocked p" $
         nst1 (Seq (Fin Nop) Nop, 0, Nothing, []) `shouldBe` Nothing
+
+    -- if --
+    describe "(If exp p q)" $ do
+      it "nothing: x undef" $
+        nst1 (If (Var "x") Nop Break, 0, Nothing, [])
+        `shouldBe` Nothing
+
+      it "transit: x == 0" $
+        nst1 (If (Var "x") Nop Break, 0, Nothing, [("x", 0)])
+        `shouldBe` Just (Break, 0, Nothing, [("x", 0)])
+
+      it "transit: x /= 0" $
+        nst1 (If (Var "x") Nop Break, 0, Nothing, [("x", 1)])
+        `shouldBe` Just (Nop, 0, Nothing, [("x", 1)])
 
     -- loop-expd --
     describe "(Loop p)" $ do
