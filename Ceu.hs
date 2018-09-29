@@ -7,10 +7,47 @@ type Evt = Int
 -- Stack level.
 type Lvl = Int
 
+-- Variable / Value.
+type ID = String
+type Val = Int
+
+-- Environment.
+
+type Env = [ (ID,Val) ]         -- head of the list is the most recent bind
+
+envSet :: String -> Val -> Env -> Env
+envSet id val env = (id,val) : env
+
+envGet :: String -> Env -> Val  -- TODO: assumes variables all exist and are initialized
+envGet id env =
+  case env of
+    [] -> 0
+    (id',val') : env' -> if id==id' then val' else (envGet id env')
+
+-- Expressions.
+
+data Exp
+  = Const Val
+  | Var ID
+  | Umn Exp
+  | Add Exp Exp
+  | Sub Exp Exp
+  deriving (Eq,Show)
+
+evalExp :: Env -> Exp -> Val
+evalExp env e =
+  case e of
+    Const val -> val
+    Var id -> envGet id env
+    Umn e -> - (evalExp env e)
+    Add e1 e2 -> (evalExp env e1) + (evalExp env e2)
+    Sub e1 e2 -> (evalExp env e1) - (evalExp env e2)
+
 -- Program.
 -- TODO: Add variables and conditionals.
 data Stmt
-  = AwaitExt Evt
+  = Write ID Exp
+  | AwaitExt Evt
   | AwaitInt Evt
   | EmitInt Evt
   | Break
@@ -28,13 +65,19 @@ data Stmt
   deriving (Eq,Show)
 
 -- Description.
-type Desc = (Stmt, Lvl, Maybe Evt)
+type Desc = (Stmt, Lvl, Maybe Evt, Env)
 desc1 :: Desc -> Stmt
-desc1 (p, n, e) = p
+desc1 (p, n, e, env) = p
 desc2 :: Desc -> Lvl
-desc2 (p, n, e) = n
+desc2 (p, n, e, env) = n
 desc3 :: Desc -> Maybe Evt
-desc3 (p, n, e) = e
+desc3 (p, n, e, env) = e
+desc4 :: Desc -> Env
+desc4 (p, n, e, env) = env
+
+
+----------------------------------------------------------------------------
+-- Expressions
 
 
 ----------------------------------------------------------------------------
@@ -82,84 +125,88 @@ clear' p = Nothing              -- otherwise
 nst1Adv :: Desc -> (Stmt -> Stmt) -> Maybe Desc
 nst1Adv d f
   = let res = (nst1 d) in
-      if res == Nothing then Nothing
-      else let d' = (fromJust res) in
-             Just (f (desc1 d'), desc2 d', desc3 d')
+      case res of
+        Nothing -> Nothing
+        otherwise -> let d' = (fromJust res) in
+                       Just (f (desc1 d'), desc2 d', desc3 d', desc4 d')
 
 -- Single nested transition.
 nst1 :: Desc -> Maybe Desc
 
-nst1 (EmitInt e, n, Nothing)    -- emit-int
-  = Just (CanRun n, n, Just e)
+nst1 (Write id exp, n, Nothing, env)  -- write
+  = Just (Nop, n, Nothing, (envSet id (evalExp env exp) env))
 
-nst1 (CanRun m, n, Nothing)     -- can-run
-  | m == n = Just (Nop, n, Nothing)
+nst1 (EmitInt e, n, Nothing, env)    -- emit-int
+  = Just (CanRun n, n, Just e, env)
+
+nst1 (CanRun m, n, Nothing, env)     -- can-run
+  | m == n = Just (Nop, n, Nothing, env)
   | otherwise = Nothing
 
-nst1 (Seq Nop q, n, Nothing)    -- seq-nop
-  = Just (q, n, Nothing)
+nst1 (Seq Nop q, n, Nothing, env)    -- seq-nop
+  = Just (q, n, Nothing, env)
 
-nst1 (Seq Break q, n, Nothing)  -- seq-brk
-  = Just (Break, n, Nothing)
+nst1 (Seq Break q, n, Nothing, env)  -- seq-brk
+  = Just (Break, n, Nothing, env)
 
-nst1 (Seq p q, n, Nothing)      -- seq-adv
-  = nst1Adv (p, n, Nothing) (\p' -> Seq p' q)
+nst1 (Seq p q, n, Nothing, env)      -- seq-adv
+  = nst1Adv (p, n, Nothing, env) (\p' -> Seq p' q)
 
-nst1 (Loop p, n, Nothing)       -- loop-expd
-  = Just (Loop' p p, n, Nothing)
+nst1 (Loop p, n, Nothing, env)       -- loop-expd
+  = Just (Loop' p p, n, Nothing, env)
 
-nst1 (Loop' Nop q, n, Nothing)  -- loop-nop
-  = Just (Loop q, n, Nothing)
+nst1 (Loop' Nop q, n, Nothing, env)  -- loop-nop
+  = Just (Loop q, n, Nothing, env)
 
-nst1 (Loop' Break q, n, Nothing) -- loop-brk
-  = Just (Nop, n, Nothing)
+nst1 (Loop' Break q, n, Nothing, env) -- loop-brk
+  = Just (Nop, n, Nothing, env)
 
-nst1 (Loop' p q, n, Nothing)    -- loop-adv
-  = nst1Adv (p, n, Nothing) (\p' -> Loop' p' q)
+nst1 (Loop' p q, n, Nothing, env)    -- loop-adv
+  = nst1Adv (p, n, Nothing, env) (\p' -> Loop' p' q)
 
-nst1 (And p q, n, Nothing)      -- and-expd
-  = Just (And' p (Seq (CanRun n) q), n, Nothing)
+nst1 (And p q, n, Nothing, env)      -- and-expd
+  = Just (And' p (Seq (CanRun n) q), n, Nothing, env)
 
-nst1 (And' Nop q, n, Nothing)   -- and-nop1
-  = Just (q, n, Nothing)
+nst1 (And' Nop q, n, Nothing, env)   -- and-nop1
+  = Just (q, n, Nothing, env)
 
-nst1 (And' Break q, n, Nothing) -- and brk1
-  = Just (Seq (clear q) Break, n, Nothing)
+nst1 (And' Break q, n, Nothing, env) -- and brk1
+  = Just (Seq (clear q) Break, n, Nothing, env)
 
-nst1 (And' p Nop, n, Nothing)   -- and-nop2
-  | not (isBlocked n p) = nst1Adv (p, n, Nothing) (\p' -> And' p' Nop)
-  | otherwise = Just (p, n, Nothing)
+nst1 (And' p Nop, n, Nothing, env)   -- and-nop2
+  | not (isBlocked n p) = nst1Adv (p, n, Nothing, env) (\p' -> And' p' Nop)
+  | otherwise = Just (p, n, Nothing, env)
 
-nst1 (And' p Break, n, Nothing) -- and-brk2
-  | not (isBlocked n p) = nst1Adv (p, n, Nothing) (\p' -> And' p' Break)
-  | otherwise = Just (Seq (clear p) Break, n, Nothing)
+nst1 (And' p Break, n, Nothing, env) -- and-brk2
+  | not (isBlocked n p) = nst1Adv (p, n, Nothing, env) (\p' -> And' p' Break)
+  | otherwise = Just (Seq (clear p) Break, n, Nothing, env)
 
-nst1 (And' p q, n, Nothing)     -- and-adv
-  | not (isBlocked n p) = nst1Adv (p, n, Nothing) (\p' -> And' p' q)
-  | otherwise = nst1Adv (q, n, Nothing) (\q' -> And' p q')
+nst1 (And' p q, n, Nothing, env)     -- and-adv
+  | not (isBlocked n p) = nst1Adv (p, n, Nothing, env) (\p' -> And' p' q)
+  | otherwise = nst1Adv (q, n, Nothing, env) (\q' -> And' p q')
 
-nst1 (Or p q, n, Nothing)       -- or-expd
-  = Just (Or' p (Seq (CanRun n) q), n, Nothing)
+nst1 (Or p q, n, Nothing, env)       -- or-expd
+  = Just (Or' p (Seq (CanRun n) q), n, Nothing, env)
 
-nst1 (Or' Nop q, n, Nothing)    -- or-nop1
-  = Just (clear q, n, Nothing)
+nst1 (Or' Nop q, n, Nothing, env)    -- or-nop1
+  = Just (clear q, n, Nothing, env)
 
-nst1 (Or' Break q, n, Nothing)  -- or-brk1
-  = Just (Seq (clear q) Break, n, Nothing)
+nst1 (Or' Break q, n, Nothing, env)  -- or-brk1
+  = Just (Seq (clear q) Break, n, Nothing, env)
 
-nst1 (Or' p Nop, n, Nothing)    -- or-nop2
-  | not (isBlocked n p) = nst1Adv (p, n, Nothing) (\p' -> Or' p' Nop)
-  | otherwise = Just (clear p, n, Nothing)
+nst1 (Or' p Nop, n, Nothing, env)    -- or-nop2
+  | not (isBlocked n p) = nst1Adv (p, n, Nothing, env) (\p' -> Or' p' Nop)
+  | otherwise = Just (clear p, n, Nothing, env)
 
-nst1 (Or' p Break, n, Nothing)
-  | not (isBlocked n p) = nst1Adv (p, n, Nothing) (\p' -> Or' p' Break)
-  | otherwise = Just (Seq (clear p) Break, n, Nothing)
+nst1 (Or' p Break, n, Nothing, env)
+  | not (isBlocked n p) = nst1Adv (p, n, Nothing, env) (\p' -> Or' p' Break)
+  | otherwise = Just (Seq (clear p) Break, n, Nothing, env)
 
-nst1 (Or' p q, n, Nothing)      -- or-adv
-  | not (isBlocked n p) = nst1Adv (p, n, Nothing) (\p' -> Or' p' q)
-  | otherwise = nst1Adv (q, n, Nothing) (\q' -> Or' p q')
+nst1 (Or' p q, n, Nothing, env)      -- or-adv
+  | not (isBlocked n p) = nst1Adv (p, n, Nothing, env) (\p' -> Or' p' q)
+  | otherwise = nst1Adv (q, n, Nothing, env) (\q' -> Or' p q')
 
-nst1 (p, n, e) = Nothing        -- default: none of the previous
+nst1 (p, n, e, env) = Nothing        -- default: none of the previous
 
 -- Zero or more nested transitions.
 nst :: Desc -> Desc
@@ -171,10 +218,10 @@ nst d
 -- Tests whether the description is nst-irreducible.
 -- CHECK: nst should only produce nst-irreducible descriptions.
 isNstIrreducible :: Desc -> Bool
-isNstIrreducible (Nop, n, e) = True
-isNstIrreducible (Break, n, e) = True
-isNstIrreducible (p, n, Just e) = True
-isNstIrreducible (p, n, Nothing) = isBlocked n p
+isNstIrreducible (Nop, n, e, env) = True
+isNstIrreducible (Break, n, e, env) = True
+isNstIrreducible (p, n, Just e, env) = True
+isNstIrreducible (p, n, Nothing, env) = isBlocked n p
 
 
 ----------------------------------------------------------------------------
@@ -193,9 +240,9 @@ bcast e p = p -- otherwise
 
 -- Single outermost transition.
 out1 :: Desc -> Maybe Desc
-out1 (p, n, Just e) = Just (bcast e p, n+1, Nothing)
-out1 (p, n, Nothing)
-  | n > 0 && isNstIrreducible (p, n, Nothing) = Just (p, n - 1, Nothing)
+out1 (p, n, Just e, env) = Just (bcast e p, n+1, Nothing, env)
+out1 (p, n, Nothing, env)
+  | n > 0 && isNstIrreducible (p, n, Nothing, env) = Just (p, n - 1, Nothing, env)
   | otherwise = Nothing
 
 -- Zero or more outermost transitions.
@@ -219,8 +266,8 @@ out d
 -- CHECK: eval1/2 should only produce (nst+out)-irreducible descriptions.
 -- CHECK: eval1/2 should be equivalent.
 eval2 :: Desc -> Desc
-eval2 (p, n, e)
-  | isJust e' = eval2 (bcast (fromJust e') p', n+1, Nothing)
-  | n' > 0 = eval2 (p', n'-1, Nothing)
-  | otherwise = (p', n', e')
-  where (p', n', e') = nst (p, n, e)
+eval2 (p, n, e, env)
+  | isJust e' = eval2 (bcast (fromJust e') p', n+1, Nothing, env)
+  | n' > 0 = eval2 (p', n'-1, Nothing, env)
+  | otherwise = (p', n', e', env')
+  where (p', n', e', env') = nst (p, n, e, env)
