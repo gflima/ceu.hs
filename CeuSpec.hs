@@ -11,7 +11,7 @@ main = hspec $ do
     -- write --
     describe "(Write id exp)" $ do
       it "nothing: x=y undef" $
-        nst1 (Write "x" (Var "y"), 0, Nothing, [])
+        nst1 (Write "x" (Read "y"), 0, Nothing, [])
           `shouldBe` Nothing
 
       it "transit: x=1" $
@@ -27,7 +27,7 @@ main = hspec $ do
           `shouldBe` Just ((Write "x" (Const 1)), 0, Nothing, [])
 
       it "transit: [x=1] y=x+2" $
-        nst1 (Write "y" (Add (Var "x") (Const 2)), 0, Nothing, [("x",1)])
+        nst1 (Write "y" (Add (Read "x") (Const 2)), 0, Nothing, [("x",1)])
           `shouldBe` Just (Nop, 0, Nothing, [("y",3),("x",1)])
 
       it "transit: x=-(5+1)" $
@@ -104,15 +104,15 @@ main = hspec $ do
     -- if --
     describe "(If exp p q)" $ do
       it "nothing: x undef" $
-        nst1 (If (Var "x") Nop Break, 0, Nothing, [])
+        nst1 (If (Read "x") Nop Break, 0, Nothing, [])
         `shouldBe` Nothing
 
       it "transit: x == 0" $
-        nst1 (If (Var "x") Nop Break, 0, Nothing, [("x", 0)])
+        nst1 (If (Read "x") Nop Break, 0, Nothing, [("x", 0)])
         `shouldBe` Just (Break, 0, Nothing, [("x", 0)])
 
       it "transit: x /= 0" $
-        nst1 (If (Var "x") Nop Break, 0, Nothing, [("x", 1)])
+        nst1 (If (Read "x") Nop Break, 0, Nothing, [("x", 1)])
         `shouldBe` Just (Nop, 0, Nothing, [("x", 1)])
 
     -- loop-expd --
