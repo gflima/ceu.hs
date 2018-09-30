@@ -11,18 +11,29 @@ type Lvl = Int
 type ID = String
 type Val = Int
 
--- Environment.
+-- Environment: pair with a list of declarations and history of all assignments
 
-type Env = [ (ID,Val) ]         -- head of the list is the most recent bind
+type Env = ([ID], [(ID,Val)])
 
-envSet :: String -> Val -> Env -> Env
-envSet id val env = (id,val) : env
+envDcl :: Env -> String -> Env                  -- adds uninitialized variable
+envDcl env id = (id: (fst env), snd env)
 
-envGet :: String -> Env -> (Maybe Val)
-envGet id env =
-  case env of
-    [] -> Nothing
-    (id',val') : env' -> if id==id' then (Just val') else (envGet id env')
+envHas :: Env -> String -> Bool                 -- checks if variable is declared
+envHas env id =
+  envHas' (fst env) id where
+    envHas' [] id = False
+    envHas' (id':ids') id = if id'==id then True else envHas' ids' id
+
+envSet :: Env -> String -> Val -> (Maybe Env)   -- may fail if not declared
+envSet env id val =
+  if (envHas env id) then Just (fst env, (id,val):(snd env))
+                     else Nothing
+
+envGet :: Env -> String -> (Maybe Val)
+envGet env id =
+    envGet' (snd env) id where
+      envGet' [] id = Nothing
+      envGet' ((id',val'):his') id = if id==id' then (Just val') else (envGet' his' id)
 
 -- Expressions.
 
@@ -56,14 +67,15 @@ evalExp :: Env -> Exp -> (Maybe Val)
 evalExp env e =
   case e of
     Const val -> (Just val)
-    Read id -> envGet id env
+    Read id -> envGet env id
     Umn e -> evalExp1 env e negate
     Add e1 e2 -> evalExp2 env e1 e2 (+)
     Sub e1 e2 -> evalExp2 env e1 e2 (-)
 
 -- Program.
 data Stmt
-  = Write ID Exp
+  = Var ID
+  | Write ID Exp
   | AwaitExt Evt
   | AwaitInt Evt
   | EmitInt Evt
@@ -151,11 +163,18 @@ nst1Adv d f
 -- Single nested transition.
 nst1 :: Desc -> Maybe Desc
 
+nst1 (Var id, n, Nothing, env) -- var
+  = Just (Nop, n, Nothing, (envDcl env id))
+
 nst1 (Write id exp, n, Nothing, env) -- write
   = let v = (evalExp env exp) in
       case v of
         Nothing -> Nothing
-        (Just v') -> Just (Nop, n, Nothing, (envSet id v' env))
+        (Just v') ->
+          let env' = (envSet env id v') in
+            case env' of
+              Nothing -> Nothing
+              (Just env'') -> Just (Nop, n, Nothing, env'')
 
 nst1 (EmitInt e, n, Nothing, env)    -- emit-int
   = Just (CanRun n, n, Just e, env)
