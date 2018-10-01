@@ -106,6 +106,7 @@ data Stmt
 
 -- Description.
 type Desc = (Stmt, Lvl, Maybe Evt, Envs)
+
 desc1 :: Desc -> Stmt
 desc1 (p, n, e, env) = p
 desc2 :: Desc -> Lvl
@@ -167,8 +168,8 @@ nst1Adv d f
   = let res = (nst1 d) in
       case res of
         Nothing -> Nothing
-        otherwise -> let d' = (fromJust res) in
-                       Just (f (desc1 d'), desc2 d', desc3 d', desc4 d')
+        otherwise -> let (p, n, e, env) = (fromJust res) in
+                       Just (f p, n, e, env)
 
 -- Single nested transition.
 nst1 :: Desc -> Maybe Desc
@@ -202,7 +203,7 @@ nst1 (Seq Break q, n, Nothing, env)  -- seq-brk
 nst1 (Seq p q, n, Nothing, env)      -- seq-adv
   = nst1Adv (p, n, Nothing, env) (\p' -> Seq p' q)
 
-nst1 (If exp p q, n, Nothing, env)
+nst1 (If exp p q, n, Nothing, env)   -- if-true/false
   = let v = (evalExp env exp) in
       case v of
         Nothing -> Nothing
