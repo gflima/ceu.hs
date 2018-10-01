@@ -14,26 +14,36 @@ type Val = Int
 -- Environment: pair with a list of declarations and history of all assignments
 
 type Env = ([ID], [(ID,Val)])
+type Envs = [Env]
 
-envDcl :: Env -> String -> Env                  -- adds uninitialized variable
-envDcl env id = (id: (fst env), snd env)
+envsDcl :: Envs -> String -> Envs                -- adds uninitialized variable
+envsDcl (env:envs) id = (id: (fst env), snd env) : envs
 
-envHas :: Env -> String -> Bool                 -- checks if variable is declared
-envHas env id =
-  envHas' (fst env) id where
-    envHas' [] id = False
-    envHas' (id':ids') id = if id'==id then True else envHas' ids' id
+envsGet :: Envs -> String -> (Maybe (Envs,Env,Envs))         -- gets Env of given variable
+envsGet envs id = envsGet' [] envs id where
+  envsGet' :: Envs -> Envs -> String -> (Maybe (Envs,Env,Envs))
+  envsGet' _ [] _ = Nothing
+  envsGet' envsNo (env:envsMaybe) id =
+    let has = elem id (fst env) in
+      case has of
+        True -> Just (envsNo,env,envsMaybe)
+        False -> (envsGet' ([env]++envs) envsMaybe id)
 
-envSet :: Env -> String -> Val -> (Maybe Env)   -- may fail if not declared
-envSet env id val =
-  if (envHas env id) then Just (fst env, (id,val):(snd env))
-                     else Nothing
+envsWrite :: Envs -> String -> Val -> (Maybe Envs)   -- may fail if not declared
+envsWrite envs id val =
+  let envs' = (envsGet envs id) in
+    case envs' of
+      Nothing -> Nothing
+      Just (envs1,env,envs2) -> Just (envs1 ++ [(fst env, (id,val):(snd env))] ++ envs2)
 
-envGet :: Env -> String -> (Maybe Val)
-envGet env id =
-    envGet' (snd env) id where
-      envGet' [] id = Nothing
-      envGet' ((id',val'):his') id = if id==id' then (Just val') else (envGet' his' id)
+envsRead :: Envs -> String -> (Maybe Val)
+envsRead envs id =
+  let env = (envsGet envs id) in
+    case env of
+      Nothing -> Nothing
+      Just (_, (_,hst), _) -> (envsRead hst id) where
+        envsRead [] id = Nothing
+        envsRead ((id',val'):hst') id = if id==id' then (Just val') else (envsRead hst' id)
 
 -- Expressions.
 
@@ -45,17 +55,17 @@ data Exp
   | Sub Exp Exp
   deriving (Eq,Show)
 
-evalExp1 :: Env -> Exp -> (Val->Val) -> (Maybe Val)
-evalExp1 env e op =
-  let v = (evalExp env e) in
+evalExp1 :: Envs -> Exp -> (Val->Val) -> (Maybe Val)
+evalExp1 envs e op =
+  let v = (evalExp envs e) in
     case v of
       Nothing -> Nothing
       (Just v') -> Just (op v')
 
-evalExp2 :: Env -> Exp -> Exp -> (Val->Val->Val) -> (Maybe Val)
-evalExp2 env e1 e2 op =
-  let v1 = (evalExp env e1)
-      v2 = (evalExp env e2) in
+evalExp2 :: Envs -> Exp -> Exp -> (Val->Val->Val) -> (Maybe Val)
+evalExp2 envs e1 e2 op =
+  let v1 = (evalExp envs e1)
+      v2 = (evalExp envs e2) in
     case v1 of
       Nothing -> Nothing
       (Just v1') ->
@@ -63,14 +73,14 @@ evalExp2 env e1 e2 op =
           Nothing -> Nothing
           (Just v2') -> Just (op v1' v2')
 
-evalExp :: Env -> Exp -> (Maybe Val)
-evalExp env e =
+evalExp :: Envs -> Exp -> (Maybe Val)
+evalExp envs e =
   case e of
     Const val -> (Just val)
-    Read id -> envGet env id
-    Umn e -> evalExp1 env e negate
-    Add e1 e2 -> evalExp2 env e1 e2 (+)
-    Sub e1 e2 -> evalExp2 env e1 e2 (-)
+    Read id -> envsRead envs id
+    Umn e -> evalExp1 envs e negate
+    Add e1 e2 -> evalExp2 envs e1 e2 (+)
+    Sub e1 e2 -> evalExp2 envs e1 e2 (-)
 
 -- Program.
 data Stmt
@@ -95,14 +105,14 @@ data Stmt
   deriving (Eq,Show)
 
 -- Description.
-type Desc = (Stmt, Lvl, Maybe Evt, Env)
+type Desc = (Stmt, Lvl, Maybe Evt, Envs)
 desc1 :: Desc -> Stmt
 desc1 (p, n, e, env) = p
 desc2 :: Desc -> Lvl
 desc2 (p, n, e, env) = n
 desc3 :: Desc -> Maybe Evt
 desc3 (p, n, e, env) = e
-desc4 :: Desc -> Env
+desc4 :: Desc -> Envs
 desc4 (p, n, e, env) = env
 
 
@@ -164,14 +174,14 @@ nst1Adv d f
 nst1 :: Desc -> Maybe Desc
 
 nst1 (Var id, n, Nothing, env) -- var
-  = Just (Nop, n, Nothing, (envDcl env id))
+  = Just (Nop, n, Nothing, (envsDcl env id))
 
 nst1 (Write id exp, n, Nothing, env) -- write
   = let v = (evalExp env exp) in
       case v of
         Nothing -> Nothing
         (Just v') ->
-          let env' = (envSet env id v') in
+          let env' = (envsWrite env id v') in
             case env' of
               Nothing -> Nothing
               (Just env'') -> Just (Nop, n, Nothing, env'')
