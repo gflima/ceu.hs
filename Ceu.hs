@@ -105,7 +105,7 @@ data Stmt
   | And' Stmt Stmt              -- unrolled And
   | Or' Stmt Stmt               -- unrolled Or
   | CanRun Lvl
-  | Envs' Envs                  -- reset environment
+  | Envs' Int                   -- reset environment
   | Nop
   deriving (Eq,Show)
 
@@ -180,10 +180,10 @@ nst1Adv d f
 nst1 :: Desc -> Maybe Desc
 
 nst1 (Block p, n, Nothing, envs)      -- block-expd
-  = Just (Seq p (Envs' envs), n, Nothing, (newEnv : envs))
+  = Just (Seq p (Envs' (length envs)), n, Nothing, (newEnv : envs))
 
-nst1 (Envs' envs', n, Nothing, envs)  -- envs'
-  = Just (Nop, n, Nothing, envs')
+nst1 (Envs' lvl, n, Nothing, envs)  -- envs'
+  = Just (Nop, n, Nothing, drop ((length envs)-lvl) envs)
 
 nst1 (Var id, n, Nothing, envs)       -- var
   = Just (Nop, n, Nothing, (envsDcl envs id))
@@ -222,7 +222,7 @@ nst1 (If exp p q, n, Nothing, envs)   -- if-true/false
                                 else Just (q, n, Nothing, envs)
 
 nst1 (Loop p, n, Nothing, envs)       -- loop-expd
-  = Just (Seq (Loop' p p) (Envs' envs), n, Nothing, envs)
+  = Just (Seq (Loop' p p) (Envs' (length envs)), n, Nothing, envs)
 
 nst1 (Loop' Nop q, n, Nothing, envs)  -- loop-nop
   = Just (Loop q, n, Nothing, envs)
@@ -255,7 +255,7 @@ nst1 (And' p q, n, Nothing, envs)     -- and-adv
   | otherwise = nst1Adv (q, n, Nothing, envs) (\q' -> And' p q')
 
 nst1 (Or p q, n, Nothing, envs)       -- or-expd
-  = Just (Seq (Or' p (Seq (CanRun n) q)) (Envs' envs), n, Nothing, envs)
+  = Just (Seq (Or' p (Seq (CanRun n) q)) (Envs' (length envs)), n, Nothing, envs)
 
 nst1 (Or' Nop q, n, Nothing, envs)    -- or-nop1
   = Just (clear q, n, Nothing, envs)

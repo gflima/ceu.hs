@@ -12,12 +12,12 @@ main = hspec $ do
     describe "(Block p)" $ do
       it "transit: Block Nop" $
         nst1 (Block Nop, 0, Nothing, [newEnv])
-        `shouldBe` Just (Seq Nop (Envs' [newEnv]), 0, Nothing, [newEnv,newEnv])
+        `shouldBe` Just (Seq Nop (Envs' 1), 0, Nothing, [newEnv,newEnv])
 
     -- envs' --
     describe "(Envs' envs)" $ do
       it "transit: [e1,e2] " $
-        nst1 (Envs' [newEnv], 0, Nothing, [newEnv,newEnv])
+        nst1 (Envs' 1, 0, Nothing, [newEnv,newEnv])
         `shouldBe` Just (Nop, 0, Nothing, [newEnv])
 
     -- var --
@@ -160,12 +160,12 @@ main = hspec $ do
     describe "(Loop p)" $ do
       it "transit: lvl == 0" $
         nst1 (Loop Nop, 0, Nothing, [([],[])])
-        `shouldBe` Just (Seq (Loop' Nop Nop) (Envs' [([],[])]),0,Nothing,[([],[])])
+        `shouldBe` Just (Seq (Loop' Nop Nop) (Envs' 1),0,Nothing,[([],[])])
 
       it "transit: lvl > 0" $
         nst1 (Loop (Seq Nop (EmitInt 8)), 3, Nothing, [([],[])])
         `shouldBe` Just (Seq (Loop' (Seq Nop (EmitInt 8)) (Seq Nop (EmitInt 8)))
-                          (Envs' [([],[])]),3,Nothing,[([],[])])
+                          (Envs' 1),3,Nothing,[([],[])])
 
       it "nothing: evt /= nil" $
         nst1 (Loop Nop, 0, Just 1, [([],[])])
@@ -173,7 +173,7 @@ main = hspec $ do
 
       it "transit: isBlocked p" $
         nst1 (Loop (Fin Nop), 0, Nothing, [([],[])])
-        `shouldBe` Just (Seq (Loop' (Fin Nop) (Fin Nop)) (Envs' [([],[])]),0,Nothing,[([],[])])
+        `shouldBe` Just (Seq (Loop' (Fin Nop) (Fin Nop)) (Envs' 1),0,Nothing,[([],[])])
 
     -- loop-nop --
     describe "(Loop' Nop q)" $ do
@@ -387,12 +387,12 @@ main = hspec $ do
       it "transit: lvl == 0" $
         nst1 (Or Nop Nop, 0, Nothing, [([],[])])
         `shouldBe` Just (Seq (Or' Nop (Seq (CanRun 0) Nop))
-                          (Envs' [([],[])]),0,Nothing,[([],[])])
+                          (Envs' 1),0,Nothing,[([],[])])
 
       it "transit: lvl > 0" $
         nst1 (Or (Seq Nop (EmitInt 8)) (Seq Nop Nop), 3, Nothing, [([],[])])
         `shouldBe` Just (Seq (Or' (Seq Nop (EmitInt 8)) (Seq (CanRun 3)
-                          (Seq Nop Nop))) (Envs' [([],[])]),3,Nothing,[([],[])])
+                          (Seq Nop Nop))) (Envs' 1),3,Nothing,[([],[])])
 
       it "nothing: evt /= nil" $
         nst1 (Or Nop Nop, 0, Just 1, [([],[])])
@@ -401,17 +401,17 @@ main = hspec $ do
       it "transit: isBlocked p" $
         nst1 (Or (Fin Nop) Nop, 0, Nothing, [([],[])])
         `shouldBe` Just (Seq (Or' (Fin Nop) (Seq (CanRun 0) Nop))
-                          (Envs' [([],[])]),0,Nothing,[([],[])])
+                          (Envs' 1),0,Nothing,[([],[])])
 
       it "transit: isBlocked q" $
         nst1 (Or Nop (Fin Nop), 0, Nothing, [([],[])])
         `shouldBe` Just (Seq (Or' Nop (Seq (CanRun 0) (Fin Nop)))
-                          (Envs' [([],[])]),0,Nothing,[([],[])])
+                          (Envs' 1),0,Nothing,[([],[])])
 
       it "transit: isBlocked p && isBlocked q" $
         nst1 (Or (Fin Nop) (Fin Nop), 0, Nothing, [([],[])])
         `shouldBe` Just (Seq (Or' (Fin Nop) (Seq (CanRun 0) (Fin Nop)))
-                          (Envs' [([],[])]),0,Nothing,[([],[])])
+                          (Envs' 1),0,Nothing,[([],[])])
 
     -- or-nop1 --
     describe "(Or' Nop q)" $ do
@@ -730,12 +730,27 @@ main = hspec $ do
         (evalProg p)
         `shouldBe` (Just 11)
 
+    it "var ret; ret=1; {ret=2;}" $
+      let p = Seq (Var "ret") (Seq (Write "ret" (Const 1)) (Block (Write "ret" (Const 2)))) in
+        (evalProg p)
+        `shouldBe` (Just 2)
+
     it "var ret; var a; a=1; ({var a; a=99; awaitExt E} || nop); ret=a+10;" $
       let p = Seq (Var "ret") (Seq (Var "a") (Seq (Write "a" (Const 1)) (Seq (Or (Block (Seq (Var "a") (Seq (Write "a" (Const 99)) (AwaitExt 0)))) Nop) (Write "ret" (Add (Read "a") (Const 10)))))) in
         (evalProg p)
         `shouldBe` (Just 11)
 
+    it "var ret; ({ret=1; awaitExt E} || nop);" $
+      let p = Seq (Var "ret") (Or (Block (Seq (Write "ret" (Const 1)) (AwaitExt 0))) Nop) in
+        (evalProg p)
+        `shouldBe` (Just 1)
+
     it "var ret; var a; a=1; loop ({var a; a=99; awaitExt E} && break); ret=a+10;" $
       let p = Seq (Var "ret") (Seq (Var "a") (Seq (Write "a" (Const 1)) (Seq (Loop (And (Block (Seq (Var "a") (Seq (Write "a" (Const 99)) (AwaitExt 0)))) Break)) (Write "ret" (Add (Read "a") (Const 10)))))) in
         (evalProg p)
         `shouldBe` (Just 11)
+
+    it "var ret; loop ({ret=1; awaitExt E} && break);" $
+      let p = Seq (Var "ret") (Loop (And (Block (Seq (Write "ret" (Const 1)) (AwaitExt 0))) Break))in
+        (evalProg p)
+        `shouldBe` (Just 1)
