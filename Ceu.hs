@@ -16,6 +16,9 @@ type Val = Int
 type Env = ([ID], [(ID,Val)])
 type Envs = [Env]
 
+newEnv :: Env
+newEnv = ([], [])
+
 envsDcl :: Envs -> String -> Envs                -- adds uninitialized variable
 envsDcl (env:envs) id = (id: (fst env), snd env) : envs
 
@@ -84,7 +87,8 @@ evalExp envs e =
 
 -- Program.
 data Stmt
-  = Var ID
+  = Block Stmt
+  | Var ID
   | Write ID Exp
   | AwaitExt Evt
   | AwaitInt Evt
@@ -101,6 +105,7 @@ data Stmt
   | And' Stmt Stmt              -- unrolled And
   | Or' Stmt Stmt               -- unrolled Or
   | CanRun Lvl
+  | Envs' Envs                  -- reset environment
   | Nop
   deriving (Eq,Show)
 
@@ -174,7 +179,13 @@ nst1Adv d f
 -- Single nested transition.
 nst1 :: Desc -> Maybe Desc
 
-nst1 (Var id, n, Nothing, envs) -- var
+nst1 (Block p, n, Nothing, envs)      -- block-expd
+  = Just (Seq p (Envs' envs), n, Nothing, (newEnv : envs))
+
+nst1 (Envs' envs', n, Nothing, envs)  -- envs'
+  = Just (Nop, n, Nothing, envs')
+
+nst1 (Var id, n, Nothing, envs)       -- var
   = Just (Nop, n, Nothing, (envsDcl envs id))
 
 nst1 (Write id exp, n, Nothing, envs) -- write
@@ -211,7 +222,7 @@ nst1 (If exp p q, n, Nothing, envs)   -- if-true/false
                                 else Just (q, n, Nothing, envs)
 
 nst1 (Loop p, n, Nothing, envs)       -- loop-expd
-  = Just (Loop' p p, n, Nothing, envs)
+  = Just (Seq (Loop' p p) (Envs' envs), n, Nothing, envs)
 
 nst1 (Loop' Nop q, n, Nothing, envs)  -- loop-nop
   = Just (Loop q, n, Nothing, envs)
@@ -244,7 +255,7 @@ nst1 (And' p q, n, Nothing, envs)     -- and-adv
   | otherwise = nst1Adv (q, n, Nothing, envs) (\q' -> And' p q')
 
 nst1 (Or p q, n, Nothing, envs)       -- or-expd
-  = Just (Or' p (Seq (CanRun n) q), n, Nothing, envs)
+  = Just (Seq (Or' p (Seq (CanRun n) q)) (Envs' envs), n, Nothing, envs)
 
 nst1 (Or' Nop q, n, Nothing, envs)    -- or-nop1
   = Just (clear q, n, Nothing, envs)
@@ -329,3 +340,7 @@ eval2 (p, n, e, envs)
   | n' > 0 = eval2 (p', n'-1, Nothing, envs)
   | otherwise = (p', n', e', envs')
   where (p', n', e', envs') = nst (p, n, e, envs)
+
+evalProg :: Stmt -> (Maybe Val)
+evalProg prog = envsRead envs "ret" where
+  (_,_,_,envs) = eval2 (prog, 0, Nothing, [newEnv])
