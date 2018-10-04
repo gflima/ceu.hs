@@ -112,20 +112,9 @@ data Stmt
 -- Description.
 type Desc = (Stmt, Lvl, Maybe Evt, Envs)
 
-desc1 :: Desc -> Stmt
-desc1 (p, n, e, envs) = p
-desc2 :: Desc -> Lvl
-desc2 (p, n, e, envs) = n
-desc3 :: Desc -> Maybe Evt
-desc3 (p, n, e, envs) = e
-desc4 :: Desc -> Envs
-desc4 (p, n, e, envs) = envs
-
-
 ----------------------------------------------------------------------------
 -- Expressions
 
-
 ----------------------------------------------------------------------------
 -- Nested transition
 
@@ -292,7 +281,6 @@ isNstIrreducible (Break, n, e, envs) = True
 isNstIrreducible (p, n, Just e, envs) = True
 isNstIrreducible (p, n, Nothing, envs) = isBlocked n p
 
-
 ----------------------------------------------------------------------------
 -- Outermost transition
 
@@ -324,7 +312,6 @@ out d
 -- TODO: Define pot.
 -- TODO: Define rank.
 
-
 ----------------------------------------------------------------------------
 -- Eval
 
