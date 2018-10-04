@@ -13,8 +13,9 @@ type Val = Int
 
 -- Environment: pair with a list of declarations and history of all assignments
 
-type Env = ([ID], [(ID,Val)])
-type Envs = [Env]
+type Env = ([ID], [(ID,Val)])   -- ([a,b,...], [a=1,b=2,a=0,...])
+type Envs = [Env]               -- [ block-L, block-L, ..., block-G ]
+type MEnvs = (Envs,Envs,Envs)   -- [ Exts, Ints, Vars ]
 
 newEnv :: Env
 newEnv = ([], [])
@@ -59,16 +60,16 @@ data Exp
   deriving (Eq,Show)
 
 evalExp1 :: Envs -> Exp -> (Val->Val) -> (Maybe Val)
-evalExp1 envs e op =
-  let v = (evalExp envs e) in
+evalExp1 vars e op =
+  let v = (evalExp vars e) in
     case v of
       Nothing -> Nothing
       (Just v') -> Just (op v')
 
 evalExp2 :: Envs -> Exp -> Exp -> (Val->Val->Val) -> (Maybe Val)
-evalExp2 envs e1 e2 op =
-  let v1 = (evalExp envs e1)
-      v2 = (evalExp envs e2) in
+evalExp2 vars e1 e2 op =
+  let v1 = (evalExp vars e1)
+      v2 = (evalExp vars e2) in
     case v1 of
       Nothing -> Nothing
       (Just v1') ->
@@ -77,13 +78,13 @@ evalExp2 envs e1 e2 op =
           (Just v2') -> Just (op v1' v2')
 
 evalExp :: Envs -> Exp -> (Maybe Val)
-evalExp envs e =
+evalExp vars e =
   case e of
     Const val -> (Just val)
-    Read id -> envsRead envs id
-    Umn e -> evalExp1 envs e negate
-    Add e1 e2 -> evalExp2 envs e1 e2 (+)
-    Sub e1 e2 -> evalExp2 envs e1 e2 (-)
+    Read id -> envsRead vars id
+    Umn e -> evalExp1 vars e negate
+    Add e1 e2 -> evalExp2 vars e1 e2 (+)
+    Sub e1 e2 -> evalExp2 vars e1 e2 (-)
 
 -- Program.
 data Stmt
@@ -105,12 +106,12 @@ data Stmt
   | And' Stmt Stmt              -- unrolled And
   | Or' Stmt Stmt               -- unrolled Or
   | CanRun Lvl
-  | Envs' Int                   -- reset environment
+  | MEnvs' Int                  -- reset environment
   | Nop
   deriving (Eq,Show)
 
 -- Description.
-type Desc = (Stmt, Lvl, Maybe Evt, Envs)
+type Desc = (Stmt, Lvl, Maybe Evt, MEnvs)
 
 desc1 :: Desc -> Stmt
 desc1 (p, n, e, envs) = p
@@ -118,7 +119,7 @@ desc2 :: Desc -> Lvl
 desc2 (p, n, e, envs) = n
 desc3 :: Desc -> Maybe Evt
 desc3 (p, n, e, envs) = e
-desc4 :: Desc -> Envs
+desc4 :: Desc -> MEnvs
 desc4 (p, n, e, envs) = envs
 
 
@@ -179,24 +180,28 @@ nst1Adv d f
 -- Single nested transition.
 nst1 :: Desc -> Maybe Desc
 
-nst1 (Block p, n, Nothing, envs)      -- block-expd
-  = Just (Seq p (Envs' (length envs)), n, Nothing, (newEnv : envs))
+nst1 (Block p, n, Nothing, (exts,ints,vars))      -- block-expd
+  = Just (Seq p (MEnvs' (length exts)), n, Nothing,
+         ((newEnv:exts),(newEnv:ints),(newEnv:vars)))
 
-nst1 (Envs' lvl, n, Nothing, envs)  -- envs'
-  = Just (Nop, n, Nothing, drop ((length envs)-lvl) envs)
+nst1 (MEnvs' lvl, n, Nothing, (exts,ints,vars))  -- envs'
+  = Just (Nop, n, Nothing, ( (drop ((length exts)-lvl) exts),
+                             (drop ((length ints)-lvl) ints),
+                             (drop ((length vars)-lvl) vars)
+                           ) )
 
-nst1 (Var id, n, Nothing, envs)       -- var
-  = Just (Nop, n, Nothing, (envsDcl envs id))
+nst1 (Var id, n, Nothing, (exts,ints,vars))       -- var
+  = Just (Nop, n, Nothing, (exts,ints,(envsDcl vars id)))
 
-nst1 (Write id exp, n, Nothing, envs) -- write
-  = let v = (evalExp envs exp) in
+nst1 (Write id exp, n, Nothing, (exts,ints,vars)) -- write
+  = let v = (evalExp vars exp) in
       case v of
         Nothing -> Nothing
         (Just v') ->
-          let envs' = (envsWrite envs id v') in
-            case envs' of
+          let vars' = (envsWrite vars id v') in
+            case vars' of
               Nothing -> Nothing
-              (Just envs'') -> Just (Nop, n, Nothing, envs'')
+              (Just vars'') -> Just (Nop, n, Nothing, (exts,ints,vars''))
 
 nst1 (EmitInt e, n, Nothing, envs)    -- emit-int
   = Just (CanRun n, n, Just e, envs)
@@ -214,15 +219,15 @@ nst1 (Seq Break q, n, Nothing, envs)  -- seq-brk
 nst1 (Seq p q, n, Nothing, envs)      -- seq-adv
   = nst1Adv (p, n, Nothing, envs) (\p' -> Seq p' q)
 
-nst1 (If exp p q, n, Nothing, envs)   -- if-true/false
-  = let v = (evalExp envs exp) in
+nst1 (If exp p q, n, Nothing, (exts,ints,vars))   -- if-true/false
+  = let v = (evalExp vars exp) in
       case v of
         Nothing -> Nothing
-        (Just v') -> if v' /= 0 then Just (p, n, Nothing, envs)
-                                else Just (q, n, Nothing, envs)
+        (Just v') -> if v' /= 0 then Just (p, n, Nothing, (exts,ints,vars))
+                                else Just (q, n, Nothing, (exts,ints,vars))
 
-nst1 (Loop p, n, Nothing, envs)       -- loop-expd
-  = Just (Seq (Loop' p p) (Envs' (length envs)), n, Nothing, envs)
+nst1 (Loop p, n, Nothing, (exts,ints,vars))       -- loop-expd
+  = Just (Seq (Loop' p p) (MEnvs' (length exts)), n, Nothing, (exts,ints,vars))
 
 nst1 (Loop' Nop q, n, Nothing, envs)  -- loop-nop
   = Just (Loop q, n, Nothing, envs)
@@ -254,8 +259,8 @@ nst1 (And' p q, n, Nothing, envs)     -- and-adv
   | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> And' p' q)
   | otherwise = nst1Adv (q, n, Nothing, envs) (\q' -> And' p q')
 
-nst1 (Or p q, n, Nothing, envs)       -- or-expd
-  = Just (Seq (Or' p (Seq (CanRun n) q)) (Envs' (length envs)), n, Nothing, envs)
+nst1 (Or p q, n, Nothing, (exts,ints,vars))       -- or-expd
+  = Just (Seq (Or' p (Seq (CanRun n) q)) (MEnvs' (length exts)), n, Nothing, (exts,ints,vars))
 
 nst1 (Or' Nop q, n, Nothing, envs)    -- or-nop1
   = Just (clear q, n, Nothing, envs)
@@ -342,5 +347,14 @@ eval2 (p, n, e, envs)
   where (p', n', e', envs') = nst (p, n, e, envs)
 
 evalProg :: Stmt -> (Maybe Val)
-evalProg prog = envsRead envs "ret" where
+evalProg prog = envsRead vars "ret" where
+  (_,_,_,(exts,ints,vars)) = eval2 (prog, 0, Nothing, ([newEnv],[newEnv],[newEnv]))
+
+{-
+evalProg :: Stmt -> [Evt] -> (Maybe Val)
+evalProg prog evts = envsRead envs "ret" where
+  envs = eval2' prog evts where
+    eval2' prog evts
+      | ??
   (_,_,_,envs) = eval2 (prog, 0, Nothing, [newEnv])
+-}
