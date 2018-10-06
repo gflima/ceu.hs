@@ -13,40 +13,11 @@ type Lvl = Int
 type ID = String
 type Val = Int
 
--- Environment: pair with a list of declarations and history of all assignments
-
+-- Environment (declarations plus assignment history).
 type Env = ([ID], [(ID,Val)])
 type Envs = [Env]
 
-newEnv :: Env
-newEnv = ([], [])
-
-envsDcl :: Envs -> String -> Envs                -- adds uninitialized variable
-envsDcl (env:envs) id = (id: (fst env), snd env) : envs
-
-envsGet :: Envs -> String -> (Envs,Env,Envs)     -- gets Env of given variable
-envsGet envs id = envsGet' [] envs id where
-  envsGet' :: Envs -> Envs -> String -> (Envs,Env,Envs)
-  envsGet' _ [] _ = error "envsGet: undeclared variable"
-  envsGet' envsNo (env:envsMaybe) id =
-    let has = elem id (fst env) in
-      case has of
-        True  -> (envsNo,env,envsMaybe)
-        False -> (envsGet' ([env]++envs) envsMaybe id)
-
-envsWrite :: Envs -> String -> Val -> Envs
-envsWrite envs id val = (envs1 ++ [(fst env, (id,val):(snd env))] ++ envs2)
-  where (envs1,env,envs2) = (envsGet envs id)
-
-envsRead :: Envs -> String -> Val
-envsRead envs id =
-  let (_, (_,hst), _) = (envsGet envs id) in
-      (envsRead' hst id) where
-        envsRead' [] id = error "envsRead: uninitialized variable"
-        envsRead' ((id',val'):hst') id = if id==id' then val' else (envsRead' hst' id)
-
--- Expressions.
-
+-- Expression.
 data Exp
   = Const Val
   | Read ID
@@ -54,24 +25,6 @@ data Exp
   | Add Exp Exp
   | Sub Exp Exp
   deriving (Eq, Show)
-
-evalExp1 :: Envs -> Exp -> (Val->Val) -> Val
-evalExp1 envs e op = op (evalExp envs e)
-
-evalExp2 :: Envs -> Exp -> Exp -> (Val->Val->Val) -> Val
-evalExp2 envs e1 e2 op =
-  let v1 = (evalExp envs e1)
-      v2 = (evalExp envs e2) in
-           (op v1 v2)
-
-evalExp :: Envs -> Exp -> Val
-evalExp envs e =
-  case e of
-    Const val -> val
-    Read id -> envsRead envs id
-    Umn e -> evalExp1 envs e negate
-    Add e1 e2 -> evalExp2 envs e1 e2 (+)
-    Sub e1 e2 -> evalExp2 envs e1 e2 (-)
 
 -- Program (pg 5).
 data Stmt
@@ -110,7 +63,63 @@ instance NFData Stmt where
 type Desc = (Stmt, Lvl, Maybe Evt, Envs)
 
 ----------------------------------------------------------------------------
--- Expressions
+-- Environment
+
+-- The empty environment.
+newEnv :: Env
+newEnv = ([], [])
+
+-- Adds uninitialized variable to environment.
+envsDcl :: Envs -> String -> Envs
+envsDcl (env:envs) id = (id: (fst env), snd env) : envs
+
+-- Gets the environment of a given variable.
+envsGet :: Envs -> String -> (Envs,Env,Envs)
+envsGet envs id = envsGet' [] envs id where
+  envsGet' :: Envs -> Envs -> String -> (Envs,Env,Envs)
+  envsGet' _ [] _ = error "envsGet: undeclared variable"
+  envsGet' envsNo (env:envsMaybe) id =
+    let has = elem id (fst env) in
+      case has of
+        True  -> (envsNo,env,envsMaybe)
+        False -> (envsGet' ([env]++envs) envsMaybe id)
+
+-- Writes value to variable in environment.
+envsWrite :: Envs -> String -> Val -> Envs
+envsWrite envs id val = (envs1 ++ [(fst env, (id,val):(snd env))] ++ envs2)
+  where (envs1,env,envs2) = (envsGet envs id)
+
+-- Reads variable value from environment.
+envsRead :: Envs -> String -> Val
+envsRead envs id =
+  let (_, (_,hst), _) = (envsGet envs id) in
+      (envsRead' hst id) where
+        envsRead' [] id = error "envsRead: uninitialized variable"
+        envsRead' ((id',val'):hst') id = if id==id' then val' else (envsRead' hst' id)
+
+----------------------------------------------------------------------------
+-- Expression
+
+-- Evaluates unary operator.
+evalExp1 :: Envs -> Exp -> (Val->Val) -> Val
+evalExp1 envs e op = op (evalExp envs e)
+
+-- Evaluates binary operator.
+evalExp2 :: Envs -> Exp -> Exp -> (Val->Val->Val) -> Val
+evalExp2 envs e1 e2 op =
+  let v1 = (evalExp envs e1)
+      v2 = (evalExp envs e2) in
+           (op v1 v2)
+
+-- Evaluates expression in environment.
+evalExp :: Envs -> Exp -> Val
+evalExp envs e =
+  case e of
+    Const val -> val
+    Read id -> envsRead envs id
+    Umn e -> evalExp1 envs e negate
+    Add e1 e2 -> evalExp2 envs e1 e2 (+)
+    Sub e1 e2 -> evalExp2 envs e1 e2 (-)
 
 ----------------------------------------------------------------------------
 -- Nested transition
@@ -127,7 +136,7 @@ isBlocked n (Seq p q) = isBlocked n p
 isBlocked n (Loop' p q) = isBlocked n p
 isBlocked n (And' p q) = (isBlocked n p) && (isBlocked n q)
 isBlocked n (Or' p q) = (isBlocked n p) && (isBlocked n q)
-isBlocked n p = False           -- otherwise
+isBlocked _ _ = False           -- otherwise
 
 -- Obtains the body of all active Fin statements in program.
 -- (pg 8, fig 4.iii)
@@ -293,7 +302,7 @@ nsts_out1_s :: Desc -> Desc
 nsts_out1_s (p,n,e,envs)
   | n==0 = (p,n,e,envs)
   | n>0 = nsts_out1_s (out1 (nsts (p,n,e,envs)))
-  
+
 -- TODO: Define pot.
 -- TODO: Define rank.
 
