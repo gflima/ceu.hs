@@ -6,7 +6,7 @@ import Control.Exception
 import Test.Hspec
 
 -- Declare Stmt as a datatype that can be fully evaluated.
--- (This is required by some of the `shouldThrow` calls below.)
+-- This is required by some of the `shouldThrow` calls below.
 instance NFData Stmt where
   rnf Nop = ()
   rnf (AwaitInt e) = ()
@@ -17,6 +17,48 @@ instance NFData Stmt where
 
 main :: IO ()
 main = hspec $ do
+
+  -- Env/Envs --------------------------------------------------------------
+  describe "envsDcl envs id" $ do
+    it "fail: envs == []" $
+      evaluate (envsDcl [] "x")
+      `shouldThrow` errorCall "envsDcl: bad environment"
+
+    it "pass: 1st declaration" $
+      envsDcl [newEnv] "x" `shouldBe` [(["x"],[])]
+
+    it "pass: 2nd declaration, same env" $
+      envsDcl [(["x"],[])] "y" `shouldBe` [(["y","x"],[])]
+
+    it "pass: redeclaration, same env" $ -- CHECK THIS! --
+      envsDcl [(["y","x"],[])] "x" `shouldBe` [(["x","y", "x"],[])]
+
+    it "pass: redeclaration, inner env (shadowing)" $
+      envsDcl (newEnv:[(["x"],[])]) "y" `shouldBe` [(["y"],[]),(["x"],[])]
+
+  describe "envsGet envs id" $ do
+    it "fail: envs == []" $
+      evaluate (envsGet [] "x")
+      `shouldThrow` errorCall "envsGet: bad environment"
+
+    it "fail: undeclared variable" $
+      evaluate (envsGet [newEnv] "x")
+      `shouldThrow` errorCall "envsGet: undeclared variable"
+
+    it "pass: finds in simple env" $
+      envsGet [(["x"],[("x",0)])] "x" -- CHECK THIS! --
+      `shouldBe` ([],(["x"],[("x",0)]),[])
+
+    it "pass: finds in complex env" $
+      let envs = [(["z"],[]),
+                  (["y"],[("y",1)]),
+                  (["y"],[("y",0)]),
+                  (["x"],[])] in
+        envsGet envs "y"
+        `shouldBe` ([(["z"],[])],
+                     (["y"],[("y",1)]),
+                     [(["y"],[("y",0)]),(["x"],[])])
+
   -- nst1 ------------------------------------------------------------------
   describe "nst1" $ do
 

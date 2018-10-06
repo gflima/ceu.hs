@@ -60,19 +60,20 @@ newEnv :: Env
 newEnv = ([], [])
 
 -- Adds uninitialized variable to environment.
+-- CHECK: Envs must be nonempty.
 envsDcl :: Envs -> String -> Envs
-envsDcl (env:envs) id = (id: (fst env), snd env) : envs
+envsDcl [] _ = error "envsDcl: bad environment"
+envsDcl (env:envs) id = (id : (fst env), snd env) : envs
 
--- Gets the environment of a given variable.
+-- Finds the first environment containing the given variable.
 envsGet :: Envs -> String -> (Envs,Env,Envs)
-envsGet envs id = envsGet' [] envs id where
+envsGet [] _ = error "envsGet: bad environment"
+envsGet envs id  = envsGet' [] envs id where
   envsGet' :: Envs -> Envs -> String -> (Envs,Env,Envs)
   envsGet' _ [] _ = error "envsGet: undeclared variable"
-  envsGet' envsNo (env:envsMaybe) id =
-    let has = elem id (fst env) in
-      case has of
-        True  -> (envsNo,env,envsMaybe)
-        False -> (envsGet' ([env]++envs) envsMaybe id)
+  envsGet' envsNotHere (env:envsMaybeHere) id
+    | elem id (fst env) = (envsNotHere,env,envsMaybeHere) -- found
+    | otherwise = (envsGet' (envsNotHere ++ [env]) envsMaybeHere id)
 
 -- Writes value to variable in environment.
 envsWrite :: Envs -> String -> Val -> Envs
@@ -85,7 +86,8 @@ envsRead envs id =
   let (_, (_,hst), _) = (envsGet envs id) in
       (envsRead' hst id) where
         envsRead' [] id = error "envsRead: uninitialized variable"
-        envsRead' ((id',val'):hst') id = if id==id' then val' else (envsRead' hst' id)
+        envsRead' ((id',val'):hst') id
+          = if id==id' then val' else (envsRead' hst' id)
 
 ----------------------------------------------------------------------------
 -- Expression
@@ -151,19 +153,19 @@ nst1Adv d f = (f p, n, e, envs) where
 -- (pg 6)
 nst1 :: Desc -> Desc
 
-nst1 (Block p, n, Nothing, envs)      -- block-expd
+nst1 (Block p, n, Nothing, envs)                -- block-expd
   = (Seq p (Envs' (length envs)), n, Nothing, (newEnv : envs))
 
-nst1 (Envs' lvl, n, Nothing, envs)  -- envs'
+nst1 (Envs' lvl, n, Nothing, envs)              -- envs'
   = (Nop, n, Nothing, drop ((length envs)-lvl) envs)
 
-nst1 (Var id, n, Nothing, envs)       -- var
+nst1 (Var id, n, Nothing, envs)                 -- var
   = (Nop, n, Nothing, (envsDcl envs id))
 
-nst1 (Write id exp, n, Nothing, envs) -- write
+nst1 (Write id exp, n, Nothing, envs)           -- write
   = (Nop, n, Nothing, (envsWrite envs id (evalExp envs exp)))
 
-nst1 (EmitInt e, n, Nothing, envs)    -- emit-int (pg 6)
+nst1 (EmitInt e, n, Nothing, envs)              -- emit-int (pg 6)
   = (CanRun n, n, Just e, envs)
 
 nst1 (CanRun m, n, Nothing, envs)     -- can-run (pg 6)
