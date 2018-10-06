@@ -22,31 +22,26 @@ newEnv = ([], [])
 envsDcl :: Envs -> String -> Envs                -- adds uninitialized variable
 envsDcl (env:envs) id = (id: (fst env), snd env) : envs
 
-envsGet :: Envs -> String -> (Maybe (Envs,Env,Envs))         -- gets Env of given variable
+envsGet :: Envs -> String -> (Envs,Env,Envs)     -- gets Env of given variable
 envsGet envs id = envsGet' [] envs id where
-  envsGet' :: Envs -> Envs -> String -> (Maybe (Envs,Env,Envs))
-  envsGet' _ [] _ = Nothing
+  envsGet' :: Envs -> Envs -> String -> (Envs,Env,Envs)
+  envsGet' _ [] _ = error "envsGet: undeclared variable"
   envsGet' envsNo (env:envsMaybe) id =
     let has = elem id (fst env) in
       case has of
-        True -> Just (envsNo,env,envsMaybe)
+        True  -> (envsNo,env,envsMaybe)
         False -> (envsGet' ([env]++envs) envsMaybe id)
 
-envsWrite :: Envs -> String -> Val -> (Maybe Envs)   -- may fail if not declared
-envsWrite envs id val =
-  let envs' = (envsGet envs id) in
-    case envs' of
-      Nothing -> Nothing
-      Just (envs1,env,envs2) -> Just (envs1 ++ [(fst env, (id,val):(snd env))] ++ envs2)
+envsWrite :: Envs -> String -> Val -> Envs
+envsWrite envs id val = (envs1 ++ [(fst env, (id,val):(snd env))] ++ envs2)
+  where (envs1,env,envs2) = (envsGet envs id)
 
-envsRead :: Envs -> String -> (Maybe Val)
+envsRead :: Envs -> String -> Val
 envsRead envs id =
-  let env = (envsGet envs id) in
-    case env of
-      Nothing -> Nothing
-      Just (_, (_,hst), _) -> (envsRead hst id) where
-        envsRead [] id = Nothing
-        envsRead ((id',val'):hst') id = if id==id' then (Just val') else (envsRead hst' id)
+  let (_, (_,hst), _) = (envsGet envs id) in
+      (envsRead' hst id) where
+        envsRead' [] id = error "envsRead: uninitialized variable"
+        envsRead' ((id',val'):hst') id = if id==id' then val' else (envsRead' hst' id)
 
 -- Expressions.
 
@@ -58,28 +53,19 @@ data Exp
   | Sub Exp Exp
   deriving (Eq,Show)
 
-evalExp1 :: Envs -> Exp -> (Val->Val) -> (Maybe Val)
-evalExp1 envs e op =
-  let v = (evalExp envs e) in
-    case v of
-      Nothing -> Nothing
-      (Just v') -> Just (op v')
+evalExp1 :: Envs -> Exp -> (Val->Val) -> Val
+evalExp1 envs e op = op (evalExp envs e)
 
-evalExp2 :: Envs -> Exp -> Exp -> (Val->Val->Val) -> (Maybe Val)
+evalExp2 :: Envs -> Exp -> Exp -> (Val->Val->Val) -> Val
 evalExp2 envs e1 e2 op =
   let v1 = (evalExp envs e1)
       v2 = (evalExp envs e2) in
-    case v1 of
-      Nothing -> Nothing
-      (Just v1') ->
-        case v2 of
-          Nothing -> Nothing
-          (Just v2') -> Just (op v1' v2')
+           (op v1 v2)
 
-evalExp :: Envs -> Exp -> (Maybe Val)
+evalExp :: Envs -> Exp -> Val
 evalExp envs e =
   case e of
-    Const val -> (Just val)
+    Const val -> val
     Read id -> envsRead envs id
     Umn e -> evalExp1 envs e negate
     Add e1 e2 -> evalExp2 envs e1 e2 (+)
@@ -133,145 +119,113 @@ isBlocked n p = False           -- otherwise
 
 -- Obtains the body of all active Fin statements in program.
 clear :: Stmt -> Stmt
-clear p = if isJust p' then fromJust p' else Nop
-  where p' = clear' p
-
-clear' :: Stmt -> Maybe Stmt
-clear' (AwaitExt e) = Nothing
-clear' (AwaitInt e) = Nothing
-clear' (Every e p) = Nothing
-clear' (CanRun n) = Nothing
-clear' (Fin p) = Just p
-clear' (Seq p q) = clear' p
-clear' (Loop' p q) = clear' p
-clear' (And' p q)
-  | isNothing p' = q'
-  | isNothing q' = p'
-  | otherwise = Just (Seq (fromJust p') (fromJust q'))
-  where p' = clear' p; q' = clear' q
-clear' (Or' p q)
-  | isNothing p' = q'
-  | isNothing q' = p'
-  | otherwise = Just (Seq (fromJust p') (fromJust q'))
-  where p' = clear' p; q' = clear' q
-clear' p = Nothing              -- otherwise
+clear (AwaitExt _) = Nop
+clear (AwaitInt _) = Nop
+clear (Every _ _) = Nop
+clear (CanRun _) = Nop
+clear (Fin p) = p
+clear (Seq p _) = clear p
+clear (Loop' p _) = clear p
+clear (And' p q) = (Seq (clear p) (clear q))
+clear (Or' p q) = (Seq (clear p) (clear q))
+clear _ = error "clear: invalid clear"
 
 -- Helper function used by nst1 in the *-adv rules.
-nst1Adv :: Desc -> (Stmt -> Stmt) -> Maybe Desc
-nst1Adv d f
-  = let res = (nst1 d) in
-      case res of
-        Nothing -> Nothing
-        otherwise -> let (p, n, e, envs) = (fromJust res) in
-                       Just (f p, n, e, envs)
+nst1Adv :: Desc -> (Stmt -> Stmt) -> Desc
+nst1Adv d f = (f p, n, e, envs) where
+  (p,n,e,envs) = (nst1 d)
 
 -- Single nested transition.
-nst1 :: Desc -> Maybe Desc
+nst1 :: Desc -> Desc
 
 nst1 (Block p, n, Nothing, envs)      -- block-expd
-  = Just (Seq p (Envs' (length envs)), n, Nothing, (newEnv : envs))
+  = (Seq p (Envs' (length envs)), n, Nothing, (newEnv : envs))
 
 nst1 (Envs' lvl, n, Nothing, envs)  -- envs'
-  = Just (Nop, n, Nothing, drop ((length envs)-lvl) envs)
+  = (Nop, n, Nothing, drop ((length envs)-lvl) envs)
 
 nst1 (Var id, n, Nothing, envs)       -- var
-  = Just (Nop, n, Nothing, (envsDcl envs id))
+  = (Nop, n, Nothing, (envsDcl envs id))
 
 nst1 (Write id exp, n, Nothing, envs) -- write
-  = let v = (evalExp envs exp) in
-      case v of
-        Nothing -> Nothing
-        (Just v') ->
-          let envs' = (envsWrite envs id v') in
-            case envs' of
-              Nothing -> Nothing
-              (Just envs'') -> Just (Nop, n, Nothing, envs'')
+  = (Nop, n, Nothing, (envsWrite envs id (evalExp envs exp)))
 
 nst1 (EmitInt e, n, Nothing, envs)    -- emit-int
-  = Just (CanRun n, n, Just e, envs)
+  = (CanRun n, n, Just e, envs)
 
 nst1 (CanRun m, n, Nothing, envs)     -- can-run
-  | m == n = Just (Nop, n, Nothing, envs)
-  | otherwise = Nothing
+  | m == n = (Nop, n, Nothing, envs)
+  | otherwise = error "nst1: cannot advance"
 
 nst1 (Seq Nop q, n, Nothing, envs)    -- seq-nop
-  = Just (q, n, Nothing, envs)
+  = (q, n, Nothing, envs)
 
 nst1 (Seq Break q, n, Nothing, envs)  -- seq-brk
-  = Just (Break, n, Nothing, envs)
+  = (Break, n, Nothing, envs)
 
 nst1 (Seq p q, n, Nothing, envs)      -- seq-adv
   = nst1Adv (p, n, Nothing, envs) (\p' -> Seq p' q)
 
 nst1 (If exp p q, n, Nothing, envs)   -- if-true/false
-  = let v = (evalExp envs exp) in
-      case v of
-        Nothing -> Nothing
-        (Just v') -> if v' /= 0 then Just (p, n, Nothing, envs)
-                                else Just (q, n, Nothing, envs)
+  = if v /= 0 then (p, n, Nothing, envs)
+              else (q, n, Nothing, envs)
+    where v = (evalExp envs exp)
 
 nst1 (Loop p, n, Nothing, envs)       -- loop-expd
-  = Just (Seq (Loop' p p) (Envs' (length envs)), n, Nothing, envs)
+  = (Seq (Loop' p p) (Envs' (length envs)), n, Nothing, envs)
 
 nst1 (Loop' Nop q, n, Nothing, envs)  -- loop-nop
-  = Just (Loop q, n, Nothing, envs)
+  = (Loop q, n, Nothing, envs)
 
 nst1 (Loop' Break q, n, Nothing, envs) -- loop-brk
-  = Just (Nop, n, Nothing, envs)
+  = (Nop, n, Nothing, envs)
 
 nst1 (Loop' p q, n, Nothing, envs)    -- loop-adv
   = nst1Adv (p, n, Nothing, envs) (\p' -> Loop' p' q)
 
 nst1 (And p q, n, Nothing, envs)      -- and-expd
-  = Just (And' p (Seq (CanRun n) q), n, Nothing, envs)
+  = (And' p (Seq (CanRun n) q), n, Nothing, envs)
 
 nst1 (And' Nop q, n, Nothing, envs)   -- and-nop1
-  = Just (q, n, Nothing, envs)
+  = (q, n, Nothing, envs)
 
 nst1 (And' Break q, n, Nothing, envs) -- and brk1
-  = Just (Seq (clear q) Break, n, Nothing, envs)
+  = (Seq (clear q) Break, n, Nothing, envs)
 
 nst1 (And' p Nop, n, Nothing, envs)   -- and-nop2
   | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> And' p' Nop)
-  | otherwise = Just (p, n, Nothing, envs)
+  | otherwise = (p, n, Nothing, envs)
 
 nst1 (And' p Break, n, Nothing, envs) -- and-brk2
   | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> And' p' Break)
-  | otherwise = Just (Seq (clear p) Break, n, Nothing, envs)
+  | otherwise = (Seq (clear p) Break, n, Nothing, envs)
 
 nst1 (And' p q, n, Nothing, envs)     -- and-adv
   | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> And' p' q)
   | otherwise = nst1Adv (q, n, Nothing, envs) (\q' -> And' p q')
 
 nst1 (Or p q, n, Nothing, envs)       -- or-expd
-  = Just (Seq (Or' p (Seq (CanRun n) q)) (Envs' (length envs)), n, Nothing, envs)
+  = (Seq (Or' p (Seq (CanRun n) q)) (Envs' (length envs)), n, Nothing, envs)
 
 nst1 (Or' Nop q, n, Nothing, envs)    -- or-nop1
-  = Just (clear q, n, Nothing, envs)
+  = (clear q, n, Nothing, envs)
 
 nst1 (Or' Break q, n, Nothing, envs)  -- or-brk1
-  = Just (Seq (clear q) Break, n, Nothing, envs)
+  = (Seq (clear q) Break, n, Nothing, envs)
 
 nst1 (Or' p Nop, n, Nothing, envs)    -- or-nop2
   | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> Or' p' Nop)
-  | otherwise = Just (clear p, n, Nothing, envs)
+  | otherwise = (clear p, n, Nothing, envs)
 
 nst1 (Or' p Break, n, Nothing, envs)
   | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> Or' p' Break)
-  | otherwise = Just (Seq (clear p) Break, n, Nothing, envs)
+  | otherwise = (Seq (clear p) Break, n, Nothing, envs)
 
 nst1 (Or' p q, n, Nothing, envs)      -- or-adv
   | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> Or' p' q)
   | otherwise = nst1Adv (q, n, Nothing, envs) (\q' -> Or' p q')
 
-nst1 (p, n, e, envs) = Nothing        -- default: none of the previous
-
--- Zero or more nested transitions.
-nst :: Desc -> Desc
-nst d
-  | isNothing d' = d
-  | otherwise = nst (fromJust d')
-  where d' = nst1 d
+nst1 (p, n, e, envs) = error "nst1: cannot advance"
 
 -- Tests whether the description is nst-irreducible.
 -- CHECK: nst should only produce nst-irreducible descriptions.
@@ -280,6 +234,12 @@ isNstIrreducible (Nop, n, e, envs) = True
 isNstIrreducible (Break, n, e, envs) = True
 isNstIrreducible (p, n, Just e, envs) = True
 isNstIrreducible (p, n, Nothing, envs) = isBlocked n p
+
+-- Zero or more nested transitions.
+nsts :: Desc -> Desc
+nsts d
+  | isNstIrreducible d = d
+  | otherwise = nsts (nst1 d)
 
 ----------------------------------------------------------------------------
 -- Outermost transition
@@ -296,38 +256,27 @@ bcast e (Or' p q) = Or' (bcast e p) (bcast e q)
 bcast e p = p -- otherwise
 
 -- Single outermost transition.
-out1 :: Desc -> Maybe Desc
-out1 (p, n, Just e, envs) = Just (bcast e p, n+1, Nothing, envs)
+out1 :: Desc -> Desc
+out1 (p, n, Just e, envs) = (bcast e p, n+1, Nothing, envs)
 out1 (p, n, Nothing, envs)
-  | n > 0 && isNstIrreducible (p, n, Nothing, envs) = Just (p, n - 1, Nothing, envs)
-  | otherwise = Nothing
+  | n>0 && isNstIrreducible (p,n,Nothing,envs) = (p, n-1, Nothing, envs)
+  | otherwise = error "out1: cannot advance"
 
--- Zero or more outermost transitions.
-out :: Desc -> Desc
-out d
-  | isNothing d' = d
-  | otherwise = out (fromJust d')
-  where d' = out1 d
-
+nsts_out1_s :: Desc -> Desc
+nsts_out1_s (p,n,e,envs)
+  | n==0 = (p,n,e,envs)
+  | n>0 = nsts_out1_s (out1 (nsts (p,n,e,envs)))
+  
 -- TODO: Define pot.
 -- TODO: Define rank.
 
 ----------------------------------------------------------------------------
--- Eval
+-- Reaction
 
--- TODO: Define eval1 as in the paper (via nst+out+rank).
--- eval1 :: Desc -> Desc
+reaction :: (Stmt,Evt,Envs) -> (Stmt,Envs)
+reaction (p,e,envs) = (p',envs') where
+  (p',_,_,envs') = nsts_out1_s (out1 (p,0,(Just e),envs))
 
--- Alternative (more direct) definition of eval1.
--- CHECK: eval1/2 should only produce (nst+out)-irreducible descriptions.
--- CHECK: eval1/2 should be equivalent.
-eval2 :: Desc -> Desc
-eval2 (p, n, e, envs)
-  | isJust e' = eval2 (bcast (fromJust e') p', n+1, Nothing, envs)
-  | n' > 0 = eval2 (p', n'-1, Nothing, envs)
-  | otherwise = (p', n', e', envs')
-  where (p', n', e', envs') = nst (p, n, e, envs)
-
-evalProg :: Stmt -> (Maybe Val)
+evalProg :: Stmt -> Val
 evalProg prog = envsRead envs "ret" where
-  (_,_,_,envs) = eval2 (prog, 0, Nothing, [newEnv])
+  (_,envs) = reaction (prog,0,[newEnv])
