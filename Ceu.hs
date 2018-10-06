@@ -90,29 +90,13 @@ envsRead envs id = envsRead' hst id
           | id == id' = val'    -- found
           | otherwise = envsRead' hst' id
 
-----------------------------------------------------------------------------
--- Expression
-
--- Evaluates unary operator.
-evalExp1 :: Envs -> Exp -> (Val->Val) -> Val
-evalExp1 envs e op = op (evalExp envs e)
-
--- Evaluates binary operator.
-evalExp2 :: Envs -> Exp -> Exp -> (Val->Val->Val) -> Val
-evalExp2 envs e1 e2 op =
-  let v1 = (evalExp envs e1)
-      v2 = (evalExp envs e2) in
-           (op v1 v2)
-
 -- Evaluates expression in environment.
-evalExp :: Envs -> Exp -> Val
-evalExp envs e =
-  case e of
-    Const val -> val
-    Read id -> envsRead envs id
-    Umn e -> evalExp1 envs e negate
-    Add e1 e2 -> evalExp2 envs e1 e2 (+)
-    Sub e1 e2 -> evalExp2 envs e1 e2 (-)
+envsEval :: Envs -> Exp -> Val
+envsEval envs (Const val) = val
+envsEval envs (Read id) = envsRead envs id
+envsEval envs (Umn e) = negate (envsEval envs e)
+envsEval envs (Add e1 e2) = (envsEval envs e1) + (envsEval envs e2)
+envsEval envs (Sub e1 e2) = (envsEval envs e1) - (envsEval envs e2)
 
 ----------------------------------------------------------------------------
 -- Nested transition
@@ -164,7 +148,7 @@ nst1 (Var id, n, Nothing, envs)                 -- var
   = (Nop, n, Nothing, (envsDcl envs id))
 
 nst1 (Write id exp, n, Nothing, envs)           -- write
-  = (Nop, n, Nothing, (envsWrite envs id (evalExp envs exp)))
+  = (Nop, n, Nothing, (envsWrite envs id (envsEval envs exp)))
 
 nst1 (EmitInt e, n, Nothing, envs)              -- emit-int (pg 6)
   = (CanRun n, n, Just e, envs)
@@ -185,7 +169,7 @@ nst1 (Seq p q, n, Nothing, envs)      -- seq-adv (pg 6)
 nst1 (If exp p q, n, Nothing, envs)   -- if-true/false (pg 6)
   | v /= 0 = (p, n, Nothing, envs)
   | otherwise = (q, n, Nothing, envs)
-  where v = (evalExp envs exp)
+  where v = (envsEval envs exp)
 
 nst1 (Loop p, n, Nothing, envs)       -- loop-expd (pg 7)
   = (Seq (Loop' p p) (Envs' (length envs)), n, Nothing, envs)

@@ -19,93 +19,122 @@ main :: IO ()
 main = hspec $ do
 
   -- Env/Envs --------------------------------------------------------------
-  describe "envsDcl envs id" $ do
-    it "fail: envs == [] (exception)" $
-      evaluate (envsDcl [] "x")
-      `shouldThrow` errorCall "envsDcl: bad environment"
+  describe "Env/Envs" $ do
+    describe "envsDcl envs id" $ do
+      it "fail: envs == [] (exception)" $
+        evaluate (envsDcl [] "x")
+        `shouldThrow` errorCall "envsDcl: bad environment"
 
-    it "pass: 1st declaration" $
-      envsDcl [newEnv] "x" `shouldBe` [(["x"],[])]
+      it "pass: 1st declaration" $
+        envsDcl [newEnv] "x" `shouldBe` [(["x"],[])]
 
-    it "pass: 2nd declaration" $
-      envsDcl [(["x"],[])] "y" `shouldBe` [(["y","x"],[])]
+      it "pass: 2nd declaration" $
+        envsDcl [(["x"],[])] "y" `shouldBe` [(["y","x"],[])]
 
-    it "pass: redeclaration" $  -- CHECK THIS! --
-      envsDcl [(["y","x"],[])] "x" `shouldBe` [(["x","y","x"],[])]
+      it "pass: redeclaration" $  -- CHECK THIS! --
+        envsDcl [(["y","x"],[])] "x" `shouldBe` [(["x","y","x"],[])]
 
-    it "pass: redeclaration in inner env" $
-      envsDcl (newEnv:[(["x"],[("x",0)])]) "x"
-      `shouldBe` [(["x"],[]),(["x"],[("x",0)])]
+      it "pass: redeclaration in inner env" $
+        envsDcl (newEnv:[(["x"],[("x",0)])]) "x"
+        `shouldBe` [(["x"],[]),(["x"],[("x",0)])]
 
-  describe "envsGet envs id" $ do
-    it "fail: envs == [] (exception)" $
-      evaluate (envsGet [] "x")
-      `shouldThrow` errorCall "envsGet: bad environment"
+    describe "envsGet envs id" $ do
+      it "fail: envs == [] (exception)" $
+        evaluate (envsGet [] "x")
+        `shouldThrow` errorCall "envsGet: bad environment"
 
-    it "fail: undeclared variable (exception)" $
-      evaluate (envsGet [newEnv] "x")
-      `shouldThrow` errorCall "envsGet: undeclared variable"
+      it "fail: undeclared variable (exception)" $
+        evaluate (envsGet [newEnv] "x")
+        `shouldThrow` errorCall "envsGet: undeclared variable"
 
-    it "pass: find in simple env" $
-      envsGet [(["x"],[("x",0)])] "x" -- CHECK THIS! --
-      `shouldBe` ([],(["x"],[("x",0)]),[])
+      it "pass: find in simple env" $
+        envsGet [(["x"],[("x",0)])] "x" -- CHECK THIS! --
+        `shouldBe` ([],(["x"],[("x",0)]),[])
 
-    it "pass: find in complex env" $
-      let envs = [(["z"],[]),
-                  (["y"],[("y",1)]),
-                  (["y"],[("y",0)]),
-                  (["x"],[])] in
-        envsGet envs "y"
-        `shouldBe` ([(["z"],[])],
-                     (["y"],[("y",1)]),
-                     [(["y"],[("y",0)]),(["x"],[])])
+      it "pass: find in complex env" $
+        let envs = [(["z"],[]),
+                    (["y"],[("y",1)]),
+                    (["y"],[("y",0)]),
+                    (["x"],[])] in
+          envsGet envs "y"
+          `shouldBe` ([(["z"],[])],
+                      (["y"],[("y",1)]),
+                      [(["y"],[("y",0)]),(["x"],[])])
 
-  describe "envsWrite envs id val" $ do
-    it "fail: envs == [] (exception)" $
-      evaluate (envsWrite [] "x" 0)
-      `shouldThrow` errorCall "envsGet: bad environment"
+    describe "envsWrite envs id val" $ do
+      it "fail: envs == [] (exception)" $
+        evaluate (envsWrite [] "x" 0)
+        `shouldThrow` errorCall "envsGet: bad environment"
 
-    it "fail: undeclared variable (exception)" $
-      evaluate (envsWrite [newEnv] "x" 0)
-      `shouldThrow` errorCall "envsGet: undeclared variable"
+      it "fail: undeclared variable (exception)" $
+        evaluate (envsWrite [newEnv] "x" 0)
+        `shouldThrow` errorCall "envsGet: undeclared variable"
 
-    it "pass: 1st write" $
-      envsWrite [(["x"],[])] "x" 0 `shouldBe` [(["x"],[("x",0)])]
+      it "pass: 1st write" $
+        envsWrite [(["x"],[])] "x" 0 `shouldBe` [(["x"],[("x",0)])]
 
-    it "pass: 2st write" $
-      envsWrite [(["x"],[("x",0)])] "x" 1
-      `shouldBe` [(["x"],[("x",1),("x",0)])]
+      it "pass: 2st write" $
+        envsWrite [(["x"],[("x",0)])] "x" 1
+        `shouldBe` [(["x"],[("x",1),("x",0)])]
 
-    it "pass: 1st write in inner env" $
-      envsWrite [newEnv,(["x"],[]),(["x"],[("x",0)])] "x" 1
-      `shouldBe` [newEnv,(["x"],[("x",1)]),(["x"],[("x",0)])]
+      it "pass: 1st write in inner env" $
+        envsWrite [newEnv,(["x"],[]),(["x"],[("x",0)])] "x" 1
+        `shouldBe` [newEnv,(["x"],[("x",1)]),(["x"],[("x",0)])]
 
-    it "pass: 2nd write in inner env" $
-      envsWrite [newEnv,(["x"],[("x",1)]),(["x"],[("x",0)])] "x" 2
-      `shouldBe` [newEnv,(["x"],[("x",2),("x",1)]),(["x"],[("x",0)])]
+      it "pass: 2nd write in inner env" $
+        envsWrite [newEnv,(["x"],[("x",1)]),(["x"],[("x",0)])] "x" 2
+        `shouldBe` [newEnv,(["x"],[("x",2),("x",1)]),(["x"],[("x",0)])]
 
-  describe "envsRead envs id" $ do
-    it "fail: envs == [] (exception)" $
-      evaluate (envsRead [] "x")
-      `shouldThrow` errorCall "envsGet: bad environment"
+    describe "envsRead envs id" $ do
+      it "fail: envs == [] (exception)" $
+        evaluate (envsRead [] "x")
+        `shouldThrow` errorCall "envsGet: bad environment"
 
-    it "fail: undeclared variable (exception)" $
-      evaluate (envsRead [newEnv] "x")
-      `shouldThrow` errorCall "envsGet: undeclared variable"
+      it "fail: undeclared variable (exception)" $
+        evaluate (envsRead [newEnv] "x")
+        `shouldThrow` errorCall "envsGet: undeclared variable"
 
-    it "fail: uninitialized variable (exception)" $
-      evaluate (envsRead [(["x"],[])] "x")
-      `shouldThrow` errorCall "envsRead: uninitialized variable"
+      it "fail: uninitialized variable (exception)" $
+        evaluate (envsRead [(["x"],[])] "x")
+        `shouldThrow` errorCall "envsRead: uninitialized variable"
 
-    it "pass: read in simple env" $
-      envsRead [(["x"],[("x",0)])] "x" `shouldBe` 0
+      it "pass: read in simple env" $
+        envsRead [(["x"],[("x",0)])] "x" `shouldBe` 0
 
-    it "pass: read in complex env" $
-      let envs = [newEnv,
-                   (["y"],[]),
-                   (["y","x"],[("y",1),("y",0),("x",1),("x",0)]),
-                   (["x"],[("x",99)])] in
-        envsRead envs "x" `shouldBe` 1
+      it "pass: read in complex env" $
+        let envs = [newEnv,
+                    (["y"],[]),
+                    (["y","x"],[("y",1),("y",0),("x",1),("x",0)]),
+                    (["x"],[("x",99)])] in
+          envsRead envs "x" `shouldBe` 1
+
+    describe "envsEval envs exp" $ do
+      it "pass: envs == [] && exp == (Const _)" $
+        envsEval [] (Const 0) `shouldBe` 0 -- CHECK THIS! --
+
+      it "fail: envs == [] && exp != (Const _) (exception)" $
+        evaluate (envsEval [] (Read "x"))
+        `shouldThrow` errorCall "envsGet: bad environment"
+
+      it "fail: undeclared variable (exception)" $
+        evaluate (envsEval [newEnv] (Read "x"))
+        `shouldThrow` errorCall "envsGet: undeclared variable"
+
+      it "fail: uninitialized variable (exception)" $
+        evaluate (envsEval [(["x"],[])] (Read "x"))
+        `shouldThrow` errorCall "envsRead: uninitialized variable"
+
+      it "pass: eval in simple env" $
+        let envs = [(["x","y"],[("x",1),("y",2)])] in
+          envsEval envs (((Read "x") `Sub` Const 3) `Add` Umn (Read "y"))
+          `shouldBe` (-4)
+
+      it "pass: eval in complex env" $
+        let envs = [(["y"],[("y",2)]),
+                    (["y","x"],[("y",0),("x",1)]),
+                     (["x"],[("x",0)])] in
+          envsEval envs (((Read "x") `Sub` Const 3) `Add` Umn (Read "y"))
+          `shouldBe` (-4)
 
   -- nst1 ------------------------------------------------------------------
   describe "nst1" $ do
