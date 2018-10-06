@@ -1,7 +1,6 @@
 module Ceu where
 
 import Data.Maybe
-import Control.DeepSeq
 
 -- Event.
 type Evt = Int
@@ -49,15 +48,6 @@ data Stmt
   | Envs' Int                   -- reset environment
   | Nop
   deriving (Eq, Show)
-
--- TODO: Complete this (and maybe move to CeuSpec.hs).
-instance NFData Stmt where
-  rnf Nop = ()
-  rnf (AwaitInt e) = ()
-  rnf (Seq p q) = rnf p `seq` rnf q
-  rnf (Loop' p q) = rnf p
-  rnf (And' p q) = rnf p `seq` rnf q
-  rnf (Or' p q) = rnf p `seq` rnf q
 
 -- Description (pg 6).
 type Desc = (Stmt, Lvl, Maybe Evt, Envs)
@@ -155,7 +145,7 @@ clear _ = error "clear: invalid clear"
 -- Helper function used by nst1 in the *-adv rules.
 nst1Adv :: Desc -> (Stmt -> Stmt) -> Desc
 nst1Adv d f = (f p, n, e, envs) where
-  (p,n,e,envs) = (nst1 d)
+  (p, n, e, envs) = (nst1 d)
 
 -- Single nested transition.
 -- (pg 6)
@@ -190,9 +180,9 @@ nst1 (Seq p q, n, Nothing, envs)      -- seq-adv (pg 6)
   = nst1Adv (p, n, Nothing, envs) (\p' -> Seq p' q)
 
 nst1 (If exp p q, n, Nothing, envs)   -- if-true/false (pg 6)
-  = if v /= 0 then (p, n, Nothing, envs)
-              else (q, n, Nothing, envs)
-    where v = (evalExp envs exp)
+  | v /= 0 = (p, n, Nothing, envs)
+  | otherwise = (q, n, Nothing, envs)
+  where v = (evalExp envs exp)
 
 nst1 (Loop p, n, Nothing, envs)       -- loop-expd (pg 7)
   = (Seq (Loop' p p) (Envs' (length envs)), n, Nothing, envs)

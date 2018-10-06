@@ -1,9 +1,19 @@
 module CeuSpec where
 
-import Test.Hspec
-import Control.Exception
-import Control.DeepSeq
 import Ceu
+import Control.DeepSeq
+import Control.Exception
+import Test.Hspec
+
+-- Declare Stmt as a datatype that can be fully evaluated.
+-- (This is required by some of the `shouldThrow` calls below.)
+instance NFData Stmt where
+  rnf Nop = ()
+  rnf (AwaitInt e) = ()
+  rnf (Seq p q) = rnf p `seq` rnf q
+  rnf (Loop' p q) = rnf p
+  rnf (And' p q) = rnf p `seq` rnf q
+  rnf (Or' p q) = rnf p `seq` rnf q
 
 main :: IO ()
 main = hspec $ do
