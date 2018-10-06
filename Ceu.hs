@@ -71,7 +71,7 @@ evalExp envs e =
     Add e1 e2 -> evalExp2 envs e1 e2 (+)
     Sub e1 e2 -> evalExp2 envs e1 e2 (-)
 
--- Program.
+-- Program (pg 5).
 data Stmt
   = Block Stmt
   | Var ID
@@ -95,7 +95,7 @@ data Stmt
   | Nop
   deriving (Eq,Show)
 
--- Description.
+-- Description (pg 6).
 type Desc = (Stmt, Lvl, Maybe Evt, Envs)
 
 ----------------------------------------------------------------------------
@@ -105,6 +105,7 @@ type Desc = (Stmt, Lvl, Maybe Evt, Envs)
 -- Nested transition
 
 -- Tests whether program is blocked at the given stack level.
+-- (pg 8, fig 4.ii)
 isBlocked :: Lvl -> Stmt -> Bool
 isBlocked n (AwaitExt e) = True
 isBlocked n (AwaitInt e) = True
@@ -118,6 +119,7 @@ isBlocked n (Or' p q) = (isBlocked n p) && (isBlocked n q)
 isBlocked n p = False           -- otherwise
 
 -- Obtains the body of all active Fin statements in program.
+-- (pg 8, fig 4.iii)
 clear :: Stmt -> Stmt
 clear (AwaitExt _) = Nop
 clear (AwaitInt _) = Nop
@@ -136,6 +138,7 @@ nst1Adv d f = (f p, n, e, envs) where
   (p,n,e,envs) = (nst1 d)
 
 -- Single nested transition.
+-- (pg 6)
 nst1 :: Desc -> Desc
 
 nst1 (Block p, n, Nothing, envs)      -- block-expd
@@ -150,70 +153,70 @@ nst1 (Var id, n, Nothing, envs)       -- var
 nst1 (Write id exp, n, Nothing, envs) -- write
   = (Nop, n, Nothing, (envsWrite envs id (evalExp envs exp)))
 
-nst1 (EmitInt e, n, Nothing, envs)    -- emit-int
+nst1 (EmitInt e, n, Nothing, envs)    -- emit-int (pg 6)
   = (CanRun n, n, Just e, envs)
 
-nst1 (CanRun m, n, Nothing, envs)     -- can-run
+nst1 (CanRun m, n, Nothing, envs)     -- can-run (pg 6)
   | m == n = (Nop, n, Nothing, envs)
   | otherwise = error "nst1: cannot advance"
 
-nst1 (Seq Nop q, n, Nothing, envs)    -- seq-nop
+nst1 (Seq Nop q, n, Nothing, envs)    -- seq-nop (pg 6)
   = (q, n, Nothing, envs)
 
-nst1 (Seq Break q, n, Nothing, envs)  -- seq-brk
+nst1 (Seq Break q, n, Nothing, envs)  -- seq-brk (pg 6)
   = (Break, n, Nothing, envs)
 
-nst1 (Seq p q, n, Nothing, envs)      -- seq-adv
+nst1 (Seq p q, n, Nothing, envs)      -- seq-adv (pg 6)
   = nst1Adv (p, n, Nothing, envs) (\p' -> Seq p' q)
 
-nst1 (If exp p q, n, Nothing, envs)   -- if-true/false
+nst1 (If exp p q, n, Nothing, envs)   -- if-true/false (pg 6)
   = if v /= 0 then (p, n, Nothing, envs)
               else (q, n, Nothing, envs)
     where v = (evalExp envs exp)
 
-nst1 (Loop p, n, Nothing, envs)       -- loop-expd
+nst1 (Loop p, n, Nothing, envs)       -- loop-expd (pg 7)
   = (Seq (Loop' p p) (Envs' (length envs)), n, Nothing, envs)
 
-nst1 (Loop' Nop q, n, Nothing, envs)  -- loop-nop
+nst1 (Loop' Nop q, n, Nothing, envs)  -- loop-nop (pg 7)
   = (Loop q, n, Nothing, envs)
 
-nst1 (Loop' Break q, n, Nothing, envs) -- loop-brk
+nst1 (Loop' Break q, n, Nothing, envs) -- loop-brk (pg 7)
   = (Nop, n, Nothing, envs)
 
-nst1 (Loop' p q, n, Nothing, envs)    -- loop-adv
+nst1 (Loop' p q, n, Nothing, envs)    -- loop-adv (pg 7)
   = nst1Adv (p, n, Nothing, envs) (\p' -> Loop' p' q)
 
-nst1 (And p q, n, Nothing, envs)      -- and-expd
+nst1 (And p q, n, Nothing, envs)      -- and-expd (pg 7)
   = (And' p (Seq (CanRun n) q), n, Nothing, envs)
 
-nst1 (And' Nop q, n, Nothing, envs)   -- and-nop1
+nst1 (And' Nop q, n, Nothing, envs)   -- and-nop1 (pg 7)
   = (q, n, Nothing, envs)
 
-nst1 (And' Break q, n, Nothing, envs) -- and brk1
+nst1 (And' Break q, n, Nothing, envs) -- and brk1 (pg 7)
   = (Seq (clear q) Break, n, Nothing, envs)
 
-nst1 (And' p Nop, n, Nothing, envs)   -- and-nop2
+nst1 (And' p Nop, n, Nothing, envs)   -- and-nop2 (pg 7)
   | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> And' p' Nop)
   | otherwise = (p, n, Nothing, envs)
 
-nst1 (And' p Break, n, Nothing, envs) -- and-brk2
+nst1 (And' p Break, n, Nothing, envs) -- and-brk2 (pg 7)
   | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> And' p' Break)
   | otherwise = (Seq (clear p) Break, n, Nothing, envs)
 
-nst1 (And' p q, n, Nothing, envs)     -- and-adv
+nst1 (And' p q, n, Nothing, envs)     -- and-adv (pg 7)
   | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> And' p' q)
   | otherwise = nst1Adv (q, n, Nothing, envs) (\q' -> And' p q')
 
-nst1 (Or p q, n, Nothing, envs)       -- or-expd
+nst1 (Or p q, n, Nothing, envs)       -- or-expd (pg 7)
   = (Seq (Or' p (Seq (CanRun n) q)) (Envs' (length envs)), n, Nothing, envs)
 
-nst1 (Or' Nop q, n, Nothing, envs)    -- or-nop1
+nst1 (Or' Nop q, n, Nothing, envs)    -- or-nop1 (pg 7)
   = (clear q, n, Nothing, envs)
 
-nst1 (Or' Break q, n, Nothing, envs)  -- or-brk1
+nst1 (Or' Break q, n, Nothing, envs)  -- or-brk1 (pg 7)
   = (Seq (clear q) Break, n, Nothing, envs)
 
-nst1 (Or' p Nop, n, Nothing, envs)    -- or-nop2
+nst1 (Or' p Nop, n, Nothing, envs)    -- or-nop2 (pg 7)
   | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> Or' p' Nop)
   | otherwise = (clear p, n, Nothing, envs)
 
@@ -221,7 +224,7 @@ nst1 (Or' p Break, n, Nothing, envs)
   | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> Or' p' Break)
   | otherwise = (Seq (clear p) Break, n, Nothing, envs)
 
-nst1 (Or' p q, n, Nothing, envs)      -- or-adv
+nst1 (Or' p q, n, Nothing, envs)      -- or-adv (pg 7)
   | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> Or' p' q)
   | otherwise = nst1Adv (q, n, Nothing, envs) (\q' -> Or' p q')
 
@@ -236,6 +239,7 @@ isNstIrreducible (p, n, Just e, envs) = True
 isNstIrreducible (p, n, Nothing, envs) = isBlocked n p
 
 -- Zero or more nested transitions.
+-- (pg 6)
 nsts :: Desc -> Desc
 nsts d
   | isNstIrreducible d = d
@@ -245,6 +249,7 @@ nsts d
 -- Outermost transition
 
 -- Awakes all trails waiting for the given event.
+-- (pg 8, fig 4.i)
 bcast :: Evt -> Stmt -> Stmt
 bcast e (AwaitExt e') = if e == e' then Nop else AwaitExt e'
 bcast e (AwaitInt e') = if e == e' then Nop else AwaitInt e'
@@ -255,13 +260,24 @@ bcast e (And' p q) = And' (bcast e p) (bcast e q)
 bcast e (Or' p q) = Or' (bcast e p) (bcast e q)
 bcast e p = p -- otherwise
 
--- Single outermost transition.
-out1 :: Desc -> Desc
-out1 (p, n, Just e, envs) = (bcast e p, n+1, Nothing, envs)
-out1 (p, n, Nothing, envs)
-  | n>0 && isNstIrreducible (p,n,Nothing,envs) = (p, n-1, Nothing, envs)
-  | otherwise = error "out1: cannot advance"
+-- (pg 6)
+outPush :: Desc -> Desc
+outPush (_, _, Nothing, _)   = error "outPush: missing event"
+outPush (p, n, Just e, envs) = (bcast e p, n+1, Nothing, envs)
 
+-- (pg 6)
+outPop :: Desc -> Desc
+outPop (p, n, Nothing, envs)
+  | n>0 && isNstIrreducible (p,n,Nothing,envs) = (p, n-1, Nothing, envs)
+  | otherwise = error "outPop: cannot advance"
+
+-- Single outermost transition.
+-- (pg 6)
+out1 :: Desc -> Desc
+out1 (p, n, Just e, envs)  = outPush (p, n, Just e, envs)
+out1 (p, n, Nothing, envs) = outPop (p, n, Nothing, envs)
+
+-- (pg 6)
 nsts_out1_s :: Desc -> Desc
 nsts_out1_s (p,n,e,envs)
   | n==0 = (p,n,e,envs)
@@ -273,9 +289,10 @@ nsts_out1_s (p,n,e,envs)
 ----------------------------------------------------------------------------
 -- Reaction
 
+-- (pg 6)
 reaction :: (Stmt,Evt,Envs) -> (Stmt,Envs)
 reaction (p,e,envs) = (p',envs') where
-  (p',_,_,envs') = nsts_out1_s (out1 (p,0,(Just e),envs))
+  (p',_,_,envs') = nsts_out1_s $ outPush (p,0,(Just e),envs)
 
 evalProg :: Stmt -> Val
 evalProg prog = envsRead envs "ret" where

@@ -659,7 +659,7 @@ main = hspec $ do
     describe "pop" $ do
       it "nothing: lvl == 0" $
         evaluate (out1 (Nop, 0, Nothing, [([],[])]))
-        `shouldThrow` errorCall "out1: cannot advance"
+        `shouldThrow` errorCall "outPop: cannot advance"
 
       it "transit: lvl > 0 && nst-irreducible" $
         out1 (Nop, 33, Nothing, [([],[])])
@@ -667,7 +667,7 @@ main = hspec $ do
 
       it "nothing: lvl > 0 && not nst-irreducible" $
         evaluate (out1 (Seq Nop Nop, 1, Nothing, [([],[])]))
-        `shouldThrow` errorCall "out1: cannot advance"
+        `shouldThrow` errorCall "outPop: cannot advance"
 
   -- nsts_out1_s -------------------------------------------------------------------
   describe "nsts_out1_s" $ do
@@ -699,14 +699,12 @@ main = hspec $ do
   describe "reaction" $ do
 
     it "Nop; (AwaitInt 3) && Nop; Fin Nop -> Nop" $
-      let p = (Nop `Seq` AwaitInt 3) `And` (Nop `Seq` Fin Nop) in
-        reaction (p, 3, [([],[])])
-        `shouldBe` (AwaitInt 3 `And'` Fin Nop, [([],[])])
+      reaction ((Nop `Seq` AwaitInt 3) `And` (Nop `Seq` Fin Nop), 3, [([],[])])
+      `shouldBe` (AwaitInt 3 `And'` Fin Nop, [([],[])])
 
     it "Nop; (AwaitInt 3) && Nop; (EmitInt 3) -> Nop" $
-      let p = (Nop `Seq` AwaitInt 3) `And` (Nop `Seq` EmitInt 3) in
-        reaction (p, 1, [([],[])])
-        `shouldBe` (Nop, [([],[])])
+      reaction ((Nop `Seq` AwaitInt 3) `And` (Nop `Seq` EmitInt 3), 1, [([],[])])
+      `shouldBe` (Nop, [([],[])])
 
   -- evalProg -----------------------------------------------------------------
   describe "evalProg" $ do
