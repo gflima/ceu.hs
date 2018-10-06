@@ -66,6 +66,7 @@ envsDcl [] _ = error "envsDcl: bad environment"
 envsDcl (env:envs) id = (id : (fst env), snd env) : envs
 
 -- Finds the first environment containing the given variable.
+-- CHECK: Envs must be nonempty.
 envsGet :: Envs -> String -> (Envs,Env,Envs)
 envsGet [] _ = error "envsGet: bad environment"
 envsGet envs id  = envsGet' [] envs id where
@@ -78,16 +79,16 @@ envsGet envs id  = envsGet' [] envs id where
 -- Writes value to variable in environment.
 envsWrite :: Envs -> String -> Val -> Envs
 envsWrite envs id val = (envs1 ++ [(fst env, (id,val):(snd env))] ++ envs2)
-  where (envs1,env,envs2) = (envsGet envs id)
+  where (envs1,env,envs2) = envsGet envs id
 
 -- Reads variable value from environment.
 envsRead :: Envs -> String -> Val
-envsRead envs id =
-  let (_, (_,hst), _) = (envsGet envs id) in
-      (envsRead' hst id) where
+envsRead envs id = envsRead' hst id
+  where (_, (_,hst), _) = envsGet envs id
         envsRead' [] id = error "envsRead: uninitialized variable"
         envsRead' ((id',val'):hst') id
-          = if id==id' then val' else (envsRead' hst' id)
+          | id == id' = val'    -- found
+          | otherwise = envsRead' hst' id
 
 ----------------------------------------------------------------------------
 -- Expression
