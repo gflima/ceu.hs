@@ -30,12 +30,12 @@ main = hspec $ do
 
     -- write --
     describe "(Write id exp)" $ do
-      it "nothing: x=y undef" $
-        evaluate (nst1 (Write "x" (Read "y"), 0, Nothing, [([],[])]))
+      it "error: x=y undef" $
+        (evaluate . force) (nst1 (Write "x" (Read "y"), 0, Nothing, [newEnv]))
         `shouldThrow` errorCall "envsGet: undeclared variable"
 
-      it "nothing: x=1" $
-        evaluate (nst1 (Write "x" (Const 1), 0, Nothing, [([],[])]))
+      it "error: x=1" $
+        (evaluate . force) (nst1 (Write "x" (Const 1), 0, Nothing, [([],[])]))
         `shouldThrow` errorCall "envsGet: undeclared variable"
 
       it "transit: [x=?] x=1" $
@@ -50,8 +50,8 @@ main = hspec $ do
         nst1 (Seq Nop (Write "x" (Const 1)), 0, Nothing, [([],[])])
         `shouldBe` ((Write "x" (Const 1)), 0, Nothing, [([],[])])
 
-      it "nothing: [x=1] y=x+2" $
-        evaluate (nst1 (Write "y" (Add (Read "x") (Const 2)), 0, Nothing, [(["x"],[("x",1)])]))
+      it "error: [x=1] y=x+2" $
+        (evaluate . force) (nst1 (Write "y" (Read "x" `Add` Const 2), 0, Nothing, [(["x"],[("x",1)])]))
         `shouldThrow` errorCall "envsGet: undeclared variable"
 
       it "transit: [x=1,y=?] y=x+2" $
@@ -72,7 +72,7 @@ main = hspec $ do
         nst1 (EmitInt 1, 3, Nothing, [([],[])])
         `shouldBe` (CanRun 3, 3, Just 1, [([],[])])
 
-      it "nothing: evt /= nil" $
+      it "error: evt /= nil" $
         evaluate (nst1 (EmitInt 1, 3, Just 1, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -86,15 +86,15 @@ main = hspec $ do
         nst1 (CanRun 8, 8, Nothing, [([],[])])
         `shouldBe` (Nop, 8, Nothing, [([],[])])
 
-      it "nothing: n > lvl" $
+      it "error: n > lvl" $
         evaluate (nst1 (CanRun 8, 6, Nothing, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
-      it "nothing: n < lvl" $
+      it "error: n < lvl" $
         evaluate (nst1 (CanRun 8, 12, Nothing, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
-      it "nothing: evt /= nil" $
+      it "error: evt /= nil" $
         evaluate (nst1 (CanRun 0, 0, Just 1, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -108,7 +108,7 @@ main = hspec $ do
         nst1 (Seq Nop Break, 3, Nothing, [([],[])])
         `shouldBe` (Break, 3, Nothing, [([],[])])
 
-      it "nothing: evt /= nil" $
+      it "error: evt /= nil" $
         evaluate (nst1 (Seq Nop Nop, 0, Just 1, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -122,7 +122,7 @@ main = hspec $ do
         nst1 (Seq Break (EmitInt 8), 3, Nothing, [([],[])])
         `shouldBe` (Break, 3, Nothing, [([],[])])
 
-      it "nothing: evt /= nil" $
+      it "error: evt /= nil" $
         evaluate (nst1 (Seq Break Nop, 0, Just 1, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -136,17 +136,17 @@ main = hspec $ do
         nst1 (Seq (Seq (EmitInt 8) Nop) Nop, 3, Nothing, [([],[])])
         `shouldBe` (Seq (Seq (CanRun 3) Nop) Nop, 3, Just 8, [([],[])])
 
-      it "nothing: evt /= nil" $
+      it "error: evt /= nil" $
         evaluate (nst1 (Seq (Seq Nop Nop) Nop, 0, Just 1, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
-      it "nothing: isBlocked p" $
-        evaluate (nst1 (Seq (Fin Nop) Nop, 0, Nothing, [([],[])]))
+      it "error: isBlocked p" $
+        (evaluate . force) (nst1 (Seq (Fin Nop) Nop, 0, Nothing, [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
     -- if --
     describe "(If exp p q)" $ do
-      it "nothing: x undef" $
+      it "error: x undef" $
         evaluate (nst1 (If (Read "x") Nop Break, 0, Nothing, [([],[])]))
         `shouldThrow` errorCall "envsGet: undeclared variable"
 
@@ -169,7 +169,7 @@ main = hspec $ do
         `shouldBe` (Seq (Loop' (Seq Nop (EmitInt 8)) (Seq Nop (EmitInt 8)))
                           (Envs' 1),3,Nothing,[([],[])])
 
-      it "nothing: evt /= nil" $
+      it "error: evt /= nil" $
         evaluate (nst1 (Loop Nop, 0, Just 1, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -187,7 +187,7 @@ main = hspec $ do
         nst1 (Loop' Nop (EmitInt 8), 3, Nothing, [([],[])])
         `shouldBe` (Loop (EmitInt 8), 3, Nothing, [([],[])])
 
-      it "nothing: evt /= nil" $
+      it "error: evt /= nil" $
         evaluate (nst1 (Loop' Nop Nop, 0, Just 1, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -205,7 +205,7 @@ main = hspec $ do
         nst1 (Loop' Break (Seq (EmitInt 8) Nop), 3, Nothing, [([],[])])
         `shouldBe` (Nop, 3, Nothing, [([],[])])
 
-      it "nothing: evt /= nil" $
+      it "error: evt /= nil" $
         evaluate (nst1 (Loop' Break Nop, 0, Just 1, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -223,12 +223,12 @@ main = hspec $ do
         nst1 (Loop' (Seq (EmitInt 8) Nop) Break, 3, Nothing, [([],[])])
         `shouldBe` (Loop' (Seq (CanRun 3) Nop) Break, 3, Just 8, [([],[])])
 
-      it "nothing: evt /= nil" $
+      it "error: evt /= nil" $
         evaluate (nst1 (Loop' (Seq Nop Nop) Nop, 0, Just 1, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
-      it "nothing: isBlocked p" $
-        evaluate (nst1 (Loop' (Fin Nop) Nop, 0, Nothing, [([],[])]))
+      it "error: isBlocked p" $
+        (evaluate . force) (nst1 (Loop' (Fin Nop) Nop, 0, Nothing, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "transit: not (isBlocked p) && isBlocked q" $
@@ -246,7 +246,7 @@ main = hspec $ do
         `shouldBe` (And' (Seq Nop (EmitInt 8))
                           (Seq (CanRun 3) (Seq Nop Nop)), 3, Nothing, [([],[])])
 
-      it "nothing: evt /= nil" $
+      it "error: evt /= nil" $
         evaluate (nst1 (And Nop Nop, 0, Just 1, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -273,7 +273,7 @@ main = hspec $ do
         nst1 (And' Nop (EmitInt 8), 3, Nothing, [([],[])])
         `shouldBe` (EmitInt 8, 3, Nothing, [([],[])])
 
-      it "nothing: evt /= nil" $
+      it "error: evt /= nil" $
         evaluate (nst1 (And' Nop Nop, 0, Just 1, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -295,7 +295,7 @@ main = hspec $ do
         nst1 (And' Break (AwaitInt 0), 3, Nothing, [([],[])])
         `shouldBe` (Seq Nop Break, 3, Nothing, [([],[])])
 
-      it "nothing: evt /= nil" $
+      it "error: evt /= nil" $
         evaluate (nst1 (And' Break (Var "x"), 0, Just 1, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -325,7 +325,7 @@ main = hspec $ do
         nst1 (And' (Seq (Fin Nop) Nop) Nop, 3, Nothing, [([],[])])
         `shouldBe` (Seq (Fin Nop) Nop, 3, Nothing, [([],[])])
 
-      it "nothing: evt /= nil" $
+      it "error: evt /= nil" $
         evaluate (nst1 (And' (Fin Nop) Nop, 0, Just 1, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -339,7 +339,7 @@ main = hspec $ do
         nst1 (And' (Fin (Seq Nop Nop)) Break, 3, Nothing, [([],[])])
         `shouldBe` (Seq (Seq Nop Nop) Break, 3, Nothing, [([],[])])
 
-      it "nothing: evt /= nil" $
+      it "error: evt /= nil" $
         evaluate (nst1 (And' (Fin Nop) Break, 0, Just 1, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -366,7 +366,7 @@ main = hspec $ do
         `shouldBe` (And' (Seq (CanRun 3) Nop)
                           (Seq (EmitInt 9) Nop), 3, Just 8, [([],[])])
 
-      it "nothing: evt /= nil" $
+      it "error: evt /= nil" $
         evaluate (nst1 (And' (Seq Nop Nop) (Seq Nop Nop), 0, Just 1, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -378,8 +378,8 @@ main = hspec $ do
         nst1 (And' (EmitInt 8) (AwaitInt 8), 3, Nothing, [([],[])])
         `shouldBe` (And' (CanRun 3) (AwaitInt 8), 3, Just 8, [([],[])])
 
-      it "nothing: isBlocked p && isBlocked q" $
-        evaluate (nst1 (And' (AwaitInt 3) (AwaitInt 4), 0, Nothing, [([],[])]))
+      it "error: isBlocked p && isBlocked q" $
+        (evaluate . force) (nst1 (And' (AwaitInt 3) (AwaitInt 4), 0, Nothing, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
     -- or-expd --
@@ -394,7 +394,7 @@ main = hspec $ do
         `shouldBe` (Seq (Or' (Seq Nop (EmitInt 8)) (Seq (CanRun 3)
                           (Seq Nop Nop))) (Envs' 1),3,Nothing,[([],[])])
 
-      it "nothing: evt /= nil" $
+      it "error: evt /= nil" $
         evaluate (nst1 (Or Nop Nop, 0, Just 1, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -423,7 +423,7 @@ main = hspec $ do
         nst1 (Or' Nop (AwaitInt 8), 3, Nothing, [([],[])])
         `shouldBe` (Nop, 3, Nothing, [([],[])])
 
-      it "nothing: evt /= nil" $
+      it "error: evt /= nil" $
         evaluate (nst1 (Or' Nop Nop, 0, Just 1, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -439,8 +439,8 @@ main = hspec $ do
                     (Seq (AwaitInt 1) (Fin (EmitInt 4)))))), 0, Nothing, [([],[])])
         `shouldBe` (Seq Nop (Seq (EmitInt 1) (Seq (Seq (EmitInt 2) (EmitInt 3)) Nop)),0,Nothing,[([],[])])
 
-      it "transit: q == Break" $ -- clear q == Nop -- CHECK THIS! --
-        evaluate (nst1 (Or' Nop Break, 0, Nothing, [([],[])]))
+      it "error: q == Break" $ -- clear q == Nop -- CHECK THIS! --
+        (evaluate . force) (nst1 (Or' Nop Break, 0, Nothing, [([],[])]))
         `shouldThrow` errorCall "clear: invalid clear"
 
       it "transit: q == Break" $ -- clear q == Nop -- CHECK THIS! --
@@ -449,8 +449,8 @@ main = hspec $ do
 
     -- or-brk1 --
     describe "(Or' Break q)" $ do
-      it "transit: lvl == 0" $  -- clear q == Nop
-        evaluate (nst1 (Or' Break Nop, 0, Nothing, [([],[])]))
+      it "error: lvl == 0" $  -- clear q == Nop
+        (evaluate . force) (nst1 (Or' Break Nop, 0, Nothing, [([],[])]))
         `shouldThrow` errorCall "clear: invalid clear"
 
       it "transit: lvl == 0" $  -- clear q == Nop
@@ -477,8 +477,8 @@ main = hspec $ do
                     (Seq (AwaitInt 0) (Fin (EmitInt 4)))))), 0, Nothing, [([],[])])
         `shouldBe` (Seq (Seq Nop (Seq (EmitInt 1) (Seq (Seq (EmitInt 2) (EmitInt 3)) Nop))) Break,0,Nothing,[([],[])])
 
-      it "transit: q == Break" $
-        evaluate (nst1 (Or' Break Break, 0, Nothing, [([],[])]))
+      it "error: q == Break" $
+        (evaluate . force) (nst1 (Or' Break Break, 0, Nothing, [([],[])]))
         `shouldThrow` errorCall "clear: invalid clear"
 
       it "transit: q == Break" $
@@ -495,7 +495,7 @@ main = hspec $ do
         nst1 (Or' (Seq (Fin Nop) Nop) Nop, 3, Nothing, [([],[])])
         `shouldBe` (Nop, 3, Nothing, [([],[])])
 
-      it "nothing: evt /= nil" $
+      it "error: evt /= nil" $
         evaluate (nst1 (Or' (Fin Nop) Nop, 0, Just 1, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -509,7 +509,7 @@ main = hspec $ do
         nst1 (Or' (Fin (Seq Nop Nop)) Break, 3, Nothing, [([],[])])
         `shouldBe` (Seq (Seq Nop Nop) Break, 3, Nothing, [([],[])])
 
-      it "nothing: evt /= nil" $
+      it "error: evt /= nil" $
         evaluate (nst1 (Or' (Fin Nop) Break, 0, Just 1, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -536,7 +536,7 @@ main = hspec $ do
         `shouldBe` (Or' (Seq (CanRun 3) Nop)
                           (Seq (EmitInt 9) Nop), 3, Just 8, [([],[])])
 
-      it "nothing: evt /= nil" $
+      it "error: evt /= nil" $
         evaluate (nst1 (Or' (Seq Nop Nop) (Seq Nop Nop), 0, Just 1, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -548,8 +548,8 @@ main = hspec $ do
         nst1 (Or' (EmitInt 8) (AwaitInt 8), 3, Nothing, [([],[])])
         `shouldBe` (Or' (CanRun 3) (AwaitInt 8), 3, Just 8, [([],[])])
 
-      it "nothing: isBlocked p && isBlocked q" $
-        evaluate (nst1 (Or' (AwaitInt 3) (AwaitInt 4), 0, Nothing, [([],[])]))
+      it "error: isBlocked p && isBlocked q" $
+        (evaluate . force) (nst1 (Or' (AwaitInt 3) (AwaitInt 4), 0, Nothing, [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
   -- nsts -------------------------------------------------------------------

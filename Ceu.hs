@@ -1,5 +1,7 @@
 module Ceu where
+
 import Data.Maybe
+import Control.DeepSeq
 
 -- Event.
 type Evt = Int
@@ -51,7 +53,7 @@ data Exp
   | Umn Exp
   | Add Exp Exp
   | Sub Exp Exp
-  deriving (Eq,Show)
+  deriving (Eq, Show)
 
 evalExp1 :: Envs -> Exp -> (Val->Val) -> Val
 evalExp1 envs e op = op (evalExp envs e)
@@ -93,7 +95,16 @@ data Stmt
   | CanRun Lvl
   | Envs' Int                   -- reset environment
   | Nop
-  deriving (Eq,Show)
+  deriving (Eq, Show)
+
+-- TODO: Complete this (and maybe move to CeuSpec.hs).
+instance NFData Stmt where
+  rnf Nop = ()
+  rnf (AwaitInt e) = ()
+  rnf (Seq p q) = rnf p `seq` rnf q
+  rnf (Loop' p q) = rnf p
+  rnf (And' p q) = rnf p `seq` rnf q
+  rnf (Or' p q) = rnf p `seq` rnf q
 
 -- Description (pg 6).
 type Desc = (Stmt, Lvl, Maybe Evt, Envs)
@@ -228,7 +239,7 @@ nst1 (Or' p q, n, Nothing, envs)      -- or-adv (pg 7)
   | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> Or' p' q)
   | otherwise = nst1Adv (q, n, Nothing, envs) (\q' -> Or' p q')
 
-nst1 (p, n, e, envs) = error "nst1: cannot advance"
+nst1 (_, _, _, _) = error "nst1: cannot advance"
 
 -- Tests whether the description is nst-irreducible.
 -- CHECK: nst should only produce nst-irreducible descriptions.
