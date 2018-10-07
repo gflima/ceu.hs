@@ -18,35 +18,35 @@ type Envs = [Env]
 
 -- Expression.
 data Exp
-  = Const Val
-  | Read ID
-  | Umn Exp
-  | Add Exp Exp
-  | Sub Exp Exp
+  = Const Val                   -- constant
+  | Read ID                     -- variable read
+  | Umn Exp                     -- unary minus
+  | Add Exp Exp                 -- addition
+  | Sub Exp Exp                 -- subtraction
   deriving (Eq, Show)
 
 -- Program (pg 5).
 data Stmt
-  = Block Stmt
-  | Var ID
-  | Write ID Exp
-  | AwaitExt Evt
-  | AwaitInt Evt
-  | EmitInt Evt
-  | Break
-  | Seq Stmt Stmt
-  | If Exp Stmt Stmt
-  | Loop Stmt
-  | Every Evt Stmt
-  | And Stmt Stmt
-  | Or Stmt Stmt
-  | Fin Stmt
-  | Loop' Stmt Stmt             -- unrolled Loop
-  | And' Stmt Stmt              -- unrolled And
-  | Or' Stmt Stmt               -- unrolled Or
-  | CanRun Lvl
-  | Envs' Int                   -- reset environment
-  | Nop
+  = Block Stmt                  -- start block
+  | Var ID                      -- variable declaration
+  | Write ID Exp                -- variable assignment
+  | AwaitExt Evt                -- await external event
+  | AwaitInt Evt                -- await internal event
+  | EmitInt Evt                 -- emit internal event
+  | Break                       -- loop escape
+  | If Exp Stmt Stmt            -- conditional
+  | Seq Stmt Stmt               -- sequence
+  | Loop Stmt                   -- repetition
+  | Every Evt Stmt              -- event iteration
+  | And Stmt Stmt               -- par/and
+  | Or Stmt Stmt                -- par/or
+  | Fin Stmt                    -- finalization
+  | CanRun Lvl                  -- wait for stack level
+  | Nop                         -- skip
+  | Envs' Int                   -- reset environment (internal)
+  | Loop' Stmt Stmt             -- unrolled Loop (internal)
+  | And' Stmt Stmt              -- unrolled And (internal)
+  | Or' Stmt Stmt               -- unrolled Or (internal)
   deriving (Eq, Show)
 
 -- Description (pg 6).
@@ -60,13 +60,11 @@ newEnv :: Env
 newEnv = ([], [])
 
 -- Adds uninitialized variable to environment.
--- CHECK: Envs must be nonempty.
 envsDcl :: Envs -> String -> Envs
 envsDcl [] _ = error "envsDcl: bad environment"
 envsDcl (env:envs) id = (id : (fst env), snd env) : envs
 
 -- Finds the first environment containing the given variable.
--- CHECK: Envs must be nonempty.
 envsGet :: Envs -> String -> (Envs,Env,Envs)
 envsGet [] _ = error "envsGet: bad environment"
 envsGet envs id  = envsGet' [] envs id where
@@ -125,8 +123,8 @@ clear (CanRun _) = Nop
 clear (Fin p) = p
 clear (Seq p _) = clear p
 clear (Loop' p _) = clear p
-clear (And' p q) = (Seq (clear p) (clear q))
-clear (Or' p q) = (Seq (clear p) (clear q))
+clear (And' p q) = Seq (clear p) (clear q)
+clear (Or' p q) = Seq (clear p) (clear q)
 clear _ = error "clear: invalid clear"
 
 -- Helper function used by nst1 in the *-adv rules.
@@ -142,7 +140,7 @@ nst1 (Block p, n, Nothing, envs)                -- block-expd
   = (Seq p (Envs' (length envs)), n, Nothing, (newEnv : envs))
 
 nst1 (Envs' lvl, n, Nothing, envs)              -- envs'
-  = (Nop, n, Nothing, drop ((length envs)-lvl) envs)
+  = (Nop, n, Nothing, drop ((length envs) - lvl) envs)
 
 nst1 (Var id, n, Nothing, envs)                 -- var
   = (Nop, n, Nothing, (envsDcl envs id))
@@ -153,79 +151,82 @@ nst1 (Write id exp, n, Nothing, envs)           -- write
 nst1 (EmitInt e, n, Nothing, envs)              -- emit-int (pg 6)
   = (CanRun n, n, Just e, envs)
 
-nst1 (CanRun m, n, Nothing, envs)     -- can-run (pg 6)
+nst1 (CanRun m, n, Nothing, envs)               -- can-run (pg 6)
   | m == n = (Nop, n, Nothing, envs)
   | otherwise = error "nst1: cannot advance"
 
-nst1 (Seq Nop q, n, Nothing, envs)    -- seq-nop (pg 6)
+nst1 (Seq Nop q, n, Nothing, envs)              -- seq-nop (pg 6)
   = (q, n, Nothing, envs)
 
-nst1 (Seq Break q, n, Nothing, envs)  -- seq-brk (pg 6)
+nst1 (Seq Break q, n, Nothing, envs)            -- seq-brk (pg 6)
   = (Break, n, Nothing, envs)
 
-nst1 (Seq p q, n, Nothing, envs)      -- seq-adv (pg 6)
+nst1 (Seq p q, n, Nothing, envs)                -- seq-adv (pg 6)
   = nst1Adv (p, n, Nothing, envs) (\p' -> Seq p' q)
 
-nst1 (If exp p q, n, Nothing, envs)   -- if-true/false (pg 6)
-  | v /= 0 = (p, n, Nothing, envs)
+nst1 (If exp p q, n, Nothing, envs)             -- if-true/false (pg 6)
+  | (envsEval envs exp) /= 0 = (p, n, Nothing, envs)
   | otherwise = (q, n, Nothing, envs)
-  where v = (envsEval envs exp)
 
-nst1 (Loop p, n, Nothing, envs)       -- loop-expd (pg 7)
+nst1 (Loop p, n, Nothing, envs)                 -- loop-expd (pg 7)
   = (Seq (Loop' p p) (Envs' (length envs)), n, Nothing, envs)
 
-nst1 (Loop' Nop q, n, Nothing, envs)  -- loop-nop (pg 7)
+nst1 (Loop' Nop q, n, Nothing, envs)            -- loop-nop (pg 7)
   = (Loop q, n, Nothing, envs)
 
-nst1 (Loop' Break q, n, Nothing, envs) -- loop-brk (pg 7)
+nst1 (Loop' Break q, n, Nothing, envs)          -- loop-brk (pg 7)
   = (Nop, n, Nothing, envs)
 
-nst1 (Loop' p q, n, Nothing, envs)    -- loop-adv (pg 7)
+nst1 (Loop' p q, n, Nothing, envs)              -- loop-adv (pg 7)
   = nst1Adv (p, n, Nothing, envs) (\p' -> Loop' p' q)
 
-nst1 (And p q, n, Nothing, envs)      -- and-expd (pg 7)
+nst1 (And p q, n, Nothing, envs)                -- and-expd (pg 7)
   = (And' p (Seq (CanRun n) q), n, Nothing, envs)
 
-nst1 (And' Nop q, n, Nothing, envs)   -- and-nop1 (pg 7)
+nst1 (And' Nop q, n, Nothing, envs)             -- and-nop1 (pg 7)
   = (q, n, Nothing, envs)
 
-nst1 (And' Break q, n, Nothing, envs) -- and brk1 (pg 7)
+nst1 (And' Break q, n, Nothing, envs)           -- and brk1 (pg 7)
   = (Seq (clear q) Break, n, Nothing, envs)
 
-nst1 (And' p Nop, n, Nothing, envs)   -- and-nop2 (pg 7)
-  | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> And' p' Nop)
+nst1 (And' p Nop, n, Nothing, envs)             -- and-nop2 (pg 7)
+  | not (isBlocked n p) =
+      nst1Adv (p, n, Nothing, envs) (\p' -> And' p' Nop)
   | otherwise = (p, n, Nothing, envs)
 
-nst1 (And' p Break, n, Nothing, envs) -- and-brk2 (pg 7)
-  | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> And' p' Break)
+nst1 (And' p Break, n, Nothing, envs)           -- and-brk2 (pg 7)
+  | not (isBlocked n p) =
+      nst1Adv (p, n, Nothing, envs) (\p' -> And' p' Break)
   | otherwise = (Seq (clear p) Break, n, Nothing, envs)
 
-nst1 (And' p q, n, Nothing, envs)     -- and-adv (pg 7)
+nst1 (And' p q, n, Nothing, envs)               -- and-adv (pg 7)
   | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> And' p' q)
   | otherwise = nst1Adv (q, n, Nothing, envs) (\q' -> And' p q')
 
-nst1 (Or p q, n, Nothing, envs)       -- or-expd (pg 7)
+nst1 (Or p q, n, Nothing, envs)                 -- or-expd (pg 7)
   = (Seq (Or' p (Seq (CanRun n) q)) (Envs' (length envs)), n, Nothing, envs)
 
-nst1 (Or' Nop q, n, Nothing, envs)    -- or-nop1 (pg 7)
+nst1 (Or' Nop q, n, Nothing, envs)              -- or-nop1 (pg 7)
   = (clear q, n, Nothing, envs)
 
-nst1 (Or' Break q, n, Nothing, envs)  -- or-brk1 (pg 7)
+nst1 (Or' Break q, n, Nothing, envs)            -- or-brk1 (pg 7)
   = (Seq (clear q) Break, n, Nothing, envs)
 
-nst1 (Or' p Nop, n, Nothing, envs)    -- or-nop2 (pg 7)
-  | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> Or' p' Nop)
+nst1 (Or' p Nop, n, Nothing, envs)              -- or-nop2 (pg 7)
+  | not (isBlocked n p) =
+      nst1Adv (p, n, Nothing, envs) (\p' -> Or' p' Nop)
   | otherwise = (clear p, n, Nothing, envs)
 
-nst1 (Or' p Break, n, Nothing, envs)
-  | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> Or' p' Break)
+nst1 (Or' p Break, n, Nothing, envs)            -- or-brk2 (pg 7)
+  | not (isBlocked n p) =
+      nst1Adv (p, n, Nothing, envs) (\p' -> Or' p' Break)
   | otherwise = (Seq (clear p) Break, n, Nothing, envs)
 
-nst1 (Or' p q, n, Nothing, envs)      -- or-adv (pg 7)
+nst1 (Or' p q, n, Nothing, envs)                -- or-adv (pg 7)
   | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> Or' p' q)
   | otherwise = nst1Adv (q, n, Nothing, envs) (\q' -> Or' p q')
 
-nst1 (_, _, _, _) = error "nst1: cannot advance"
+nst1 (_, _, _, _) = error "nst1: cannot advance" -- default
 
 -- Tests whether the description is nst-irreducible.
 -- CHECK: nst should only produce nst-irreducible descriptions.
