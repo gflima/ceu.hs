@@ -810,88 +810,99 @@ main = hspec $ do
 
   -- nsts ------------------------------------------------------------------
   describe "nsts" $ do
-    describe "Zero steps: Program is blocked" $ do
-      it "AwaitExt -> AwaitExt#" $
-        nsts (AwaitExt 0, 0, Nothing, [([],[])])
-        `shouldBe` (AwaitExt 0, 0, Nothing, [([],[])])
+    describe "zero steps (program is blocked)" $ do
+      it "pass: AwaitExt#" $
+        let d = (AwaitExt 0, 0, Nothing, [newEnv]) in
+          (nsts d `shouldBe` d) >> (isNstIrreducible d `shouldBe` True)
 
-      it "AwaitInt -> AwaitInt#" $
-        nsts (AwaitInt 0, 0, Nothing, [([],[])])
-        `shouldBe` (AwaitInt 0, 0, Nothing, [([],[])])
+      it "pass: AwaitInt#" $
+        let d = (AwaitInt 0, 0, Nothing, [newEnv]) in
+          (nsts d `shouldBe` d) >> (isNstIrreducible d `shouldBe` True)
 
-      it "Seq -> Seq#" $
-        nsts (Seq (AwaitInt 0) Nop, 0, Nothing, [([],[])])
-        `shouldBe` (Seq (AwaitInt 0) Nop, 0, Nothing, [([],[])])
+      it "pass: Seq#" $
+        let d = (Seq (AwaitInt 0) Nop, 0, Nothing, [newEnv]) in
+          (nsts d `shouldBe` d) >> (isNstIrreducible d `shouldBe` True)
 
-      it "Every -> Every#" $
-        nsts (Every 0 Nop, 0, Nothing, [([],[])])
-        `shouldBe` (Every 0 Nop, 0, Nothing, [([],[])])
+      it "pass: Every#" $
+        let d = (Every 0 Nop, 0, Nothing, [newEnv]) in
+          (nsts d `shouldBe` d) >> (isNstIrreducible d `shouldBe` True)
 
-      it "Fin -> Fin#" $
-        nsts (Fin (Seq Nop Nop), 0, Nothing, [([],[])])
-        `shouldBe` (Fin (Seq Nop Nop), 0, Nothing, [([],[])])
+      it "pass: Fin#" $
+        let d = (Fin (Seq Nop Nop), 0, Nothing, [newEnv]) in
+          (nsts d `shouldBe` d) >> (isNstIrreducible d `shouldBe` True)
 
-      it "And' -> And'#" $
-        nsts (And' (AwaitExt 0) (Fin Nop), 0, Nothing, [([],[])])
-        `shouldBe` (And' (AwaitExt 0) (Fin Nop), 0, Nothing, [([],[])])
+      it "pass: And'#" $
+        let d = (And' (AwaitExt 0) (Fin Nop), 0, Nothing, [newEnv]) in
+          (nsts d `shouldBe` d) >> (isNstIrreducible d `shouldBe` True)
 
-      it "Or' -> Or'#" $
-        nsts (Or' (AwaitExt 0) (Fin Nop), 0, Nothing, [([],[])])
-        `shouldBe` (Or' (AwaitExt 0) (Fin Nop), 0, Nothing, [([],[])])
+      it "pass: nsts Or'#" $
+        let d = (Or' (AwaitExt 0) (Fin Nop), 0, Nothing, [newEnv]) in
+          (nsts d `shouldBe` d) >> (isNstIrreducible d `shouldBe` True)
 
-      it "CanRun -> CanRun#" $
-        forceEval (nsts (CanRun 5, 0, Nothing, [([],[])]))
+      it "fail: CanRun# (cannot advance)" $
+        forceEval (nsts (CanRun 5, 0, Nothing, [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
-    describe "Zero steps: No nst-rule applies" $ do
-      it "Nop -> Nop#" $
-        nsts (Nop, 0, Nothing, [([],[])])
-        `shouldBe` (Nop, 0, Nothing, [([],[])])
+    describe "zero steps (no nst1-rule applies)" $ do
+      it "pass: Nop#" $
+        let d = (Nop, 0, Nothing, [newEnv]) in
+          (nsts d `shouldBe` d) >> (isNstIrreducible d `shouldBe` True)
 
-      it "Break -> Break#" $
-        nsts (Break, 0, Nothing, [([],[])])
-        `shouldBe` (Break, 0, Nothing, [([],[])])
+      it "pass: Break#" $
+        let d = (Break, 0, Nothing, [newEnv]) in
+          (nsts d `shouldBe` d) >> (isNstIrreducible d `shouldBe` True)
 
-    describe "One+ steps" $ do
-      it "EmitInt -> CanRun#" $
-        let d = (EmitInt 8, 3, Nothing, [([],[])])
-            d' = (CanRun 3, 3, Just 8, [([],[])]) in
+    describe "one+ steps" $ do
+      it "pass: {var x; x=1} -> [] Nop#" $
+        let d = (Block (Var "x" `Seq` (Write "x" (Const 0))),
+                  3, Nothing, [newEnv])
+            d' = (Nop, 3, Nothing, [newEnv]) in
           (nsts d `shouldBe` d') >> (isNstIrreducible d' `shouldBe` True)
 
-      it "CanRun -> Nop#" $
-        let d = (CanRun 3, 3, Nothing, [([],[])])
-            d' = (Nop, 3, Nothing, [([],[])]) in
+      it "pass: var x; x=1 -> [x=1] Nop#" $
+        let d = (Var "x" `Seq` (Write "x" (Const 0)), 3, Nothing, [newEnv])
+            d' = (Nop, 3, Nothing, [(["x"],[("x",0)])]) in
           (nsts d `shouldBe` d') >> (isNstIrreducible d' `shouldBe` True)
 
-      it "Nop; Nop; Nop; Break; Nop -> Break#" $
+      it "pass: EmitInt -> CanRun#" $
+        let d = (EmitInt 8, 3, Nothing, [newEnv])
+            d' = (CanRun 3, 3, Just 8, [newEnv]) in
+          (nsts d `shouldBe` d') >> (isNstIrreducible d' `shouldBe` True)
+
+      it "pass: CanRun -> Nop#" $
+        let d = (CanRun 3, 3, Nothing, [newEnv])
+            d' = (Nop, 3, Nothing, [newEnv]) in
+          (nsts d `shouldBe` d') >> (isNstIrreducible d' `shouldBe` True)
+
+      it "pass: Nop; Nop; Nop; Break; Nop -> Break#" $
         let p = Nop `Seq` Nop `Seq` Nop `Seq` Break `Seq` Nop
-            d = (p, 0, Nothing, [([],[])])
-            d' = (Break, 0, Nothing, [([],[])]) in
+            d = (p, 0, Nothing, [newEnv])
+            d' = (Break, 0, Nothing, [newEnv]) in
           (nsts d `shouldBe` d') >> (isNstIrreducible d' `shouldBe` True)
 
-      it "Loop Break; Nop; Nop; EmitInt; Break -> CanRun#; Break" $
+      it "pass: Loop Break; Nop; Nop; EmitInt; Break -> CanRun#; Break" $
         let p = Loop Break `Seq` Nop `Seq` Nop `Seq` EmitInt 8 `Seq` Break
-            d = (p, 3, Nothing, [([],[])])
-            d' = (Seq (CanRun 3) Break, 3, Just 8, [([],[])]) in
+            d = (p, 3, Nothing, [newEnv])
+            d' = (Seq (CanRun 3) Break, 3, Just 8, [newEnv]) in
           (nsts d `shouldBe` d') >> (isNstIrreducible d' `shouldBe` True)
 
-      it "(Loop Break; Nop) && (EmitInt; Nop) -> CanRun#; Nop" $
+      it "pass: (Loop Break; Nop) && (EmitInt; Nop) -> CanRun#; Nop" $
         let p = Seq (Loop Break) Nop `And` Seq (EmitInt 8) Nop
-            d = (p, 3, Nothing, [([],[])])
-            d' = (Seq (CanRun 3) Nop, 3, Just 8, [([],[])]) in
+            d = (p, 3, Nothing, [newEnv])
+            d' = (Seq (CanRun 3) Nop, 3, Just 8, [newEnv]) in
           (nsts d `shouldBe` d') >> (isNstIrreducible d' `shouldBe` True)
 
-      it "(Loop Break; Nop) || (EmitInt; Nop) -> Nop#" $
+      it "pass: (Loop Break; Nop) || (EmitInt; Nop) -> Nop#" $
         let p = Seq (Loop Break) Nop `Or` Seq (EmitInt 8) Nop
-            d = (p, 3, Nothing, [([],[])])
-            d' = (Nop, 3, Nothing, [([],[])]) in
+            d = (p, 3, Nothing, [newEnv])
+            d' = (Nop, 3, Nothing, [newEnv]) in
           (nsts d `shouldBe` d') >> (isNstIrreducible d' `shouldBe` True)
 
-      it "Loop ((Nop; AwaitInt) && (AwaitExt || Nop; Break)) -> Nop#" $
+      it "pass: Loop ((Nop; AwaitInt) && (AwaitExt || Nop; Break)) -> Nop#" $
         let p = Loop ((Nop `Seq` AwaitInt 3)
                       `And` (AwaitExt 18 `Or` (Nop `Seq` Break)))
-            d = (p, 0, Nothing, [([],[])])
-            d' = (Nop, 0, Nothing, [([],[])]) in
+            d = (p, 0, Nothing, [newEnv])
+            d' = (Nop, 0, Nothing, [newEnv]) in
           (nsts d `shouldBe` d') >> (isNstIrreducible d' `shouldBe` True)
 
   -- out1 ------------------------------------------------------------------
@@ -899,59 +910,71 @@ main = hspec $ do
 
     -- push --
     describe "push" $ do
-      it "transit: lvl == 0" $
-        out1 (Nop, 0, Just 1, [([],[])])
-        `shouldBe` (Nop, 1, Nothing, [([],[])])
+      it "pass: lvl == 0" $
+        out1 (Nop, 0, Just 1, [newEnv])
+        `shouldBe` (Nop, 1, Nothing, [newEnv])
 
-      it "transit: lvl > 0" $
-        out1 (Seq (AwaitInt 1) Break, 3, Just 1, [([],[])])
-        `shouldBe` (Seq Nop Break, 4, Nothing, [([],[])])
+      it "pass: lvl > 0" $
+        out1 (Seq (AwaitInt 1) Break, 3, Just 1, [newEnv])
+        `shouldBe` (Seq Nop Break, 4, Nothing, [newEnv])
 
-      it "transit: lvl > 0 && bcast fails" $
-        out1 (Seq (AwaitInt 2) Break, 3, Just 1, [([],[])])
-        `shouldBe` (Seq (AwaitInt 2) Break, 4, Nothing, [([],[])])
+      it "pass: lvl > 0 && bcast fails" $
+        out1 (Seq (AwaitInt 2) Break, 3, Just 1, [newEnv])
+        `shouldBe` (Seq (AwaitInt 2) Break, 4, Nothing, [newEnv])
 
     -- pop --
     describe "pop" $ do
-      it "nothing: lvl == 0" $
-        forceEval (out1 (Nop, 0, Nothing, [([],[])]))
+      it "fail: lvl == 0 (cannot advance)" $
+        forceEval (out1 (Nop, 0, Nothing, [newEnv]))
         `shouldThrow` errorCall "outPop: cannot advance"
 
-      it "transit: lvl > 0 && nst-irreducible" $
-        out1 (Nop, 33, Nothing, [([],[])])
-        `shouldBe` (Nop, 32, Nothing, [([],[])])
+      it "pass: lvl > 0 && isNstIrreducible p" $
+        out1 (Nop, 33, Nothing, [newEnv])
+        `shouldBe` (Nop, 32, Nothing, [newEnv])
 
-      it "nothing: lvl > 0 && not nst-irreducible" $
-        forceEval (out1 (Seq Nop Nop, 1, Nothing, [([],[])]))
+      it "pass: lvl > 0 && not (nstIrreducible p)" $
+        forceEval (out1 (Seq Nop Nop, 1, Nothing, [newEnv]))
         `shouldThrow` errorCall "outPop: cannot advance"
 
-  -- nsts_out1_s -------------------------------------------------------------------
+  -- nsts_out1_s -----------------------------------------------------------
   describe "nsts_out1_s" $ do
-    describe "Zero steps: No out-rule applies" $ do
-      it "lvl == 0" $
-        let d = (Nop, 0, Nothing, [([],[])]) in
-          (nsts_out1_s d `shouldBe` d) >> (isNstIrreducible d `shouldBe` True)
+    describe "zero steps (no out-rule applies)" $ do
+      it "pass: lvl == 0 && isNstIrreducible p" $
+        let d = (Nop, 0, Nothing, [newEnv]) in
+          (nsts_out1_s d `shouldBe` d)
+          >> (isNstIrreducible d `shouldBe` True)
+          >> (isIrreducible d `shouldBe` True)
 
-      it "not (isNstIrreducible p)" $
-        let d = (Seq Nop Nop, 0, Nothing, [([],[])]) in
+      it "pass: lvl == 0 && not (isNstIrreducible p)" $
+        let d = (Seq Nop Nop, 0, Nothing, [newEnv]) in
           (nsts_out1_s d `shouldBe` d)
           >> (isNstIrreducible d `shouldBe` False)
+          >> (isIrreducible d `shouldBe` False)
 
-    describe "One+ steps: One+ pops" $ do
-      it "lvl > 0" $
-        nsts_out1_s (Nop, 13, Nothing, [([],[])])
-        `shouldBe`  (Nop, 0, Nothing, [([],[])])
+    describe "one+ pops" $ do
+      it "pass: lvl > 0" $
+        let d = (Nop, 13, Nothing, [newEnv])
+            d' = (Nop, 0, Nothing, [newEnv]) in
+          (nsts_out1_s d `shouldBe` d')
+          >> (isNstIrreducible d' `shouldBe` True)
+          >> (isIrreducible d' `shouldBe` True)
 
-    describe "One+ steps: One push followed by one+ pops" $ do
-      it "lvl == 0" $
-        nsts_out1_s (AwaitInt 3, 0, Just 3, [([],[])])
-        `shouldBe`  (AwaitInt 3, 0, Just 3, [([],[])])
+    describe "one push followed by one+ pops" $ do
+      it "pass: lvl == 0 (do nothing)" $ -- CHECK THIS! --
+        let d = (AwaitInt 3, 0, Just 3, [newEnv])
+            d' = (AwaitInt 3, 0, Just 3, [newEnv]) in
+          (nsts_out1_s d `shouldBe` d')
+          >> (isNstIrreducible d' `shouldBe` True)
+          -- >> (isIrreducible d' `shouldBe` True)
 
-      it "lvl > 0" $
-        nsts_out1_s (AwaitInt 3, 88, Just 3, [([],[])])
-        `shouldBe`  (Nop, 0, Nothing, [([],[])])
+      it "pass: lvl > 0" $
+        let d = (AwaitInt 3, 88, Just 3, [newEnv])
+            d' = (Nop, 0, Nothing, [newEnv]) in
+          (nsts_out1_s d `shouldBe` d')
+          >> (isNstIrreducible d' `shouldBe` True)
+          >> (isIrreducible d' `shouldBe` True)
 
-  -- reaction -----------------------------------------------------------------
+  -- reaction --------------------------------------------------------------
   describe "reaction" $ do
 
     it "Nop; (AwaitInt 3) && Nop; Fin Nop -> Nop" $

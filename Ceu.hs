@@ -67,12 +67,12 @@ envsDcl (env:envs) id = (id : (fst env), snd env) : envs
 -- Finds the first environment containing the given variable.
 envsGet :: Envs -> String -> (Envs,Env,Envs)
 envsGet [] _ = error "envsGet: bad environment"
-envsGet envs id  = envsGet' [] envs id where
-  envsGet' :: Envs -> Envs -> String -> (Envs,Env,Envs)
-  envsGet' _ [] _ = error "envsGet: undeclared variable"
-  envsGet' envsNotHere (env:envsMaybeHere) id
-    | elem id (fst env) = (envsNotHere,env,envsMaybeHere) -- found
-    | otherwise = (envsGet' (envsNotHere ++ [env]) envsMaybeHere id)
+envsGet envs id  = envsGet' [] envs id
+  where envsGet' :: Envs -> Envs -> String -> (Envs,Env,Envs)
+        envsGet' _ [] _ = error "envsGet: undeclared variable"
+        envsGet' envsNotHere (env:envsMaybeHere) id
+          | elem id (fst env) = (envsNotHere,env,envsMaybeHere) -- found
+          | otherwise = (envsGet' (envsNotHere ++ [env]) envsMaybeHere id)
 
 -- Writes value to variable in environment.
 envsWrite :: Envs -> String -> Val -> Envs
@@ -129,8 +129,8 @@ clear _ = error "clear: invalid clear"
 
 -- Helper function used by nst1 in the *-adv rules.
 nst1Adv :: Desc -> (Stmt -> Stmt) -> Desc
-nst1Adv d f = (f p, n, e, envs) where
-  (p, n, e, envs) = (nst1 d)
+nst1Adv d f = (f p, n, e, envs)
+  where (p, n, e, envs) = (nst1 d)
 
 -- Single nested transition.
 -- (pg 6)
@@ -256,17 +256,62 @@ bcast e (Seq p q) = Seq (bcast e p) q
 bcast e (Loop' p q) = Loop' (bcast e p) q
 bcast e (And' p q) = And' (bcast e p) (bcast e q)
 bcast e (Or' p q) = Or' (bcast e p) (bcast e q)
-bcast e p = p -- otherwise
+bcast e p = p                   -- otherwise
+
+-- Checks if a Break or AwaitExt occurs in all execution paths of program.
+chkProg :: Stmt -> Bool
+chkProg (Block p) = chkProg p
+chkProg (AwaitExt e) = True
+chkProg Break = True
+chkProg (If exp p q) = chkProg p && chkProg q
+chkProg (Seq p q) = chkProg p || chkProg q
+chkProg (Loop p) = chkProg p
+chkProg (Every e p) = chkProg p     -- CHECK THIS! --
+chkProg (And p q) = chkProg p && chkProg q
+chkProg (Or p q) = chkProg p && chkProg q
+chkProg (Loop' p q) = chkProg p || chkProg q
+chkProg (And' p q) = chkProg p && chkProg q
+chkProg (Or' p q) = chkProg p && chkProg q
+chkProg _ = False
+
+-- Counts the number of reachable EmitInt statements in program.
+-- (pg 9)
+pot' :: Stmt -> Int
+pot' (EmitInt e) = 1
+pot' (If exp p q) = max (pot' p) (pot' q)
+pot' (Loop p) = pot' p
+pot' (And p q) = (pot' p) + (pot' q)
+pot' (Or p q) = (pot' p) + (pot' q)
+pot' (Seq Break q) = 0
+pot' (Seq (AwaitExt e) q) = 0
+pot' (Seq p q) = (pot' p) + (pot' q)
+pot' (Loop' p q)
+  | chkProg p = pot' p        -- q is unreachable
+  | otherwise = (pot' p) + (pot' q)
+pot' (And' p q) = (pot' p) + (pot' q) -- CHECK THIS! --
+pot' (Or' p q) = (pot' p) + (pot' q)  -- CHECK THIS! --
+pot' _ = 0
+
+-- Counts the number of reachable EmitInt statements that can be executed in
+-- a reaction of program to event.
+-- (pg 9)
+pot :: Evt -> Stmt -> Int
+pot e p = pot' (bcast e p)
+
+-- (pg 9)
+rank :: Desc -> (Int, Int)
+rank (p, n, Nothing, envs) = (0, n)
+rank (p, n, Just e, envs) = (pot e p, n+1)
 
 -- (pg 6)
 outPush :: Desc -> Desc
-outPush (_, _, Nothing, _)   = error "outPush: missing event"
 outPush (p, n, Just e, envs) = (bcast e p, n+1, Nothing, envs)
+outPush (_, _, Nothing, _) = error "outPush: missing event"
 
 -- (pg 6)
 outPop :: Desc -> Desc
 outPop (p, n, Nothing, envs)
-  | n>0 && isNstIrreducible (p,n,Nothing,envs) = (p, n-1, Nothing, envs)
+  | n>0 && isNstIrreducible (p, n, Nothing, envs) = (p, n-1, Nothing, envs)
   | otherwise = error "outPop: cannot advance"
 
 -- Single outermost transition.
@@ -277,12 +322,13 @@ out1 (p, n, Nothing, envs) = outPop (p, n, Nothing, envs)
 
 -- (pg 6)
 nsts_out1_s :: Desc -> Desc
-nsts_out1_s (p,n,e,envs)
-  | n==0 = (p,n,e,envs)
-  | n>0 = nsts_out1_s (out1 (nsts (p,n,e,envs)))
+nsts_out1_s (p, n, e, envs)
+  | n == 0 = (p, n, e, envs)    -- why?
+  | n > 0 = nsts_out1_s (out1 (nsts (p, n, e, envs)))
 
--- TODO: Define pot.
--- TODO: Define rank.
+-- Tests whether the description is irreducible in general.
+isIrreducible :: Desc -> Bool
+isIrreducible d = isNstIrreducible d && snd (rank d) == 0
 
 ----------------------------------------------------------------------------
 -- Reaction
