@@ -990,37 +990,62 @@ main = hspec $ do
 
     it "var a; var ret; a=1; ret=a+10;" $
       let p = Seq (Var "a") (Seq (Var "ret") (Seq (Write "a" (Const 1)) (Write "ret" (Add (Read "a") (Const 10))))) in
-        (evalProg p) `shouldBe` 11
+        (evalProg p []) `shouldBe` 11
 
     it "var a; {var ret; a=1; ret=a+10;}" $
       let p = Seq (Var "a") (Block (Seq (Var "ret") (Seq (Write "a" (Const 1)) (Write "ret" (Add (Read "a") (Const 10)))))) in
-        forceEval (evalProg p)
+        forceEval (evalProg p [])
         `shouldThrow` errorCall "envsGet: undeclared variable"
 
     it "var ret; ret=1; {var ret; ret=99;}" $
       let p = Seq (Var "ret") (Seq (Var "ret") (Seq (Write "ret" (Const 1)) (Block (Seq (Var "ret") (Write "ret" (Const 99)))))) in
-        (evalProg p) `shouldBe` 1
+        (evalProg p []) `shouldBe` 1
 
     it "var ret; var a; a=1; {var a; a=99;} ret=a+10;" $
       let p = Seq (Var "ret") (Seq (Var "a") (Seq (Write "a" (Const 1)) (Seq (Block (Seq (Var "a") (Write "a" (Const 99)))) (Write "ret" (Add (Read "a") (Const 10)))))) in
-        (evalProg p) `shouldBe` 11
+        (evalProg p []) `shouldBe` 11
 
     it "var ret; ret=1; {ret=2;}" $
       let p = Seq (Var "ret") (Seq (Write "ret" (Const 1)) (Block (Write "ret" (Const 2)))) in
-        (evalProg p) `shouldBe` 2
+        (evalProg p []) `shouldBe` 2
 
     it "var ret; var a; a=1; ({var a; a=99; awaitExt E} || nop); ret=a+10;" $
       let p = Seq (Var "ret") (Seq (Var "a") (Seq (Write "a" (Const 1)) (Seq (Or (Block (Seq (Var "a") (Seq (Write "a" (Const 99)) (AwaitExt 0)))) Nop) (Write "ret" (Add (Read "a") (Const 10)))))) in
-        (evalProg p) `shouldBe` 11
+        (evalProg p []) `shouldBe` 11
 
     it "var ret; ({ret=1; awaitExt E} || nop);" $
       let p = Seq (Var "ret") (Or (Block (Seq (Write "ret" (Const 1)) (AwaitExt 0))) Nop) in
-        (evalProg p) `shouldBe` 1
+        (evalProg p []) `shouldBe` 1
 
     it "var ret; var a; a=1; loop ({var a; a=99; awaitExt E} && break); ret=a+10;" $
       let p = Seq (Var "ret") (Seq (Var "a") (Seq (Write "a" (Const 1)) (Seq (Loop (And (Block (Seq (Var "a") (Seq (Write "a" (Const 99)) (AwaitExt 0)))) Break)) (Write "ret" (Add (Read "a") (Const 10)))))) in
-        (evalProg p) `shouldBe` 11
+        (evalProg p []) `shouldBe` 11
 
     it "var ret; loop ({ret=1; awaitExt E} && break);" $
       let p = Seq (Var "ret") (Loop (And (Block (Seq (Write "ret" (Const 1)) (AwaitExt 0))) Break))in
-        (evalProg p) `shouldBe` 1
+        (evalProg p []) `shouldBe` 1
+
+    -- multiple inputs
+
+    it "[0] | var ret; awaitExt 0; ret=1;" $
+      let p = Seq (Var "ret") (Seq (AwaitExt 0) (Write "ret" (Const 1))) in
+        (evalProg p [0]) `shouldBe` 1
+
+    it "[] | var ret; awaitExt 0; ret=1;" $
+      let p = Seq (Var "ret") (Seq (AwaitExt 0) (Write "ret" (Const 1))) in
+        evaluate (evalProg p [])
+        `shouldThrow` errorCall "evalProg: did not terminate"
+
+    it "[1] | var ret; awaitExt 0; ret=1;" $
+      let p = Seq (Var "ret") (Seq (AwaitExt 0) (Write "ret" (Const 1))) in
+        evaluate (evalProg p [1])
+        `shouldThrow` errorCall "evalProg: did not terminate"
+
+    it "[0,0] | var ret; awaitExt 0; ret=1;" $
+      let p = Seq (Var "ret") (Seq (AwaitExt 0) (Write "ret" (Const 1))) in
+        evaluate (evalProg p [0,0])
+        `shouldThrow` errorCall "evalProg: pending inputs"
+
+    it "[0,1] | var ret; awaitExt 0; awaitExt 1; ret=1;" $
+      let p = Seq (Var "ret") (Seq (AwaitExt 0) (Seq (AwaitExt 1) (Write "ret" (Const 1)))) in
+        (evalProg p [0,1]) `shouldBe` 1
