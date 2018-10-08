@@ -340,7 +340,7 @@ reaction (p,e,envs) = (p',envs') where
   (p',_,_,envs') = nsts_out1_s $ outPush (p,0,(Just e),envs)
 
 evalProg :: Stmt -> [Evt] -> Val
-evalProg prog es = evalProg' prog (0:es) [(["ret"],[])] -- extra `0` for the boot reaction
+evalProg prog es = evalProg' prog (-1:es) [(["ret"],[])] -- extra `-1` for the boot reaction
   where evalProg' :: Stmt -> [Evt] -> Envs -> Val
         evalProg' Nop (_:es) _    = error "evalProg: pending inputs"
         evalProg' Nop []     envs = envsRead envs "ret"
