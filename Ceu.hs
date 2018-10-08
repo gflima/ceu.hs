@@ -25,10 +25,13 @@ data Exp
   | Sub Exp Exp                 -- subtraction
   deriving (Eq, Show)
 
+-- `Add` and `Sub` associate to the left.
+infixl 6 `Add`
+infixl 6 `Sub`
+
 -- Program (pg 5).
 data Stmt
-  = Block Stmt                  -- start block
-  | Var ID                      -- variable declaration
+  = Block [ID] Stmt             -- variable declaration block
   | Write ID Exp                -- variable assignment
   | AwaitExt Evt                -- await external event
   | AwaitInt Evt                -- await internal event
@@ -36,18 +39,23 @@ data Stmt
   | Break                       -- loop escape
   | If Exp Stmt Stmt            -- conditional
   | Seq Stmt Stmt               -- sequence
-  | Loop Stmt                   -- repetition
+  | Loop Stmt                   -- infinite loop
   | Every Evt Stmt              -- event iteration
-  | And Stmt Stmt               -- par/and
-  | Or Stmt Stmt                -- par/or
-  | Fin Stmt                    -- finalization
-  | CanRun Lvl                  -- wait for stack level
-  | Nop                         -- skip
-  | Envs' Int                   -- reset environment (internal)
+  | And Stmt Stmt               -- par/and statement
+  | Or Stmt Stmt                -- par/or statement
+  | Fin Stmt                    -- finalization statement
+  | Nop                         -- dummy statement (internal)
+  | CanRun Lvl                  -- wait for stack level (internal)
+  | Restore Int                 -- restore environment (internal)
   | Loop' Stmt Stmt             -- unrolled Loop (internal)
   | And' Stmt Stmt              -- unrolled And (internal)
   | Or' Stmt Stmt               -- unrolled Or (internal)
   deriving (Eq, Show)
+
+-- `Seq`, `Or`, and `And` associate to the right.
+infixr 1 `Seq`
+infixr 0 `Or`
+infixr 0 `And`
 
 -- Description (pg 6).
 type Desc = (Stmt, Lvl, Maybe Evt, Envs)
@@ -59,17 +67,12 @@ type Desc = (Stmt, Lvl, Maybe Evt, Envs)
 newEnv :: Env
 newEnv = ([], [])
 
--- Adds uninitialized variable to environment.
-envsDcl :: Envs -> String -> Envs
-envsDcl [] _ = error "envsDcl: bad environment"
-envsDcl (env:envs) id = (id : (fst env), snd env) : envs
-
 -- Finds the first environment containing the given variable.
 envsGet :: Envs -> String -> (Envs,Env,Envs)
 envsGet [] _ = error "envsGet: bad environment"
 envsGet envs id  = envsGet' [] envs id
   where envsGet' :: Envs -> Envs -> String -> (Envs,Env,Envs)
-        envsGet' _ [] _ = error "envsGet: undeclared variable"
+        envsGet' _ [] _ = error ("envsGet: undeclared variable: " ++ id)
         envsGet' envsNotHere (env:envsMaybeHere) id
           | elem id (fst env) = (envsNotHere,env,envsMaybeHere) -- found
           | otherwise = (envsGet' (envsNotHere ++ [env]) envsMaybeHere id)
@@ -83,7 +86,7 @@ envsWrite envs id val = (envs1 ++ [(fst env, (id,val):(snd env))] ++ envs2)
 envsRead :: Envs -> String -> Val
 envsRead envs id = envsRead' hst id
   where (_, (_,hst), _) = envsGet envs id
-        envsRead' [] id = error "envsRead: uninitialized variable"
+        envsRead' [] id = error ("envsRead: uninitialized variable: " ++ id)
         envsRead' ((id',val'):hst') id
           | id == id' = val'    -- found
           | otherwise = envsRead' hst' id
@@ -136,14 +139,11 @@ nst1Adv d f = (f p, n, e, envs)
 -- (pg 6)
 nst1 :: Desc -> Desc
 
-nst1 (Block p, n, Nothing, envs)                -- block-expd
-  = (Seq p (Envs' (length envs)), n, Nothing, (newEnv : envs))
+nst1 (Block vars p, n, Nothing, envs)           -- block
+  = (Seq p (Restore (length envs)), n, Nothing, (vars,[]):envs)
 
-nst1 (Envs' lvl, n, Nothing, envs)              -- envs'
+nst1 (Restore lvl, n, Nothing, envs)            -- restore
   = (Nop, n, Nothing, drop ((length envs) - lvl) envs)
-
-nst1 (Var id, n, Nothing, envs)                 -- var
-  = (Nop, n, Nothing, (envsDcl envs id))
 
 nst1 (Write id exp, n, Nothing, envs)           -- write
   = (Nop, n, Nothing, (envsWrite envs id (envsEval envs exp)))
@@ -169,7 +169,7 @@ nst1 (If exp p q, n, Nothing, envs)             -- if-true/false (pg 6)
   | otherwise = (q, n, Nothing, envs)
 
 nst1 (Loop p, n, Nothing, envs)                 -- loop-expd (pg 7)
-  = (Seq (Loop' p p) (Envs' (length envs)), n, Nothing, envs)
+  = (Seq (Loop' p p) (Restore (length envs)), n, Nothing, envs)
 
 nst1 (Loop' Nop q, n, Nothing, envs)            -- loop-nop (pg 7)
   = (Loop q, n, Nothing, envs)
@@ -204,7 +204,8 @@ nst1 (And' p q, n, Nothing, envs)               -- and-adv (pg 7)
   | otherwise = nst1Adv (q, n, Nothing, envs) (\q' -> And' p q')
 
 nst1 (Or p q, n, Nothing, envs)                 -- or-expd (pg 7)
-  = (Seq (Or' p (Seq (CanRun n) q)) (Envs' (length envs)), n, Nothing, envs)
+  = (Seq (Or' p (Seq (CanRun n) q))
+         (Restore (length envs)), n, Nothing, envs)
 
 nst1 (Or' Nop q, n, Nothing, envs)              -- or-nop1 (pg 7)
   = (clear q, n, Nothing, envs)
@@ -260,7 +261,7 @@ bcast e p = p                   -- otherwise
 
 -- Checks if a Break or AwaitExt occurs in all execution paths of program.
 chkProg :: Stmt -> Bool
-chkProg (Block p) = chkProg p
+--chkProg (Block p) = chkProg p
 chkProg (AwaitExt e) = True
 chkProg Break = True
 chkProg (If exp p q) = chkProg p && chkProg q
@@ -339,7 +340,7 @@ reaction (p,e,envs) = (p',envs') where
   (p',_,_,envs') = nsts_out1_s $ outPush (p,0,(Just e),envs)
 
 evalProg :: Stmt -> [Evt] -> Val
-evalProg prog es = evalProg' prog (0:es) [newEnv] -- extra `0` for the boot reaction
+evalProg prog es = evalProg' prog (0:es) [(["ret"],[])] -- extra `0` for the boot reaction
   where evalProg' :: Stmt -> [Evt] -> Envs -> Val
         evalProg' Nop (_:es) _    = error "evalProg: pending inputs"
         evalProg' Nop []     envs = envsRead envs "ret"

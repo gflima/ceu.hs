@@ -23,23 +23,6 @@ main = hspec $ do
 
   -- Env/Envs --------------------------------------------------------------
   describe "Env/Envs" $ do
-    describe "envsDcl envs id" $ do
-      it "fail: envs == [] (bad environment)" $
-        forceEval (envsDcl [] "x")
-        `shouldThrow` errorCall "envsDcl: bad environment"
-
-      it "pass: 1st declaration" $
-        envsDcl [newEnv] "x" `shouldBe` [(["x"],[])]
-
-      it "pass: 2nd declaration" $
-        envsDcl [(["x"],[])] "y" `shouldBe` [(["y","x"],[])]
-
-      it "pass: redeclaration" $  -- CHECK THIS! --
-        envsDcl [(["y","x"],[])] "x" `shouldBe` [(["x","y","x"],[])]
-
-      it "pass: redeclaration in inner env" $
-        envsDcl (newEnv:[(["x"],[("x",0)])]) "x"
-        `shouldBe` [(["x"],[]),(["x"],[("x",0)])]
 
     describe "envsGet envs id" $ do
       it "fail: envs == [] (bad environment)" $
@@ -48,7 +31,7 @@ main = hspec $ do
 
       it "fail: undeclared variable" $
         forceEval (envsGet [newEnv] "x")
-        `shouldThrow` errorCall "envsGet: undeclared variable"
+        `shouldThrow` errorCall "envsGet: undeclared variable: x"
 
       it "pass: find in simple env" $
         envsGet [(["x"],[("x",0)])] "x" -- CHECK THIS! --
@@ -71,7 +54,7 @@ main = hspec $ do
 
       it "fail: undeclared variable" $
         forceEval (envsWrite [newEnv] "x" 0)
-        `shouldThrow` errorCall "envsGet: undeclared variable"
+        `shouldThrow` errorCall "envsGet: undeclared variable: x"
 
       it "pass: 1st write" $
         envsWrite [(["x"],[])] "x" 0 `shouldBe` [(["x"],[("x",0)])]
@@ -95,11 +78,11 @@ main = hspec $ do
 
       it "fail: undeclared variable" $
         forceEval (envsRead [newEnv] "x")
-        `shouldThrow` errorCall "envsGet: undeclared variable"
+        `shouldThrow` errorCall "envsGet: undeclared variable: x"
 
       it "fail: uninitialized variable" $
         forceEval (envsRead [(["x"],[])] "x")
-        `shouldThrow` errorCall "envsRead: uninitialized variable"
+        `shouldThrow` errorCall "envsRead: uninitialized variable: x"
 
       it "pass: read in simple env" $
         envsRead [(["x"],[("x",0)])] "x" `shouldBe` 0
@@ -121,11 +104,11 @@ main = hspec $ do
 
       it "fail: undeclared variable" $
         forceEval (envsEval [newEnv] (Read "x"))
-        `shouldThrow` errorCall "envsGet: undeclared variable"
+        `shouldThrow` errorCall "envsGet: undeclared variable: x"
 
       it "fail: uninitialized variable" $
         forceEval (envsEval [(["x"],[])] (Read "x"))
-        `shouldThrow` errorCall "envsRead: uninitialized variable"
+        `shouldThrow` errorCall "envsRead: uninitialized variable: x"
 
       it "pass: eval in simple env" $
         let envs = [(["x","y"],[("x",1),("y",2)])] in
@@ -143,32 +126,34 @@ main = hspec $ do
   describe "nst1" $ do
 
     -- block --
-    describe "(Block p)" $ do
-      it "pass: Block Nop" $
-        nst1 (Block Nop, 0, Nothing, [newEnv])
-        `shouldBe` (Seq Nop (Envs' 1), 0, Nothing, [newEnv,newEnv])
+    describe "(Block [vars] p)" $ do
+      it "pass: Block [] Nop" $
+        nst1 (Block [] Nop, 0, Nothing, [newEnv])
+        `shouldBe` (Seq Nop (Restore 1), 0, Nothing, [newEnv,newEnv])
 
-    -- envs' --
-    describe "(Envs' envs)" $ do
+      it "pass: Block [\"x\"] p" $
+        nst1 (Block ["x"] Nop, 0, Nothing, [newEnv])
+        `shouldBe` (Seq Nop (Restore 1), 0, Nothing, [(["x"],[]),newEnv])
+
+      it "pass: Block [\"x\",\"y\"] p" $
+        nst1 (Block ["x","y"] Nop, 0, Nothing, [newEnv])
+        `shouldBe` (Seq Nop (Restore 1), 0, Nothing, [(["x","y"],[]),newEnv])
+
+    -- restore --
+    describe "(Restore envs)" $ do
       it "pass: [e1,e2] " $
-        nst1 (Envs' 1, 0, Nothing, [newEnv,newEnv])
+        nst1 (Restore 1, 0, Nothing, [newEnv,newEnv])
         `shouldBe` (Nop, 0, Nothing, [newEnv])
-
-    -- var --
-    describe "(Var id)" $ do
-      it "pass: x" $
-        nst1 (Var "x", 0, Nothing, [([],[])])
-        `shouldBe` (Nop, 0, Nothing, [(["x"],[])])
 
     -- write --
     describe "(Write id exp)" $ do
       it "fail: [] x=y (undeclared variable)" $
         forceEval (nst1 (Write "x" (Read "y"), 0, Nothing, [newEnv]))
-        `shouldThrow` errorCall "envsGet: undeclared variable"
+        `shouldThrow` errorCall "envsGet: undeclared variable: x"
 
       it "fail: [] x=1 (undeclared variable)" $
         forceEval (nst1 (Write "x" (Const 1), 0, Nothing, [newEnv]))
-        `shouldThrow` errorCall "envsGet: undeclared variable"
+        `shouldThrow` errorCall "envsGet: undeclared variable: x"
 
       it "pass: [x=?] x=1" $
         nst1 (Write "x" (Const 1), 0, Nothing, [(["x"],[])])
@@ -181,24 +166,24 @@ main = hspec $ do
       it "fail: [x=?,y=?] x=y (uninitialized variable)" $
         forceEval (nst1 (Write "x" (Read "y"), 0, Nothing,
                           [(["x","y"],[("x",1)])]))
-        `shouldThrow` errorCall "envsRead: uninitialized variable"
+        `shouldThrow` errorCall "envsRead: uninitialized variable: y"
 
       it "pass: nop; x=1" $
-        nst1 (Seq Nop (Write "x" (Const 1)), 0, Nothing, [newEnv])
+        nst1 (Nop `Seq` (Write "x" (Const 1)), 0, Nothing, [newEnv])
         `shouldBe` ((Write "x" (Const 1)), 0, Nothing, [newEnv])
 
       it "fail: [x=1] y=x+2 (undeclared variable)" $
         forceEval (nst1 (Write "y" (Read "x" `Add` Const 2), 0, Nothing,
-                         [(["x"],[("x",1)])]))
-        `shouldThrow` errorCall "envsGet: undeclared variable"
+                          [(["x"],[("x",1)])]))
+        `shouldThrow` errorCall "envsGet: undeclared variable: y"
 
       it "pass: [x=1,y=?] y=x+2" $
-        nst1 (Write "y" (Add (Read "x") (Const 2)), 0, Nothing,
+        nst1 (Write "y" (Read "x" `Add` Const 2), 0, Nothing,
                [(["x","y"],[("x",1)])])
         `shouldBe` (Nop, 0, Nothing, [(["x","y"],[("y",3),("x",1)])])
 
       it "transit: [x=?] x=-(5+1)" $
-        nst1 (Write "x" (Umn (Add (Const 5) (Const 1))), 0, Nothing,
+        nst1 (Write "x" (Umn (Const 5 `Add` Const 1)), 0, Nothing,
                [(["x"],[])])
         `shouldBe` (Nop, 0, Nothing, [(["x"], [("x",-6)])])
 
@@ -288,7 +273,7 @@ main = hspec $ do
     describe "(If exp p q)" $ do
       it "fail: undeclared variable" $
         forceEval (nst1 (If (Read "x") Nop Break, 0, Nothing, [newEnv]))
-        `shouldThrow` errorCall "envsGet: undeclared variable"
+        `shouldThrow` errorCall "envsGet: undeclared variable: x"
 
       it "pass: x == 0" $
         nst1 (If (Read "x") Nop Break, 0, Nothing, [(["x"],[("x",0)])])
@@ -302,12 +287,13 @@ main = hspec $ do
     describe "(Loop p)" $ do
       it "pass: lvl == 0" $
         nst1 (Loop Nop, 0, Nothing, [newEnv])
-        `shouldBe` (Seq (Loop' Nop Nop) (Envs' 1), 0, Nothing, [newEnv])
+        `shouldBe` (Seq (Loop' Nop Nop) (Restore 1), 0, Nothing, [newEnv])
 
       it "pass: lvl > 0" $
         nst1 (Loop (Seq Nop (EmitInt 8)), 3, Nothing, [newEnv])
         `shouldBe`
-        (Seq (Loop' (Seq Nop (EmitInt 8)) (Seq Nop (EmitInt 8))) (Envs' 1),
+        (Seq (Loop' (Seq Nop (EmitInt 8)) (Seq Nop (EmitInt 8)))
+             (Restore 1),
           3, Nothing, [newEnv])
 
       it "fail: evt /= nil (cannot advance)" $
@@ -316,7 +302,7 @@ main = hspec $ do
 
       it "fail: isBlocked p (cannot advance)" $
         nst1 (Loop (Fin Nop), 0, Nothing, [newEnv])
-        `shouldBe` (Seq (Loop' (Fin Nop) (Fin Nop)) (Envs' 1),
+        `shouldBe` (Seq (Loop' (Fin Nop) (Fin Nop)) (Restore 1),
                      0, Nothing, [newEnv])
 
     -- loop-nop --
@@ -384,9 +370,10 @@ main = hspec $ do
         `shouldBe` (And' Nop (Seq (CanRun 0) Nop), 0, Nothing, [newEnv])
 
       it "pass: lvl > 0" $
-        nst1 (And (Seq Nop (EmitInt 8)) (Seq Nop Nop), 3, Nothing, [newEnv])
-        `shouldBe` (And' (Seq Nop (EmitInt 8))
-                          (Seq (CanRun 3) (Seq Nop Nop)), 3, Nothing, [newEnv])
+        nst1 (And (Nop `Seq` EmitInt 8)  (Nop `Seq` Nop),
+               3, Nothing, [newEnv])
+        `shouldBe` (And' (Nop `Seq` EmitInt 8)
+                     (CanRun 3 `Seq` Nop `Seq` Nop), 3, Nothing, [newEnv])
 
       it "fail: evt /= nil (cannot advance)" $
         forceEval (nst1 (And Nop Nop, 0, Just 1, [newEnv]))
@@ -450,7 +437,7 @@ main = hspec $ do
            `shouldBe` (Seq (clear q) Break, 3, Nothing, [newEnv]))
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (And' Break (Var "x"), 0, Just 1, [newEnv]))
+        forceEval (nst1 (And' Break (Block [] Nop), 0, Just 1, [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "pass: isBlocked q" $
@@ -461,14 +448,12 @@ main = hspec $ do
             `shouldBe` (Seq (clear q) Break, 0, Nothing, [newEnv]))
 
       it "pass: isBlocked q (nontrivial clear)" $
-        let q = (Or' (Seq (AwaitExt 0) (Fin Nop))
-                 (And' (Fin (EmitInt 1))
-                  (Or' (Fin (Seq (EmitInt 2) (EmitInt 3)))
-                    (Seq (AwaitInt 0) (Fin (EmitInt 4))))))
-            clear_q = (Nop `Seq`
-                       (EmitInt 1 `Seq`
-                        ((EmitInt 2 `Seq` EmitInt 3) `Seq`
-                         Nop))) in
+        let q = Or' (AwaitExt 0 `Seq` Fin Nop)
+                    (And' (Fin (EmitInt 1))
+                          (Or' (Fin (EmitInt 2 `Seq` EmitInt 3))
+                            (AwaitInt 0 `Seq` Fin (EmitInt 4))))
+            clear_q = Nop `Seq` EmitInt 1 `Seq`
+                      (EmitInt 2 `Seq` EmitInt 3) `Seq` Nop in
           (clear q `shouldBe` clear_q)
           >>                   -- clear q == Nop; Emit1; (Emit2; Emit3); Nop
           (nst1 (And' Break q, 0, Nothing, [newEnv])
@@ -525,14 +510,12 @@ main = hspec $ do
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "pass: isBlocked p (nontrivial clear)" $
-        let p = (Or' (Seq (AwaitExt 0) (Fin Nop))
-                 (And' (Fin (EmitInt 1))
-                  (Or' (Fin (Seq (EmitInt 2) (EmitInt 3)))
-                    (Seq (AwaitInt 0) (Fin (EmitInt 4))))))
-            clear_p = (Nop `Seq`
-                       (EmitInt 1 `Seq`
-                        ((EmitInt 2 `Seq` EmitInt 3) `Seq`
-                         Nop))) in
+        let p = Or' (AwaitExt 0 `Seq` Fin Nop)
+                    (And' (Fin (EmitInt 1))
+                          (Or' (Fin (EmitInt 2 `Seq` EmitInt 3))
+                            (AwaitInt 0 `Seq` Fin (EmitInt 4))))
+            clear_p = Nop `Seq` EmitInt 1 `Seq`
+                      (EmitInt 2 `Seq` EmitInt 3) `Seq` Nop in
           (clear p `shouldBe` clear_p)
           >>                   -- clear p == Nop; Emit1; (Emit2; Emit3); Nop
           (nst1 (And' p Break, 0, Nothing, [newEnv])
@@ -582,13 +565,13 @@ main = hspec $ do
     describe "(Or p q)" $ do
       it "pass: lvl == 0" $
         nst1 (Or Nop Nop, 0, Nothing, [newEnv])
-        `shouldBe` (Seq (Or' Nop (Seq (CanRun 0) Nop)) (Envs' 1),
+        `shouldBe` (Seq (Or' Nop (Seq (CanRun 0) Nop)) (Restore 1),
                      0, Nothing, [newEnv])
 
       it "pass: lvl > 0" $
         nst1 (Or (Seq Nop (EmitInt 8)) (Seq Nop Nop), 3, Nothing, [newEnv])
         `shouldBe` (Seq (Or' (Seq Nop (EmitInt 8))
-                          (Seq (CanRun 3) (Seq Nop Nop))) (Envs' 1),
+                          (Seq (CanRun 3) (Seq Nop Nop))) (Restore 1),
                      3, Nothing, [newEnv])
 
       it "fail: evt /= nil (cannot advance)" $
@@ -597,18 +580,18 @@ main = hspec $ do
 
       it "pass: isBlocked p && not (isBlocked q)" $
         nst1 (Or (Fin Nop) Nop, 0, Nothing, [newEnv])
-        `shouldBe` (Seq (Or' (Fin Nop) (Seq (CanRun 0) Nop)) (Envs' 1),
+        `shouldBe` (Seq (Or' (Fin Nop) (Seq (CanRun 0) Nop)) (Restore 1),
                      0, Nothing, [newEnv])
 
       it "pass: not (isBlocked p) && isBlocked q" $
         nst1 (Or Nop (Fin Nop), 0, Nothing, [newEnv])
-        `shouldBe` (Seq (Or' Nop (Seq (CanRun 0) (Fin Nop))) (Envs' 1),
+        `shouldBe` (Seq (Or' Nop (Seq (CanRun 0) (Fin Nop))) (Restore 1),
                      0, Nothing, [newEnv])
 
       it "pass: isBlocked p && isBlocked q" $
         nst1 (Or (Fin Nop) (Fin Nop), 0, Nothing, [newEnv])
         `shouldBe` (Seq (Or' (Fin Nop) (Seq (CanRun 0) (Fin Nop)))
-                     (Envs' 1), 0, Nothing, [newEnv])
+                     (Restore 1), 0, Nothing, [newEnv])
 
     -- or-nop1 --
     describe "(Or' Nop q)" $ do
@@ -638,14 +621,12 @@ main = hspec $ do
            `shouldBe` (clear q, 0, Nothing, [newEnv]))
 
       it "pass: isBlocked q (nontrivial clear)" $
-        let q = (Or' (Seq (AwaitExt 0) (Fin Nop))
-                 (And' (Fin (EmitInt 1))
-                  (Or' (Fin (Seq (EmitInt 2) (EmitInt 3)))
-                    (Seq (AwaitInt 0) (Fin (EmitInt 4))))))
-            clear_q = (Nop `Seq`
-                       (EmitInt 1 `Seq`
-                        ((EmitInt 2 `Seq` EmitInt 3) `Seq`
-                         Nop))) in
+        let q = Or' (AwaitExt 0 `Seq` Fin Nop)
+                    (And' (Fin (EmitInt 1))
+                          (Or' (Fin (EmitInt 2 `Seq` EmitInt 3))
+                            (AwaitInt 0 `Seq` Fin (EmitInt 4))))
+            clear_q = Nop `Seq` EmitInt 1 `Seq`
+                      (EmitInt 2 `Seq` EmitInt 3) `Seq` Nop in
           (clear q `shouldBe` clear_q)
           >>                   -- clear q == Nop; Emit1; (Emit2; Emit3); Nop
           (nst1 (Or' Nop q, 0, Nothing, [newEnv])
@@ -687,14 +668,12 @@ main = hspec $ do
            `shouldBe` (Seq (clear q) Break, 0, Nothing, [newEnv]))
 
       it "pass: isBlocked q (nontrivial clear)" $
-        let q = (Or' (Seq (AwaitExt 0) (Fin Nop))
-                 (And' (Fin (EmitInt 1))
-                  (Or' (Fin (Seq (EmitInt 2) (EmitInt 3)))
-                    (Seq (AwaitInt 0) (Fin (EmitInt 4))))))
-            clear_q = (Nop `Seq`
-                       (EmitInt 1 `Seq`
-                        ((EmitInt 2 `Seq` EmitInt 3) `Seq`
-                         Nop))) in
+        let q = Or' (AwaitExt 0 `Seq` Fin Nop)
+                    (And' (Fin (EmitInt 1))
+                          (Or' (Fin (EmitInt 2 `Seq` EmitInt 3))
+                            (AwaitInt 0 `Seq` Fin (EmitInt 4))))
+            clear_q = Nop `Seq` EmitInt 1 `Seq`
+                      (EmitInt 2 `Seq` EmitInt 3) `Seq` Nop in
           (clear q `shouldBe` clear_q)
           >>                   -- clear q == Nop; Emit1; (Emit2; Emit3); Nop
           (nst1 (Or' Break q, 0, Nothing, [newEnv])
@@ -757,14 +736,12 @@ main = hspec $ do
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "pass: isBlocked p (nontrivial clear)" $
-        let p = (Or' (Seq (AwaitExt 0) (Fin Nop))
-                 (And' (Fin (EmitInt 1))
-                  (Or' (Fin (Seq (EmitInt 2) (EmitInt 3)))
-                    (Seq (AwaitInt 0) (Fin (EmitInt 4))))))
-            clear_p = (Nop `Seq`
-                       (EmitInt 1 `Seq`
-                        ((EmitInt 2 `Seq` EmitInt 3) `Seq`
-                         Nop))) in
+        let p = Or' (AwaitExt 0 `Seq` Fin Nop)
+                    (And' (Fin (EmitInt 1))
+                          (Or' (Fin (EmitInt 2 `Seq` EmitInt 3))
+                            (AwaitInt 0 `Seq` Fin (EmitInt 4))))
+            clear_p = Nop `Seq` EmitInt 1 `Seq`
+                      (EmitInt 2 `Seq` EmitInt 3) `Seq` Nop in
           (clear p `shouldBe` clear_p)
           >>                   -- clear p == Nop; Emit1; (Emit2; Emit3); Nop
           (nst1 (Or' p Break, 0, Nothing, [newEnv])
@@ -853,15 +830,9 @@ main = hspec $ do
           (nsts d `shouldBe` d) >> (isNstIrreducible d `shouldBe` True)
 
     describe "one+ steps" $ do
-      it "pass: {var x; x=1} -> [] Nop#" $
-        let d = (Block (Var "x" `Seq` (Write "x" (Const 0))),
-                  3, Nothing, [newEnv])
+      it "pass: {var x; x=0} -> [] Nop#" $
+        let d = (Block ["x"] (Write "x" (Const 0)), 3, Nothing, [newEnv])
             d' = (Nop, 3, Nothing, [newEnv]) in
-          (nsts d `shouldBe` d') >> (isNstIrreducible d' `shouldBe` True)
-
-      it "pass: var x; x=1 -> [x=1] Nop#" $
-        let d = (Var "x" `Seq` (Write "x" (Const 0)), 3, Nothing, [newEnv])
-            d' = (Nop, 3, Nothing, [(["x"],[("x",0)])]) in
           (nsts d `shouldBe` d') >> (isNstIrreducible d' `shouldBe` True)
 
       it "pass: EmitInt -> CanRun#" $
@@ -985,67 +956,86 @@ main = hspec $ do
       reaction ((Nop `Seq` AwaitInt 3) `And` (Nop `Seq` EmitInt 3), 1, [([],[])])
       `shouldBe` (Nop, [([],[])])
 
-  -- evalProg -----------------------------------------------------------------
+  -- evalProg --------------------------------------------------------------
   describe "evalProg" $ do
-
-    it "var a; var ret; a=1; ret=a+10;" $
-      let p = Seq (Var "a") (Seq (Var "ret") (Seq (Write "a" (Const 1)) (Write "ret" (Add (Read "a") (Const 10))))) in
+    it "{var a; a=1; ret=a+10}" $
+      let p = Block ["a"]
+              (Write "a" (Const 1) `Seq`
+               Write "ret" (Read "a" `Add` Const 10)) in
         (evalProg p []) `shouldBe` 11
 
-    it "var a; {var ret; a=1; ret=a+10;}" $
-      let p = Seq (Var "a") (Block (Seq (Var "ret") (Seq (Write "a" (Const 1)) (Write "ret" (Add (Read "a") (Const 10)))))) in
+    it "{var a; {var ret; a=1; ret=a+10}} (shadowing ret)" $
+      let p = Block ["a"]
+              (Block ["ret"]
+               (Write "a" (Const 1) `Seq`
+                Write "ret" (Read "a" `Add` Const 10))) in
         forceEval (evalProg p [])
-        `shouldThrow` errorCall "envsGet: undeclared variable"
+        `shouldThrow` errorCall "envsRead: uninitialized variable: ret"
 
-    it "var ret; ret=1; {var ret; ret=99;}" $
-      let p = Seq (Var "ret") (Seq (Var "ret") (Seq (Write "ret" (Const 1)) (Block (Seq (Var "ret") (Write "ret" (Const 99)))))) in
+    it "ret=1; {var ret; ret=99}" $
+      let p = Write "ret" (Const 1) `Seq`
+             (Block ["ret"] (Write "ret" (Const 99))) in
         (evalProg p []) `shouldBe` 1
 
-    it "var ret; var a; a=1; {var a; a=99;} ret=a+10;" $
-      let p = Seq (Var "ret") (Seq (Var "a") (Seq (Write "a" (Const 1)) (Seq (Block (Seq (Var "a") (Write "a" (Const 99)))) (Write "ret" (Add (Read "a") (Const 10)))))) in
+    it "{var a; a=1; {var a; a=99} ret=a+10}" $
+      let p = Block ["a"]
+              (Write "a" (Const 1) `Seq`
+               Block ["a"] (Write "a" (Const 99)) `Seq`
+               Write "ret" (Read "a" `Add` Const 10)) in
         (evalProg p []) `shouldBe` 11
 
-    it "var ret; ret=1; {ret=2;}" $
-      let p = Seq (Var "ret") (Seq (Write "ret" (Const 1)) (Block (Write "ret" (Const 2)))) in
+    it "ret=1; {ret=2}" $
+      let p = Write "ret" (Const 1) `Seq`
+              Block [] (Write "ret" (Const 2)) in
         (evalProg p []) `shouldBe` 2
 
-    it "var ret; var a; a=1; ({var a; a=99; awaitExt E} || nop); ret=a+10;" $
-      let p = Seq (Var "ret") (Seq (Var "a") (Seq (Write "a" (Const 1)) (Seq (Or (Block (Seq (Var "a") (Seq (Write "a" (Const 99)) (AwaitExt 0)))) Nop) (Write "ret" (Add (Read "a") (Const 10)))))) in
+    it "{var a; a=1; ({var a; a=99; awaitExt E} || nop); ret=a+10}" $
+      let p = Block ["a"]
+              (Write "a" (Const 1) `Seq`
+               Or (Block ["a"] (Write "a" (Const 99) `Seq` AwaitExt 0))
+                  (Nop) `Seq`
+               Write "ret" (Read "a" `Add` Const 10)) in
         (evalProg p []) `shouldBe` 11
 
-    it "var ret; ({ret=1; awaitExt E} || nop);" $
-      let p = Seq (Var "ret") (Or (Block (Seq (Write "ret" (Const 1)) (AwaitExt 0))) Nop) in
+    it "({ret=1; awaitExt E} || nop)" $
+      let p = Or (Block [] (Write "ret" (Const 1) `Seq` AwaitExt 0))
+                 (Nop) in
         (evalProg p []) `shouldBe` 1
 
-    it "var ret; var a; a=1; loop ({var a; a=99; awaitExt E} && break); ret=a+10;" $
-      let p = Seq (Var "ret") (Seq (Var "a") (Seq (Write "a" (Const 1)) (Seq (Loop (And (Block (Seq (Var "a") (Seq (Write "a" (Const 99)) (AwaitExt 0)))) Break)) (Write "ret" (Add (Read "a") (Const 10)))))) in
+    it "{var a; a=1; loop ({var a; a=99; awaitExt E} && break); ret=a+10}" $
+      let p = Block ["a"]
+              (Write "a" (Const 1) `Seq`
+               Loop (And (Block ["a"] (Write "a" (Const 99) `Seq` AwaitExt 0))
+                         (Break)) `Seq`
+               Write "ret" (Read "a" `Add` Const 10)) in
         (evalProg p []) `shouldBe` 11
 
-    it "var ret; loop ({ret=1; awaitExt E} && break);" $
-      let p = Seq (Var "ret") (Loop (And (Block (Seq (Write "ret" (Const 1)) (AwaitExt 0))) Break))in
-        (evalProg p []) `shouldBe` 1
+    it "loop ({ret=1; awaitExt E} && break)" $
+      let p = Loop (And (Block [] (Write "ret" (Const 1) `Seq` AwaitExt 0))
+                        (Break)) in
+        evalProg p [] `shouldBe` 1
 
     -- multiple inputs
 
-    it "[0] | var ret; awaitExt 0; ret=1;" $
-      let p = Seq (Var "ret") (Seq (AwaitExt 0) (Write "ret" (Const 1))) in
-        (evalProg p [0]) `shouldBe` 1
+    it "[0] | awaitExt 0; ret=1" $
+      let p = AwaitExt 0 `Seq` Write "ret" (Const 1) in
+        evalProg p [0] `shouldBe` 1
 
-    it "[] | var ret; awaitExt 0; ret=1;" $
-      let p = Seq (Var "ret") (Seq (AwaitExt 0) (Write "ret" (Const 1))) in
+    it "[] | awaitExt 0; ret=1;" $
+      let p = AwaitExt 0 `Seq` Write "ret" (Const 1) in
         evaluate (evalProg p [])
         `shouldThrow` errorCall "evalProg: did not terminate"
 
-    it "[1] | var ret; awaitExt 0; ret=1;" $
-      let p = Seq (Var "ret") (Seq (AwaitExt 0) (Write "ret" (Const 1))) in
+    it "[1] | awaitExt 0; ret=1;" $
+      let p = AwaitExt 0 `Seq` Write "ret" (Const 1) in
         evaluate (evalProg p [1])
         `shouldThrow` errorCall "evalProg: did not terminate"
 
-    it "[0,0] | var ret; awaitExt 0; ret=1;" $
-      let p = Seq (Var "ret") (Seq (AwaitExt 0) (Write "ret" (Const 1))) in
+    it "[0,0] | awaitExt 0; ret=1;" $
+      let p = AwaitExt 0 `Seq` Write "ret" (Const 1) in
         evaluate (evalProg p [0,0])
         `shouldThrow` errorCall "evalProg: pending inputs"
 
-    it "[0,1] | var ret; awaitExt 0; awaitExt 1; ret=1;" $
-      let p = Seq (Var "ret") (Seq (AwaitExt 0) (Seq (AwaitExt 1) (Write "ret" (Const 1)))) in
-        (evalProg p [0,1]) `shouldBe` 1
+    it "[0,1] | awaitExt 0; awaitExt 1; ret=1" $
+      let p = AwaitExt 0 `Seq` AwaitExt 1 `Seq` Write "ret" (Const 1) in
+        evalProg p [0,1] `shouldBe` 1
