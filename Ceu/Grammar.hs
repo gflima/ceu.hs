@@ -1,5 +1,7 @@
 module Ceu.Grammar where
 
+import Text.Printf
+
 -- Primitive types.
 type Evt = Int                  -- event identifier
 type ID  = String               -- variable identifier
@@ -47,44 +49,47 @@ infixr 0 `And`                  -- `And` associates to the right
 -- Shows expression.
 showExpr :: Expr -> String
 showExpr expr = case expr of
-  (Const n)   -> show n
-  (Read v)    -> v
-  (Umn e)     -> "-(" ++ showExpr e ++ ")"
-  (Add e1 e2) -> "(" ++ showExpr e1 ++ "+" ++ showExpr e2 ++ ")"
-  (Sub e1 e2) -> "(" ++ showExpr e1 ++ "-" ++ showExpr e2 ++ ")"
+  Const n   -> show n
+  Read v    -> v
+  Umn e     -> printf "(-%s)" (showExpr e)
+  Add e1 e2 -> printf "(%s+%s)" (showExpr e1) (showExpr e2)
+  Sub e1 e2 -> printf "(%s-%s)" (showExpr e1) (showExpr e2)
 
 -- Shows list of variables.
 showVars :: [ID] -> String
 showVars vars = case vars of
-  []       -> ""
-  (v:[])   -> v
-  (v:vars) -> v ++ "," ++ showVars vars
+  []     -> ""
+  v:[]   -> v
+  v:vars -> v ++ "," ++ showVars vars
 
 -- Shows program.
 showProg :: Stmt -> String
 showProg stmt = case stmt of
-  Block vars p   -> "{" ++ (if null vars then ""
-                               else showVars vars ++ ": ")
-                      ++ showProg p ++ "}"
-  Write var expr -> var ++ "=" ++ showExpr expr
-  AwaitExt e     -> "?E" ++ show e
-  AwaitInt e     -> "?" ++ show e
-  EmitInt e      -> "!" ++ show e
+  Block vars p   -> if null vars
+                    then printf "{%s}" (sP p)
+                    else printf "{%s: %s}" (sV vars) (sP p)
+  Write var expr -> printf "%s=%s" var (sE expr)
+  AwaitExt e     -> printf "?E%d" e
+  AwaitInt e     -> printf "?%d" e
+  EmitInt e      -> printf "!%d" e
   Break          -> "break"
-  If expr p q    -> "(if " ++ showExpr expr ++ " then "
-                      ++ showProg p ++ " else " ++ showProg q ++ ")"
-  Seq p q        -> showProg p ++ "; " ++ showProg q
-  Loop p         -> "(loop " ++ showProg p ++ ")"
-  Every e p      -> "(every " ++ show e ++ " " ++ showProg p ++ ")"
-  And p q        -> "(" ++ showProg p ++ " && " ++ showProg q ++ ")"
-  Or p q         -> "(" ++ showProg p ++ " || " ++ showProg q ++ ")"
-  Fin p          -> "(fin " ++ showProg p ++ ")"
+  If expr p q    -> printf "(if %s then %s else %s)" (sE expr) (sP p) (sP q)
+  Seq p q        -> printf "%s; %s" (sP p) (sP q)
+  Loop p         -> printf "(loop %s)" (sP p)
+  Every e p      -> printf "(every %d %s)" e (sP p)
+  And p q        -> printf "(%s && %s)" (sP p) (sP q)
+  Or p q         -> printf "(%s || %s)" (sP p) (sP q)
+  Fin p          -> printf "(fin %s)" (sP p)
   Nop            -> "nop"
-  CanRun n       -> "@canrun(" ++ show n ++ ")"
-  Restore n      -> "@restore(" ++ show n ++ ")"
-  Loop' p q      -> "(" ++ showProg p ++ " @loop " ++ showProg q ++ ")"
-  And' p q       -> "(" ++ showProg p ++ " @&& " ++ showProg q ++ ")"
-  Or' p q        -> "(" ++ showProg p ++ " @|| " ++ showProg q ++ ")"
+  CanRun n       -> printf "@canrun(%d)" n
+  Restore n      -> printf "@restore(%d)" n
+  Loop' p q      -> printf "(%s @loop %s)" (sP p) (sP q)
+  And' p q       -> printf "(%s @&& %s)" (sP p) (sP q)
+  Or' p q        -> printf "(%s @|| %s)" (sP p) (sP q)
+  where
+    sE = showExpr
+    sP = showProg
+    sV = showVars
 
 -- Checks if program is valid.
 checkProg :: Stmt -> Bool

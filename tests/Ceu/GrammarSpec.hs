@@ -12,22 +12,22 @@ spec = do
   describe "checkLoop -- matching-Break/AwaitExt/Every in all paths" $ do
 
     -- atomic statements --
-    checkLoopIt (Loop (Write "x" (Const 0)))      False
-    checkLoopIt (Loop (AwaitExt 0))               True
-    checkLoopIt (Loop (AwaitInt 0))               False
-    checkLoopIt (Loop (EmitInt 0))                False
-    checkLoopIt (Loop (Break))                    True
-    checkLoopIt (Loop (Nop))                      False
-    checkLoopIt (Loop (CanRun 0))                 False
-    checkLoopIt (Loop (Restore 0))                False
-    checkLoopIt (Loop' Nop (Write "x" (Const 0))) False
-    checkLoopIt (Loop' Nop (AwaitExt 0))          True
-    checkLoopIt (Loop' Nop (AwaitInt 0))          False
-    checkLoopIt (Loop' Nop (EmitInt 0))           False
-    checkLoopIt (Loop' Nop (Break))               True
-    checkLoopIt (Loop' Nop (Nop))                 False
-    checkLoopIt (Loop' Nop (CanRun 0))            False
-    checkLoopIt (Loop' Nop (Restore 0))           False
+    checkLoopIt (Loop (Write "x" (Umn (Const 1)))) False
+    checkLoopIt (Loop (AwaitExt 0))                True
+    checkLoopIt (Loop (AwaitInt 0))                False
+    checkLoopIt (Loop (EmitInt 0))                 False
+    checkLoopIt (Loop (Break))                     True
+    checkLoopIt (Loop (Nop))                       False
+    checkLoopIt (Loop (CanRun 0))                  False
+    checkLoopIt (Loop (Restore 0))                 False
+    checkLoopIt (Loop' Nop (Write "x" (Const 0)))  False
+    checkLoopIt (Loop' Nop (AwaitExt 0))           True
+    checkLoopIt (Loop' Nop (AwaitInt 0))           False
+    checkLoopIt (Loop' Nop (EmitInt 0))            False
+    checkLoopIt (Loop' Nop (Break))                True
+    checkLoopIt (Loop' Nop (Nop))                  False
+    checkLoopIt (Loop' Nop (CanRun 0))             False
+    checkLoopIt (Loop' Nop (Restore 0))            False
 
     -- compound statements --
     checkLoopIt (Loop (Block [] (Block [] Break)))               True

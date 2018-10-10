@@ -24,25 +24,28 @@ newEnv = ([], [])
 envsGet :: Envs -> String -> (Envs,Env,Envs)
 envsGet [] _ = error "envsGet: bad environment"
 envsGet envs id  = envsGet' [] envs id
-  where envsGet' :: Envs -> Envs -> String -> (Envs, Env, Envs)
-        envsGet' _ [] _ = error ("envsGet: undeclared variable: " ++ id)
-        envsGet' notHere (env:maybeHere) id
-          | elem id (fst env) = (notHere, env, maybeHere) -- found
-          | otherwise         = envsGet' (notHere++[env]) maybeHere id
+  where
+    envsGet' :: Envs -> Envs -> String -> (Envs, Env, Envs)
+    envsGet' _ [] _ = error ("envsGet: undeclared variable: " ++ id)
+    envsGet' notHere (env:maybeHere) id
+      | elem id (fst env) = (notHere, env, maybeHere) -- found
+      | otherwise         = envsGet' (notHere++[env]) maybeHere id
 
 -- Writes value to variable in environment.
 envsWrite :: Envs -> String -> Val -> Envs
 envsWrite envs id val = envs1 ++ [(fst env, (id,val):(snd env))] ++ envs2
-  where (envs1, env, envs2) = envsGet envs id
+  where
+    (envs1, env, envs2) = envsGet envs id
 
 -- Reads variable value from environment.
 envsRead :: Envs -> String -> Val
 envsRead envs id = envsRead' hst id
-  where (_, (_,hst), _) = envsGet envs id
-        envsRead' [] id = error ("envsRead: uninitialized variable: " ++ id)
-        envsRead' ((id',val'):hst') id
-          | id == id' = val'    -- found
-          | otherwise = envsRead' hst' id
+  where
+    (_, (_,hst), _) = envsGet envs id
+    envsRead' [] id = error ("envsRead: uninitialized variable: " ++ id)
+    envsRead' ((id',val'):hst') id
+      | id == id' = val'    -- found
+      | otherwise = envsRead' hst' id
 
 -- Evaluates expression in environment.
 envsEval :: Envs -> Expr -> Val
@@ -59,35 +62,38 @@ envsEval envs expr = case expr of
 -- Tests whether program is blocked at the given stack level.
 -- (pg 8, fig 4.ii)
 isBlocked :: Lvl -> Stmt -> Bool
-isBlocked n (AwaitExt e) = True
-isBlocked n (AwaitInt e) = True
-isBlocked n (Every e p) = True
-isBlocked n (CanRun m) = n > m
-isBlocked n (Fin p) = True
-isBlocked n (Seq p q) = isBlocked n p
-isBlocked n (Loop' p q) = isBlocked n p
-isBlocked n (And' p q) = (isBlocked n p) && (isBlocked n q)
-isBlocked n (Or' p q) = (isBlocked n p) && (isBlocked n q)
-isBlocked _ _ = False           -- otherwise
+isBlocked n stmt = case stmt of
+  AwaitExt e -> True
+  AwaitInt e -> True
+  Every e p  -> True
+  CanRun m   -> n > m
+  Fin p      -> True
+  Seq p q    -> isBlocked n p
+  Loop' p q  -> isBlocked n p
+  And' p q   -> (isBlocked n p) && (isBlocked n q)
+  Or' p q    -> (isBlocked n p) && (isBlocked n q)
+  _          -> False
 
 -- Obtains the body of all active Fin statements in program.
 -- (pg 8, fig 4.iii)
 clear :: Stmt -> Stmt
-clear (AwaitExt _) = Nop
-clear (AwaitInt _) = Nop
-clear (Every _ _) = Nop
-clear (CanRun _) = Nop
-clear (Fin p) = p
-clear (Seq p _) = clear p
-clear (Loop' p _) = clear p
-clear (And' p q) = Seq (clear p) (clear q)
-clear (Or' p q) = Seq (clear p) (clear q)
-clear _ = error "clear: invalid clear"
+clear stmt = case stmt of
+  AwaitExt _ -> Nop
+  AwaitInt _ -> Nop
+  Every _ _  -> Nop
+  CanRun _   -> Nop
+  Fin p      -> p
+  Seq p _    -> clear p
+  Loop' p _  -> clear p
+  And' p q   -> Seq (clear p) (clear q)
+  Or' p q    -> Seq (clear p) (clear q)
+  _          -> error "clear: invalid clear"
 
 -- Helper function used by nst1 in the *-adv rules.
 nst1Adv :: Desc -> (Stmt -> Stmt) -> Desc
 nst1Adv d f = (f p, n, e, envs)
-  where (p, n, e, envs) = (nst1 d)
+  where
+    (p, n, e, envs) = nst1 d
 
 -- Single nested transition.
 -- (pg 6)
@@ -181,15 +187,16 @@ nst1 (Or' p q, n, Nothing, envs)                -- or-adv (pg 7)
   | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> Or' p' q)
   | otherwise = nst1Adv (q, n, Nothing, envs) (\q' -> Or' p q')
 
-nst1 (_, _, _, _) = error "nst1: cannot advance" -- default
+nst1 (_, _, _, _) = error "nst1: cannot advance"
 
 -- Tests whether the description is nst-irreducible.
 -- CHECK: nst should only produce nst-irreducible descriptions.
 isNstIrreducible :: Desc -> Bool
-isNstIrreducible (Nop, n, e, envs) = True
-isNstIrreducible (Break, n, e, envs) = True
-isNstIrreducible (p, n, Just e, envs) = True
-isNstIrreducible (p, n, Nothing, envs) = isBlocked n p
+isNstIrreducible desc = case desc of
+  (Nop, n, e, envs)     -> True
+  (Break, n, e, envs)   -> True
+  (p, n, Just e, envs)  -> True
+  (p, n, Nothing, envs) -> isBlocked n p
 
 -- Zero or more nested transitions.
 -- (pg 6)
@@ -204,30 +211,15 @@ nsts d
 -- Awakes all trails waiting for the given event.
 -- (pg 8, fig 4.i)
 bcast :: Evt -> Stmt -> Stmt
-bcast e (AwaitExt e') = if e == e' then Nop else AwaitExt e'
-bcast e (AwaitInt e') = if e == e' then Nop else AwaitInt e'
-bcast e (Every e' p) = if e == e' then (Seq p (Every e' p)) else (Every e' p)
-bcast e (Seq p q) = Seq (bcast e p) q
-bcast e (Loop' p q) = Loop' (bcast e p) q
-bcast e (And' p q) = And' (bcast e p) (bcast e q)
-bcast e (Or' p q) = Or' (bcast e p) (bcast e q)
-bcast e p = p                   -- otherwise
-
--- Checks if a Break or AwaitExt occurs in all execution paths of program.
-chkProg :: Stmt -> Bool
---chkProg (Block p) = chkProg p
-chkProg (AwaitExt e) = True
-chkProg Break = True
-chkProg (If exp p q) = chkProg p && chkProg q
-chkProg (Seq p q) = chkProg p || chkProg q
-chkProg (Loop p) = chkProg p
-chkProg (Every e p) = chkProg p     -- CHECK THIS! --
-chkProg (And p q) = chkProg p && chkProg q
-chkProg (Or p q) = chkProg p && chkProg q
-chkProg (Loop' p q) = chkProg p || chkProg q
-chkProg (And' p q) = chkProg p && chkProg q
-chkProg (Or' p q) = chkProg p && chkProg q
-chkProg _ = False
+bcast e stmt = case stmt of
+  AwaitExt e' -> if e == e' then Nop else AwaitExt e'
+  AwaitInt e' -> if e == e' then Nop else AwaitInt e'
+  Every e' p  -> if e == e' then (Seq p (Every e' p)) else (Every e' p)
+  Seq p q     -> Seq (bcast e p) q
+  Loop' p q   -> Loop' (bcast e p) q
+  And' p q    -> And' (bcast e p) (bcast e q)
+  Or' p q     -> Or' (bcast e p) (bcast e q)
+  _           -> stmt           -- nothing to do
 
 -- Counts the number of reachable EmitInt statements in program.
 -- (pg 9)
@@ -241,7 +233,7 @@ pot' (Seq Break q) = 0
 pot' (Seq (AwaitExt e) q) = 0
 pot' (Seq p q) = (pot' p) + (pot' q)
 pot' (Loop' p q)
-  | chkProg p = pot' p        -- q is unreachable
+  | checkLoop (Loop p) = pot' p        -- q is unreachable
   | otherwise = (pot' p) + (pot' q)
 pot' (And' p q) = (pot' p) + (pot' q) -- CHECK THIS! --
 pot' (Or' p q) = (pot' p) + (pot' q)  -- CHECK THIS! --
