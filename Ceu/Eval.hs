@@ -1,61 +1,14 @@
-module Ceu where
+module Ceu.Eval where
 
+import Ceu.Grammar
 import Data.Maybe
 
--- Event.
-type Evt = Int
+-- Environment.
+type Env = ([ID], [(ID,Val)])   -- declarations plus assignment history
+type Envs = [Env]               -- list of environments
 
 -- Stack level.
 type Lvl = Int
-
--- Variable / Value.
-type ID = String
-type Val = Int
-
--- Environment (declarations plus assignment history).
-type Env = ([ID], [(ID,Val)])
-type Envs = [Env]
-
--- Expression.
-data Exp
-  = Const Val                   -- constant
-  | Read ID                     -- variable read
-  | Umn Exp                     -- unary minus
-  | Add Exp Exp                 -- addition
-  | Sub Exp Exp                 -- subtraction
-  deriving (Eq, Show)
-
--- `Add` and `Sub` associate to the left.
-infixl 6 `Add`
-infixl 6 `Sub`
-
--- Program (pg 5).
-data Stmt
-  = Block [ID] Stmt             -- variable declaration block
-  | Write ID Exp                -- variable assignment
-  | AwaitExt Evt                -- await external event
-  | AwaitInt Evt                -- await internal event
-  | EmitInt Evt                 -- emit internal event
-  | Break                       -- loop escape
-  | If Exp Stmt Stmt            -- conditional
-  | Seq Stmt Stmt               -- sequence
-  | Loop Stmt                   -- infinite loop
-  | Every Evt Stmt              -- event iteration
-  | And Stmt Stmt               -- par/and statement
-  | Or Stmt Stmt                -- par/or statement
-  | Fin Stmt                    -- finalization statement
-  | Nop                         -- dummy statement (internal)
-  | CanRun Lvl                  -- wait for stack level (internal)
-  | Restore Int                 -- restore environment (internal)
-  | Loop' Stmt Stmt             -- unrolled Loop (internal)
-  | And' Stmt Stmt              -- unrolled And (internal)
-  | Or' Stmt Stmt               -- unrolled Or (internal)
-  deriving (Eq, Show)
-
--- `Seq`, `Or`, and `And` associate to the right.
-infixr 1 `Seq`
-infixr 0 `Or`
-infixr 0 `And`
 
 -- Description (pg 6).
 type Desc = (Stmt, Lvl, Maybe Evt, Envs)
@@ -71,16 +24,16 @@ newEnv = ([], [])
 envsGet :: Envs -> String -> (Envs,Env,Envs)
 envsGet [] _ = error "envsGet: bad environment"
 envsGet envs id  = envsGet' [] envs id
-  where envsGet' :: Envs -> Envs -> String -> (Envs,Env,Envs)
+  where envsGet' :: Envs -> Envs -> String -> (Envs, Env, Envs)
         envsGet' _ [] _ = error ("envsGet: undeclared variable: " ++ id)
-        envsGet' envsNotHere (env:envsMaybeHere) id
-          | elem id (fst env) = (envsNotHere,env,envsMaybeHere) -- found
-          | otherwise = (envsGet' (envsNotHere ++ [env]) envsMaybeHere id)
+        envsGet' notHere (env:maybeHere) id
+          | elem id (fst env) = (notHere, env, maybeHere) -- found
+          | otherwise         = envsGet' (notHere++[env]) maybeHere id
 
 -- Writes value to variable in environment.
 envsWrite :: Envs -> String -> Val -> Envs
-envsWrite envs id val = (envs1 ++ [(fst env, (id,val):(snd env))] ++ envs2)
-  where (envs1,env,envs2) = envsGet envs id
+envsWrite envs id val = envs1 ++ [(fst env, (id,val):(snd env))] ++ envs2
+  where (envs1, env, envs2) = envsGet envs id
 
 -- Reads variable value from environment.
 envsRead :: Envs -> String -> Val
@@ -92,12 +45,13 @@ envsRead envs id = envsRead' hst id
           | otherwise = envsRead' hst' id
 
 -- Evaluates expression in environment.
-envsEval :: Envs -> Exp -> Val
-envsEval envs (Const val) = val
-envsEval envs (Read id) = envsRead envs id
-envsEval envs (Umn e) = negate (envsEval envs e)
-envsEval envs (Add e1 e2) = (envsEval envs e1) + (envsEval envs e2)
-envsEval envs (Sub e1 e2) = (envsEval envs e1) - (envsEval envs e2)
+envsEval :: Envs -> Expr -> Val
+envsEval envs expr = case expr of
+  Const val -> val
+  Read id   -> envsRead envs id
+  Umn e     -> negate (envsEval envs e)
+  Add e1 e2 -> (envsEval envs e1) + (envsEval envs e2)
+  Sub e1 e2 -> (envsEval envs e1) - (envsEval envs e2)
 
 ----------------------------------------------------------------------------
 -- Nested transition

@@ -1,10 +1,13 @@
-module CeuGrammarSpec where
+module Ceu.GrammarSpec (main, spec) where
 
-import CeuGrammar
+import Ceu.Grammar
 import Test.Hspec
 
 main :: IO ()
-main = hspec $ do
+main = hspec spec
+
+spec :: Spec
+spec = do
   --------------------------------------------------------------------------
   describe "checkLoop -- matching-Break/AwaitExt/Every in all paths" $ do
 

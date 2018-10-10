@@ -1,6 +1,7 @@
-module CeuSpec where
+module Ceu.EvalSpec (main, spec) where
 
-import Ceu
+import Ceu.Eval
+import Ceu.Grammar
 import Control.DeepSeq
 import Control.Exception
 import Test.Hspec
@@ -19,8 +20,10 @@ forceEval :: NFData a => a -> IO a
 forceEval = evaluate . force
 
 main :: IO ()
-main = hspec $ do
+main = hspec spec
 
+spec :: Spec
+spec = do
   -- Env/Envs --------------------------------------------------------------
   describe "Env/Envs" $ do
 

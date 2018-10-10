@@ -1,4 +1,4 @@
-module CeuGrammar where
+module Ceu.Grammar where
 
 -- Primitive types.
 type Evt = Int                  -- event identifier
