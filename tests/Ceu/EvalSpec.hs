@@ -5,6 +5,7 @@ import Ceu.Grammar
 import Control.DeepSeq
 import Control.Exception
 import Test.Hspec
+import Text.Printf
 
 -- Declare Stmt as a datatype that can be fully evaluated.
 instance NFData Stmt where
@@ -24,7 +25,7 @@ main = hspec spec
 
 spec :: Spec
 spec = do
-  -- Env/Envs --------------------------------------------------------------
+  --------------------------------------------------------------------------
   describe "Env/Envs" $ do
 
     describe "envsGet envs id" $ do
@@ -125,7 +126,7 @@ spec = do
           envsEval envs (((Read "x") `Sub` Const 3) `Add` Umn (Read "y"))
           `shouldBe` (-4)
 
-  -- nst1 ------------------------------------------------------------------
+  --------------------------------------------------------------------------
   describe "nst1" $ do
 
     -- block --
@@ -788,98 +789,89 @@ spec = do
                           0, Nothing, [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
-  -- nsts ------------------------------------------------------------------
+  --------------------------------------------------------------------------
   describe "nsts" $ do
     describe "zero steps (program is blocked)" $ do
-      it "pass: AwaitExt#" $
-        let d = (AwaitExt 0, 0, Nothing, [newEnv]) in
-          (nsts d `shouldBe` d) >> (isNstIrreducible d `shouldBe` True)
 
-      it "pass: AwaitInt#" $
-        let d = (AwaitInt 0, 0, Nothing, [newEnv]) in
-          (nsts d `shouldBe` d) >> (isNstIrreducible d `shouldBe` True)
+      nstsItPass
+        (AwaitExt 0, 0, Nothing, [newEnv])
+        (AwaitExt 0, 0, Nothing, [newEnv])
 
-      it "pass: Seq#" $
-        let d = (Seq (AwaitInt 0) Nop, 0, Nothing, [newEnv]) in
-          (nsts d `shouldBe` d) >> (isNstIrreducible d `shouldBe` True)
+      nstsItPass
+        (AwaitInt 0, 0, Nothing, [newEnv])
+        (AwaitInt 0, 0, Nothing, [newEnv])
 
-      it "pass: Every#" $
-        let d = (Every 0 Nop, 0, Nothing, [newEnv]) in
-          (nsts d `shouldBe` d) >> (isNstIrreducible d `shouldBe` True)
+      nstsItPass
+        (Seq (AwaitInt 0) Nop, 0, Nothing, [newEnv])
+        (Seq (AwaitInt 0) Nop, 0, Nothing, [newEnv])
 
-      it "pass: Fin#" $
-        let d = (Fin (Seq Nop Nop), 0, Nothing, [newEnv]) in
-          (nsts d `shouldBe` d) >> (isNstIrreducible d `shouldBe` True)
+      nstsItPass
+        (Every 0 Nop, 0, Nothing, [newEnv])
+        (Every 0 Nop, 0, Nothing, [newEnv])
 
-      it "pass: And'#" $
-        let d = (And' (AwaitExt 0) (Fin Nop), 0, Nothing, [newEnv]) in
-          (nsts d `shouldBe` d) >> (isNstIrreducible d `shouldBe` True)
+      nstsItPass
+        (Fin (Seq Nop Nop), 0, Nothing, [newEnv])
+        (Fin (Seq Nop Nop), 0, Nothing, [newEnv])
 
-      it "pass: nsts Or'#" $
-        let d = (Or' (AwaitExt 0) (Fin Nop), 0, Nothing, [newEnv]) in
-          (nsts d `shouldBe` d) >> (isNstIrreducible d `shouldBe` True)
+      nstsItPass
+        (And' (AwaitExt 0) (Fin Nop), 0, Nothing, [newEnv])
+        (And' (AwaitExt 0) (Fin Nop), 0, Nothing, [newEnv])
 
-      it "fail: CanRun# (cannot advance)" $
-        forceEval (nsts (CanRun 5, 0, Nothing, [newEnv]))
-        `shouldThrow` errorCall "nst1: cannot advance"
+      nstsItPass
+        (Or' (AwaitExt 0) (Fin Nop), 0, Nothing, [newEnv])
+        (Or' (AwaitExt 0) (Fin Nop), 0, Nothing, [newEnv])
+
+      nstsItFail "nst1: cannot advance"
+        (CanRun 5, 0, Nothing, [newEnv])
 
     describe "zero steps (no nst1-rule applies)" $ do
-      it "pass: Nop#" $
-        let d = (Nop, 0, Nothing, [newEnv]) in
-          (nsts d `shouldBe` d) >> (isNstIrreducible d `shouldBe` True)
 
-      it "pass: Break#" $
-        let d = (Break, 0, Nothing, [newEnv]) in
-          (nsts d `shouldBe` d) >> (isNstIrreducible d `shouldBe` True)
+      nstsItPass
+        (Nop, 0, Nothing, [newEnv])
+        (Nop, 0, Nothing, [newEnv])
+
+      nstsItPass
+        (Break, 0, Nothing, [newEnv])
+        (Break, 0, Nothing, [newEnv])
 
     describe "one+ steps" $ do
-      it "pass: {var x; x=0} -> [] Nop#" $
-        let d = (Block ["x"] (Write "x" (Const 0)), 3, Nothing, [newEnv])
-            d' = (Nop, 3, Nothing, [newEnv]) in
-          (nsts d `shouldBe` d') >> (isNstIrreducible d' `shouldBe` True)
 
-      it "pass: EmitInt -> CanRun#" $
-        let d = (EmitInt 8, 3, Nothing, [newEnv])
-            d' = (CanRun 3, 3, Just 8, [newEnv]) in
-          (nsts d `shouldBe` d') >> (isNstIrreducible d' `shouldBe` True)
+      nstsItPass
+        (Block ["x"] (Write "x" (Const 0)), 3, Nothing, [newEnv])
+        (Nop, 3, Nothing, [newEnv])
 
-      it "pass: CanRun -> Nop#" $
-        let d = (CanRun 3, 3, Nothing, [newEnv])
-            d' = (Nop, 3, Nothing, [newEnv]) in
-          (nsts d `shouldBe` d') >> (isNstIrreducible d' `shouldBe` True)
+      nstsItPass
+        (EmitInt 8, 3, Nothing, [newEnv])
+        (CanRun 3, 3, Just 8, [newEnv])
 
-      it "pass: Nop; Nop; Nop; Break; Nop -> Break#" $
-        let p = Nop `Seq` Nop `Seq` Nop `Seq` Break `Seq` Nop
-            d = (p, 0, Nothing, [newEnv])
-            d' = (Break, 0, Nothing, [newEnv]) in
-          (nsts d `shouldBe` d') >> (isNstIrreducible d' `shouldBe` True)
+      nstsItPass
+        (CanRun 3, 3, Nothing, [newEnv])
+        (Nop, 3, Nothing, [newEnv])
 
-      it "pass: Loop Break; Nop; Nop; EmitInt; Break -> CanRun#; Break" $
-        let p = Loop Break `Seq` Nop `Seq` Nop `Seq` EmitInt 8 `Seq` Break
-            d = (p, 3, Nothing, [newEnv])
-            d' = (Seq (CanRun 3) Break, 3, Just 8, [newEnv]) in
-          (nsts d `shouldBe` d') >> (isNstIrreducible d' `shouldBe` True)
+      nstsItPass
+        (Nop `Seq` Nop `Seq` Nop `Seq` Break `Seq` Nop, 0, Nothing, [newEnv])
+        (Break, 0, Nothing, [newEnv])
 
-      it "pass: (Loop Break; Nop) && (EmitInt; Nop) -> CanRun#; Nop" $
-        let p = Seq (Loop Break) Nop `And` Seq (EmitInt 8) Nop
-            d = (p, 3, Nothing, [newEnv])
-            d' = (Seq (CanRun 3) Nop, 3, Just 8, [newEnv]) in
-          (nsts d `shouldBe` d') >> (isNstIrreducible d' `shouldBe` True)
+      nstsItPass
+        (Loop Break `Seq` Nop `Seq` Nop `Seq` EmitInt 8 `Seq` Break,
+          3, Nothing, [newEnv])
+        (Seq (CanRun 3) Break, 3, Just 8, [newEnv])
 
-      it "pass: (Loop Break; Nop) || (EmitInt; Nop) -> Nop#" $
-        let p = Seq (Loop Break) Nop `Or` Seq (EmitInt 8) Nop
-            d = (p, 3, Nothing, [newEnv])
-            d' = (Nop, 3, Nothing, [newEnv]) in
-          (nsts d `shouldBe` d') >> (isNstIrreducible d' `shouldBe` True)
+      nstsItPass
+        (Seq (Loop Break) Nop `And` Seq (EmitInt 8) Nop, 3, Nothing, [newEnv])
+        (Seq (CanRun 3) Nop, 3, Just 8, [newEnv])
 
-      it "pass: Loop ((Nop; AwaitInt) && (AwaitExt || Nop; Break)) -> Nop#" $
-        let p = Loop ((Nop `Seq` AwaitInt 3)
-                      `And` (AwaitExt 18 `Or` (Nop `Seq` Break)))
-            d = (p, 0, Nothing, [newEnv])
-            d' = (Nop, 0, Nothing, [newEnv]) in
-          (nsts d `shouldBe` d') >> (isNstIrreducible d' `shouldBe` True)
+      nstsItPass
+        (Seq (Loop Break) Nop `Or` Seq (EmitInt 8) Nop, 3, Nothing, [newEnv])
+        (Nop, 3, Nothing, [newEnv])
 
-  -- out1 ------------------------------------------------------------------
+      nstsItPass
+        (Loop
+          ((Nop `Seq` AwaitInt 3) `And`
+            (AwaitExt 18 `Or` (Nop `Seq` Break))), 0, Nothing, [newEnv])
+        (Nop, 0, Nothing, [newEnv])
+
+  --------------------------------------------------------------------------
   describe "out1" $ do
 
     -- push --
@@ -910,7 +902,7 @@ spec = do
         forceEval (out1 (Seq Nop Nop, 1, Nothing, [newEnv]))
         `shouldThrow` errorCall "outPop: cannot advance"
 
-  -- nsts_out1_s -----------------------------------------------------------
+  --------------------------------------------------------------------------
   describe "nsts_out1_s" $ do
     describe "zero steps (no out-rule applies)" $ do
       it "pass: lvl == 0 && isNstIrreducible p" $
@@ -948,97 +940,106 @@ spec = do
           >> (isNstIrreducible d' `shouldBe` True)
           >> (isIrreducible d' `shouldBe` True)
 
-  -- reaction --------------------------------------------------------------
+  --------------------------------------------------------------------------
   describe "reaction" $ do
 
-    it "Nop; (AwaitInt 3) && Nop; Fin Nop -> Nop" $
-      reaction ((Nop `Seq` AwaitInt 3) `And` (Nop `Seq` Fin Nop), 3, [([],[])])
-      `shouldBe` (AwaitInt 3 `And'` Fin Nop, [([],[])])
+    reactionItPass
+      ((Nop `Seq` AwaitInt 3) `And` (Nop `Seq` Fin Nop), 3, [([],[])])
+      (AwaitInt 3 `And'` Fin Nop, [([],[])])
 
-    it "Nop; (AwaitInt 3) && Nop; (EmitInt 3) -> Nop" $
-      reaction ((Nop `Seq` AwaitInt 3) `And` (Nop `Seq` EmitInt 3), 1, [([],[])])
-      `shouldBe` (Nop, [([],[])])
+    reactionItPass
+      ((Nop `Seq` AwaitInt 3) `And` (Nop `Seq` EmitInt 3), 1, [([],[])])
+      (Nop, [([],[])])
 
-  -- evalProg --------------------------------------------------------------
+  --------------------------------------------------------------------------
   describe "evalProg" $ do
-    it "{var a; a=1; ret=a+10}" $
-      let p = Block ["a"]
-              (Write "a" (Const 1) `Seq`
-               Write "ret" (Read "a" `Add` Const 10)) in
-        (evalProg p []) `shouldBe` 11
 
-    it "{var a; {var ret; a=1; ret=a+10}} (shadowing ret)" $
-      let p = Block ["a"]
-              (Block ["ret"]
-               (Write "a" (Const 1) `Seq`
-                Write "ret" (Read "a" `Add` Const 10))) in
-        forceEval (evalProg p [])
-        `shouldThrow` errorCall "envsRead: uninitialized variable: ret"
+    evalProgItPass 11
+      [] (Block ["a"]
+           (Write "a" (Const 1) `Seq`
+            Write "ret" (Read "a" `Add` Const 10)))
 
-    it "ret=1; {var ret; ret=99}" $
-      let p = Write "ret" (Const 1) `Seq`
-             (Block ["ret"] (Write "ret" (Const 99))) in
-        (evalProg p []) `shouldBe` 1
+    evalProgItFail "envsRead: uninitialized variable: ret"
+      [] (Block ["a"]
+           (Block ["ret"]
+             (Write "a" (Const 1) `Seq`
+              Write "ret" (Read "a" `Add` Const 10))))
 
-    it "{var a; a=1; {var a; a=99} ret=a+10}" $
-      let p = Block ["a"]
-              (Write "a" (Const 1) `Seq`
-               Block ["a"] (Write "a" (Const 99)) `Seq`
-               Write "ret" (Read "a" `Add` Const 10)) in
-        (evalProg p []) `shouldBe` 11
+    evalProgItPass 1
+      [] (Write "ret" (Const 1) `Seq`
+          Block ["ret"] (Write "ret" (Const 99)))
 
-    it "ret=1; {ret=2}" $
-      let p = Write "ret" (Const 1) `Seq`
-              Block [] (Write "ret" (Const 2)) in
-        (evalProg p []) `shouldBe` 2
+    evalProgItPass 11
+      [] (Block ["a"]
+           (Write "a" (Const 1) `Seq`
+            Block ["a"] (Write "a" (Const 99)) `Seq`
+            Write "ret" (Read "a" `Add` Const 10)))
 
-    it "{var a; a=1; ({var a; a=99; awaitExt E} || nop); ret=a+10}" $
-      let p = Block ["a"]
-              (Write "a" (Const 1) `Seq`
-               Or (Block ["a"] (Write "a" (Const 99) `Seq` AwaitExt 0))
-                  (Nop) `Seq`
-               Write "ret" (Read "a" `Add` Const 10)) in
-        (evalProg p []) `shouldBe` 11
+    evalProgItPass 2
+      [] (Write "ret" (Const 1) `Seq`
+          Block [] (Write "ret" (Const 2)))
 
-    it "({ret=1; awaitExt E} || nop)" $
-      let p = Or (Block [] (Write "ret" (Const 1) `Seq` AwaitExt 0))
-                 (Nop) in
-        (evalProg p []) `shouldBe` 1
+    evalProgItPass 11
+      [] (Block ["a"]
+           (Write "a" (Const 1) `Seq`
+            Or
+             (Block ["a"] (Write "a" (Const 99) `Seq` AwaitExt 0))
+             (Nop) `Seq`
+           Write "ret" (Read "a" `Add` Const 10)))
 
-    it "{var a; a=1; loop ({var a; a=99; awaitExt E} && break); ret=a+10}" $
-      let p = Block ["a"]
-              (Write "a" (Const 1) `Seq`
-               Loop (And (Block ["a"] (Write "a" (Const 99) `Seq` AwaitExt 0))
-                         (Break)) `Seq`
-               Write "ret" (Read "a" `Add` Const 10)) in
-        (evalProg p []) `shouldBe` 11
+    evalProgItPass 1
+      [] (Or
+           (Block [] (Write "ret" (Const 1) `Seq` AwaitExt 0))
+           (Nop))
 
-    it "loop ({ret=1; awaitExt E} && break)" $
-      let p = Loop (And (Block [] (Write "ret" (Const 1) `Seq` AwaitExt 0))
-                        (Break)) in
-        evalProg p [] `shouldBe` 1
+    evalProgItPass 11
+      [] (Block ["a"]
+           (Write "a" (Const 1) `Seq`
+            Loop (And
+                  (Block ["a"] (Write "a" (Const 99) `Seq` AwaitExt 0))
+                  (Break)) `Seq`
+             Write "ret" (Read "a" `Add` Const 10)))
+
+    evalProgItPass 1
+      [] (Loop (And
+                 (Block [] (Write "ret" (Const 1) `Seq` AwaitExt 0))
+                 (Break)))
 
     -- multiple inputs
 
-    it "[0] | awaitExt 0; ret=1" $
-      let p = AwaitExt 0 `Seq` Write "ret" (Const 1) in
-        evalProg p [0] `shouldBe` 1
+    evalProgItPass 1
+      [0] (AwaitExt 0 `Seq` Write "ret" (Const 1))
 
-    it "[] | awaitExt 0; ret=1;" $
-      let p = AwaitExt 0 `Seq` Write "ret" (Const 1) in
-        evaluate (evalProg p [])
-        `shouldThrow` errorCall "evalProg: program didn't terminate"
+    evalProgItFail "evalProg: program didn't terminate"
+      [] (AwaitExt 0 `Seq` Write "ret" (Const 1))
 
-    it "[1] | awaitExt 0; ret=1;" $
-      let p = AwaitExt 0 `Seq` Write "ret" (Const 1) in
-        evaluate (evalProg p [1])
-        `shouldThrow` errorCall "evalProg: program didn't terminate"
+    evalProgItFail "evalProg: program didn't terminate"
+      [1] (AwaitExt 0 `Seq` Write "ret" (Const 1))
 
-    it "[0,0] | awaitExt 0; ret=1;" $
-      let p = AwaitExt 0 `Seq` Write "ret" (Const 1) in
-        evaluate (evalProg p [0,0])
-        `shouldThrow` errorCall "evalProg: pending inputs"
+    evalProgItFail "evalProg: pending inputs"
+      [0,0] (AwaitExt 0 `Seq` Write "ret" (Const 1))
 
-    it "[0,1] | awaitExt 0; awaitExt 1; ret=1" $
-      let p = AwaitExt 0 `Seq` AwaitExt 1 `Seq` Write "ret" (Const 1) in
-        evalProg p [0,1] `shouldBe` 1
+    evalProgItPass 1
+      [0,1] (AwaitExt 0 `Seq` AwaitExt 1 `Seq` Write "ret" (Const 1))
+
+      where
+        nstsItPass (p,n,e,envs) (p',n',e',envs') =
+          (it (printf "pass: %s -> %s#" (showProg p) (showProg p'))
+           ((nsts (p,n,e,envs) `shouldBe` (p',n',e',envs'))
+             >> (isNstIrreducible (p',n',e',envs') `shouldBe` True)))
+
+        nstsItFail err (p,n,e,envs) =
+          (it (printf "fail: %s ***%s" (showProg p) err)
+           (forceEval (nsts (p,n,e,envs)) `shouldThrow` errorCall err))
+
+        reactionItPass (p,e,envs) (p',envs') =
+          (it (printf "pass: %d | %s -> %s" e (showProg p) (showProg p'))
+            (reaction (p,e,envs) `shouldBe` (p',envs')))
+
+        evalProgItPass res hist prog =
+          (it (printf "pass: %s | %s ~>%d" (show hist) (showProg prog) res) $
+            (evalProg prog hist `shouldBe` res))
+
+        evalProgItFail err hist prog =
+          (it (printf "fail: %s | %s ***%s" (show hist) (showProg prog) err) $
+            (forceEval (evalProg prog hist) `shouldThrow` errorCall err))
