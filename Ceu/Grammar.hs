@@ -10,7 +10,7 @@ type Val = Int                  -- value
 -- Expression.
 data Expr
   = Const Val                   -- constant
-  | Read ID                     -- contents
+  | Read ID                     -- variable read
   | Umn Expr                    -- unary minus
   | Add Expr Expr               -- addition
   | Sub Expr Expr               -- subtraction
@@ -65,9 +65,8 @@ showVars vars = case vars of
 -- Shows program.
 showProg :: Stmt -> String
 showProg stmt = case stmt of
-  Block vars p   -> if null vars
-                    then printf "{%s}" (sP p)
-                    else printf "{%s: %s}" (sV vars) (sP p)
+  Block vars p | null vars -> printf "{%s}" (sP p)
+               | otherwise -> printf "{%s: %s}" (sV vars) (sP p)
   Write var expr -> printf "%s=%s" var (sE expr)
   AwaitExt e     -> printf "?E%d" e
   AwaitInt e     -> printf "?%d" e
@@ -111,37 +110,35 @@ checkProg stmt = case stmt of
 -- in its body lead to an occurrence of a matching-Break/AwaitExt/Every.
 checkLoop :: Stmt -> Bool
 checkLoop loop = case loop of
-  Loop body    -> checkLoop' False body
-  Loop' _ body -> checkLoop' False body
+  Loop body    -> cL False body
+  Loop' _ body -> cL False body
   _            -> error "checkLoop: expected Loop or Loop'"
   where
-    checkLoop' :: Bool -> Stmt -> Bool
-    checkLoop' ignBrk stmt = case stmt of
+    cL ignBrk stmt = case stmt of
       AwaitExt _ -> True
       Break      -> not ignBrk
       Every _ _  -> True
-      Block _ p  -> checkLoop' ignBrk p
-      If _ p q   -> checkLoop' ignBrk p && checkLoop' ignBrk q
-      Seq p q    -> checkLoop' ignBrk p || checkLoop' ignBrk q
-      Loop p     -> checkLoop' True p
-      And p q    -> checkLoop' ignBrk p && checkLoop' ignBrk q
-      Or p q     -> checkLoop' ignBrk p && checkLoop' ignBrk q
-      Fin p      -> False       -- always run in zero time
-      Loop' p q  -> checkLoop' True p && checkLoop' True q
-      And' p q   -> checkLoop' ignBrk p && checkLoop' ignBrk q
-      Or' p q    -> checkLoop' ignBrk p && checkLoop' ignBrk q
+      Block _ p  -> cL ignBrk p
+      If _ p q   -> cL ignBrk p && cL ignBrk q
+      Seq p q    -> cL ignBrk p || cL ignBrk q
+      Loop p     -> cL True p
+      And p q    -> cL ignBrk p && cL ignBrk q
+      Or p q     -> cL ignBrk p && cL ignBrk q
+      Fin p      -> False       -- runs in zero time
+      Loop' p q  -> cL True p && cL True q
+      And' p q   -> cL ignBrk p && cL ignBrk q
+      Or' p q    -> cL ignBrk p && cL ignBrk q
       _          -> False
 
 -- Receives a Fin or Every statement and checks whether it does not contain
 -- any occurrences of Loop/Break/Await*/Every/Fin.
 checkFin :: Stmt -> Bool
 checkFin finOrEvery = case finOrEvery of
-  Fin body     -> checkFin' body
-  Every _ body -> checkFin' body
+  Fin body     -> cF body
+  Every _ body -> cF body
   _            -> error "checkFin: expected Fin or Every"
   where
-    checkFin' :: Stmt -> Bool
-    checkFin' stmt = case stmt of
+    cF stmt = case stmt of
       Break      -> False
       AwaitInt _ -> False
       AwaitExt _ -> False
@@ -149,15 +146,35 @@ checkFin finOrEvery = case finOrEvery of
       Fin _      -> False
       Loop _     -> False
       Loop' _ _  -> False
-      Block _ p  -> checkFin' p
-      If _ p q   -> checkFin' p && checkFin' q
-      Seq p q    -> checkFin' p && checkFin' q
-      And p q    -> checkFin' p && checkFin' q
-      Or p q     -> checkFin' p && checkFin' q
-      And' p q   -> checkFin' p && checkFin' q
-      Or' p q    -> checkFin' p && checkFin' q
+      Block _ p  -> cF p
+      If _ p q   -> cF p && cF q
+      Seq p q    -> cF p && cF q
+      And p q    -> cF p && cF q
+      Or p q     -> cF p && cF q
+      And' p q   -> cF p && cF q
+      Or' p q    -> cF p && cF q
       _          -> True
 
 -- Alias for checkFin.
 checkEvery :: Stmt -> Bool
 checkEvery = checkFin
+
+-- Counts the maximum number of EmitInt's that can be executed in program.
+-- (pot', pg 9)
+countMaxEmits :: Stmt -> Int
+countMaxEmits stmt = case stmt of
+  EmitInt e                      -> 1
+  If expr p q                    -> max (cME p) (cME q)
+  Loop p                         -> cME p
+  And p q                        -> cME p + cME q
+  Or p q                         -> cME p + cME q
+  Seq Break q                    -> 0
+  Seq (AwaitExt e) q             -> 0
+  Seq p q                        -> cME p + cME q
+  Loop' p q | checkLoop (Loop p) -> cME p         -- q is unreachable
+            | otherwise          -> cME p + cME q
+  And' p q                       -> cME p + cME q -- CHECK THIS! --
+  Or' p q                        -> cME p + cME q -- CHECK THIS! --
+  _                              -> 0
+  where
+    cME = countMaxEmits

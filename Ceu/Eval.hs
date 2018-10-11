@@ -221,35 +221,6 @@ bcast e stmt = case stmt of
   Or' p q     -> Or' (bcast e p) (bcast e q)
   _           -> stmt           -- nothing to do
 
--- Counts the number of reachable EmitInt statements in program.
--- (pg 9)
-pot' :: Stmt -> Int
-pot' (EmitInt e) = 1
-pot' (If exp p q) = max (pot' p) (pot' q)
-pot' (Loop p) = pot' p
-pot' (And p q) = (pot' p) + (pot' q)
-pot' (Or p q) = (pot' p) + (pot' q)
-pot' (Seq Break q) = 0
-pot' (Seq (AwaitExt e) q) = 0
-pot' (Seq p q) = (pot' p) + (pot' q)
-pot' (Loop' p q)
-  | checkLoop (Loop p) = pot' p        -- q is unreachable
-  | otherwise = (pot' p) + (pot' q)
-pot' (And' p q) = (pot' p) + (pot' q) -- CHECK THIS! --
-pot' (Or' p q) = (pot' p) + (pot' q)  -- CHECK THIS! --
-pot' _ = 0
-
--- Counts the number of reachable EmitInt statements that can be executed in
--- a reaction of program to event.
--- (pg 9)
-pot :: Evt -> Stmt -> Int
-pot e p = pot' (bcast e p)
-
--- (pg 9)
-rank :: Desc -> (Int, Int)
-rank (p, n, Nothing, envs) = (0, n)
-rank (p, n, Just e, envs) = (pot e p, n+1)
-
 -- (pg 6)
 outPush :: Desc -> Desc
 outPush (p, n, Just e, envs) = (bcast e p, n+1, Nothing, envs)
@@ -272,6 +243,16 @@ nsts_out1_s :: Desc -> Desc
 nsts_out1_s (p, n, e, envs)
   | n == 0 = (p, n, e, envs)    -- why?
   | n > 0 = nsts_out1_s (out1 (nsts (p, n, e, envs)))
+
+-- Counts the maximum number of EmitInt's that can be executed in a reaction
+-- of program to event.  (pg 9)
+pot :: Evt -> Stmt -> Int
+pot e p = countMaxEmits (bcast e p)
+
+-- (pg 9)
+rank :: Desc -> (Int, Int)
+rank (p, n, Nothing, envs) = (0, n)
+rank (p, n, Just e, envs) = (pot e p, n+1)
 
 -- Tests whether the description is irreducible in general.
 isIrreducible :: Desc -> Bool
