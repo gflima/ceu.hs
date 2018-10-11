@@ -25,8 +25,7 @@ envsGet :: Envs -> String -> (Envs,Env,Envs)
 envsGet [] _ = error "envsGet: bad environment"
 envsGet envs id  = envsGet' [] envs id
   where
-    envsGet' :: Envs -> Envs -> String -> (Envs, Env, Envs)
-    envsGet' _ [] _ = error ("envsGet: undeclared variable: " ++ id)
+    envsGet' _ [] _       = error ("envsGet: undeclared variable: " ++ id)
     envsGet' notHere (env:maybeHere) id
       | elem id (fst env) = (notHere, env, maybeHere) -- found
       | otherwise         = envsGet' (notHere++[env]) maybeHere id
@@ -52,7 +51,7 @@ envsEval :: Envs -> Expr -> Val
 envsEval envs expr = case expr of
   Const val -> val
   Read id   -> envsRead envs id
-  Umn e     -> negate (envsEval envs e)
+  Umn e     -> negate $ envsEval envs e
   Add e1 e2 -> (envsEval envs e1) + (envsEval envs e2)
   Sub e1 e2 -> (envsEval envs e1) - (envsEval envs e2)
 
@@ -70,8 +69,8 @@ isBlocked n stmt = case stmt of
   Fin p      -> True
   Seq p q    -> isBlocked n p
   Loop' p q  -> isBlocked n p
-  And' p q   -> (isBlocked n p) && (isBlocked n q)
-  Or' p q    -> (isBlocked n p) && (isBlocked n q)
+  And' p q   -> isBlocked n p && isBlocked n q
+  Or' p q    -> isBlocked n p && isBlocked n q
   _          -> False
 
 -- Obtains the body of all active Fin statements in program.
@@ -103,16 +102,16 @@ nst1 (Block vars p, n, Nothing, envs)           -- block
   = (Seq p (Restore (length envs)), n, Nothing, (vars,[]):envs)
 
 nst1 (Restore lvl, n, Nothing, envs)            -- restore
-  = (Nop, n, Nothing, drop ((length envs) - lvl) envs)
+  = (Nop, n, Nothing, drop (length envs - lvl) envs)
 
 nst1 (Write id exp, n, Nothing, envs)           -- write
-  = (Nop, n, Nothing, (envsWrite envs id (envsEval envs exp)))
+  = (Nop, n, Nothing, envsWrite envs id (envsEval envs exp))
 
 nst1 (EmitInt e, n, Nothing, envs)              -- emit-int (pg 6)
   = (CanRun n, n, Just e, envs)
 
 nst1 (CanRun m, n, Nothing, envs)               -- can-run (pg 6)
-  | m == n = (Nop, n, Nothing, envs)
+  | m == n    = (Nop, n, Nothing, envs)
   | otherwise = error "nst1: cannot advance"
 
 nst1 (Seq Nop q, n, Nothing, envs)              -- seq-nop (pg 6)
@@ -125,8 +124,8 @@ nst1 (Seq p q, n, Nothing, envs)                -- seq-adv (pg 6)
   = nst1Adv (p, n, Nothing, envs) (\p' -> Seq p' q)
 
 nst1 (If exp p q, n, Nothing, envs)             -- if-true/false (pg 6)
-  | (envsEval envs exp) /= 0 = (p, n, Nothing, envs)
-  | otherwise = (q, n, Nothing, envs)
+  | envsEval envs exp /= 0 = (p, n, Nothing, envs)
+  | otherwise              = (q, n, Nothing, envs)
 
 nst1 (Loop p, n, Nothing, envs)                 -- loop-expd (pg 7)
   = (Seq (Loop' p p) (Restore (length envs)), n, Nothing, envs)
@@ -150,22 +149,19 @@ nst1 (And' Break q, n, Nothing, envs)           -- and brk1 (pg 7)
   = (Seq (clear q) Break, n, Nothing, envs)
 
 nst1 (And' p Nop, n, Nothing, envs)             -- and-nop2 (pg 7)
-  | not (isBlocked n p) =
-      nst1Adv (p, n, Nothing, envs) (\p' -> And' p' Nop)
-  | otherwise = (p, n, Nothing, envs)
+  | not $ isBlocked n p = nst1Adv (p, n, Nothing, envs) (\p' -> And' p' Nop)
+  | otherwise           = (p, n, Nothing, envs)
 
 nst1 (And' p Break, n, Nothing, envs)           -- and-brk2 (pg 7)
-  | not (isBlocked n p) =
-      nst1Adv (p, n, Nothing, envs) (\p' -> And' p' Break)
-  | otherwise = (Seq (clear p) Break, n, Nothing, envs)
+  | not $ isBlocked n p = nst1Adv (p, n, Nothing, envs) (\p' -> And' p' Break)
+  | otherwise           = (Seq (clear p) Break, n, Nothing, envs)
 
 nst1 (And' p q, n, Nothing, envs)               -- and-adv (pg 7)
-  | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> And' p' q)
-  | otherwise = nst1Adv (q, n, Nothing, envs) (\q' -> And' p q')
+  | not $ isBlocked n p = nst1Adv (p, n, Nothing, envs) (\p' -> And' p' q)
+  | otherwise           = nst1Adv (q, n, Nothing, envs) (\q' -> And' p q')
 
 nst1 (Or p q, n, Nothing, envs)                 -- or-expd (pg 7)
-  = (Seq (Or' p (Seq (CanRun n) q))
-         (Restore (length envs)), n, Nothing, envs)
+  = (Seq (Or' p (Seq (CanRun n) q)) (Restore (length envs)), n, Nothing, envs)
 
 nst1 (Or' Nop q, n, Nothing, envs)              -- or-nop1 (pg 7)
   = (clear q, n, Nothing, envs)
@@ -174,18 +170,16 @@ nst1 (Or' Break q, n, Nothing, envs)            -- or-brk1 (pg 7)
   = (Seq (clear q) Break, n, Nothing, envs)
 
 nst1 (Or' p Nop, n, Nothing, envs)              -- or-nop2 (pg 7)
-  | not (isBlocked n p) =
-      nst1Adv (p, n, Nothing, envs) (\p' -> Or' p' Nop)
-  | otherwise = (clear p, n, Nothing, envs)
+  | not $ isBlocked n p = nst1Adv (p, n, Nothing, envs) (\p' -> Or' p' Nop)
+  | otherwise           = (clear p, n, Nothing, envs)
 
 nst1 (Or' p Break, n, Nothing, envs)            -- or-brk2 (pg 7)
-  | not (isBlocked n p) =
-      nst1Adv (p, n, Nothing, envs) (\p' -> Or' p' Break)
-  | otherwise = (Seq (clear p) Break, n, Nothing, envs)
+  | not $ isBlocked n p = nst1Adv (p, n, Nothing, envs) (\p' -> Or' p' Break)
+  | otherwise           = (Seq (clear p) Break, n, Nothing, envs)
 
 nst1 (Or' p q, n, Nothing, envs)                -- or-adv (pg 7)
-  | not (isBlocked n p) = nst1Adv (p, n, Nothing, envs) (\p' -> Or' p' q)
-  | otherwise = nst1Adv (q, n, Nothing, envs) (\q' -> Or' p q')
+  | not $ isBlocked n p = nst1Adv (p, n, Nothing, envs) (\p' -> Or' p' q)
+  | otherwise           = nst1Adv (q, n, Nothing, envs) (\q' -> Or' p q')
 
 nst1 (_, _, _, _) = error "nst1: cannot advance"
 
@@ -212,19 +206,19 @@ nsts d
 -- (pg 8, fig 4.i)
 bcast :: Evt -> Stmt -> Stmt
 bcast e stmt = case stmt of
-  AwaitExt e' -> if e == e' then Nop else AwaitExt e'
-  AwaitInt e' -> if e == e' then Nop else AwaitInt e'
-  Every e' p  -> if e == e' then (Seq p (Every e' p)) else (Every e' p)
-  Seq p q     -> Seq (bcast e p) q
-  Loop' p q   -> Loop' (bcast e p) q
-  And' p q    -> And' (bcast e p) (bcast e q)
-  Or' p q     -> Or' (bcast e p) (bcast e q)
-  _           -> stmt           -- nothing to do
+  AwaitExt e' | e == e' -> Nop
+  AwaitInt e' | e == e' -> Nop
+  Every e' p  | e == e' -> Seq p (Every e' p)
+  Seq p q               -> Seq (bcast e p) q
+  Loop' p q             -> Loop' (bcast e p) q
+  And' p q              -> And' (bcast e p) (bcast e q)
+  Or' p q               -> Or' (bcast e p) (bcast e q)
+  _                     -> stmt -- nothing to do
 
 -- (pg 6)
 outPush :: Desc -> Desc
 outPush (p, n, Just e, envs) = (bcast e p, n+1, Nothing, envs)
-outPush (_, _, Nothing, _) = error "outPush: missing event"
+outPush (_, _, Nothing, _)   = error "outPush: missing event"
 
 -- (pg 6)
 outPop :: Desc -> Desc
@@ -241,18 +235,19 @@ out1 (p, n, Nothing, envs) = outPop (p, n, Nothing, envs)
 -- (pg 6)
 nsts_out1_s :: Desc -> Desc
 nsts_out1_s (p, n, e, envs)
-  | n == 0 = (p, n, e, envs)    -- why?
-  | n > 0 = nsts_out1_s (out1 (nsts (p, n, e, envs)))
+  | n == 0 = (p, n, e, envs)
+  | n > 0  = nsts_out1_s $ out1 $ nsts (p, n, e, envs)
 
 -- Counts the maximum number of EmitInt's that can be executed in a reaction
--- of program to event.  (pg 9)
+-- of program to event.
+-- (pg 9)
 pot :: Evt -> Stmt -> Int
-pot e p = countMaxEmits (bcast e p)
+pot e p = countMaxEmits $ bcast e p
 
 -- (pg 9)
 rank :: Desc -> (Int, Int)
 rank (p, n, Nothing, envs) = (0, n)
-rank (p, n, Just e, envs) = (pot e p, n+1)
+rank (p, n, Just e, envs)  = (pot e p, n+1)
 
 -- Tests whether the description is irreducible in general.
 isIrreducible :: Desc -> Bool
@@ -261,16 +256,23 @@ isIrreducible d = isNstIrreducible d && snd (rank d) == 0
 ----------------------------------------------------------------------------
 -- Reaction
 
+-- Computes a reaction of program plus environment to a single event.
 -- (pg 6)
-reaction :: (Stmt,Evt,Envs) -> (Stmt,Envs)
-reaction (p,e,envs) = (p',envs') where
-  (p',_,_,envs') = nsts_out1_s $ outPush (p,0,(Just e),envs)
+reaction :: (Stmt, Evt, Envs) -> (Stmt, Envs)
+reaction (p, e, envs) = (p', envs')
+  where
+    (p', _, _, envs') = nsts_out1_s $ outPush (p, 0, Just e, envs)
 
+-- Evaluates program over history of input events.
+-- Returns the last value of global "ret" set by the program.
 evalProg :: Stmt -> [Evt] -> Val
-evalProg prog es = evalProg' prog (-1:es) [(["ret"],[])] -- extra `-1` for the boot reaction
-  where evalProg' :: Stmt -> [Evt] -> Envs -> Val
-        evalProg' Nop (_:es) _    = error "evalProg: pending inputs"
-        evalProg' Nop []     envs = envsRead envs "ret"
-        evalProg' _   []     _    = error "evalProg: did not terminate"
-        evalProg' prog (e:es) envs = evalProg' prog' es envs'
-          where (prog',envs') = reaction (prog,e,envs)
+evalProg prog hist = evalProg' prog (-1:hist) [(["ret"],[])]
+  where                                      -- extra -1 for boot reaction
+    evalProg' :: Stmt -> [Evt] -> Envs -> Val
+    evalProg' prog hist envs = case prog of
+      Nop | null hist -> envsRead envs "ret" -- done
+          | otherwise -> error "evalProg: pending inputs"
+      _   | null hist -> error "evalProg: program didn't terminate"
+          | otherwise ->                     -- continue
+            let (prog', envs') = reaction (prog, head hist, envs) in
+              evalProg' prog' (tail hist) envs'

@@ -1027,12 +1027,12 @@ spec = do
     it "[] | awaitExt 0; ret=1;" $
       let p = AwaitExt 0 `Seq` Write "ret" (Const 1) in
         evaluate (evalProg p [])
-        `shouldThrow` errorCall "evalProg: did not terminate"
+        `shouldThrow` errorCall "evalProg: program didn't terminate"
 
     it "[1] | awaitExt 0; ret=1;" $
       let p = AwaitExt 0 `Seq` Write "ret" (Const 1) in
         evaluate (evalProg p [1])
-        `shouldThrow` errorCall "evalProg: did not terminate"
+        `shouldThrow` errorCall "evalProg: program didn't terminate"
 
     it "[0,0] | awaitExt 0; ret=1;" $
       let p = AwaitExt 0 `Seq` Write "ret" (Const 1) in
