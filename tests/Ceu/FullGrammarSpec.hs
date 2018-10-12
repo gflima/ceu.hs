@@ -2,7 +2,18 @@ module Ceu.FullGrammarSpec (main, spec) where
 
 import qualified Ceu.Grammar as G
 import Ceu.FullGrammar
+import Control.DeepSeq
+import Control.Exception
 import Test.Hspec
+
+-- Declare Stmt as a datatype that can be fully evaluated.
+instance NFData Stmt where
+  rnf Nop' = ()
+  rnf (Seq p q) = rnf p `seq` rnf q
+
+-- Force full evaluation of a given NFData.
+forceEval :: NFData a => a -> IO a
+forceEval = evaluate . force
 
 main :: IO ()
 main = hspec spec
@@ -14,7 +25,7 @@ spec = do
 
     it "var x;" $ do
       remVar (Var "x")
-      `shouldBe` (["x"], Nop)
+      `shouldBe` (["x"], Nop')
 
     it "x = 1;" $ do
       remVar (Write "x" (G.Const 1))
@@ -22,15 +33,30 @@ spec = do
 
     it "var x; x = 1" $ do
       remVar (Seq (Var "x") (Write "x" (G.Const 1)))
-      `shouldBe` (["x"], Seq Nop (Write "x" (G.Const 1)))
+      `shouldBe` (["x"], Seq Nop' (Write "x" (G.Const 1)))
 
     it "var x || x = 1" $ do
       remVar (Or (Var "x") (Write "x" (G.Const 1)))
-      `shouldBe` (["x"], Or Nop (Write "x" (G.Const 1)))
+      `shouldBe` (["x"], Or Nop' (Write "x" (G.Const 1)))
 
     it "do var x; x = 1 end" $ do
       remVar (Block (Seq (Var "x") (Write "x" (G.Const 1))))
-      `shouldBe` ([], (Block' ["x"] (Seq Nop (Write "x" (G.Const 1)))))
+      `shouldBe` ([], (Block' ["x"] (Seq Nop' (Write "x" (G.Const 1)))))
+
+  --------------------------------------------------------------------------
+  describe "remSpawn" $ do
+
+    it "spawn nop;" $ do
+      evaluate $ remSpawn (Spawn Nop')
+      `shouldThrow` errorCall "remSpawn: unexpected statement (Spawn)"
+
+    it "nop; spawn nop;" $ do
+      forceEval $ remSpawn (Seq Nop' (Spawn Nop'))
+      `shouldThrow` errorCall "remSpawn: unexpected statement (Spawn)"
+
+    it "spawn nop; nop" $ do
+      remSpawn (Seq (Spawn Nop') Nop')
+      `shouldBe` (Or (Seq Nop' AwaitFor) Nop')
 
   --------------------------------------------------------------------------
   describe "toGrammar" $ do
