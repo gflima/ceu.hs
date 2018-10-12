@@ -24,24 +24,28 @@ spec = do
   describe "remVar" $ do
 
     it "var x;" $ do
-      remVar (Var "x")
-      `shouldBe` (["x"], Nop')
+      evaluate $ remVar (Var "x")
+      `shouldThrow` errorCall "remVar: expected enclosing top-level block"
+
+    it "var x;" $ do
+      remVar (Block (Var "x"))
+      `shouldBe` (Block' ["x"] Nop')
 
     it "x = 1;" $ do
-      remVar (Write "x" (G.Const 1))
-      `shouldBe` ([], Write "x" (G.Const 1))
+      remVar (Block (Write "x" (G.Const 1)))
+      `shouldBe` (Block' [] (Write "x" (G.Const 1)))
 
     it "var x; x = 1" $ do
-      remVar (Seq (Var "x") (Write "x" (G.Const 1)))
-      `shouldBe` (["x"], Seq Nop' (Write "x" (G.Const 1)))
+      remVar (Block (Seq (Var "x") (Write "x" (G.Const 1))))
+      `shouldBe` (Block' ["x"] (Seq Nop' (Write "x" (G.Const 1))))
 
     it "var x || x = 1" $ do
-      remVar (Or (Var "x") (Write "x" (G.Const 1)))
-      `shouldBe` (["x"], Or Nop' (Write "x" (G.Const 1)))
+      remVar (Block (Or (Var "x") (Write "x" (G.Const 1))))
+      `shouldBe` (Block' ["x"] (Or Nop' (Write "x" (G.Const 1))))
 
     it "do var x; x = 1 end" $ do
-      remVar (Block (Seq (Var "x") (Write "x" (G.Const 1))))
-      `shouldBe` ([], (Block' ["x"] (Seq Nop' (Write "x" (G.Const 1)))))
+      remVar (Block (Block (Seq (Var "x") (Write "x" (G.Const 1)))))
+      `shouldBe` (Block' [] (Block' ["x"] (Seq Nop' (Write "x" (G.Const 1)))))
 
   --------------------------------------------------------------------------
   describe "remSpawn" $ do

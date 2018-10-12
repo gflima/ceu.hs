@@ -30,31 +30,37 @@ infixr 1 `Seq`                  -- `Seq` associates to the right
 infixr 0 `Or`                   -- `Or` associates to the right
 infixr 0 `And`                  -- `And` associates to the right
 
--- remVars: Removes (Var id) stmts and maps (Block p) -> (Block' [ids] p)
+-- remVar: Removes (Var id) stmts and maps (Block p) -> (Block' [ids] p)
 
-remVar :: Stmt -> ([G.ID], Stmt)
-remVar (Block p)      = ([], Block' ids' p') where (ids', p') = remVar p
-remVar (Var id)       = ([id], Nop')
-remVar (If exp p1 p2) = remVar2 p1 p2 (\p1' p2' -> If exp p1' p2')
-remVar (Seq p1 p2)    = remVar2 p1 p2 (\p1' p2' -> Seq p1' p2')
-remVar (Loop p)       = remVar1 p (\p' -> Loop p')
-remVar (Every e p)    = remVar1 p (\p' -> Every e p')
-remVar (And p1 p2)    = remVar2 p1 p2 (\p1' p2' -> And p1' p2')
-remVar (Or p1 p2)     = remVar2 p1 p2 (\p1' p2' -> Or  p1' p2')
-remVar (Spawn p)      = remVar1 p (\p' -> Spawn p')
-remVar (Finalize p)   = remVar1 p (\p' -> Finalize p')
-remVar (Async p)      = remVar1 p (\p' -> Async p')
-remVar (Block' _ _)   = error "remVar: unexpected statement (Block')"
-remVar (Fin' p)       = remVar1 p (\p' -> Fin' p')
-remVar q              = ([], q)
+remVar :: Stmt -> Stmt
+remVar (Block p) = p' where
+    (_,p') = rV (Block p)
 
-remVar1 :: Stmt -> (Stmt->Stmt) -> ([G.ID], Stmt)
-remVar1 p f = (ids', f p') where (ids',p') = remVar p
+    rV :: Stmt -> ([G.ID], Stmt)
+    rV (Block p)      = ([], Block' ids' p') where (ids', p') = rV p
+    rV (Var id)       = ([id], Nop')
+    rV (If exp p1 p2) = rV2 p1 p2 (\p1' p2' -> If exp p1' p2')
+    rV (Seq p1 p2)    = rV2 p1 p2 (\p1' p2' -> Seq p1' p2')
+    rV (Loop p)       = rV1 p (\p' -> Loop p')
+    rV (Every e p)    = rV1 p (\p' -> Every e p')
+    rV (And p1 p2)    = rV2 p1 p2 (\p1' p2' -> And p1' p2')
+    rV (Or p1 p2)     = rV2 p1 p2 (\p1' p2' -> Or  p1' p2')
+    rV (Spawn p)      = rV1 p (\p' -> Spawn p')
+    rV (Finalize p)   = rV1 p (\p' -> Finalize p')
+    rV (Async p)      = rV1 p (\p' -> Async p')
+    rV (Block' _ _)   = error "remVar: unexpected statement (Block')"
+    rV (Fin' p)       = rV1 p (\p' -> Fin' p')
+    rV q              = ([], q)
 
-remVar2 :: Stmt -> Stmt -> (Stmt->Stmt->Stmt) -> ([G.ID], Stmt)
-remVar2 p1 p2 f = (ids1'++ids2', f p1' p2') where
-                  (ids1',p1') = remVar p1
-                  (ids2',p2') = remVar p2
+    rV1 :: Stmt -> (Stmt->Stmt) -> ([G.ID], Stmt)
+    rV1 p f = (ids', f p') where (ids',p') = rV p
+
+    rV2 :: Stmt -> Stmt -> (Stmt->Stmt->Stmt) -> ([G.ID], Stmt)
+    rV2 p1 p2 f = (ids1'++ids2', f p1' p2') where
+                      (ids1',p1') = rV p1
+                      (ids2',p2') = rV p2
+
+remVar _         = error "remVar: expected enclosing top-level block"
 
 -- remSpawn: Converts (spawn p1; p2) into (p1;AwaitFor or p2)
 
@@ -77,9 +83,7 @@ remSpawn p                   = p
 -- toGrammar: Converts full -> basic
 
 toGrammar :: Stmt -> G.Stmt
-toGrammar p = toG p' where
-  (_, p') = remVar (Block (Seq (Var "ret") p))
-
+toGrammar p = toG $ remVar (Block (Seq (Var "ret") p)) where
   toG :: Stmt -> G.Stmt
   toG (Write id exp) = G.Write id exp
   toG (AwaitExt e)   = G.AwaitExt e
