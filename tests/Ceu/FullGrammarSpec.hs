@@ -63,6 +63,13 @@ spec = do
       `shouldBe` (Or (Seq Nop' AwaitFor) Nop')
 
   --------------------------------------------------------------------------
+  describe "remAwaitFor" $ do
+
+    it "await FOREVER;" $ do
+      remAwaitFor AwaitFor
+      `shouldBe` (AwaitExt $ -2)
+
+  --------------------------------------------------------------------------
   describe "toGrammar" $ do
 
     it "var x;" $ do
@@ -72,4 +79,8 @@ spec = do
     it "do var x; x = 1 end" $ do
       toGrammar (Block (Seq (Var "x") (Write "x" (G.Const 1))))
       `shouldBe` G.Block ["ret"] (G.Seq G.Nop (G.Block ["x"] (G.Seq G.Nop (G.Write "x" (G.Const 1)))))
+
+    it "spawn do await A; end ;; await B; var x; await FOREVER;" $ do
+      toGrammar (Seq (Spawn (AwaitExt 0)) (Seq (AwaitExt 1) (Seq (Var "x") AwaitFor)))
+      `shouldBe` (G.Block ["ret","x"] (G.Seq G.Nop (G.Or (G.Seq (G.AwaitExt 0) (G.AwaitExt (-2))) (G.Seq (G.AwaitExt 1) (G.Seq G.Nop (G.AwaitExt (-2)))))))
 

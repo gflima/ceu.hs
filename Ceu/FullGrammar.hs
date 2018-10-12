@@ -80,10 +80,28 @@ remSpawn (Block' ids p)      = Block' ids (remSpawn p)
 remSpawn (Fin' p)            = Fin' (remSpawn p)
 remSpawn p                   = p
 
+-- remAwaitFor: Converts AwaitFor into (AwaitExt -2)
+
+remAwaitFor :: Stmt -> Stmt
+remAwaitFor (Block p)           = Block (remAwaitFor p)
+remAwaitFor (If e p1 p2)        = If e (remAwaitFor p1) (remAwaitFor p2)
+remAwaitFor (Seq p1 p2)         = Seq (remAwaitFor p1) (remAwaitFor p2)
+remAwaitFor (Loop p)            = Loop (remAwaitFor p)
+remAwaitFor (Every e p)         = Every e (remAwaitFor p)
+remAwaitFor (And p1 p2)         = And (remAwaitFor p1) (remAwaitFor p2)
+remAwaitFor (Or p1 p2)          = Or (remAwaitFor p1) (remAwaitFor p2)
+remAwaitFor (Spawn p)           = Spawn (remAwaitFor p)
+remAwaitFor (Finalize p)        = Finalize (remAwaitFor p)
+remAwaitFor (Async p)           = Async (remAwaitFor p)
+remAwaitFor (Block' ids p)      = Block' ids (remAwaitFor p)
+remAwaitFor (Fin' p)            = Fin' (remAwaitFor p)
+remAwaitFor AwaitFor            = AwaitExt $ -2
+remAwaitFor p                   = p
+
 -- toGrammar: Converts full -> basic
 
 toGrammar :: Stmt -> G.Stmt
-toGrammar p = toG $ remVar (Block (Seq (Var "ret") p)) where
+toGrammar p = toG $ remAwaitFor $ remSpawn $ remVar (Block (Seq (Var "ret") p)) where
   toG :: Stmt -> G.Stmt
   toG (Write id exp) = G.Write id exp
   toG (AwaitExt e)   = G.AwaitExt e
