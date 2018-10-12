@@ -78,6 +78,13 @@ spec = do
       `shouldBe` (Seq (Spawn Nop') Nop')
 
   --------------------------------------------------------------------------
+  describe "remAsync" $ do
+
+    it "async { loop nop }" $ do
+      remAsync (Async (Loop Nop'))
+      `shouldBe` (Loop (Seq Nop' (AwaitExt G.inputAsync)))
+
+  --------------------------------------------------------------------------
   describe "remAwaitFor" $ do
 
     it "await FOREVER;" $ do

@@ -107,6 +107,28 @@ chkSpawn p = case p of
   chkS (Fin' p)       = (notS p) && (chkS p)
   chkS _              = True
 
+-- remSpawn: Adds AwaitFor in Loops inside Asyncs
+
+remAsync :: Stmt -> Stmt
+remAsync p = (rA p False) where
+  rA :: Stmt -> Bool -> Stmt
+  rA (Block p)      inA = Block (rA p inA)
+  rA (If exp p1 p2) inA = If exp (rA p1 inA) (rA p2 inA)
+  rA (Seq p1 p2)    inA = Seq (rA p1 inA) (rA p2 inA)
+  rA (Loop p)      True = Loop (rA (Seq p (AwaitExt G.inputAsync)) True)
+  rA (Loop p)     False = Loop (rA p False)
+  rA (Every e p)    inA = Every e (rA p inA)
+  rA (And p1 p2)    inA = And (rA p1 inA) (rA p2 inA)
+  rA (Or p1 p2)     inA = Or (rA p1 inA) (rA p2 inA)
+  rA (Spawn p)      inA = Spawn (rA p inA)
+  rA (Finalize p)   inA = Finalize (rA p inA)
+  rA (Async p)      inA = (rA p True)
+  rA (Block' ids p) inA = Block' ids (rA p inA)
+  rA (Fin' p)       inA = Fin' (rA p inA)
+  rA p              inA = p
+
+-- TODO: chkSpan: no sync statements
+
 -- remAwaitFor: Converts AwaitFor into (AwaitExt inputForever)
 
 remAwaitFor :: Stmt -> Stmt
@@ -128,7 +150,9 @@ remAwaitFor p              = p
 -- toGrammar: Converts full -> basic
 
 toGrammar :: Stmt -> G.Stmt
-toGrammar p = toG $ remAwaitFor $ remSpawn $ chkSpawn $ remVar (Block (Seq (Var "ret") p)) where
+toGrammar p = toG $ remAwaitFor $ remAsync
+                  $ remSpawn $ chkSpawn
+                  $ remVar (Block (Seq (Var "ret") p)) where
   toG :: Stmt -> G.Stmt
   toG (Write id exp) = G.Write id exp
   toG (AwaitExt e)   = G.AwaitExt e
@@ -145,3 +169,5 @@ toGrammar p = toG $ remAwaitFor $ remSpawn $ chkSpawn $ remVar (Block (Seq (Var 
   toG (Fin' p)       = G.Fin (toG p)
   toG Nop'           = G.Nop
   toG _              = error "toG: unexpected statement (Block,Var,AwaitFor,Finalize,Spawn,Async)"
+
+-- TODO: evalFull
