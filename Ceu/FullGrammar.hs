@@ -5,7 +5,7 @@ import qualified Ceu.Grammar as G
 -- Program (pg 5).
 data Stmt
   = Block Stmt                  -- declaration block
-  | Var G.ID
+  | Var G.ID                    -- variable declaration
   | Write G.ID G.Expr           -- assignment statement
   | AwaitExt G.Evt              -- await external event
   | AwaitInt G.Evt              -- await internal event
@@ -17,8 +17,9 @@ data Stmt
   | Every G.Evt Stmt            -- event iteration
   | And Stmt Stmt               -- par/and statement
   | Or Stmt Stmt                -- par/or statement
-  | Finalize Stmt               -- finalization statement
-  | Async Stmt
+  | Spawn Stmt                  -- spawn statement
+  | Finalize Stmt               -- finalize statement
+  | Async Stmt                  -- async statement
   | Block' [G.ID] Stmt
   | Nop
   deriving (Eq, Show)
@@ -29,32 +30,32 @@ infixr 0 `And`                  -- `And` associates to the right
 
 -- remVars: Removes (Var id) stmts and maps (Block p) -> (Block' [ids] p)
 
-remVars :: Stmt -> ([G.ID], Stmt)
-remVars (Block p)      = ([], Block' ids' p') where (ids', p') = remVars p
-remVars (Var id')      = ([id'], Nop)
-remVars (If exp p1 p2) = remVars2 p1 p2 (\p1' p2' -> If exp p1' p2')
-remVars (Seq p1 p2)    = remVars2 p1 p2 (\p1' p2' -> Seq p1' p2')
-remVars (Loop p)       = remVars1 p (\p' -> Loop p')
-remVars (Every e p)    = remVars1 p (\p' -> Every e p')
-remVars (And p1 p2)    = remVars2 p1 p2 (\p1' p2' -> And p1' p2')
-remVars (Or p1 p2)     = remVars2 p1 p2 (\p1' p2' -> Or  p1' p2')
-remVars (Finalize p)   = remVars1 p (\p' -> Finalize p')
-remVars (Async p)      = remVars1 p (\p' -> Async p')
-remVars q              = ([], q)
+remVar :: Stmt -> ([G.ID], Stmt)
+remVar (Block p)      = ([], Block' ids' p') where (ids', p') = remVar p
+remVar (Var id')      = ([id'], Nop)
+remVar (If exp p1 p2) = remVar2 p1 p2 (\p1' p2' -> If exp p1' p2')
+remVar (Seq p1 p2)    = remVar2 p1 p2 (\p1' p2' -> Seq p1' p2')
+remVar (Loop p)       = remVar1 p (\p' -> Loop p')
+remVar (Every e p)    = remVar1 p (\p' -> Every e p')
+remVar (And p1 p2)    = remVar2 p1 p2 (\p1' p2' -> And p1' p2')
+remVar (Or p1 p2)     = remVar2 p1 p2 (\p1' p2' -> Or  p1' p2')
+remVar (Finalize p)   = remVar1 p (\p' -> Finalize p')
+remVar (Async p)      = remVar1 p (\p' -> Async p')
+remVar q              = ([], q)
 
-remVars1 :: Stmt -> (Stmt->Stmt) -> ([G.ID], Stmt)
-remVars1 p f = (ids', f p') where (ids',p') = remVars p
+remVar1 :: Stmt -> (Stmt->Stmt) -> ([G.ID], Stmt)
+remVar1 p f = (ids', f p') where (ids',p') = remVar p
 
-remVars2 :: Stmt -> Stmt -> (Stmt->Stmt->Stmt) -> ([G.ID], Stmt)
-remVars2 p1 p2 f = (ids1'++ids2', f p1' p2') where
-                  (ids1',p1') = remVars p1
-                  (ids2',p2') = remVars p2
+remVar2 :: Stmt -> Stmt -> (Stmt->Stmt->Stmt) -> ([G.ID], Stmt)
+remVar2 p1 p2 f = (ids1'++ids2', f p1' p2') where
+                  (ids1',p1') = remVar p1
+                  (ids2',p2') = remVar p2
 
 -- toGrammar: Converts full -> basic
 
 toGrammar :: Stmt -> G.Stmt
 toGrammar p = toG p' where
-  (_, p') = remVars (Block (Seq (Var "ret") p))
+  (_, p') = remVar (Block (Seq (Var "ret") p))
 
   toG :: Stmt -> G.Stmt
   toG (Write id exp) = G.Write id exp
