@@ -80,6 +80,33 @@ remSpawn (Block' ids p)      = Block' ids (remSpawn p)
 remSpawn (Fin' p)            = Fin' (remSpawn p)
 remSpawn p                   = p
 
+-- chkSpawn: `Spawn` can only appear as first item in `Seq`
+
+chkSpawn :: Stmt -> Stmt
+chkSpawn p = case p of
+  (Spawn _) -> error "chkSpawn: unexpected statement (Spawn)"
+  _ | (chkS p) -> p
+    | otherwise -> error "chkSpawn: unexpected statement (Spawn)"
+  where
+
+  notS (Spawn _) = False
+  notS p         = True
+
+  chkS :: Stmt -> Bool
+  chkS (Block p)           = (notS p) && (chkS p)
+  chkS (If e p1 p2)        = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
+  chkS (Seq p1 p2)         = (chkS p1) && (notS p2) && (chkS p2)
+  chkS (Loop p)            = (notS p) && (chkS p)
+  chkS (Every e p)         = (notS p) && (chkS p)
+  chkS (And p1 p2)         = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
+  chkS (Or p1 p2)          = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
+  chkS (Spawn p)           = (notS p) && (chkS p)
+  chkS (Finalize p)        = (notS p) && (chkS p)
+  chkS (Async p)           = (notS p) && (chkS p)
+  chkS (Block' ids p)      = (notS p) && (chkS p)
+  chkS (Fin' p)            = (notS p) && (chkS p)
+  chkS _                   = True
+
 -- remAwaitFor: Converts AwaitFor into (AwaitExt -2)
 
 remAwaitFor :: Stmt -> Stmt
@@ -101,7 +128,7 @@ remAwaitFor p                   = p
 -- toGrammar: Converts full -> basic
 
 toGrammar :: Stmt -> G.Stmt
-toGrammar p = toG $ remAwaitFor $ remSpawn $ remVar (Block (Seq (Var "ret") p)) where
+toGrammar p = toG $ remAwaitFor $ remSpawn $ chkSpawn $ remVar (Block (Seq (Var "ret") p)) where
   toG :: Stmt -> G.Stmt
   toG (Write id exp) = G.Write id exp
   toG (AwaitExt e)   = G.AwaitExt e

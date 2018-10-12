@@ -63,6 +63,21 @@ spec = do
       `shouldBe` (Or (Seq Nop' AwaitFor) Nop')
 
   --------------------------------------------------------------------------
+  describe "chkSpawn" $ do
+
+    it "spawn nop;" $ do
+      forceEval $ chkSpawn (Spawn Nop')
+      `shouldThrow` errorCall "chkSpawn: unexpected statement (Spawn)"
+
+    it "nop; spawn nop;" $ do
+      forceEval $ chkSpawn (Seq Nop' (Spawn Nop'))
+      `shouldThrow` errorCall "chkSpawn: unexpected statement (Spawn)"
+
+    it "spawn nop; nop" $ do
+      chkSpawn (Seq (Spawn Nop') Nop')
+      `shouldBe` (Seq (Spawn Nop') Nop')
+
+  --------------------------------------------------------------------------
   describe "remAwaitFor" $ do
 
     it "await FOREVER;" $ do
