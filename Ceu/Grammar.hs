@@ -7,6 +7,17 @@ type Evt = Int                  -- event identifier
 type ID  = String               -- variable identifier
 type Val = Int                  -- value
 
+-- Events:
+-- -1: program can never await (used for boot reaction)
+-- -2: system can never emit (used as "await FOREVER" input)
+-- -3: program can never await (used as "async" input)
+inputBoot    :: Evt
+inputForever :: Evt
+inputAsync   :: Evt
+inputBoot    = -1
+inputForever = -2
+inputAsync   = -3
+
 -- Expression.
 data Expr
   = Const Val                   -- constant

@@ -82,7 +82,7 @@ spec = do
 
     it "await FOREVER;" $ do
       remAwaitFor AwaitFor
-      `shouldBe` (AwaitExt $ -2)
+      `shouldBe` (AwaitExt G.inputForever)
 
   --------------------------------------------------------------------------
   describe "toGrammar" $ do
@@ -97,5 +97,5 @@ spec = do
 
     it "spawn do await A; end ;; await B; var x; await FOREVER;" $ do
       toGrammar (Seq (Spawn (AwaitExt 0)) (Seq (AwaitExt 1) (Seq (Var "x") AwaitFor)))
-      `shouldBe` (G.Block ["ret","x"] (G.Seq G.Nop (G.Or (G.Seq (G.AwaitExt 0) (G.AwaitExt (-2))) (G.Seq (G.AwaitExt 1) (G.Seq G.Nop (G.AwaitExt (-2)))))))
+      `shouldBe` (G.Block ["ret","x"] (G.Seq G.Nop (G.Or (G.Seq (G.AwaitExt 0) (G.AwaitExt G.inputForever)) (G.Seq (G.AwaitExt 1) (G.Seq G.Nop (G.AwaitExt G.inputForever))))))
 

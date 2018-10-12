@@ -266,7 +266,7 @@ reaction (p, e, envs) = (p', envs')
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
 evalProg :: Stmt -> [Evt] -> Val
-evalProg prog hist = evalProg' prog (-1:hist) [(["ret"],[])]
+evalProg prog hist = evalProg' prog (inputBoot:hist) [(["ret"],[])]
   where                                      -- extra -1 for boot reaction
     evalProg' :: Stmt -> [Evt] -> Envs -> Val
     evalProg' prog hist envs = case prog of

@@ -107,7 +107,7 @@ chkSpawn p = case p of
   chkS (Fin' p)            = (notS p) && (chkS p)
   chkS _                   = True
 
--- remAwaitFor: Converts AwaitFor into (AwaitExt -2)
+-- remAwaitFor: Converts AwaitFor into (AwaitExt inputForever)
 
 remAwaitFor :: Stmt -> Stmt
 remAwaitFor (Block p)           = Block (remAwaitFor p)
@@ -122,7 +122,7 @@ remAwaitFor (Finalize p)        = Finalize (remAwaitFor p)
 remAwaitFor (Async p)           = Async (remAwaitFor p)
 remAwaitFor (Block' ids p)      = Block' ids (remAwaitFor p)
 remAwaitFor (Fin' p)            = Fin' (remAwaitFor p)
-remAwaitFor AwaitFor            = AwaitExt $ -2
+remAwaitFor AwaitFor            = AwaitExt G.inputForever
 remAwaitFor p                   = p
 
 -- toGrammar: Converts full -> basic
