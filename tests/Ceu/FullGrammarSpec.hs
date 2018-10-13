@@ -82,14 +82,14 @@ spec = do
 
     it "async { loop nop }" $ do
       remAsync (Async (Loop Nop'))
-      `shouldBe` (Loop (Seq Nop' (AwaitExt G.inputAsync)))
+      `shouldBe` (Loop (Seq Nop' (AwaitExt inputAsync)))
 
   --------------------------------------------------------------------------
   describe "remAwaitFor" $ do
 
     it "await FOREVER;" $ do
       remAwaitFor AwaitFor
-      `shouldBe` (AwaitExt G.inputForever)
+      `shouldBe` (AwaitExt inputForever)
 
   --------------------------------------------------------------------------
   describe "toGrammar" $ do
@@ -104,5 +104,5 @@ spec = do
 
     it "spawn do await A; end ;; await B; var x; await FOREVER;" $ do
       toGrammar (Seq (Spawn (AwaitExt 0)) (Seq (AwaitExt 1) (Seq (Var "x") AwaitFor)))
-      `shouldBe` (G.Block ["ret","x"] (G.Seq G.Nop (G.Or (G.Seq (G.AwaitExt 0) (G.AwaitExt G.inputForever)) (G.Seq (G.AwaitExt 1) (G.Seq G.Nop (G.AwaitExt G.inputForever))))))
+      `shouldBe` (G.Block ["ret","x"] (G.Seq G.Nop (G.Or (G.Seq (G.AwaitExt 0) (G.AwaitExt inputForever)) (G.Seq (G.AwaitExt 1) (G.Seq G.Nop (G.AwaitExt inputForever))))))
 

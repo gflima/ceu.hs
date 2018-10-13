@@ -2,6 +2,17 @@ module Ceu.FullGrammar where
 
 import qualified Ceu.Grammar as G
 
+-- Events:
+-- -1: program can never await (used for boot reaction)
+-- -2: system can never emit (used as "await FOREVER" input)
+-- -3: program can never await (used as "async" input)
+--inputBoot    :: Evt
+inputForever :: G.Evt
+inputAsync   :: G.Evt
+--inputBoot    = -1
+inputForever = -2
+inputAsync   = -3
+
 -- Program (pg 5).
 data Stmt
   = Block Stmt                  -- declaration block
@@ -20,7 +31,7 @@ data Stmt
   | And Stmt Stmt               -- par/and statement
   | Or Stmt Stmt                -- par/or statement
   | Spawn Stmt                  -- spawn statement
-  | Fin (Maybe id) Stmt         -- finalize statement
+  | Fin (Maybe G.ID) Stmt       -- finalize statement
   | Async Stmt                  -- async statement
   | Block' [G.ID] Stmt          -- block as in basic Grammar
   | Fin' Stmt                   -- fin as in basic Grammar
@@ -111,22 +122,22 @@ chkSpawn p = case p of
 -- remSpawn: Adds AwaitFor in Loops inside Asyncs
 
 remAsync :: Stmt -> Stmt
-remAsync p = (rA p False) where
-  rA :: Stmt -> Bool -> Stmt
-  rA (Block p)      inA = Block (rA p inA)
-  rA (If exp p1 p2) inA = If exp (rA p1 inA) (rA p2 inA)
-  rA (Seq p1 p2)    inA = Seq (rA p1 inA) (rA p2 inA)
-  rA (Loop p)      True = Loop (rA (Seq p (AwaitExt G.inputAsync)) True)
-  rA (Loop p)     False = Loop (rA p False)
-  rA (Every e p)    inA = Every e (rA p inA)
-  rA (And p1 p2)    inA = And (rA p1 inA) (rA p2 inA)
-  rA (Or p1 p2)     inA = Or (rA p1 inA) (rA p2 inA)
-  rA (Spawn p)      inA = Spawn (rA p inA)
-  rA (Fin id p)     inA = Fin id (rA p inA)
-  rA (Async p)      inA = (rA p True)
-  rA (Block' ids p) inA = Block' ids (rA p inA)
-  rA (Fin' p)       inA = Fin' (rA p inA)
-  rA p              inA = p
+remAsync p = (rA False p) where
+  rA :: Bool -> Stmt -> Stmt
+  rA inA   (Block p)      = Block (rA inA p)
+  rA inA   (If exp p1 p2) = If exp (rA inA p1) (rA inA p2)
+  rA inA   (Seq p1 p2)    = Seq (rA inA p1) (rA inA p2)
+  rA True  (Loop p)       = Loop (rA True (Seq p (AwaitExt inputAsync)))
+  rA False (Loop p)       = Loop (rA False p)
+  rA inA   (Every e p)    = Every e (rA inA p)
+  rA inA   (And p1 p2)    = And (rA inA p1) (rA inA p2)
+  rA inA   (Or p1 p2)     = Or (rA inA p1) (rA inA p2)
+  rA inA   (Spawn p)      = Spawn (rA inA p)
+  rA inA   (Fin id p)     = Fin id (rA inA p)
+  rA inA   (Async p)      = (rA True p)
+  rA inA   (Block' ids p) = Block' ids (rA inA p)
+  rA inA   (Fin' p)       = Fin' (rA inA p)
+  rA inA   p              = p
 
 -- TODO: chkSpan: no sync statements
 
@@ -145,7 +156,7 @@ remAwaitFor (Fin id p)     = Fin id (remAwaitFor p)
 remAwaitFor (Async p)      = Async (remAwaitFor p)
 remAwaitFor (Block' ids p) = Block' ids (remAwaitFor p)
 remAwaitFor (Fin' p)       = Fin' (remAwaitFor p)
-remAwaitFor AwaitFor       = AwaitExt G.inputForever
+remAwaitFor AwaitFor       = AwaitExt inputForever
 remAwaitFor p              = p
 
 -- toGrammar: Converts full -> basic
