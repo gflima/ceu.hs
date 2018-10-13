@@ -62,6 +62,25 @@ spec = do
       remFin (Block' ["x"] (Block' [] (Seq (Fin (Just "x") (Write "x" (G.Const 1))) (Seq (Fin Nothing (Write "x" (G.Const 2))) (Write "x" (G.Const 3))))))
       `shouldBe` (Block' ["x"] (Or (Fin' (Seq (Write "x" (G.Const 1)) Nop')) (Block' [] (Or (Fin' (Write "x" (G.Const 2))) (Write "x" (G.Const 3))))))
 
+    it "var x; { fin x with x=1; fin x with y=1; y=3 }" $ do
+      remFin (Block' ["x"] (Block' [] (
+                (Fin (Just "x") (Write "x" (G.Const 1))) `Seq`
+                (Fin (Just "x") (Write "y" (G.Const 1))) `Seq`
+                (Write "y" (G.Const 3))
+             )))
+      `shouldBe` (Block' ["x"] (Or (Fin' (Seq (Write "y" (G.Const 1)) (Seq (Write "x" (G.Const 1)) Nop'))) (Block' [] (Write "y" (G.Const 3)))))
+
+    it "var x; nop; { fin x with x=1; fin with x=2; x=3; fin x with y=1; fin with y=2; y=3 }; nop" $ do
+      remFin (Block' ["x"] (Seq Nop' (Seq (Block' [] (
+                (Fin (Just "x") (Write "x" (G.Const 1))) `Seq`
+                (Fin Nothing    (Write "x" (G.Const 2))) `Seq`
+                (Write "x" (G.Const 3))                  `Seq`
+                (Fin (Just "x") (Write "y" (G.Const 1))) `Seq`
+                (Fin Nothing    (Write "y" (G.Const 2))) `Seq`
+                (Write "y" (G.Const 3))
+             )) Nop')))
+      `shouldBe` (Block' ["x"] (Or (Fin' (Seq (Write "y" (G.Const 1)) (Seq (Write "x" (G.Const 1)) Nop'))) (Seq Nop' (Seq (Block' [] (Or (Fin' (Write "x" (G.Const 2))) (Seq (Write "x" (G.Const 3)) (Or (Fin' (Write "y" (G.Const 2))) (Write "y" (G.Const 3)))))) Nop'))))
+
   --------------------------------------------------------------------------
   describe "remSpawn" $ do
 

@@ -115,8 +115,8 @@ remFin p = p' where
                             f _ [] = ([], [])
                             f ids ((id,stmt):fs) = (a++a', b++b') where
                               (a',b') = f ids fs
-                              (a, b ) | (elem id ids) = ([stmt], fs)
-                                      | otherwise     = ([], (id,stmt):fs)
+                              (a, b ) | (elem id ids) = ([stmt], [])
+                                      | otherwise     = ([], [(id,stmt)])
 
                             toSeq :: [Stmt] -> Stmt
                             toSeq []     = Nop'
