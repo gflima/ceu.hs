@@ -9,6 +9,7 @@ data Stmt
   | Write G.ID G.Expr           -- assignment statement
   | AwaitExt G.Evt              -- await external event
   | AwaitFor                    -- await forever
+-- TODO: AwaitTmr
   | AwaitInt G.Evt              -- await internal event
   | EmitInt G.Evt               -- emit internal event
   | Break                       -- loop escape
@@ -19,7 +20,7 @@ data Stmt
   | And Stmt Stmt               -- par/and statement
   | Or Stmt Stmt                -- par/or statement
   | Spawn Stmt                  -- spawn statement
-  | Finalize Stmt               -- finalize statement
+  | Fin (Maybe id) Stmt         -- finalize statement
   | Async Stmt                  -- async statement
   | Block' [G.ID] Stmt          -- block as in basic Grammar
   | Fin' Stmt                   -- fin as in basic Grammar
@@ -46,7 +47,7 @@ remVar (Block p) = p' where
     rV (And p1 p2)    = rV2 p1 p2 (\p1' p2' -> And p1' p2')
     rV (Or p1 p2)     = rV2 p1 p2 (\p1' p2' -> Or  p1' p2')
     rV (Spawn p)      = rV1 p (\p' -> Spawn p')
-    rV (Finalize p)   = rV1 p (\p' -> Finalize p')
+    rV (Fin id p)     = rV1 p (\p' -> Fin id p')
     rV (Async p)      = rV1 p (\p' -> Async p')
     rV (Block' _ _)   = error "remVar: unexpected statement (Block')"
     rV (Fin' p)       = rV1 p (\p' -> Fin' p')
@@ -60,9 +61,9 @@ remVar (Block p) = p' where
                       (ids1',p1') = rV p1
                       (ids2',p2') = rV p2
 
-remVar _         = error "remVar: expected enclosing top-level block"
+remVar _ = error "remVar: expected enclosing top-level block"
 
--- remSpawn: Converts (spawn p1; p2) into (p1;AwaitFor or p2)
+-- remSpawn: Converts (spawn p1; ...) into (p1;AwaitFor or ...)
 
 remSpawn :: Stmt -> Stmt
 remSpawn (Block p)           = Block (remSpawn p)
@@ -74,7 +75,7 @@ remSpawn (Every e p)         = Every e (remSpawn p)
 remSpawn (And p1 p2)         = And (remSpawn p1) (remSpawn p2)
 remSpawn (Or p1 p2)          = Or (remSpawn p1) (remSpawn p2)
 remSpawn (Spawn p)           = error "remSpawn: unexpected statement (Spawn)"
-remSpawn (Finalize p)        = Finalize (remSpawn p)
+remSpawn (Fin id p)          = Fin id (remSpawn p)
 remSpawn (Async p)           = Async (remSpawn p)
 remSpawn (Block' ids p)      = Block' ids (remSpawn p)
 remSpawn (Fin' p)            = Fin' (remSpawn p)
@@ -93,19 +94,19 @@ chkSpawn p = case p of
   notS p         = True
 
   chkS :: Stmt -> Bool
-  chkS (Block p)      = (notS p) && (chkS p)
-  chkS (If exp p1 p2) = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
-  chkS (Seq p1 p2)    = (chkS p1) && (notS p2) && (chkS p2)
-  chkS (Loop p)       = (notS p) && (chkS p)
-  chkS (Every e p)    = (notS p) && (chkS p)
-  chkS (And p1 p2)    = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
-  chkS (Or p1 p2)     = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
-  chkS (Spawn p)      = (notS p) && (chkS p)
-  chkS (Finalize p)   = (notS p) && (chkS p)
-  chkS (Async p)      = (notS p) && (chkS p)
-  chkS (Block' ids p) = (notS p) && (chkS p)
-  chkS (Fin' p)       = (notS p) && (chkS p)
-  chkS _              = True
+  chkS (Block p)    = (notS p) && (chkS p)
+  chkS (If _ p1 p2) = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
+  chkS (Seq p1 p2)  = (chkS p1) && (notS p2) && (chkS p2)
+  chkS (Loop p)     = (notS p) && (chkS p)
+  chkS (Every _ p)  = (notS p) && (chkS p)
+  chkS (And p1 p2)  = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
+  chkS (Or p1 p2)   = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
+  chkS (Spawn p)    = (notS p) && (chkS p)
+  chkS (Fin _ p)    = (notS p) && (chkS p)
+  chkS (Async p)    = (notS p) && (chkS p)
+  chkS (Block' _ p) = (notS p) && (chkS p)
+  chkS (Fin' p)     = (notS p) && (chkS p)
+  chkS _            = True
 
 -- remSpawn: Adds AwaitFor in Loops inside Asyncs
 
@@ -121,7 +122,7 @@ remAsync p = (rA p False) where
   rA (And p1 p2)    inA = And (rA p1 inA) (rA p2 inA)
   rA (Or p1 p2)     inA = Or (rA p1 inA) (rA p2 inA)
   rA (Spawn p)      inA = Spawn (rA p inA)
-  rA (Finalize p)   inA = Finalize (rA p inA)
+  rA (Fin id p)     inA = Fin id (rA p inA)
   rA (Async p)      inA = (rA p True)
   rA (Block' ids p) inA = Block' ids (rA p inA)
   rA (Fin' p)       inA = Fin' (rA p inA)
@@ -140,7 +141,7 @@ remAwaitFor (Every e p)    = Every e (remAwaitFor p)
 remAwaitFor (And p1 p2)    = And (remAwaitFor p1) (remAwaitFor p2)
 remAwaitFor (Or p1 p2)     = Or (remAwaitFor p1) (remAwaitFor p2)
 remAwaitFor (Spawn p)      = Spawn (remAwaitFor p)
-remAwaitFor (Finalize p)   = Finalize (remAwaitFor p)
+remAwaitFor (Fin id p)     = Fin id (remAwaitFor p)
 remAwaitFor (Async p)      = Async (remAwaitFor p)
 remAwaitFor (Block' ids p) = Block' ids (remAwaitFor p)
 remAwaitFor (Fin' p)       = Fin' (remAwaitFor p)
@@ -168,6 +169,6 @@ toGrammar p = toG $ remAwaitFor $ remAsync
   toG (Block' ids p) = G.Block ids (toG p)
   toG (Fin' p)       = G.Fin (toG p)
   toG Nop'           = G.Nop
-  toG _              = error "toG: unexpected statement (Block,Var,AwaitFor,Finalize,Spawn,Async)"
+  toG _              = error "toG: unexpected statement (Block,Var,AwaitFor,Fin,Spawn,Async)"
 
 -- TODO: evalFull
