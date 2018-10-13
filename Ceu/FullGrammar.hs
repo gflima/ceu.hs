@@ -1,6 +1,7 @@
 module Ceu.FullGrammar where
 
 import qualified Ceu.Grammar as G
+--import Debug.Trace
 
 -- Events:
 -- -1: program can never await (used for boot reaction)
@@ -73,6 +74,55 @@ remVar (Block p) = p' where
                       (ids2',p2') = rV p2
 
 remVar _ = error "remVar: expected enclosing top-level block"
+
+-- remFin: Converts (Fin _  p);A -> (or (Fin' p) A)
+--                  (Fin id p);A -> A ||| (Block (Or [(Fin p)] X)
+
+remFin :: Stmt -> Stmt
+remFin p = p' where
+  (_,p') = rF p
+
+  rF :: Stmt -> ([(G.ID,Stmt)], Stmt)
+  rF (Block p)           = error "remFin: unexpected statement (Block)"
+  rF (Var _)             = error "remFin: unexpected statement (Var)"
+  rF (If exp p1 p2)      = ([], If exp (snd (rF p1)) (snd (rF p2)))
+
+  rF (Seq (Fin Nothing p1) p2)   = (l2', Or (Fin' p1) p2')
+                                     where (l2',p2') = (rF p2)
+  rF (Seq (Fin (Just id) p1) p2) = (l2'++[(id,p1)], p2')        -- invert l2/l1
+                                     where (l2',p2') = (rF p2)
+  rF (Seq p1 p2)                 = (l2'++l1', Seq p1' p2')
+                                     where (l1',p1') = (rF p1)
+                                           (l2',p2') = (rF p2)
+
+  rF (Loop p)            = ([], Loop (snd (rF p)))
+  rF (Every e p)         = ([], Every e (snd (rF p)))
+  rF (And p1 p2)         = ([], And (snd (rF p1)) (snd (rF p2)))
+  rF (Or p1 p2)          = ([], Or (snd (rF p1)) (snd (rF p2)))
+  rF (Spawn p)           = ([], Spawn (snd (rF p)))
+  rF (Fin id p)          = error "remFin: unexpected statement (Fin)"
+  rF (Async p)           = ([], Async (snd (rF p)))
+
+  rF (Block' ids p)      = (l'', Block' ids p''') where
+                            (l', p')  = (rF p)   -- results from nested p
+                            (p'',l'') = f ids l' -- matches l' with current block ids
+                            p''' | ((toSeq p'') == Nop') = p' -- nothing to finalize
+                                 | otherwise             = (Or (Fin' (toSeq p'')) p')
+
+                            -- recs: [ID] in block, [pending finalize] (id->stmts)
+                            -- rets: [stmts to fin] in block, [remaining finalize]
+                            f :: [G.ID] -> [(G.ID,Stmt)] -> ([Stmt], [(G.ID,Stmt)])
+                            f _ [] = ([], [])
+                            f ids ((id,stmt):fs) = (a++a', b++b') where
+                              (a',b') = f ids fs
+                              (a, b ) | (elem id ids) = ([stmt], fs)
+                                      | otherwise     = ([], (id,stmt):fs)
+
+                            toSeq :: [Stmt] -> Stmt
+                            toSeq []     = Nop'
+                            toSeq (s:ss) = Seq s (toSeq ss)
+
+  rF p                   = ([], p)
 
 -- remSpawn: Converts (spawn p1; ...) into (p1;AwaitFor or ...)
 
@@ -153,7 +203,7 @@ remAwaitFor (And p1 p2)    = And (remAwaitFor p1) (remAwaitFor p2)
 remAwaitFor (Or p1 p2)     = Or (remAwaitFor p1) (remAwaitFor p2)
 remAwaitFor (Spawn p)      = Spawn (remAwaitFor p)
 remAwaitFor (Fin id p)     = Fin id (remAwaitFor p)
-remAwaitFor (Async p)      = Async (remAwaitFor p)
+remAwaitFor (Async p)      = error "remAwaitFor: unexpected statement (Async)"
 remAwaitFor (Block' ids p) = Block' ids (remAwaitFor p)
 remAwaitFor (Fin' p)       = Fin' (remAwaitFor p)
 remAwaitFor AwaitFor       = AwaitExt inputForever
@@ -164,6 +214,7 @@ remAwaitFor p              = p
 toGrammar :: Stmt -> G.Stmt
 toGrammar p = toG $ remAwaitFor $ remAsync
                   $ remSpawn $ chkSpawn
+                  $ remFin
                   $ remVar (Block (Seq (Var "ret") p)) where
   toG :: Stmt -> G.Stmt
   toG (Write id exp) = G.Write id exp

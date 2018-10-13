@@ -48,6 +48,21 @@ spec = do
       `shouldBe` (Block' [] (Block' ["x"] (Seq Nop' (Write "x" (G.Const 1)))))
 
   --------------------------------------------------------------------------
+  describe "remFin" $ do
+
+    it "var x; fin x with nop; nop" $ do
+      remFin (Block' ["x"] (Seq (Fin (Just "x") Nop') Nop'))
+      `shouldBe` (Block' ["x"] (Or (Fin' (Seq Nop' Nop')) Nop'))
+
+    it "var x; { fin x with nop; nop }" $ do
+      remFin (Block' ["x"] (Block' [] (Seq (Fin (Just "x") Nop') Nop')))
+      `shouldBe` (Block' ["x"] (Or (Fin' (Seq Nop' Nop')) (Block' [] Nop')))
+
+    it "var x; { fin x with x=1; fin with x=2; x=3 }" $ do
+      remFin (Block' ["x"] (Block' [] (Seq (Fin (Just "x") (Write "x" (G.Const 1))) (Seq (Fin Nothing (Write "x" (G.Const 2))) (Write "x" (G.Const 3))))))
+      `shouldBe` (Block' ["x"] (Or (Fin' (Seq (Write "x" (G.Const 1)) Nop')) (Block' [] (Or (Fin' (Write "x" (G.Const 2))) (Write "x" (G.Const 3))))))
+
+  --------------------------------------------------------------------------
   describe "remSpawn" $ do
 
     it "spawn nop;" $ do
