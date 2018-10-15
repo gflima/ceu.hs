@@ -40,6 +40,7 @@ data Stmt
   | Or Stmt Stmt                -- par/or statement
   | Fin Stmt                    -- finalization statement
   | Nop                         -- dummy statement (internal)
+  | Error String                -- generate runtime error (for testing purposes)
   | CanRun Int                  -- wait for stack level (internal)
   | Restore Int                 -- restore environment (internal)
   | Loop' Stmt Stmt             -- unrolled Loop (internal)
@@ -85,6 +86,7 @@ showProg stmt = case stmt of
   Or p q         -> printf "(%s || %s)" (sP p) (sP q)
   Fin p          -> printf "(fin %s)" (sP p)
   Nop            -> "nop"
+  Error _        -> "err"
   CanRun n       -> printf "@canrun(%d)" n
   Restore n      -> printf "@restore(%d)" n
   Loop' p q      -> printf "(%s @loop %s)" (sP p) (sP q)

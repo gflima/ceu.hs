@@ -18,6 +18,7 @@ spec = do
     checkLoopIt (Loop (EmitInt 0))                 False
     checkLoopIt (Loop (Break))                     True
     checkLoopIt (Loop (Nop))                       False
+    checkLoopIt (Loop (Error ""))                  False
     checkLoopIt (Loop (CanRun 0))                  False
     checkLoopIt (Loop (Restore 0))                 False
     checkLoopIt (Loop' Nop (Write "x" (Const 0)))  False
@@ -26,6 +27,7 @@ spec = do
     checkLoopIt (Loop' Nop (EmitInt 0))            False
     checkLoopIt (Loop' Nop (Break))                True
     checkLoopIt (Loop' Nop (Nop))                  False
+    checkLoopIt (Loop' Nop (Error ""))             False
     checkLoopIt (Loop' Nop (CanRun 0))             False
     checkLoopIt (Loop' Nop (Restore 0))            False
 
@@ -79,6 +81,7 @@ spec = do
     checkFinIt (Fin (EmitInt 0))           True
     checkFinIt (Fin (Break))               False
     checkFinIt (Fin (Nop))                 True
+    checkFinIt (Fin (Error ""))            True
     checkFinIt (Fin (CanRun 0))            True
     checkFinIt (Fin (Restore 0))           True
 
@@ -108,6 +111,7 @@ spec = do
     checkProgIt (EmitInt 0)           True
     checkProgIt (Break)               True
     checkProgIt (Nop)                 True
+    checkProgIt (Error "")            True
     checkProgIt (CanRun 0)            True
     checkProgIt (Restore 0)           True
 

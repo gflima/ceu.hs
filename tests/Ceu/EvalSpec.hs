@@ -129,6 +129,12 @@ spec = do
   --------------------------------------------------------------------------
   describe "nst1" $ do
 
+    -- error --
+    describe "(Error \"erro\")" $ do
+      it "fail: error \"erro\"" $
+        (forceEval $ nst1 (Error "erro", 0, Nothing, [newEnv]))
+        `shouldThrow` errorCall "Runtime error: erro"
+
     -- block --
     describe "(Block [vars] p)" $ do
       it "pass: Block [] Nop" $

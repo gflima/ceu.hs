@@ -140,3 +140,8 @@ spec = do
       toGrammar (Seq (Spawn (AwaitExt 0)) (Seq (AwaitExt 1) (Seq (Var "x") AwaitFor)))
       `shouldBe` (G.Block ["ret","x"] (G.Seq G.Nop (G.Or (G.Seq (G.AwaitExt 0) (G.AwaitExt inputForever)) (G.Seq (G.AwaitExt 1) (G.Seq G.Nop (G.AwaitExt inputForever))))))
 
+
+    it "spawn do async ret++ end ;; await F;" $ do
+      toGrammar (Seq (Spawn (Async (Loop (Write "x" (G.Add (G.Read "x") (G.Const 1)))))) (AwaitExt 0))
+      `shouldBe` (G.Block ["ret"] (G.Seq G.Nop (G.Or (G.Seq (G.Loop (G.Seq (G.Write "x" (G.Add (G.Read "x") (G.Const 1))) (G.AwaitExt (-3)))) (G.AwaitExt (-2))) (G.AwaitExt 0))))
+

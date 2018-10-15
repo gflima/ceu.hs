@@ -34,10 +34,14 @@ data Stmt
   | Spawn Stmt                  -- spawn statement
   | Fin (Maybe G.ID) Stmt       -- finalize statement
   | Async Stmt                  -- async statement
+  | Error String                -- generate runtime error (for testing purposes)
   | Block' [G.ID] Stmt          -- block as in basic Grammar
   | Fin' Stmt                   -- fin as in basic Grammar
   | Nop'                        -- nop as in basic Grammar
   deriving (Eq, Show)
+
+--TODO: fazer um exemplo que o fin executa 2x por causa de um emit que mata um paror por fora.
+--TODO: adicionar um @error Int nas duas semanticas
 
 infixr 1 `Seq`                  -- `Seq` associates to the right
 infixr 0 `Or`                   -- `Or` associates to the right
@@ -228,6 +232,7 @@ toGrammar p = toG $ remAwaitFor $ remAsync
   toG (Every e p)    = G.Every e (toG p)
   toG (And p1 p2)    = G.And (toG p1) (toG p2)
   toG (Or p1 p2)     = G.Or (toG p1) (toG p2)
+  toG (Error msg)    = G.Error msg
   toG (Block' ids p) = G.Block ids (toG p)
   toG (Fin' p)       = G.Fin (toG p)
   toG Nop'           = G.Nop

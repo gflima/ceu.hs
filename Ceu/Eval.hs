@@ -181,6 +181,8 @@ nst1 (Or' p q, n, Nothing, envs)                -- or-adv (pg 7)
   | not $ isBlocked n p = nst1Adv (p, n, Nothing, envs) (\p' -> Or' p' q)
   | otherwise           = nst1Adv (q, n, Nothing, envs) (\q' -> Or' p q')
 
+nst1 (Error msg, _, Nothing, _) = error ("Runtime error: " ++ msg)
+
 nst1 (_, _, _, _) = error "nst1: cannot advance"
 
 -- Tests whether the description is nst-irreducible.
