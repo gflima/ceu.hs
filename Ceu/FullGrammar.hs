@@ -1,6 +1,7 @@
 module Ceu.FullGrammar where
 
 import qualified Ceu.Grammar as G
+import Ceu.Eval
 --import Debug.Trace
 
 -- Events:
@@ -8,10 +9,10 @@ import qualified Ceu.Grammar as G
 -- -2: system can never emit (used as "await FOREVER" input)
 -- -3: program can never await (used as "async" input)
 --inputBoot    :: Evt
-inputForever :: G.Evt
+--inputForever :: G.Evt
 inputAsync   :: G.Evt
 --inputBoot    = -1
-inputForever = -2
+--inputForever = -2
 inputAsync   = -3
 
 -- Program (pg 5).
@@ -210,7 +211,7 @@ remAwaitFor (Fin id p)     = Fin id (remAwaitFor p)
 remAwaitFor (Async p)      = error "remAwaitFor: unexpected statement (Async)"
 remAwaitFor (Block' ids p) = Block' ids (remAwaitFor p)
 remAwaitFor (Fin' p)       = Fin' (remAwaitFor p)
-remAwaitFor AwaitFor       = AwaitExt inputForever
+remAwaitFor AwaitFor       = AwaitExt G.inputForever
 remAwaitFor p              = p
 
 -- toGrammar: Converts full -> basic
@@ -219,7 +220,7 @@ toGrammar :: Stmt -> G.Stmt
 toGrammar p = toG $ remAwaitFor $ remAsync
                   $ remSpawn $ chkSpawn
                   $ remFin
-                  $ remVar (Block (Seq (Var "ret") p)) where
+                  $ remVar (Block p) where
   toG :: Stmt -> G.Stmt
   toG (Write id exp) = G.Write id exp
   toG (AwaitExt e)   = G.AwaitExt e
@@ -238,4 +239,5 @@ toGrammar p = toG $ remAwaitFor $ remAsync
   toG Nop'           = G.Nop
   toG _              = error "toG: unexpected statement (Block,Var,AwaitFor,Fin,Spawn,Async)"
 
--- TODO: evalFull
+evalFullProg :: Stmt -> [G.Evt] -> G.Val
+evalFullProg prog hist = evalProg (toGrammar prog) []

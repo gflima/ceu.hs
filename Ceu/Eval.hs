@@ -55,6 +55,8 @@ envsEval envs expr = case expr of
   Umn e     -> negate $ envsEval envs e
   Add e1 e2 -> (envsEval envs e1) + (envsEval envs e2)
   Sub e1 e2 -> (envsEval envs e1) - (envsEval envs e2)
+  Mul e1 e2 -> (envsEval envs e1) * (envsEval envs e2)
+  Div e1 e2 -> (envsEval envs e1) `div` (envsEval envs e2)
 
 ----------------------------------------------------------------------------
 -- Nested transition
