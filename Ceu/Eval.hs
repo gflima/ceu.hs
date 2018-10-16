@@ -2,6 +2,7 @@ module Ceu.Eval where
 
 import Ceu.Grammar
 import Data.Maybe
+--import Debug.Trace
 
 -- Environment.
 type Env = ([ID], [(ID,Val)])   -- declarations plus assignment history
@@ -268,11 +269,12 @@ reaction (p, e, envs) = (p', envs')
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
 evalProg :: Stmt -> [Evt] -> Val
-evalProg prog hist = evalProg' prog (inputBoot:hist) [(["ret"],[])]
-  where                                      -- extra -1 for boot reaction
+evalProg prog hist = evalProg' (Block ["ret"] (Seq prog (AwaitExt inputForever))) (inputBoot:hist) []
+  where                         -- enclosing block with "ret" that never terminates
     evalProg' :: Stmt -> [Evt] -> Envs -> Val
     evalProg' prog hist envs = case prog of
-      Nop | null hist -> envsRead envs "ret" -- done
+      (Seq (AwaitExt inputForever) (Restore 0))
+          | null hist -> envsRead envs "ret"  -- done
           | otherwise -> error "evalProg: pending inputs"
       _   | null hist -> error "evalProg: program didn't terminate"
           | otherwise ->                     -- continue

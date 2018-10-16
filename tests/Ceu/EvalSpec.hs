@@ -1011,6 +1011,20 @@ spec = do
                  (Block [] (Write "ret" (Const 1) `Seq` AwaitExt 0))
                  (Break)))
 
+    evalProgItPass 5 [] (
+      (Write "ret" (Const 1)) `Seq`
+      (And
+        ((AwaitInt 0) `Seq` (Write "ret" (Const 5)))
+        (EmitInt 0)
+      ))
+
+    evalProgItPass 5 [] (
+      (Write "ret" (Const 1)) `Seq`
+      (Or
+        ((AwaitInt 0) `Seq` (Write "ret" (Const 5)))
+        (Or (Fin (EmitInt 0)) Nop)
+      ))
+
     -- multiple inputs
 
     evalProgItPass 1
@@ -1027,6 +1041,8 @@ spec = do
 
     evalProgItPass 1
       [0,1] (AwaitExt 0 `Seq` AwaitExt 1 `Seq` Write "ret" (Const 1))
+
+    evalProgItPass 1 [] (Write "ret" (Const 1))
 
       where
         nstsItPass (p,n,e,envs) (p',n',e',envs') =

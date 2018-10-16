@@ -10,7 +10,9 @@ type Val = Int                  -- value
 -- Events:
 -- -1: program can never await (used for boot reaction)
 inputBoot    :: Evt
+inputForever :: Evt
 inputBoot    = -1
+inputForever = -2
 
 -- Expression.
 data Expr

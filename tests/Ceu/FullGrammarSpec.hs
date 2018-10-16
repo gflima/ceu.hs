@@ -5,6 +5,7 @@ import Ceu.FullGrammar
 import Control.DeepSeq
 import Control.Exception
 import Test.Hspec
+import Text.Printf
 
 -- Declare Stmt as a datatype that can be fully evaluated.
 instance NFData Stmt where
@@ -123,25 +124,68 @@ spec = do
 
     it "await FOREVER;" $ do
       remAwaitFor AwaitFor
-      `shouldBe` (AwaitExt inputForever)
+      `shouldBe` (AwaitExt G.inputForever)
 
   --------------------------------------------------------------------------
   describe "toGrammar" $ do
 
     it "var x;" $ do
       toGrammar (Var "x")
-      `shouldBe` G.Block ["ret","x"] (G.Seq G.Nop G.Nop)
+      `shouldBe` (G.Block ["x"] G.Nop)
 
     it "do var x; x = 1 end" $ do
       toGrammar (Block (Seq (Var "x") (Write "x" (G.Const 1))))
-      `shouldBe` G.Block ["ret"] (G.Seq G.Nop (G.Block ["x"] (G.Seq G.Nop (G.Write "x" (G.Const 1)))))
+      `shouldBe` G.Block [] (G.Block ["x"] (G.Seq G.Nop (G.Write "x" (G.Const 1))))
 
     it "spawn do await A; end ;; await B; var x; await FOREVER;" $ do
       toGrammar (Seq (Spawn (AwaitExt 0)) (Seq (AwaitExt 1) (Seq (Var "x") AwaitFor)))
-      `shouldBe` (G.Block ["ret","x"] (G.Seq G.Nop (G.Or (G.Seq (G.AwaitExt 0) (G.AwaitExt inputForever)) (G.Seq (G.AwaitExt 1) (G.Seq G.Nop (G.AwaitExt inputForever))))))
+      `shouldBe` (G.Block ["x"] (G.Or (G.Seq (G.AwaitExt 0) (G.AwaitExt G.inputForever)) (G.Seq (G.AwaitExt 1) (G.Seq G.Nop (G.AwaitExt G.inputForever)))))
 
 
     it "spawn do async ret++ end ;; await F;" $ do
       toGrammar (Seq (Spawn (Async (Loop (Write "x" (G.Add (G.Read "x") (G.Const 1)))))) (AwaitExt 0))
-      `shouldBe` (G.Block ["ret"] (G.Seq G.Nop (G.Or (G.Seq (G.Loop (G.Seq (G.Write "x" (G.Add (G.Read "x") (G.Const 1))) (G.AwaitExt (-3)))) (G.AwaitExt (-2))) (G.AwaitExt 0))))
+      `shouldBe` (G.Block [] (G.Or (G.Seq (G.Loop (G.Seq (G.Write "x" (G.Add (G.Read "x") (G.Const 1))) (G.AwaitExt (-3)))) (G.AwaitExt (-2))) (G.AwaitExt 0)))
 
+  --------------------------------------------------------------------------
+  describe "evalFullProg" $ do
+    it "error \"Hello!\"" $ do
+      evaluate $ evalFullProg (Error "Hello!") []
+      `shouldThrow` errorCall "Runtime error: Hello!"
+
+{-
+ret = 0;
+par/or do
+    await a;
+    ret = ret + 5;          // 3- ret=25
+with
+    par/or do
+        do finalize with
+            ret = ret * 2;  // 2- ret=20
+            emit a;         // (awakes par/or that could finalize again)
+        end
+        await FOREVER;
+    with
+        ret = ret + 10;     // 1- ret=10
+    end
+end
+-}
+    evalFullProgItPass 25 [] (
+      (Write "ret" (G.Const 0)) `Seq`
+      (Or
+        ((AwaitInt 0) `Seq` (Write "ret" (G.Add (G.Read "ret") (G.Const 5))))
+        (Or
+          (
+            (Fin Nothing (
+              (Write "ret" (G.Mul (G.Read "ret") (G.Const 2))) `Seq`
+              (EmitInt 0)
+            )) `Seq`
+            AwaitFor
+          )
+          (Write "ret" (G.Add (G.Read "ret") (G.Const 10)))
+        )
+      ))
+
+      where
+        evalFullProgItPass res hist prog =
+          (it (printf "pass: %s | %s ~>%d" (show hist) (G.showProg $ toGrammar prog) res) $
+            (evalFullProg prog hist `shouldBe` res))
