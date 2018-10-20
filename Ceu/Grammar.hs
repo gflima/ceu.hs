@@ -3,16 +3,13 @@ module Ceu.Grammar where
 import Text.Printf
 
 -- Primitive types.
-type Evt = Int                  -- event identifier
+type Evt = String               -- event identifier
 type ID  = String               -- variable identifier
 type Val = Int                  -- value
 
--- Events:
--- -1: program can never await (used for boot reaction)
-inputBoot    :: Evt
-inputForever :: Evt
-inputBoot    = -1
-inputForever = -2
+-- Special events:
+-- "BOOT"
+-- "FOREVER"
 
 -- Expression.
 data Expr
@@ -32,11 +29,11 @@ infixl 7 `Div`                  -- `Div` associates to the left
 
 -- Program (pg 5).
 data Stmt
-  = Block [ID] Stmt             -- declaration block
+  = Block ([ID],[ID]) Stmt      -- declaration block
   | Write ID Expr               -- assignment statement
   | AwaitExt Evt                -- await external event
-  | AwaitInt Evt                -- await internal event
-  | EmitInt Evt                 -- emit internal event
+  | AwaitInt ID                 -- await internal event
+  | EmitInt ID                  -- emit internal event
   | Break                       -- loop escape
   | If Expr Stmt Stmt           -- conditional
   | Seq Stmt Stmt               -- sequence
@@ -69,22 +66,22 @@ showExpr expr = case expr of
   Mul e1 e2 -> printf "(%s*%s)" (showExpr e1) (showExpr e2)
   Div e1 e2 -> printf "(%s*%s)" (showExpr e1) (showExpr e2)
 
--- Shows list of variables.
-showVars :: [ID] -> String
-showVars vars = case vars of
+-- Shows list of declarations (variables or events).
+showDcls :: [ID] -> String
+showDcls dcls = case dcls of
   []     -> ""
   v:[]   -> v
-  v:vars -> v ++ "," ++ showVars vars
+  v:dcls -> v ++ "," ++ showDcls dcls
 
 -- Shows program.
 showProg :: Stmt -> String
 showProg stmt = case stmt of
-  Block vars p | null vars -> printf "{%s}" (sP p)
-               | otherwise -> printf "{%s: %s}" (sV vars) (sP p)
+  Block (vs,es) p | null (vs,es) -> printf "{%s}" (sP p)
+                  | otherwise    -> printf "{%s/%s: %s}" (sV vs) (sV es) (sP p)
   Write var expr -> printf "%s=%s" var (sE expr)
-  AwaitExt e     -> printf "?E%d" e
-  AwaitInt e     -> printf "?%d" e
-  EmitInt e      -> printf "!%d" e
+  AwaitExt e     -> printf "?E%s" e
+  AwaitInt e     -> printf "?%s" e
+  EmitInt e      -> printf "!%s" e
   Break          -> "break"
   If expr p q    -> printf "(if %s then %s else %s)" (sE expr) (sP p) (sP q)
   Seq p q        -> printf "%s; %s" (sP p) (sP q)
@@ -103,7 +100,7 @@ showProg stmt = case stmt of
   where
     sE = showExpr
     sP = showProg
-    sV = showVars
+    sV = showDcls
 
 -- Checks if program is valid.
 checkProg :: Stmt -> Bool

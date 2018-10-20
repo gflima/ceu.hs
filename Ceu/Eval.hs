@@ -5,8 +5,8 @@ import Data.Maybe
 --import Debug.Trace
 
 -- Environment.
-type Env = ([ID], [(ID,Val)])   -- declarations plus assignment history
-type Envs = [Env]               -- list of environments
+type Env = (([ID],[ID]), [(ID,Val)]) -- declarations plus assignment history
+type Envs = [Env]                    -- list of environments
 
 -- Stack level.
 type Lvl = Int
@@ -19,17 +19,18 @@ type Desc = (Stmt, Lvl, Maybe Evt, Envs)
 
 -- The empty environment.
 newEnv :: Env
-newEnv = ([], [])
+newEnv = (([],[]), [])
 
--- Finds the first environment containing the given variable.
+-- Finds the first environment containing the given declaration.
 envsGet :: Envs -> String -> (Envs,Env,Envs)
 envsGet [] _ = error "envsGet: bad environment"
 envsGet envs id  = envsGet' [] envs id
   where
-    envsGet' _ [] _       = error ("envsGet: undeclared variable: " ++ id)
+    f = fst
+    envsGet' _ [] _  = error ("envsGet: undeclared variable: " ++ id)
     envsGet' notHere (env:maybeHere) id
-      | elem id (fst env) = (notHere, env, maybeHere) -- found
-      | otherwise         = envsGet' (notHere++[env]) maybeHere id
+      | elem id (fst (f env)) = (notHere, env, maybeHere) -- found
+      | otherwise             = envsGet' (notHere++[env]) maybeHere id
 
 -- Writes value to variable in environment.
 envsWrite :: Envs -> String -> Val -> Envs
@@ -101,8 +102,8 @@ nst1Adv d f = (f p, n, e, envs)
 -- (pg 6)
 nst1 :: Desc -> Desc
 
-nst1 (Block vars p, n, Nothing, envs)           -- block
-  = (Seq p (Restore (length envs)), n, Nothing, (vars,[]):envs)
+nst1 (Block dcls p, n, Nothing, envs)           -- block
+  = (Seq p (Restore (length envs)), n, Nothing, (dcls,[]):envs)
 
 nst1 (Restore lvl, n, Nothing, envs)            -- restore
   = (Nop, n, Nothing, drop (length envs - lvl) envs)
@@ -271,11 +272,11 @@ reaction (p, e, envs) = (p', envs')
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
 evalProg :: Stmt -> [Evt] -> Val
-evalProg prog hist = evalProg' (Block ["ret"] (Seq prog (AwaitExt inputForever))) (inputBoot:hist) []
+evalProg prog hist = evalProg' (Block (["ret"],[]) (Seq prog (AwaitExt "FOREVER"))) ("FOREVER":hist) []
   where                         -- enclosing block with "ret" that never terminates
     evalProg' :: Stmt -> [Evt] -> Envs -> Val
     evalProg' prog hist envs = case prog of
-      (Seq (AwaitExt inputForever) (Restore 0))
+      (Seq (AwaitExt "FOREVER") (Restore 0))
           | null hist -> envsRead envs "ret"  -- done
           | otherwise -> error "evalProg: pending inputs"
       _   | null hist -> error "evalProg: program didn't terminate"

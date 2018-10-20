@@ -4,41 +4,35 @@ import qualified Ceu.Grammar as G
 import Ceu.Eval
 --import Debug.Trace
 
--- Events:
--- -1: program can never await (used for boot reaction)
--- -2: system can never emit (used as "await FOREVER" input)
--- -3: program can never await (used as "async" input)
---inputBoot    :: Evt
---inputForever :: G.Evt
-inputAsync   :: G.Evt
---inputBoot    = -1
---inputForever = -2
-inputAsync   = -3
+-- Special events:
+-- "BOOT"
+-- "FOREVER"
+-- "ASYNC"
 
 -- Program (pg 5).
 data Stmt
-  = Block Stmt                  -- declaration block
-  | Var G.ID                    -- variable declaration
-  | Write G.ID G.Expr           -- assignment statement
-  | AwaitExt G.Evt              -- await external event
-  | AwaitFor                    -- await forever
+  = Block Stmt                    -- declaration block
+  | Var G.ID                      -- variable declaration
+  | Write G.ID G.Expr             -- assignment statement
+  | AwaitExt G.Evt (Maybe G.ID)   -- await external event
+  | AwaitFor                      -- await forever
 -- TODO: AwaitTmr
-  | AwaitInt G.Evt              -- await internal event
-  | EmitInt G.Evt               -- emit internal event
-  | Break                       -- loop escape
-  | If G.Expr Stmt Stmt         -- conditional
-  | Seq Stmt Stmt               -- sequence
-  | Loop Stmt                   -- infinite loop
-  | Every G.Evt Stmt            -- event iteration
-  | And Stmt Stmt               -- par/and statement
-  | Or Stmt Stmt                -- par/or statement
-  | Spawn Stmt                  -- spawn statement
-  | Fin (Maybe G.ID) Stmt       -- finalize statement
-  | Async Stmt                  -- async statement
-  | Error String                -- generate runtime error (for testing purposes)
-  | Block' [G.ID] Stmt          -- block as in basic Grammar
-  | Fin' Stmt                   -- fin as in basic Grammar
-  | Nop'                        -- nop as in basic Grammar
+  | AwaitInt G.Evt (Maybe G.ID)   -- await internal event
+  | EmitInt G.Evt G.Expr          -- emit internal event
+  | Break                         -- loop escape
+  | If G.Expr Stmt Stmt           -- conditional
+  | Seq Stmt Stmt                 -- sequence
+  | Loop Stmt                     -- infinite loop
+  | Every G.Evt (Maybe G.ID) Stmt -- event iteration
+  | And Stmt Stmt                 -- par/and statement
+  | Or Stmt Stmt                  -- par/or statement
+  | Spawn Stmt                    -- spawn statement
+  | Fin (Maybe G.ID) Stmt         -- finalize statement
+  | Async Stmt                    -- async statement
+  | Error String                  -- generate runtime error (for testing purposes)
+  | Block' ([G.ID],[G.Evt]) Stmt  -- block as in basic Grammar
+  | Fin' Stmt                     -- fin as in basic Grammar
+  | Nop'                          -- nop as in basic Grammar
   deriving (Eq, Show)
 
 --TODO: fazer um exemplo que o fin executa 2x por causa de um emit que mata um paror por fora.
@@ -54,13 +48,13 @@ remVar :: Stmt -> Stmt
 remVar (Block p) = p' where
     (_,p') = rV (Block p)
 
-    rV :: Stmt -> ([G.ID], Stmt)
-    rV (Block p)      = ([], Block' ids' p') where (ids', p') = rV p
-    rV (Var id)       = ([id], Nop')
+    rV :: Stmt -> (([G.ID],[G.Evt]), Stmt)
+    rV (Block p)      = (([],[]), Block' ids' p') where (ids', p') = rV p
+    rV (Var id)       = (([id],[]), Nop')
     rV (If exp p1 p2) = rV2 p1 p2 (\p1' p2' -> If exp p1' p2')
     rV (Seq p1 p2)    = rV2 p1 p2 (\p1' p2' -> Seq p1' p2')
     rV (Loop p)       = rV1 p (\p' -> Loop p')
-    rV (Every e p)    = rV1 p (\p' -> Every e p')
+    rV (Every e id p) = rV1 p (\p' -> Every e id p')
     rV (And p1 p2)    = rV2 p1 p2 (\p1' p2' -> And p1' p2')
     rV (Or p1 p2)     = rV2 p1 p2 (\p1' p2' -> Or  p1' p2')
     rV (Spawn p)      = rV1 p (\p' -> Spawn p')
@@ -68,15 +62,15 @@ remVar (Block p) = p' where
     rV (Async p)      = rV1 p (\p' -> Async p')
     rV (Block' _ _)   = error "remVar: unexpected statement (Block')"
     rV (Fin' p)       = rV1 p (\p' -> Fin' p')
-    rV q              = ([], q)
+    rV q              = (([],[]), q)
 
-    rV1 :: Stmt -> (Stmt->Stmt) -> ([G.ID], Stmt)
+    rV1 :: Stmt -> (Stmt->Stmt) -> (([G.ID],[G.Evt]), Stmt)
     rV1 p f = (ids', f p') where (ids',p') = rV p
 
-    rV2 :: Stmt -> Stmt -> (Stmt->Stmt->Stmt) -> ([G.ID], Stmt)
-    rV2 p1 p2 f = (ids1'++ids2', f p1' p2') where
-                      (ids1',p1') = rV p1
-                      (ids2',p2') = rV p2
+    rV2 :: Stmt -> Stmt -> (Stmt->Stmt->Stmt) -> (([G.ID],[G.Evt]), Stmt)
+    rV2 p1 p2 f = ((vs1'++vs2',es1'++es2'), f p1' p2') where
+                      ((vs1',es1'),p1') = rV p1
+                      ((vs2',es2'),p2') = rV p2
 
 remVar _ = error "remVar: expected enclosing top-level block"
 
@@ -101,16 +95,16 @@ remFin p = p' where
                                            (l2',p2') = (rF p2)
 
   rF (Loop p)            = ([], Loop (snd (rF p)))
-  rF (Every e p)         = ([], Every e (snd (rF p)))
+  rF (Every e id p)      = ([], Every e id (snd (rF p)))
   rF (And p1 p2)         = ([], And (snd (rF p1)) (snd (rF p2)))
   rF (Or p1 p2)          = ([], Or (snd (rF p1)) (snd (rF p2)))
   rF (Spawn p)           = ([], Spawn (snd (rF p)))
   rF (Fin id p)          = error "remFin: unexpected statement (Fin)"
   rF (Async p)           = ([], Async (snd (rF p)))
 
-  rF (Block' ids p)      = (l'', Block' ids p''') where
+  rF (Block' (vs,es) p)  = (l'', Block' (vs,es) p''') where
                             (l', p')  = (rF p)   -- results from nested p
-                            (p'',l'') = f ids l' -- matches l' with current block ids
+                            (p'',l'') = f vs l' -- matches l' with current block vars
                             p''' | ((toSeq p'') == Nop') = p' -- nothing to finalize
                                  | otherwise             = (Or (Fin' (toSeq p'')) p')
 
@@ -118,10 +112,10 @@ remFin p = p' where
                             -- rets: [stmts to fin] in block, [remaining finalize]
                             f :: [G.ID] -> [(G.ID,Stmt)] -> ([Stmt], [(G.ID,Stmt)])
                             f _ [] = ([], [])
-                            f ids ((id,stmt):fs) = (a++a', b++b') where
-                              (a',b') = f ids fs
-                              (a, b ) | (elem id ids) = ([stmt], [])
-                                      | otherwise     = ([], [(id,stmt)])
+                            f vars ((id,stmt):fs) = (a++a', b++b') where
+                              (a',b') = f vars fs
+                              (a, b ) | (elem id vars) = ([stmt], [])
+                                      | otherwise      = ([], [(id,stmt)])
 
                             toSeq :: [Stmt] -> Stmt
                             toSeq []     = Nop'
@@ -137,7 +131,7 @@ remSpawn (If exp p1 p2)      = If exp (remSpawn p1) (remSpawn p2)
 remSpawn (Seq (Spawn p1) p2) = Or (Seq (remSpawn p1) AwaitFor) (remSpawn p2)
 remSpawn (Seq p1 p2)         = Seq (remSpawn p1) (remSpawn p2)
 remSpawn (Loop p)            = Loop (remSpawn p)
-remSpawn (Every e p)         = Every e (remSpawn p)
+remSpawn (Every e id p)      = Every e id (remSpawn p)
 remSpawn (And p1 p2)         = And (remSpawn p1) (remSpawn p2)
 remSpawn (Or p1 p2)          = Or (remSpawn p1) (remSpawn p2)
 remSpawn (Spawn p)           = error "remSpawn: unexpected statement (Spawn)"
@@ -160,19 +154,19 @@ chkSpawn p = case p of
   notS p         = True
 
   chkS :: Stmt -> Bool
-  chkS (Block p)    = (notS p) && (chkS p)
-  chkS (If _ p1 p2) = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
-  chkS (Seq p1 p2)  = (chkS p1) && (notS p2) && (chkS p2)
-  chkS (Loop p)     = (notS p) && (chkS p)
-  chkS (Every _ p)  = (notS p) && (chkS p)
-  chkS (And p1 p2)  = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
-  chkS (Or p1 p2)   = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
-  chkS (Spawn p)    = (notS p) && (chkS p)
-  chkS (Fin _ p)    = (notS p) && (chkS p)
-  chkS (Async p)    = (notS p) && (chkS p)
-  chkS (Block' _ p) = (notS p) && (chkS p)
-  chkS (Fin' p)     = (notS p) && (chkS p)
-  chkS _            = True
+  chkS (Block p)     = (notS p) && (chkS p)
+  chkS (If _ p1 p2)  = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
+  chkS (Seq p1 p2)   = (chkS p1) && (notS p2) && (chkS p2)
+  chkS (Loop p)      = (notS p) && (chkS p)
+  chkS (Every _ _ p) = (notS p) && (chkS p)
+  chkS (And p1 p2)   = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
+  chkS (Or p1 p2)    = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
+  chkS (Spawn p)     = (notS p) && (chkS p)
+  chkS (Fin _ p)     = (notS p) && (chkS p)
+  chkS (Async p)     = (notS p) && (chkS p)
+  chkS (Block' _ p)  = (notS p) && (chkS p)
+  chkS (Fin' p)      = (notS p) && (chkS p)
+  chkS _             = True
 
 -- remSpawn: Adds AwaitFor in Loops inside Asyncs
 
@@ -182,9 +176,9 @@ remAsync p = (rA False p) where
   rA inA   (Block p)      = Block (rA inA p)
   rA inA   (If exp p1 p2) = If exp (rA inA p1) (rA inA p2)
   rA inA   (Seq p1 p2)    = Seq (rA inA p1) (rA inA p2)
-  rA True  (Loop p)       = Loop (rA True (Seq p (AwaitExt inputAsync)))
+  rA True  (Loop p)       = Loop (rA True (Seq p (AwaitExt "ASYNC" Nothing)))
   rA False (Loop p)       = Loop (rA False p)
-  rA inA   (Every e p)    = Every e (rA inA p)
+  rA inA   (Every e id p) = Every e id (rA inA p)
   rA inA   (And p1 p2)    = And (rA inA p1) (rA inA p2)
   rA inA   (Or p1 p2)     = Or (rA inA p1) (rA inA p2)
   rA inA   (Spawn p)      = Spawn (rA inA p)
@@ -196,14 +190,14 @@ remAsync p = (rA False p) where
 
 -- TODO: chkSpan: no sync statements
 
--- remAwaitFor: Converts AwaitFor into (AwaitExt inputForever)
+-- remAwaitFor: Converts AwaitFor into (AwaitExt "FOREVER")
 
 remAwaitFor :: Stmt -> Stmt
 remAwaitFor (Block p)      = Block (remAwaitFor p)
 remAwaitFor (If exp p1 p2) = If exp (remAwaitFor p1) (remAwaitFor p2)
 remAwaitFor (Seq p1 p2)    = Seq (remAwaitFor p1) (remAwaitFor p2)
 remAwaitFor (Loop p)       = Loop (remAwaitFor p)
-remAwaitFor (Every e p)    = Every e (remAwaitFor p)
+remAwaitFor (Every e id p) = Every e id (remAwaitFor p)
 remAwaitFor (And p1 p2)    = And (remAwaitFor p1) (remAwaitFor p2)
 remAwaitFor (Or p1 p2)     = Or (remAwaitFor p1) (remAwaitFor p2)
 remAwaitFor (Spawn p)      = Spawn (remAwaitFor p)
@@ -211,7 +205,7 @@ remAwaitFor (Fin id p)     = Fin id (remAwaitFor p)
 remAwaitFor (Async p)      = error "remAwaitFor: unexpected statement (Async)"
 remAwaitFor (Block' ids p) = Block' ids (remAwaitFor p)
 remAwaitFor (Fin' p)       = Fin' (remAwaitFor p)
-remAwaitFor AwaitFor       = AwaitExt G.inputForever
+remAwaitFor AwaitFor       = AwaitExt "FOREVER" Nothing
 remAwaitFor p              = p
 
 -- toGrammar: Converts full -> basic
@@ -222,22 +216,23 @@ toGrammar p = toG $ remAwaitFor $ remAsync
                   $ remFin
                   $ remVar (Block p) where
   toG :: Stmt -> G.Stmt
-  toG (Write id exp) = G.Write id exp
-  toG (AwaitExt e)   = G.AwaitExt e
-  toG (AwaitInt e)   = G.AwaitInt e
-  toG (EmitInt e)    = G.EmitInt e
-  toG Break          = G.Break
-  toG (If exp p1 p2) = G.If exp (toG p1) (toG p2)
-  toG (Seq p1 p2)    = G.Seq (toG p1) (toG p2)
-  toG (Loop p)       = G.Loop (toG p)
-  toG (Every e p)    = G.Every e (toG p)
-  toG (And p1 p2)    = G.And (toG p1) (toG p2)
-  toG (Or p1 p2)     = G.Or (toG p1) (toG p2)
-  toG (Error msg)    = G.Error msg
-  toG (Block' ids p) = G.Block ids (toG p)
-  toG (Fin' p)       = G.Fin (toG p)
-  toG Nop'           = G.Nop
-  toG _              = error "toG: unexpected statement (Block,Var,AwaitFor,Fin,Spawn,Async)"
+  toG (Write id exp)  = G.Write id exp
+  toG (AwaitExt e id) = G.AwaitExt e        -- TODO
+  toG (AwaitInt e id) = G.AwaitInt e        -- TODO
+  toG (EmitInt e exp) = G.EmitInt e         -- TODO
+  toG Break           = G.Break
+  toG (If exp p1 p2)  = G.If exp (toG p1) (toG p2)
+  toG (Seq p1 p2)     = G.Seq (toG p1) (toG p2)
+  toG (Loop p)        = G.Loop (toG p)
+  toG (Every e id p)  = G.Every e (toG p)   -- TODO
+  toG (And p1 p2)     = G.And (toG p1) (toG p2)
+  toG (Or p1 p2)      = G.Or (toG p1) (toG p2)
+  toG (Error msg)     = G.Error msg
+  toG (Block' ids p)  = G.Block ids (toG p)
+  toG (Fin' p)        = G.Fin (toG p)
+  toG Nop'            = G.Nop
+  toG _               = error "toG: unexpected statement (Block,Var,AwaitFor,Fin,Spawn,Async)"
 
-evalFullProg :: Stmt -> [G.Evt] -> G.Val
+evalFullProg :: Stmt -> [(G.Evt,G.Val)] -> G.Val
 evalFullProg prog hist = evalProg (toGrammar prog) []
+--evalFullProg prog hist = evalProg (toGrammar prog) hist
