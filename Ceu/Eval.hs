@@ -5,14 +5,14 @@ import Data.Maybe
 --import Debug.Trace
 
 -- Environment.
-type Env = (([ID],[ID]), [(ID,Val)]) -- declarations plus assignment history
+type Env = (([ID_Var],[ID_Evt]), [(ID_Var,Val)]) -- declarations plus assignment history
 type Envs = [Env]                    -- list of environments
 
 -- Stack level.
 type Lvl = Int
 
 -- Description (pg 6).
-type Desc = (Stmt, Lvl, Maybe Evt, Envs)
+type Desc = (Stmt, Lvl, Maybe ID_Evt, Envs)
 
 ----------------------------------------------------------------------------
 -- Environment
@@ -210,7 +210,7 @@ nsts d
 
 -- Awakes all trails waiting for the given event.
 -- (pg 8, fig 4.i)
-bcast :: Evt -> Stmt -> Stmt
+bcast :: ID_Evt -> Stmt -> Stmt
 bcast e stmt = case stmt of
   AwaitExt e' | e == e' -> Nop
   AwaitInt e' | e == e' -> Nop
@@ -247,7 +247,7 @@ nsts_out1_s (p, n, e, envs)
 -- Counts the maximum number of EmitInt's that can be executed in a reaction
 -- of program to event.
 -- (pg 9)
-pot :: Evt -> Stmt -> Int
+pot :: ID_Evt -> Stmt -> Int
 pot e p = countMaxEmits $ bcast e p
 
 -- (pg 9)
@@ -264,17 +264,17 @@ isIrreducible d = isNstIrreducible d && snd (rank d) == 0
 
 -- Computes a reaction of program plus environment to a single event.
 -- (pg 6)
-reaction :: (Stmt, Evt, Envs) -> (Stmt, Envs)
+reaction :: (Stmt, ID_Evt, Envs) -> (Stmt, Envs)
 reaction (p, e, envs) = (p', envs')
   where
     (p', _, _, envs') = nsts_out1_s $ outPush (p, 0, Just e, envs)
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
-evalProg :: Stmt -> [Evt] -> Val
+evalProg :: Stmt -> [ID_Evt] -> Val
 evalProg prog hist = evalProg' (Block (["ret"],[]) (Seq prog (AwaitExt "FOREVER"))) ("FOREVER":hist) []
   where                         -- enclosing block with "ret" that never terminates
-    evalProg' :: Stmt -> [Evt] -> Envs -> Val
+    evalProg' :: Stmt -> [ID_Evt] -> Envs -> Val
     evalProg' prog hist envs = case prog of
       (Seq (AwaitExt "FOREVER") (Restore 0))
           | null hist -> envsRead envs "ret"  -- done

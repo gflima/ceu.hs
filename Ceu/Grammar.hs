@@ -3,8 +3,8 @@ module Ceu.Grammar where
 import Text.Printf
 
 -- Primitive types.
-type Evt = String               -- event identifier
-type ID  = String               -- variable identifier
+type ID_Var  = String           -- variable identifier
+type ID_Evt  = String           -- event identifier
 type Val = Int                  -- value
 
 -- Special events:
@@ -14,7 +14,7 @@ type Val = Int                  -- value
 -- Expression.
 data Expr
   = Const Val                   -- constant
-  | Read ID                     -- variable read
+  | Read ID_Var                 -- variable read
   | Umn Expr                    -- unary minus
   | Add Expr Expr               -- addition
   | Sub Expr Expr               -- subtraction
@@ -29,16 +29,16 @@ infixl 7 `Div`                  -- `Div` associates to the left
 
 -- Program (pg 5).
 data Stmt
-  = Block ([ID],[ID]) Stmt      -- declaration block
-  | Write ID Expr               -- assignment statement
-  | AwaitExt Evt                -- await external event
-  | AwaitInt ID                 -- await internal event
-  | EmitInt ID                  -- emit internal event
+  = Block ([ID_Var],[ID_Evt]) Stmt -- declaration block
+  | Write ID_Var Expr           -- assignment statement
+  | AwaitExt ID_Evt             -- await external event
+  | AwaitInt ID_Evt             -- await internal event
+  | EmitInt ID_Evt              -- emit internal event
   | Break                       -- loop escape
   | If Expr Stmt Stmt           -- conditional
   | Seq Stmt Stmt               -- sequence
   | Loop Stmt                   -- infinite loop
-  | Every Evt Stmt              -- event iteration
+  | Every ID_Evt Stmt           -- event iteration
   | And Stmt Stmt               -- par/and statement
   | Or Stmt Stmt                -- par/or statement
   | Fin Stmt                    -- finalization statement
@@ -67,7 +67,7 @@ showExpr expr = case expr of
   Div e1 e2 -> printf "(%s*%s)" (showExpr e1) (showExpr e2)
 
 -- Shows list of declarations (variables or events).
-showDcls :: [ID] -> String
+showDcls :: [String] -> String
 showDcls dcls = case dcls of
   []     -> ""
   v:[]   -> v
@@ -86,7 +86,7 @@ showProg stmt = case stmt of
   If expr p q    -> printf "(if %s then %s else %s)" (sE expr) (sP p) (sP q)
   Seq p q        -> printf "%s; %s" (sP p) (sP q)
   Loop p         -> printf "(loop %s)" (sP p)
-  Every e p      -> printf "(every %d %s)" e (sP p)
+  Every e p      -> printf "(every %s %s)" e (sP p)
   And p q        -> printf "(%s && %s)" (sP p) (sP q)
   Or p q         -> printf "(%s || %s)" (sP p) (sP q)
   Fin p          -> printf "(fin %s)" (sP p)
