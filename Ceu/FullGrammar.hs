@@ -239,5 +239,5 @@ toGrammar p = toG $ remAwaitFor $ remAsync
   toG Nop'            = G.Nop
   toG _               = error "toG: unexpected statement (Block,Var,AwaitFor,Fin,Spawn,Async)"
 
-evalFullProg :: Stmt -> [G.Evt] -> G.Val
-evalFullProg prog hist = evalProg (toGrammar prog) []
+evalFullProg :: Stmt -> [(G.Evt,G.Val)] -> G.Val
+evalFullProg prog hist = evalProg (toGrammar prog) hist

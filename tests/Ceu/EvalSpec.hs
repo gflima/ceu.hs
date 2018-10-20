@@ -433,7 +433,7 @@ spec = do
     -- and-brk1 --
     describe "(And' Break q)" $ do
       it "pass: lvl == 0" $
-        let q = (AwaitExt 0 Nothing) in
+        let q = (AwaitExt 0 (Just "x")) in
           (clear q `shouldBe` Nop)
           >>                    -- clear q == Nop
           (nst1 (And' Break q, 0, Nothing, [newEnv])
@@ -461,7 +461,7 @@ spec = do
         let q = Or' (AwaitExt 0 Nothing `Seq` Fin Nop)
                     (And' (Fin (EmitInt 1 (Const 0)))
                           (Or' (Fin (EmitInt 2 (Const 0) `Seq` EmitInt 3 (Const 0)))
-                            (AwaitInt 0 Nothing `Seq` Fin (EmitInt 4 (Const 0)))))
+                            (AwaitInt 0 (Just "x") `Seq` Fin (EmitInt 4 (Const 0)))))
             clear_q = Nop `Seq` EmitInt 1 (Const 0) `Seq`
                       (EmitInt 2 (Const 0) `Seq` EmitInt 3 (Const 0)) `Seq` Nop in
           (clear q `shouldBe` clear_q)
@@ -816,6 +816,10 @@ spec = do
         (Every 0 Nothing Nop, 0, Nothing, [newEnv])
 
       nstsItPass
+        (Every 0 (Just "x") Nop, 0, Nothing, [newEnv])
+        (Every 0 (Just "x") Nop, 0, Nothing, [newEnv])
+
+      nstsItPass
         (Fin (Seq Nop Nop), 0, Nothing, [newEnv])
         (Fin (Seq Nop Nop), 0, Nothing, [newEnv])
 
@@ -1030,6 +1034,9 @@ spec = do
     evalProgItPass 1
       [(0,0)] (AwaitExt 0 Nothing `Seq` Write "ret" (Const 1))
 
+    evalProgItPass 99
+      [(0,99)] (AwaitExt 0 (Just "ret"))
+
     evalProgItFail "evalProg: program didn't terminate"
       [] (AwaitExt 0 Nothing `Seq` Write "ret" (Const 1))
 
@@ -1041,6 +1048,19 @@ spec = do
 
     evalProgItPass 1
       [(0,0),(1,0)] (AwaitExt 0 Nothing `Seq` AwaitExt 1 Nothing `Seq` Write "ret" (Const 1))
+
+    evalProgItPass 99
+      [(0,0),(1,99)] (AwaitExt 0 Nothing `Seq` AwaitExt 1 (Just "ret"))
+
+    evalProgItPass 99
+      [(0,0),(1,99)] (Block ["x"] ((AwaitExt 1 (Just "x")) `Seq` (EmitInt 10 (Read "x"))) `And` AwaitInt 10 (Just "ret"))
+
+    evalProgItPass 33
+      [(0,11),(0,22),(1,0)] (
+        (Write "ret" (Const 0)) `Seq`
+        Block ["x"] (Or
+            (Every 0 (Just "x") (Write "ret" (Add (Read "ret") (Read "x"))))
+            (AwaitExt 1 Nothing)))
 
     evalProgItPass 1 [] (Write "ret" (Const 1))
 

@@ -185,6 +185,16 @@ end
         )
       ))
 
+    evalFullProgItPass 99 [(0,0),(1,99)]
+      (Block ((Var "x") `Seq` ((AwaitExt 1 (Just "x")) `Seq` (EmitInt 10 (G.Read "x")))) `And` AwaitInt 10 (Just "ret"))
+
+    evalFullProgItPass 33 [(0,11),(0,22),(1,0)]
+      (
+        (Write "ret" (G.Const 0)) `Seq`
+        Block (Var "x" `Seq` (Or
+            (Every 0 (Just "x") (Write "ret" (G.Add (G.Read "ret") (G.Read "x"))))
+            (AwaitExt 1 Nothing))))
+
       where
         evalFullProgItPass res hist prog =
           (it (printf "pass: %s | %s ~>%d" (show hist) (G.showProg $ toGrammar prog) res) $
