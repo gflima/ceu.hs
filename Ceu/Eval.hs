@@ -12,7 +12,7 @@ type Envs = [Env]               -- list of environments
 type Lvl = Int
 
 -- Description (pg 6).
-type Desc = (Stmt, Lvl, Maybe Evt, Envs)
+type Desc = (Stmt, Lvl, Maybe (Evt,Val), Envs)
 
 ----------------------------------------------------------------------------
 -- Environment
@@ -65,31 +65,31 @@ envsEval envs expr = case expr of
 -- (pg 8, fig 4.ii)
 isBlocked :: Lvl -> Stmt -> Bool
 isBlocked n stmt = case stmt of
-  AwaitExt e -> True
-  AwaitInt e -> True
-  Every e p  -> True
-  CanRun m   -> n > m
-  Fin p      -> True
-  Seq p q    -> isBlocked n p
-  Loop' p q  -> isBlocked n p
-  And' p q   -> isBlocked n p && isBlocked n q
-  Or' p q    -> isBlocked n p && isBlocked n q
-  _          -> False
+  AwaitExt e _ -> True
+  AwaitInt e _ -> True
+  Every e _ p  -> True
+  CanRun m     -> n > m
+  Fin p        -> True
+  Seq p q      -> isBlocked n p
+  Loop' p q    -> isBlocked n p
+  And' p q     -> isBlocked n p && isBlocked n q
+  Or' p q      -> isBlocked n p && isBlocked n q
+  _            -> False
 
 -- Obtains the body of all active Fin statements in program.
 -- (pg 8, fig 4.iii)
 clear :: Stmt -> Stmt
 clear stmt = case stmt of
-  AwaitExt _ -> Nop
-  AwaitInt _ -> Nop
-  Every _ _  -> Nop
-  CanRun _   -> Nop
-  Fin p      -> p
-  Seq p _    -> clear p
-  Loop' p _  -> clear p
-  And' p q   -> Seq (clear p) (clear q)
-  Or' p q    -> Seq (clear p) (clear q)
-  _          -> error "clear: invalid clear"
+  AwaitExt _ _ -> Nop
+  AwaitInt _ _ -> Nop
+  Every _ _ _  -> Nop
+  CanRun _     -> Nop
+  Fin p        -> p
+  Seq p _      -> clear p
+  Loop' p _    -> clear p
+  And' p q     -> Seq (clear p) (clear q)
+  Or' p q      -> Seq (clear p) (clear q)
+  _            -> error "clear: invalid clear"
 
 -- Helper function used by nst1 in the *-adv rules.
 nst1Adv :: Desc -> (Stmt -> Stmt) -> Desc
@@ -110,8 +110,8 @@ nst1 (Restore lvl, n, Nothing, envs)            -- restore
 nst1 (Write id exp, n, Nothing, envs)           -- write
   = (Nop, n, Nothing, envsWrite envs id (envsEval envs exp))
 
-nst1 (EmitInt e, n, Nothing, envs)              -- emit-int (pg 6)
-  = (CanRun n, n, Just e, envs)
+nst1 (EmitInt e v, n, Nothing, envs)            -- emit-int (pg 6)
+  = (CanRun n, n, Just (e,(envsEval envs v)), envs)
 
 nst1 (CanRun m, n, Nothing, envs)               -- can-run (pg 6)
   | m == n    = (Nop, n, Nothing, envs)
@@ -194,7 +194,7 @@ isNstIrreducible :: Desc -> Bool
 isNstIrreducible desc = case desc of
   (Nop, n, e, envs)     -> True
   (Break, n, e, envs)   -> True
-  (p, n, Just e, envs)  -> True
+  (p, n, Just ev, envs) -> True
   (p, n, Nothing, envs) -> isBlocked n p
 
 -- Zero or more nested transitions.
@@ -209,21 +209,24 @@ nsts d
 
 -- Awakes all trails waiting for the given event.
 -- (pg 8, fig 4.i)
-bcast :: Evt -> Stmt -> Stmt
-bcast e stmt = case stmt of
-  AwaitExt e' | e == e' -> Nop
-  AwaitInt e' | e == e' -> Nop
-  Every e' p  | e == e' -> Seq p (Every e' p)
-  Seq p q               -> Seq (bcast e p) q
-  Loop' p q             -> Loop' (bcast e p) q
-  And' p q              -> And' (bcast e p) (bcast e q)
-  Or' p q               -> Or' (bcast e p) (bcast e q)
+bcast :: (Evt,Val) -> Stmt -> Stmt
+bcast (e,v) stmt = case stmt of
+  AwaitExt e' Nothing   | e == e' -> Nop
+  AwaitExt e' (Just id) | e == e' -> Write id (Const v)
+  AwaitInt e' Nothing   | e == e' -> Nop
+  AwaitInt e' (Just id) | e == e' -> Write id (Const v)
+  Every e' Nothing   p  | e == e' -> Seq p (Every e' Nothing p)
+  Every e' (Just id) p  | e == e' -> Seq (Write id (Const v)) (Seq p (Every e' (Just id) p))
+  Seq p q               -> Seq (bcast (e,v) p) q
+  Loop' p q             -> Loop' (bcast (e,v) p) q
+  And' p q              -> And' (bcast (e,v) p) (bcast (e,v) q)
+  Or' p q               -> Or' (bcast (e,v) p) (bcast (e,v) q)
   _                     -> stmt -- nothing to do
 
 -- (pg 6)
 outPush :: Desc -> Desc
-outPush (p, n, Just e, envs) = (bcast e p, n+1, Nothing, envs)
-outPush (_, _, Nothing, _)   = error "outPush: missing event"
+outPush (p, n, Just ev, envs) = (bcast ev p, n+1, Nothing, envs)
+outPush (_, _, Nothing, _)    = error "outPush: missing event"
 
 -- (pg 6)
 outPop :: Desc -> Desc
@@ -234,7 +237,7 @@ outPop (p, n, Nothing, envs)
 -- Single outermost transition.
 -- (pg 6)
 out1 :: Desc -> Desc
-out1 (p, n, Just e, envs)  = outPush (p, n, Just e, envs)
+out1 (p, n, Just ev, envs) = outPush (p, n, Just ev, envs)
 out1 (p, n, Nothing, envs) = outPop (p, n, Nothing, envs)
 
 -- (pg 6)
@@ -246,13 +249,13 @@ nsts_out1_s (p, n, e, envs)
 -- Counts the maximum number of EmitInt's that can be executed in a reaction
 -- of program to event.
 -- (pg 9)
-pot :: Evt -> Stmt -> Int
-pot e p = countMaxEmits $ bcast e p
+pot :: (Evt,Val) -> Stmt -> Int
+pot ev p = countMaxEmits $ bcast ev p
 
 -- (pg 9)
 rank :: Desc -> (Int, Int)
 rank (p, n, Nothing, envs) = (0, n)
-rank (p, n, Just e, envs)  = (pot e p, n+1)
+rank (p, n, Just ev, envs)  = (pot ev p, n+1)
 
 -- Tests whether the description is irreducible in general.
 isIrreducible :: Desc -> Bool
@@ -263,19 +266,19 @@ isIrreducible d = isNstIrreducible d && snd (rank d) == 0
 
 -- Computes a reaction of program plus environment to a single event.
 -- (pg 6)
-reaction :: (Stmt, Evt, Envs) -> (Stmt, Envs)
-reaction (p, e, envs) = (p', envs')
+reaction :: (Stmt, (Evt,Val), Envs) -> (Stmt, Envs)
+reaction (p, ev, envs) = (p', envs')
   where
-    (p', _, _, envs') = nsts_out1_s $ outPush (p, 0, Just e, envs)
+    (p', _, _, envs') = nsts_out1_s $ outPush (p, 0, Just ev, envs)
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
-evalProg :: Stmt -> [Evt] -> Val
-evalProg prog hist = evalProg' (Block ["ret"] (Seq prog (AwaitExt inputForever))) (inputBoot:hist) []
+evalProg :: Stmt -> [(Evt,Val)] -> Val
+evalProg prog hist = evalProg' (Block ["ret"] (Seq prog (AwaitExt inputForever Nothing))) ((inputBoot,0):hist) []
   where                         -- enclosing block with "ret" that never terminates
-    evalProg' :: Stmt -> [Evt] -> Envs -> Val
+    evalProg' :: Stmt -> [(Evt,Val)] -> Envs -> Val
     evalProg' prog hist envs = case prog of
-      (Seq (AwaitExt inputForever) (Restore 0))
+      (Seq (AwaitExt inputForever Nothing) (Restore 0))
           | null hist -> envsRead envs "ret"  -- done
           | otherwise -> error "evalProg: pending inputs"
       _   | null hist -> error "evalProg: program didn't terminate"

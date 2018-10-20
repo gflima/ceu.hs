@@ -117,14 +117,14 @@ spec = do
 
     it "async { loop nop }" $ do
       remAsync (Async (Loop Nop'))
-      `shouldBe` (Loop (Seq Nop' (AwaitExt inputAsync)))
+      `shouldBe` (Loop (Seq Nop' (AwaitExt inputAsync Nothing)))
 
   --------------------------------------------------------------------------
   describe "remAwaitFor" $ do
 
     it "await FOREVER;" $ do
       remAwaitFor AwaitFor
-      `shouldBe` (AwaitExt G.inputForever)
+      `shouldBe` (AwaitExt G.inputForever Nothing)
 
   --------------------------------------------------------------------------
   describe "toGrammar" $ do
@@ -138,13 +138,13 @@ spec = do
       `shouldBe` G.Block [] (G.Block ["x"] (G.Seq G.Nop (G.Write "x" (G.Const 1))))
 
     it "spawn do await A; end ;; await B; var x; await FOREVER;" $ do
-      toGrammar (Seq (Spawn (AwaitExt 0)) (Seq (AwaitExt 1) (Seq (Var "x") AwaitFor)))
-      `shouldBe` (G.Block ["x"] (G.Or (G.Seq (G.AwaitExt 0) (G.AwaitExt G.inputForever)) (G.Seq (G.AwaitExt 1) (G.Seq G.Nop (G.AwaitExt G.inputForever)))))
+      toGrammar (Seq (Spawn (AwaitExt 0 Nothing)) (Seq (AwaitExt 1 Nothing) (Seq (Var "x") AwaitFor)))
+      `shouldBe` (G.Block ["x"] (G.Or (G.Seq (G.AwaitExt 0 Nothing) (G.AwaitExt G.inputForever Nothing)) (G.Seq (G.AwaitExt 1 Nothing) (G.Seq G.Nop (G.AwaitExt G.inputForever Nothing)))))
 
 
     it "spawn do async ret++ end ;; await F;" $ do
-      toGrammar (Seq (Spawn (Async (Loop (Write "x" (G.Add (G.Read "x") (G.Const 1)))))) (AwaitExt 0))
-      `shouldBe` (G.Block [] (G.Or (G.Seq (G.Loop (G.Seq (G.Write "x" (G.Add (G.Read "x") (G.Const 1))) (G.AwaitExt (-3)))) (G.AwaitExt (-2))) (G.AwaitExt 0)))
+      toGrammar (Seq (Spawn (Async (Loop (Write "x" (G.Add (G.Read "x") (G.Const 1)))))) (AwaitExt 0 Nothing))
+      `shouldBe` (G.Block [] (G.Or (G.Seq (G.Loop (G.Seq (G.Write "x" (G.Add (G.Read "x") (G.Const 1))) (G.AwaitExt (-3) Nothing))) (G.AwaitExt (-2) Nothing)) (G.AwaitExt 0 Nothing)))
 
   --------------------------------------------------------------------------
   describe "evalFullProg" $ do
@@ -172,12 +172,12 @@ end
     evalFullProgItPass 25 [] (
       (Write "ret" (G.Const 0)) `Seq`
       (Or
-        ((AwaitInt 0) `Seq` (Write "ret" (G.Add (G.Read "ret") (G.Const 5))))
+        ((AwaitInt 0 Nothing) `Seq` (Write "ret" (G.Add (G.Read "ret") (G.Const 5))))
         (Or
           (
             (Fin Nothing (
               (Write "ret" (G.Mul (G.Read "ret") (G.Const 2))) `Seq`
-              (EmitInt 0)
+              (EmitInt 0 (G.Const 0))
             )) `Seq`
             AwaitFor
           )

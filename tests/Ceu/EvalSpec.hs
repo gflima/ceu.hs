@@ -10,7 +10,7 @@ import Text.Printf
 -- Declare Stmt as a datatype that can be fully evaluated.
 instance NFData Stmt where
   rnf Nop = ()
-  rnf (AwaitInt e) = ()
+  rnf (AwaitInt e _) = ()
   rnf (Seq p q) = rnf p `seq` rnf q
   rnf (Loop' p q) = rnf p
   rnf (And' p q) = rnf p `seq` rnf q
@@ -200,15 +200,15 @@ spec = do
     -- emit-int --
     describe "(EmitInt e')" $ do
       it "pass: lvl == 0" $
-        nst1 (EmitInt 0, 0, Nothing, [newEnv])
-        `shouldBe` (CanRun 0, 0, Just 0, [newEnv])
+        nst1 (EmitInt 0 (Const 0), 0, Nothing, [newEnv])
+        `shouldBe` (CanRun 0, 0, Just (0,0), [newEnv])
 
       it "pass: lvl > 0" $
-        nst1 (EmitInt 1, 3, Nothing, [newEnv])
-        `shouldBe` (CanRun 3, 3, Just 1, [newEnv])
+        nst1 (EmitInt 1 (Const 0), 3, Nothing, [newEnv])
+        `shouldBe` (CanRun 3, 3, Just (1,0), [newEnv])
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (EmitInt 1, 3, Just 1, [([],[])]))
+        forceEval (nst1 (EmitInt 1 (Const 0), 3, Just (1,0), [([],[])]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
     -- can-run --
@@ -230,7 +230,7 @@ spec = do
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (CanRun 0, 0, Just 1, [newEnv]))
+        forceEval (nst1 (CanRun 0, 0, Just (1,0), [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
     -- seq-nop --
@@ -244,7 +244,7 @@ spec = do
         `shouldBe` (Break, 3, Nothing, [newEnv])
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (Seq Nop Nop, 0, Just 1, [newEnv]))
+        forceEval (nst1 (Seq Nop Nop, 0, Just (1,0), [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
     -- seq-brk --
@@ -254,11 +254,11 @@ spec = do
         `shouldBe` (Break, 0, Nothing, [newEnv])
 
       it "pass: lvl > 0" $
-        nst1 (Seq Break (EmitInt 8), 3, Nothing, [newEnv])
+        nst1 (Seq Break (EmitInt 8 (Const 0)), 3, Nothing, [newEnv])
         `shouldBe` (Break, 3, Nothing, [newEnv])
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (Seq Break Nop, 0, Just 1, [newEnv]))
+        forceEval (nst1 (Seq Break Nop, 0, Just (1,0), [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
     -- seq-adv --
@@ -268,11 +268,11 @@ spec = do
         `shouldBe` (Seq Nop Nop, 0, Nothing, [newEnv])
 
       it "pass: lvl > 0" $
-        nst1 (Seq (Seq (EmitInt 8) Nop) Nop, 3, Nothing, [newEnv])
-        `shouldBe` (Seq (Seq (CanRun 3) Nop) Nop, 3, Just 8, [newEnv])
+        nst1 (Seq (Seq (EmitInt 8 (Const 0)) Nop) Nop, 3, Nothing, [newEnv])
+        `shouldBe` (Seq (Seq (CanRun 3) Nop) Nop, 3, Just (8,0), [newEnv])
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (Seq (Seq Nop Nop) Nop, 0, Just 1, [newEnv]))
+        forceEval (nst1 (Seq (Seq Nop Nop) Nop, 0, Just (1,0), [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "fail: isBlocked p (cannot advance)" $
@@ -300,14 +300,14 @@ spec = do
         `shouldBe` (Seq (Loop' Nop Nop) (Restore 1), 0, Nothing, [newEnv])
 
       it "pass: lvl > 0" $
-        nst1 (Loop (Seq Nop (EmitInt 8)), 3, Nothing, [newEnv])
+        nst1 (Loop (Seq Nop (EmitInt 8 (Const 0))), 3, Nothing, [newEnv])
         `shouldBe`
-        (Seq (Loop' (Seq Nop (EmitInt 8)) (Seq Nop (EmitInt 8)))
+        (Seq (Loop' (Seq Nop (EmitInt 8 (Const 0))) (Seq Nop (EmitInt 8 (Const 0))))
              (Restore 1),
           3, Nothing, [newEnv])
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (Loop Nop, 0, Just 1, [newEnv]))
+        forceEval (nst1 (Loop Nop, 0, Just (1,0), [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "fail: isBlocked p (cannot advance)" $
@@ -322,11 +322,11 @@ spec = do
         `shouldBe` (Loop Nop, 0, Nothing, [newEnv])
 
       it "pass: lvl > 0" $
-        nst1 (Loop' Nop (EmitInt 8), 3, Nothing, [newEnv])
-        `shouldBe` (Loop (EmitInt 8), 3, Nothing, [newEnv])
+        nst1 (Loop' Nop (EmitInt 8 (Const 0)), 3, Nothing, [newEnv])
+        `shouldBe` (Loop (EmitInt 8 (Const 0)), 3, Nothing, [newEnv])
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (Loop' Nop Nop, 0, Just 1, [newEnv]))
+        forceEval (nst1 (Loop' Nop Nop, 0, Just (1,0), [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "pass: isBlocked q" $
@@ -340,11 +340,11 @@ spec = do
         `shouldBe` (Nop, 0, Nothing, [newEnv])
 
       it "pass: lvl > 0" $
-        nst1 (Loop' Break (Seq (EmitInt 8) Nop), 3, Nothing, [newEnv])
+        nst1 (Loop' Break (Seq (EmitInt 8 (Const 0)) Nop), 3, Nothing, [newEnv])
         `shouldBe` (Nop, 3, Nothing, [newEnv])
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (Loop' Break Nop, 0, Just 1, [newEnv]))
+        forceEval (nst1 (Loop' Break Nop, 0, Just (1,0), [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "pass: isBlocked q" $
@@ -358,11 +358,11 @@ spec = do
         `shouldBe` (Loop' Nop Nop, 0, Nothing, [newEnv])
 
       it "pass: lvl > 0" $
-        nst1 (Loop' (Seq (EmitInt 8) Nop) Break, 3, Nothing, [newEnv])
-        `shouldBe` (Loop' (Seq (CanRun 3) Nop) Break, 3, Just 8, [newEnv])
+        nst1 (Loop' (Seq (EmitInt 8 (Const 0)) Nop) Break, 3, Nothing, [newEnv])
+        `shouldBe` (Loop' (Seq (CanRun 3) Nop) Break, 3, Just (8,0), [newEnv])
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (Loop' (Seq Nop Nop) Nop, 0, Just 1, [newEnv]))
+        forceEval (nst1 (Loop' (Seq Nop Nop) Nop, 0, Just (1,0), [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "fail: isBlocked p (cannot advance)" $
@@ -380,13 +380,13 @@ spec = do
         `shouldBe` (And' Nop (Seq (CanRun 0) Nop), 0, Nothing, [newEnv])
 
       it "pass: lvl > 0" $
-        nst1 (And (Nop `Seq` EmitInt 8)  (Nop `Seq` Nop),
+        nst1 (And (Nop `Seq` EmitInt 8 (Const 0))  (Nop `Seq` Nop),
                3, Nothing, [newEnv])
-        `shouldBe` (And' (Nop `Seq` EmitInt 8)
+        `shouldBe` (And' (Nop `Seq` EmitInt 8 (Const 0))
                      (CanRun 3 `Seq` Nop `Seq` Nop), 3, Nothing, [newEnv])
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (And Nop Nop, 0, Just 1, [newEnv]))
+        forceEval (nst1 (And Nop Nop, 0, Just (1,0), [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "pass: isBlocked p && not (isBlocked q)" $
@@ -411,11 +411,11 @@ spec = do
         `shouldBe` (Nop, 0, Nothing, [newEnv])
 
       it "pass: lvl > 0" $
-        nst1 (And' Nop (EmitInt 8), 3, Nothing, [newEnv])
-        `shouldBe` (EmitInt 8, 3, Nothing, [newEnv])
+        nst1 (And' Nop (EmitInt 8 (Const 0)), 3, Nothing, [newEnv])
+        `shouldBe` (EmitInt 8 (Const 0), 3, Nothing, [newEnv])
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (And' Nop Nop, 0, Just 1, [newEnv]))
+        forceEval (nst1 (And' Nop Nop, 0, Just (1,0), [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "pass: isBlocked q" $
@@ -433,21 +433,21 @@ spec = do
     -- and-brk1 --
     describe "(And' Break q)" $ do
       it "pass: lvl == 0" $
-        let q = (AwaitExt 0) in
+        let q = (AwaitExt 0 Nothing) in
           (clear q `shouldBe` Nop)
           >>                    -- clear q == Nop
           (nst1 (And' Break q, 0, Nothing, [newEnv])
             `shouldBe` (Seq (clear q) Break, 0, Nothing, [newEnv]))
 
       it "pass: lvl > 0" $
-        let q = (AwaitInt 0) in
+        let q = (AwaitInt 0 Nothing) in
           (clear q `shouldBe` Nop)
           >>                    -- clear q == Nop
           (nst1 (And' Break q, 3, Nothing, [newEnv])
            `shouldBe` (Seq (clear q) Break, 3, Nothing, [newEnv]))
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (And' Break (Block [] Nop), 0, Just 1, [newEnv]))
+        forceEval (nst1 (And' Break (Block [] Nop), 0, Just (1,0), [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "pass: isBlocked q" $
@@ -458,12 +458,12 @@ spec = do
             `shouldBe` (Seq (clear q) Break, 0, Nothing, [newEnv]))
 
       it "pass: isBlocked q (nontrivial clear)" $
-        let q = Or' (AwaitExt 0 `Seq` Fin Nop)
-                    (And' (Fin (EmitInt 1))
-                          (Or' (Fin (EmitInt 2 `Seq` EmitInt 3))
-                            (AwaitInt 0 `Seq` Fin (EmitInt 4))))
-            clear_q = Nop `Seq` EmitInt 1 `Seq`
-                      (EmitInt 2 `Seq` EmitInt 3) `Seq` Nop in
+        let q = Or' (AwaitExt 0 Nothing `Seq` Fin Nop)
+                    (And' (Fin (EmitInt 1 (Const 0)))
+                          (Or' (Fin (EmitInt 2 (Const 0) `Seq` EmitInt 3 (Const 0)))
+                            (AwaitInt 0 Nothing `Seq` Fin (EmitInt 4 (Const 0)))))
+            clear_q = Nop `Seq` EmitInt 1 (Const 0) `Seq`
+                      (EmitInt 2 (Const 0) `Seq` EmitInt 3 (Const 0)) `Seq` Nop in
           (clear q `shouldBe` clear_q)
           >>                   -- clear q == Nop; Emit1; (Emit2; Emit3); Nop
           (nst1 (And' Break q, 0, Nothing, [newEnv])
@@ -488,7 +488,7 @@ spec = do
         `shouldBe` (Seq (Fin Nop) Nop, 3, Nothing, [newEnv])
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (And' (Fin Nop) Nop, 0, Just 1, [newEnv]))
+        forceEval (nst1 (And' (Fin Nop) Nop, 0, Just (1,0), [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "pass: p == Nop" $
@@ -502,7 +502,7 @@ spec = do
     -- and-brk2 --
     describe "(And' p Break)" $ do
       it "pass: lvl == 0 && isBlocked p" $
-        let p = (AwaitInt 1) in
+        let p = (AwaitInt 1 Nothing) in
           (clear p `shouldBe` Nop)
           >>                    -- clear p == Nop
           (nst1 (And' p Break, 0, Nothing, [newEnv])
@@ -516,16 +516,16 @@ spec = do
            `shouldBe` (Seq (clear p) Break, 3, Nothing, [newEnv]))
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (And' (Fin Nop) Break, 0, Just 1, [newEnv]))
+        forceEval (nst1 (And' (Fin Nop) Break, 0, Just (1,0), [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "pass: isBlocked p (nontrivial clear)" $
-        let p = Or' (AwaitExt 0 `Seq` Fin Nop)
-                    (And' (Fin (EmitInt 1))
-                          (Or' (Fin (EmitInt 2 `Seq` EmitInt 3))
-                            (AwaitInt 0 `Seq` Fin (EmitInt 4))))
-            clear_p = Nop `Seq` EmitInt 1 `Seq`
-                      (EmitInt 2 `Seq` EmitInt 3) `Seq` Nop in
+        let p = Or' (AwaitExt 0 Nothing `Seq` Fin Nop)
+                    (And' (Fin (EmitInt 1 (Const 0)))
+                          (Or' (Fin (EmitInt 2 (Const 0) `Seq` EmitInt 3 (Const 0)))
+                            (AwaitInt 0 Nothing `Seq` Fin (EmitInt 4 (Const 0)))))
+            clear_p = Nop `Seq` EmitInt 1 (Const 0) `Seq`
+                      (EmitInt 2 (Const 0) `Seq` EmitInt 3 (Const 0)) `Seq` Nop in
           (clear p `shouldBe` clear_p)
           >>                   -- clear p == Nop; Emit1; (Emit2; Emit3); Nop
           (nst1 (And' p Break, 0, Nothing, [newEnv])
@@ -546,28 +546,28 @@ spec = do
         `shouldBe` (And' Nop (Seq Break Break), 0, Nothing, [newEnv])
 
       it "pass: lvl > 0" $
-        nst1 (And' (Seq (EmitInt 8) Nop) (Seq (EmitInt 9) Nop),
+        nst1 (And' (Seq (EmitInt 8 (Const 0)) Nop) (Seq (EmitInt 9 (Const 0)) Nop),
                3, Nothing, [newEnv])
-        `shouldBe` (And' (Seq (CanRun 3) Nop) (Seq (EmitInt 9) Nop),
-                     3, Just 8, [newEnv])
+        `shouldBe` (And' (Seq (CanRun 3) Nop) (Seq (EmitInt 9 (Const 0)) Nop),
+                     3, Just (8,0), [newEnv])
 
       it "fail: evt /= nil (cannot advance)" $
         forceEval (nst1 (And' (Seq Nop Nop) (Seq Nop Nop),
-                         0, Just 1, [newEnv]))
+                         0, Just (1,0), [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "pass: isBlocked p && not (isBlocked q)" $
-        nst1 (And' (Fin Nop) (Seq (EmitInt 8) Nop),
+        nst1 (And' (Fin Nop) (Seq (EmitInt 8 (Const 0)) Nop),
                3, Nothing, [newEnv])
         `shouldBe` (And' (Fin Nop) (Seq (CanRun 3) Nop),
-                     3, Just 8, [newEnv])
+                     3, Just (8,0), [newEnv])
 
       it "pass: not (isBlocked p) && isBlocked q" $
-        nst1 (And' (EmitInt 8) (AwaitInt 8), 3, Nothing, [newEnv])
-        `shouldBe` (And' (CanRun 3) (AwaitInt 8), 3, Just 8, [newEnv])
+        nst1 (And' (EmitInt 8 (Const 0)) (AwaitInt 8 Nothing), 3, Nothing, [newEnv])
+        `shouldBe` (And' (CanRun 3) (AwaitInt 8 Nothing), 3, Just (8,0), [newEnv])
 
       it "fail: isBlocked p && isBlocked q (cannot advance)" $
-        forceEval (nst1 (And' (AwaitInt 3) (AwaitInt 4),
+        forceEval (nst1 (And' (AwaitInt 3 Nothing) (AwaitInt 4 Nothing),
                           0, Nothing, [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -579,13 +579,13 @@ spec = do
                      0, Nothing, [newEnv])
 
       it "pass: lvl > 0" $
-        nst1 (Or (Seq Nop (EmitInt 8)) (Seq Nop Nop), 3, Nothing, [newEnv])
-        `shouldBe` (Seq (Or' (Seq Nop (EmitInt 8))
+        nst1 (Or (Seq Nop (EmitInt 8 (Const 0))) (Seq Nop Nop), 3, Nothing, [newEnv])
+        `shouldBe` (Seq (Or' (Seq Nop (EmitInt 8 (Const 0)))
                           (Seq (CanRun 3) (Seq Nop Nop))) (Restore 1),
                      3, Nothing, [newEnv])
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (Or Nop Nop, 0, Just 1, [newEnv]))
+        forceEval (nst1 (Or Nop Nop, 0, Just (1,0), [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "pass: isBlocked p && not (isBlocked q)" $
@@ -606,21 +606,21 @@ spec = do
     -- or-nop1 --
     describe "(Or' Nop q)" $ do
       it "pass: lvl == 0" $
-        let q = (AwaitInt 0) in
+        let q = (AwaitInt 0 Nothing) in
           (clear q `shouldBe` Nop)
           >>                    -- clear q == Nop
           (nst1 (Or' Nop q, 0, Nothing, [newEnv])
            `shouldBe` (clear q, 0, Nothing, [newEnv]))
 
       it "pass: lvl > 0" $
-        let q = (AwaitInt 8) in
+        let q = (AwaitInt 8 Nothing) in
           (clear q `shouldBe` Nop)
           >>                    -- clear q == Nop
           (nst1 (Or' Nop q, 3, Nothing, [newEnv])
            `shouldBe` (clear q, 3, Nothing, [newEnv]))
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (Or' Nop Nop, 0, Just 1, [newEnv]))
+        forceEval (nst1 (Or' Nop Nop, 0, Just (1,0), [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "pass: isBlocked q" $
@@ -631,12 +631,12 @@ spec = do
            `shouldBe` (clear q, 0, Nothing, [newEnv]))
 
       it "pass: isBlocked q (nontrivial clear)" $
-        let q = Or' (AwaitExt 0 `Seq` Fin Nop)
-                    (And' (Fin (EmitInt 1))
-                          (Or' (Fin (EmitInt 2 `Seq` EmitInt 3))
-                            (AwaitInt 0 `Seq` Fin (EmitInt 4))))
-            clear_q = Nop `Seq` EmitInt 1 `Seq`
-                      (EmitInt 2 `Seq` EmitInt 3) `Seq` Nop in
+        let q = Or' (AwaitExt 0 Nothing `Seq` Fin Nop)
+                    (And' (Fin (EmitInt 1 (Const 0)))
+                          (Or' (Fin (EmitInt 2 (Const 0) `Seq` EmitInt 3 (Const 0)))
+                            (AwaitInt 0 Nothing `Seq` Fin (EmitInt 4 (Const 0)))))
+            clear_q = Nop `Seq` EmitInt 1 (Const 0) `Seq`
+                      (EmitInt 2 (Const 0) `Seq` EmitInt 3 (Const 0)) `Seq` Nop in
           (clear q `shouldBe` clear_q)
           >>                   -- clear q == Nop; Emit1; (Emit2; Emit3); Nop
           (nst1 (Or' Nop q, 0, Nothing, [newEnv])
@@ -653,21 +653,21 @@ spec = do
     -- or-brk1 --
     describe "(Or' Break q)" $ do
       it "pass: lvl == 0" $
-        let q = (AwaitInt 0) in
+        let q = (AwaitInt 0 Nothing) in
           (clear q `shouldBe` Nop)
           >>                    -- clear q == Nop
           (nst1 (Or' Break q, 0, Nothing, [newEnv])
            `shouldBe` (Seq (clear q) Break, 0, Nothing, [newEnv]))
 
       it "transit: lvl > 0" $
-        let q = (AwaitInt 8) in
+        let q = (AwaitInt 8 Nothing) in
           (clear q`shouldBe` Nop)
           >>                    -- clear q == Nop
           (nst1 (Or' Break q, 3, Nothing, [newEnv])
            `shouldBe` (Seq (clear q) Break, 3, Nothing, [newEnv]))
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (Or' Break Nop, 0, Just 1, [newEnv]))
+        forceEval (nst1 (Or' Break Nop, 0, Just (1,0), [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "pass: isBlocked q" $
@@ -678,12 +678,12 @@ spec = do
            `shouldBe` (Seq (clear q) Break, 0, Nothing, [newEnv]))
 
       it "pass: isBlocked q (nontrivial clear)" $
-        let q = Or' (AwaitExt 0 `Seq` Fin Nop)
-                    (And' (Fin (EmitInt 1))
-                          (Or' (Fin (EmitInt 2 `Seq` EmitInt 3))
-                            (AwaitInt 0 `Seq` Fin (EmitInt 4))))
-            clear_q = Nop `Seq` EmitInt 1 `Seq`
-                      (EmitInt 2 `Seq` EmitInt 3) `Seq` Nop in
+        let q = Or' (AwaitExt 0 Nothing `Seq` Fin Nop)
+                    (And' (Fin (EmitInt 1 (Const 0)))
+                          (Or' (Fin (EmitInt 2 (Const 0) `Seq` EmitInt 3 (Const 0)))
+                            (AwaitInt 0 Nothing `Seq` Fin (EmitInt 4 (Const 0)))))
+            clear_q = Nop `Seq` EmitInt 1 (Const 0) `Seq`
+                      (EmitInt 2 (Const 0) `Seq` EmitInt 3 (Const 0)) `Seq` Nop in
           (clear q `shouldBe` clear_q)
           >>                   -- clear q == Nop; Emit1; (Emit2; Emit3); Nop
           (nst1 (Or' Break q, 0, Nothing, [newEnv])
@@ -714,7 +714,7 @@ spec = do
             `shouldBe` (clear p, 3, Nothing, [newEnv]))
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (Or' (Fin Nop) Nop, 0, Just 1, [newEnv]))
+        forceEval (nst1 (Or' (Fin Nop) Nop, 0, Just (1,0), [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "fail: p == Nop (invalid clear)" $
@@ -728,7 +728,7 @@ spec = do
     -- or-brk2 --
     describe "(Or' p Break)" $ do
       it "pass: lvl == 0 && isBlocked p" $
-        let p = (AwaitInt 1) in
+        let p = (AwaitInt 1 Nothing) in
           (clear p `shouldBe` Nop)
           >>                    -- clear p == Nop
           (nst1 (Or' p Break, 0, Nothing, [newEnv])
@@ -742,16 +742,16 @@ spec = do
             `shouldBe` (Seq (clear p) Break, 3, Nothing, [newEnv]))
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (Or' (Fin Nop) Break, 0, Just 1, [newEnv]))
+        forceEval (nst1 (Or' (Fin Nop) Break, 0, Just (1,0), [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "pass: isBlocked p (nontrivial clear)" $
-        let p = Or' (AwaitExt 0 `Seq` Fin Nop)
-                    (And' (Fin (EmitInt 1))
-                          (Or' (Fin (EmitInt 2 `Seq` EmitInt 3))
-                            (AwaitInt 0 `Seq` Fin (EmitInt 4))))
-            clear_p = Nop `Seq` EmitInt 1 `Seq`
-                      (EmitInt 2 `Seq` EmitInt 3) `Seq` Nop in
+        let p = Or' (AwaitExt 0 Nothing `Seq` Fin Nop)
+                    (And' (Fin (EmitInt 1 (Const 0)))
+                          (Or' (Fin (EmitInt 2 (Const 0) `Seq` EmitInt 3 (Const 0)))
+                            (AwaitInt 0 Nothing `Seq` Fin (EmitInt 4 (Const 0)))))
+            clear_p = Nop `Seq` EmitInt 1 (Const 0) `Seq`
+                      (EmitInt 2 (Const 0) `Seq` EmitInt 3 (Const 0)) `Seq` Nop in
           (clear p `shouldBe` clear_p)
           >>                   -- clear p == Nop; Emit1; (Emit2; Emit3); Nop
           (nst1 (Or' p Break, 0, Nothing, [newEnv])
@@ -772,26 +772,26 @@ spec = do
         `shouldBe` (Or' Nop (Seq Break Break), 0, Nothing, [newEnv])
 
       it "psas: lvl > 0" $
-        nst1 (Or' (Seq (EmitInt 8) Nop) (Seq (EmitInt 9) Nop),
+        nst1 (Or' (Seq (EmitInt 8 (Const 0)) Nop) (Seq (EmitInt 9 (Const 0)) Nop),
                3, Nothing, [newEnv])
-        `shouldBe` (Or' (Seq (CanRun 3) Nop) (Seq (EmitInt 9) Nop),
-                     3, Just 8, [newEnv])
+        `shouldBe` (Or' (Seq (CanRun 3) Nop) (Seq (EmitInt 9 (Const 0)) Nop),
+                     3, Just (8,0), [newEnv])
 
       it "fail: evt /= nil (cannot advance)" $
         forceEval (nst1 (Or' (Seq Nop Nop) (Seq Nop Nop),
-                          0, Just 1, [newEnv]))
+                          0, Just (1,0), [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "pass: isBlocked p && not (isBlocked q)" $
-        nst1 (Or' (Fin Nop) (Seq (EmitInt 8) Nop), 3, Nothing, [newEnv])
-        `shouldBe` (Or' (Fin Nop) (Seq (CanRun 3) Nop), 3, Just 8, [newEnv])
+        nst1 (Or' (Fin Nop) (Seq (EmitInt 8 (Const 0)) Nop), 3, Nothing, [newEnv])
+        `shouldBe` (Or' (Fin Nop) (Seq (CanRun 3) Nop), 3, Just (8,0), [newEnv])
 
       it "pass: not (isBlocked p) && isBlocked q" $
-        nst1 (Or' (EmitInt 8) (AwaitInt 8), 3, Nothing, [newEnv])
-        `shouldBe` (Or' (CanRun 3) (AwaitInt 8), 3, Just 8, [newEnv])
+        nst1 (Or' (EmitInt 8 (Const 0)) (AwaitInt 8 Nothing), 3, Nothing, [newEnv])
+        `shouldBe` (Or' (CanRun 3) (AwaitInt 8 Nothing), 3, Just (8,0), [newEnv])
 
       it "fail: isBlocked p && isBlocked q (cannot advance)" $
-        forceEval (nst1 (Or' (AwaitInt 3) (AwaitInt 4),
+        forceEval (nst1 (Or' (AwaitInt 3 Nothing) (AwaitInt 4 Nothing),
                           0, Nothing, [newEnv]))
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -800,32 +800,32 @@ spec = do
     describe "zero steps (program is blocked)" $ do
 
       nstsItPass
-        (AwaitExt 0, 0, Nothing, [newEnv])
-        (AwaitExt 0, 0, Nothing, [newEnv])
+        (AwaitExt 0 Nothing, 0, Nothing, [newEnv])
+        (AwaitExt 0 Nothing, 0, Nothing, [newEnv])
 
       nstsItPass
-        (AwaitInt 0, 0, Nothing, [newEnv])
-        (AwaitInt 0, 0, Nothing, [newEnv])
+        (AwaitInt 0 Nothing, 0, Nothing, [newEnv])
+        (AwaitInt 0 Nothing, 0, Nothing, [newEnv])
 
       nstsItPass
-        (Seq (AwaitInt 0) Nop, 0, Nothing, [newEnv])
-        (Seq (AwaitInt 0) Nop, 0, Nothing, [newEnv])
+        (Seq (AwaitInt 0 Nothing) Nop, 0, Nothing, [newEnv])
+        (Seq (AwaitInt 0 Nothing) Nop, 0, Nothing, [newEnv])
 
       nstsItPass
-        (Every 0 Nop, 0, Nothing, [newEnv])
-        (Every 0 Nop, 0, Nothing, [newEnv])
+        (Every 0 Nothing Nop, 0, Nothing, [newEnv])
+        (Every 0 Nothing Nop, 0, Nothing, [newEnv])
 
       nstsItPass
         (Fin (Seq Nop Nop), 0, Nothing, [newEnv])
         (Fin (Seq Nop Nop), 0, Nothing, [newEnv])
 
       nstsItPass
-        (And' (AwaitExt 0) (Fin Nop), 0, Nothing, [newEnv])
-        (And' (AwaitExt 0) (Fin Nop), 0, Nothing, [newEnv])
+        (And' (AwaitExt 0 Nothing) (Fin Nop), 0, Nothing, [newEnv])
+        (And' (AwaitExt 0 Nothing) (Fin Nop), 0, Nothing, [newEnv])
 
       nstsItPass
-        (Or' (AwaitExt 0) (Fin Nop), 0, Nothing, [newEnv])
-        (Or' (AwaitExt 0) (Fin Nop), 0, Nothing, [newEnv])
+        (Or' (AwaitExt 0 Nothing) (Fin Nop), 0, Nothing, [newEnv])
+        (Or' (AwaitExt 0 Nothing) (Fin Nop), 0, Nothing, [newEnv])
 
       nstsItFail "nst1: cannot advance"
         (CanRun 5, 0, Nothing, [newEnv])
@@ -847,8 +847,8 @@ spec = do
         (Nop, 3, Nothing, [newEnv])
 
       nstsItPass
-        (EmitInt 8, 3, Nothing, [newEnv])
-        (CanRun 3, 3, Just 8, [newEnv])
+        (EmitInt 8 (Const 0), 3, Nothing, [newEnv])
+        (CanRun 3, 3, Just (8,0), [newEnv])
 
       nstsItPass
         (CanRun 3, 3, Nothing, [newEnv])
@@ -859,22 +859,22 @@ spec = do
         (Break, 0, Nothing, [newEnv])
 
       nstsItPass
-        (Loop Break `Seq` Nop `Seq` Nop `Seq` EmitInt 8 `Seq` Break,
+        (Loop Break `Seq` Nop `Seq` Nop `Seq` EmitInt 8 (Const 0) `Seq` Break,
           3, Nothing, [newEnv])
-        (Seq (CanRun 3) Break, 3, Just 8, [newEnv])
+        (Seq (CanRun 3) Break, 3, Just (8,0), [newEnv])
 
       nstsItPass
-        (Seq (Loop Break) Nop `And` Seq (EmitInt 8) Nop, 3, Nothing, [newEnv])
-        (Seq (CanRun 3) Nop, 3, Just 8, [newEnv])
+        (Seq (Loop Break) Nop `And` Seq (EmitInt 8 (Const 0)) Nop, 3, Nothing, [newEnv])
+        (Seq (CanRun 3) Nop, 3, Just (8,0), [newEnv])
 
       nstsItPass
-        (Seq (Loop Break) Nop `Or` Seq (EmitInt 8) Nop, 3, Nothing, [newEnv])
+        (Seq (Loop Break) Nop `Or` Seq (EmitInt 8 (Const 0)) Nop, 3, Nothing, [newEnv])
         (Nop, 3, Nothing, [newEnv])
 
       nstsItPass
         (Loop
-          ((Nop `Seq` AwaitInt 3) `And`
-            (AwaitExt 18 `Or` (Nop `Seq` Break))), 0, Nothing, [newEnv])
+          ((Nop `Seq` AwaitInt 3 Nothing) `And`
+            (AwaitExt 18 Nothing `Or` (Nop `Seq` Break))), 0, Nothing, [newEnv])
         (Nop, 0, Nothing, [newEnv])
 
   --------------------------------------------------------------------------
@@ -883,16 +883,16 @@ spec = do
     -- push --
     describe "push" $ do
       it "pass: lvl == 0" $
-        out1 (Nop, 0, Just 1, [newEnv])
+        out1 (Nop, 0, Just (1,0), [newEnv])
         `shouldBe` (Nop, 1, Nothing, [newEnv])
 
       it "pass: lvl > 0" $
-        out1 (Seq (AwaitInt 1) Break, 3, Just 1, [newEnv])
+        out1 (Seq (AwaitInt 1 Nothing) Break, 3, Just (1,0), [newEnv])
         `shouldBe` (Seq Nop Break, 4, Nothing, [newEnv])
 
       it "pass: lvl > 0 && bcast fails" $
-        out1 (Seq (AwaitInt 2) Break, 3, Just 1, [newEnv])
-        `shouldBe` (Seq (AwaitInt 2) Break, 4, Nothing, [newEnv])
+        out1 (Seq (AwaitInt 2 Nothing) Break, 3, Just (1,0), [newEnv])
+        `shouldBe` (Seq (AwaitInt 2 Nothing) Break, 4, Nothing, [newEnv])
 
     -- pop --
     describe "pop" $ do
@@ -933,14 +933,14 @@ spec = do
 
     describe "one push followed by one+ pops" $ do
       it "pass: lvl == 0 (do nothing)" $ -- CHECK THIS! --
-        let d = (AwaitInt 3, 0, Just 3, [newEnv])
-            d' = (AwaitInt 3, 0, Just 3, [newEnv]) in
+        let d = (AwaitInt 3 Nothing, 0, Just (3,0), [newEnv])
+            d' = (AwaitInt 3 Nothing, 0, Just (3,0), [newEnv]) in
           (nsts_out1_s d `shouldBe` d')
           >> (isNstIrreducible d' `shouldBe` True)
           -- >> (isIrreducible d' `shouldBe` True)
 
       it "pass: lvl > 0" $
-        let d = (AwaitInt 3, 88, Just 3, [newEnv])
+        let d = (AwaitInt 3 Nothing, 88, Just (3,0), [newEnv])
             d' = (Nop, 0, Nothing, [newEnv]) in
           (nsts_out1_s d `shouldBe` d')
           >> (isNstIrreducible d' `shouldBe` True)
@@ -950,11 +950,11 @@ spec = do
   describe "reaction" $ do
 
     reactionItPass
-      ((Nop `Seq` AwaitInt 3) `And` (Nop `Seq` Fin Nop), 3, [([],[])])
-      (AwaitInt 3 `And'` Fin Nop, [([],[])])
+      ((Nop `Seq` AwaitInt 3 Nothing) `And` (Nop `Seq` Fin Nop), (3,0), [([],[])])
+      (AwaitInt 3 Nothing `And'` Fin Nop, [([],[])])
 
     reactionItPass
-      ((Nop `Seq` AwaitInt 3) `And` (Nop `Seq` EmitInt 3), 1, [([],[])])
+      ((Nop `Seq` AwaitInt 3 Nothing) `And` (Nop `Seq` EmitInt 3 (Const 0)), (1,0), [([],[])])
       (Nop, [([],[])])
 
   --------------------------------------------------------------------------
@@ -989,58 +989,58 @@ spec = do
       [] (Block ["a"]
            (Write "a" (Const 1) `Seq`
             Or
-             (Block ["a"] (Write "a" (Const 99) `Seq` AwaitExt 0))
+             (Block ["a"] (Write "a" (Const 99) `Seq` AwaitExt 0 Nothing))
              (Nop) `Seq`
            Write "ret" (Read "a" `Add` Const 10)))
 
     evalProgItPass 1
       [] (Or
-           (Block [] (Write "ret" (Const 1) `Seq` AwaitExt 0))
+           (Block [] (Write "ret" (Const 1) `Seq` AwaitExt 0 Nothing))
            (Nop))
 
     evalProgItPass 11
       [] (Block ["a"]
            (Write "a" (Const 1) `Seq`
             Loop (And
-                  (Block ["a"] (Write "a" (Const 99) `Seq` AwaitExt 0))
+                  (Block ["a"] (Write "a" (Const 99) `Seq` AwaitExt 0 Nothing))
                   (Break)) `Seq`
              Write "ret" (Read "a" `Add` Const 10)))
 
     evalProgItPass 1
       [] (Loop (And
-                 (Block [] (Write "ret" (Const 1) `Seq` AwaitExt 0))
+                 (Block [] (Write "ret" (Const 1) `Seq` AwaitExt 0 Nothing))
                  (Break)))
 
     evalProgItPass 5 [] (
       (Write "ret" (Const 1)) `Seq`
       (And
-        ((AwaitInt 0) `Seq` (Write "ret" (Const 5)))
-        (EmitInt 0)
+        ((AwaitInt 0 Nothing) `Seq` (Write "ret" (Const 5)))
+        (EmitInt 0 (Const 0))
       ))
 
     evalProgItPass 5 [] (
       (Write "ret" (Const 1)) `Seq`
       (Or
-        ((AwaitInt 0) `Seq` (Write "ret" (Const 5)))
-        (Or (Fin (EmitInt 0)) Nop)
+        ((AwaitInt 0 Nothing) `Seq` (Write "ret" (Const 5)))
+        (Or (Fin (EmitInt 0 (Const 0))) Nop)
       ))
 
     -- multiple inputs
 
     evalProgItPass 1
-      [0] (AwaitExt 0 `Seq` Write "ret" (Const 1))
+      [(0,0)] (AwaitExt 0 Nothing `Seq` Write "ret" (Const 1))
 
     evalProgItFail "evalProg: program didn't terminate"
-      [] (AwaitExt 0 `Seq` Write "ret" (Const 1))
+      [] (AwaitExt 0 Nothing `Seq` Write "ret" (Const 1))
 
     evalProgItFail "evalProg: program didn't terminate"
-      [1] (AwaitExt 0 `Seq` Write "ret" (Const 1))
+      [(1,0)] (AwaitExt 0 Nothing `Seq` Write "ret" (Const 1))
 
     evalProgItFail "evalProg: pending inputs"
-      [0,0] (AwaitExt 0 `Seq` Write "ret" (Const 1))
+      [(0,0),(0,0)] (AwaitExt 0 Nothing `Seq` Write "ret" (Const 1))
 
     evalProgItPass 1
-      [0,1] (AwaitExt 0 `Seq` AwaitExt 1 `Seq` Write "ret" (Const 1))
+      [(0,0),(1,0)] (AwaitExt 0 Nothing `Seq` AwaitExt 1 Nothing `Seq` Write "ret" (Const 1))
 
     evalProgItPass 1 [] (Write "ret" (Const 1))
 
@@ -1054,9 +1054,9 @@ spec = do
           (it (printf "fail: %s ***%s" (showProg p) err)
            (forceEval (nsts (p,n,e,envs)) `shouldThrow` errorCall err))
 
-        reactionItPass (p,e,envs) (p',envs') =
-          (it (printf "pass: %d | %s -> %s" e (showProg p) (showProg p'))
-            (reaction (p,e,envs) `shouldBe` (p',envs')))
+        reactionItPass (p,(e,v),envs) (p',envs') =
+          (it (printf "pass: %d/%d | %s -> %s" e v (showProg p) (showProg p'))
+            (reaction (p,(e,v),envs) `shouldBe` (p',envs')))
 
         evalProgItPass res hist prog =
           (it (printf "pass: %s | %s ~>%d" (show hist) (showProg prog) res) $
