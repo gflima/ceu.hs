@@ -1,5 +1,6 @@
 module Ceu.FullGrammarSpec (main, spec) where
 
+import Ceu.Globals
 import qualified Ceu.Grammar as G
 import Ceu.FullGrammar
 import Control.DeepSeq
@@ -22,31 +23,35 @@ main = hspec spec
 spec :: Spec
 spec = do
   --------------------------------------------------------------------------
-  describe "remVar" $ do
+  describe "remDcl" $ do
 
     it "var x;" $ do
-      evaluate $ remVar (Var "x")
-      `shouldThrow` errorCall "remVar: expected enclosing top-level block"
+      evaluate $ remDcl (Var "x")
+      `shouldThrow` errorCall "remDcl: expected enclosing top-level block"
+
+    it "evt x;" $ do
+      evaluate $ remDcl (Evt "x")
+      `shouldThrow` errorCall "remDcl: expected enclosing top-level block"
 
     it "var x;" $ do
-      remVar (Block (Var "x"))
+      remDcl (Block (Var "x"))
       `shouldBe` (Block' (["x"],[]) Nop')
 
     it "x = 1;" $ do
-      remVar (Block (Write "x" (G.Const 1)))
-      `shouldBe` (Block' ([],[]) (Write "x" (G.Const 1)))
+      remDcl (Block (Write "x" (Const 1)))
+      `shouldBe` (Block' ([],[]) (Write "x" (Const 1)))
 
     it "var x; x = 1" $ do
-      remVar (Block (Seq (Var "x") (Write "x" (G.Const 1))))
-      `shouldBe` (Block' (["x"],[]) (Seq Nop' (Write "x" (G.Const 1))))
+      remDcl (Block (Seq (Var "x") (Write "x" (Const 1))))
+      `shouldBe` (Block' (["x"],[]) (Seq Nop' (Write "x" (Const 1))))
 
     it "var x || x = 1" $ do
-      remVar (Block (Or (Var "x") (Write "x" (G.Const 1))))
-      `shouldBe` (Block' (["x"],[]) (Or Nop' (Write "x" (G.Const 1))))
+      remDcl (Block (Or (Var "x") (Write "x" (Const 1))))
+      `shouldBe` (Block' (["x"],[]) (Or Nop' (Write "x" (Const 1))))
 
     it "do var x; x = 1 end" $ do
-      remVar (Block (Block (Seq (Var "x") (Write "x" (G.Const 1)))))
-      `shouldBe` (Block' ([],[]) (Block' (["x"],[]) (Seq Nop' (Write "x" (G.Const 1)))))
+      remDcl (Block (Block (Seq (Var "x") (Write "x" (Const 1)))))
+      `shouldBe` (Block' ([],[]) (Block' (["x"],[]) (Seq Nop' (Write "x" (Const 1)))))
 
   --------------------------------------------------------------------------
   describe "remFin" $ do
@@ -60,27 +65,27 @@ spec = do
       `shouldBe` (Block' (["x"],[]) (Or (Fin' (Seq Nop' Nop')) (Block' ([],[]) Nop')))
 
     it "var x; { fin x with x=1; fin with x=2; x=3 }" $ do
-      remFin (Block' (["x"],[]) (Block' ([],[]) (Seq (Fin (Just "x") (Write "x" (G.Const 1))) (Seq (Fin Nothing (Write "x" (G.Const 2))) (Write "x" (G.Const 3))))))
-      `shouldBe` (Block' (["x"],[]) (Or (Fin' (Seq (Write "x" (G.Const 1)) Nop')) (Block' ([],[]) (Or (Fin' (Write "x" (G.Const 2))) (Write "x" (G.Const 3))))))
+      remFin (Block' (["x"],[]) (Block' ([],[]) (Seq (Fin (Just "x") (Write "x" (Const 1))) (Seq (Fin Nothing (Write "x" (Const 2))) (Write "x" (Const 3))))))
+      `shouldBe` (Block' (["x"],[]) (Or (Fin' (Seq (Write "x" (Const 1)) Nop')) (Block' ([],[]) (Or (Fin' (Write "x" (Const 2))) (Write "x" (Const 3))))))
 
     it "var x; { fin x with x=1; fin x with y=1; y=3 }" $ do
       remFin (Block' (["x"],[]) (Block' ([],[]) (
-                (Fin (Just "x") (Write "x" (G.Const 1))) `Seq`
-                (Fin (Just "x") (Write "y" (G.Const 1))) `Seq`
-                (Write "y" (G.Const 3))
+                (Fin (Just "x") (Write "x" (Const 1))) `Seq`
+                (Fin (Just "x") (Write "y" (Const 1))) `Seq`
+                (Write "y" (Const 3))
              )))
-      `shouldBe` (Block' (["x"],[]) (Or (Fin' (Seq (Write "y" (G.Const 1)) (Seq (Write "x" (G.Const 1)) Nop'))) (Block' ([],[]) (Write "y" (G.Const 3)))))
+      `shouldBe` (Block' (["x"],[]) (Or (Fin' (Seq (Write "y" (Const 1)) (Seq (Write "x" (Const 1)) Nop'))) (Block' ([],[]) (Write "y" (Const 3)))))
 
     it "var x; nop; { fin x with x=1; fin with x=2; x=3; fin x with y=1; fin with y=2; y=3 }; nop" $ do
       remFin (Block' (["x"],[]) (Seq Nop' (Seq (Block' ([],[]) (
-                (Fin (Just "x") (Write "x" (G.Const 1))) `Seq`
-                (Fin Nothing    (Write "x" (G.Const 2))) `Seq`
-                (Write "x" (G.Const 3))                  `Seq`
-                (Fin (Just "x") (Write "y" (G.Const 1))) `Seq`
-                (Fin Nothing    (Write "y" (G.Const 2))) `Seq`
-                (Write "y" (G.Const 3))
+                (Fin (Just "x") (Write "x" (Const 1))) `Seq`
+                (Fin Nothing    (Write "x" (Const 2))) `Seq`
+                (Write "x" (Const 3))                  `Seq`
+                (Fin (Just "x") (Write "y" (Const 1))) `Seq`
+                (Fin Nothing    (Write "y" (Const 2))) `Seq`
+                (Write "y" (Const 3))
              )) Nop')))
-      `shouldBe` (Block' (["x"],[]) (Or (Fin' (Seq (Write "y" (G.Const 1)) (Seq (Write "x" (G.Const 1)) Nop'))) (Seq Nop' (Seq (Block' ([],[]) (Or (Fin' (Write "x" (G.Const 2))) (Seq (Write "x" (G.Const 3)) (Or (Fin' (Write "y" (G.Const 2))) (Write "y" (G.Const 3)))))) Nop'))))
+      `shouldBe` (Block' (["x"],[]) (Or (Fin' (Seq (Write "y" (Const 1)) (Seq (Write "x" (Const 1)) Nop'))) (Seq Nop' (Seq (Block' ([],[]) (Or (Fin' (Write "x" (Const 2))) (Seq (Write "x" (Const 3)) (Or (Fin' (Write "y" (Const 2))) (Write "y" (Const 3)))))) Nop'))))
 
   --------------------------------------------------------------------------
   describe "remSpawn" $ do
@@ -133,18 +138,29 @@ spec = do
       toGrammar (Var "x")
       `shouldBe` (G.Block (["x"],[]) G.Nop)
 
+    it "evt e;" $ do
+      toGrammar (Evt "e")
+      `shouldBe` (G.Block ([],["e"]) G.Nop)
+
     it "do var x; x = 1 end" $ do
-      toGrammar (Block (Seq (Var "x") (Write "x" (G.Const 1))))
-      `shouldBe` G.Block ([],[]) (G.Block (["x"],[]) (G.Seq G.Nop (G.Write "x" (G.Const 1))))
+      toGrammar (Block (Seq (Var "x") (Write "x" (Const 1))))
+      `shouldBe` G.Block ([],[]) (G.Block (["x"],[]) (G.Seq G.Nop (G.Write "x" (Const 1))))
+
+    it "do evt x; end" $ do
+      toGrammar (Block (Evt "x"))
+      `shouldBe` G.Block ([],[]) (G.Block ([],["x"]) G.Nop)
 
     it "spawn do await A; end ;; await B; var x; await FOREVER;" $ do
       toGrammar (Seq (Spawn (AwaitExt "A" Nothing)) (Seq (AwaitExt "B" Nothing) (Seq (Var "x") AwaitFor)))
       `shouldBe` (G.Block (["x"],[]) (G.Or (G.Seq (G.AwaitExt "A") (G.AwaitExt "FOREVER")) (G.Seq (G.AwaitExt "B") (G.Seq G.Nop (G.AwaitExt "FOREVER")))))
 
+    it "spawn do await A; end ;; await B; evt x; await FOREVER;" $ do
+      toGrammar (Seq (Spawn (AwaitExt "A" Nothing)) (Seq (AwaitExt "B" Nothing) (Seq (Evt "x") AwaitFor)))
+      `shouldBe` (G.Block ([],["x"]) (G.Or (G.Seq (G.AwaitExt "A") (G.AwaitExt "FOREVER")) (G.Seq (G.AwaitExt "B") (G.Seq G.Nop (G.AwaitExt "FOREVER")))))
 
-    it "spawn do async ret++ end ;; await F;" $ do
-      toGrammar (Seq (Spawn (Async (Loop (Write "x" (G.Add (G.Read "x") (G.Const 1)))))) (AwaitExt "A" Nothing))
-      `shouldBe` (G.Block ([],[]) (G.Or (G.Seq (G.Loop (G.Seq (G.Write "x" (G.Add (G.Read "x") (G.Const 1))) (G.AwaitExt "ASYNC"))) (G.AwaitExt "FOREVER")) (G.AwaitExt "A")))
+    it "spawn do async x++ end ;; await F;" $ do
+      toGrammar (Seq (Spawn (Async (Loop (Write "x" (Add (Read "x") (Const 1)))))) (AwaitExt "A" Nothing))
+      `shouldBe` (G.Block ([],[]) (G.Or (G.Seq (G.Loop (G.Seq (G.Write "x" (Add (Read "x") (Const 1))) (G.AwaitExt "ASYNC"))) (G.AwaitExt "FOREVER")) (G.AwaitExt "A")))
 
   --------------------------------------------------------------------------
   describe "evalFullProg" $ do
@@ -170,29 +186,29 @@ with
 end
 -}
     evalFullProgItPass 25 [] (
-      (Write "ret" (G.Const 0)) `Seq`
+      (Write "ret" (Const 0)) `Seq`
       (Or
-        ((AwaitInt "e" Nothing) `Seq` (Write "ret" (G.Add (G.Read "ret") (G.Const 5))))
+        ((AwaitInt "e" Nothing) `Seq` (Write "ret" (Add (Read "ret") (Const 5))))
         (Or
           (
             (Fin Nothing (
-              (Write "ret" (G.Mul (G.Read "ret") (G.Const 2))) `Seq`
-              (EmitInt "e" (G.Const 0))
+              (Write "ret" (Mul (Read "ret") (Const 2))) `Seq`
+              (EmitInt "e" (Const 0))
             )) `Seq`
             AwaitFor
           )
-          (Write "ret" (G.Add (G.Read "ret") (G.Const 10)))
+          (Write "ret" (Add (Read "ret") (Const 10)))
         )
       ))
 
     evalFullProgItPass 99 [("A",0),("B",99)]
-      (Block ((Var "x") `Seq` ((AwaitExt "B" (Just "x")) `Seq` (EmitInt "x" (G.Read "x")))) `And` AwaitInt "x" (Just "ret"))
+      (Block ((Var "x") `Seq` ((AwaitExt "B" (Just "x")) `Seq` (EmitInt "x" (Read "x")))) `And` AwaitInt "x" (Just "ret"))
 
     evalFullProgItPass 33 [("A",11),("A",22),("B",0)]
       (
-        (Write "ret" (G.Const 0)) `Seq`
+        (Write "ret" (Const 0)) `Seq`
         Block (Var "x" `Seq` (Or
-            (Every "A" (Just "x") (Write "ret" (G.Add (G.Read "ret") (G.Read "x"))))
+            (Every "A" (Just "x") (Write "ret" (Add (Read "ret") (Read "x"))))
             (AwaitExt "B" Nothing))))
 
       where

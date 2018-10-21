@@ -1,7 +1,8 @@
 module Ceu.FullGrammar where
 
+import Ceu.Globals
 import qualified Ceu.Grammar as G
-import Ceu.Eval
+import qualified Ceu.Eval as E
 --import Debug.Trace
 
 -- Special events:
@@ -11,28 +12,29 @@ import Ceu.Eval
 
 -- Program (pg 5).
 data Stmt
-  = Block Stmt                    -- declaration block
-  | Var G.ID_Var                  -- variable declaration
-  | Write G.ID_Var G.Expr         -- assignment statement
-  | AwaitExt G.ID_Evt (Maybe G.ID_Var) -- await external event
-  | AwaitFor                      -- await forever
+  = Block Stmt                      -- declaration block
+  | Var ID_Var                      -- variable declaration
+  | Evt ID_Evt                      -- event declaration
+  | Write ID_Var Expr               -- assignment statement
+  | AwaitExt ID_Evt (Maybe ID_Var)  -- await external event
+  | AwaitFor                        -- await forever
 -- TODO: AwaitTmr
-  | AwaitInt G.ID_Evt (Maybe G.ID_Var) -- await internal event
-  | EmitInt G.ID_Evt G.Expr       -- emit internal event
-  | Break                         -- loop escape
-  | If G.Expr Stmt Stmt           -- conditional
-  | Seq Stmt Stmt                 -- sequence
-  | Loop Stmt                     -- infinite loop
-  | Every G.ID_Evt (Maybe G.ID_Var) Stmt -- event iteration
-  | And Stmt Stmt                 -- par/and statement
-  | Or Stmt Stmt                  -- par/or statement
-  | Spawn Stmt                    -- spawn statement
-  | Fin (Maybe G.ID_Var) Stmt     -- finalize statement
-  | Async Stmt                    -- async statement
-  | Error String                  -- generate runtime error (for testing purposes)
-  | Block' ([G.ID_Var],[G.ID_Evt]) Stmt -- block as in basic Grammar
-  | Fin' Stmt                     -- fin as in basic Grammar
-  | Nop'                          -- nop as in basic Grammar
+  | AwaitInt ID_Evt (Maybe ID_Var)  -- await internal event
+  | EmitInt ID_Evt Expr             -- emit internal event
+  | Break                           -- loop escape
+  | If Expr Stmt Stmt               -- conditional
+  | Seq Stmt Stmt                   -- sequence
+  | Loop Stmt                       -- infinite loop
+  | Every ID_Evt (Maybe ID_Var) Stmt -- event iteration
+  | And Stmt Stmt                   -- par/and statement
+  | Or Stmt Stmt                    -- par/or statement
+  | Spawn Stmt                      -- spawn statement
+  | Fin (Maybe ID_Var) Stmt         -- finalize statement
+  | Async Stmt                      -- async statement
+  | Error String                    -- generate runtime error (for testing purposes)
+  | Block' ([ID_Var],[ID_Evt]) Stmt -- block as in basic Grammar
+  | Fin' Stmt                       -- fin as in basic Grammar
+  | Nop'                            -- nop as in basic Grammar
   deriving (Eq, Show)
 
 --TODO: fazer um exemplo que o fin executa 2x por causa de um emit que mata um paror por fora.
@@ -42,15 +44,16 @@ infixr 1 `Seq`                  -- `Seq` associates to the right
 infixr 0 `Or`                   -- `Or` associates to the right
 infixr 0 `And`                  -- `And` associates to the right
 
--- remVar: Removes (Var id) stmts and maps (Block p) -> (Block' [ids] p)
+-- remDcl: Removes (Var/Evt id) stmts and maps (Block p) -> (Block' ([vs],[es]) p)
 
-remVar :: Stmt -> Stmt
-remVar (Block p) = p' where
+remDcl :: Stmt -> Stmt
+remDcl (Block p) = p' where
     (_,p') = rV (Block p)
 
-    rV :: Stmt -> (([G.ID_Var],[G.ID_Evt]), Stmt)
+    rV :: Stmt -> (([ID_Var],[ID_Evt]), Stmt)
     rV (Block p)      = (([],[]), Block' ids' p') where (ids', p') = rV p
     rV (Var id)       = (([id],[]), Nop')
+    rV (Evt id)       = (([],[id]), Nop')
     rV (If exp p1 p2) = rV2 p1 p2 (\p1' p2' -> If exp p1' p2')
     rV (Seq p1 p2)    = rV2 p1 p2 (\p1' p2' -> Seq p1' p2')
     rV (Loop p)       = rV1 p (\p' -> Loop p')
@@ -60,19 +63,19 @@ remVar (Block p) = p' where
     rV (Spawn p)      = rV1 p (\p' -> Spawn p')
     rV (Fin id p)     = rV1 p (\p' -> Fin id p')
     rV (Async p)      = rV1 p (\p' -> Async p')
-    rV (Block' _ _)   = error "remVar: unexpected statement (Block')"
+    rV (Block' _ _)   = error "remDcl: unexpected statement (Block')"
     rV (Fin' p)       = rV1 p (\p' -> Fin' p')
     rV q              = (([],[]), q)
 
-    rV1 :: Stmt -> (Stmt->Stmt) -> (([G.ID_Var],[G.ID_Evt]), Stmt)
+    rV1 :: Stmt -> (Stmt->Stmt) -> (([ID_Var],[ID_Evt]), Stmt)
     rV1 p f = (ids', f p') where (ids',p') = rV p
 
-    rV2 :: Stmt -> Stmt -> (Stmt->Stmt->Stmt) -> (([G.ID_Var],[G.ID_Evt]), Stmt)
+    rV2 :: Stmt -> Stmt -> (Stmt->Stmt->Stmt) -> (([ID_Var],[ID_Evt]), Stmt)
     rV2 p1 p2 f = ((vs1'++vs2',es1'++es2'), f p1' p2') where
                       ((vs1',es1'),p1') = rV p1
                       ((vs2',es2'),p2') = rV p2
 
-remVar _ = error "remVar: expected enclosing top-level block"
+remDcl _ = error "remDcl: expected enclosing top-level block"
 
 -- remFin: Converts (Fin _  p);A -> (or (Fin' p) A)
 --                  (Fin id p);A -> A ||| (Block (Or [(Fin p)] X)
@@ -81,7 +84,7 @@ remFin :: Stmt -> Stmt
 remFin p = p' where
   (_,p') = rF p
 
-  rF :: Stmt -> ([(G.ID_Var,Stmt)], Stmt)
+  rF :: Stmt -> ([(ID_Var,Stmt)], Stmt)
   rF (Block p)           = error "remFin: unexpected statement (Block)"
   rF (Var _)             = error "remFin: unexpected statement (Var)"
   rF (If exp p1 p2)      = ([], If exp (snd (rF p1)) (snd (rF p2)))
@@ -110,7 +113,7 @@ remFin p = p' where
 
                             -- recs: [ID_Var] in block, [pending finalize] (id->stmts)
                             -- rets: [stmts to fin] in block, [remaining finalize]
-                            f :: [G.ID_Var] -> [(G.ID_Var,Stmt)] -> ([Stmt], [(G.ID_Var,Stmt)])
+                            f :: [ID_Var] -> [(ID_Var,Stmt)] -> ([Stmt], [(ID_Var,Stmt)])
                             f _ [] = ([], [])
                             f vars ((id,stmt):fs) = (a++a', b++b') where
                               (a',b') = f vars fs
@@ -214,7 +217,7 @@ toGrammar :: Stmt -> G.Stmt
 toGrammar p = toG $ remAwaitFor $ remAsync
                   $ remSpawn $ chkSpawn
                   $ remFin
-                  $ remVar (Block p) where
+                  $ remDcl (Block p) where
   toG :: Stmt -> G.Stmt
   toG (Write id exp)  = G.Write id exp
   toG (AwaitExt e id) = G.AwaitExt e        -- TODO
@@ -233,6 +236,6 @@ toGrammar p = toG $ remAwaitFor $ remAsync
   toG Nop'            = G.Nop
   toG _               = error "toG: unexpected statement (Block,Var,AwaitFor,Fin,Spawn,Async)"
 
-evalFullProg :: Stmt -> [(G.ID_Evt,G.Val)] -> G.Val
-evalFullProg prog hist = evalProg (toGrammar prog) []
+evalFullProg :: Stmt -> [(ID_Evt,Val)] -> Val
+evalFullProg prog hist = E.evalProg (toGrammar prog) []
 --evalFullProg prog hist = evalProg (toGrammar prog) hist
