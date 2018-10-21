@@ -1,31 +1,7 @@
 module Ceu.Grammar where
 
+import Ceu.Globals
 import Text.Printf
-
--- Primitive types.
-type ID_Var  = String           -- variable identifier
-type ID_Evt  = String           -- event identifier
-type Val = Int                  -- value
-
--- Special events:
--- "BOOT"
--- "FOREVER"
-
--- Expression.
-data Expr
-  = Const Val                   -- constant
-  | Read ID_Var                 -- variable read
-  | Umn Expr                    -- unary minus
-  | Add Expr Expr               -- addition
-  | Sub Expr Expr               -- subtraction
-  | Mul Expr Expr               -- multiplication
-  | Div Expr Expr               -- division
-  deriving (Eq, Show)
-
-infixl 6 `Add`                  -- `Add` associates to the left
-infixl 6 `Sub`                  -- `Sub` associates to the left
-infixl 7 `Mul`                  -- `Mul` associates to the left
-infixl 7 `Div`                  -- `Div` associates to the left
 
 -- Program (pg 5).
 data Stmt
@@ -44,27 +20,11 @@ data Stmt
   | Fin Stmt                    -- finalization statement
   | Nop                         -- dummy statement (internal)
   | Error String                -- generate runtime error (for testing purposes)
-  | CanRun Int                  -- wait for stack level (internal)
-  | Restore Int                 -- restore environment (internal)
-  | Loop' Stmt Stmt             -- unrolled Loop (internal)
-  | And' Stmt Stmt              -- unrolled And (internal)
-  | Or' Stmt Stmt               -- unrolled Or (internal)
   deriving (Eq, Show)
 
 infixr 1 `Seq`                  -- `Seq` associates to the right
 infixr 0 `Or`                   -- `Or` associates to the right
 infixr 0 `And`                  -- `And` associates to the right
-
--- Shows expression.
-showExpr :: Expr -> String
-showExpr expr = case expr of
-  Const n   -> show n
-  Read v    -> v
-  Umn e     -> printf "(-%s)" (showExpr e)
-  Add e1 e2 -> printf "(%s+%s)" (showExpr e1) (showExpr e2)
-  Sub e1 e2 -> printf "(%s-%s)" (showExpr e1) (showExpr e2)
-  Mul e1 e2 -> printf "(%s*%s)" (showExpr e1) (showExpr e2)
-  Div e1 e2 -> printf "(%s*%s)" (showExpr e1) (showExpr e2)
 
 -- Shows list of declarations (variables or events).
 showDcls :: [String] -> String
@@ -92,11 +52,6 @@ showProg stmt = case stmt of
   Fin p          -> printf "(fin %s)" (sP p)
   Nop            -> "nop"
   Error _        -> "err"
-  CanRun n       -> printf "@canrun(%d)" n
-  Restore n      -> printf "@restore(%d)" n
-  Loop' p q      -> printf "(%s @loop %s)" (sP p) (sP q)
-  And' p q       -> printf "(%s @&& %s)" (sP p) (sP q)
-  Or' p q        -> printf "(%s @|| %s)" (sP p) (sP q)
   where
     sE = showExpr
     sP = showProg
@@ -113,9 +68,6 @@ checkProg stmt = case stmt of
   And p q   -> checkProg p && checkProg q
   Or p q    -> checkProg p && checkProg q
   Fin p     -> checkFin (Fin p) && checkProg p
-  Loop' p q -> checkLoop (Loop' p q) && checkProg q
-  And' p q  -> checkProg p && checkProg q
-  Or' p q   -> checkProg p && checkProg q
   _         -> True
 
 -- Receives a Loop or Loop' statement and checks whether all execution paths
@@ -123,7 +75,6 @@ checkProg stmt = case stmt of
 checkLoop :: Stmt -> Bool
 checkLoop loop = case loop of
   Loop body    -> cL False body
-  Loop' _ body -> cL False body
   _            -> error "checkLoop: expected Loop or Loop'"
   where
     cL ignBrk stmt = case stmt of
@@ -137,9 +88,6 @@ checkLoop loop = case loop of
       And p q    -> cL ignBrk p && cL ignBrk q
       Or p q     -> cL ignBrk p && cL ignBrk q
       Fin p      -> False       -- runs in zero time
-      Loop' p q  -> cL True p && cL True q
-      And' p q   -> cL ignBrk p && cL ignBrk q
-      Or' p q    -> cL ignBrk p && cL ignBrk q
       _          -> False
 
 -- Receives a Fin or Every statement and checks whether it does not contain
@@ -157,36 +105,13 @@ checkFin finOrEvery = case finOrEvery of
       Every _ _  -> False
       Fin _      -> False
       Loop _     -> False
-      Loop' _ _  -> False
       Block _ p  -> cF p
       If _ p q   -> cF p && cF q
       Seq p q    -> cF p && cF q
       And p q    -> cF p && cF q
       Or p q     -> cF p && cF q
-      And' p q   -> cF p && cF q
-      Or' p q    -> cF p && cF q
       _          -> True
 
 -- Alias for checkFin.
 checkEvery :: Stmt -> Bool
 checkEvery = checkFin
-
--- Counts the maximum number of EmitInt's that can be executed in program.
--- (pot', pg 9)
-countMaxEmits :: Stmt -> Int
-countMaxEmits stmt = case stmt of
-  EmitInt e                      -> 1
-  If expr p q                    -> max (cME p) (cME q)
-  Loop p                         -> cME p
-  And p q                        -> cME p + cME q
-  Or p q                         -> cME p + cME q
-  Seq Break q                    -> 0
-  Seq (AwaitExt e) q             -> 0
-  Seq p q                        -> cME p + cME q
-  Loop' p q | checkLoop (Loop p) -> cME p         -- q is unreachable
-            | otherwise          -> cME p + cME q
-  And' p q                       -> cME p + cME q -- CHECK THIS! --
-  Or' p q                        -> cME p + cME q -- CHECK THIS! --
-  _                              -> 0
-  where
-    cME = countMaxEmits
