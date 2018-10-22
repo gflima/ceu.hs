@@ -5,8 +5,8 @@ import Data.Maybe
 --import Debug.Trace
 
 -- Environment.
-type Env = ([ID], [(ID,Val)])   -- declarations plus assignment history
-type Envs = [Env]               -- list of environments
+type Env  = [(ID, Maybe Val)]
+type Envs = [Env]
 
 -- Stack level.
 type Lvl = Int
@@ -17,35 +17,39 @@ type Desc = (Stmt, Lvl, Maybe Evt, Envs)
 ----------------------------------------------------------------------------
 -- Environment
 
--- The empty environment.
-newEnv :: Env
-newEnv = ([], [])
-
 -- Finds the first environment containing the given variable.
 envsGet :: Envs -> String -> (Envs,Env,Envs)
 envsGet [] _ = error "envsGet: bad environment"
 envsGet envs id  = envsGet' [] envs id
   where
-    envsGet' _ [] _       = error ("envsGet: undeclared variable: " ++ id)
+    envsGet' _ [] _   = error ("envsGet: undeclared variable: " ++ id)
     envsGet' notHere (env:maybeHere) id
-      | elem id (fst env) = (notHere, env, maybeHere) -- found
-      | otherwise         = envsGet' (notHere++[env]) maybeHere id
+      | elemID id env = (notHere, env, maybeHere) -- found
+      | otherwise     = envsGet' (notHere++[env]) maybeHere id
+
+    elemID x []                 = False
+    elemID x ((y,_):_) | (x==y) = True
+    elemID x (_:rest)           = elemID x rest
 
 -- Writes value to variable in environment.
 envsWrite :: Envs -> String -> Val -> Envs
-envsWrite envs id val = envs1 ++ [(fst env, (id,val):(snd env))] ++ envs2
+envsWrite envs id val = envs1 ++ [(id,Just val):env] ++ envs2
   where
     (envs1, env, envs2) = envsGet envs id
 
 -- Reads variable value from environment.
 envsRead :: Envs -> String -> Val
-envsRead envs id = envsRead' hst id
+envsRead envs id = eR env id
   where
-    (_, (_,hst), _) = envsGet envs id
-    envsRead' [] id = error ("envsRead: uninitialized variable: " ++ id)
-    envsRead' ((id',val'):hst') id
-      | id == id' = val'    -- found
-      | otherwise = envsRead' hst' id
+    (_, env, _) = envsGet envs id
+
+    eR [] id = error ("envsRead: impossible case")
+    eR ((id',val'):env') id
+      | (id'==id) =
+        case val' of
+          Nothing -> error ("envsRead: uninitialized variable: " ++ id)
+          Just v  -> v
+      | otherwise = eR env' id
 
 -- Evaluates expression in environment.
 envsEval :: Envs -> Expr -> Val
@@ -102,7 +106,7 @@ nst1Adv d f = (f p, n, e, envs)
 nst1 :: Desc -> Desc
 
 nst1 (Block vars p, n, Nothing, envs)           -- block
-  = (Seq p (Restore (length envs)), n, Nothing, (vars,[]):envs)
+  = (Seq p (Restore (length envs)), n, Nothing, (map (\v->(v,Nothing)) vars):envs)
 
 nst1 (Restore lvl, n, Nothing, envs)            -- restore
   = (Nop, n, Nothing, drop (length envs - lvl) envs)
