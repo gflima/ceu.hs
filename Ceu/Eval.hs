@@ -40,18 +40,18 @@ envEval expr env = case expr of
 
 -- Tests whether program is blocked at the given stack level.
 -- (pg 8, fig 4.ii)
-isLocaled :: Lvl -> Stmt -> Bool
-isLocaled n stmt = case stmt of
+isBlocked :: Lvl -> Stmt -> Bool
+isBlocked n stmt = case stmt of
   AwaitExt e -> True
   AwaitInt e -> True
   Every e p  -> True
   CanRun m   -> n > m
   Fin p      -> True
-  Seq p q    -> isLocaled n p
-  Local' _ p -> isLocaled n p
-  Loop' p q  -> isLocaled n p
-  And' p q   -> isLocaled n p && isLocaled n q
-  Or' p q    -> isLocaled n p && isLocaled n q
+  Seq p q    -> isBlocked n p
+  Local' _ p -> isBlocked n p
+  Loop' p q  -> isBlocked n p
+  And' p q   -> isBlocked n p && isBlocked n q
+  Or' p q    -> isBlocked n p && isBlocked n q
   _          -> False
 
 -- Obtains the body of all active Fin statements in program.
@@ -173,15 +173,15 @@ nst1 (And' Break q, n, Nothing) _               -- and brk1 (pg 7)
   = (Seq (clear q) Break, n, Nothing)
 
 nst1 (And' p Nop, n, Nothing) env               -- and-nop2 (pg 7)
-  | not $ isLocaled n p = nst1Adv (p, n, Nothing) (\p' -> And' p' Nop) env
+  | not $ isBlocked n p = nst1Adv (p, n, Nothing) (\p' -> And' p' Nop) env
   | otherwise           = (p, n, Nothing)
 
 nst1 (And' p Break, n, Nothing) env             -- and-brk2 (pg 7)
-  | not $ isLocaled n p = nst1Adv (p, n, Nothing) (\p' -> And' p' Break) env
+  | not $ isBlocked n p = nst1Adv (p, n, Nothing) (\p' -> And' p' Break) env
   | otherwise           = (Seq (clear p) Break, n, Nothing)
 
 nst1 (And' p q, n, Nothing) env                 -- and-adv (pg 7)
-  | not $ isLocaled n p = nst1Adv (p, n, Nothing) (\p' -> And' p' q) env
+  | not $ isBlocked n p = nst1Adv (p, n, Nothing) (\p' -> And' p' q) env
   | otherwise           = nst1Adv (q, n, Nothing) (\q' -> And' p q') env
 
 nst1 (Or p q, n, Nothing) _                     -- or-expd (pg 7)
@@ -194,15 +194,15 @@ nst1 (Or' Break q, n, Nothing) _                -- or-brk1 (pg 7)
   = (Seq (clear q) Break, n, Nothing)
 
 nst1 (Or' p Nop, n, Nothing) env                -- or-nop2 (pg 7)
-  | not $ isLocaled n p = nst1Adv (p, n, Nothing) (\p' -> Or' p' Nop) env
+  | not $ isBlocked n p = nst1Adv (p, n, Nothing) (\p' -> Or' p' Nop) env
   | otherwise           = (clear p, n, Nothing)
 
 nst1 (Or' p Break, n, Nothing) env              -- or-brk2 (pg 7)
-  | not $ isLocaled n p = nst1Adv (p, n, Nothing) (\p' -> Or' p' Break) env
+  | not $ isBlocked n p = nst1Adv (p, n, Nothing) (\p' -> Or' p' Break) env
   | otherwise           = (Seq (clear p) Break, n, Nothing)
 
 nst1 (Or' p q, n, Nothing) env                  -- or-adv (pg 7)
-  | not $ isLocaled n p = nst1Adv (p, n, Nothing) (\p' -> Or' p' q) env
+  | not $ isBlocked n p = nst1Adv (p, n, Nothing) (\p' -> Or' p' q) env
   | otherwise           = nst1Adv (q, n, Nothing) (\q' -> Or' p q') env
 
 nst1 (Error msg, _, Nothing) _ = error ("Runtime error: " ++ msg)
@@ -216,7 +216,7 @@ isNstIrreducible desc = case desc of
   (Nop, n, e)     -> True
   (Break, n, e)   -> True
   (p, n, Just e)  -> True
-  (p, n, Nothing) -> isLocaled n p
+  (p, n, Nothing) -> isBlocked n p
 
 -- Zero or more nested transitions.
 -- (pg 6)
