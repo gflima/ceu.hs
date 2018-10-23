@@ -14,7 +14,7 @@ type Desc = (Stmt, Lvl, Maybe ID_Evt)
 
 -- Program (pg 5).
 data Stmt
-  = Local [ID_Var] Stmt         -- declaration block
+  = Locals [ID_Var] Stmt        -- declaration block
   | Write ID_Var Expr           -- assignment statement
   | AwaitExt ID_Evt             -- await external event
   | AwaitInt ID_Evt             -- await internal event
@@ -30,7 +30,7 @@ data Stmt
   | Nop                         -- dummy statement (internal)
   | Error String                -- generate runtime error (for testing purposes)
   | CanRun Int                  -- wait for stack level (internal)
-  | Local' Env Stmt             -- block with environment store
+  | Locals' Env Stmt            -- block with environment store
   | Loop' Stmt Stmt             -- unrolled Loop (internal)
   | And' Stmt Stmt              -- unrolled And (internal)
   | Or' Stmt Stmt               -- unrolled Or (internal)
@@ -41,26 +41,26 @@ infixr 0 `Or`                   -- `Or` associates to the right
 infixr 0 `And`                  -- `And` associates to the right
 
 fromGrammar :: G.Stmt -> Stmt
-fromGrammar (G.Local envs p) = Local envs (fromGrammar p)
-fromGrammar (G.Write id exp) = Write id exp
-fromGrammar (G.AwaitExt id)  = AwaitExt id
-fromGrammar (G.AwaitInt id)  = AwaitInt id
-fromGrammar (G.EmitInt id)   = EmitInt id
-fromGrammar G.Break          = Break
-fromGrammar (G.If exp p1 p2) = If exp (fromGrammar p1) (fromGrammar p2)
-fromGrammar (G.Seq p1 p2)    = Seq (fromGrammar p1) (fromGrammar p2)
-fromGrammar (G.Loop p)       = Loop (fromGrammar p)
-fromGrammar (G.Every id p)   = Every id (fromGrammar p)
-fromGrammar (G.And p1 p2)    = And (fromGrammar p1) (fromGrammar p2)
-fromGrammar (G.Or p1 p2)     = Or (fromGrammar p1) (fromGrammar p2)
-fromGrammar (G.Fin p)        = Fin (fromGrammar p)
-fromGrammar G.Nop            = Nop
-fromGrammar (G.Error msg)    = Error msg
+fromGrammar (G.Locals envs p) = Locals envs (fromGrammar p)
+fromGrammar (G.Write id exp)  = Write id exp
+fromGrammar (G.AwaitExt id)   = AwaitExt id
+fromGrammar (G.AwaitInt id)   = AwaitInt id
+fromGrammar (G.EmitInt id)    = EmitInt id
+fromGrammar G.Break           = Break
+fromGrammar (G.If exp p1 p2)  = If exp (fromGrammar p1) (fromGrammar p2)
+fromGrammar (G.Seq p1 p2)     = Seq (fromGrammar p1) (fromGrammar p2)
+fromGrammar (G.Loop p)        = Loop (fromGrammar p)
+fromGrammar (G.Every id p)    = Every id (fromGrammar p)
+fromGrammar (G.And p1 p2)     = And (fromGrammar p1) (fromGrammar p2)
+fromGrammar (G.Or p1 p2)      = Or (fromGrammar p1) (fromGrammar p2)
+fromGrammar (G.Fin p)         = Fin (fromGrammar p)
+fromGrammar G.Nop             = Nop
+fromGrammar (G.Error msg)     = Error msg
 
 -- Shows program.
 showProg :: Stmt -> String
 showProg stmt = case stmt of
-  Local vars p | null vars -> printf "{%s}" (sP p)
+  Locals vars p | null vars -> printf "{%s}" (sP p)
                | otherwise -> printf "{%s: %s}" (sV vars) (sP p)
   Write var expr -> printf "%s=%s" var (sE expr)
   AwaitExt e     -> printf "?E%d" e
@@ -77,7 +77,7 @@ showProg stmt = case stmt of
   Nop            -> "nop"
   Error _        -> "err"
   CanRun n       -> printf "@canrun(%d)" n
-  Local' env p   -> printf "(TODO)"
+  Locals' env p  -> printf "(TODO)"
   Loop' p q      -> printf "(%s @loop %s)" (sP p) (sP q)
   And' p q       -> printf "(%s @&& %s)" (sP p) (sP q)
   Or' p q        -> printf "(%s @|| %s)" (sP p) (sP q)
@@ -118,33 +118,33 @@ envEval expr env = case expr of
 -- (pg 8, fig 4.ii)
 isBlocked :: Lvl -> Stmt -> Bool
 isBlocked n stmt = case stmt of
-  AwaitExt e -> True
-  AwaitInt e -> True
-  Every e p  -> True
-  CanRun m   -> n > m
-  Fin p      -> True
-  Seq p q    -> isBlocked n p
-  Local' _ p -> isBlocked n p
-  Loop' p q  -> isBlocked n p
-  And' p q   -> isBlocked n p && isBlocked n q
-  Or' p q    -> isBlocked n p && isBlocked n q
-  _          -> False
+  AwaitExt e  -> True
+  AwaitInt e  -> True
+  Every e p   -> True
+  CanRun m    -> n > m
+  Fin p       -> True
+  Seq p q     -> isBlocked n p
+  Locals' _ p -> isBlocked n p
+  Loop' p q   -> isBlocked n p
+  And' p q    -> isBlocked n p && isBlocked n q
+  Or' p q     -> isBlocked n p && isBlocked n q
+  _           -> False
 
 -- Obtains the body of all active Fin statements in program.
 -- (pg 8, fig 4.iii)
 clear :: Stmt -> Stmt
 clear stmt = case stmt of
-  AwaitExt _ -> Nop
-  AwaitInt _ -> Nop
-  Every _ _  -> Nop
-  CanRun _   -> Nop
-  Fin p      -> p
-  Seq p _    -> clear p
-  Local' _ p -> clear p
-  Loop' p _  -> clear p
-  And' p q   -> Seq (clear p) (clear q)
-  Or' p q    -> Seq (clear p) (clear q)
-  _          -> error "clear: invalid clear"
+  AwaitExt _  -> Nop
+  AwaitInt _  -> Nop
+  Every _ _   -> Nop
+  CanRun _    -> Nop
+  Fin p       -> p
+  Seq p _     -> clear p
+  Locals' _ p -> clear p
+  Loop' p _   -> clear p
+  And' p q    -> Seq (clear p) (clear q)
+  Or' p q     -> Seq (clear p) (clear q)
+  _           -> error "clear: invalid clear"
 
 -- Helper function used by nst1 in the *-adv rules.
 nst1Adv :: Desc -> (Stmt -> Stmt) -> Env -> Desc
@@ -156,20 +156,20 @@ nst1Adv d f env = (f p, n, e)
 -- (pg 6)
 nst1 :: Desc -> Env -> Desc
 
-nst1 (Local vars p, n, Nothing) _           -- block
-  = (Local' (map (\v->(v,Nothing)) vars) p, n, Nothing)
+nst1 (Locals vars p, n, Nothing) _           -- block
+  = (Locals' (map (\v->(v,Nothing)) vars) p, n, Nothing)
 
-nst1 (Local' _ Nop, n, Nothing) _           -- block'-nop
+nst1 (Locals' _ Nop, n, Nothing) _           -- block'-nop
   = (Nop, n, Nothing)
 
-nst1 (Local' env' p, n, Nothing) env =
-  let p1 = (Local' env' p)
+nst1 (Locals' env' p, n, Nothing) env =
+  let p1 = (Locals' env' p)
       p2 = f1 p1 env
   in
     if p1 /= p2 then    -- block'-write
       (p2, n, Nothing)
     else                -- block'-adv
-      nst1Adv (p, n, Nothing) (\p' -> Local' env' p') (env'++env)
+      nst1Adv (p, n, Nothing) (\p' -> Locals' env' p') (env'++env)
   where
     f1 :: Stmt -> Env -> Stmt
     f1 p env =
@@ -196,14 +196,14 @@ nst1 (Local' env' p, n, Nothing) env =
         Nothing   -> v2
         otherwise -> v1
 
-    f2 (Local' env' p) env =
+    f2 (Locals' env' p) env =
       case (f2 p (env'++env)) of
-        (p', Nothing)       -> (Local' env' p', Nothing)
+        (p', Nothing)       -> (Locals' env' p', Nothing)
         (p', Just (id,val)) ->
           if (envHas id env') then
-            (Local' ((id, Just val):env') p', Nothing)
+            (Locals' ((id, Just val):env') p', Nothing)
           else
-            (Local' env' p', Just (id,val))
+            (Locals' env' p', Just (id,val))
 
     f2 p _ = (p, Nothing)
 
@@ -315,7 +315,7 @@ bcast e stmt = case stmt of
   Loop' p q             -> Loop' (bcast e p) q
   And' p q              -> And' (bcast e p) (bcast e q)
   Or' p q               -> Or' (bcast e p) (bcast e q)
-  Local' env p          -> Local' env (bcast e p)
+  Locals' env p         -> Locals' env (bcast e p)
   _                     -> stmt -- nothing to do
 
 -- (pg 6)
@@ -355,7 +355,7 @@ countMaxEmits stmt = case stmt of
   Seq Break q                    -> 0
   Seq (AwaitExt e) q             -> 0
   Seq p q                        -> cME p + cME q
-  Local' _ p                     -> cME p
+  Locals' _ p                    -> cME p
   Loop' p q | checkLoop (Loop p) -> cME p         -- q is unreachable
             | otherwise          -> cME p + cME q
   And' p q                       -> cME p + cME q -- CHECK THIS! --
@@ -399,11 +399,11 @@ reaction (p, e) = p'
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
 evalProg :: G.Stmt -> [ID_Evt] -> Val
-evalProg prog hist = evalProg' (Local ["ret"] (Seq (fromGrammar prog) (AwaitExt inputForever))) (inputBoot:hist)
+evalProg prog hist = evalProg' (Locals ["ret"] (Seq (fromGrammar prog) (AwaitExt inputForever))) (inputBoot:hist)
   where                         -- enclosing block with "ret" that never terminates
     evalProg' :: Stmt -> [ID_Evt] -> Val
     evalProg' prog hist = case prog of
-      (Local' env (AwaitExt inputForever))
+      (Locals' env (AwaitExt inputForever))
           | null hist -> envRead "ret" env  -- done
           | otherwise -> error "evalProg: pending inputs"
       p   | null hist -> (trace (show p) error "evalProg: program didn't terminate")

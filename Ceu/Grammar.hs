@@ -5,7 +5,7 @@ import Text.Printf
 
 -- Program (pg 5).
 data Stmt
-  = Local [ID_Var] Stmt         -- declaration block
+  = Locals [ID_Var] Stmt        -- declaration block
   | Write ID_Var Expr           -- assignment statement
   | AwaitExt ID_Evt             -- await external event
   | AwaitInt ID_Evt             -- await internal event
@@ -29,8 +29,8 @@ infixr 0 `And`                  -- `And` associates to the right
 -- Shows program.
 showProg :: Stmt -> String
 showProg stmt = case stmt of
-  Local vars p | null vars -> printf "{%s}" (sP p)
-               | otherwise -> printf "{%s: %s}" (sV vars) (sP p)
+  Locals vars p | null vars -> printf "{%s}" (sP p)
+                | otherwise -> printf "{%s: %s}" (sV vars) (sP p)
   Write var expr -> printf "%s=%s" var (sE expr)
   AwaitExt e     -> printf "?E%d" e
   AwaitInt e     -> printf "?%d" e
@@ -53,15 +53,15 @@ showProg stmt = case stmt of
 -- Checks if program is valid.
 checkProg :: Stmt -> Bool
 checkProg stmt = case stmt of
-  Local _ p -> checkProg p
-  If _ p q  -> checkProg p && checkProg q
-  Seq p q   -> checkProg p && checkProg q
-  Loop p    -> checkLoop (Loop p) && checkProg p
-  Every e p -> checkEvery (Every e p) && checkProg p
-  And p q   -> checkProg p && checkProg q
-  Or p q    -> checkProg p && checkProg q
-  Fin p     -> checkFin (Fin p) && checkProg p
-  _         -> True
+  Locals _ p -> checkProg p
+  If _ p q   -> checkProg p && checkProg q
+  Seq p q    -> checkProg p && checkProg q
+  Loop p     -> checkLoop (Loop p) && checkProg p
+  Every e p  -> checkEvery (Every e p) && checkProg p
+  And p q    -> checkProg p && checkProg q
+  Or p q     -> checkProg p && checkProg q
+  Fin p      -> checkFin (Fin p) && checkProg p
+  _          -> True
 
 -- Receives a Loop statement and checks whether all execution paths
 -- in its body lead to an occurrence of a matching-Break/AwaitExt/Every.
@@ -74,7 +74,7 @@ checkLoop loop = case loop of
       AwaitExt _ -> True
       Break      -> not ignBrk
       Every _ _  -> True
-      Local _ p  -> cL ignBrk p
+      Locals _ p -> cL ignBrk p
       If _ p q   -> cL ignBrk p && cL ignBrk q
       Seq p q    -> cL ignBrk p || cL ignBrk q
       Loop p     -> cL True p
@@ -98,7 +98,7 @@ checkFin finOrEvery = case finOrEvery of
       Every _ _  -> False
       Fin _      -> False
       Loop _     -> False
-      Local _ p  -> cF p
+      Locals _ p -> cF p
       If _ p q   -> cF p && cF q
       Seq p q    -> cF p && cF q
       And p q    -> cF p && cF q

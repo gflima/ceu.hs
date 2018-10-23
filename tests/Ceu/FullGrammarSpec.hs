@@ -30,50 +30,50 @@ spec = do
       `shouldThrow` errorCall "remVar: expected enclosing top-level block"
 
     it "var x;" $ do
-      remVar (Local (Var "x"))
-      `shouldBe` (Local' ["x"] Nop')
+      remVar (Locals (Var "x"))
+      `shouldBe` (Locals' ["x"] Nop')
 
     it "x = 1;" $ do
-      remVar (Local (Write "x" (Const 1)))
-      `shouldBe` (Local' [] (Write "x" (Const 1)))
+      remVar (Locals (Write "x" (Const 1)))
+      `shouldBe` (Locals' [] (Write "x" (Const 1)))
 
     it "var x; x = 1" $ do
-      remVar (Local (Seq (Var "x") (Write "x" (Const 1))))
-      `shouldBe` (Local' ["x"] (Seq Nop' (Write "x" (Const 1))))
+      remVar (Locals (Seq (Var "x") (Write "x" (Const 1))))
+      `shouldBe` (Locals' ["x"] (Seq Nop' (Write "x" (Const 1))))
 
     it "var x || x = 1" $ do
-      remVar (Local (Or (Var "x") (Write "x" (Const 1))))
-      `shouldBe` (Local' ["x"] (Or Nop' (Write "x" (Const 1))))
+      remVar (Locals (Or (Var "x") (Write "x" (Const 1))))
+      `shouldBe` (Locals' ["x"] (Or Nop' (Write "x" (Const 1))))
 
     it "do var x; x = 1 end" $ do
-      remVar (Local (Local (Seq (Var "x") (Write "x" (Const 1)))))
-      `shouldBe` (Local' [] (Local' ["x"] (Seq Nop' (Write "x" (Const 1)))))
+      remVar (Locals (Locals (Seq (Var "x") (Write "x" (Const 1)))))
+      `shouldBe` (Locals' [] (Locals' ["x"] (Seq Nop' (Write "x" (Const 1)))))
 
   --------------------------------------------------------------------------
   describe "remFin" $ do
 
     it "var x; fin x with nop; nop" $ do
-      remFin (Local' ["x"] (Seq (Fin (Just "x") Nop') Nop'))
-      `shouldBe` (Local' ["x"] (Or (Fin' (Seq Nop' Nop')) Nop'))
+      remFin (Locals' ["x"] (Seq (Fin (Just "x") Nop') Nop'))
+      `shouldBe` (Locals' ["x"] (Or (Fin' (Seq Nop' Nop')) Nop'))
 
     it "var x; { fin x with nop; nop }" $ do
-      remFin (Local' ["x"] (Local' [] (Seq (Fin (Just "x") Nop') Nop')))
-      `shouldBe` (Local' ["x"] (Or (Fin' (Seq Nop' Nop')) (Local' [] Nop')))
+      remFin (Locals' ["x"] (Locals' [] (Seq (Fin (Just "x") Nop') Nop')))
+      `shouldBe` (Locals' ["x"] (Or (Fin' (Seq Nop' Nop')) (Locals' [] Nop')))
 
     it "var x; { fin x with x=1; fin with x=2; x=3 }" $ do
-      remFin (Local' ["x"] (Local' [] (Seq (Fin (Just "x") (Write "x" (Const 1))) (Seq (Fin Nothing (Write "x" (Const 2))) (Write "x" (Const 3))))))
-      `shouldBe` (Local' ["x"] (Or (Fin' (Seq (Write "x" (Const 1)) Nop')) (Local' [] (Or (Fin' (Write "x" (Const 2))) (Write "x" (Const 3))))))
+      remFin (Locals' ["x"] (Locals' [] (Seq (Fin (Just "x") (Write "x" (Const 1))) (Seq (Fin Nothing (Write "x" (Const 2))) (Write "x" (Const 3))))))
+      `shouldBe` (Locals' ["x"] (Or (Fin' (Seq (Write "x" (Const 1)) Nop')) (Locals' [] (Or (Fin' (Write "x" (Const 2))) (Write "x" (Const 3))))))
 
     it "var x; { fin x with x=1; fin x with y=1; y=3 }" $ do
-      remFin (Local' ["x"] (Local' [] (
+      remFin (Locals' ["x"] (Locals' [] (
                 (Fin (Just "x") (Write "x" (Const 1))) `Seq`
                 (Fin (Just "x") (Write "y" (Const 1))) `Seq`
                 (Write "y" (Const 3))
              )))
-      `shouldBe` (Local' ["x"] (Or (Fin' (Seq (Write "y" (Const 1)) (Seq (Write "x" (Const 1)) Nop'))) (Local' [] (Write "y" (Const 3)))))
+      `shouldBe` (Locals' ["x"] (Or (Fin' (Seq (Write "y" (Const 1)) (Seq (Write "x" (Const 1)) Nop'))) (Locals' [] (Write "y" (Const 3)))))
 
     it "var x; nop; { fin x with x=1; fin with x=2; x=3; fin x with y=1; fin with y=2; y=3 }; nop" $ do
-      remFin (Local' ["x"] (Seq Nop' (Seq (Local' [] (
+      remFin (Locals' ["x"] (Seq Nop' (Seq (Locals' [] (
                 (Fin (Just "x") (Write "x" (Const 1))) `Seq`
                 (Fin Nothing    (Write "x" (Const 2))) `Seq`
                 (Write "x" (Const 3))                  `Seq`
@@ -81,7 +81,7 @@ spec = do
                 (Fin Nothing    (Write "y" (Const 2))) `Seq`
                 (Write "y" (Const 3))
              )) Nop')))
-      `shouldBe` (Local' ["x"] (Or (Fin' (Seq (Write "y" (Const 1)) (Seq (Write "x" (Const 1)) Nop'))) (Seq Nop' (Seq (Local' [] (Or (Fin' (Write "x" (Const 2))) (Seq (Write "x" (Const 3)) (Or (Fin' (Write "y" (Const 2))) (Write "y" (Const 3)))))) Nop'))))
+      `shouldBe` (Locals' ["x"] (Or (Fin' (Seq (Write "y" (Const 1)) (Seq (Write "x" (Const 1)) Nop'))) (Seq Nop' (Seq (Locals' [] (Or (Fin' (Write "x" (Const 2))) (Seq (Write "x" (Const 3)) (Or (Fin' (Write "y" (Const 2))) (Write "y" (Const 3)))))) Nop'))))
 
   --------------------------------------------------------------------------
   describe "remSpawn" $ do
@@ -132,20 +132,20 @@ spec = do
 
     it "var x;" $ do
       toGrammar (Var "x")
-      `shouldBe` (G.Local ["x"] G.Nop)
+      `shouldBe` (G.Locals ["x"] G.Nop)
 
     it "do var x; x = 1 end" $ do
-      toGrammar (Local (Seq (Var "x") (Write "x" (Const 1))))
-      `shouldBe` G.Local [] (G.Local ["x"] (G.Seq G.Nop (G.Write "x" (Const 1))))
+      toGrammar (Locals (Seq (Var "x") (Write "x" (Const 1))))
+      `shouldBe` G.Locals [] (G.Locals ["x"] (G.Seq G.Nop (G.Write "x" (Const 1))))
 
     it "spawn do await A; end ;; await B; var x; await FOREVER;" $ do
       toGrammar (Seq (Spawn (AwaitExt 0)) (Seq (AwaitExt 1) (Seq (Var "x") AwaitFor)))
-      `shouldBe` (G.Local ["x"] (G.Or (G.Seq (G.AwaitExt 0) (G.AwaitExt inputForever)) (G.Seq (G.AwaitExt 1) (G.Seq G.Nop (G.AwaitExt inputForever)))))
+      `shouldBe` (G.Locals ["x"] (G.Or (G.Seq (G.AwaitExt 0) (G.AwaitExt inputForever)) (G.Seq (G.AwaitExt 1) (G.Seq G.Nop (G.AwaitExt inputForever)))))
 
 
     it "spawn do async ret++ end ;; await F;" $ do
       toGrammar (Seq (Spawn (Async (Loop (Write "x" (Add (Read "x") (Const 1)))))) (AwaitExt 0))
-      `shouldBe` (G.Local [] (G.Or (G.Seq (G.Loop (G.Seq (G.Write "x" (Add (Read "x") (Const 1))) (G.AwaitExt (-3)))) (G.AwaitExt (-2))) (G.AwaitExt 0)))
+      `shouldBe` (G.Locals [] (G.Or (G.Seq (G.Loop (G.Seq (G.Write "x" (Add (Read "x") (Const 1))) (G.AwaitExt (-3)))) (G.AwaitExt (-2))) (G.AwaitExt 0)))
 
   --------------------------------------------------------------------------
   describe "evalFullProg" $ do

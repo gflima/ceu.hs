@@ -22,8 +22,8 @@ spec = do
     checkLoopIt (Loop (Error ""))                  False
 
     -- compound statements --
-    checkLoopIt (Loop (Local  [] (Local  [] Break)))             True
-    checkLoopIt (Loop (Local  [] (Local  [] Nop)))               False
+    checkLoopIt (Loop (Locals  [] (Locals  [] Break)))           True
+    checkLoopIt (Loop (Locals  [] (Locals  [] Nop)))             False
 
     checkLoopIt (Loop (If (Const 0) Break Nop))                  False
     checkLoopIt (Loop (If (Const 0) (Fin Nop) Nop))              False
@@ -64,8 +64,8 @@ spec = do
     checkFinIt (Fin (Error ""))            True
 
     -- compound statements --
-    checkFinIt (Fin (Local [] Nop))                               True
-    checkFinIt (Fin (Local [] (Every 0 Nop)))                     False
+    checkFinIt (Fin (Locals [] Nop))                              True
+    checkFinIt (Fin (Locals [] (Every 0 Nop)))                    False
     checkFinIt (Fin (If (Const 0) (Loop Break) (Nop)))            False
     checkFinIt (Fin (If (Const 0) (Write "x" (Const 0)) (Nop)))   True
     checkFinIt (Fin (Nop `Seq` Nop `Seq` (AwaitExt 0) `Seq` Nop)) False
@@ -87,7 +87,7 @@ spec = do
     checkProgIt (Error "")            True
 
     -- compound statements --
-    checkProgIt (Local [] Nop)           True
+    checkProgIt (Locals [] Nop)           True
     checkProgIt (If (Const 0) Nop Break) True
     checkProgIt (Seq Break Nop)          True
     checkProgIt (Loop Break)             True
@@ -102,7 +102,7 @@ spec = do
     -- misc --
     checkProgIt (Nop `Seq` (Fin (Loop Break)))                      False
     checkProgIt (Nop `Seq` (Fin (Loop Nop)))                        False
-    checkProgIt (Local [] (Fin (Every 0 Nop)))                      False
+    checkProgIt (Locals [] (Fin (Every 0 Nop)))                     False
     checkProgIt (Loop (Loop Break))                                 False
     checkProgIt (Loop (Loop (Seq Break Break)))                     False
     checkProgIt (AwaitInt 0 `Seq` (Fin Break) `Or` Nop)             False
