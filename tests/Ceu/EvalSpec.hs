@@ -242,7 +242,7 @@ spec = do
         forceEval (nst1 (Seq (Seq Nop Nop) Nop, 0, Just 1) [])
         `shouldThrow` errorCall "nst1: cannot advance"
 
-      it "fail: isLocaled p (cannot advance)" $
+      it "fail: isBlocked p (cannot advance)" $
         forceEval (nst1 (Seq (Fin Nop) Nop, 0, Nothing) [])
         `shouldThrow` errorCall "nst1: cannot advance"
 
@@ -276,7 +276,7 @@ spec = do
         forceEval (nst1 (Loop Nop, 0, Just 1) [])
         `shouldThrow` errorCall "nst1: cannot advance"
 
-      it "fail: isLocaled p (cannot advance)" $
+      it "fail: isBlocked p (cannot advance)" $
         nst1 (Loop (Fin Nop), 0, Nothing) []
         `shouldBe` (Loop' (Fin Nop) (Fin Nop), 0, Nothing)
 
@@ -294,7 +294,7 @@ spec = do
         forceEval (nst1 (Loop' Nop Nop, 0, Just 1) [])
         `shouldThrow` errorCall "nst1: cannot advance"
 
-      it "pass: isLocaled q" $
+      it "pass: isBlocked q" $
         nst1 (Loop' Nop (Fin Nop), 0, Nothing) []
         `shouldBe` (Loop (Fin Nop), 0, Nothing)
 
@@ -312,7 +312,7 @@ spec = do
         forceEval (nst1 (Loop' Break Nop, 0, Just 1) [])
         `shouldThrow` errorCall "nst1: cannot advance"
 
-      it "pass: isLocaled q" $
+      it "pass: isBlocked q" $
         nst1 (Loop' Break (Fin Nop), 0, Nothing) []
         `shouldBe` (Nop, 0, Nothing)
 
@@ -330,11 +330,11 @@ spec = do
         forceEval (nst1 (Loop' (Seq Nop Nop) Nop, 0, Just 1) [])
         `shouldThrow` errorCall "nst1: cannot advance"
 
-      it "fail: isLocaled p (cannot advance)" $
+      it "fail: isBlocked p (cannot advance)" $
         forceEval (nst1 (Loop' (Fin Nop) Nop, 0, Nothing) [])
         `shouldThrow` errorCall "nst1: cannot advance"
 
-      it "pass: not (isLocaled p) && isLocaled q" $
+      it "pass: not (isBlocked p) && isBlocked q" $
         nst1 (Loop' (Seq Nop Nop) (Fin Nop), 0, Nothing) []
         `shouldBe` (Loop' Nop (Fin Nop), 0, Nothing)
 
@@ -354,17 +354,17 @@ spec = do
         forceEval (nst1 (And Nop Nop, 0, Just 1) [])
         `shouldThrow` errorCall "nst1: cannot advance"
 
-      it "pass: isLocaled p && not (isLocaled q)" $
+      it "pass: isBlocked p && not (isBlocked q)" $
         nst1 (And (Fin Nop) Nop, 0, Nothing) []
         `shouldBe` (And' (Fin Nop) (Seq (CanRun 0) Nop),
                      0, Nothing)
 
-      it "pass: not (isLocaled p) && isLocaled q" $
+      it "pass: not (isBlocked p) && isBlocked q" $
         nst1 (And Nop (Fin Nop), 0, Nothing) []
         `shouldBe` (And' Nop (Seq (CanRun 0) (Fin Nop)),
                      0, Nothing)
 
-      it "pass: isLocaled p && isLocaled q" $
+      it "pass: isBlocked p && isBlocked q" $
         nst1 (And (Fin Nop) (Fin Nop), 0, Nothing) []
         `shouldBe` (And' (Fin Nop) (Seq (CanRun 0) (Fin Nop)),
                      0, Nothing)
@@ -383,7 +383,7 @@ spec = do
         forceEval (nst1 (And' Nop Nop, 0, Just 1) [])
         `shouldThrow` errorCall "nst1: cannot advance"
 
-      it "pass: isLocaled q" $
+      it "pass: isBlocked q" $
         nst1 (And' Nop (Fin Nop), 0, Nothing) []
         `shouldBe` (Fin Nop, 0, Nothing)
 
@@ -415,14 +415,14 @@ spec = do
         forceEval (nst1 (And' Break (Local [] Nop), 0, Just 1) [])
         `shouldThrow` errorCall "nst1: cannot advance"
 
-      it "pass: isLocaled q" $
+      it "pass: isBlocked q" $
         let q = Fin (Seq Nop Nop) in
           (clear q `shouldBe` (Seq Nop Nop))
           >>                    -- clear q == Nop; Nop
           (nst1 (And' Break q, 0, Nothing) []
             `shouldBe` (Seq (clear q) Break, 0, Nothing))
 
-      it "pass: isLocaled q (nontrivial clear)" $
+      it "pass: isBlocked q (nontrivial clear)" $
         let q = Or' (AwaitExt 0 `Seq` Fin Nop)
                     (And' (Fin (EmitInt 1))
                           (Or' (Fin (EmitInt 2 `Seq` EmitInt 3))
@@ -444,11 +444,11 @@ spec = do
 
     -- and-nop2 --
     describe "(And' p Nop)" $ do
-      it "pass: lvl == 0 && isLocaled p" $
+      it "pass: lvl == 0 && isBlocked p" $
         nst1 (And' (Fin Nop) Nop, 0, Nothing) []
         `shouldBe` (Fin Nop, 0, Nothing)
 
-      it "pass: lvl > 0 && isLocaled p" $
+      it "pass: lvl > 0 && isBlocked p" $
         nst1 (And' (Seq (Fin Nop) Nop) Nop, 3, Nothing) []
         `shouldBe` (Seq (Fin Nop) Nop, 3, Nothing)
 
@@ -466,14 +466,14 @@ spec = do
 
     -- and-brk2 --
     describe "(And' p Break)" $ do
-      it "pass: lvl == 0 && isLocaled p" $
+      it "pass: lvl == 0 && isBlocked p" $
         let p = (AwaitInt 1) in
           (clear p `shouldBe` Nop)
           >>                    -- clear p == Nop
           (nst1 (And' p Break, 0, Nothing) []
            `shouldBe` (Seq (clear p) Break, 0, Nothing))
 
-      it "pass: lvl > 0 && isLocaled p" $
+      it "pass: lvl > 0 && isBlocked p" $
         let p = Fin (Seq Nop Nop) in
           (clear p `shouldBe` (Seq Nop Nop))
           >>
@@ -484,7 +484,7 @@ spec = do
         forceEval (nst1 (And' (Fin Nop) Break, 0, Just 1) [])
         `shouldThrow` errorCall "nst1: cannot advance"
 
-      it "pass: isLocaled p (nontrivial clear)" $
+      it "pass: isBlocked p (nontrivial clear)" $
         let p = Or' (AwaitExt 0 `Seq` Fin Nop)
                     (And' (Fin (EmitInt 1))
                           (Or' (Fin (EmitInt 2 `Seq` EmitInt 3))
@@ -521,17 +521,17 @@ spec = do
                          0, Just 1) [])
         `shouldThrow` errorCall "nst1: cannot advance"
 
-      it "pass: isLocaled p && not (isLocaled q)" $
+      it "pass: isBlocked p && not (isBlocked q)" $
         nst1 (And' (Fin Nop) (Seq (EmitInt 8) Nop),
                3, Nothing) []
         `shouldBe` (And' (Fin Nop) (Seq (CanRun 3) Nop),
                      3, Just 8)
 
-      it "pass: not (isLocaled p) && isLocaled q" $
+      it "pass: not (isBlocked p) && isBlocked q" $
         nst1 (And' (EmitInt 8) (AwaitInt 8), 3, Nothing) []
         `shouldBe` (And' (CanRun 3) (AwaitInt 8), 3, Just 8)
 
-      it "fail: isLocaled p && isLocaled q (cannot advance)" $
+      it "fail: isBlocked p && isBlocked q (cannot advance)" $
         forceEval (nst1 (And' (AwaitInt 3) (AwaitInt 4),
                           0, Nothing) [])
         `shouldThrow` errorCall "nst1: cannot advance"
@@ -551,15 +551,15 @@ spec = do
         forceEval (nst1 (Or Nop Nop, 0, Just 1) [])
         `shouldThrow` errorCall "nst1: cannot advance"
 
-      it "pass: isLocaled p && not (isLocaled q)" $
+      it "pass: isBlocked p && not (isBlocked q)" $
         nst1 (Or (Fin Nop) Nop, 0, Nothing) []
         `shouldBe` (Or' (Fin Nop) (Seq (CanRun 0) Nop), 0, Nothing)
 
-      it "pass: not (isLocaled p) && isLocaled q" $
+      it "pass: not (isBlocked p) && isBlocked q" $
         nst1 (Or Nop (Fin Nop), 0, Nothing) []
         `shouldBe` (Or' Nop (Seq (CanRun 0) (Fin Nop)), 0, Nothing)
 
-      it "pass: isLocaled p && isLocaled q" $
+      it "pass: isBlocked p && isBlocked q" $
         nst1 (Or (Fin Nop) (Fin Nop), 0, Nothing) []
         `shouldBe` (Or' (Fin Nop) (Seq (CanRun 0) (Fin Nop)), 0, Nothing)
 
@@ -583,14 +583,14 @@ spec = do
         forceEval (nst1 (Or' Nop Nop, 0, Just 1) [])
         `shouldThrow` errorCall "nst1: cannot advance"
 
-      it "pass: isLocaled q" $
+      it "pass: isBlocked q" $
         let q = (Fin Nop) in
           (clear q `shouldBe` Nop)
           >>                    -- clear q == Nop
           (nst1 (Or' Nop q, 0, Nothing) []
            `shouldBe` (clear q, 0, Nothing))
 
-      it "pass: isLocaled q (nontrivial clear)" $
+      it "pass: isBlocked q (nontrivial clear)" $
         let q = Or' (AwaitExt 0 `Seq` Fin Nop)
                     (And' (Fin (EmitInt 1))
                           (Or' (Fin (EmitInt 2 `Seq` EmitInt 3))
@@ -630,14 +630,14 @@ spec = do
         forceEval (nst1 (Or' Break Nop, 0, Just 1) [])
         `shouldThrow` errorCall "nst1: cannot advance"
 
-      it "pass: isLocaled q" $
+      it "pass: isBlocked q" $
         let q = Fin (Seq Nop Nop) in
           (clear q `shouldBe` (Seq Nop Nop))
           >>                    -- clear q == Nop; Nop
           (nst1 (Or' Break q, 0, Nothing) []
            `shouldBe` (Seq (clear q) Break, 0, Nothing))
 
-      it "pass: isLocaled q (nontrivial clear)" $
+      it "pass: isBlocked q (nontrivial clear)" $
         let q = Or' (AwaitExt 0 `Seq` Fin Nop)
                     (And' (Fin (EmitInt 1))
                           (Or' (Fin (EmitInt 2 `Seq` EmitInt 3))
@@ -659,14 +659,14 @@ spec = do
 
     -- or-nop2 --
     describe "(Or' p Nop)" $ do
-      it "pass: lvl == 0 && isLocaled p" $
+      it "pass: lvl == 0 && isBlocked p" $
         let p = (Fin Nop) in
           (clear p `shouldBe` Nop)
           >>                    -- clear p == Nop
           (nst1 (Or' p Nop, 0, Nothing) []
             `shouldBe` (clear p, 0, Nothing))
 
-      it "pass: lvl > 0 && isLocaled p" $
+      it "pass: lvl > 0 && isBlocked p" $
         let p = Seq (Fin Nop) Nop in
           (clear p `shouldBe` Nop)
           >>                    -- clear p == Nop
@@ -687,14 +687,14 @@ spec = do
 
     -- or-brk2 --
     describe "(Or' p Break)" $ do
-      it "pass: lvl == 0 && isLocaled p" $
+      it "pass: lvl == 0 && isBlocked p" $
         let p = (AwaitInt 1) in
           (clear p `shouldBe` Nop)
           >>                    -- clear p == Nop
           (nst1 (Or' p Break, 0, Nothing) []
            `shouldBe` (Seq (clear p) Break, 0, Nothing))
 
-      it "pass: lvl > 0 && isLocaled p" $
+      it "pass: lvl > 0 && isBlocked p" $
         let p = Fin (Seq Nop Nop) in
           (clear p `shouldBe` Seq Nop Nop)
           >>                    -- clear p == Nop; Nop
@@ -705,7 +705,7 @@ spec = do
         forceEval (nst1 (Or' (Fin Nop) Break, 0, Just 1) [])
         `shouldThrow` errorCall "nst1: cannot advance"
 
-      it "pass: isLocaled p (nontrivial clear)" $
+      it "pass: isBlocked p (nontrivial clear)" $
         let p = Or' (AwaitExt 0 `Seq` Fin Nop)
                     (And' (Fin (EmitInt 1))
                           (Or' (Fin (EmitInt 2 `Seq` EmitInt 3))
@@ -742,15 +742,15 @@ spec = do
                           0, Just 1) [])
         `shouldThrow` errorCall "nst1: cannot advance"
 
-      it "pass: isLocaled p && not (isLocaled q)" $
+      it "pass: isBlocked p && not (isBlocked q)" $
         nst1 (Or' (Fin Nop) (Seq (EmitInt 8) Nop), 3, Nothing) []
         `shouldBe` (Or' (Fin Nop) (Seq (CanRun 3) Nop), 3, Just 8)
 
-      it "pass: not (isLocaled p) && isLocaled q" $
+      it "pass: not (isBlocked p) && isBlocked q" $
         nst1 (Or' (EmitInt 8) (AwaitInt 8), 3, Nothing) []
         `shouldBe` (Or' (CanRun 3) (AwaitInt 8), 3, Just 8)
 
-      it "fail: isLocaled p && isLocaled q (cannot advance)" $
+      it "fail: isBlocked p && isBlocked q (cannot advance)" $
         forceEval (nst1 (Or' (AwaitInt 3) (AwaitInt 4),
                           0, Nothing) [])
         `shouldThrow` errorCall "nst1: cannot advance"
