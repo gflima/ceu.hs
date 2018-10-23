@@ -42,33 +42,33 @@ envEval expr env = case expr of
 -- (pg 8, fig 4.ii)
 isBlocked :: Lvl -> Stmt -> Bool
 isBlocked n stmt = case stmt of
-  AwaitExt e -> True
-  AwaitInt e -> True
-  Every e p  -> True
-  CanRun m   -> n > m
-  Fin p      -> True
-  Seq p q    -> isBlocked n p
-  Local' _ p -> isBlocked n p
-  Loop' p q  -> isBlocked n p
-  And' p q   -> isBlocked n p && isBlocked n q
-  Or' p q    -> isBlocked n p && isBlocked n q
-  _          -> False
+  AwaitExt e  -> True
+  AwaitInt e  -> True
+  Every e p   -> True
+  CanRun m    -> n > m
+  Fin p       -> True
+  Seq p q     -> isBlocked n p
+  Locals' _ p -> isBlocked n p
+  Loop' p q   -> isBlocked n p
+  And' p q    -> isBlocked n p && isBlocked n q
+  Or' p q     -> isBlocked n p && isBlocked n q
+  _           -> False
 
 -- Obtains the body of all active Fin statements in program.
 -- (pg 8, fig 4.iii)
 clear :: Stmt -> Stmt
 clear stmt = case stmt of
-  AwaitExt _ -> Nop
-  AwaitInt _ -> Nop
-  Every _ _  -> Nop
-  CanRun _   -> Nop
-  Fin p      -> p
-  Seq p _    -> clear p
-  Local' _ p -> clear p
-  Loop' p _  -> clear p
-  And' p q   -> Seq (clear p) (clear q)
-  Or' p q    -> Seq (clear p) (clear q)
-  _          -> error "clear: invalid clear"
+  AwaitExt _  -> Nop
+  AwaitInt _  -> Nop
+  Every _ _   -> Nop
+  CanRun _    -> Nop
+  Fin p       -> p
+  Seq p _     -> clear p
+  Locals' _ p -> clear p
+  Loop' p _   -> clear p
+  And' p q    -> Seq (clear p) (clear q)
+  Or' p q     -> Seq (clear p) (clear q)
+  _           -> error "clear: invalid clear"
 
 -- Helper function used by nst1 in the *-adv rules.
 nst1Adv :: Desc -> (Stmt -> Stmt) -> Env -> Desc
@@ -80,20 +80,20 @@ nst1Adv d f env = (f p, n, e)
 -- (pg 6)
 nst1 :: Desc -> Env -> Desc
 
-nst1 (Local vars p, n, Nothing) _           -- block
-  = (Local' (map (\v->(v,Nothing)) vars) p, n, Nothing)
+nst1 (Locals vars p, n, Nothing) _           -- block
+  = (Locals' (map (\v->(v,Nothing)) vars) p, n, Nothing)
 
-nst1 (Local' _ Nop, n, Nothing) _           -- block'-nop
+nst1 (Locals' _ Nop, n, Nothing) _           -- block'-nop
   = (Nop, n, Nothing)
 
-nst1 (Local' env' p, n, Nothing) env =
-  let p1 = (Local' env' p)
+nst1 (Locals' env' p, n, Nothing) env =
+  let p1 = (Locals' env' p)
       p2 = f1 p1 env
   in
     if p1 /= p2 then    -- block'-write
       (p2, n, Nothing)
     else                -- block'-adv
-      nst1Adv (p, n, Nothing) (\p' -> Local' env' p') (env'++env)
+      nst1Adv (p, n, Nothing) (\p' -> Locals' env' p') (env'++env)
   where
     f1 :: Stmt -> Env -> Stmt
     f1 p env =
@@ -120,14 +120,14 @@ nst1 (Local' env' p, n, Nothing) env =
         Nothing   -> v2
         otherwise -> v1
 
-    f2 (Local' env' p) env =
+    f2 (Locals' env' p) env =
       case (f2 p (env'++env)) of
-        (p', Nothing)       -> (Local' env' p', Nothing)
+        (p', Nothing)       -> (Locals' env' p', Nothing)
         (p', Just (id,val)) ->
           if (envHas id env') then
-            (Local' ((id, Just val):env') p', Nothing)
+            (Locals' ((id, Just val):env') p', Nothing)
           else
-            (Local' env' p', Just (id,val))
+            (Locals' env' p', Just (id,val))
 
     f2 p _ = (p, Nothing)
 
@@ -239,7 +239,7 @@ bcast e stmt = case stmt of
   Loop' p q             -> Loop' (bcast e p) q
   And' p q              -> And' (bcast e p) (bcast e q)
   Or' p q               -> Or' (bcast e p) (bcast e q)
-  Local' env p          -> Local' env (bcast e p)
+  Locals' env p         -> Locals' env (bcast e p)
   _                     -> stmt -- nothing to do
 
 -- (pg 6)
@@ -293,11 +293,11 @@ reaction (p, e) = p'
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
 evalProg :: Stmt -> [Evt] -> Val
-evalProg prog hist = evalProg' (Local ["ret"] (Seq prog (AwaitExt inputForever))) (inputBoot:hist)
+evalProg prog hist = evalProg' (Locals ["ret"] (Seq prog (AwaitExt inputForever))) (inputBoot:hist)
   where                         -- enclosing block with "ret" that never terminates
     evalProg' :: Stmt -> [Evt] -> Val
     evalProg' prog hist = case prog of
-      (Local' env (AwaitExt inputForever))
+      (Locals' env (AwaitExt inputForever))
           | null hist -> envRead "ret" env  -- done
           | otherwise -> error "evalProg: pending inputs"
       p   | null hist -> (trace (show p) error "evalProg: program didn't terminate")

@@ -35,7 +35,7 @@ infixl 7 `Div`                  -- `Div` associates to the left
 
 -- Program (pg 5).
 data Stmt
-  = Local [ID] Stmt             -- declaration block
+  = Locals [ID] Stmt            -- declaration block
   | Write ID Expr               -- assignment statement
   | AwaitExt Evt                -- await external event
   | AwaitInt Evt                -- await internal event
@@ -51,7 +51,7 @@ data Stmt
   | Nop                         -- dummy statement (internal)
   | Error String                -- generate runtime error (for testing purposes)
   | CanRun Int                  -- wait for stack level (internal)
-  | Local' Env Stmt             -- block with environment store
+  | Locals' Env Stmt            -- block with environment store
   | Loop' Stmt Stmt             -- unrolled Loop (internal)
   | And' Stmt Stmt              -- unrolled And (internal)
   | Or' Stmt Stmt               -- unrolled Or (internal)
@@ -82,8 +82,8 @@ showVars vars = case vars of
 -- Shows program.
 showProg :: Stmt -> String
 showProg stmt = case stmt of
-  Local vars p | null vars -> printf "{%s}" (sP p)
-               | otherwise -> printf "{%s: %s}" (sV vars) (sP p)
+  Locals vars p | null vars -> printf "{%s}" (sP p)
+                | otherwise -> printf "{%s: %s}" (sV vars) (sP p)
   Write var expr -> printf "%s=%s" var (sE expr)
   AwaitExt e     -> printf "?E%d" e
   AwaitInt e     -> printf "?%d" e
@@ -99,7 +99,7 @@ showProg stmt = case stmt of
   Nop            -> "nop"
   Error _        -> "err"
   CanRun n       -> printf "@canrun(%d)" n
-  Local' env p   -> printf "(TODO)"
+  Locals' env p  -> printf "(TODO)"
   Loop' p q      -> printf "(%s @loop %s)" (sP p) (sP q)
   And' p q       -> printf "(%s @&& %s)" (sP p) (sP q)
   Or' p q        -> printf "(%s @|| %s)" (sP p) (sP q)
@@ -111,19 +111,19 @@ showProg stmt = case stmt of
 -- Checks if program is valid.
 checkProg :: Stmt -> Bool
 checkProg stmt = case stmt of
-  Local _ p -> checkProg p
-  If _ p q  -> checkProg p && checkProg q
-  Seq p q   -> checkProg p && checkProg q
-  Loop p    -> checkLoop (Loop p) && checkProg p
-  Every e p -> checkEvery (Every e p) && checkProg p
-  And p q   -> checkProg p && checkProg q
-  Or p q    -> checkProg p && checkProg q
-  Fin p     -> checkFin (Fin p) && checkProg p
-  Local' _ p -> checkProg p
-  Loop' p q -> checkLoop (Loop' p q) && checkProg q
-  And' p q  -> checkProg p && checkProg q
-  Or' p q   -> checkProg p && checkProg q
-  _         -> True
+  Locals _ p  -> checkProg p
+  If _ p q    -> checkProg p && checkProg q
+  Seq p q     -> checkProg p && checkProg q
+  Loop p      -> checkLoop (Loop p) && checkProg p
+  Every e p   -> checkEvery (Every e p) && checkProg p
+  And p q     -> checkProg p && checkProg q
+  Or p q      -> checkProg p && checkProg q
+  Fin p       -> checkFin (Fin p) && checkProg p
+  Locals' _ p -> checkProg p
+  Loop' p q   -> checkLoop (Loop' p q) && checkProg q
+  And' p q    -> checkProg p && checkProg q
+  Or' p q     -> checkProg p && checkProg q
+  _           -> True
 
 -- Receives a Loop or Loop' statement and checks whether all execution paths
 -- in its body lead to an occurrence of a matching-Break/AwaitExt/Every.
@@ -134,21 +134,21 @@ checkLoop loop = case loop of
   _            -> error "checkLoop: expected Loop or Loop'"
   where
     cL ignBrk stmt = case stmt of
-      AwaitExt _ -> True
-      Break      -> not ignBrk
-      Every _ _  -> True
-      Local _ p  -> cL ignBrk p
-      If _ p q   -> cL ignBrk p && cL ignBrk q
-      Seq p q    -> cL ignBrk p || cL ignBrk q
-      Loop p     -> cL True p
-      And p q    -> cL ignBrk p && cL ignBrk q
-      Or p q     -> cL ignBrk p && cL ignBrk q
-      Fin p      -> False       -- runs in zero time
-      Local' _ p -> cL ignBrk p
-      Loop' p q  -> cL True p && cL True q
-      And' p q   -> cL ignBrk p && cL ignBrk q
-      Or' p q    -> cL ignBrk p && cL ignBrk q
-      _          -> False
+      AwaitExt _  -> True
+      Break       -> not ignBrk
+      Every _ _   -> True
+      Locals _ p  -> cL ignBrk p
+      If _ p q    -> cL ignBrk p && cL ignBrk q
+      Seq p q     -> cL ignBrk p || cL ignBrk q
+      Loop p      -> cL True p
+      And p q     -> cL ignBrk p && cL ignBrk q
+      Or p q      -> cL ignBrk p && cL ignBrk q
+      Fin p       -> False       -- runs in zero time
+      Locals' _ p -> cL ignBrk p
+      Loop' p q   -> cL True p && cL True q
+      And' p q    -> cL ignBrk p && cL ignBrk q
+      Or' p q     -> cL ignBrk p && cL ignBrk q
+      _           -> False
 
 -- Receives a Fin or Every statement and checks whether it does not contain
 -- any occurrences of Loop/Break/Await*/Every/Fin.
@@ -159,22 +159,22 @@ checkFin finOrEvery = case finOrEvery of
   _            -> error "checkFin: expected Fin or Every"
   where
     cF stmt = case stmt of
-      Break      -> False
-      AwaitInt _ -> False
-      AwaitExt _ -> False
-      Every _ _  -> False
-      Fin _      -> False
-      Loop _     -> False
-      Loop' _ _  -> False
-      Local _ p  -> cF p
-      If _ p q   -> cF p && cF q
-      Seq p q    -> cF p && cF q
-      And p q    -> cF p && cF q
-      Or p q     -> cF p && cF q
-      Local' _ p -> cF p
-      And' p q   -> cF p && cF q
-      Or' p q    -> cF p && cF q
-      _          -> True
+      Break       -> False
+      AwaitInt _  -> False
+      AwaitExt _  -> False
+      Every _ _   -> False
+      Fin _       -> False
+      Loop _      -> False
+      Loop' _ _   -> False
+      Locals _ p  -> cF p
+      If _ p q    -> cF p && cF q
+      Seq p q     -> cF p && cF q
+      And p q     -> cF p && cF q
+      Or p q      -> cF p && cF q
+      Locals' _ p -> cF p
+      And' p q    -> cF p && cF q
+      Or' p q     -> cF p && cF q
+      _           -> True
 
 -- Alias for checkFin.
 checkEvery :: Stmt -> Bool
@@ -192,7 +192,7 @@ countMaxEmits stmt = case stmt of
   Seq Break q                    -> 0
   Seq (AwaitExt e) q             -> 0
   Seq p q                        -> cME p + cME q
-  Local' _ p                     -> cME p
+  Locals' _ p                    -> cME p
   Loop' p q | checkLoop (Loop p) -> cME p         -- q is unreachable
             | otherwise          -> cME p + cME q
   And' p q                       -> cME p + cME q -- CHECK THIS! --

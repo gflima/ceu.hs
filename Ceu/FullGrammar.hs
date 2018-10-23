@@ -17,7 +17,7 @@ inputAsync   = -3
 
 -- Program (pg 5).
 data Stmt
-  = Local Stmt                  -- declaration block
+  = Locals Stmt                 -- declaration block
   | Var G.ID                    -- variable declaration
   | Write G.ID G.Expr           -- assignment statement
   | AwaitExt G.Evt              -- await external event
@@ -36,7 +36,7 @@ data Stmt
   | Fin (Maybe G.ID) Stmt       -- finalize statement
   | Async Stmt                  -- async statement
   | Error String                -- generate runtime error (for testing purposes)
-  | Local' [G.ID] Stmt          -- block as in basic Grammar
+  | Locals' [G.ID] Stmt         -- block as in basic Grammar
   | Fin' Stmt                   -- fin as in basic Grammar
   | Nop'                        -- nop as in basic Grammar
   deriving (Eq, Show)
@@ -48,14 +48,14 @@ infixr 1 `Seq`                  -- `Seq` associates to the right
 infixr 0 `Or`                   -- `Or` associates to the right
 infixr 0 `And`                  -- `And` associates to the right
 
--- remVar: Removes (Var id) stmts and maps (Local p) -> (Local' [ids] p)
+-- remVar: Removes (Var id) stmts and maps (Locals p) -> (Locals' [ids] p)
 
 remVar :: Stmt -> Stmt
-remVar (Local p) = p' where
-    (_,p') = rV (Local p)
+remVar (Locals p) = p' where
+    (_,p') = rV (Locals p)
 
     rV :: Stmt -> ([G.ID], Stmt)
-    rV (Local p)      = ([], Local' ids' p') where (ids', p') = rV p
+    rV (Locals p)     = ([], Locals' ids' p') where (ids', p') = rV p
     rV (Var id)       = ([id], Nop')
     rV (If exp p1 p2) = rV2 p1 p2 (\p1' p2' -> If exp p1' p2')
     rV (Seq p1 p2)    = rV2 p1 p2 (\p1' p2' -> Seq p1' p2')
@@ -66,7 +66,7 @@ remVar (Local p) = p' where
     rV (Spawn p)      = rV1 p (\p' -> Spawn p')
     rV (Fin id p)     = rV1 p (\p' -> Fin id p')
     rV (Async p)      = rV1 p (\p' -> Async p')
-    rV (Local' _ _)   = error "remVar: unexpected statement (Local')"
+    rV (Locals' _ _)  = error "remVar: unexpected statement (Locals')"
     rV (Fin' p)       = rV1 p (\p' -> Fin' p')
     rV q              = ([], q)
 
@@ -81,14 +81,14 @@ remVar (Local p) = p' where
 remVar _ = error "remVar: expected enclosing top-level block"
 
 -- remFin: Converts (Fin _  p);A -> (or (Fin' p) A)
---                  (Fin id p);A -> A ||| (Local (Or [(Fin p)] X)
+--                  (Fin id p);A -> A ||| (Locals (Or [(Fin p)] X)
 
 remFin :: Stmt -> Stmt
 remFin p = p' where
   (_,p') = rF p
 
   rF :: Stmt -> ([(G.ID,Stmt)], Stmt)
-  rF (Local p)           = error "remFin: unexpected statement (Local)"
+  rF (Locals p)          = error "remFin: unexpected statement (Locals)"
   rF (Var _)             = error "remFin: unexpected statement (Var)"
   rF (If exp p1 p2)      = ([], If exp (snd (rF p1)) (snd (rF p2)))
 
@@ -108,7 +108,7 @@ remFin p = p' where
   rF (Fin id p)          = error "remFin: unexpected statement (Fin)"
   rF (Async p)           = ([], Async (snd (rF p)))
 
-  rF (Local' ids p)      = (l'', Local' ids p''') where
+  rF (Locals' ids p)      = (l'', Locals' ids p''') where
                             (l', p')  = (rF p)   -- results from nested p
                             (p'',l'') = f ids l' -- matches l' with current block ids
                             p''' | ((toSeq p'') == Nop') = p' -- nothing to finalize
@@ -132,7 +132,7 @@ remFin p = p' where
 -- remSpawn: Converts (spawn p1; ...) into (p1;AwaitFor or ...)
 
 remSpawn :: Stmt -> Stmt
-remSpawn (Local p)           = Local (remSpawn p)
+remSpawn (Locals p)          = Locals (remSpawn p)
 remSpawn (If exp p1 p2)      = If exp (remSpawn p1) (remSpawn p2)
 remSpawn (Seq (Spawn p1) p2) = Or (Seq (remSpawn p1) AwaitFor) (remSpawn p2)
 remSpawn (Seq p1 p2)         = Seq (remSpawn p1) (remSpawn p2)
@@ -143,7 +143,7 @@ remSpawn (Or p1 p2)          = Or (remSpawn p1) (remSpawn p2)
 remSpawn (Spawn p)           = error "remSpawn: unexpected statement (Spawn)"
 remSpawn (Fin id p)          = Fin id (remSpawn p)
 remSpawn (Async p)           = Async (remSpawn p)
-remSpawn (Local' ids p)      = Local' ids (remSpawn p)
+remSpawn (Locals' ids p)     = Locals' ids (remSpawn p)
 remSpawn (Fin' p)            = Fin' (remSpawn p)
 remSpawn p                   = p
 
@@ -160,59 +160,59 @@ chkSpawn p = case p of
   notS p         = True
 
   chkS :: Stmt -> Bool
-  chkS (Local p)    = (notS p) && (chkS p)
-  chkS (If _ p1 p2) = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
-  chkS (Seq p1 p2)  = (chkS p1) && (notS p2) && (chkS p2)
-  chkS (Loop p)     = (notS p) && (chkS p)
-  chkS (Every _ p)  = (notS p) && (chkS p)
-  chkS (And p1 p2)  = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
-  chkS (Or p1 p2)   = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
-  chkS (Spawn p)    = (notS p) && (chkS p)
-  chkS (Fin _ p)    = (notS p) && (chkS p)
-  chkS (Async p)    = (notS p) && (chkS p)
-  chkS (Local' _ p) = (notS p) && (chkS p)
-  chkS (Fin' p)     = (notS p) && (chkS p)
-  chkS _            = True
+  chkS (Locals p)    = (notS p) && (chkS p)
+  chkS (If _ p1 p2)  = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
+  chkS (Seq p1 p2)   = (chkS p1) && (notS p2) && (chkS p2)
+  chkS (Loop p)      = (notS p) && (chkS p)
+  chkS (Every _ p)   = (notS p) && (chkS p)
+  chkS (And p1 p2)   = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
+  chkS (Or p1 p2)    = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
+  chkS (Spawn p)     = (notS p) && (chkS p)
+  chkS (Fin _ p)     = (notS p) && (chkS p)
+  chkS (Async p)     = (notS p) && (chkS p)
+  chkS (Locals' _ p) = (notS p) && (chkS p)
+  chkS (Fin' p)      = (notS p) && (chkS p)
+  chkS _             = True
 
 -- remSpawn: Adds AwaitFor in Loops inside Asyncs
 
 remAsync :: Stmt -> Stmt
 remAsync p = (rA False p) where
   rA :: Bool -> Stmt -> Stmt
-  rA inA   (Local p)      = Local (rA inA p)
-  rA inA   (If exp p1 p2) = If exp (rA inA p1) (rA inA p2)
-  rA inA   (Seq p1 p2)    = Seq (rA inA p1) (rA inA p2)
-  rA True  (Loop p)       = Loop (rA True (Seq p (AwaitExt inputAsync)))
-  rA False (Loop p)       = Loop (rA False p)
-  rA inA   (Every e p)    = Every e (rA inA p)
-  rA inA   (And p1 p2)    = And (rA inA p1) (rA inA p2)
-  rA inA   (Or p1 p2)     = Or (rA inA p1) (rA inA p2)
-  rA inA   (Spawn p)      = Spawn (rA inA p)
-  rA inA   (Fin id p)     = Fin id (rA inA p)
-  rA inA   (Async p)      = (rA True p)
-  rA inA   (Local' ids p) = Local' ids (rA inA p)
-  rA inA   (Fin' p)       = Fin' (rA inA p)
-  rA inA   p              = p
+  rA inA   (Locals p)      = Locals (rA inA p)
+  rA inA   (If exp p1 p2)  = If exp (rA inA p1) (rA inA p2)
+  rA inA   (Seq p1 p2)     = Seq (rA inA p1) (rA inA p2)
+  rA True  (Loop p)        = Loop (rA True (Seq p (AwaitExt inputAsync)))
+  rA False (Loop p)        = Loop (rA False p)
+  rA inA   (Every e p)     = Every e (rA inA p)
+  rA inA   (And p1 p2)     = And (rA inA p1) (rA inA p2)
+  rA inA   (Or p1 p2)      = Or (rA inA p1) (rA inA p2)
+  rA inA   (Spawn p)       = Spawn (rA inA p)
+  rA inA   (Fin id p)      = Fin id (rA inA p)
+  rA inA   (Async p)       = (rA True p)
+  rA inA   (Locals' ids p) = Locals' ids (rA inA p)
+  rA inA   (Fin' p)        = Fin' (rA inA p)
+  rA inA   p               = p
 
 -- TODO: chkSpan: no sync statements
 
 -- remAwaitFor: Converts AwaitFor into (AwaitExt inputForever)
 
 remAwaitFor :: Stmt -> Stmt
-remAwaitFor (Local p)      = Local (remAwaitFor p)
-remAwaitFor (If exp p1 p2) = If exp (remAwaitFor p1) (remAwaitFor p2)
-remAwaitFor (Seq p1 p2)    = Seq (remAwaitFor p1) (remAwaitFor p2)
-remAwaitFor (Loop p)       = Loop (remAwaitFor p)
-remAwaitFor (Every e p)    = Every e (remAwaitFor p)
-remAwaitFor (And p1 p2)    = And (remAwaitFor p1) (remAwaitFor p2)
-remAwaitFor (Or p1 p2)     = Or (remAwaitFor p1) (remAwaitFor p2)
-remAwaitFor (Spawn p)      = Spawn (remAwaitFor p)
-remAwaitFor (Fin id p)     = Fin id (remAwaitFor p)
-remAwaitFor (Async p)      = error "remAwaitFor: unexpected statement (Async)"
-remAwaitFor (Local' ids p) = Local' ids (remAwaitFor p)
-remAwaitFor (Fin' p)       = Fin' (remAwaitFor p)
-remAwaitFor AwaitFor       = AwaitExt G.inputForever
-remAwaitFor p              = p
+remAwaitFor (Locals p)      = Locals (remAwaitFor p)
+remAwaitFor (If exp p1 p2)  = If exp (remAwaitFor p1) (remAwaitFor p2)
+remAwaitFor (Seq p1 p2)     = Seq (remAwaitFor p1) (remAwaitFor p2)
+remAwaitFor (Loop p)        = Loop (remAwaitFor p)
+remAwaitFor (Every e p)     = Every e (remAwaitFor p)
+remAwaitFor (And p1 p2)     = And (remAwaitFor p1) (remAwaitFor p2)
+remAwaitFor (Or p1 p2)      = Or (remAwaitFor p1) (remAwaitFor p2)
+remAwaitFor (Spawn p)       = Spawn (remAwaitFor p)
+remAwaitFor (Fin id p)      = Fin id (remAwaitFor p)
+remAwaitFor (Async p)       = error "remAwaitFor: unexpected statement (Async)"
+remAwaitFor (Locals' ids p) = Locals' ids (remAwaitFor p)
+remAwaitFor (Fin' p)        = Fin' (remAwaitFor p)
+remAwaitFor AwaitFor        = AwaitExt G.inputForever
+remAwaitFor p               = p
 
 -- toGrammar: Converts full -> basic
 
@@ -220,24 +220,24 @@ toGrammar :: Stmt -> G.Stmt
 toGrammar p = toG $ remAwaitFor $ remAsync
                   $ remSpawn $ chkSpawn
                   $ remFin
-                  $ remVar (Local p) where
+                  $ remVar (Locals p) where
   toG :: Stmt -> G.Stmt
-  toG (Write id exp) = G.Write id exp
-  toG (AwaitExt e)   = G.AwaitExt e
-  toG (AwaitInt e)   = G.AwaitInt e
-  toG (EmitInt e)    = G.EmitInt e
-  toG Break          = G.Break
-  toG (If exp p1 p2) = G.If exp (toG p1) (toG p2)
-  toG (Seq p1 p2)    = G.Seq (toG p1) (toG p2)
-  toG (Loop p)       = G.Loop (toG p)
-  toG (Every e p)    = G.Every e (toG p)
-  toG (And p1 p2)    = G.And (toG p1) (toG p2)
-  toG (Or p1 p2)     = G.Or (toG p1) (toG p2)
-  toG (Error msg)    = G.Error msg
-  toG (Local' ids p) = G.Local ids (toG p)
-  toG (Fin' p)       = G.Fin (toG p)
-  toG Nop'           = G.Nop
-  toG _              = error "toG: unexpected statement (Local,Var,AwaitFor,Fin,Spawn,Async)"
+  toG (Write id exp)  = G.Write id exp
+  toG (AwaitExt e)    = G.AwaitExt e
+  toG (AwaitInt e)    = G.AwaitInt e
+  toG (EmitInt e)     = G.EmitInt e
+  toG Break           = G.Break
+  toG (If exp p1 p2)  = G.If exp (toG p1) (toG p2)
+  toG (Seq p1 p2)     = G.Seq (toG p1) (toG p2)
+  toG (Loop p)        = G.Loop (toG p)
+  toG (Every e p)     = G.Every e (toG p)
+  toG (And p1 p2)     = G.And (toG p1) (toG p2)
+  toG (Or p1 p2)      = G.Or (toG p1) (toG p2)
+  toG (Error msg)     = G.Error msg
+  toG (Locals' ids p) = G.Locals ids (toG p)
+  toG (Fin' p)        = G.Fin (toG p)
+  toG Nop'            = G.Nop
+  toG _               = error "toG: unexpected statement (Locals,Var,AwaitFor,Fin,Spawn,Async)"
 
 evalFullProg :: Stmt -> [G.Evt] -> G.Val
 evalFullProg prog hist = evalProg (toGrammar prog) []

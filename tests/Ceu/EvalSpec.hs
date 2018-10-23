@@ -111,26 +111,26 @@ spec = do
         `shouldThrow` errorCall "Runtime error: erro"
 
     -- block --
-    describe "(Local [vars] p)" $ do
-      it "pass: Local [] Nop" $
-        nst1 (Local [] Nop, 0, Nothing) []
-        `shouldBe` (Local' [] Nop, 0, Nothing)
+    describe "(Locals [vars] p)" $ do
+      it "pass: Locals [] Nop" $
+        nst1 (Locals [] Nop, 0, Nothing) []
+        `shouldBe` (Locals' [] Nop, 0, Nothing)
 
-      it "pass: Local [\"x\"] p" $
-        nst1 (Local ["x"] Nop, 0, Nothing) []
-        `shouldBe` (Local' [("x",Nothing)] Nop, 0, Nothing)
+      it "pass: Locals [\"x\"] p" $
+        nst1 (Locals ["x"] Nop, 0, Nothing) []
+        `shouldBe` (Locals' [("x",Nothing)] Nop, 0, Nothing)
 
-      it "pass: Local [\"x\",\"y\"] p" $
-        nst1 (Local ["x","y"] Nop, 0, Nothing) []
-        `shouldBe` (Local' [("x",Nothing),("y",Nothing)] Nop, 0, Nothing)
+      it "pass: Locals [\"x\",\"y\"] p" $
+        nst1 (Locals ["x","y"] Nop, 0, Nothing) []
+        `shouldBe` (Locals' [("x",Nothing),("y",Nothing)] Nop, 0, Nothing)
 
-    describe "(Local' [vars] p)" $ do
-      it "pass: Local [] Nop" $
-        nst1 (Local' [] Nop, 0, Nothing) []
+    describe "(Locals' [vars] p)" $ do
+      it "pass: Locals [] Nop" $
+        nst1 (Locals' [] Nop, 0, Nothing) []
         `shouldBe` (Nop, 0, Nothing)
 
-      it "pass: Local [\"x\"] p" $
-        nst1 (Local' [("x",Nothing)] Nop, 0, Nothing) []
+      it "pass: Locals [\"x\"] p" $
+        nst1 (Locals' [("x",Nothing)] Nop, 0, Nothing) []
         `shouldBe` (Nop, 0, Nothing)
 
     -- write --
@@ -140,15 +140,15 @@ spec = do
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "fail: [] x=1 (undeclared variable)" $
-        forceEval (nst1 (Local' [] (Write "x" (Const 1)), 0, Nothing) [])
+        forceEval (nst1 (Locals' [] (Write "x" (Const 1)), 0, Nothing) [])
         `shouldThrow` errorCall "Write: undeclared variable: x"
 
       it "pass: [x=?] x=1" $
-        nst1 (Local' [("x",Nothing)] (Write "x" (Const 1)), 0, Nothing) []
-        `shouldBe` (Local' [("x",Just 1),("x",Nothing)] Nop, 0, Nothing)
+        nst1 (Locals' [("x",Nothing)] (Write "x" (Const 1)), 0, Nothing) []
+        `shouldBe` (Locals' [("x",Just 1),("x",Nothing)] Nop, 0, Nothing)
 
       it "fail: [x=?,y=?] x=y (uninitialized variable)" $
-        forceEval (nst1 (Local' [("x",Nothing),("y",Nothing)] (Write "x" (Read "y")), 0, Nothing) [])
+        forceEval (nst1 (Locals' [("x",Nothing),("y",Nothing)] (Write "x" (Read "y")), 0, Nothing) [])
         `shouldThrow` errorCall "envRead: uninitialized variable: y"
 
       it "pass: nop; x=1" $
@@ -156,12 +156,12 @@ spec = do
         `shouldBe` ((Write "x" (Const 1)), 0, Nothing)
 
       it "pass: [x=1,y=?] y=x+2" $
-        nst1 (Local' [("y",Nothing),("x",Just 1)] (Write "y" (Read "x" `Add` Const 2)), 0, Nothing) []
-        `shouldBe` (Local' [("y",Just 3),("y",Nothing),("x",Just 1)] Nop, 0, Nothing)
+        nst1 (Locals' [("y",Nothing),("x",Just 1)] (Write "y" (Read "x" `Add` Const 2)), 0, Nothing) []
+        `shouldBe` (Locals' [("y",Just 3),("y",Nothing),("x",Just 1)] Nop, 0, Nothing)
 
       it "transit: [x=?] x=-(5+1)" $
-        nst1 (Local' [("x",Nothing)] (Write "x" (Umn (Const 5 `Add` Const 1))), 0, Nothing) []
-        `shouldBe` (Local' [("x",Just (-6)),("x",Nothing)] Nop, 0, Nothing)
+        nst1 (Locals' [("x",Nothing)] (Write "x" (Umn (Const 5 `Add` Const 1))), 0, Nothing) []
+        `shouldBe` (Locals' [("x",Just (-6)),("x",Nothing)] Nop, 0, Nothing)
 
     -- emit-int --
     describe "(EmitInt e')" $ do
@@ -252,12 +252,12 @@ spec = do
         `shouldThrow` errorCall "envRead: undeclared variable: x"
 
       it "pass: x == 0" $
-        nst1 (Local' [("x",Just 0)] (If (Read "x") Nop Break), 0, Nothing) []
-        `shouldBe` (Local' [("x",Just 0)] Break, 0, Nothing)
+        nst1 (Locals' [("x",Just 0)] (If (Read "x") Nop Break), 0, Nothing) []
+        `shouldBe` (Locals' [("x",Just 0)] Break, 0, Nothing)
 
       it "pass: x /= 0" $
-        nst1 (Local' [("x",Just 1)] (If (Read "x") Nop Break), 0, Nothing) []
-        `shouldBe` (Local' [("x",Just 1)] Nop, 0, Nothing)
+        nst1 (Locals' [("x",Just 1)] (If (Read "x") Nop Break), 0, Nothing) []
+        `shouldBe` (Locals' [("x",Just 1)] Nop, 0, Nothing)
 
     -- loop-expd --
     describe "(Loop p)" $ do
@@ -411,7 +411,7 @@ spec = do
            `shouldBe` (Seq (clear q) Break, 3, Nothing))
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (And' Break (Local [] Nop), 0, Just 1) [])
+        forceEval (nst1 (And' Break (Locals [] Nop), 0, Just 1) [])
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "pass: isBlocked q" $
@@ -802,7 +802,7 @@ spec = do
     describe "one+ steps" $ do
 
       nstsItPass
-        (Local ["x"] (Write "x" (Const 0)), 3, Nothing)
+        (Locals ["x"] (Write "x" (Const 0)), 3, Nothing)
         (Nop, 3, Nothing)
 
       nstsItPass
@@ -920,54 +920,54 @@ spec = do
   describe "evalProg" $ do
 
     evalProgItPass 11
-      [] (Local ["a"]
+      [] (Locals ["a"]
            (Write "a" (Const 1) `Seq`
             Write "ret" (Read "a" `Add` Const 10)))
 
     evalProgItFail "envRead: uninitialized variable: ret"
-      [] (Local ["a"]
-           (Local ["ret"]
+      [] (Locals ["a"]
+           (Locals ["ret"]
              (Write "a" (Const 1) `Seq`
               Write "ret" (Read "a" `Add` Const 10))))
 
     evalProgItPass 1
       [] (Write "ret" (Const 1) `Seq`
-          Local ["ret"] (Write "ret" (Const 99)))
+          Locals ["ret"] (Write "ret" (Const 99)))
 
     evalProgItPass 11
-      [] (Local ["a"]
+      [] (Locals ["a"]
            (Write "a" (Const 1) `Seq`
-            Local ["a"] (Write "a" (Const 99)) `Seq`
+            Locals ["a"] (Write "a" (Const 99)) `Seq`
             Write "ret" (Read "a" `Add` Const 10)))
 
     evalProgItPass 2
       [] (Write "ret" (Const 1) `Seq`
-          Local [] (Write "ret" (Const 2)))
+          Locals [] (Write "ret" (Const 2)))
 
     evalProgItPass 11
-      [] (Local ["a"]
+      [] (Locals ["a"]
            (Write "a" (Const 1) `Seq`
             Or
-             (Local ["a"] (Write "a" (Const 99) `Seq` AwaitExt 0))
+             (Locals ["a"] (Write "a" (Const 99) `Seq` AwaitExt 0))
              (Nop) `Seq`
            Write "ret" (Read "a" `Add` Const 10)))
 
     evalProgItPass 1
       [] (Or
-           (Local [] (Write "ret" (Const 1) `Seq` AwaitExt 0))
+           (Locals [] (Write "ret" (Const 1) `Seq` AwaitExt 0))
            (Nop))
 
     evalProgItPass 11
-      [] (Local ["a"]
+      [] (Locals ["a"]
            (Write "a" (Const 1) `Seq`
             Loop (And
-                  (Local ["a"] (Write "a" (Const 99) `Seq` AwaitExt 0))
+                  (Locals ["a"] (Write "a" (Const 99) `Seq` AwaitExt 0))
                   (Break)) `Seq`
              Write "ret" (Read "a" `Add` Const 10)))
 
     evalProgItPass 1
       [] (Loop (And
-                 (Local [] (Write "ret" (Const 1) `Seq` AwaitExt 0))
+                 (Locals [] (Write "ret" (Const 1) `Seq` AwaitExt 0))
                  (Break)))
 
     evalProgItPass 5 [] (
@@ -996,10 +996,10 @@ end
 escape x;
 -}
     evalProgItPass 99 [] (
-      (Local ["x"] (
+      (Locals ["x"] (
         (Write "x" (Const 10)) `Seq`
         (Or
-          (Local ["x"] (AwaitExt inputForever))
+          (Locals ["x"] (AwaitExt inputForever))
           (Write "x" (Const 99))
         ) `Seq`
         (Write "ret" (Read "x"))
