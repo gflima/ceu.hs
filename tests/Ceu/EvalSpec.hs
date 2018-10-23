@@ -1,7 +1,7 @@
 module Ceu.EvalSpec (main, spec) where
 
 import Ceu.Globals
-import Ceu.Grammar
+import qualified Ceu.Grammar as G
 import Ceu.Eval
 import Control.DeepSeq
 import Control.Exception
@@ -921,68 +921,68 @@ spec = do
   describe "evalProg" $ do
 
     evalProgItPass 11
-      [] (Local ["a"]
-           (Write "a" (Const 1) `Seq`
-            Write "ret" (Read "a" `Add` Const 10)))
+      [] (G.Local ["a"]
+           (G.Write "a" (Const 1) `G.Seq`
+            G.Write "ret" (Read "a" `Add` Const 10)))
 
     evalProgItFail "envRead: uninitialized variable: ret"
-      [] (Local ["a"]
-           (Local ["ret"]
-             (Write "a" (Const 1) `Seq`
-              Write "ret" (Read "a" `Add` Const 10))))
+      [] (G.Local ["a"]
+           (G.Local ["ret"]
+             (G.Write "a" (Const 1) `G.Seq`
+              G.Write "ret" (Read "a" `Add` Const 10))))
 
     evalProgItPass 1
-      [] (Write "ret" (Const 1) `Seq`
-          Local ["ret"] (Write "ret" (Const 99)))
+      [] (G.Write "ret" (Const 1) `G.Seq`
+          G.Local ["ret"] (G.Write "ret" (Const 99)))
 
     evalProgItPass 11
-      [] (Local ["a"]
-           (Write "a" (Const 1) `Seq`
-            Local ["a"] (Write "a" (Const 99)) `Seq`
-            Write "ret" (Read "a" `Add` Const 10)))
+      [] (G.Local ["a"]
+           (G.Write "a" (Const 1) `G.Seq`
+            G.Local ["a"] (G.Write "a" (Const 99)) `G.Seq`
+            G.Write "ret" (Read "a" `Add` Const 10)))
 
     evalProgItPass 2
-      [] (Write "ret" (Const 1) `Seq`
-          Local [] (Write "ret" (Const 2)))
+      [] (G.Write "ret" (Const 1) `G.Seq`
+          G.Local [] (G.Write "ret" (Const 2)))
 
     evalProgItPass 11
-      [] (Local ["a"]
-           (Write "a" (Const 1) `Seq`
-            Or
-             (Local ["a"] (Write "a" (Const 99) `Seq` AwaitExt 0))
-             (Nop) `Seq`
-           Write "ret" (Read "a" `Add` Const 10)))
+      [] (G.Local ["a"]
+           (G.Write "a" (Const 1) `G.Seq`
+            G.Or
+             (G.Local ["a"] (G.Write "a" (Const 99) `G.Seq` G.AwaitExt 0))
+             (G.Nop) `G.Seq`
+           G.Write "ret" (Read "a" `Add` Const 10)))
 
     evalProgItPass 1
-      [] (Or
-           (Local [] (Write "ret" (Const 1) `Seq` AwaitExt 0))
-           (Nop))
+      [] (G.Or
+           (G.Local [] (G.Write "ret" (Const 1) `G.Seq` G.AwaitExt 0))
+           (G.Nop))
 
     evalProgItPass 11
-      [] (Local ["a"]
-           (Write "a" (Const 1) `Seq`
-            Loop (And
-                  (Local ["a"] (Write "a" (Const 99) `Seq` AwaitExt 0))
-                  (Break)) `Seq`
-             Write "ret" (Read "a" `Add` Const 10)))
+      [] (G.Local ["a"]
+           (G.Write "a" (Const 1) `G.Seq`
+            G.Loop (G.And
+                  (G.Local ["a"] (G.Write "a" (Const 99) `G.Seq` G.AwaitExt 0))
+                  (G.Break)) `G.Seq`
+             G.Write "ret" (Read "a" `Add` Const 10)))
 
     evalProgItPass 1
-      [] (Loop (And
-                 (Local [] (Write "ret" (Const 1) `Seq` AwaitExt 0))
-                 (Break)))
+      [] (G.Loop (G.And
+                 (G.Local [] (G.Write "ret" (Const 1) `G.Seq` G.AwaitExt 0))
+                 (G.Break)))
 
     evalProgItPass 5 [] (
-      (Write "ret" (Const 1)) `Seq`
-      (And
-        ((AwaitInt 0) `Seq` (Write "ret" (Const 5)))
-        (EmitInt 0)
+      (G.Write "ret" (Const 1)) `G.Seq`
+      (G.And
+        ((G.AwaitInt 0) `G.Seq` (G.Write "ret" (Const 5)))
+        (G.EmitInt 0)
       ))
 
     evalProgItPass 5 [] (
-      (Write "ret" (Const 1)) `Seq`
-      (Or
-        ((AwaitInt 0) `Seq` (Write "ret" (Const 5)))
-        (Or (Fin (EmitInt 0)) Nop)
+      (G.Write "ret" (Const 1)) `G.Seq`
+      (G.Or
+        ((G.AwaitInt 0) `G.Seq` (G.Write "ret" (Const 5)))
+        (G.Or (G.Fin (G.EmitInt 0)) G.Nop)
       ))
 
 {-
@@ -997,33 +997,33 @@ end
 escape x;
 -}
     evalProgItPass 99 [] (
-      (Local ["x"] (
-        (Write "x" (Const 10)) `Seq`
-        (Or
-          (Local ["x"] (AwaitExt inputForever))
-          (Write "x" (Const 99))
-        ) `Seq`
-        (Write "ret" (Read "x"))
+      (G.Local ["x"] (
+        (G.Write "x" (Const 10)) `G.Seq`
+        (G.Or
+          (G.Local ["x"] (G.AwaitExt inputForever))
+          (G.Write "x" (Const 99))
+        ) `G.Seq`
+        (G.Write "ret" (Read "x"))
       )))
 
     -- multiple inputs
 
     evalProgItPass 1
-      [0] (AwaitExt 0 `Seq` Write "ret" (Const 1))
+      [0] (G.AwaitExt 0 `G.Seq` G.Write "ret" (Const 1))
 
     evalProgItFail "evalProg: program didn't terminate"
-      [] (AwaitExt 0 `Seq` Write "ret" (Const 1))
+      [] (G.AwaitExt 0 `G.Seq` G.Write "ret" (Const 1))
 
     evalProgItFail "evalProg: program didn't terminate"
-      [1] (AwaitExt 0 `Seq` Write "ret" (Const 1))
+      [1] (G.AwaitExt 0 `G.Seq` G.Write "ret" (Const 1))
 
     evalProgItFail "evalProg: pending inputs"
-      [0,0] (AwaitExt 0 `Seq` Write "ret" (Const 1))
+      [0,0] (G.AwaitExt 0 `G.Seq` G.Write "ret" (Const 1))
 
     evalProgItPass 1
-      [0,1] (AwaitExt 0 `Seq` AwaitExt 1 `Seq` Write "ret" (Const 1))
+      [0,1] (G.AwaitExt 0 `G.Seq` G.AwaitExt 1 `G.Seq` G.Write "ret" (Const 1))
 
-    evalProgItPass 1 [] (Write "ret" (Const 1))
+    evalProgItPass 1 [] (G.Write "ret" (Const 1))
 
       where
         nstsItPass (p,n,e) (p',n',e') =
@@ -1040,9 +1040,9 @@ escape x;
             (reaction (p,e) `shouldBe` (p')))
 
         evalProgItPass res hist prog =
-          (it (printf "pass: %s | %s ~>%d" (show hist) (showProg prog) res) $
+          (it (printf "pass: %s | %s ~>%d" (show hist) (G.showProg prog) res) $
             (evalProg prog hist `shouldBe` res))
 
         evalProgItFail err hist prog =
-          (it (printf "fail: %s | %s ***%s" (show hist) (showProg prog) err) $
+          (it (printf "fail: %s | %s ***%s" (show hist) (G.showProg prog) err) $
             (forceEval (evalProg prog hist) `shouldThrow` errorCall err))

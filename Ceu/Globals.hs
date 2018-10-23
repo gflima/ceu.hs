@@ -43,3 +43,10 @@ showExpr expr = case expr of
   Sub e1 e2 -> printf "(%s-%s)" (showExpr e1) (showExpr e2)
   Mul e1 e2 -> printf "(%s*%s)" (showExpr e1) (showExpr e2)
   Div e1 e2 -> printf "(%s*%s)" (showExpr e1) (showExpr e2)
+
+-- Shows list of variables.
+showVars :: [ID_Var] -> String
+showVars vars = case vars of
+  []     -> ""
+  v:[]   -> v
+  v:vars -> v ++ "," ++ showVars vars

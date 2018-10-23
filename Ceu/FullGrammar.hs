@@ -2,7 +2,7 @@ module Ceu.FullGrammar where
 
 import Ceu.Globals
 import qualified Ceu.Grammar as G
-import Ceu.Eval
+import qualified Ceu.Eval as E
 --import Debug.Trace
 
 -- Events:
@@ -241,4 +241,4 @@ toGrammar p = toG $ remAwaitFor $ remAsync
   toG _              = error "toG: unexpected statement (Local,Var,AwaitFor,Fin,Spawn,Async)"
 
 evalFullProg :: Stmt -> [ID_Evt] -> Val
-evalFullProg prog hist = evalProg (toGrammar prog) []
+evalFullProg prog hist = E.evalProg (toGrammar prog) []
