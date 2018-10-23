@@ -122,7 +122,7 @@ nst1 (Locals' env' p, n, Nothing) env =
 
     f2 (Locals' env' p) env =
       case (f2 p (env'++env)) of
-        (p', Nothing)       -> (Locals' env' p', Nothing)
+        (p', Nothing)       -> (Locals' env' p, Nothing) -- keep p, since Write matches nested Locals'
         (p', Just (id,val)) ->
           if (envHas id env') then
             (Locals' ((id, Just val):env') p', Nothing)
