@@ -99,7 +99,7 @@ showProg stmt = case stmt of
   Nop            -> "nop"
   Error _        -> "err"
   CanRun n       -> printf "@canrun(%d)" n
-  --Local' env p   -> printf "(TODO)"
+  Local' env p   -> printf "(TODO)"
   Loop' p q      -> printf "(%s @loop %s)" (sP p) (sP q)
   And' p q       -> printf "(%s @&& %s)" (sP p) (sP q)
   Or' p q        -> printf "(%s @|| %s)" (sP p) (sP q)
