@@ -1,7 +1,8 @@
 module Ceu.EvalSpec (main, spec) where
 
-import Ceu.Eval
+import Ceu.Globals
 import Ceu.Grammar
+import Ceu.Eval
 import Control.DeepSeq
 import Control.Exception
 import Test.Hspec

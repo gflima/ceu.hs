@@ -1,5 +1,6 @@
 module Ceu.GrammarSpec (main, spec) where
 
+import Ceu.Globals
 import Ceu.Grammar
 import Test.Hspec
 

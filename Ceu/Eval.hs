@@ -1,5 +1,6 @@
 module Ceu.Eval where
 
+import Ceu.Globals
 import Ceu.Grammar
 import Data.Maybe
 import Debug.Trace
@@ -8,17 +9,17 @@ import Debug.Trace
 type Lvl = Int
 
 -- Description (pg 6).
-type Desc = (Stmt, Lvl, Maybe Evt)
+type Desc = (Stmt, Lvl, Maybe ID_Evt)
 
 ----------------------------------------------------------------------------
 -- Environment
 
-envHas :: ID -> Env -> Bool
+envHas :: ID_Var -> Env -> Bool
 envHas id []                      = False
 envHas id ((id',v):_) | (id==id') = True
 envHas id (_:rest)                = envHas id rest
 
-envRead :: ID -> Env -> Val
+envRead :: ID_Var -> Env -> Val
 envRead id []                            = error ("envRead: undeclared variable: " ++ id)
 envRead id ((id',Nothing):_) | (id==id') = error ("envRead: uninitialized variable: " ++ id)
 envRead id ((id',Just v):_) | (id==id')  = v
@@ -102,7 +103,7 @@ nst1 (Local' env' p, n, Nothing) env =
           (p', Nothing)    -> p'
           (_, Just (id,_)) -> error ("Write: undeclared variable: " ++ id)
 
-    f2 :: Stmt -> Env -> (Stmt, Maybe (ID,Val))
+    f2 :: Stmt -> Env -> (Stmt, Maybe (ID_Var,Val))
     f2 (Write id exp) env = (Nop, Just (id, envEval exp env))
     f2 (Seq p1 p2)    env = (Seq   p1' p2,  v) where (p1',v) = (f2 p1 env)
     f2 (Every e p)    env = (Every e   p',  v) where (p', v) = (f2 p env)
@@ -230,7 +231,7 @@ nsts d
 
 -- Awakes all trails waiting for the given event.
 -- (pg 8, fig 4.i)
-bcast :: Evt -> Stmt -> Stmt
+bcast :: ID_Evt -> Stmt -> Stmt
 bcast e stmt = case stmt of
   AwaitExt e' | e == e' -> Nop
   AwaitInt e' | e == e' -> Nop
@@ -268,7 +269,7 @@ nsts_out1_s (p, n, e)
 -- Counts the maximum number of EmitInt's that can be executed in a reaction
 -- of program to event.
 -- (pg 9)
-pot :: Evt -> Stmt -> Int
+pot :: ID_Evt -> Stmt -> Int
 pot e p = countMaxEmits $ bcast e p
 
 -- (pg 9)
@@ -285,17 +286,17 @@ isIrreducible d = isNstIrreducible d && snd (rank d) == 0
 
 -- Computes a reaction of program plus environment to a single event.
 -- (pg 6)
-reaction :: (Stmt, Evt) -> Stmt
+reaction :: (Stmt, ID_Evt) -> Stmt
 reaction (p, e) = p'
   where
     (p', _, _) = nsts_out1_s $ outPush (p, 0, Just e)
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
-evalProg :: Stmt -> [Evt] -> Val
+evalProg :: Stmt -> [ID_Evt] -> Val
 evalProg prog hist = evalProg' (Local ["ret"] (Seq prog (AwaitExt inputForever))) (inputBoot:hist)
   where                         -- enclosing block with "ret" that never terminates
-    evalProg' :: Stmt -> [Evt] -> Val
+    evalProg' :: Stmt -> [ID_Evt] -> Val
     evalProg' prog hist = case prog of
       (Local' env (AwaitExt inputForever))
           | null hist -> envRead "ret" env  -- done

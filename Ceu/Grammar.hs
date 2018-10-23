@@ -1,50 +1,20 @@
 module Ceu.Grammar where
 
+import Ceu.Globals
 import Text.Printf
-
--- Primitive types.
-type Evt = Int                  -- event identifier
-type ID  = String               -- variable identifier
-type Val = Int                  -- value
-
--- Environment.
-type Env  = [(ID, Maybe Val)]
-
--- Events:
--- -1: program can never await (used for boot reaction)
-inputBoot    :: Evt
-inputForever :: Evt
-inputBoot    = -1
-inputForever = -2
-
--- Expression.
-data Expr
-  = Const Val                   -- constant
-  | Read ID                     -- variable read
-  | Umn Expr                    -- unary minus
-  | Add Expr Expr               -- addition
-  | Sub Expr Expr               -- subtraction
-  | Mul Expr Expr               -- multiplication
-  | Div Expr Expr               -- division
-  deriving (Eq, Show)
-
-infixl 6 `Add`                  -- `Add` associates to the left
-infixl 6 `Sub`                  -- `Sub` associates to the left
-infixl 7 `Mul`                  -- `Mul` associates to the left
-infixl 7 `Div`                  -- `Div` associates to the left
 
 -- Program (pg 5).
 data Stmt
-  = Local [ID] Stmt             -- declaration block
-  | Write ID Expr               -- assignment statement
-  | AwaitExt Evt                -- await external event
-  | AwaitInt Evt                -- await internal event
-  | EmitInt Evt                 -- emit internal event
+  = Local [ID_Var] Stmt         -- declaration block
+  | Write ID_Var Expr           -- assignment statement
+  | AwaitExt ID_Evt             -- await external event
+  | AwaitInt ID_Evt             -- await internal event
+  | EmitInt ID_Evt              -- emit internal event
   | Break                       -- loop escape
   | If Expr Stmt Stmt           -- conditional
   | Seq Stmt Stmt               -- sequence
   | Loop Stmt                   -- infinite loop
-  | Every Evt Stmt              -- event iteration
+  | Every ID_Evt Stmt           -- event iteration
   | And Stmt Stmt               -- par/and statement
   | Or Stmt Stmt                -- par/or statement
   | Fin Stmt                    -- finalization statement
@@ -61,19 +31,8 @@ infixr 1 `Seq`                  -- `Seq` associates to the right
 infixr 0 `Or`                   -- `Or` associates to the right
 infixr 0 `And`                  -- `And` associates to the right
 
--- Shows expression.
-showExpr :: Expr -> String
-showExpr expr = case expr of
-  Const n   -> show n
-  Read v    -> v
-  Umn e     -> printf "(-%s)" (showExpr e)
-  Add e1 e2 -> printf "(%s+%s)" (showExpr e1) (showExpr e2)
-  Sub e1 e2 -> printf "(%s-%s)" (showExpr e1) (showExpr e2)
-  Mul e1 e2 -> printf "(%s*%s)" (showExpr e1) (showExpr e2)
-  Div e1 e2 -> printf "(%s*%s)" (showExpr e1) (showExpr e2)
-
 -- Shows list of variables.
-showVars :: [ID] -> String
+showVars :: [ID_Var] -> String
 showVars vars = case vars of
   []     -> ""
   v:[]   -> v
