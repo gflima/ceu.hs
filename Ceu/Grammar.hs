@@ -1,10 +1,11 @@
 module Ceu.Grammar where
 
+import Data.Maybe
 import Text.Printf
 
 -- Primitive types.
 type Evt = Int                  -- event identifier
-type ID  = String               -- variable identifier
+type Var = String               -- variable identifier
 type Val = Int                  -- value
 
 -- Events:
@@ -17,7 +18,7 @@ inputForever = -2
 -- Expression.
 data Expr
   = Const Val                   -- constant
-  | Read ID                     -- variable read
+  | Read Var                    -- variable read
   | Umn Expr                    -- unary minus
   | Add Expr Expr               -- addition
   | Sub Expr Expr               -- subtraction
@@ -32,8 +33,8 @@ infixl 7 `Div`                  -- `Div` associates to the left
 
 -- Program (pg 5).
 data Stmt
-  = Block [ID] Stmt             -- declaration block
-  | Write ID Expr               -- assignment statement
+  = Local Var Stmt              -- variable declaration
+  | Write Var Expr              -- assignment statement
   | AwaitExt Evt                -- await external event
   | AwaitInt Evt                -- await internal event
   | EmitInt Evt                 -- emit internal event
@@ -46,9 +47,9 @@ data Stmt
   | Or Stmt Stmt                -- par/or statement
   | Fin Stmt                    -- finalization statement
   | Nop                         -- dummy statement (internal)
-  | Error String                -- generate runtime error (for testing purposes)
+  | Error String                -- generate runtime error (for testing)
   | CanRun Int                  -- wait for stack level (internal)
-  | Restore Int                 -- restore environment (internal)
+  | Local' Var (Maybe Val) Stmt -- unrolled Local (internal)
   | Loop' Stmt Stmt             -- unrolled Loop (internal)
   | And' Stmt Stmt              -- unrolled And (internal)
   | Or' Stmt Stmt               -- unrolled Or (internal)
@@ -67,59 +68,54 @@ showExpr expr = case expr of
   Add e1 e2 -> printf "(%s+%s)" (showExpr e1) (showExpr e2)
   Sub e1 e2 -> printf "(%s-%s)" (showExpr e1) (showExpr e2)
   Mul e1 e2 -> printf "(%s*%s)" (showExpr e1) (showExpr e2)
-  Div e1 e2 -> printf "(%s*%s)" (showExpr e1) (showExpr e2)
-
--- Shows list of variables.
-showVars :: [ID] -> String
-showVars vars = case vars of
-  []     -> ""
-  v:[]   -> v
-  v:vars -> v ++ "," ++ showVars vars
+  Div e1 e2 -> printf "(%s/%s)" (showExpr e1) (showExpr e2)
 
 -- Shows program.
 showProg :: Stmt -> String
 showProg stmt = case stmt of
-  Block vars p | null vars -> printf "{%s}" (sP p)
-               | otherwise -> printf "{%s: %s}" (sV vars) (sP p)
-  Write var expr -> printf "%s=%s" var (sE expr)
-  AwaitExt e     -> printf "?E%d" e
-  AwaitInt e     -> printf "?%d" e
-  EmitInt e      -> printf "!%d" e
-  Break          -> "break"
-  If expr p q    -> printf "(if %s then %s else %s)" (sE expr) (sP p) (sP q)
-  Seq p q        -> printf "%s; %s" (sP p) (sP q)
-  Loop p         -> printf "(loop %s)" (sP p)
-  Every e p      -> printf "(every %d %s)" e (sP p)
-  And p q        -> printf "(%s && %s)" (sP p) (sP q)
-  Or p q         -> printf "(%s || %s)" (sP p) (sP q)
-  Fin p          -> printf "(fin %s)" (sP p)
-  Nop            -> "nop"
-  Error _        -> "err"
-  CanRun n       -> printf "@canrun(%d)" n
-  Restore n      -> printf "@restore(%d)" n
-  Loop' p q      -> printf "(%s @loop %s)" (sP p) (sP q)
-  And' p q       -> printf "(%s @&& %s)" (sP p) (sP q)
-  Or' p q        -> printf "(%s @|| %s)" (sP p) (sP q)
+  Local var p       -> printf "{%s: %s}" var (sP p)
+  Write var expr    -> printf "%s=%s" var (sE expr)
+  AwaitExt e        -> printf "?E%d" e
+  AwaitInt e        -> printf "?%d" e
+  EmitInt e         -> printf "!%d" e
+  Break             -> "break"
+  If expr p q       -> printf "(if %s then %s else %s)"
+                       (sE expr) (sP p) (sP q)
+  Seq p q           -> printf "%s; %s" (sP p) (sP q)
+  Loop p            -> printf "(loop %s)" (sP p)
+  Every e p         -> printf "(every %d %s)" e (sP p)
+  And p q           -> printf "(%s && %s)" (sP p) (sP q)
+  Or p q            -> printf "(%s || %s)" (sP p) (sP q)
+  Fin p             -> printf "(fin %s)" (sP p)
+  Nop               -> "nop"
+  Error _           -> "err"
+  CanRun n          -> printf "@canrun(%d)" n
+  Local' var val p
+    | isNothing val -> printf "{%s=_: %s}" var (sP p)
+    | otherwise     -> printf "{%s=%d: %s}" var (fromJust val) (sP p)
+  Loop' p q         -> printf "(%s @loop %s)" (sP p) (sP q)
+  And' p q          -> printf "(%s @&& %s)" (sP p) (sP q)
+  Or' p q           -> printf "(%s @|| %s)" (sP p) (sP q)
   where
     sE = showExpr
     sP = showProg
-    sV = showVars
 
 -- Checks if program is valid.
 checkProg :: Stmt -> Bool
 checkProg stmt = case stmt of
-  Block _ p -> checkProg p
-  If _ p q  -> checkProg p && checkProg q
-  Seq p q   -> checkProg p && checkProg q
-  Loop p    -> checkLoop (Loop p) && checkProg p
-  Every e p -> checkEvery (Every e p) && checkProg p
-  And p q   -> checkProg p && checkProg q
-  Or p q    -> checkProg p && checkProg q
-  Fin p     -> checkFin (Fin p) && checkProg p
-  Loop' p q -> checkLoop (Loop' p q) && checkProg q
-  And' p q  -> checkProg p && checkProg q
-  Or' p q   -> checkProg p && checkProg q
-  _         -> True
+  Local _ p    -> checkProg p
+  If _ p q     -> checkProg p && checkProg q
+  Seq p q      -> checkProg p && checkProg q
+  Loop p       -> checkLoop (Loop p) && checkProg p
+  Every e p    -> checkEvery (Every e p) && checkProg p
+  And p q      -> checkProg p && checkProg q
+  Or p q       -> checkProg p && checkProg q
+  Fin p        -> checkFin (Fin p) && checkProg p
+  Local' _ _ p -> checkProg p
+  Loop' p q    -> checkLoop (Loop' p q) && checkProg q
+  And' p q     -> checkProg p && checkProg q
+  Or' p q      -> checkProg p && checkProg q
+  _            -> True
 
 -- Receives a Loop or Loop' statement and checks whether all execution paths
 -- in its body lead to an occurrence of a matching-Break/AwaitExt/Every.
@@ -130,20 +126,21 @@ checkLoop loop = case loop of
   _            -> error "checkLoop: expected Loop or Loop'"
   where
     cL ignBrk stmt = case stmt of
-      AwaitExt _ -> True
-      Break      -> not ignBrk
-      Every _ _  -> True
-      Block _ p  -> cL ignBrk p
-      If _ p q   -> cL ignBrk p && cL ignBrk q
-      Seq p q    -> cL ignBrk p || cL ignBrk q
-      Loop p     -> cL True p
-      And p q    -> cL ignBrk p && cL ignBrk q
-      Or p q     -> cL ignBrk p && cL ignBrk q
-      Fin p      -> False       -- runs in zero time
-      Loop' p q  -> cL True p && cL True q
-      And' p q   -> cL ignBrk p && cL ignBrk q
-      Or' p q    -> cL ignBrk p && cL ignBrk q
-      _          -> False
+      AwaitExt _   -> True
+      Break        -> not ignBrk
+      Every _ _    -> True
+      Local _ p    -> cL ignBrk p
+      Local' _ _ p -> cL ignBrk p
+      If _ p q     -> cL ignBrk p && cL ignBrk q
+      Seq p q      -> cL ignBrk p || cL ignBrk q
+      Loop p       -> cL True p
+      And p q      -> cL ignBrk p && cL ignBrk q
+      Or p q       -> cL ignBrk p && cL ignBrk q
+      Fin p        -> False       -- runs in zero time
+      Loop' p q    -> cL True p && cL True q
+      And' p q     -> cL ignBrk p && cL ignBrk q
+      Or' p q      -> cL ignBrk p && cL ignBrk q
+      _            -> False
 
 -- Receives a Fin or Every statement and checks whether it does not contain
 -- any occurrences of Loop/Break/Await*/Every/Fin.
@@ -154,21 +151,22 @@ checkFin finOrEvery = case finOrEvery of
   _            -> error "checkFin: expected Fin or Every"
   where
     cF stmt = case stmt of
-      Break      -> False
-      AwaitInt _ -> False
-      AwaitExt _ -> False
-      Every _ _  -> False
-      Fin _      -> False
-      Loop _     -> False
-      Loop' _ _  -> False
-      Block _ p  -> cF p
-      If _ p q   -> cF p && cF q
-      Seq p q    -> cF p && cF q
-      And p q    -> cF p && cF q
-      Or p q     -> cF p && cF q
-      And' p q   -> cF p && cF q
-      Or' p q    -> cF p && cF q
-      _          -> True
+      Break        -> False
+      AwaitInt _   -> False
+      AwaitExt _   -> False
+      Every _ _    -> False
+      Fin _        -> False
+      Loop _       -> False
+      Loop' _ _    -> False
+      Local _ p    -> cF p
+      Local' _ _ p -> cF p
+      If _ p q     -> cF p && cF q
+      Seq p q      -> cF p && cF q
+      And p q      -> cF p && cF q
+      And' p q     -> cF p && cF q
+      Or p q       -> cF p && cF q
+      Or' p q      -> cF p && cF q
+      _            -> True
 
 -- Alias for checkFin.
 checkEvery :: Stmt -> Bool
@@ -179,6 +177,7 @@ checkEvery = checkFin
 countMaxEmits :: Stmt -> Int
 countMaxEmits stmt = case stmt of
   EmitInt e                      -> 1
+  Local _ p                      -> cME p
   If expr p q                    -> max (cME p) (cME q)
   Loop p                         -> cME p
   And p q                        -> cME p + cME q
@@ -186,6 +185,7 @@ countMaxEmits stmt = case stmt of
   Seq Break q                    -> 0
   Seq (AwaitExt e) q             -> 0
   Seq p q                        -> cME p + cME q
+  Local' _ _ p                   -> cME p
   Loop' p q | checkLoop (Loop p) -> cME p         -- q is unreachable
             | otherwise          -> cME p + cME q
   And' p q                       -> cME p + cME q -- CHECK THIS! --
