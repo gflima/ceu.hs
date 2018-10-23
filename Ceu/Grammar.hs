@@ -7,6 +7,9 @@ type Evt = Int                  -- event identifier
 type ID  = String               -- variable identifier
 type Val = Int                  -- value
 
+-- Environment.
+type Env  = [(ID, Maybe Val)]
+
 -- Events:
 -- -1: program can never await (used for boot reaction)
 inputBoot    :: Evt
@@ -32,7 +35,7 @@ infixl 7 `Div`                  -- `Div` associates to the left
 
 -- Program (pg 5).
 data Stmt
-  = Block [ID] Stmt             -- declaration block
+  = Local [ID] Stmt             -- declaration block
   | Write ID Expr               -- assignment statement
   | AwaitExt Evt                -- await external event
   | AwaitInt Evt                -- await internal event
@@ -48,7 +51,7 @@ data Stmt
   | Nop                         -- dummy statement (internal)
   | Error String                -- generate runtime error (for testing purposes)
   | CanRun Int                  -- wait for stack level (internal)
-  | Restore Int                 -- restore environment (internal)
+  | Local' Env Stmt             -- block with environment store
   | Loop' Stmt Stmt             -- unrolled Loop (internal)
   | And' Stmt Stmt              -- unrolled And (internal)
   | Or' Stmt Stmt               -- unrolled Or (internal)
@@ -79,7 +82,7 @@ showVars vars = case vars of
 -- Shows program.
 showProg :: Stmt -> String
 showProg stmt = case stmt of
-  Block vars p | null vars -> printf "{%s}" (sP p)
+  Local vars p | null vars -> printf "{%s}" (sP p)
                | otherwise -> printf "{%s: %s}" (sV vars) (sP p)
   Write var expr -> printf "%s=%s" var (sE expr)
   AwaitExt e     -> printf "?E%d" e
@@ -96,7 +99,7 @@ showProg stmt = case stmt of
   Nop            -> "nop"
   Error _        -> "err"
   CanRun n       -> printf "@canrun(%d)" n
-  Restore n      -> printf "@restore(%d)" n
+  --Local' env p   -> printf "(TODO)"
   Loop' p q      -> printf "(%s @loop %s)" (sP p) (sP q)
   And' p q       -> printf "(%s @&& %s)" (sP p) (sP q)
   Or' p q        -> printf "(%s @|| %s)" (sP p) (sP q)
@@ -108,7 +111,7 @@ showProg stmt = case stmt of
 -- Checks if program is valid.
 checkProg :: Stmt -> Bool
 checkProg stmt = case stmt of
-  Block _ p -> checkProg p
+  Local _ p -> checkProg p
   If _ p q  -> checkProg p && checkProg q
   Seq p q   -> checkProg p && checkProg q
   Loop p    -> checkLoop (Loop p) && checkProg p
@@ -116,6 +119,7 @@ checkProg stmt = case stmt of
   And p q   -> checkProg p && checkProg q
   Or p q    -> checkProg p && checkProg q
   Fin p     -> checkFin (Fin p) && checkProg p
+  Local' _ p -> checkProg p
   Loop' p q -> checkLoop (Loop' p q) && checkProg q
   And' p q  -> checkProg p && checkProg q
   Or' p q   -> checkProg p && checkProg q
@@ -133,13 +137,14 @@ checkLoop loop = case loop of
       AwaitExt _ -> True
       Break      -> not ignBrk
       Every _ _  -> True
-      Block _ p  -> cL ignBrk p
+      Local _ p  -> cL ignBrk p
       If _ p q   -> cL ignBrk p && cL ignBrk q
       Seq p q    -> cL ignBrk p || cL ignBrk q
       Loop p     -> cL True p
       And p q    -> cL ignBrk p && cL ignBrk q
       Or p q     -> cL ignBrk p && cL ignBrk q
       Fin p      -> False       -- runs in zero time
+      Local' _ p -> cL ignBrk p
       Loop' p q  -> cL True p && cL True q
       And' p q   -> cL ignBrk p && cL ignBrk q
       Or' p q    -> cL ignBrk p && cL ignBrk q
@@ -161,11 +166,12 @@ checkFin finOrEvery = case finOrEvery of
       Fin _      -> False
       Loop _     -> False
       Loop' _ _  -> False
-      Block _ p  -> cF p
+      Local _ p  -> cF p
       If _ p q   -> cF p && cF q
       Seq p q    -> cF p && cF q
       And p q    -> cF p && cF q
       Or p q     -> cF p && cF q
+      Local' _ p -> cF p
       And' p q   -> cF p && cF q
       Or' p q    -> cF p && cF q
       _          -> True
@@ -186,6 +192,7 @@ countMaxEmits stmt = case stmt of
   Seq Break q                    -> 0
   Seq (AwaitExt e) q             -> 0
   Seq p q                        -> cME p + cME q
+  Local' _ p                     -> cME p
   Loop' p q | checkLoop (Loop p) -> cME p         -- q is unreachable
             | otherwise          -> cME p + cME q
   And' p q                       -> cME p + cME q -- CHECK THIS! --
