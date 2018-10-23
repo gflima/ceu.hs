@@ -156,19 +156,19 @@ nst1Adv d f env = (f p, n, e)
 -- (pg 6)
 nst1 :: Desc -> Env -> Desc
 
-nst1 (Locals vars p, n, Nothing) _           -- block
+nst1 (Locals vars p, n, Nothing) _           -- locals
   = (Locals' (map (\v->(v,Nothing)) vars) p, n, Nothing)
 
-nst1 (Locals' _ Nop, n, Nothing) _           -- block'-nop
+nst1 (Locals' _ Nop, n, Nothing) _           -- locals'-nop
   = (Nop, n, Nothing)
 
 nst1 (Locals' env' p, n, Nothing) env =
   let p1 = (Locals' env' p)
       p2 = f1 p1 env
   in
-    if p1 /= p2 then    -- block'-write
+    if p1 /= p2 then    -- locals'-write
       (p2, n, Nothing)
-    else                -- block'-adv
+    else                -- locals'-adv
       nst1Adv (p, n, Nothing) (\p' -> Locals' env' p') (env'++env)
   where
     f1 :: Stmt -> Env -> Stmt
@@ -198,7 +198,7 @@ nst1 (Locals' env' p, n, Nothing) env =
 
     f2 (Locals' env' p) env =
       case (f2 p (env'++env)) of
-        (p', Nothing)       -> (Locals' env' p', Nothing)
+        (p', Nothing)       -> (Locals' env' p, Nothing) -- keep p, since Write matches nested Locals'
         (p', Just (id,val)) ->
           if (envHas id env') then
             (Locals' ((id, Just val):env') p', Nothing)
@@ -400,7 +400,7 @@ reaction (p, e) = p'
 -- Returns the last value of global "ret" set by the program.
 evalProg :: G.Stmt -> [ID_Evt] -> Val
 evalProg prog hist = evalProg' (Locals ["ret"] (Seq (fromGrammar prog) (AwaitExt inputForever))) (inputBoot:hist)
-  where                         -- enclosing block with "ret" that never terminates
+  where                         -- enclosing locals with "ret" that never terminates
     evalProg' :: Stmt -> [ID_Evt] -> Val
     evalProg' prog hist = case prog of
       (Locals' env (AwaitExt inputForever))
