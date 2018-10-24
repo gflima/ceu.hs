@@ -19,7 +19,6 @@ instance NFData Expr where
   rnf (Div e1 e2) = rnf e1 `deepseq` rnf e2
 
 instance NFData Stmt where
-  rnf (Var _ p)        = rnf p
   rnf (Write var expr) = rnf expr
   rnf (AwaitExt _)     = ()
   rnf (AwaitInt _)     = ()
@@ -27,7 +26,6 @@ instance NFData Stmt where
   rnf (Break)          = ()
   rnf (If expr p q)    = rnf expr `deepseq` rnf p `deepseq` rnf q
   rnf (Seq p q)        = rnf p `deepseq` rnf q
-  rnf (Loop p)         = rnf p
   rnf (Every _ p)      = rnf p
   rnf (And p q)        = rnf p `deepseq` rnf q
   rnf (Or p q)         = rnf p `deepseq` rnf q
@@ -115,7 +113,8 @@ spec = do
         (forceEval $ nst1 (Error "erro", 0, Nothing, []))
         `shouldThrow` errorCall "Runtime error: erro"
 
-    -- block --
+{-
+    -- var --
     describe "(Var \"x\" p)" $ do
       it "pass: Var \"x\" Nop" $
         nst1 (Var "x" Nop, 0, Nothing, [])
@@ -124,6 +123,7 @@ spec = do
       it "pass: Var [\"x\"] p" $
         nst1 (Var "x" (Seq Nop Nop), 0, Nothing, [])
         `shouldBe` (Var' "x" Nothing (Seq Nop Nop), 0, Nothing, [])
+-}
 
     -- write --
     describe "(Write id exp)" $ do
@@ -278,6 +278,7 @@ spec = do
         nst1 (If (Read "x") Nop Break, 0, Nothing, [("x",Just 1)])
         `shouldBe` (Nop, 0, Nothing, [("x",Just 1)])
 
+{-
   -- loop-expd --
   describe "(Loop p)" $ do
       it "pass: lvl == 0" $
@@ -297,16 +298,17 @@ spec = do
         nst1 (Loop (Fin Nop), 0, Nothing, [])
         `shouldBe` (Loop' (Fin Nop) (Fin Nop),
                      0, Nothing, [])
+-}
 
   -- loop-nop --
   describe "(Loop' Nop q)" $ do
       it "pass: lvl == 0" $
         nst1 (Loop' Nop Nop, 0, Nothing, [])
-        `shouldBe` (Loop Nop, 0, Nothing, [])
+        `shouldBe` (Loop' Nop Nop, 0, Nothing, [])
 
       it "pass: lvl > 0" $
         nst1 (Loop' Nop (EmitInt 8), 3, Nothing, [])
-        `shouldBe` (Loop (EmitInt 8), 3, Nothing, [])
+        `shouldBe` (Loop' (EmitInt 8) (EmitInt 8), 3, Nothing, [])
 
       it "fail: evt /= nil (cannot advance)" $
         forceEval (nst1 (Loop' Nop Nop, 0, Just 1, []))
@@ -314,7 +316,7 @@ spec = do
 
       it "pass: isBlocked q" $
         nst1 (Loop' Nop (Fin Nop), 0, Nothing, [])
-        `shouldBe` (Loop (Fin Nop), 0, Nothing, [])
+        `shouldBe` (Loop' (Fin Nop) (Fin Nop), 0, Nothing, [])
 
   -- loop-brk --
   describe "(Loop' Break q)" $ do
@@ -430,7 +432,7 @@ spec = do
            `shouldBe` (Seq (clear q) Break, 3, Nothing, []))
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (And' Break (Var "_" Nop), 0, Just 1, []))
+        forceEval (nst1 (And' Break (Var' "_" Nothing Nop), 0, Just 1, []))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "pass: isBlocked q" $
@@ -825,7 +827,7 @@ spec = do
     describe "one+ steps" $ do
 
       nstsItPass
-        (Var "x" (Write "x" (Const 0)), 3, Nothing, [])
+        (Var' "x" Nothing (Write "x" (Const 0)), 3, Nothing, [])
         (Nop, 3, Nothing, [])
 
       nstsItPass
@@ -841,20 +843,22 @@ spec = do
         (Break, 0, Nothing, [])
 
       nstsItPass
-        (Loop Break `Seq` Nop `Seq` Nop `Seq` EmitInt 8 `Seq` Break,
+        (Loop' Break Break `Seq` Nop `Seq` Nop `Seq` EmitInt 8 `Seq` Break,
           3, Nothing, [])
         (Seq (CanRun 3) Break, 3, Just 8, [])
 
       nstsItPass
-        (Seq (Loop Break) Nop `And` Seq (EmitInt 8) Nop, 3, Nothing, [])
+        (Seq (Loop' Break Break) Nop `And` Seq (EmitInt 8) Nop, 3, Nothing, [])
         (Seq (CanRun 3) Nop, 3, Just 8, [])
 
       nstsItPass
-        (Seq (Loop Break) Nop `Or` Seq (EmitInt 8) Nop, 3, Nothing, [])
+        (Seq (Loop' Break Break) Nop `Or` Seq (EmitInt 8) Nop, 3, Nothing, [])
         (Nop, 3, Nothing, [])
 
       nstsItPass
-        (Loop
+        (Loop'
+          ((Nop `Seq` AwaitInt 3) `And`
+            (AwaitExt 18 `Or` (Nop `Seq` Break)))
           ((Nop `Seq` AwaitInt 3) `And`
             (AwaitExt 18 `Or` (Nop `Seq` Break))), 0, Nothing, [])
         (Nop, 0, Nothing, [])

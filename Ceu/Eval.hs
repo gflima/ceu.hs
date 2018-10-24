@@ -14,15 +14,13 @@ type Desc = (Stmt, Lvl, Maybe ID_Evt, Env)
 
 -- Program (pg 5).
 data Stmt
-  = Var ID_Var Stmt           -- declaration block
-  | Write ID_Var Expr           -- assignment statement
+  = Write ID_Var Expr           -- assignment statement
   | AwaitExt ID_Evt             -- await external event
   | AwaitInt ID_Evt             -- await internal event
   | EmitInt ID_Evt              -- emit internal event
   | Break                       -- loop escape
   | If Expr Stmt Stmt           -- conditional
   | Seq Stmt Stmt               -- sequence
-  | Loop Stmt                   -- infinite loop
   | Every ID_Evt Stmt           -- event iteration
   | And Stmt Stmt               -- par/and statement
   | Or Stmt Stmt                -- par/or statement
@@ -41,7 +39,7 @@ infixr 0 `Or`                   -- `Or` associates to the right
 infixr 0 `And`                  -- `And` associates to the right
 
 fromGrammar :: G.Stmt -> Stmt
-fromGrammar (G.Var id p)      = Var id (fromGrammar p)
+fromGrammar (G.Var id p)      = Var' id Nothing (fromGrammar p)
 fromGrammar (G.Write id exp)  = Write id exp
 fromGrammar (G.AwaitExt id)   = AwaitExt id
 fromGrammar (G.AwaitInt id)   = AwaitInt id
@@ -49,7 +47,7 @@ fromGrammar (G.EmitInt id)    = EmitInt id
 fromGrammar G.Break           = Break
 fromGrammar (G.If exp p1 p2)  = If exp (fromGrammar p1) (fromGrammar p2)
 fromGrammar (G.Seq p1 p2)     = Seq (fromGrammar p1) (fromGrammar p2)
-fromGrammar (G.Loop p)        = Loop (fromGrammar p)
+fromGrammar (G.Loop p)        = Loop' (fromGrammar p) (fromGrammar p)
 fromGrammar (G.Every id p)    = Every id (fromGrammar p)
 fromGrammar (G.And p1 p2)     = And (fromGrammar p1) (fromGrammar p2)
 fromGrammar (G.Or p1 p2)      = Or (fromGrammar p1) (fromGrammar p2)
@@ -60,7 +58,6 @@ fromGrammar (G.Error msg)     = Error msg
 -- Shows program.
 showProg :: Stmt -> String
 showProg stmt = case stmt of
-  Var var p      -> printf "{%s: %s}" var (sP p)
   Write var expr -> printf "%s=%s" var (sE expr)
   AwaitExt e     -> printf "?E%d" e
   AwaitInt e     -> printf "?%d" e
@@ -68,7 +65,6 @@ showProg stmt = case stmt of
   Break          -> "break"
   If expr p q    -> printf "(if %s then %s else %s)" (sE expr) (sP p) (sP q)
   Seq p q        -> printf "%s; %s" (sP p) (sP q)
-  Loop p         -> printf "(loop %s)" (sP p)
   Every e p      -> printf "(every %d %s)" e (sP p)
   And p q        -> printf "(%s && %s)" (sP p) (sP q)
   Or p q         -> printf "(%s || %s)" (sP p) (sP q)
@@ -163,9 +159,6 @@ nst1Adv d f = (f p, n, e, env)
 -- (pg 6)
 nst1 :: Desc -> Desc
 
-nst1 (Var var p, n, Nothing, env)            -- local-exp
-  = (Var' var Nothing p, n, Nothing, env)
-
 nst1 (Var' var val Nop, n, Nothing, env)     -- local-nop
   = (Nop, n, Nothing, env)
 
@@ -200,11 +193,8 @@ nst1 (If exp p q, n, Nothing, env)             -- if-true/false (pg 6)
   | envEval env exp /= 0 = (p, n, Nothing, env)
   | otherwise              = (q, n, Nothing, env)
 
-nst1 (Loop p, n, Nothing, env)                 -- loop-expd (pg 7)
-  = ((Loop' p p), n, Nothing, env)
-
 nst1 (Loop' Nop q, n, Nothing, env)            -- loop-nop (pg 7)
-  = (Loop q, n, Nothing, env)
+  = (Loop' q q, n, Nothing, env)
 
 nst1 (Loop' Break q, n, Nothing, env)          -- loop-brk (pg 7)
   = (Nop, n, Nothing, env)
@@ -375,7 +365,7 @@ reaction (p, e, env) = (p', env')
 -- Returns the last value of global "ret" set by the program.
 evalProg :: G.Stmt -> [ID_Evt] -> Val
 evalProg prog hist -- enclosing block with "ret" that never terminates
-  = evalProg' (Var "ret" (Seq (fromGrammar prog) (AwaitExt inputForever))) (inputBoot:hist) []
+  = evalProg' (Var' "ret" Nothing (Seq (fromGrammar prog) (AwaitExt inputForever))) (inputBoot:hist) []
   where
     evalProg' :: Stmt -> [ID_Evt] -> Env -> Val
     evalProg' prog hist env = case prog of
