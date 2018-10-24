@@ -1,38 +1,39 @@
 module Ceu.FullGrammar where
 
+import Ceu.Globals
 import qualified Ceu.Grammar as G
-import Ceu.Eval
+import qualified Ceu.Eval as E
 --import Debug.Trace
 
 -- Events:
 -- -1: program can never await (used for boot reaction)
 -- -2: system can never emit (used as "await FOREVER" input)
 -- -3: program can never await (used as "async" input)
---inputBoot    :: Evt
---inputForever :: G.Evt
-inputAsync   :: G.Evt
+--inputBoot    :: ID_Evt
+--inputForever :: ID_Evt
+inputAsync   :: ID_Evt
 --inputBoot    = -1
 --inputForever = -2
 inputAsync   = -3
 
 -- Program (pg 5).
 data Stmt
-  = Local G.Var Stmt            -- variable declaration
-  | Write G.Var G.Expr          -- assignment statement
-  | AwaitExt G.Evt              -- await external event
+  = Local ID_Var Stmt           -- variable declaration
+  | Write ID_Var Expr           -- assignment statement
+  | AwaitExt ID_Evt             -- await external event
   | AwaitFor                    -- await forever
 -- TODO: AwaitTmr
-  | AwaitInt G.Evt              -- await internal event
-  | EmitInt G.Evt               -- emit internal event
+  | AwaitInt ID_Evt             -- await internal event
+  | EmitInt ID_Evt              -- emit internal event
   | Break                       -- loop escape
-  | If G.Expr Stmt Stmt         -- conditional
+  | If Expr Stmt Stmt           -- conditional
   | Seq Stmt Stmt               -- sequence
   | Loop Stmt                   -- infinite loop
-  | Every G.Evt Stmt            -- event iteration
+  | Every ID_Evt Stmt           -- event iteration
   | And Stmt Stmt               -- par/and statement
   | Or Stmt Stmt                -- par/or statement
   | Spawn Stmt                  -- spawn statement
-  | Fin (Maybe G.Var) Stmt      -- finalize statement
+  | Fin (Maybe ID_Var) Stmt     -- finalize statement
   | Async Stmt                  -- async statement
   | Error String                -- generate runtime error (for testing purposes)
   | Fin' Stmt                   -- fin as in basic Grammar
@@ -53,7 +54,7 @@ remFin :: Stmt -> Stmt
 remFin p = p' where
   (_,p') = rF p
 
-  rF :: Stmt -> ([(G.Var,Stmt)], Stmt)
+  rF :: Stmt -> ([(ID_Var,Stmt)], Stmt)
   rF (If exp p1 p2)      = ([], If exp (snd (rF p1)) (snd (rF p2)))
 
   rF (Seq (Fin Nothing p1) p2)   = (l2', Or (Fin' p1) p2')
@@ -80,7 +81,7 @@ remFin p = p' where
 
                             -- recs: Var in Local, [pending finalize] (id->stmts)
                             -- rets: [stmts to fin] in block, [remaining finalize]
-                            f :: G.Var -> [(G.Var,Stmt)] -> ([Stmt], [(G.Var,Stmt)])
+                            f :: ID_Var -> [(ID_Var,Stmt)] -> ([Stmt], [(ID_Var,Stmt)])
                             f _ [] = ([], [])
                             f id1 ((id2,stmt):fs) = (a++a', b++b') where
                               (a',b') = f id1 fs
@@ -171,7 +172,7 @@ remAwaitFor (Spawn p)      = Spawn (remAwaitFor p)
 remAwaitFor (Fin id p)     = Fin id (remAwaitFor p)
 remAwaitFor (Async p)      = error "remAwaitFor: unexpected statement (Async)"
 remAwaitFor (Fin' p)       = Fin' (remAwaitFor p)
-remAwaitFor AwaitFor       = AwaitExt G.inputForever
+remAwaitFor AwaitFor       = AwaitExt inputForever
 remAwaitFor p              = p
 
 -- toGrammar: Converts full -> basic
@@ -196,7 +197,7 @@ toGrammar p = toG $ remAwaitFor $ remAsync
   toG (Error msg)    = G.Error msg
   toG (Fin' p)       = G.Fin (toG p)
   toG Nop'           = G.Nop
-  toG _              = error "toG: unexpected statement (Block,Var,AwaitFor,Fin,Spawn,Async)"
+  toG _              = error "toG: unexpected statement (AwaitFor,Fin,Spawn,Async)"
 
-evalFullProg :: Stmt -> [G.Evt] -> G.Val
-evalFullProg prog hist = evalProg (toGrammar prog) []
+evalFullProg :: Stmt -> [ID_Evt] -> Val
+evalFullProg prog hist = E.evalProg (toGrammar prog) []

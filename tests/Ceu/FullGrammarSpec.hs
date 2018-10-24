@@ -1,5 +1,6 @@
 module Ceu.FullGrammarSpec (main, spec) where
 
+import Ceu.Globals
 import qualified Ceu.Grammar as G
 import Ceu.FullGrammar
 import Control.DeepSeq
@@ -33,27 +34,27 @@ spec = do
       `shouldBe` (Local "x" (Or (Fin' (Seq Nop' Nop')) (Local "y" Nop')))
 
     it "var x; { fin x with x=1; fin with x=2; x=3 }" $ do
-      remFin (Local "x" (Local "y" (Seq (Fin (Just "x") (Write "x" (G.Const 1))) (Seq (Fin Nothing (Write "x" (G.Const 2))) (Write "x" (G.Const 3))))))
-      `shouldBe` (Local "x" (Or (Fin' (Seq (Write "x" (G.Const 1)) Nop')) (Local "y" (Or (Fin' (Write "x" (G.Const 2))) (Write "x" (G.Const 3))))))
+      remFin (Local "x" (Local "y" (Seq (Fin (Just "x") (Write "x" (Const 1))) (Seq (Fin Nothing (Write "x" (Const 2))) (Write "x" (Const 3))))))
+      `shouldBe` (Local "x" (Or (Fin' (Seq (Write "x" (Const 1)) Nop')) (Local "y" (Or (Fin' (Write "x" (Const 2))) (Write "x" (Const 3))))))
 
     it "var x; { fin x with x=1; fin x with y=1; y=3 }" $ do
       remFin (Local "x" (Local "_" (
-                (Fin (Just "x") (Write "x" (G.Const 1))) `Seq`
-                (Fin (Just "x") (Write "y" (G.Const 1))) `Seq`
-                (Write "y" (G.Const 3))
+                (Fin (Just "x") (Write "x" (Const 1))) `Seq`
+                (Fin (Just "x") (Write "y" (Const 1))) `Seq`
+                (Write "y" (Const 3))
              )))
-      `shouldBe` (Local "x" (Or (Fin' (Seq (Write "y" (G.Const 1)) (Seq (Write "x" (G.Const 1)) Nop'))) (Local "_" (Write "y" (G.Const 3)))))
+      `shouldBe` (Local "x" (Or (Fin' (Seq (Write "y" (Const 1)) (Seq (Write "x" (Const 1)) Nop'))) (Local "_" (Write "y" (Const 3)))))
 
     it "var x; nop; { fin x with x=1; fin with x=2; x=3; fin x with y=1; fin with y=2; y=3 }; nop" $ do
       remFin (Local "x" (Seq Nop' (Seq (Local "_" (
-                (Fin (Just "x") (Write "x" (G.Const 1))) `Seq`
-                (Fin Nothing    (Write "x" (G.Const 2))) `Seq`
-                (Write "x" (G.Const 3))                  `Seq`
-                (Fin (Just "x") (Write "y" (G.Const 1))) `Seq`
-                (Fin Nothing    (Write "y" (G.Const 2))) `Seq`
-                (Write "y" (G.Const 3))
+                (Fin (Just "x") (Write "x" (Const 1))) `Seq`
+                (Fin Nothing    (Write "x" (Const 2))) `Seq`
+                (Write "x" (Const 3))                  `Seq`
+                (Fin (Just "x") (Write "y" (Const 1))) `Seq`
+                (Fin Nothing    (Write "y" (Const 2))) `Seq`
+                (Write "y" (Const 3))
              )) Nop')))
-      `shouldBe` (Local "x" (Or (Fin' (Seq (Write "y" (G.Const 1)) (Seq (Write "x" (G.Const 1)) Nop'))) (Seq Nop' (Seq (Local "_" (Or (Fin' (Write "x" (G.Const 2))) (Seq (Write "x" (G.Const 3)) (Or (Fin' (Write "y" (G.Const 2))) (Write "y" (G.Const 3)))))) Nop'))))
+      `shouldBe` (Local "x" (Or (Fin' (Seq (Write "y" (Const 1)) (Seq (Write "x" (Const 1)) Nop'))) (Seq Nop' (Seq (Local "_" (Or (Fin' (Write "x" (Const 2))) (Seq (Write "x" (Const 3)) (Or (Fin' (Write "y" (Const 2))) (Write "y" (Const 3)))))) Nop'))))
 
   --------------------------------------------------------------------------
   describe "remSpawn" $ do
@@ -97,7 +98,7 @@ spec = do
 
     it "await FOREVER;" $ do
       remAwaitFor AwaitFor
-      `shouldBe` (AwaitExt G.inputForever)
+      `shouldBe` (AwaitExt inputForever)
 
   --------------------------------------------------------------------------
   describe "toGrammar" $ do
@@ -107,17 +108,17 @@ spec = do
       `shouldBe` (G.Local "x" G.Nop)
 
     it "do var x; x = 1 end" $ do
-      toGrammar (Local "x" (Write "x" (G.Const 1)))
-      `shouldBe` (G.Local "x" (G.Write "x" (G.Const 1)))
+      toGrammar (Local "x" (Write "x" (Const 1)))
+      `shouldBe` (G.Local "x" (G.Write "x" (Const 1)))
 
     it "spawn do await A; end ;; await B; var x; await FOREVER;" $ do
       toGrammar (Seq (Spawn (AwaitExt 0)) (Seq (AwaitExt 1) (Local "x" AwaitFor)))
-      `shouldBe` (G.Or (G.Seq (G.AwaitExt 0) (G.AwaitExt G.inputForever)) (G.Seq (G.AwaitExt 1) (G.Local "x" (G.AwaitExt G.inputForever))))
+      `shouldBe` (G.Or (G.Seq (G.AwaitExt 0) (G.AwaitExt inputForever)) (G.Seq (G.AwaitExt 1) (G.Local "x" (G.AwaitExt inputForever))))
 
 
     it "spawn do async ret++ end ;; await F;" $ do
-      toGrammar (Seq (Spawn (Async (Loop (Write "x" (G.Add (G.Read "x") (G.Const 1)))))) (AwaitExt 0))
-      `shouldBe` (G.Or (G.Seq (G.Loop (G.Seq (G.Write "x" (G.Add (G.Read "x") (G.Const 1))) (G.AwaitExt (-3)))) (G.AwaitExt (-2))) (G.AwaitExt 0))
+      toGrammar (Seq (Spawn (Async (Loop (Write "x" (Add (Read "x") (Const 1)))))) (AwaitExt 0))
+      `shouldBe` (G.Or (G.Seq (G.Loop (G.Seq (G.Write "x" (Add (Read "x") (Const 1))) (G.AwaitExt (-3)))) (G.AwaitExt (-2))) (G.AwaitExt 0))
 
   --------------------------------------------------------------------------
   describe "evalFullProg" $ do
@@ -142,9 +143,9 @@ nop;
       (Local "a"
         (Local "b"
           (Seq
-            (Write "b" (G.Const 99))
+            (Write "b" (Const 99))
             (Seq
-              (Fin (Just "a") (Write "ret" (G.Read "b")))
+              (Fin (Just "a") (Write "ret" (Read "b")))
               Nop'
             )
           )
@@ -169,18 +170,18 @@ with
 end
 -}
     evalFullProgItPass 25 [] (
-      (Write "ret" (G.Const 0)) `Seq`
+      (Write "ret" (Const 0)) `Seq`
       (Or
-        ((AwaitInt 0) `Seq` (Write "ret" (G.Add (G.Read "ret") (G.Const 5))))
+        ((AwaitInt 0) `Seq` (Write "ret" (Add (Read "ret") (Const 5))))
         (Or
           (
             (Fin Nothing (
-              (Write "ret" (G.Mul (G.Read "ret") (G.Const 2))) `Seq`
+              (Write "ret" (Mul (Read "ret") (Const 2))) `Seq`
               (EmitInt 0)
             )) `Seq`
             AwaitFor
           )
-          (Write "ret" (G.Add (G.Read "ret") (G.Const 10)))
+          (Write "ret" (Add (Read "ret") (Const 10)))
         )
       ))
 

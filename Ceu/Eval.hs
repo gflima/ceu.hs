@@ -1,23 +1,97 @@
 module Ceu.Eval where
 
-import Ceu.Grammar
+import Ceu.Globals
+import qualified Ceu.Grammar as G
 import Data.Maybe
+import Text.Printf
 import Debug.Trace
-
--- Environment.
-type Env = [(Var,Maybe Val)]
 
 -- Stack level.
 type Lvl = Int
 
 -- Description (pg 6).
-type Desc = (Stmt, Lvl, Maybe Evt, Env)
+type Desc = (Stmt, Lvl, Maybe ID_Evt, Env)
+
+-- Program (pg 5).
+data Stmt
+  = Local ID_Var Stmt           -- declaration block
+  | Write ID_Var Expr           -- assignment statement
+  | AwaitExt ID_Evt             -- await external event
+  | AwaitInt ID_Evt             -- await internal event
+  | EmitInt ID_Evt              -- emit internal event
+  | Break                       -- loop escape
+  | If Expr Stmt Stmt           -- conditional
+  | Seq Stmt Stmt               -- sequence
+  | Loop Stmt                   -- infinite loop
+  | Every ID_Evt Stmt           -- event iteration
+  | And Stmt Stmt               -- par/and statement
+  | Or Stmt Stmt                -- par/or statement
+  | Fin Stmt                    -- finalization statement
+  | Nop                         -- dummy statement (internal)
+  | Error String                -- generate runtime error (for testing purposes)
+  | CanRun Int                  -- wait for stack level (internal)
+  | Local' ID_Var (Maybe Val) Stmt -- block with environment store
+  | Loop' Stmt Stmt             -- unrolled Loop (internal)
+  | And' Stmt Stmt              -- unrolled And (internal)
+  | Or' Stmt Stmt               -- unrolled Or (internal)
+  deriving (Eq, Show)
+
+infixr 1 `Seq`                  -- `Seq` associates to the right
+infixr 0 `Or`                   -- `Or` associates to the right
+infixr 0 `And`                  -- `And` associates to the right
+
+fromGrammar :: G.Stmt -> Stmt
+fromGrammar (G.Local id p)    = Local id (fromGrammar p)
+fromGrammar (G.Write id exp)  = Write id exp
+fromGrammar (G.AwaitExt id)   = AwaitExt id
+fromGrammar (G.AwaitInt id)   = AwaitInt id
+fromGrammar (G.EmitInt id)    = EmitInt id
+fromGrammar G.Break           = Break
+fromGrammar (G.If exp p1 p2)  = If exp (fromGrammar p1) (fromGrammar p2)
+fromGrammar (G.Seq p1 p2)     = Seq (fromGrammar p1) (fromGrammar p2)
+fromGrammar (G.Loop p)        = Loop (fromGrammar p)
+fromGrammar (G.Every id p)    = Every id (fromGrammar p)
+fromGrammar (G.And p1 p2)     = And (fromGrammar p1) (fromGrammar p2)
+fromGrammar (G.Or p1 p2)      = Or (fromGrammar p1) (fromGrammar p2)
+fromGrammar (G.Fin p)         = Fin (fromGrammar p)
+fromGrammar G.Nop             = Nop
+fromGrammar (G.Error msg)     = Error msg
+
+-- Shows program.
+showProg :: Stmt -> String
+showProg stmt = case stmt of
+  Local var p       -> printf "{%s: %s}" var (sP p)
+  Write var expr -> printf "%s=%s" var (sE expr)
+  AwaitExt e     -> printf "?E%d" e
+  AwaitInt e     -> printf "?%d" e
+  EmitInt e      -> printf "!%d" e
+  Break          -> "break"
+  If expr p q    -> printf "(if %s then %s else %s)" (sE expr) (sP p) (sP q)
+  Seq p q        -> printf "%s; %s" (sP p) (sP q)
+  Loop p         -> printf "(loop %s)" (sP p)
+  Every e p      -> printf "(every %d %s)" e (sP p)
+  And p q        -> printf "(%s && %s)" (sP p) (sP q)
+  Or p q         -> printf "(%s || %s)" (sP p) (sP q)
+  Fin p          -> printf "(fin %s)" (sP p)
+  Nop            -> "nop"
+  Error _        -> "err"
+  CanRun n       -> printf "@canrun(%d)" n
+  Local' var val p
+    | isNothing val -> printf "{%s=_: %s}" var (sP p)
+    | otherwise     -> printf "{%s=%d: %s}" var (fromJust val) (sP p)
+  Loop' p q      -> printf "(%s @loop %s)" (sP p) (sP q)
+  And' p q       -> printf "(%s @&& %s)" (sP p) (sP q)
+  Or' p q        -> printf "(%s @|| %s)" (sP p) (sP q)
+  where
+    sE = showExpr
+    sP = showProg
+    sV = showVars
 
 ----------------------------------------------------------------------------
 -- Environment
 
 -- Write value to variable in environment.
-envWrite :: Env -> Var -> Val -> Env
+envWrite :: Env -> ID_Var -> Val -> Env
 envWrite env var val = case env of
   (var',val'):env'
     | var == var' -> (var,Just val):env'
@@ -25,7 +99,7 @@ envWrite env var val = case env of
   []              -> error ("envWrite: undeclared variable: " ++ var)
 
 -- Reads variable value from environment.
-envRead :: Env -> Var -> Val
+envRead :: Env -> ID_Var -> Val
 envRead env var = case env of
   (var',val):env'
     | var' == var -> if isJust val then fromJust val
@@ -206,7 +280,7 @@ nsts d
 
 -- Awakes all trails waiting for the given event.
 -- (pg 8, fig 4.i)
-bcast :: Evt -> Stmt -> Stmt
+bcast :: ID_Evt -> Stmt -> Stmt
 bcast e stmt = case stmt of
   AwaitExt e' | e == e' -> Nop
   AwaitInt e' | e == e' -> Nop
@@ -241,10 +315,34 @@ nsts_out1_s (p, n, e, env)
   | n == 0 = (p, n, e, env)
   | n > 0  = nsts_out1_s $ out1 $ nsts (p, n, e, env)
 
+-- TODO: are these functions used anywhere?
+{-
+-- Counts the maximum number of EmitInt's that can be executed in program.
+-- (pot', pg 9)
+countMaxEmits :: Stmt -> Int
+countMaxEmits stmt = case stmt of
+  EmitInt e                      -> 1
+  Local _ p                      -> cME p
+  If expr p q                    -> max (cME p) (cME q)
+  Loop p                         -> cME p
+  And p q                        -> cME p + cME q
+  Or p q                         -> cME p + cME q
+  Seq Break q                    -> 0
+  Seq (AwaitExt e) q             -> 0
+  Seq p q                        -> cME p + cME q
+  Local' _ _ p                   -> cME p
+  Loop' p q | checkLoop (Loop p) -> cME p         -- q is unreachable
+            | otherwise          -> cME p + cME q
+  And' p q                       -> cME p + cME q -- CHECK THIS! --
+  Or' p q                        -> cME p + cME q -- CHECK THIS! --
+  _                              -> 0
+  where
+    cME = countMaxEmits
+
 -- Counts the maximum number of EmitInt's that can be executed in a reaction
 -- of program to event.
 -- (pg 9)
-pot :: Evt -> Stmt -> Int
+pot :: ID_Evt -> Stmt -> Int
 pot e p = countMaxEmits $ bcast e p
 
 -- (pg 9)
@@ -255,24 +353,31 @@ rank (p, n, Just e, env)  = (pot e p, n+1)
 -- Tests whether the description is irreducible in general.
 isIrreducible :: Desc -> Bool
 isIrreducible d = isNstIrreducible d && snd (rank d) == 0
+-}
+
+-- Tests whether the description is irreducible in general.
+isIrreducible :: Desc -> Bool
+isIrreducible d = isNstIrreducible d && iR d where
+  iR (_,i,Nothing,_) = i == 0
+  iR (_,_,Just ne,_) = True
 
 ----------------------------------------------------------------------------
 -- Reaction
 
 -- Computes a reaction of program plus environment to a single event.
 -- (pg 6)
-reaction :: (Stmt, Evt, Env) -> (Stmt, Env)
+reaction :: (Stmt, ID_Evt, Env) -> (Stmt, Env)
 reaction (p, e, env) = (p', env')
   where
     (p', _, _, env') = nsts_out1_s $ outPush (p, 0, Just e, env)
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
-evalProg :: Stmt -> [Evt] -> Val
+evalProg :: G.Stmt -> [ID_Evt] -> Val
 evalProg prog hist -- enclosing block with "ret" that never terminates
-  = evalProg' (Local "ret" (Seq prog (AwaitExt inputForever))) (inputBoot:hist) []
+  = evalProg' (Local "ret" (Seq (fromGrammar prog) (AwaitExt inputForever))) (inputBoot:hist) []
   where
-    evalProg' :: Stmt -> [Evt] -> Env -> Val
+    evalProg' :: Stmt -> [ID_Evt] -> Env -> Val
     evalProg' prog hist env = case prog of
       (Local' "ret" val (AwaitExt inputForever))
         | not (null hist) -> traceShow hist error "evalProg: pending inputs"

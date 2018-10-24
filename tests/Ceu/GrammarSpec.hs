@@ -1,5 +1,6 @@
 module Ceu.GrammarSpec (main, spec) where
 
+import Ceu.Globals
 import Ceu.Grammar
 import Test.Hspec
 
@@ -19,15 +20,6 @@ spec = do
     checkLoopIt (Loop (Break))                     True
     checkLoopIt (Loop (Nop))                       False
     checkLoopIt (Loop (Error ""))                  False
-    checkLoopIt (Loop (CanRun 0))                  False
-    checkLoopIt (Loop' Nop (Write "x" (Const 0)))  False
-    checkLoopIt (Loop' Nop (AwaitExt 0))           True
-    checkLoopIt (Loop' Nop (AwaitInt 0))           False
-    checkLoopIt (Loop' Nop (EmitInt 0))            False
-    checkLoopIt (Loop' Nop (Break))                True
-    checkLoopIt (Loop' Nop (Nop))                  False
-    checkLoopIt (Loop' Nop (Error ""))             False
-    checkLoopIt (Loop' Nop (CanRun 0))             False
 
     -- compound statements --
     checkLoopIt (Loop (Local "x" (Local "y" Break)))             True
@@ -50,18 +42,8 @@ spec = do
     checkLoopIt (Loop (Loop (Seq Break Break)))                  False
 
     checkLoopIt (Loop (Nop `And` Nop `And` Nop))                 False
-    checkLoopIt (Loop (Break `And'` Nop `And` Nop))              False
-    checkLoopIt (Loop (Break `And` Every 0 Nop `And'` Break))    True
     checkLoopIt (Loop (Nop `Or` Nop `Or` Nop))                   False
-    checkLoopIt (Loop (Nop `Or'` AwaitExt 0 `Or` Nop))           False
     checkLoopIt (Loop (Every 0 Nop `Or` AwaitExt 0 `Or` Break))  True
-
-    checkLoopIt (Loop (Nop `And'` Nop))                          False
-    checkLoopIt (Loop (Break `And'` Nop))                        False
-    checkLoopIt (Loop (Break `And'` (Every 0 Nop)))              True
-    checkLoopIt (Loop (Nop `Or'` Nop))                           False
-    checkLoopIt (Loop (Nop `Or'` (AwaitExt 0)))                  False
-    checkLoopIt (Loop ((Every 0 Nop) `Or'` (AwaitExt 0)))        True
 
     -- Fin always run in zero time.
     checkLoopIt (Loop (Fin Nop))                                 False
@@ -80,7 +62,6 @@ spec = do
     checkFinIt (Fin (Break))               False
     checkFinIt (Fin (Nop))                 True
     checkFinIt (Fin (Error ""))            True
-    checkFinIt (Fin (CanRun 0))            True
 
     -- compound statements --
     checkFinIt (Fin (Local "x" Nop))                              True
@@ -91,11 +72,7 @@ spec = do
     checkFinIt (Fin (Nop `Seq` Nop `Seq` (EmitInt 0) `Seq` Nop))  True
     checkFinIt (Fin (Loop (AwaitInt 0)))                          False
     checkFinIt (Fin (Loop (AwaitExt 0)))                          False
-    checkFinIt (Fin (Loop' Nop Nop))                              False
-    checkFinIt (Fin (Loop' Nop (AwaitExt 0)))                     False
     checkFinIt (Fin (Nop `And` Nop `And` (EmitInt 0)))            True
-    checkFinIt (Fin (Fin Nop `And'` Nop `And` (EmitInt 0)))       False
-    checkFinIt (Fin (Break `Or'` Nop `Or` (EmitInt 0)))           False
 
   --------------------------------------------------------------------------
   describe "checkProg -- program is valid" $ do
@@ -108,7 +85,6 @@ spec = do
     checkProgIt (Break)               True
     checkProgIt (Nop)                 True
     checkProgIt (Error "")            True
-    checkProgIt (CanRun 0)            True
 
     -- compound statements --
     checkProgIt (Local "x" Nop)          True
@@ -122,10 +98,6 @@ spec = do
     checkProgIt (Or Nop (EmitInt 0))     True
     checkProgIt (Fin Nop)                True
     checkProgIt (Fin (Fin Nop))          False
-    checkProgIt (Loop' Nop Break)        True
-    checkProgIt (Loop' Nop Nop)          False
-    checkProgIt (And' Break Nop)         True
-    checkProgIt (Or' Nop (EmitInt 0))    True
 
     -- misc --
     checkProgIt (Nop `Seq` (Fin (Loop Break)))                      False
