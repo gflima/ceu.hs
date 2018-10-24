@@ -19,7 +19,7 @@ instance NFData Expr where
   rnf (Div e1 e2) = rnf e1 `deepseq` rnf e2
 
 instance NFData Stmt where
-  rnf (Local _ p)      = rnf p
+  rnf (Var _ p)        = rnf p
   rnf (Write var expr) = rnf expr
   rnf (AwaitExt _)     = ()
   rnf (AwaitInt _)     = ()
@@ -35,7 +35,7 @@ instance NFData Stmt where
   rnf (Nop)            = ()
   rnf (Error _)        = ()
   rnf (CanRun _)       = ()
-  rnf (Local' _ _ p)   = rnf p
+  rnf (Var' _ _ p)     = rnf p
   rnf (Loop' p q)      = rnf p
   rnf (And' p q)       = rnf p `deepseq` rnf q
   rnf (Or' p q)        = rnf p `deepseq` rnf q
@@ -116,14 +116,14 @@ spec = do
         `shouldThrow` errorCall "Runtime error: erro"
 
     -- block --
-    describe "(Local \"x\" p)" $ do
-      it "pass: Local \"x\" Nop" $
-        nst1 (Local "x" Nop, 0, Nothing, [])
-        `shouldBe` (Local' "x" Nothing Nop, 0, Nothing, [])
+    describe "(Var \"x\" p)" $ do
+      it "pass: Var \"x\" Nop" $
+        nst1 (Var "x" Nop, 0, Nothing, [])
+        `shouldBe` (Var' "x" Nothing Nop, 0, Nothing, [])
 
-      it "pass: Local [\"x\"] p" $
-        nst1 (Local "x" (Seq Nop Nop), 0, Nothing, [])
-        `shouldBe` (Local' "x" Nothing (Seq Nop Nop), 0, Nothing, [])
+      it "pass: Var [\"x\"] p" $
+        nst1 (Var "x" (Seq Nop Nop), 0, Nothing, [])
+        `shouldBe` (Var' "x" Nothing (Seq Nop Nop), 0, Nothing, [])
 
     -- write --
     describe "(Write id exp)" $ do
@@ -136,51 +136,51 @@ spec = do
         `shouldThrow` errorCall "envWrite: undeclared variable: x"
 
       it "pass: [x=?] x=1" $
-        nst1 (Local' "x" Nothing (Write "x" (Const 1)), 0, Nothing, [])
-        `shouldBe` (Local' "x" (Just 1) Nop, 0, Nothing, [])
+        nst1 (Var' "x" Nothing (Write "x" (Const 1)), 0, Nothing, [])
+        `shouldBe` (Var' "x" (Just 1) Nop, 0, Nothing, [])
 
       it "pass: [x=1] x=2" $
-        nst1 (Local' "x" (Just 1) (Write "x" (Const 2)), 0, Nothing, [])
-        `shouldBe` (Local' "x" (Just 2) Nop, 0, Nothing, [])
+        nst1 (Var' "x" (Just 1) (Write "x" (Const 2)), 0, Nothing, [])
+        `shouldBe` (Var' "x" (Just 2) Nop, 0, Nothing, [])
 
       -- TODO: test is correct but fails
       it "fail: [x=1,y=?] x=y (uninitialized variable) | TODO: ok" $
-        let p = Local' "x" (Just 1)
-               (Local' "y" Nothing
+        let p = Var' "x" (Just 1)
+               (Var' "y" Nothing
                  (Write "x" (Read "y"))) in
           (forceEval $ nst1 (p, 0, Nothing, []))
           `shouldThrow` errorCall "envRead: uninitialized variable: y"
 
       it "pass: nop; x=1" $
         nst1
-        (Local' "x" Nothing
+        (Var' "x" Nothing
           (Nop `Seq` (Write "x" (Const 1))), 0, Nothing, [])
         `shouldBe`
-        (Local' "x" Nothing
+        (Var' "x" Nothing
           (Write "x" (Const 1)), 0, Nothing, [])
 
       it "pass: [x=1,y=?] y=x+2" $
         nst1 (
-          (Local' "x" (Just 1)
-          (Local' "y" Nothing
+          (Var' "x" (Just 1)
+          (Var' "y" Nothing
             (Write "y" (Read "x" `Add` Const 2))), 0, Nothing, []))
-        `shouldBe` (Local' "x" (Just 1) (Local' "y" (Just 3) Nop),0,Nothing,[])
+        `shouldBe` (Var' "x" (Just 1) (Var' "y" (Just 3) Nop),0,Nothing,[])
 
       it "pass: [x=1,y=?] y=x+2" $
         nst1
-        (Local' "x" (Just 1)
-        (Local' "y" Nothing
+        (Var' "x" (Just 1)
+        (Var' "y" Nothing
           (Write "y" (Read "x" `Add` Const 2))), 0, Nothing, [])
         `shouldBe`
-        (Local' "x" (Just 1)
-        (Local' "y" (Just 3) Nop), 0, Nothing, [])
+        (Var' "x" (Just 1)
+        (Var' "y" (Just 3) Nop), 0, Nothing, [])
 
       it "pass: [x=?] x=-(5+1)" $
         nst1
-        (Local' "x" (Just 0)
+        (Var' "x" (Just 0)
           (Write "x" (Umn (Const 5 `Add` Const 1))), 0, Nothing, [])
         `shouldBe`
-        (Local' "x" (Just (-6)) Nop, 0, Nothing, [])
+        (Var' "x" (Just (-6)) Nop, 0, Nothing, [])
 
     -- emit-int --
   describe "(EmitInt e')" $ do
@@ -430,7 +430,7 @@ spec = do
            `shouldBe` (Seq (clear q) Break, 3, Nothing, []))
 
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (nst1 (And' Break (Local "_" Nop), 0, Just 1, []))
+        forceEval (nst1 (And' Break (Var "_" Nop), 0, Just 1, []))
         `shouldThrow` errorCall "nst1: cannot advance"
 
       it "pass: isBlocked q" $
@@ -825,7 +825,7 @@ spec = do
     describe "one+ steps" $ do
 
       nstsItPass
-        (Local "x" (Write "x" (Const 0)), 3, Nothing, [])
+        (Var "x" (Write "x" (Const 0)), 3, Nothing, [])
         (Nop, 3, Nothing, [])
 
       nstsItPass
@@ -943,54 +943,54 @@ spec = do
   describe "evalProg" $ do
 
     evalProgItPass 11
-      [] (G.Local "a"
+      [] (G.Var "a"
            (G.Write "a" (Const 1) `G.Seq`
             G.Write "ret" (Read "a" `Add` Const 10)))
 
     evalProgItFail "evalProg: no return"
-      [] (G.Local "a"
-           (G.Local "ret"
+      [] (G.Var "a"
+           (G.Var "ret"
              (G.Write "a" (Const 1) `G.Seq`
               G.Write "ret" (Read "a" `Add` Const 10))))
 
     evalProgItPass 1
       [] (G.Write "ret" (Const 1) `G.Seq`
-          G.Local "ret" (G.Write "ret" (Const 99)))
+          G.Var "ret" (G.Write "ret" (Const 99)))
 
     evalProgItPass 11
-      [] (G.Local "a"
+      [] (G.Var "a"
            (G.Write "a" (Const 1) `G.Seq`
-            G.Local "a" (G.Write "a" (Const 99)) `G.Seq`
+            G.Var "a" (G.Write "a" (Const 99)) `G.Seq`
             G.Write "ret" (Read "a" `Add` Const 10)))
 
     evalProgItPass 2
       [] (G.Write "ret" (Const 1) `G.Seq`
-          G.Local "_" (G.Write "ret" (Const 2)))
+          G.Var "_" (G.Write "ret" (Const 2)))
 
     evalProgItPass 11
-      [] (G.Local "a"
+      [] (G.Var "a"
            (G.Write "a" (Const 1) `G.Seq`
             G.Or
-             (G.Local "a" (G.Write "a" (Const 99) `G.Seq` G.AwaitExt 0))
+             (G.Var "a" (G.Write "a" (Const 99) `G.Seq` G.AwaitExt 0))
              (G.Nop) `G.Seq`
            G.Write "ret" (Read "a" `Add` Const 10)))
 
     evalProgItPass 1
       [] (G.Or
-           (G.Local "x" (G.Write "ret" (Const 1) `G.Seq` G.AwaitExt 0))
+           (G.Var "x" (G.Write "ret" (Const 1) `G.Seq` G.AwaitExt 0))
            (G.Nop))
 
     evalProgItPass 11
-      [] (G.Local "a"
+      [] (G.Var "a"
            (G.Write "a" (Const 1) `G.Seq`
             G.Loop (G.And
-                  (G.Local "a" (G.Write "a" (Const 99) `G.Seq` G.AwaitExt 0))
+                  (G.Var "a" (G.Write "a" (Const 99) `G.Seq` G.AwaitExt 0))
                   (G.Break)) `G.Seq`
              G.Write "ret" (Read "a" `Add` Const 10)))
 
     evalProgItPass 1
       [] (G.Loop (G.And
-                 (G.Local "x" (G.Write "ret" (Const 1) `G.Seq` G.AwaitExt 0))
+                 (G.Var "x" (G.Write "ret" (Const 1) `G.Seq` G.AwaitExt 0))
                  (G.Break)))
 
     evalProgItPass 5 [] (
@@ -1019,10 +1019,10 @@ end
 escape x;
 -}
     evalProgItPass 99 [] (
-      (G.Local "x" (
+      (G.Var "x" (
         (G.Write "x" (Const 10)) `G.Seq`
         (G.Or
-          (G.Local "x" (G.AwaitExt inputForever))
+          (G.Var "x" (G.AwaitExt inputForever))
           (G.Write "x" (Const 99))
         ) `G.Seq`
         (G.Write "ret" (Read "x"))

@@ -18,7 +18,7 @@ inputAsync   = -3
 
 -- Program (pg 5).
 data Stmt
-  = Local ID_Var Stmt           -- variable declaration
+  = Var ID_Var Stmt             -- variable declaration
   | Write ID_Var Expr           -- assignment statement
   | AwaitExt ID_Evt             -- await external event
   | AwaitFor                    -- await forever
@@ -48,7 +48,7 @@ infixr 0 `Or`                   -- `Or` associates to the right
 infixr 0 `And`                  -- `And` associates to the right
 
 -- remFin: Converts (Fin _  p);A -> (or (Fin' p) A)
---                  (Fin id p);A -> A ||| (Local (Or [(Fin p)] X)
+--                  (Fin id p);A -> A ||| (Var (Or [(Fin p)] X)
 
 remFin :: Stmt -> Stmt
 remFin p = p' where
@@ -73,13 +73,13 @@ remFin p = p' where
   rF (Fin id p)          = error "remFin: unexpected statement (Fin)"
   rF (Async p)           = ([], Async (snd (rF p)))
 
-  rF (Local id p)        = (l'', Local id p''') where
+  rF (Var id p)          = (l'', Var id p''') where
                             (l', p')  = (rF p)   -- results from nested p
                             (p'',l'') = f id l' -- matches l' with current local id
                             p''' | ((toSeq p'') == Nop') = p' -- nothing to finalize
                                  | otherwise             = (Or (Fin' (toSeq p'')) p')
 
-                            -- recs: Var in Local, [pending finalize] (id->stmts)
+                            -- recs: Var in Var, [pending finalize] (id->stmts)
                             -- rets: [stmts to fin] in block, [remaining finalize]
                             f :: ID_Var -> [(ID_Var,Stmt)] -> ([Stmt], [(ID_Var,Stmt)])
                             f _ [] = ([], [])
@@ -97,7 +97,7 @@ remFin p = p' where
 -- remSpawn: Converts (spawn p1; ...) into (p1;AwaitFor or ...)
 
 remSpawn :: Stmt -> Stmt
-remSpawn (Local var p)       = Local var (remSpawn p)
+remSpawn (Var var p)         = Var var (remSpawn p)
 remSpawn (If exp p1 p2)      = If exp (remSpawn p1) (remSpawn p2)
 remSpawn (Seq (Spawn p1) p2) = Or (Seq (remSpawn p1) AwaitFor) (remSpawn p2)
 remSpawn (Seq p1 p2)         = Seq (remSpawn p1) (remSpawn p2)
@@ -124,7 +124,7 @@ chkSpawn p = case p of
   notS p         = True
 
   chkS :: Stmt -> Bool
-  chkS (Local _ p)  = (notS p) && (chkS p)
+  chkS (Var _ p)    = (notS p) && (chkS p)
   chkS (If _ p1 p2) = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
   chkS (Seq p1 p2)  = (chkS p1) && (notS p2) && (chkS p2)
   chkS (Loop p)     = (notS p) && (chkS p)
@@ -142,7 +142,7 @@ chkSpawn p = case p of
 remAsync :: Stmt -> Stmt
 remAsync p = (rA False p) where
   rA :: Bool -> Stmt -> Stmt
-  rA inA   (Local var p)  = Local var (rA inA p)
+  rA inA   (Var var p)    = Var var (rA inA p)
   rA inA   (If exp p1 p2) = If exp (rA inA p1) (rA inA p2)
   rA inA   (Seq p1 p2)    = Seq (rA inA p1) (rA inA p2)
   rA True  (Loop p)       = Loop (rA True (Seq p (AwaitExt inputAsync)))
@@ -161,7 +161,7 @@ remAsync p = (rA False p) where
 -- remAwaitFor: Converts AwaitFor into (AwaitExt inputForever)
 
 remAwaitFor :: Stmt -> Stmt
-remAwaitFor (Local var p)  = Local var (remAwaitFor p)
+remAwaitFor (Var var p)    = Var var (remAwaitFor p)
 remAwaitFor (If exp p1 p2) = If exp (remAwaitFor p1) (remAwaitFor p2)
 remAwaitFor (Seq p1 p2)    = Seq (remAwaitFor p1) (remAwaitFor p2)
 remAwaitFor (Loop p)       = Loop (remAwaitFor p)
@@ -182,7 +182,7 @@ toGrammar p = toG $ remAwaitFor $ remAsync
                   $ remSpawn $ chkSpawn
                   $ remFin p where
   toG :: Stmt -> G.Stmt
-  toG (Local id p)   = G.Local id (toG p)
+  toG (Var id p)     = G.Var id (toG p)
   toG (Write id exp) = G.Write id exp
   toG (AwaitExt e)   = G.AwaitExt e
   toG (AwaitInt e)   = G.AwaitInt e

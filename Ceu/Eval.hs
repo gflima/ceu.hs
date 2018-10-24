@@ -14,7 +14,7 @@ type Desc = (Stmt, Lvl, Maybe ID_Evt, Env)
 
 -- Program (pg 5).
 data Stmt
-  = Local ID_Var Stmt           -- declaration block
+  = Var ID_Var Stmt           -- declaration block
   | Write ID_Var Expr           -- assignment statement
   | AwaitExt ID_Evt             -- await external event
   | AwaitInt ID_Evt             -- await internal event
@@ -30,7 +30,7 @@ data Stmt
   | Nop                         -- dummy statement (internal)
   | Error String                -- generate runtime error (for testing purposes)
   | CanRun Int                  -- wait for stack level (internal)
-  | Local' ID_Var (Maybe Val) Stmt -- block with environment store
+  | Var' ID_Var (Maybe Val) Stmt -- block with environment store
   | Loop' Stmt Stmt             -- unrolled Loop (internal)
   | And' Stmt Stmt              -- unrolled And (internal)
   | Or' Stmt Stmt               -- unrolled Or (internal)
@@ -41,7 +41,7 @@ infixr 0 `Or`                   -- `Or` associates to the right
 infixr 0 `And`                  -- `And` associates to the right
 
 fromGrammar :: G.Stmt -> Stmt
-fromGrammar (G.Local id p)    = Local id (fromGrammar p)
+fromGrammar (G.Var id p)      = Var id (fromGrammar p)
 fromGrammar (G.Write id exp)  = Write id exp
 fromGrammar (G.AwaitExt id)   = AwaitExt id
 fromGrammar (G.AwaitInt id)   = AwaitInt id
@@ -60,7 +60,7 @@ fromGrammar (G.Error msg)     = Error msg
 -- Shows program.
 showProg :: Stmt -> String
 showProg stmt = case stmt of
-  Local var p       -> printf "{%s: %s}" var (sP p)
+  Var var p      -> printf "{%s: %s}" var (sP p)
   Write var expr -> printf "%s=%s" var (sE expr)
   AwaitExt e     -> printf "?E%d" e
   AwaitInt e     -> printf "?%d" e
@@ -76,7 +76,7 @@ showProg stmt = case stmt of
   Nop            -> "nop"
   Error _        -> "err"
   CanRun n       -> printf "@canrun(%d)" n
-  Local' var val p
+  Var' var val p
     | isNothing val -> printf "{%s=_: %s}" var (sP p)
     | otherwise     -> printf "{%s=%d: %s}" var (fromJust val) (sP p)
   Loop' p q      -> printf "(%s @loop %s)" (sP p) (sP q)
@@ -131,7 +131,7 @@ isBlocked n stmt = case stmt of
   CanRun m     -> n > m
   Fin p        -> True
   Seq p q      -> isBlocked n p
-  Local' _ _ p -> isBlocked n p
+  Var' _ _ p   -> isBlocked n p
   Loop' p q    -> isBlocked n p
   And' p q     -> isBlocked n p && isBlocked n q
   Or' p q      -> isBlocked n p && isBlocked n q
@@ -147,7 +147,7 @@ clear stmt = case stmt of
   CanRun _     -> Nop
   Fin p        -> p
   Seq p _      -> clear p
-  Local' _ _ p -> clear p
+  Var' _ _ p   -> clear p
   Loop' p _    -> clear p
   And' p q     -> Seq (clear p) (clear q)
   Or' p q      -> Seq (clear p) (clear q)
@@ -163,17 +163,17 @@ nst1Adv d f = (f p, n, e, env)
 -- (pg 6)
 nst1 :: Desc -> Desc
 
-nst1 (Local var p, n, Nothing, env)            -- local-exp
-  = (Local' var Nothing p, n, Nothing, env)
+nst1 (Var var p, n, Nothing, env)            -- local-exp
+  = (Var' var Nothing p, n, Nothing, env)
 
-nst1 (Local' var val Nop, n, Nothing, env)     -- local-nop
+nst1 (Var' var val Nop, n, Nothing, env)     -- local-nop
   = (Nop, n, Nothing, env)
 
-nst1 (Local' var val Break, n, Nothing, env)   -- local-brk
+nst1 (Var' var val Break, n, Nothing, env)   -- local-brk
   = (Break, n, Nothing, env)
 
-nst1 (Local' var val p, n, Nothing, env)       -- local-adv
-  = (Local' var val' p', n, e, env')
+nst1 (Var' var val p, n, Nothing, env)       -- local-adv
+  = (Var' var val' p', n, e, env')
     where
       (p', _, e, (_,val'):env') = nst1Adv (p, n, Nothing, (var,val):env) id
 
@@ -286,7 +286,7 @@ bcast e stmt = case stmt of
   AwaitInt e' | e == e' -> Nop
   Every e' p  | e == e' -> Seq p (Every e' p)
   Seq p q               -> Seq (bcast e p) q
-  Local' var val p      -> Local' var val (bcast e p)
+  Var' var val p        -> Var' var val (bcast e p)
   Loop' p q             -> Loop' (bcast e p) q
   And' p q              -> And' (bcast e p) (bcast e q)
   Or' p q               -> Or' (bcast e p) (bcast e q)
@@ -322,7 +322,7 @@ nsts_out1_s (p, n, e, env)
 countMaxEmits :: Stmt -> Int
 countMaxEmits stmt = case stmt of
   EmitInt e                      -> 1
-  Local _ p                      -> cME p
+  Var _ p                      -> cME p
   If expr p q                    -> max (cME p) (cME q)
   Loop p                         -> cME p
   And p q                        -> cME p + cME q
@@ -330,7 +330,7 @@ countMaxEmits stmt = case stmt of
   Seq Break q                    -> 0
   Seq (AwaitExt e) q             -> 0
   Seq p q                        -> cME p + cME q
-  Local' _ _ p                   -> cME p
+  Var' _ _ p                     -> cME p
   Loop' p q | checkLoop (Loop p) -> cME p         -- q is unreachable
             | otherwise          -> cME p + cME q
   And' p q                       -> cME p + cME q -- CHECK THIS! --
@@ -375,11 +375,11 @@ reaction (p, e, env) = (p', env')
 -- Returns the last value of global "ret" set by the program.
 evalProg :: G.Stmt -> [ID_Evt] -> Val
 evalProg prog hist -- enclosing block with "ret" that never terminates
-  = evalProg' (Local "ret" (Seq (fromGrammar prog) (AwaitExt inputForever))) (inputBoot:hist) []
+  = evalProg' (Var "ret" (Seq (fromGrammar prog) (AwaitExt inputForever))) (inputBoot:hist) []
   where
     evalProg' :: Stmt -> [ID_Evt] -> Env -> Val
     evalProg' prog hist env = case prog of
-      (Local' "ret" val (AwaitExt inputForever))
+      (Var' "ret" val (AwaitExt inputForever))
         | not (null hist) -> traceShow hist error "evalProg: pending inputs"
         | isNothing val   -> error "evalProg: no return"
         | otherwise       -> fromJust val

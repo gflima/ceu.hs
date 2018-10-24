@@ -26,27 +26,27 @@ spec = do
   describe "remFin" $ do
 
     it "var x; fin x with nop; nop" $ do
-      remFin (Local "x" (Seq (Fin (Just "x") Nop') Nop'))
-      `shouldBe` (Local "x" (Or (Fin' (Seq Nop' Nop')) Nop'))
+      remFin (Var "x" (Seq (Fin (Just "x") Nop') Nop'))
+      `shouldBe` (Var "x" (Or (Fin' (Seq Nop' Nop')) Nop'))
 
     it "var x; { fin x with nop; nop }" $ do
-      remFin (Local "x" (Local "y" (Seq (Fin (Just "x") Nop') Nop')))
-      `shouldBe` (Local "x" (Or (Fin' (Seq Nop' Nop')) (Local "y" Nop')))
+      remFin (Var "x" (Var "y" (Seq (Fin (Just "x") Nop') Nop')))
+      `shouldBe` (Var "x" (Or (Fin' (Seq Nop' Nop')) (Var "y" Nop')))
 
     it "var x; { fin x with x=1; fin with x=2; x=3 }" $ do
-      remFin (Local "x" (Local "y" (Seq (Fin (Just "x") (Write "x" (Const 1))) (Seq (Fin Nothing (Write "x" (Const 2))) (Write "x" (Const 3))))))
-      `shouldBe` (Local "x" (Or (Fin' (Seq (Write "x" (Const 1)) Nop')) (Local "y" (Or (Fin' (Write "x" (Const 2))) (Write "x" (Const 3))))))
+      remFin (Var "x" (Var "y" (Seq (Fin (Just "x") (Write "x" (Const 1))) (Seq (Fin Nothing (Write "x" (Const 2))) (Write "x" (Const 3))))))
+      `shouldBe` (Var "x" (Or (Fin' (Seq (Write "x" (Const 1)) Nop')) (Var "y" (Or (Fin' (Write "x" (Const 2))) (Write "x" (Const 3))))))
 
     it "var x; { fin x with x=1; fin x with y=1; y=3 }" $ do
-      remFin (Local "x" (Local "_" (
+      remFin (Var "x" (Var "_" (
                 (Fin (Just "x") (Write "x" (Const 1))) `Seq`
                 (Fin (Just "x") (Write "y" (Const 1))) `Seq`
                 (Write "y" (Const 3))
              )))
-      `shouldBe` (Local "x" (Or (Fin' (Seq (Write "y" (Const 1)) (Seq (Write "x" (Const 1)) Nop'))) (Local "_" (Write "y" (Const 3)))))
+      `shouldBe` (Var "x" (Or (Fin' (Seq (Write "y" (Const 1)) (Seq (Write "x" (Const 1)) Nop'))) (Var "_" (Write "y" (Const 3)))))
 
     it "var x; nop; { fin x with x=1; fin with x=2; x=3; fin x with y=1; fin with y=2; y=3 }; nop" $ do
-      remFin (Local "x" (Seq Nop' (Seq (Local "_" (
+      remFin (Var "x" (Seq Nop' (Seq (Var "_" (
                 (Fin (Just "x") (Write "x" (Const 1))) `Seq`
                 (Fin Nothing    (Write "x" (Const 2))) `Seq`
                 (Write "x" (Const 3))                  `Seq`
@@ -54,7 +54,7 @@ spec = do
                 (Fin Nothing    (Write "y" (Const 2))) `Seq`
                 (Write "y" (Const 3))
              )) Nop')))
-      `shouldBe` (Local "x" (Or (Fin' (Seq (Write "y" (Const 1)) (Seq (Write "x" (Const 1)) Nop'))) (Seq Nop' (Seq (Local "_" (Or (Fin' (Write "x" (Const 2))) (Seq (Write "x" (Const 3)) (Or (Fin' (Write "y" (Const 2))) (Write "y" (Const 3)))))) Nop'))))
+      `shouldBe` (Var "x" (Or (Fin' (Seq (Write "y" (Const 1)) (Seq (Write "x" (Const 1)) Nop'))) (Seq Nop' (Seq (Var "_" (Or (Fin' (Write "x" (Const 2))) (Seq (Write "x" (Const 3)) (Or (Fin' (Write "y" (Const 2))) (Write "y" (Const 3)))))) Nop'))))
 
   --------------------------------------------------------------------------
   describe "remSpawn" $ do
@@ -104,16 +104,16 @@ spec = do
   describe "toGrammar" $ do
 
     it "var x;" $ do
-      toGrammar (Local "x" Nop')
-      `shouldBe` (G.Local "x" G.Nop)
+      toGrammar (Var "x" Nop')
+      `shouldBe` (G.Var "x" G.Nop)
 
     it "do var x; x = 1 end" $ do
-      toGrammar (Local "x" (Write "x" (Const 1)))
-      `shouldBe` (G.Local "x" (G.Write "x" (Const 1)))
+      toGrammar (Var "x" (Write "x" (Const 1)))
+      `shouldBe` (G.Var "x" (G.Write "x" (Const 1)))
 
     it "spawn do await A; end ;; await B; var x; await FOREVER;" $ do
-      toGrammar (Seq (Spawn (AwaitExt 0)) (Seq (AwaitExt 1) (Local "x" AwaitFor)))
-      `shouldBe` (G.Or (G.Seq (G.AwaitExt 0) (G.AwaitExt inputForever)) (G.Seq (G.AwaitExt 1) (G.Local "x" (G.AwaitExt inputForever))))
+      toGrammar (Seq (Spawn (AwaitExt 0)) (Seq (AwaitExt 1) (Var "x" AwaitFor)))
+      `shouldBe` (G.Or (G.Seq (G.AwaitExt 0) (G.AwaitExt inputForever)) (G.Seq (G.AwaitExt 1) (G.Var "x" (G.AwaitExt inputForever))))
 
 
     it "spawn do async ret++ end ;; await F;" $ do
@@ -140,8 +140,8 @@ nop;
     -- but `fin` uses "b".
     -- Solution is to reject variables in `fin` that are defined after "a"
     evalFullProgItPass 99 [] (
-      (Local "a"
-        (Local "b"
+      (Var "a"
+        (Var "b"
           (Seq
             (Write "b" (Const 99))
             (Seq
