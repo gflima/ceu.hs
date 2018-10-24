@@ -22,7 +22,7 @@ envWrite env var val = case env of
   (var',val'):env'
     | var == var' -> (var,Just val):env'
     | otherwise   -> (var',val'):(envWrite env' var val)
-  []              -> error ("envWrite: no such variable: " ++ var)
+  []              -> error ("envWrite: undeclared variable: " ++ var)
 
 -- Reads variable value from environment.
 envRead :: Env -> Var -> Val
@@ -31,7 +31,7 @@ envRead env var = case env of
     | var' == var -> if isJust val then fromJust val
                      else error ("envRead: uninitialized variable: " ++ var)
     | otherwise   -> envRead env' var
-  []              -> error ("envRead: no such variable: " ++ var)
+  []              -> error ("envRead: undeclared variable: " ++ var)
 
 -- Evaluates expression in environment.
 envEval :: Env -> Expr -> Val
