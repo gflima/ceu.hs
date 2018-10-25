@@ -6,6 +6,7 @@ import Text.Printf
 -- Program (pg 5).
 data Stmt
   = Var ID_Var Stmt             -- variable declaration
+  | Evt ID_Var Stmt             -- event declaration
   | Write ID_Var Expr           -- assignment statement
   | AwaitExt ID_Evt             -- await external event
   | AwaitInt ID_Evt             -- await internal event
@@ -29,17 +30,18 @@ infixr 0 `And`                  -- `And` associates to the right
 -- Shows program.
 showProg :: Stmt -> String
 showProg stmt = case stmt of
-  Var var p         -> printf "{%s: %s}" var (sP p)
-  Write var expr    -> printf "%s=%s" var (sE expr)
-  AwaitExt e        -> printf "?E%d" e
-  AwaitInt e        -> printf "?%d" e
-  EmitInt e         -> printf "!%d" e
+  Var id p          -> printf "{%s: %s}" id (sP p)
+  Evt id p          -> printf "{%s: %s}" id (sP p)
+  Write id expr     -> printf "%s=%s" id (sE expr)
+  AwaitExt e        -> printf "?E%s" e
+  AwaitInt e        -> printf "?%s" e
+  EmitInt e         -> printf "!%s" e
   Break             -> "break"
   If expr p q       -> printf "(if %s then %s else %s)"
                        (sE expr) (sP p) (sP q)
   Seq p q           -> printf "%s; %s" (sP p) (sP q)
   Loop p            -> printf "(loop %s)" (sP p)
-  Every e p         -> printf "(every %d %s)" e (sP p)
+  Every e p         -> printf "(every %s %s)" e (sP p)
   And p q           -> printf "(%s && %s)" (sP p) (sP q)
   Or p q            -> printf "(%s || %s)" (sP p) (sP q)
   Fin p             -> printf "(fin %s)" (sP p)
@@ -53,6 +55,7 @@ showProg stmt = case stmt of
 checkProg :: Stmt -> Bool
 checkProg stmt = case stmt of
   Var _ p      -> checkProg p
+  Evt _ p      -> checkProg p
   If _ p q     -> checkProg p && checkProg q
   Seq p q      -> checkProg p && checkProg q
   Loop p       -> checkLoop (Loop p) && checkProg p
@@ -74,6 +77,7 @@ checkLoop loop = case loop of
       Break        -> not ignBrk
       Every _ _    -> True
       Var _ p      -> cL ignBrk p
+      Evt _ p      -> cL ignBrk p
       If _ p q     -> cL ignBrk p && cL ignBrk q
       Seq p q      -> cL ignBrk p || cL ignBrk q
       Loop p       -> cL True p
@@ -98,6 +102,7 @@ checkFin finOrEvery = case finOrEvery of
       Fin _        -> False
       Loop _       -> False
       Var _ p      -> cF p
+      Evt _ p      -> cF p
       If _ p q     -> cF p && cF q
       Seq p q      -> cF p && cF q
       And p q      -> cF p && cF q

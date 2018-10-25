@@ -14,7 +14,8 @@ type Desc = (Stmt, Lvl, Maybe ID_Evt, Env)
 
 -- Program (pg 5).
 data Stmt
-  = Write ID_Var Expr           -- assignment statement
+  = Evt ID_Evt Stmt             -- event declaration
+  | Write ID_Var Expr           -- assignment statement
   | AwaitExt ID_Evt             -- await external event
   | AwaitInt ID_Evt             -- await internal event
   | EmitInt ID_Evt              -- emit internal event
@@ -40,6 +41,7 @@ infixr 0 `And`                  -- `And` associates to the right
 
 fromGrammar :: G.Stmt -> Stmt
 fromGrammar (G.Var id p)      = Var' id Nothing (fromGrammar p)
+fromGrammar (G.Evt id p)      = Evt id (fromGrammar p)
 fromGrammar (G.Write id exp)  = Write id exp
 fromGrammar (G.AwaitExt id)   = AwaitExt id
 fromGrammar (G.AwaitInt id)   = AwaitInt id
@@ -58,14 +60,15 @@ fromGrammar (G.Error msg)     = Error msg
 -- Shows program.
 showProg :: Stmt -> String
 showProg stmt = case stmt of
+  Evt id stmt    -> printf ":%s" id (sP stmt)
   Write var expr -> printf "%s=%s" var (sE expr)
-  AwaitExt e     -> printf "?E%d" e
-  AwaitInt e     -> printf "?%d" e
-  EmitInt e      -> printf "!%d" e
+  AwaitExt e     -> printf "?%s" e
+  AwaitInt e     -> printf "?%s" e
+  EmitInt e      -> printf "!%s" e
   Break          -> "break"
   If expr p q    -> printf "(if %s then %s else %s)" (sE expr) (sP p) (sP q)
   Seq p q        -> printf "%s; %s" (sP p) (sP q)
-  Every e p      -> printf "(every %d %s)" e (sP p)
+  Every e p      -> printf "(every %s %s)" e (sP p)
   And p q        -> printf "(%s && %s)" (sP p) (sP q)
   Or p q         -> printf "(%s || %s)" (sP p) (sP q)
   Fin p          -> printf "(fin %s)" (sP p)
@@ -127,6 +130,7 @@ isBlocked n stmt = case stmt of
   CanRun m     -> n > m
   Fin p        -> True
   Seq p q      -> isBlocked n p
+  Evt _ p      -> isBlocked n p
   Var' _ _ p   -> isBlocked n p
   Loop' p q    -> isBlocked n p
   And' p q     -> isBlocked n p && isBlocked n q
@@ -143,6 +147,7 @@ clear stmt = case stmt of
   CanRun _     -> Nop
   Fin p        -> p
   Seq p _      -> clear p
+  Evt _ p      -> clear p
   Var' _ _ p   -> clear p
   Loop' p _    -> clear p
   And' p q     -> Seq (clear p) (clear q)
@@ -159,16 +164,27 @@ nst1Adv d f = (f p, n, e, env)
 -- (pg 6)
 nst1 :: Desc -> Desc
 
-nst1 (Var' var val Nop, n, Nothing, env)     -- local-nop
+nst1 (Var' var val Nop, n, Nothing, env)     -- var-nop
   = (Nop, n, Nothing, env)
 
-nst1 (Var' var val Break, n, Nothing, env)   -- local-brk
+nst1 (Var' var val Break, n, Nothing, env)   -- var-brk
   = (Break, n, Nothing, env)
 
-nst1 (Var' var val p, n, Nothing, env)       -- local-adv
+nst1 (Var' var val p, n, Nothing, env)       -- var-adv
   = (Var' var val' p', n, e, env')
     where
       (p', _, e, (_,val'):env') = nst1Adv (p, n, Nothing, (var,val):env) id
+
+nst1 (Evt id Nop, n, Nothing, env)           -- evt-nop
+  = (Nop, n, Nothing, env)
+
+nst1 (Evt id Break, n, Nothing, env)         -- evt-brk
+  = (Break, n, Nothing, env)
+
+nst1 (Evt id p, n, Nothing, env)             -- evt-adv
+  = (Evt id p', n, e, env')
+    where
+      (p', _, e, env') = nst1 (p, n, Nothing, env)
 
 nst1 (Write var expr, n, Nothing, env)         -- write
   = (Nop, n, Nothing, envWrite env var (envEval env expr))
@@ -276,7 +292,8 @@ bcast e stmt = case stmt of
   AwaitInt e' | e == e' -> Nop
   Every e' p  | e == e' -> Seq p (Every e' p)
   Seq p q               -> Seq (bcast e p) q
-  Var' var val p        -> Var' var val (bcast e p)
+  Evt id p              -> Evt id (bcast e p)
+  Var' id val p         -> Var' id val (bcast e p)
   Loop' p q             -> Loop' (bcast e p) q
   And' p q              -> And' (bcast e p) (bcast e q)
   Or' p q               -> Or' (bcast e p) (bcast e q)
@@ -365,11 +382,11 @@ reaction (p, e, env) = (p', env')
 -- Returns the last value of global "ret" set by the program.
 evalProg :: G.Stmt -> [ID_Evt] -> Val
 evalProg prog hist -- enclosing block with "ret" that never terminates
-  = evalProg' (Var' "ret" Nothing (Seq (fromGrammar prog) (AwaitExt inputForever))) (inputBoot:hist) []
+  = evalProg' (Var' "ret" Nothing (Seq (fromGrammar prog) (AwaitExt "FOREVER"))) ("BOOT":hist) []
   where
     evalProg' :: Stmt -> [ID_Evt] -> Env -> Val
     evalProg' prog hist env = case prog of
-      (Var' "ret" val (AwaitExt inputForever))
+      (Var' "ret" val (AwaitExt "FOREVER"))
         | not (null hist) -> traceShow hist error "evalProg: pending inputs"
         | isNothing val   -> error "evalProg: no return"
         | otherwise       -> fromJust val

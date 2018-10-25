@@ -4,18 +4,16 @@ import Text.Printf
 
 -- Primitive types.
 type ID_Var = String            -- variable identifier
-type ID_Evt = Int               -- event identifier
+type ID_Evt = String            -- event identifier
 type Val    = Int               -- value
 
 -- Environment.
-type Env  = [(ID_Var, Maybe Val)]
+type Env  = [(ID_Var, Maybe Val)]   -- TODO: rename to Vars
+type Evts = [(ID_Evt, Bool)]
 
--- Events:
--- -1: program can never await (used for boot reaction)
-inputBoot    :: ID_Evt
-inputForever :: ID_Evt
-inputBoot    = -1
-inputForever = -2
+-- Special events:
+-- "BOOT"
+-- "FOREVER"
 
 -- Expression.
 data Expr

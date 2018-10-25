@@ -5,20 +5,15 @@ import qualified Ceu.Grammar as G
 import qualified Ceu.Eval as E
 --import Debug.Trace
 
--- Events:
--- -1: program can never await (used for boot reaction)
--- -2: system can never emit (used as "await FOREVER" input)
--- -3: program can never await (used as "async" input)
---inputBoot    :: ID_Evt
---inputForever :: ID_Evt
-inputAsync   :: ID_Evt
---inputBoot    = -1
---inputForever = -2
-inputAsync   = -3
+-- Special events:
+-- "BOOT"
+-- "FOREVER"
+-- "ASYNC"
 
 -- Program (pg 5).
 data Stmt
   = Var ID_Var Stmt             -- variable declaration
+  | Evt ID_Evt Stmt             -- event declaration
   | Write ID_Var Expr           -- assignment statement
   | AwaitExt ID_Evt             -- await external event
   | AwaitFor                    -- await forever
@@ -72,6 +67,7 @@ remFin p = p' where
   rF (Spawn p)           = ([], Spawn (snd (rF p)))
   rF (Fin id p)          = error "remFin: unexpected statement (Fin)"
   rF (Async p)           = ([], Async (snd (rF p)))
+  rF (Evt id p)          = ([], Evt id (snd (rF p)))
 
   rF (Var id p)          = (l'', Var id p''') where
                             (l', p')  = (rF p)   -- results from nested p
@@ -97,7 +93,8 @@ remFin p = p' where
 -- remSpawn: Converts (spawn p1; ...) into (p1;AwaitFor or ...)
 
 remSpawn :: Stmt -> Stmt
-remSpawn (Var var p)         = Var var (remSpawn p)
+remSpawn (Var id p)          = Var id (remSpawn p)
+remSpawn (Evt id p)          = Evt id (remSpawn p)
 remSpawn (If exp p1 p2)      = If exp (remSpawn p1) (remSpawn p2)
 remSpawn (Seq (Spawn p1) p2) = Or (Seq (remSpawn p1) AwaitFor) (remSpawn p2)
 remSpawn (Seq p1 p2)         = Seq (remSpawn p1) (remSpawn p2)
@@ -125,6 +122,7 @@ chkSpawn p = case p of
 
   chkS :: Stmt -> Bool
   chkS (Var _ p)    = (notS p) && (chkS p)
+  chkS (Evt _ p)    = (notS p) && (chkS p)
   chkS (If _ p1 p2) = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
   chkS (Seq p1 p2)  = (chkS p1) && (notS p2) && (chkS p2)
   chkS (Loop p)     = (notS p) && (chkS p)
@@ -142,10 +140,11 @@ chkSpawn p = case p of
 remAsync :: Stmt -> Stmt
 remAsync p = (rA False p) where
   rA :: Bool -> Stmt -> Stmt
-  rA inA   (Var var p)    = Var var (rA inA p)
+  rA inA   (Var id p)     = Var id (rA inA p)
+  rA inA   (Evt id p)     = Evt id (rA inA p)
   rA inA   (If exp p1 p2) = If exp (rA inA p1) (rA inA p2)
   rA inA   (Seq p1 p2)    = Seq (rA inA p1) (rA inA p2)
-  rA True  (Loop p)       = Loop (rA True (Seq p (AwaitExt inputAsync)))
+  rA True  (Loop p)       = Loop (rA True (Seq p (AwaitExt "ASYNC")))
   rA False (Loop p)       = Loop (rA False p)
   rA inA   (Every e p)    = Every e (rA inA p)
   rA inA   (And p1 p2)    = And (rA inA p1) (rA inA p2)
@@ -158,10 +157,11 @@ remAsync p = (rA False p) where
 
 -- TODO: chkSpan: no sync statements
 
--- remAwaitFor: Converts AwaitFor into (AwaitExt inputForever)
+-- remAwaitFor: Converts AwaitFor into (AwaitExt "FOREVER")
 
 remAwaitFor :: Stmt -> Stmt
-remAwaitFor (Var var p)    = Var var (remAwaitFor p)
+remAwaitFor (Var id p)     = Var id (remAwaitFor p)
+remAwaitFor (Evt id p)     = Evt id (remAwaitFor p)
 remAwaitFor (If exp p1 p2) = If exp (remAwaitFor p1) (remAwaitFor p2)
 remAwaitFor (Seq p1 p2)    = Seq (remAwaitFor p1) (remAwaitFor p2)
 remAwaitFor (Loop p)       = Loop (remAwaitFor p)
@@ -172,7 +172,7 @@ remAwaitFor (Spawn p)      = Spawn (remAwaitFor p)
 remAwaitFor (Fin id p)     = Fin id (remAwaitFor p)
 remAwaitFor (Async p)      = error "remAwaitFor: unexpected statement (Async)"
 remAwaitFor (Fin' p)       = Fin' (remAwaitFor p)
-remAwaitFor AwaitFor       = AwaitExt inputForever
+remAwaitFor AwaitFor       = AwaitExt "FOREVER"
 remAwaitFor p              = p
 
 -- toGrammar: Converts full -> basic
@@ -183,6 +183,7 @@ toGrammar p = toG $ remAwaitFor $ remAsync
                   $ remFin p where
   toG :: Stmt -> G.Stmt
   toG (Var id p)     = G.Var id (toG p)
+  toG (Evt id p)     = G.Evt id (toG p)
   toG (Write id exp) = G.Write id exp
   toG (AwaitExt e)   = G.AwaitExt e
   toG (AwaitInt e)   = G.AwaitInt e
