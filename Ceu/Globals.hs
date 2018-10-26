@@ -7,10 +7,6 @@ type ID_Var = String            -- variable identifier
 type ID_Evt = String            -- event identifier
 type Val    = Int               -- value
 
--- Environment.
-type Vars  = [(ID_Var, Maybe Val)]
-type Evts = [(ID_Evt, Bool)]
-
 -- Special events:
 -- "BOOT"
 -- "FOREVER"

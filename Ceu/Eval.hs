@@ -9,6 +9,10 @@ import Debug.Trace
 -- Stack level.
 type Lvl = Int
 
+-- Environment.
+type Vars = [(ID_Var, Maybe Val)]
+type Evts = [(ID_Evt, Bool)]
+
 -- Description (pg 6).
 type Desc = (Stmt, Lvl, Maybe ID_Evt, Vars)
 
