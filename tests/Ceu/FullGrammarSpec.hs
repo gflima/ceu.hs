@@ -170,6 +170,7 @@ with
 end
 -}
     evalFullProgItPass 25 [] (
+      (Evt "a" (
       (Write "ret" (Const 0)) `Seq`
       (Or
         ((AwaitInt "a") `Seq` (Write "ret" (Add (Read "ret") (Const 5))))
@@ -183,7 +184,7 @@ end
           )
           (Write "ret" (Add (Read "ret") (Const 10)))
         )
-      ))
+      ))))
 
       where
         evalFullProgItPass res hist prog =

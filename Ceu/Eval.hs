@@ -6,7 +6,6 @@ import Data.Maybe
 import Text.Printf
 import Debug.Trace
 
--- Stack level.
 type Lvl = Int
 
 -- Environment.
@@ -14,7 +13,7 @@ type Vars = [(ID_Var, Maybe Val)]
 type Evts = [(ID_Evt, Bool)]
 
 -- Description (pg 6).
-type Desc = (Stmt, Lvl, Maybe ID_Evt, Vars)
+type Desc = (Stmt, Lvl, Vars, Evts)
 
 -- Program (pg 5).
 data Stmt
@@ -32,7 +31,7 @@ data Stmt
   | Fin Stmt                    -- finalization statement
   | Nop                         -- dummy statement (internal)
   | Error String                -- generate runtime error (for testing purposes)
-  | CanRun Int                  -- wait for stack level (internal)
+  | CanRun Lvl                  -- wait for stack level (internal)
   | Var' ID_Var (Maybe Val) Stmt -- block with environment store
   | Loop' Stmt Stmt             -- unrolled Loop (internal)
   | And' Stmt Stmt              -- unrolled And (internal)
@@ -64,15 +63,15 @@ fromGrammar (G.Error msg)     = Error msg
 -- Shows program.
 showProg :: Stmt -> String
 showProg stmt = case stmt of
-  Evt id stmt    -> printf ":%s" id (sP stmt)
+  Evt id stmt    -> printf ":%s %s" id (sP stmt)
   Write var expr -> printf "%s=%s" var (sE expr)
-  AwaitExt e     -> printf "?%s" e
-  AwaitInt e     -> printf "?%s" e
-  EmitInt e      -> printf "!%s" e
+  AwaitExt evt     -> printf "?%s" evt
+  AwaitInt evt     -> printf "?%s" evt
+  EmitInt evt      -> printf "!%s" evt
   Break          -> "break"
   If expr p q    -> printf "(if %s then %s else %s)" (sE expr) (sP p) (sP q)
   Seq p q        -> printf "%s; %s" (sP p) (sP q)
-  Every e p      -> printf "(every %s %s)" e (sP p)
+  Every evt p      -> printf "(every %s %s)" evt (sP p)
   And p q        -> printf "(%s && %s)" (sP p) (sP q)
   Or p q         -> printf "(%s || %s)" (sP p) (sP q)
   Fin p          -> printf "(fin %s)" (sP p)
@@ -121,6 +120,14 @@ varsEval vars expr = case expr of
   Mul e1 e2 -> (varsEval vars e1) * (varsEval vars e2)
   Div e1 e2 -> (varsEval vars e1) `div` (varsEval vars e2)
 
+-- Set event in environment.
+evtsEmit :: Evts -> ID_Evt -> Evts
+evtsEmit evts evt = case evts of
+  (evt',val'):evts'
+    | evt == evt' -> (evt,True):evts'
+    | otherwise   -> (evt',val'):(evtsEmit evts' evt)
+  []              -> error ("evtsEmit: undeclared event: " ++ evt)
+
 ----------------------------------------------------------------------------
 -- Nested transition
 
@@ -128,9 +135,9 @@ varsEval vars expr = case expr of
 -- (pg 8, fig 4.ii)
 isBlocked :: Lvl -> Stmt -> Bool
 isBlocked n stmt = case stmt of
-  AwaitExt e   -> True
-  AwaitInt e   -> True
-  Every e p    -> True
+  AwaitExt evt -> True
+  AwaitInt evt -> True
+  Every evt p  -> True
   CanRun m     -> n > m
   Fin p        -> True
   Seq p q      -> isBlocked n p
@@ -160,133 +167,135 @@ clear stmt = case stmt of
 
 -- Helper function used by nst1 in the *-adv rules.
 nst1Adv :: Desc -> (Stmt -> Stmt) -> Desc
-nst1Adv d f = (f p, n, e, vars)
+nst1Adv d f = (f p, n, vars, evts)
   where
-    (p, n, e, vars) = nst1 d
+    (p, n, vars, evts) = nst1 d
 
 -- Single nested transition.
 -- (pg 6)
 nst1 :: Desc -> Desc
 
-nst1 (Var' var val Nop, n, Nothing, vars)     -- var-nop
-  = (Nop, n, Nothing, vars)
+nst1 (Var' var val Nop, n, vars, evts)     -- var-nop
+  = (Nop, n, vars, evts)
 
-nst1 (Var' var val Break, n, Nothing, vars)   -- var-brk
-  = (Break, n, Nothing, vars)
+nst1 (Var' var val Break, n, vars, evts)   -- var-brk
+  = (Break, n, vars, evts)
 
-nst1 (Var' var val p, n, Nothing, vars)       -- var-adv
-  = (Var' var val' p', n, e, vars')
+nst1 (Var' var val p, n, vars, evts)       -- var-adv
+  = (Var' var val' p', n', vars', evts')
     where
-      (p', _, e, (_,val'):vars') = nst1Adv (p, n, Nothing, (var,val):vars) id
+      (p', n', (_,val'):vars', evts') = nst1Adv (p, n, (var,val):vars, evts) id
 
-nst1 (Evt id Nop, n, Nothing, vars)           -- evt-nop
-  = (Nop, n, Nothing, vars)
+nst1 (Evt id Nop, n, vars, evts)           -- evt-nop
+  = (Nop, n, vars, evts)
 
-nst1 (Evt id Break, n, Nothing, vars)         -- evt-brk
-  = (Break, n, Nothing, vars)
+nst1 (Evt id Break, n, vars, evts)         -- evt-brk
+  = (Break, n, vars, evts)
 
-nst1 (Evt id p, n, Nothing, vars)             -- evt-adv
-  = (Evt id p', n, e, vars')
+nst1 (Evt evt p, n, vars, evts)       -- evt-adv
+  = (Evt evt p'', n', vars', evts')
     where
-      (p', _, e, vars') = nst1 (p, n, Nothing, vars)
+      (p', n', vars', (_,go):evts') = nst1Adv (p, n, vars, (evt,False):evts) id
+      p'' | go = bcast evt p'
+          | otherwise = p'
 
-nst1 (Write var expr, n, Nothing, vars)       -- write
-  = (Nop, n, Nothing, varsWrite vars var (varsEval vars expr))
+nst1 (Write var expr, n, vars, evts)       -- write
+  = (Nop, n, varsWrite vars var (varsEval vars expr), evts)
 
-nst1 (EmitInt e, n, Nothing, vars)            -- emit-int (pg 6)
-  = (CanRun n, n, Just e, vars)
+nst1 (EmitInt evt, n, vars, evts)            -- emit-int (pg 6)
+  = (CanRun n, n+1, vars, evtsEmit evts evt)
 
-nst1 (CanRun m, n, Nothing, vars)             -- can-run (pg 6)
-  | m == n    = (Nop, n, Nothing, vars)
-  | otherwise = error "nst1: cannot advance"
+nst1 (CanRun m, n, vars, evts)             -- can-run (pg 6)
+  | m==n = (Nop, n, vars, evts)
 
-nst1 (Seq Nop q, n, Nothing, vars)            -- seq-nop (pg 6)
-  = (q, n, Nothing, vars)
+nst1 (Seq Nop q, n, vars, evts)            -- seq-nop (pg 6)
+  = (q, n, vars, evts)
 
-nst1 (Seq Break q, n, Nothing, vars)          -- seq-brk (pg 6)
-  = (Break, n, Nothing, vars)
+nst1 (Seq Break q, n, vars, evts)          -- seq-brk (pg 6)
+  = (Break, n, vars, evts)
 
-nst1 (Seq p q, n, Nothing, vars)              -- seq-adv (pg 6)
-  = nst1Adv (p, n, Nothing, vars) (\p' -> Seq p' q)
+nst1 (Seq p q, n, vars, evts)              -- seq-adv (pg 6)
+  = nst1Adv (p, n, vars, evts) (\p' -> Seq p' q)
 
-nst1 (If exp p q, n, Nothing, vars)           -- if-true/false (pg 6)
-  | varsEval vars exp /= 0 = (p, n, Nothing, vars)
-  | otherwise              = (q, n, Nothing, vars)
+nst1 (If exp p q, n, vars, evts)           -- if-true/false (pg 6)
+  | (varsEval vars exp) /= 0 = (p, n, vars, evts)
+  | otherwise                = (q, n, vars, evts)
 
-nst1 (Loop' Nop q, n, Nothing, vars)          -- loop-nop (pg 7)
-  = (Loop' q q, n, Nothing, vars)
+nst1 (Loop' Nop q, n, vars, evts)          -- loop-nop (pg 7)
+  = (Loop' q q, n, vars, evts)
 
-nst1 (Loop' Break q, n, Nothing, vars)        -- loop-brk (pg 7)
-  = (Nop, n, Nothing, vars)
+nst1 (Loop' Break q, n, vars, evts)        -- loop-brk (pg 7)
+  = (Nop, n, vars, evts)
 
-nst1 (Loop' p q, n, Nothing, vars)            -- loop-adv (pg 7)
-  = nst1Adv (p, n, Nothing, vars) (\p' -> Loop' p' q)
+nst1 (Loop' p q, n, vars, evts)            -- loop-adv (pg 7)
+  = nst1Adv (p, n, vars, evts) (\p' -> Loop' p' q)
 
-nst1 (And p q, n, Nothing, vars)              -- and-expd (pg 7)
-  = (And' p (Seq (CanRun n) q), n, Nothing, vars)
+nst1 (And p q, n, vars, evts)              -- and-expd (pg 7)
+  = (And' p (Seq (CanRun n) q), n, vars, evts)
 
-nst1 (And' Nop q, n, Nothing, vars)           -- and-nop1 (pg 7)
-  = (q, n, Nothing, vars)
+nst1 (And' Nop q, n, vars, evts)           -- and-nop1 (pg 7)
+  = (q, n, vars, evts)
 
-nst1 (And' Break q, n, Nothing, vars)         -- and brk1 (pg 7)
-  = (Seq (clear q) Break, n, Nothing, vars)
+nst1 (And' Break q, n, vars, evts)         -- and brk1 (pg 7)
+  = (Seq (clear q) Break, n, vars, evts)
 
-nst1 (And' p Nop, n, Nothing, vars)           -- and-nop2 (pg 7)
-  | not $ isBlocked n p = nst1Adv (p, n, Nothing, vars) (\p' -> And' p' Nop)
-  | otherwise           = (p, n, Nothing, vars)
+nst1 (And' p Nop, n, vars, evts)           -- and-nop2 (pg 7)
+  | not $ isBlocked n p = nst1Adv (p, n, vars, evts) (\p' -> And' p' Nop)
+  | otherwise           = (p, n, vars, evts)
 
-nst1 (And' p Break, n, Nothing, vars)         -- and-brk2 (pg 7)
-  | not $ isBlocked n p = nst1Adv (p, n, Nothing, vars) (\p' -> And' p' Break)
-  | otherwise           = (Seq (clear p) Break, n, Nothing, vars)
+nst1 (And' p Break, n, vars, evts)         -- and-brk2 (pg 7)
+  | not $ isBlocked n p = nst1Adv (p, n, vars, evts) (\p' -> And' p' Break)
+  | otherwise           = (Seq (clear p) Break, n, vars, evts)
 
-nst1 (And' p q, n, Nothing, vars)             -- and-adv (pg 7)
-  | not $ isBlocked n p = nst1Adv (p, n, Nothing, vars) (\p' -> And' p' q)
-  | otherwise           = nst1Adv (q, n, Nothing, vars) (\q' -> And' p q')
+nst1 (And' p q, n, vars, evts)             -- and-adv (pg 7)
+  | not $ isBlocked n p = nst1Adv (p, n, vars, evts) (\p' -> And' p' q)
+  | otherwise           = nst1Adv (q, n, vars, evts) (\q' -> And' p q')
 
-nst1 (Or p q, n, Nothing, vars)               -- or-expd (pg 7)
-  = (Or' p (Seq (CanRun n) q), n, Nothing, vars)
+nst1 (Or p q, n, vars, evts)               -- or-expd (pg 7)
+  = (Or' p (Seq (CanRun n) q), n, vars, evts)
 
-nst1 (Or' Nop q, n, Nothing, vars)            -- or-nop1 (pg 7)
-  = (clear q, n, Nothing, vars)
+nst1 (Or' Nop q, n, vars, evts)            -- or-nop1 (pg 7)
+  = (clear q, n, vars, evts)
 
-nst1 (Or' Break q, n, Nothing, vars)          -- or-brk1 (pg 7)
-  = (Seq (clear q) Break, n, Nothing, vars)
+nst1 (Or' Break q, n, vars, evts)          -- or-brk1 (pg 7)
+  = (Seq (clear q) Break, n, vars, evts)
 
-nst1 (Or' p Nop, n, Nothing, vars)            -- or-nop2 (pg 7)
-  | not $ isBlocked n p = nst1Adv (p, n, Nothing, vars) (\p' -> Or' p' Nop)
-  | otherwise           = (clear p, n, Nothing, vars)
+nst1 (Or' p Nop, n, vars, evts)            -- or-nop2 (pg 7)
+  | not $ isBlocked n p = nst1Adv (p, n, vars, evts) (\p' -> Or' p' Nop)
+  | otherwise           = (clear p, n, vars, evts)
 
-nst1 (Or' p Break, n, Nothing, vars)          -- or-brk2 (pg 7)
-  | not $ isBlocked n p = nst1Adv (p, n, Nothing, vars) (\p' -> Or' p' Break)
-  | otherwise           = (Seq (clear p) Break, n, Nothing, vars)
+nst1 (Or' p Break, n, vars, evts)          -- or-brk2 (pg 7)
+  | not $ isBlocked n p = nst1Adv (p, n, vars, evts) (\p' -> Or' p' Break)
+  | otherwise           = (Seq (clear p) Break, n, vars, evts)
 
-nst1 (Or' p q, n, Nothing, vars)              -- or-adv (pg 7)
-  | not $ isBlocked n p = nst1Adv (p, n, Nothing, vars) (\p' -> Or' p' q)
-  | otherwise           = nst1Adv (q, n, Nothing, vars) (\q' -> Or' p q')
+nst1 (Or' p q, n, vars, evts)              -- or-adv (pg 7)
+  | not $ isBlocked n p = nst1Adv (p, n, vars, evts) (\p' -> Or' p' q)
+  | otherwise           = nst1Adv (q, n, vars, evts) (\q' -> Or' p q')
 
-nst1 (Error msg, _, Nothing, _) = error ("Runtime error: " ++ msg)
+nst1 (Error msg, _, _, _) = error ("Runtime error: " ++ msg)
 
-nst1 (_, _, _, _) = error "nst1: cannot advance"
+nst1 (p, n, vars, evts)                    -- pop
+  | isNstReducible (p,n,vars,evts) = (p, n-1, vars, evts)
+
+--nst1 _ = error "nst1: cannot advance"
+nst1 p =  traceShow p (error "nst1: cannot advance")
 
 -- Tests whether the description is nst-irreducible.
 -- CHECK: nst should only produce nst-irreducible descriptions.
-isNstIrreducible :: Desc -> Bool
-isNstIrreducible desc = case desc of
-  (Nop, n, e, vars)     -> True
-  (Break, n, e, vars)   -> True
-  (p, n, Just e, vars)  -> True
-  (p, n, Nothing, vars) -> isBlocked n p
+isNstReducible :: Desc -> Bool
+isNstReducible desc = case desc of
+  (_,     n, _, _) | n>0 -> True
+  (Nop,   _, _, _)       -> False
+  (Break, _, _, _)       -> False
+  (p,     n, _, evts)    -> not $ isBlocked n p
 
 -- Zero or more nested transitions.
 -- (pg 6)
 nsts :: Desc -> Desc
 nsts d
-  | isNstIrreducible d = d
---  | otherwise = traceShow d (nsts (nst1 d))
+  | not $ isNstReducible d = d
+--  | otherwise = traceShow d (nsts $ nst1 d)
   | otherwise = nsts $ nst1 d
-
-----------------------------------------------------------------------------
--- Outermost transition
 
 -- Awakes all trails waiting for the given event.
 -- (pg 8, fig 4.i)
@@ -303,84 +312,15 @@ bcast e stmt = case stmt of
   Or' p q               -> Or' (bcast e p) (bcast e q)
   _                     -> stmt -- nothing to do
 
--- (pg 6)
-outPush :: Desc -> Desc
-outPush (p, n, Just e, vars) = (bcast e p, n+1, Nothing, vars)
-outPush (_, _, Nothing, _)   = error "outPush: missing event"
-
--- (pg 6)
-outPop :: Desc -> Desc
-outPop (p, n, Nothing, vars)
-  | n>0 && isNstIrreducible (p, n, Nothing, vars) = (p, n-1, Nothing, vars)
-  | otherwise = error "outPop: cannot advance"
-
--- Single outermost transition.
--- (pg 6)
-out1 :: Desc -> Desc
-out1 (p, n, Just e, vars)  = outPush (p, n, Just e, vars)
-out1 (p, n, Nothing, vars) = outPop (p, n, Nothing, vars)
-
--- (pg 6)
-nsts_out1_s :: Desc -> Desc
-nsts_out1_s (p, n, e, vars)
-  | n == 0 = (p, n, e, vars)
-  | n > 0  = nsts_out1_s $ out1 $ nsts (p, n, e, vars)
-
--- TODO: are these functions used anywhere?
-{-
--- Counts the maximum number of EmitInt's that can be executed in program.
--- (pot', pg 9)
-countMaxEmits :: Stmt -> Int
-countMaxEmits stmt = case stmt of
-  EmitInt e                      -> 1
-  Var _ p                        -> cME p
-  If expr p q                    -> max (cME p) (cME q)
-  Loop p                         -> cME p
-  And p q                        -> cME p + cME q
-  Or p q                         -> cME p + cME q
-  Seq Break q                    -> 0
-  Seq (AwaitExt e) q             -> 0
-  Seq p q                        -> cME p + cME q
-  Var' _ _ p                     -> cME p
-  Loop' p q | checkLoop (Loop p) -> cME p         -- q is unreachable
-            | otherwise          -> cME p + cME q
-  And' p q                       -> cME p + cME q -- CHECK THIS! --
-  Or' p q                        -> cME p + cME q -- CHECK THIS! --
-  _                              -> 0
-  where
-    cME = countMaxEmits
-
--- Counts the maximum number of EmitInt's that can be executed in a reaction
--- of program to event.
--- (pg 9)
-pot :: ID_Evt -> Stmt -> Int
-pot e p = countMaxEmits $ bcast e p
-
--- (pg 9)
-rank :: Desc -> (Int, Int)
-rank (p, n, Nothing, vars) = (0, n)
-rank (p, n, Just e, vars)  = (pot e p, n+1)
-
--- Tests whether the description is irreducible in general.
-isIrreducible :: Desc -> Bool
-isIrreducible d = isNstIrreducible d && snd (rank d) == 0
--}
-
--- Tests whether the description is irreducible in general.
-isIrreducible :: Desc -> Bool
-isIrreducible d = isNstIrreducible d && iR d where
-  iR (_,i,Nothing,_) = i == 0
-  iR (_,_,Just ne,_) = True
-
 ----------------------------------------------------------------------------
 -- Reaction
 
 -- Computes a reaction of program plus environment to a single event.
 -- (pg 6)
 reaction :: (Stmt, ID_Evt, Vars) -> (Stmt, Vars)
-reaction (p, e, vars) = (p', vars')
+reaction (p, evt, vars) = (p', vars')
   where
-    (p', _, _, vars') = nsts_out1_s $ outPush (p, 0, Just e, vars)
+    (p', _, vars', _) = nsts (bcast evt p, 0, vars, [])
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
