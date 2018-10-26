@@ -8,7 +8,7 @@ type ID_Evt = String            -- event identifier
 type Val    = Int               -- value
 
 -- Environment.
-type Env  = [(ID_Var, Maybe Val)]   -- TODO: rename to Vars
+type Vars  = [(ID_Var, Maybe Val)]
 type Evts = [(ID_Evt, Bool)]
 
 -- Special events:

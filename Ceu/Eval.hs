@@ -10,7 +10,7 @@ import Debug.Trace
 type Lvl = Int
 
 -- Description (pg 6).
-type Desc = (Stmt, Lvl, Maybe ID_Evt, Env)
+type Desc = (Stmt, Lvl, Maybe ID_Evt, Vars)
 
 -- Program (pg 5).
 data Stmt
@@ -90,7 +90,7 @@ showProg stmt = case stmt of
 -- Environment
 
 -- Write value to variable in environment.
-envWrite :: Env -> ID_Var -> Val -> Env
+envWrite :: Vars -> ID_Var -> Val -> Vars
 envWrite env var val = case env of
   (var',val'):env'
     | var == var' -> (var,Just val):env'
@@ -98,7 +98,7 @@ envWrite env var val = case env of
   []              -> error ("envWrite: undeclared variable: " ++ var)
 
 -- Reads variable value from environment.
-envRead :: Env -> ID_Var -> Val
+envRead :: Vars -> ID_Var -> Val
 envRead env var = case env of
   (var',val):env'
     | var' == var -> if isJust val then fromJust val
@@ -107,7 +107,7 @@ envRead env var = case env of
   []              -> error ("envRead: undeclared variable: " ++ var)
 
 -- Evaluates expression in environment.
-envEval :: Env -> Expr -> Val
+envEval :: Vars -> Expr -> Val
 envEval env expr = case expr of
   Const val -> val
   Read var  -> envRead env var
@@ -373,7 +373,7 @@ isIrreducible d = isNstIrreducible d && iR d where
 
 -- Computes a reaction of program plus environment to a single event.
 -- (pg 6)
-reaction :: (Stmt, ID_Evt, Env) -> (Stmt, Env)
+reaction :: (Stmt, ID_Evt, Vars) -> (Stmt, Vars)
 reaction (p, e, env) = (p', env')
   where
     (p', _, _, env') = nsts_out1_s $ outPush (p, 0, Just e, env)
@@ -384,7 +384,7 @@ evalProg :: G.Stmt -> [ID_Evt] -> Val
 evalProg prog hist -- enclosing block with "ret" that never terminates
   = evalProg' (Var' "ret" Nothing (Seq (fromGrammar prog) (AwaitExt "FOREVER"))) ("BOOT":hist) []
   where
-    evalProg' :: Stmt -> [ID_Evt] -> Env -> Val
+    evalProg' :: Stmt -> [ID_Evt] -> Vars -> Val
     evalProg' prog hist env = case prog of
       (Var' "ret" val (AwaitExt "FOREVER"))
         | not (null hist) -> traceShow hist error "evalProg: pending inputs"
