@@ -94,32 +94,32 @@ showProg stmt = case stmt of
 -- Environment
 
 -- Write value to variable in environment.
-envWrite :: Vars -> ID_Var -> Val -> Vars
-envWrite vars var val = case vars of
+varsWrite :: Vars -> ID_Var -> Val -> Vars
+varsWrite vars var val = case vars of
   (var',val'):vars'
     | var == var' -> (var,Just val):vars'
-    | otherwise   -> (var',val'):(envWrite vars' var val)
-  []              -> error ("envWrite: undeclared variable: " ++ var)
+    | otherwise   -> (var',val'):(varsWrite vars' var val)
+  []              -> error ("varsWrite: undeclared variable: " ++ var)
 
 -- Reads variable value from environment.
-envRead :: Vars -> ID_Var -> Val
-envRead vars var = case vars of
+varsRead :: Vars -> ID_Var -> Val
+varsRead vars var = case vars of
   (var',val):vars'
     | var' == var -> if isJust val then fromJust val
-                     else error ("envRead: uninitialized variable: " ++ var)
-    | otherwise   -> envRead vars' var
-  []              -> error ("envRead: undeclared variable: " ++ var)
+                     else error ("varsRead: uninitialized variable: " ++ var)
+    | otherwise   -> varsRead vars' var
+  []              -> error ("varsRead: undeclared variable: " ++ var)
 
 -- Evaluates expression in environment.
-envEval :: Vars -> Expr -> Val
-envEval vars expr = case expr of
+varsEval :: Vars -> Expr -> Val
+varsEval vars expr = case expr of
   Const val -> val
-  Read var  -> envRead vars var
-  Umn e     -> negate $ envEval vars e
-  Add e1 e2 -> (envEval vars e1) + (envEval vars e2)
-  Sub e1 e2 -> (envEval vars e1) - (envEval vars e2)
-  Mul e1 e2 -> (envEval vars e1) * (envEval vars e2)
-  Div e1 e2 -> (envEval vars e1) `div` (envEval vars e2)
+  Read var  -> varsRead vars var
+  Umn e     -> negate $ varsEval vars e
+  Add e1 e2 -> (varsEval vars e1) + (varsEval vars e2)
+  Sub e1 e2 -> (varsEval vars e1) - (varsEval vars e2)
+  Mul e1 e2 -> (varsEval vars e1) * (varsEval vars e2)
+  Div e1 e2 -> (varsEval vars e1) `div` (varsEval vars e2)
 
 ----------------------------------------------------------------------------
 -- Nested transition
@@ -191,7 +191,7 @@ nst1 (Evt id p, n, Nothing, vars)             -- evt-adv
       (p', _, e, vars') = nst1 (p, n, Nothing, vars)
 
 nst1 (Write var expr, n, Nothing, vars)       -- write
-  = (Nop, n, Nothing, envWrite vars var (envEval vars expr))
+  = (Nop, n, Nothing, varsWrite vars var (varsEval vars expr))
 
 nst1 (EmitInt e, n, Nothing, vars)            -- emit-int (pg 6)
   = (CanRun n, n, Just e, vars)
@@ -210,7 +210,7 @@ nst1 (Seq p q, n, Nothing, vars)              -- seq-adv (pg 6)
   = nst1Adv (p, n, Nothing, vars) (\p' -> Seq p' q)
 
 nst1 (If exp p q, n, Nothing, vars)           -- if-true/false (pg 6)
-  | envEval vars exp /= 0 = (p, n, Nothing, vars)
+  | varsEval vars exp /= 0 = (p, n, Nothing, vars)
   | otherwise              = (q, n, Nothing, vars)
 
 nst1 (Loop' Nop q, n, Nothing, vars)          -- loop-nop (pg 7)

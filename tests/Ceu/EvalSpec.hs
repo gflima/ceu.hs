@@ -51,57 +51,57 @@ spec = do
   describe "Env/Envs" $ do
 
       it "fail: undeclared variable" $
-        forceEval (envWrite [] "x" 0)
-        `shouldThrow` errorCall "envWrite: undeclared variable: x"
+        forceEval (varsWrite [] "x" 0)
+        `shouldThrow` errorCall "varsWrite: undeclared variable: x"
 
       it "pass: 1st write" $
-        envWrite [("x",Nothing)] "x" 0 `shouldBe` [("x",Just 0)]
+        varsWrite [("x",Nothing)] "x" 0 `shouldBe` [("x",Just 0)]
 
       it "pass: 2nd write" $
-        envWrite [("x",Just 99)] "x" 0 `shouldBe` [("x",Just 0)]
+        varsWrite [("x",Just 99)] "x" 0 `shouldBe` [("x",Just 0)]
 
       it "pass: write in middle" $
-        envWrite [("a",Nothing),("x",Just 99),("b",Nothing)] "x" 0 `shouldBe` [("a",Nothing),("x",Just 0),("b",Nothing)]
+        varsWrite [("a",Nothing),("x",Just 99),("b",Nothing)] "x" 0 `shouldBe` [("a",Nothing),("x",Just 0),("b",Nothing)]
 
       it "pass: write in last" $
-        envWrite [("a",Nothing),("b",Nothing),("x",Just 99)] "x" 0 `shouldBe` [("a",Nothing),("b",Nothing),("x",Just 0)]
+        varsWrite [("a",Nothing),("b",Nothing),("x",Just 99)] "x" 0 `shouldBe` [("a",Nothing),("b",Nothing),("x",Just 0)]
 
   describe "envsRead envs id" $ do
       it "fail: undeclared variable" $
-        forceEval (envRead [] "x")
-        `shouldThrow` errorCall "envRead: undeclared variable: x"
+        forceEval (varsRead [] "x")
+        `shouldThrow` errorCall "varsRead: undeclared variable: x"
 
       it "fail: uninitialized variable" $
-        forceEval (envRead [("x",Nothing)] "x")
-        `shouldThrow` errorCall "envRead: uninitialized variable: x"
+        forceEval (varsRead [("x",Nothing)] "x")
+        `shouldThrow` errorCall "varsRead: uninitialized variable: x"
 
       it "pass: read in simple env" $
-        envRead [("x",Just 0)] "x" `shouldBe` 0
+        varsRead [("x",Just 0)] "x" `shouldBe` 0
 
       it "pass: read in complex env" $
         let envs = [("y",Just 0),("x",Just 1),("z",Just 0)] in
-          envRead envs "x" `shouldBe` 1
+          varsRead envs "x" `shouldBe` 1
 
-  describe "envEval envs exp" $ do
+  describe "varsEval envs exp" $ do
       it "pass: envs == [] && exp == (Const _)" $
-        envEval [] (Const 0) `shouldBe` 0
+        varsEval [] (Const 0) `shouldBe` 0
 
       it "fail: undeclared variable" $
-        forceEval (envEval [] (Read "x"))
-        `shouldThrow` errorCall "envRead: undeclared variable: x"
+        forceEval (varsEval [] (Read "x"))
+        `shouldThrow` errorCall "varsRead: undeclared variable: x"
 
       it "fail: uninitialized variable" $
-        forceEval (envEval [("x",Nothing)] (Read "x"))
-        `shouldThrow` errorCall "envRead: uninitialized variable: x"
+        forceEval (varsEval [("x",Nothing)] (Read "x"))
+        `shouldThrow` errorCall "varsRead: uninitialized variable: x"
 
       it "pass: eval in simple env" $
         let envs = [("x",Just 1),("y",Just 2)] in
-          envEval envs (((Read "x") `Sub` Const 3) `Add` Umn (Read "y"))
+          varsEval envs (((Read "x") `Sub` Const 3) `Add` Umn (Read "y"))
           `shouldBe` (-4)
 
       it "pass: eval in complex env" $
         let envs = [("y",Just 2),("x",Just 1),("y",Just 99),("x",Just 99)] in
-          envEval envs (((Read "x") `Sub` Const 3) `Add` Umn (Read "y"))
+          varsEval envs (((Read "x") `Sub` Const 3) `Add` Umn (Read "y"))
           `shouldBe` (-4)
 
   --------------------------------------------------------------------------
@@ -129,11 +129,11 @@ spec = do
     describe "(Write id exp)" $ do
       it "fail: [] x=y (undeclared variable)" $
         (forceEval $ nst1 (Write "x" (Read "y"), 0, Nothing, []))
-        `shouldThrow` errorCall "envWrite: undeclared variable: x"
+        `shouldThrow` errorCall "varsWrite: undeclared variable: x"
 
       it "fail: [] x=1 (undeclared variable)" $
         (forceEval $ nst1 (Write "x" (Const 1), 0, Nothing, []))
-        `shouldThrow` errorCall "envWrite: undeclared variable: x"
+        `shouldThrow` errorCall "varsWrite: undeclared variable: x"
 
       it "pass: [x=?] x=1" $
         nst1 (Var' "x" Nothing (Write "x" (Const 1)), 0, Nothing, [])
@@ -149,7 +149,7 @@ spec = do
                (Var' "y" Nothing
                  (Write "x" (Read "y"))) in
           (forceEval $ nst1 (p, 0, Nothing, []))
-          `shouldThrow` errorCall "envRead: uninitialized variable: y"
+          `shouldThrow` errorCall "varsRead: uninitialized variable: y"
 
       it "pass: nop; x=1" $
         nst1
@@ -268,7 +268,7 @@ spec = do
   describe "(If exp p q)" $ do
       it "fail: undeclared variable" $
         forceEval (nst1 (If (Read "x") Nop Break, 0, Nothing, []))
-        `shouldThrow` errorCall "envRead: undeclared variable: x"
+        `shouldThrow` errorCall "varsRead: undeclared variable: x"
 
       it "pass: x == 0" $
         nst1 (If (Read "x") Nop Break, 0, Nothing, [("x",Just 0)])
