@@ -275,27 +275,19 @@ step (Or' p q, n, vars, evts)              -- or-adv (pg 7)
 step (Error msg, _, _, _) = error ("Runtime error: " ++ msg)
 
 step (p, n, vars, evts)                    -- pop
-  | isNstReducible (p,n,vars,evts) = (p, n-1, vars, evts)
+  | isReducible (p,n,vars,evts) = (p, n-1, vars, evts)
 
 --step _ = error "step: cannot advance"
 step p =  traceShow p (error "step: cannot advance")
 
 -- Tests whether the description is nst-irreducible.
 -- CHECK: nst should only produce nst-irreducible descriptions.
-isNstReducible :: Desc -> Bool
-isNstReducible desc = case desc of
+isReducible :: Desc -> Bool
+isReducible desc = case desc of
   (_,     n, _, _) | n>0 -> True
   (Nop,   _, _, _)       -> False
   (Break, _, _, _)       -> False
   (p,     n, _, evts)    -> not $ isBlocked n p
-
--- Zero or more nested transitions.
--- (pg 6)
-steps :: Desc -> Desc
-steps d
-  | not $ isNstReducible d = d
---  | otherwise = traceShow d (steps $ step d)
-  | otherwise = steps $ step d
 
 -- Awakes all trails waiting for the given event.
 -- (pg 8, fig 4.i)
@@ -317,25 +309,28 @@ bcast e stmt = case stmt of
 
 -- Computes a reaction of program plus environment to a single external event.
 -- (pg 6)
-reaction :: (Stmt, ID_Ext, Vars) -> (Stmt, Vars)
-reaction (p, evt, vars) = (p', vars')
-  where
-    (p', _, vars', _) = steps (bcast evt p, 0, vars, [])
+reaction :: Stmt -> ID_Ext -> Stmt
+reaction p ext = p' where (p',_,_,_) = steps (bcast ext p, 0, [], [])
+
+steps :: Desc -> Desc
+steps d
+  | not $ isReducible d = d
+  | otherwise = steps $ step d
+  -- | otherwise = traceShow d (steps $ step d)
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
 evalProg :: G.Stmt -> [ID_Ext] -> Val
 evalProg prog hist -- enclosing block with "ret" that never terminates
-  = eP (Var' "ret" Nothing (Seq (fromGrammar prog) (AwaitExt "FOREVER"))) ("BOOT":hist) []
+  = eP (Var' "ret" Nothing (Seq (fromGrammar prog) (AwaitExt "FOREVER"))) ("BOOT":hist)
   where
-    eP :: Stmt -> [ID_Ext] -> Vars -> Val
-    eP prog hist vars = case prog of
+    eP :: Stmt -> [ID_Ext] -> Val
+    eP prog hist = case prog of
       (Var' "ret" val (AwaitExt "FOREVER"))
         | not (null hist) -> traceShow hist error "evalProg: pending inputs"
         | isNothing val   -> error "evalProg: no return"
         | otherwise       -> fromJust val
       _
         | null hist       -> traceShow prog error "evalProg: program didn't terminate"
-        | otherwise       ->    -- continue
-          let (prog', vars') = reaction (prog, head hist, vars) in
-            eP prog' (tail hist) vars'
+        | otherwise       -> eP prog' (tail hist) where
+                                prog' = reaction prog (head hist)
