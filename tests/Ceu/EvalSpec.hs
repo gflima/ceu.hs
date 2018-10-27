@@ -939,7 +939,7 @@ spec = do
         forceEval (out1 (Nop, 0, [], []))
         `shouldThrow` errorCall "outPop: cannot advance"
 
-      it "pass: lvl > 0 && not (isNstReducible p)" $
+      it "pass: lvl > 0 && not (isReducible p)" $
         out1 (Nop, 33, [], [])
         `shouldBe` (Nop, 32, [], [])
 
@@ -951,16 +951,16 @@ spec = do
   --------------------------------------------------------------------------
   describe "steps" $ do
     describe "zero steps (no out-rule applies)" $ do
-      it "pass: lvl == 0 && not (isNstReducible p)" $
+      it "pass: lvl == 0 && not (isReducible p)" $
         let d = (Nop, 0, [], []) in
           (steps d `shouldBe` d)
-          >> ((isNstReducible d) `shouldBe` False)
+          >> ((isReducible d) `shouldBe` False)
           -- >> (isReducible d `shouldBe` True)
 
-      it "pass: lvl == 0 && not (not (isNstReducible p))" $
+      it "pass: lvl == 0 && not (not (isReducible p))" $
         let d = (Seq Nop Nop, 0, [], []) in
           (steps d `shouldBe` (Nop,0,[],[]))
-          >> ((isNstReducible d) `shouldBe` True)
+          >> ((isReducible d) `shouldBe` True)
           -- >> (isReducible d `shouldBe` False)
 
     describe "one+ pops" $ do
@@ -968,27 +968,27 @@ spec = do
         let d = (Int "x" (EmitInt "x"), 0, [], [])
             d' = (Nop, 0, [], []) in
           (steps d `shouldBe` d')
-          >> (isNstReducible d' `shouldBe` False)
+          >> (isReducible d' `shouldBe` False)
           -- >> (isReducible d' `shouldBe` True)
 
       it "pass: lvl>0, but `Nop`" $
         let d = (Nop, 13, [], []) in
           (steps d `shouldBe` (Nop, 0, [], []))
-          >> (isNstReducible d `shouldBe` True)
+          >> (isReducible d `shouldBe` True)
 
     describe "one push followed by one+ pops" $ do
       it "pass: lvl == 0 (do nothing)" $ -- CHECK THIS! --
         let d = (bcast "c" (AwaitInt "d"), 0, [], [])
             d' = (AwaitInt "d", 0, [], []) in
           (steps d `shouldBe` d')
-          >> (isNstReducible d' `shouldBe` False)
+          >> (isReducible d' `shouldBe` False)
           -- >> (isReducible d' `shouldBe` True)
 
       it "pass: lvl > 0, but `Nop`" $
         let d = (bcast "d" (AwaitInt "d"), 88, [], [])
             d' = (Nop, 0, [], []) in
           (steps d `shouldBe` d')
-          >> (isNstReducible d' `shouldBe` False)
+          >> (isReducible d' `shouldBe` False)
           -- >> (isReducible d' `shouldBe` True)
 
   --------------------------------------------------------------------------
@@ -1125,7 +1125,7 @@ escape x;
         stepsItPass (p,n,e,vars) (p',n',e',vars') =
           (it (printf "pass: %s -> %s#" (showProg p) (showProg p'))
            ((steps (p,n,e,vars) `shouldBe` (p',n',e',vars'))
-             >> ((isNstReducible (p',n',e',vars')) `shouldBe` False)))
+             >> ((isReducible (p',n',e',vars')) `shouldBe` False)))
 
         stepsItFail err (p,n,e,vars) =
           (it (printf "fail: %s ***%s" (showProg p) err)
@@ -1133,7 +1133,7 @@ escape x;
 
         reactionItPass (p,e,vars) (p',vars') =
           (it (printf "pass: %s | %s -> %s" e (showProg p) (showProg p'))
-            (reaction (p,e,vars) `shouldBe` (p',vars')))
+            (reaction p e `shouldBe` p'))
 
         evalProgItPass res hist prog =
           (it (printf "pass: %s | %s ~>%d" (show hist) (G.showProg prog) res) $
