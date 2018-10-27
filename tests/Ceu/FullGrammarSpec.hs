@@ -186,7 +186,56 @@ end
         )
       ))))
 
+{-
+event int a;        // none
+par/and do
+    ret = await a;  // no ret
+with
+    emit a(10);     // no 10
+end
+-}
+    evalFullProgItPass 10 [] (
+      Int "a" True (
+        And
+          (AwaitInt "a" (Just "ret"))
+          (EmitInt "a" (Just (Const 10)))
+      ))
+    evalFullProgItFail "varsWrite: undeclared variable: _a" [] (
+      Int "a" False (
+        And
+          (AwaitInt "a" (Just "ret"))
+          (EmitInt "a" (Just (Const 10)))
+      ))
+    evalFullProgItFail "varsWrite: undeclared variable: _a" [] (
+      Int "a" False ( -- TODO: OK
+        And
+          (AwaitInt "a" Nothing)
+          (EmitInt "a" (Just (Const 10)))
+      ))
+    evalFullProgItPass 99 [] (
+      Int "a" False (
+        And
+          ((AwaitInt "a" Nothing) `Seq` (Write "ret" (Const 99)))
+          (EmitInt "a" Nothing)
+      ))
+    evalFullProgItPass 99 [] (
+      Int "a" True (
+        And
+          ((AwaitInt "a" Nothing) `Seq` (Write "ret" (Const 99)))
+          (EmitInt "a" (Just (Const 10)))
+      ))
+    evalFullProgItFail "varsRead: uninitialized variable: _a" [] (
+      Int "a" True (
+        And
+          (AwaitInt "a" (Just "ret"))
+          (EmitInt "a" Nothing)
+      ))
+
       where
         evalFullProgItPass res hist prog =
           (it (printf "pass: %s | %s ~>%d" (show hist) (G.showProg $ toGrammar prog) res) $
             (evalFullProg prog hist `shouldBe` res))
+
+        evalFullProgItFail err hist prog =
+          (it (printf "fail: %s | %s ***%s" (show hist) (G.showProg $ toGrammar prog) err) $
+            (forceEval (evalFullProg prog hist) `shouldThrow` errorCall err))

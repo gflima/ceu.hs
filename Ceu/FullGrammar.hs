@@ -36,15 +36,36 @@ data Stmt
   | Nop'                                -- nop as in basic Grammar
   deriving (Eq, Show)
 
---TODO: fazer um exemplo que o fin executa 2x por causa de um emit que mata um paror por fora.
---TODO: adicionar um @error Int nas duas semanticas
-
 infixr 1 `Seq`                  -- `Seq` associates to the right
 infixr 0 `Or`                   -- `Or` associates to the right
 infixr 0 `And`                  -- `And` associates to the right
 
--- remFin: Converts (Fin _  p);A -> (or (Fin' p) A)
---                  (Fin id p);A -> A ||| (Var (Or [(Fin p)] X)
+-- remPay:
+-- (Int e True ...)  -> (Var e_ (Int e False) ...)
+-- (AwaitEvt e var)  -> (AwaitEvt e Nothing) ; (Write var e_)
+-- (EmitInt e v)     -> (Write e_ v) ; (EmitInt e Nothing)
+-- (Every e var ...) -> (Every e Nothing ((Write var e_) ; ...)
+remPay :: Stmt -> Stmt
+remPay (Int int True p)          = Var ("_"++int) (Int int False (remPay p))
+remPay (Int int False p)         = Int int False (remPay p)
+remPay (AwaitExt ext (Just var)) = (AwaitExt ext Nothing) `Seq` (Write var (Read ("_"++ext)))
+remPay (AwaitInt int (Just var)) = (AwaitInt int Nothing) `Seq` (Write var (Read ("_"++int)))
+remPay (EmitInt  int (Just exp)) = (Write ("_"++int) exp) `Seq` (EmitInt int Nothing)
+remPay (If cnd p1 p2)            = If cnd (remPay p1) (remPay p2)
+remPay (Seq p1 p2)               = Seq (remPay p1) (remPay p2)
+remPay (Loop p)                  = Loop (remPay p)
+remPay (Every evt (Just var) p)  = Every evt Nothing
+                                     ((Write var (Read ("_"++evt))) `Seq` (remPay p))
+remPay (And p1 p2)               = And (remPay p1) (remPay p2)
+remPay (Or p1 p2)                = Or (remPay p1) (remPay p2)
+remPay (Spawn p)                 = Spawn (remPay p)
+remPay (Fin var p)               = Fin var (remPay p)
+remPay (Async p)                 = Async (remPay p)
+remPay p                         = p
+
+-- remFin:
+-- (Fin _  p);A -> (or (Fin' p) A)
+-- (Fin id p);A -> A ||| (Var (Or [(Fin p)] X)
 
 remFin :: Stmt -> Stmt
 remFin p = p' where
@@ -106,7 +127,6 @@ remSpawn (Or p1 p2)          = Or (remSpawn p1) (remSpawn p2)
 remSpawn (Spawn p)           = error "remSpawn: unexpected statement (Spawn)"
 remSpawn (Fin id p)          = Fin id (remSpawn p)
 remSpawn (Async p)           = Async (remSpawn p)
-remSpawn (Fin' p)            = Fin' (remSpawn p)
 remSpawn p                   = p
 
 -- chkSpawn: `Spawn` can only appear as first item in `Seq`
@@ -133,10 +153,9 @@ chkSpawn p = case p of
   chkS (Spawn p)     = (notS p) && (chkS p)
   chkS (Fin _ p)     = (notS p) && (chkS p)
   chkS (Async p)     = (notS p) && (chkS p)
-  chkS (Fin' p)      = (notS p) && (chkS p)
   chkS _             = True
 
--- remSpawn: Adds AwaitFor in Loops inside Asyncs
+-- remAsync: Adds AwaitFor in Loops inside Asyncs
 
 remAsync :: Stmt -> Stmt
 remAsync p = (rA False p) where
@@ -153,10 +172,9 @@ remAsync p = (rA False p) where
   rA inA   (Spawn p)         = Spawn (rA inA p)
   rA inA   (Fin id p)        = Fin id (rA inA p)
   rA inA   (Async p)         = (rA True p)
-  rA inA   (Fin' p)          = Fin' (rA inA p)
   rA inA   p                 = p
 
--- TODO: chkSpan: no sync statements
+-- TODO: chkAsync: no sync statements
 
 -- remAwaitFor: Converts AwaitFor into (AwaitExt "FOREVER")
 
@@ -172,16 +190,14 @@ remAwaitFor (Or p1 p2)        = Or (remAwaitFor p1) (remAwaitFor p2)
 remAwaitFor (Spawn p)         = Spawn (remAwaitFor p)
 remAwaitFor (Fin id p)        = Fin id (remAwaitFor p)
 remAwaitFor (Async p)         = error "remAwaitFor: unexpected statement (Async)"
-remAwaitFor (Fin' p)          = Fin' (remAwaitFor p)
 remAwaitFor AwaitFor          = AwaitExt "FOREVER" Nothing
 remAwaitFor p                 = p
 
 -- toGrammar: Converts full -> basic
 
 toGrammar :: Stmt -> G.Stmt
-toGrammar p = toG $ remAwaitFor $ remAsync
-                  $ remSpawn $ chkSpawn
-                  $ remFin p where
+toGrammar p = toG $ remFin $ remAwaitFor $ remAsync
+                  $ remSpawn $ chkSpawn $ remPay $ p where
   toG :: Stmt -> G.Stmt
   toG (Var id p)         = G.Var id (toG p)
   toG (Int id b p)       = G.Int id (toG p)

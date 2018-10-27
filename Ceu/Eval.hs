@@ -326,10 +326,10 @@ reaction (p, evt, vars) = (p', vars')
 -- Returns the last value of global "ret" set by the program.
 evalProg :: G.Stmt -> [ID_Ext] -> Val
 evalProg prog hist -- enclosing block with "ret" that never terminates
-  = evalProg' (Var' "ret" Nothing (Seq (fromGrammar prog) (AwaitExt "FOREVER"))) ("BOOT":hist) []
+  = eP (Var' "ret" Nothing (Seq (fromGrammar prog) (AwaitExt "FOREVER"))) ("BOOT":hist) []
   where
-    evalProg' :: Stmt -> [ID_Ext] -> Vars -> Val
-    evalProg' prog hist vars = case prog of
+    eP :: Stmt -> [ID_Ext] -> Vars -> Val
+    eP prog hist vars = case prog of
       (Var' "ret" val (AwaitExt "FOREVER"))
         | not (null hist) -> traceShow hist error "evalProg: pending inputs"
         | isNothing val   -> error "evalProg: no return"
@@ -338,4 +338,4 @@ evalProg prog hist -- enclosing block with "ret" that never terminates
         | null hist       -> traceShow prog error "evalProg: program didn't terminate"
         | otherwise       ->    -- continue
           let (prog', vars') = reaction (prog, head hist, vars) in
-            evalProg' prog' (tail hist) vars'
+            eP prog' (tail hist) vars'
