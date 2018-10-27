@@ -91,14 +91,14 @@ spec = do
 
     it "async { loop nop }" $ do
       remAsync (Async (Loop Nop'))
-      `shouldBe` (Loop (Seq Nop' (AwaitExt "ASYNC")))
+      `shouldBe` (Loop (Seq Nop' (AwaitExt "ASYNC" Nothing)))
 
   --------------------------------------------------------------------------
   describe "remAwaitFor" $ do
 
     it "await FOREVER;" $ do
       remAwaitFor AwaitFor
-      `shouldBe` (AwaitExt "FOREVER")
+      `shouldBe` (AwaitExt "FOREVER" Nothing)
 
   --------------------------------------------------------------------------
   describe "toGrammar" $ do
@@ -112,12 +112,12 @@ spec = do
       `shouldBe` (G.Var "x" (G.Write "x" (Const 1)))
 
     it "spawn do await A; end ;; await B; var x; await FOREVER;" $ do
-      toGrammar (Seq (Spawn (AwaitExt "A")) (Seq (AwaitExt "B") (Var "x" AwaitFor)))
+      toGrammar (Seq (Spawn (AwaitExt "A" Nothing)) (Seq (AwaitExt "B" Nothing) (Var "x" AwaitFor)))
       `shouldBe` (G.Or (G.Seq (G.AwaitExt "A") (G.AwaitExt "FOREVER")) (G.Seq (G.AwaitExt "B") (G.Var "x" (G.AwaitExt "FOREVER"))))
 
 
     it "spawn do async ret++ end ;; await F;" $ do
-      toGrammar (Seq (Spawn (Async (Loop (Write "x" (Add (Read "x") (Const 1)))))) (AwaitExt "A"))
+      toGrammar (Seq (Spawn (Async (Loop (Write "x" (Add (Read "x") (Const 1)))))) (AwaitExt "A" Nothing))
       `shouldBe` (G.Or (G.Seq (G.Loop (G.Seq (G.Write "x" (Add (Read "x") (Const 1))) (G.AwaitExt "ASYNC"))) (G.AwaitExt "FOREVER")) (G.AwaitExt "A"))
 
   --------------------------------------------------------------------------
@@ -173,12 +173,12 @@ end
       (Int "a" (
       (Write "ret" (Const 0)) `Seq`
       (Or
-        ((AwaitInt "a") `Seq` (Write "ret" (Add (Read "ret") (Const 5))))
+        ((AwaitInt "a" Nothing) `Seq` (Write "ret" (Add (Read "ret") (Const 5))))
         (Or
           (
             (Fin Nothing (
               (Write "ret" (Mul (Read "ret") (Const 2))) `Seq`
-              (EmitInt "a")
+              (EmitInt "a" Nothing)
             )) `Seq`
             AwaitFor
           )

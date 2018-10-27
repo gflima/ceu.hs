@@ -12,27 +12,28 @@ import qualified Ceu.Eval as E
 
 -- Program (pg 5).
 data Stmt
-  = Var ID_Var Stmt             -- variable declaration
-  | Int ID_Int Stmt             -- event declaration
-  | Write ID_Var Expr           -- assignment statement
-  | AwaitExt ID_Ext             -- await external event
-  | AwaitFor                    -- await forever
+  = Var ID_Var Stmt                     -- variable declaration
+  | Int ID_Int Stmt                     -- event declaration
+  | Write ID_Var Expr                   -- assignment statement
+  | AwaitExt ID_Ext (Maybe ID_Var)      -- await external event
+
+  | AwaitFor                            -- await forever
 -- TODO: AwaitTmr
-  | AwaitInt ID_Int             -- await internal event
-  | EmitInt ID_Int              -- emit internal event
-  | Break                       -- loop escape
-  | If Expr Stmt Stmt           -- conditional
-  | Seq Stmt Stmt               -- sequence
-  | Loop Stmt                   -- infinite loop
-  | Every ID_Evt Stmt           -- event iteration
-  | And Stmt Stmt               -- par/and statement
-  | Or Stmt Stmt                -- par/or statement
-  | Spawn Stmt                  -- spawn statement
-  | Fin (Maybe ID_Var) Stmt     -- finalize statement
-  | Async Stmt                  -- async statement
-  | Error String                -- generate runtime error (for testing purposes)
-  | Fin' Stmt                   -- fin as in basic Grammar
-  | Nop'                        -- nop as in basic Grammar
+  | AwaitInt ID_Int (Maybe ID_Var)      -- await internal event
+  | EmitInt ID_Int (Maybe Expr)         -- emit internal event
+  | Break                               -- loop escape
+  | If Expr Stmt Stmt                   -- conditional
+  | Seq Stmt Stmt                       -- sequence
+  | Loop Stmt                           -- infinite loop
+  | Every ID_Evt (Maybe ID_Var) Stmt    -- event iteration
+  | And Stmt Stmt                       -- par/and statement
+  | Or Stmt Stmt                        -- par/or statement
+  | Spawn Stmt                          -- spawn statement
+  | Fin (Maybe ID_Var) Stmt             -- finalize statement
+  | Async Stmt                          -- async statement
+  | Error String                        -- generate runtime error (for testing purposes)
+  | Fin' Stmt                           -- fin as in basic Grammar
+  | Nop'                                -- nop as in basic Grammar
   deriving (Eq, Show)
 
 --TODO: fazer um exemplo que o fin executa 2x por causa de um emit que mata um paror por fora.
@@ -61,7 +62,7 @@ remFin p = p' where
                                            (l2',p2') = (rF p2)
 
   rF (Loop p)            = ([], Loop (snd (rF p)))
-  rF (Every e p)         = ([], Every e (snd (rF p)))
+  rF (Every evt exp p)   = ([], Every evt exp (snd (rF p)))
   rF (And p1 p2)         = ([], And (snd (rF p1)) (snd (rF p2)))
   rF (Or p1 p2)          = ([], Or (snd (rF p1)) (snd (rF p2)))
   rF (Spawn p)           = ([], Spawn (snd (rF p)))
@@ -99,7 +100,7 @@ remSpawn (If exp p1 p2)      = If exp (remSpawn p1) (remSpawn p2)
 remSpawn (Seq (Spawn p1) p2) = Or (Seq (remSpawn p1) AwaitFor) (remSpawn p2)
 remSpawn (Seq p1 p2)         = Seq (remSpawn p1) (remSpawn p2)
 remSpawn (Loop p)            = Loop (remSpawn p)
-remSpawn (Every e p)         = Every e (remSpawn p)
+remSpawn (Every evt var p)   = Every evt var (remSpawn p)
 remSpawn (And p1 p2)         = And (remSpawn p1) (remSpawn p2)
 remSpawn (Or p1 p2)          = Or (remSpawn p1) (remSpawn p2)
 remSpawn (Spawn p)           = error "remSpawn: unexpected statement (Spawn)"
@@ -121,59 +122,59 @@ chkSpawn p = case p of
   notS p         = True
 
   chkS :: Stmt -> Bool
-  chkS (Var _ p)    = (notS p) && (chkS p)
-  chkS (Int _ p)    = (notS p) && (chkS p)
-  chkS (If _ p1 p2) = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
-  chkS (Seq p1 p2)  = (chkS p1) && (notS p2) && (chkS p2)
-  chkS (Loop p)     = (notS p) && (chkS p)
-  chkS (Every _ p)  = (notS p) && (chkS p)
-  chkS (And p1 p2)  = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
-  chkS (Or p1 p2)   = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
-  chkS (Spawn p)    = (notS p) && (chkS p)
-  chkS (Fin _ p)    = (notS p) && (chkS p)
-  chkS (Async p)    = (notS p) && (chkS p)
-  chkS (Fin' p)     = (notS p) && (chkS p)
-  chkS _            = True
+  chkS (Var _ p)     = (notS p) && (chkS p)
+  chkS (Int _ p)     = (notS p) && (chkS p)
+  chkS (If _ p1 p2)  = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
+  chkS (Seq p1 p2)   = (chkS p1) && (notS p2) && (chkS p2)
+  chkS (Loop p)      = (notS p) && (chkS p)
+  chkS (Every _ _ p) = (notS p) && (chkS p)
+  chkS (And p1 p2)   = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
+  chkS (Or p1 p2)    = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
+  chkS (Spawn p)     = (notS p) && (chkS p)
+  chkS (Fin _ p)     = (notS p) && (chkS p)
+  chkS (Async p)     = (notS p) && (chkS p)
+  chkS (Fin' p)      = (notS p) && (chkS p)
+  chkS _             = True
 
 -- remSpawn: Adds AwaitFor in Loops inside Asyncs
 
 remAsync :: Stmt -> Stmt
 remAsync p = (rA False p) where
   rA :: Bool -> Stmt -> Stmt
-  rA inA   (Var id p)     = Var id (rA inA p)
-  rA inA   (Int id p)     = Int id (rA inA p)
-  rA inA   (If exp p1 p2) = If exp (rA inA p1) (rA inA p2)
-  rA inA   (Seq p1 p2)    = Seq (rA inA p1) (rA inA p2)
-  rA True  (Loop p)       = Loop (rA True (Seq p (AwaitExt "ASYNC")))
-  rA False (Loop p)       = Loop (rA False p)
-  rA inA   (Every e p)    = Every e (rA inA p)
-  rA inA   (And p1 p2)    = And (rA inA p1) (rA inA p2)
-  rA inA   (Or p1 p2)     = Or (rA inA p1) (rA inA p2)
-  rA inA   (Spawn p)      = Spawn (rA inA p)
-  rA inA   (Fin id p)     = Fin id (rA inA p)
-  rA inA   (Async p)      = (rA True p)
-  rA inA   (Fin' p)       = Fin' (rA inA p)
-  rA inA   p              = p
+  rA inA   (Var id p)        = Var id (rA inA p)
+  rA inA   (Int id p)        = Int id (rA inA p)
+  rA inA   (If exp p1 p2)    = If exp (rA inA p1) (rA inA p2)
+  rA inA   (Seq p1 p2)       = Seq (rA inA p1) (rA inA p2)
+  rA True  (Loop p)          = Loop (rA True (Seq p (AwaitExt "ASYNC" Nothing)))
+  rA False (Loop p)          = Loop (rA False p)
+  rA inA   (Every evt var p) = Every evt var (rA inA p)
+  rA inA   (And p1 p2)       = And (rA inA p1) (rA inA p2)
+  rA inA   (Or p1 p2)        = Or (rA inA p1) (rA inA p2)
+  rA inA   (Spawn p)         = Spawn (rA inA p)
+  rA inA   (Fin id p)        = Fin id (rA inA p)
+  rA inA   (Async p)         = (rA True p)
+  rA inA   (Fin' p)          = Fin' (rA inA p)
+  rA inA   p                 = p
 
 -- TODO: chkSpan: no sync statements
 
 -- remAwaitFor: Converts AwaitFor into (AwaitExt "FOREVER")
 
 remAwaitFor :: Stmt -> Stmt
-remAwaitFor (Var id p)     = Var id (remAwaitFor p)
-remAwaitFor (Int id p)     = Int id (remAwaitFor p)
-remAwaitFor (If exp p1 p2) = If exp (remAwaitFor p1) (remAwaitFor p2)
-remAwaitFor (Seq p1 p2)    = Seq (remAwaitFor p1) (remAwaitFor p2)
-remAwaitFor (Loop p)       = Loop (remAwaitFor p)
-remAwaitFor (Every e p)    = Every e (remAwaitFor p)
-remAwaitFor (And p1 p2)    = And (remAwaitFor p1) (remAwaitFor p2)
-remAwaitFor (Or p1 p2)     = Or (remAwaitFor p1) (remAwaitFor p2)
-remAwaitFor (Spawn p)      = Spawn (remAwaitFor p)
-remAwaitFor (Fin id p)     = Fin id (remAwaitFor p)
-remAwaitFor (Async p)      = error "remAwaitFor: unexpected statement (Async)"
-remAwaitFor (Fin' p)       = Fin' (remAwaitFor p)
-remAwaitFor AwaitFor       = AwaitExt "FOREVER"
-remAwaitFor p              = p
+remAwaitFor (Var id p)        = Var id (remAwaitFor p)
+remAwaitFor (Int id p)        = Int id (remAwaitFor p)
+remAwaitFor (If exp p1 p2)    = If exp (remAwaitFor p1) (remAwaitFor p2)
+remAwaitFor (Seq p1 p2)       = Seq (remAwaitFor p1) (remAwaitFor p2)
+remAwaitFor (Loop p)          = Loop (remAwaitFor p)
+remAwaitFor (Every evt var p) = Every evt var (remAwaitFor p)
+remAwaitFor (And p1 p2)       = And (remAwaitFor p1) (remAwaitFor p2)
+remAwaitFor (Or p1 p2)        = Or (remAwaitFor p1) (remAwaitFor p2)
+remAwaitFor (Spawn p)         = Spawn (remAwaitFor p)
+remAwaitFor (Fin id p)        = Fin id (remAwaitFor p)
+remAwaitFor (Async p)         = error "remAwaitFor: unexpected statement (Async)"
+remAwaitFor (Fin' p)          = Fin' (remAwaitFor p)
+remAwaitFor AwaitFor          = AwaitExt "FOREVER" Nothing
+remAwaitFor p                 = p
 
 -- toGrammar: Converts full -> basic
 
@@ -182,23 +183,23 @@ toGrammar p = toG $ remAwaitFor $ remAsync
                   $ remSpawn $ chkSpawn
                   $ remFin p where
   toG :: Stmt -> G.Stmt
-  toG (Var id p)     = G.Var id (toG p)
-  toG (Int id p)     = G.Int id (toG p)
-  toG (Write id exp) = G.Write id exp
-  toG (AwaitExt e)   = G.AwaitExt e
-  toG (AwaitInt e)   = G.AwaitInt e
-  toG (EmitInt e)    = G.EmitInt e
-  toG Break          = G.Break
-  toG (If exp p1 p2) = G.If exp (toG p1) (toG p2)
-  toG (Seq p1 p2)    = G.Seq (toG p1) (toG p2)
-  toG (Loop p)       = G.Loop (toG p)
-  toG (Every e p)    = G.Every e (toG p)
-  toG (And p1 p2)    = G.And (toG p1) (toG p2)
-  toG (Or p1 p2)     = G.Or (toG p1) (toG p2)
-  toG (Error msg)    = G.Error msg
-  toG (Fin' p)       = G.Fin (toG p)
-  toG Nop'           = G.Nop
-  toG _              = error "toG: unexpected statement (AwaitFor,Fin,Spawn,Async)"
+  toG (Var id p)         = G.Var id (toG p)
+  toG (Int id p)         = G.Int id (toG p)
+  toG (Write id exp)     = G.Write id exp
+  toG (AwaitExt ext var) = G.AwaitExt ext
+  toG (AwaitInt int var) = G.AwaitInt int
+  toG (EmitInt int val)  = G.EmitInt int
+  toG Break              = G.Break
+  toG (If exp p1 p2)     = G.If exp (toG p1) (toG p2)
+  toG (Seq p1 p2)        = G.Seq (toG p1) (toG p2)
+  toG (Loop p)           = G.Loop (toG p)
+  toG (Every evt var p)   = G.Every evt (toG p)
+  toG (And p1 p2)        = G.And (toG p1) (toG p2)
+  toG (Or p1 p2)         = G.Or (toG p1) (toG p2)
+  toG (Error msg)        = G.Error msg
+  toG (Fin' p)           = G.Fin (toG p)
+  toG Nop'               = G.Nop
+  toG _                  = error "toG: unexpected statement (AwaitFor,Fin,Spawn,Async)"
 
 evalFullProg :: Stmt -> [ID_Evt] -> Val
 evalFullProg prog hist = E.evalProg (toGrammar prog) []
