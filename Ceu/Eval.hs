@@ -10,18 +10,18 @@ type Lvl = Int
 
 -- Environment.
 type Vars = [(ID_Var, Maybe Val)]
-type Evts = [(ID_Evt, Bool)]
+type Ints = [(ID_Int, Bool)]
 
 -- Description (pg 6).
-type Desc = (Stmt, Lvl, Vars, Evts)
+type Desc = (Stmt, Lvl, Vars, Ints)
 
 -- Program (pg 5).
 data Stmt
-  = Evt ID_Evt Stmt             -- event declaration
+  = Int ID_Int Stmt             -- event declaration
   | Write ID_Var Expr           -- assignment statement
-  | AwaitExt ID_Evt             -- await external event
-  | AwaitInt ID_Evt             -- await internal event
-  | EmitInt ID_Evt              -- emit internal event
+  | AwaitExt ID_Ext             -- await external event
+  | AwaitInt ID_Int             -- await internal event
+  | EmitInt ID_Int              -- emit internal event
   | Break                       -- loop escape
   | If Expr Stmt Stmt           -- conditional
   | Seq Stmt Stmt               -- sequence
@@ -44,7 +44,7 @@ infixr 0 `And`                  -- `And` associates to the right
 
 fromGrammar :: G.Stmt -> Stmt
 fromGrammar (G.Var id p)      = Var' id Nothing (fromGrammar p)
-fromGrammar (G.Evt id p)      = Evt id (fromGrammar p)
+fromGrammar (G.Int id p)      = Int id (fromGrammar p)
 fromGrammar (G.Write id exp)  = Write id exp
 fromGrammar (G.AwaitExt id)   = AwaitExt id
 fromGrammar (G.AwaitInt id)   = AwaitInt id
@@ -63,7 +63,7 @@ fromGrammar (G.Error msg)     = Error msg
 -- Shows program.
 showProg :: Stmt -> String
 showProg stmt = case stmt of
-  Evt id stmt    -> printf ":%s %s" id (sP stmt)
+  Int id stmt    -> printf ":%s %s" id (sP stmt)
   Write var expr -> printf "%s=%s" var (sE expr)
   AwaitExt evt   -> printf "?%s" evt
   AwaitInt evt   -> printf "?%s" evt
@@ -121,7 +121,7 @@ varsEval vars expr = case expr of
   Div e1 e2 -> (varsEval vars e1) `div` (varsEval vars e2)
 
 -- Set event in environment.
-evtsEmit :: Evts -> ID_Evt -> Evts
+evtsEmit :: Ints -> ID_Int -> Ints
 evtsEmit evts evt = case evts of
   (evt',val'):evts'
     | evt == evt' -> (evt,True):evts'
@@ -141,7 +141,7 @@ isBlocked n stmt = case stmt of
   CanRun m     -> n > m
   Fin p        -> True
   Seq p q      -> isBlocked n p
-  Evt _ p      -> isBlocked n p
+  Int _ p      -> isBlocked n p
   Var' _ _ p   -> isBlocked n p
   Loop' p q    -> isBlocked n p
   And' p q     -> isBlocked n p && isBlocked n q
@@ -158,7 +158,7 @@ clear stmt = case stmt of
   CanRun _     -> Nop
   Fin p        -> p
   Seq p _      -> clear p
-  Evt _ p      -> clear p
+  Int _ p      -> clear p
   Var' _ _ p   -> clear p
   Loop' p _    -> clear p
   And' p q     -> Seq (clear p) (clear q)
@@ -186,14 +186,14 @@ step (Var' var val p, n, vars, evts)       -- var-adv
     where
       (p', n', (_,val'):vars', evts') = stepAdv (p, n, (var,val):vars, evts) id
 
-step (Evt id Nop, n, vars, evts)           -- evt-nop
+step (Int id Nop, n, vars, evts)           -- evt-nop
   = (Nop, n, vars, evts)
 
-step (Evt id Break, n, vars, evts)         -- evt-brk
+step (Int id Break, n, vars, evts)         -- evt-brk
   = (Break, n, vars, evts)
 
-step (Evt evt p, n, vars, evts)            -- evt-adv
-  = (Evt evt p'', n', vars', evts')
+step (Int evt p, n, vars, evts)            -- evt-adv
+  = (Int evt p'', n', vars', evts')
     where
       (p', n', vars', (_,go):evts') = stepAdv (p, n, vars, (evt,False):evts) id
       p'' | go = bcast evt p'
@@ -305,7 +305,7 @@ bcast e stmt = case stmt of
   AwaitInt e' | e == e' -> Nop
   Every e' p  | e == e' -> Seq p (Every e' p)
   Seq p q               -> Seq (bcast e p) q
-  Evt id p              -> Evt id (bcast e p)
+  Int id p              -> Int id (bcast e p)
   Var' id val p         -> Var' id val (bcast e p)
   Loop' p q             -> Loop' (bcast e p) q
   And' p q              -> And' (bcast e p) (bcast e q)
@@ -315,20 +315,20 @@ bcast e stmt = case stmt of
 ----------------------------------------------------------------------------
 -- Reaction
 
--- Computes a reaction of program plus environment to a single event.
+-- Computes a reaction of program plus environment to a single external event.
 -- (pg 6)
-reaction :: (Stmt, ID_Evt, Vars) -> (Stmt, Vars)
+reaction :: (Stmt, ID_Ext, Vars) -> (Stmt, Vars)
 reaction (p, evt, vars) = (p', vars')
   where
     (p', _, vars', _) = steps (bcast evt p, 0, vars, [])
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
-evalProg :: G.Stmt -> [ID_Evt] -> Val
+evalProg :: G.Stmt -> [ID_Ext] -> Val
 evalProg prog hist -- enclosing block with "ret" that never terminates
   = evalProg' (Var' "ret" Nothing (Seq (fromGrammar prog) (AwaitExt "FOREVER"))) ("BOOT":hist) []
   where
-    evalProg' :: Stmt -> [ID_Evt] -> Vars -> Val
+    evalProg' :: Stmt -> [ID_Ext] -> Vars -> Val
     evalProg' prog hist vars = case prog of
       (Var' "ret" val (AwaitExt "FOREVER"))
         | not (null hist) -> traceShow hist error "evalProg: pending inputs"

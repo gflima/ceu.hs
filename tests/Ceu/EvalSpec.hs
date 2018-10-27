@@ -34,7 +34,7 @@ instance NFData Stmt where
   rnf (Error _)        = ()
   rnf (CanRun _)       = ()
   rnf (Var' _ _ p)     = rnf p
-  rnf (Evt _ p)        = rnf p
+  rnf (Int _ p)        = rnf p
   rnf (Loop' p q)      = rnf p
   rnf (And' p q)       = rnf p `deepseq` rnf q
   rnf (Or' p q)        = rnf p `deepseq` rnf q
@@ -190,16 +190,16 @@ spec = do
         `shouldThrow` errorCall "evtsEmit: undeclared event: a"
 
       it "pass: lvl == 0" $
-        step (Evt "a" (EmitInt "a"), 0, [], [])
-        `shouldBe` (Evt "a" (CanRun 0), 1, [], [])
+        step (Int "a" (EmitInt "a"), 0, [], [])
+        `shouldBe` (Int "a" (CanRun 0), 1, [], [])
 
       it "pass: pop" $
-        (step (Evt "a" (CanRun 0), 1, [], []))
-        `shouldBe` (Evt "a" (CanRun 0), 0, [], [])
+        (step (Int "a" (CanRun 0), 1, [], []))
+        `shouldBe` (Int "a" (CanRun 0), 0, [], [])
 
       it "pass: lvl > 0" $
-        step (Evt "b" (EmitInt "b"), 3, [], [])
-        `shouldBe` (Evt "b" (CanRun 3), 4, [], [])
+        step (Int "b" (EmitInt "b"), 3, [], [])
+        `shouldBe` (Int "b" (CanRun 3), 4, [], [])
 
 {-
       it "fail: evt /= nil (cannot advance)" $
@@ -270,8 +270,8 @@ spec = do
         `shouldBe` (Seq Nop Nop, 0, [], [])
 
       it "pass: lvl > 0" $
-        step (Seq (Seq (Evt "z" (EmitInt "z")) Nop) Nop, 3, [], [])
-        `shouldBe` (Seq (Seq (Evt "z" (CanRun 3)) Nop) Nop, 4, [], [])
+        step (Seq (Seq (Int "z" (EmitInt "z")) Nop) Nop, 3, [], [])
+        `shouldBe` (Seq (Seq (Int "z" (CanRun 3)) Nop) Nop, 4, [], [])
 
 {-
       it "fail: evt /= nil (cannot advance)" $
@@ -366,8 +366,8 @@ spec = do
         `shouldBe` (Loop' Nop Nop, 0, [], [])
 
       it "pass: lvl > 0" $
-        step (Evt "z" (Loop' (Seq (EmitInt "z") Nop) Break), 3, [], [])
-        `shouldBe` (Evt "z" (Loop' (Seq (CanRun 3) Nop) Break), 4, [], [])
+        step (Int "z" (Loop' (Seq (EmitInt "z") Nop) Break), 3, [], [])
+        `shouldBe` (Int "z" (Loop' (Seq (CanRun 3) Nop) Break), 4, [], [])
 
 {-
       it "fail: evt /= nil (cannot advance)" $
@@ -566,9 +566,9 @@ spec = do
         `shouldBe` (And' Nop (Seq Break Break), 0, [], [])
 
       it "pass: lvl > 0" $
-        step (Evt "y" (Evt "z" (And' (Seq (EmitInt "z") Nop) (Seq (EmitInt "y") Nop))),
+        step (Int "y" (Int "z" (And' (Seq (EmitInt "z") Nop) (Seq (EmitInt "y") Nop))),
                3, [], [])
-        `shouldBe` (Evt "y" (Evt "z" (And' (Seq (CanRun 3) Nop) (Seq (EmitInt "y") Nop))),
+        `shouldBe` (Int "y" (Int "z" (And' (Seq (CanRun 3) Nop) (Seq (EmitInt "y") Nop))),
                      4, [], [])
 
 {-
@@ -579,14 +579,14 @@ spec = do
 -}
 
       it "pass: isBlocked p && not (isBlocked q)" $
-        step (And' (Fin Nop) (Seq (Evt "z" (EmitInt "z")) Nop),
+        step (And' (Fin Nop) (Seq (Int "z" (EmitInt "z")) Nop),
                3, [], [])
-        `shouldBe` (And' (Fin Nop) (Seq (Evt "z" (CanRun 3)) Nop),
+        `shouldBe` (And' (Fin Nop) (Seq (Int "z" (CanRun 3)) Nop),
                      4, [], [])
 
       it "pass: not (isBlocked p) && isBlocked q" $
-        step (Evt "z" (And' (EmitInt "z") (AwaitInt "z")), 3, [], [])
-        `shouldBe` (Evt "z" (And' (CanRun 3) Nop), 4, [], [])
+        step (Int "z" (And' (EmitInt "z") (AwaitInt "z")), 3, [], [])
+        `shouldBe` (Int "z" (And' (CanRun 3) Nop), 4, [], [])
 
       it "fail: isBlocked p && isBlocked q (cannot advance)" $
         forceEval (step (And' (AwaitInt "d") (AwaitInt "e"),
@@ -803,9 +803,9 @@ spec = do
         `shouldBe` (Or' Nop (Seq Break Break), 0, [], [])
 
       it "psas: lvl > 0" $
-        step (Or' (Evt "z" (Seq (EmitInt "z") Nop)) (Evt "y" (Seq (EmitInt "y") Nop)),
+        step (Or' (Int "z" (Seq (EmitInt "z") Nop)) (Int "y" (Seq (EmitInt "y") Nop)),
                3, [], [])
-        `shouldBe` (Or' (Evt "z" (Seq (CanRun 3) Nop)) (Evt "y" (Seq (EmitInt "y") Nop)),
+        `shouldBe` (Or' (Int "z" (Seq (CanRun 3) Nop)) (Int "y" (Seq (EmitInt "y") Nop)),
                      4, [], [])
 
 {-
@@ -816,12 +816,12 @@ spec = do
 -}
 
       it "pass: isBlocked p && not (isBlocked q)" $
-        step (Or' (Fin Nop) (Evt "z" (Seq (EmitInt "z") Nop)), 3, [], [])
-        `shouldBe` (Or' (Fin Nop) (Evt "z" (Seq (CanRun 3) Nop)), 4, [], [])
+        step (Or' (Fin Nop) (Int "z" (Seq (EmitInt "z") Nop)), 3, [], [])
+        `shouldBe` (Or' (Fin Nop) (Int "z" (Seq (CanRun 3) Nop)), 4, [], [])
 
       it "pass: not (isBlocked p) && isBlocked q" $
-        step (Evt "z" (Or' (EmitInt "z") (AwaitInt "z")), 3, [], [])
-        `shouldBe` (Evt "z" (Or' (CanRun 3) Nop), 4, [], [])
+        step (Int "z" (Or' (EmitInt "z") (AwaitInt "z")), 3, [], [])
+        `shouldBe` (Int "z" (Or' (CanRun 3) Nop), 4, [], [])
 
       it "fail: isBlocked p && isBlocked q (cannot advance)" $
         forceEval (step (Or' (AwaitInt "d") (AwaitInt "e"),
@@ -882,9 +882,9 @@ spec = do
         (Nop, 0, [], [])
 
       stepsItPass
-        (Evt "z" (EmitInt "z"), 3, [], [])
+        (Int "z" (EmitInt "z"), 3, [], [])
         (Nop, 0, [], [])
-        --(Evt "z" (CanRun 3), 4, [], [])
+        --(Int "z" (CanRun 3), 4, [], [])
 
       stepsItPass
         (CanRun 3, 3, [], [])
@@ -895,16 +895,16 @@ spec = do
         (Break, 0, [], [])
 
       stepsItPass
-        (Loop' Break Break `Seq` Nop `Seq` Nop `Seq` (Evt "z" (EmitInt "z")) `Seq` Break,
+        (Loop' Break Break `Seq` Nop `Seq` Nop `Seq` (Int "z" (EmitInt "z")) `Seq` Break,
           3, [], [])
         (Break, 0, [], [])
 
       stepsItPass
-        (Seq (Loop' Break Break) Nop `And` Seq (Evt "z" (EmitInt "z")) Nop, 3, [], [])
+        (Seq (Loop' Break Break) Nop `And` Seq (Int "z" (EmitInt "z")) Nop, 3, [], [])
         (Nop, 0, [], [])
 
       stepsItPass
-        (Seq (Loop' Break Break) Nop `Or` Seq (Evt "z" (EmitInt "z")) Nop, 3, [], [])
+        (Seq (Loop' Break Break) Nop `Or` Seq (Int "z" (EmitInt "z")) Nop, 3, [], [])
         (Nop, 0, [], [])
 
       stepsItPass
@@ -965,7 +965,7 @@ spec = do
 
     describe "one+ pops" $ do
       it "pass: lvl > 0" $
-        let d = (Evt "x" (EmitInt "x"), 0, [], [])
+        let d = (Int "x" (EmitInt "x"), 0, [], [])
             d' = (Nop, 0, [], []) in
           (steps d `shouldBe` d')
           >> (isNstReducible d' `shouldBe` False)
@@ -995,15 +995,15 @@ spec = do
   describe "reaction" $ do
 
     reactionItPass
-      (Evt "d"
+      (Int "d"
         (And
           (EmitInt "d")
           ((Nop `Seq` AwaitInt "d") `And` (Nop `Seq` Fin Nop)
       )), "_", [])
-      (Evt "d" (AwaitInt "d" `And'` Fin Nop), [])
+      (Int "d" (AwaitInt "d" `And'` Fin Nop), [])
 
     reactionItPass
-      (Evt "d" ((Nop `Seq` AwaitInt "d") `And` (Nop `Seq` EmitInt "d")), "_", [])
+      (Int "d" ((Nop `Seq` AwaitInt "d") `And` (Nop `Seq` EmitInt "d")), "_", [])
       (Nop, [])
 
   --------------------------------------------------------------------------
@@ -1062,7 +1062,7 @@ spec = do
 
     evalProgItPass 5 [] (
       (G.Write "ret" (Const 1)) `G.Seq`
-      (G.Evt "a"
+      (G.Int "a"
         (G.And
           ((G.AwaitInt "a") `G.Seq` (G.Write "ret" (Const 5)))
           (G.EmitInt "a")
@@ -1070,7 +1070,7 @@ spec = do
 
     evalProgItPass 5 [] (
       (G.Write "ret" (Const 1)) `G.Seq`
-      (G.Evt "a"
+      (G.Int "a"
         (G.Or
           ((G.AwaitInt "a") `G.Seq` (G.Write "ret" (Const 5)))
           (G.Or (G.Fin (G.EmitInt "a")) G.Nop)

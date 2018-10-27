@@ -13,13 +13,13 @@ import qualified Ceu.Eval as E
 -- Program (pg 5).
 data Stmt
   = Var ID_Var Stmt             -- variable declaration
-  | Evt ID_Evt Stmt             -- event declaration
+  | Int ID_Int Stmt             -- event declaration
   | Write ID_Var Expr           -- assignment statement
-  | AwaitExt ID_Evt             -- await external event
+  | AwaitExt ID_Ext             -- await external event
   | AwaitFor                    -- await forever
 -- TODO: AwaitTmr
-  | AwaitInt ID_Evt             -- await internal event
-  | EmitInt ID_Evt              -- emit internal event
+  | AwaitInt ID_Int             -- await internal event
+  | EmitInt ID_Int              -- emit internal event
   | Break                       -- loop escape
   | If Expr Stmt Stmt           -- conditional
   | Seq Stmt Stmt               -- sequence
@@ -67,7 +67,7 @@ remFin p = p' where
   rF (Spawn p)           = ([], Spawn (snd (rF p)))
   rF (Fin id p)          = error "remFin: unexpected statement (Fin)"
   rF (Async p)           = ([], Async (snd (rF p)))
-  rF (Evt id p)          = ([], Evt id (snd (rF p)))
+  rF (Int id p)          = ([], Int id (snd (rF p)))
 
   rF (Var id p)          = (l'', Var id p''') where
                             (l', p')  = (rF p)   -- results from nested p
@@ -94,7 +94,7 @@ remFin p = p' where
 
 remSpawn :: Stmt -> Stmt
 remSpawn (Var id p)          = Var id (remSpawn p)
-remSpawn (Evt id p)          = Evt id (remSpawn p)
+remSpawn (Int id p)          = Int id (remSpawn p)
 remSpawn (If exp p1 p2)      = If exp (remSpawn p1) (remSpawn p2)
 remSpawn (Seq (Spawn p1) p2) = Or (Seq (remSpawn p1) AwaitFor) (remSpawn p2)
 remSpawn (Seq p1 p2)         = Seq (remSpawn p1) (remSpawn p2)
@@ -122,7 +122,7 @@ chkSpawn p = case p of
 
   chkS :: Stmt -> Bool
   chkS (Var _ p)    = (notS p) && (chkS p)
-  chkS (Evt _ p)    = (notS p) && (chkS p)
+  chkS (Int _ p)    = (notS p) && (chkS p)
   chkS (If _ p1 p2) = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
   chkS (Seq p1 p2)  = (chkS p1) && (notS p2) && (chkS p2)
   chkS (Loop p)     = (notS p) && (chkS p)
@@ -141,7 +141,7 @@ remAsync :: Stmt -> Stmt
 remAsync p = (rA False p) where
   rA :: Bool -> Stmt -> Stmt
   rA inA   (Var id p)     = Var id (rA inA p)
-  rA inA   (Evt id p)     = Evt id (rA inA p)
+  rA inA   (Int id p)     = Int id (rA inA p)
   rA inA   (If exp p1 p2) = If exp (rA inA p1) (rA inA p2)
   rA inA   (Seq p1 p2)    = Seq (rA inA p1) (rA inA p2)
   rA True  (Loop p)       = Loop (rA True (Seq p (AwaitExt "ASYNC")))
@@ -161,7 +161,7 @@ remAsync p = (rA False p) where
 
 remAwaitFor :: Stmt -> Stmt
 remAwaitFor (Var id p)     = Var id (remAwaitFor p)
-remAwaitFor (Evt id p)     = Evt id (remAwaitFor p)
+remAwaitFor (Int id p)     = Int id (remAwaitFor p)
 remAwaitFor (If exp p1 p2) = If exp (remAwaitFor p1) (remAwaitFor p2)
 remAwaitFor (Seq p1 p2)    = Seq (remAwaitFor p1) (remAwaitFor p2)
 remAwaitFor (Loop p)       = Loop (remAwaitFor p)
@@ -183,7 +183,7 @@ toGrammar p = toG $ remAwaitFor $ remAsync
                   $ remFin p where
   toG :: Stmt -> G.Stmt
   toG (Var id p)     = G.Var id (toG p)
-  toG (Evt id p)     = G.Evt id (toG p)
+  toG (Int id p)     = G.Int id (toG p)
   toG (Write id exp) = G.Write id exp
   toG (AwaitExt e)   = G.AwaitExt e
   toG (AwaitInt e)   = G.AwaitInt e

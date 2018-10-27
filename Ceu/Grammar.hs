@@ -6,11 +6,11 @@ import Text.Printf
 -- Program (pg 5).
 data Stmt
   = Var ID_Var Stmt             -- variable declaration
-  | Evt ID_Var Stmt             -- event declaration
+  | Int ID_Var Stmt             -- event declaration
   | Write ID_Var Expr           -- assignment statement
-  | AwaitExt ID_Evt             -- await external event
-  | AwaitInt ID_Evt             -- await internal event
-  | EmitInt ID_Evt              -- emit internal event
+  | AwaitExt ID_Ext             -- await external event
+  | AwaitInt ID_Int             -- await internal event
+  | EmitInt ID_Int              -- emit internal event
   | Break                       -- loop escape
   | If Expr Stmt Stmt           -- conditional
   | Seq Stmt Stmt               -- sequence
@@ -31,7 +31,7 @@ infixr 0 `And`                  -- `And` associates to the right
 showProg :: Stmt -> String
 showProg stmt = case stmt of
   Var id p          -> printf "{%s: %s}" id (sP p)
-  Evt id p          -> printf "{%s: %s}" id (sP p)
+  Int id p          -> printf "{%s: %s}" id (sP p)
   Write id expr     -> printf "%s=%s" id (sE expr)
   AwaitExt e        -> printf "?E%s" e
   AwaitInt e        -> printf "?%s" e
@@ -55,7 +55,7 @@ showProg stmt = case stmt of
 checkProg :: Stmt -> Bool
 checkProg stmt = case stmt of
   Var _ p      -> checkProg p
-  Evt _ p      -> checkProg p
+  Int _ p      -> checkProg p
   If _ p q     -> checkProg p && checkProg q
   Seq p q      -> checkProg p && checkProg q
   Loop p       -> checkLoop (Loop p) && checkProg p
@@ -77,7 +77,7 @@ checkLoop loop = case loop of
       Break        -> not ignBrk
       Every _ _    -> True
       Var _ p      -> cL ignBrk p
-      Evt _ p      -> cL ignBrk p
+      Int _ p      -> cL ignBrk p
       If _ p q     -> cL ignBrk p && cL ignBrk q
       Seq p q      -> cL ignBrk p || cL ignBrk q
       Loop p       -> cL True p
@@ -102,7 +102,7 @@ checkFin finOrEvery = case finOrEvery of
       Fin _        -> False
       Loop _       -> False
       Var _ p      -> cF p
-      Evt _ p      -> cF p
+      Int _ p      -> cF p
       If _ p q     -> cF p && cF q
       Seq p q      -> cF p && cF q
       And p q      -> cF p && cF q
