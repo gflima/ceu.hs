@@ -170,7 +170,7 @@ with
 end
 -}
     evalFullProgItPass 25 [] (
-      (Int "a" (
+      (Int "a" False (
       (Write "ret" (Const 0)) `Seq`
       (Or
         ((AwaitInt "a" Nothing) `Seq` (Write "ret" (Add (Read "ret") (Const 5))))
