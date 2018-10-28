@@ -320,11 +320,11 @@ steps d
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
-evalProg :: G.Stmt -> [ID_Ext] -> Val
-evalProg prog hist -- enclosing block with "ret" that never terminates
-  = eP (Var' "ret" Nothing (Seq (fromGrammar prog) (AwaitExt "FOREVER"))) ("BOOT":hist)
+--evalProg_Reaction :: G.Stmt -> [a] -> (Stmt->a->Stmt) -> Val
+evalProg_Reaction prog hist reaction -- enclosing block with "ret" that never terminates
+  = eP (fromGrammar (G.Var "ret" (G.Seq prog (G.AwaitExt "FOREVER")))) hist
   where
-    eP :: Stmt -> [ID_Ext] -> Val
+    --eP :: Stmt -> [a] -> Val
     eP prog hist = case prog of
       (Var' "ret" val (AwaitExt "FOREVER"))
         | not (null hist) -> traceShow hist error "evalProg: pending inputs"
@@ -334,3 +334,8 @@ evalProg prog hist -- enclosing block with "ret" that never terminates
         | null hist       -> traceShow prog error "evalProg: program didn't terminate"
         | otherwise       -> eP prog' (tail hist) where
                                 prog' = reaction prog (head hist)
+
+-- Evaluates program over history of input events.
+-- Returns the last value of global "ret" set by the program.
+evalProg :: G.Stmt -> [ID_Ext] -> Val
+evalProg prog hist = evalProg_Reaction prog ("BOOT":hist) reaction

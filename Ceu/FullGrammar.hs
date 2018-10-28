@@ -33,7 +33,7 @@ data Stmt
   | Async Stmt                          -- async statement
   | Error String                        -- generate runtime error (for testing purposes)
   | Fin' Stmt                           -- fin as in basic Grammar
-  | Nop'                                -- nop as in basic Grammar
+  | Nop                                 -- nop as in basic Grammar
   deriving (Eq, Show)
 
 infixr 1 `Seq`                  -- `Seq` associates to the right
@@ -94,8 +94,8 @@ remFin p = p' where
   rF (Var id p)          = (l'', Var id p''') where
                             (l', p')  = (rF p)   -- results from nested p
                             (p'',l'') = f id l' -- matches l' with current local id
-                            p''' | ((toSeq p'') == Nop') = p' -- nothing to finalize
-                                 | otherwise             = (Or (Fin' (toSeq p'')) p')
+                            p''' | ((toSeq p'') == Nop) = p' -- nothing to finalize
+                                 | otherwise            = (Or (Fin' (toSeq p'')) p')
 
                             -- recs: Var in Var, [pending finalize] (id->stmts)
                             -- rets: [stmts to fin] in block, [remaining finalize]
@@ -107,7 +107,7 @@ remFin p = p' where
                                       | otherwise  = ([], [(id2,stmt)])
 
                             toSeq :: [Stmt] -> Stmt
-                            toSeq []     = Nop'
+                            toSeq []     = Nop
                             toSeq (s:ss) = Seq s (toSeq ss)
 
   rF p                   = ([], p)
@@ -214,8 +214,14 @@ toGrammar p = toG $ remFin $ remAwaitFor $ remAsync
   toG (Or p1 p2)         = G.Or (toG p1) (toG p2)
   toG (Error msg)        = G.Error msg
   toG (Fin' p)           = G.Fin (toG p)
-  toG Nop'               = G.Nop
+  toG Nop                = G.Nop
   toG _                  = error "toG: unexpected statement (AwaitFor,Fin,Spawn,Async)"
 
-evalFullProg :: Stmt -> [ID_Evt] -> Val
-evalFullProg prog hist = E.evalProg (toGrammar prog) []
+reaction :: E.Stmt -> (ID_Ext,Maybe Val) -> E.Stmt
+reaction p (ext,val) = p''' where
+  (p'',_,_,_) = E.steps (E.bcast ext p', 0, [], [])
+  p' = E.Var' ("_"++ext) val p
+  (E.Var' _ _ p''') = p''
+
+evalFullProg :: Stmt -> [(ID_Ext,Maybe Val)] -> Val
+evalFullProg prog hist = E.evalProg_Reaction (toGrammar prog) (("BOOT",Nothing):hist) reaction

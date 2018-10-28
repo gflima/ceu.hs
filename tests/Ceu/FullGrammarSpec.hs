@@ -10,7 +10,7 @@ import Text.Printf
 
 -- Declare Stmt as a datatype that can be fully evaluated.
 instance NFData Stmt where
-  rnf Nop' = ()
+  rnf Nop = ()
   rnf (Seq p q) = rnf p `seq` rnf q
 
 -- Force full evaluation of a given NFData.
@@ -26,16 +26,16 @@ spec = do
   describe "remFin" $ do
 
     it "var x; fin x with nop; nop" $ do
-      remFin (Var "x" (Seq (Fin (Just "x") Nop') Nop'))
-      `shouldBe` (Var "x" (Or (Fin' (Seq Nop' Nop')) Nop'))
+      remFin (Var "x" (Seq (Fin (Just "x") Nop) Nop))
+      `shouldBe` (Var "x" (Or (Fin' (Seq Nop Nop)) Nop))
 
     it "var x; { fin x with nop; nop }" $ do
-      remFin (Var "x" (Var "y" (Seq (Fin (Just "x") Nop') Nop')))
-      `shouldBe` (Var "x" (Or (Fin' (Seq Nop' Nop')) (Var "y" Nop')))
+      remFin (Var "x" (Var "y" (Seq (Fin (Just "x") Nop) Nop)))
+      `shouldBe` (Var "x" (Or (Fin' (Seq Nop Nop)) (Var "y" Nop)))
 
     it "var x; { fin x with x=1; fin with x=2; x=3 }" $ do
       remFin (Var "x" (Var "y" (Seq (Fin (Just "x") (Write "x" (Const 1))) (Seq (Fin Nothing (Write "x" (Const 2))) (Write "x" (Const 3))))))
-      `shouldBe` (Var "x" (Or (Fin' (Seq (Write "x" (Const 1)) Nop')) (Var "y" (Or (Fin' (Write "x" (Const 2))) (Write "x" (Const 3))))))
+      `shouldBe` (Var "x" (Or (Fin' (Seq (Write "x" (Const 1)) Nop)) (Var "y" (Or (Fin' (Write "x" (Const 2))) (Write "x" (Const 3))))))
 
     it "var x; { fin x with x=1; fin x with y=1; y=3 }" $ do
       remFin (Var "x" (Var "_" (
@@ -43,55 +43,55 @@ spec = do
                 (Fin (Just "x") (Write "y" (Const 1))) `Seq`
                 (Write "y" (Const 3))
              )))
-      `shouldBe` (Var "x" (Or (Fin' (Seq (Write "y" (Const 1)) (Seq (Write "x" (Const 1)) Nop'))) (Var "_" (Write "y" (Const 3)))))
+      `shouldBe` (Var "x" (Or (Fin' (Seq (Write "y" (Const 1)) (Seq (Write "x" (Const 1)) Nop))) (Var "_" (Write "y" (Const 3)))))
 
     it "var x; nop; { fin x with x=1; fin with x=2; x=3; fin x with y=1; fin with y=2; y=3 }; nop" $ do
-      remFin (Var "x" (Seq Nop' (Seq (Var "_" (
+      remFin (Var "x" (Seq Nop (Seq (Var "_" (
                 (Fin (Just "x") (Write "x" (Const 1))) `Seq`
                 (Fin Nothing    (Write "x" (Const 2))) `Seq`
                 (Write "x" (Const 3))                  `Seq`
                 (Fin (Just "x") (Write "y" (Const 1))) `Seq`
                 (Fin Nothing    (Write "y" (Const 2))) `Seq`
                 (Write "y" (Const 3))
-             )) Nop')))
-      `shouldBe` (Var "x" (Or (Fin' (Seq (Write "y" (Const 1)) (Seq (Write "x" (Const 1)) Nop'))) (Seq Nop' (Seq (Var "_" (Or (Fin' (Write "x" (Const 2))) (Seq (Write "x" (Const 3)) (Or (Fin' (Write "y" (Const 2))) (Write "y" (Const 3)))))) Nop'))))
+             )) Nop)))
+      `shouldBe` (Var "x" (Or (Fin' (Seq (Write "y" (Const 1)) (Seq (Write "x" (Const 1)) Nop))) (Seq Nop (Seq (Var "_" (Or (Fin' (Write "x" (Const 2))) (Seq (Write "x" (Const 3)) (Or (Fin' (Write "y" (Const 2))) (Write "y" (Const 3)))))) Nop))))
 
   --------------------------------------------------------------------------
   describe "remSpawn" $ do
 
     it "spawn nop;" $ do
-      evaluate $ remSpawn (Spawn Nop')
+      evaluate $ remSpawn (Spawn Nop)
       `shouldThrow` errorCall "remSpawn: unexpected statement (Spawn)"
 
     it "nop; spawn nop;" $ do
-      forceEval $ remSpawn (Seq Nop' (Spawn Nop'))
+      forceEval $ remSpawn (Seq Nop (Spawn Nop))
       `shouldThrow` errorCall "remSpawn: unexpected statement (Spawn)"
 
     it "spawn nop; nop" $ do
-      remSpawn (Seq (Spawn Nop') Nop')
-      `shouldBe` (Or (Seq Nop' AwaitFor) Nop')
+      remSpawn (Seq (Spawn Nop) Nop)
+      `shouldBe` (Or (Seq Nop AwaitFor) Nop)
 
   --------------------------------------------------------------------------
   describe "chkSpawn" $ do
 
     it "spawn nop;" $ do
-      forceEval $ chkSpawn (Spawn Nop')
+      forceEval $ chkSpawn (Spawn Nop)
       `shouldThrow` errorCall "chkSpawn: unexpected statement (Spawn)"
 
     it "nop; spawn nop;" $ do
-      forceEval $ chkSpawn (Seq Nop' (Spawn Nop'))
+      forceEval $ chkSpawn (Seq Nop (Spawn Nop))
       `shouldThrow` errorCall "chkSpawn: unexpected statement (Spawn)"
 
     it "spawn nop; nop" $ do
-      chkSpawn (Seq (Spawn Nop') Nop')
-      `shouldBe` (Seq (Spawn Nop') Nop')
+      chkSpawn (Seq (Spawn Nop) Nop)
+      `shouldBe` (Seq (Spawn Nop) Nop)
 
   --------------------------------------------------------------------------
   describe "remAsync" $ do
 
     it "async { loop nop }" $ do
-      remAsync (Async (Loop Nop'))
-      `shouldBe` (Loop (Seq Nop' (AwaitExt "ASYNC" Nothing)))
+      remAsync (Async (Loop Nop))
+      `shouldBe` (Loop (Seq Nop (AwaitExt "ASYNC" Nothing)))
 
   --------------------------------------------------------------------------
   describe "remAwaitFor" $ do
@@ -104,7 +104,7 @@ spec = do
   describe "toGrammar" $ do
 
     it "var x;" $ do
-      toGrammar (Var "x" Nop')
+      toGrammar (Var "x" Nop)
       `shouldBe` (G.Var "x" G.Nop)
 
     it "do var x; x = 1 end" $ do
@@ -146,7 +146,7 @@ nop;
             (Write "b" (Const 99))
             (Seq
               (Fin (Just "a") (Write "ret" (Read "b")))
-              Nop'
+              Nop
             )
           )
         )
@@ -230,6 +230,24 @@ end
           (AwaitInt "a" (Just "ret"))
           (EmitInt "a" Nothing)
       ))
+
+{-
+par/or do
+    every A in ret do end
+with
+    await F;
+end
+-}
+    evalFullProgItFail "varsRead: uninitialized variable: _A" [("A",Nothing)] (
+      Or
+        (Every "A" (Just "ret") Nop)
+        (AwaitExt "F" Nothing)
+      )
+    evalFullProgItPass 99 [("A",Just 1),("A",Just 99),("F",Just 2)] (
+      Or
+        (Every "A" (Just "ret") Nop)
+        (AwaitExt "F" Nothing)
+      )
 
       where
         evalFullProgItPass res hist prog =
