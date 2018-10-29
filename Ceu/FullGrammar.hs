@@ -16,7 +16,7 @@ data Stmt
   | Int ID_Int Bool Stmt                -- event declaration
   | Write ID_Var Expr                   -- assignment statement
   | AwaitExt ID_Ext (Maybe ID_Var)      -- await external event
-
+  | EmitExt ID_Ext (Maybe Expr)         -- emit external event
   | AwaitFor                            -- await forever
 -- TODO: AwaitTmr
   | AwaitInt ID_Int (Maybe ID_Var)      -- await internal event
@@ -49,6 +49,7 @@ remPay :: Stmt -> Stmt
 remPay (Int int True p)          = Var ("_"++int) (Int int False (remPay p))
 remPay (Int int False p)         = Int int False (remPay p)
 remPay (AwaitExt ext (Just var)) = (AwaitExt ext Nothing) `Seq` (Write var (Read ("_"++ext)))
+remPay (EmitExt  ext (Just exp)) = (Write ("_"++ext) exp) `Seq` (EmitExt ext Nothing)
 remPay (AwaitInt int (Just var)) = (AwaitInt int Nothing) `Seq` (Write var (Read ("_"++int)))
 remPay (EmitInt  int (Just exp)) = (Write ("_"++int) exp) `Seq` (EmitInt int Nothing)
 remPay (If cnd p1 p2)            = If cnd (remPay p1) (remPay p2)
@@ -219,7 +220,7 @@ toGrammar p = toG $ remFin $ remAwaitFor $ remAsync
 
 reaction :: E.Stmt -> (ID_Ext,Maybe Val) -> E.Stmt
 reaction p (ext,val) = p''' where
-  (p'',_,_,_) = E.steps (E.bcast ext p', 0, [], [])
+  (p'',_,_,_,_) = E.steps (E.bcast ext p', 0, [], [], [])
   p' = E.Var' ("_"++ext) val p
   (E.Var' _ _ p''') = p''
 

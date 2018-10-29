@@ -9,6 +9,7 @@ data Stmt
   | Int ID_Var Stmt             -- event declaration
   | Write ID_Var Expr           -- assignment statement
   | AwaitExt ID_Ext             -- await external event
+  | EmitExt ID_Ext (Maybe Expr) -- emit external event
   | AwaitInt ID_Int             -- await internal event
   | EmitInt ID_Int              -- emit internal event
   | Break                       -- loop escape
@@ -30,23 +31,25 @@ infixr 0 `And`                  -- `And` associates to the right
 -- Shows program.
 showProg :: Stmt -> String
 showProg stmt = case stmt of
-  Var id p          -> printf "{%s: %s}" id (sP p)
-  Int id p          -> printf "{%s: %s}" id (sP p)
-  Write id expr     -> printf "%s=%s" id (sE expr)
-  AwaitExt e        -> printf "?E%s" e
-  AwaitInt e        -> printf "?%s" e
-  EmitInt e         -> printf "!%s" e
-  Break             -> "break"
-  If expr p q       -> printf "(if %s then %s else %s)"
-                       (sE expr) (sP p) (sP q)
-  Seq p q           -> printf "%s; %s" (sP p) (sP q)
-  Loop p            -> printf "(loop %s)" (sP p)
-  Every e p         -> printf "(every %s %s)" e (sP p)
-  And p q           -> printf "(%s && %s)" (sP p) (sP q)
-  Or p q            -> printf "(%s || %s)" (sP p) (sP q)
-  Fin p             -> printf "(fin %s)" (sP p)
-  Nop               -> "nop"
-  Error _           -> "err"
+  Var id p             -> printf "{%s: %s}" id (sP p)
+  Int id p             -> printf "{%s: %s}" id (sP p)
+  Write id expr        -> printf "%s=%s" id (sE expr)
+  AwaitExt ext         -> printf "?%s" ext
+  EmitExt ext Nothing  -> printf "!%s" ext
+  EmitExt ext (Just v) -> printf "!%s=%s" ext (sE v)
+  AwaitInt int         -> printf "?%s" int
+  EmitInt int          -> printf "!%s" int
+  Break                -> "break"
+  If expr p q          -> printf "(if %s then %s else %s)"
+                            (sE expr) (sP p) (sP q)
+  Seq p q              -> printf "%s; %s" (sP p) (sP q)
+  Loop p               -> printf "(loop %s)" (sP p)
+  Every evt p          -> printf "(every %s %s)" evt (sP p)
+  And p q              -> printf "(%s && %s)" (sP p) (sP q)
+  Or p q               -> printf "(%s || %s)" (sP p) (sP q)
+  Fin p                -> printf "(fin %s)" (sP p)
+  Nop                  -> "nop"
+  Error _              -> "err"
   where
     sE = showExpr
     sP = showProg
