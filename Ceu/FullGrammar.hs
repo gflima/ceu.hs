@@ -3,7 +3,7 @@ module Ceu.FullGrammar where
 import Ceu.Globals
 import qualified Ceu.Grammar as G
 import qualified Ceu.Eval as E
---import Debug.Trace
+import Debug.Trace
 
 -- Special events:
 -- "BOOT"
@@ -46,10 +46,10 @@ infixr 0 `And`                  -- `And` associates to the right
 -- (EmitInt e v)     -> (Write e_ v) ; (EmitInt e Nothing)
 -- (Every e var ...) -> (Every e Nothing ((Write var e_) ; ...)
 remPay :: Stmt -> Stmt
+remPay (Var id p)                = Var id (remPay p)
 remPay (Int int True p)          = Var ("_"++int) (Int int False (remPay p))
 remPay (Int int False p)         = Int int False (remPay p)
 remPay (AwaitExt ext (Just var)) = (AwaitExt ext Nothing) `Seq` (Write var (Read ("_"++ext)))
-remPay (EmitExt  ext (Just exp)) = (Write ("_"++ext) exp) `Seq` (EmitExt ext Nothing)
 remPay (AwaitInt int (Just var)) = (AwaitInt int Nothing) `Seq` (Write var (Read ("_"++int)))
 remPay (EmitInt  int (Just exp)) = (Write ("_"++int) exp) `Seq` (EmitInt int Nothing)
 remPay (If cnd p1 p2)            = If cnd (remPay p1) (remPay p2)
@@ -204,6 +204,7 @@ toGrammar p = toG $ remFin $ remAwaitFor $ remAsync
   toG (Int id b p)       = G.Int id (toG p)
   toG (Write id exp)     = G.Write id exp
   toG (AwaitExt ext var) = G.AwaitExt ext
+  toG (EmitExt ext exp)  = G.EmitExt ext exp
   toG (AwaitInt int var) = G.AwaitInt int
   toG (EmitInt int val)  = G.EmitInt int
   toG Break              = G.Break

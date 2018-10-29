@@ -249,6 +249,15 @@ end
         (AwaitExt "F" Nothing)
       )
 
+    -- multiple outputs
+
+    evalFullProgItPass (1,[[],[("O",Just 1)],[("O",Just 2)],[]]) [("I",Just 1),("I",Just 2),("F",Nothing)]
+      (Seq (Write "ret" (Const 1))
+           (Var "i"
+             (Or
+               (AwaitExt "F" Nothing)
+               (Every "I" (Just "i") (EmitExt "O" (Just (Read "i")))))))
+
       where
         evalFullProgItPass (res,outss) hist prog =
           (it (printf "pass: %s | %s ~> %d %s" (show hist) (G.showProg $ toGrammar prog) res (show outss)) $

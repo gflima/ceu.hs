@@ -1121,6 +1121,12 @@ escape x;
       (G.EmitInt "a")
       )
 
+    -- multiple outputs
+
+    evalProgItPass (1,[[],[("O",Nothing)],[("O",Nothing)],[]]) ["I","I","F"]
+      (G.Seq (G.Write "ret" (Const 1))
+        (G.Or (G.AwaitExt "F") (G.Every "I" (G.EmitExt "O" Nothing))))
+
       where
         stepsItPass (p,n,e,vars,outs) (p',n',e',vars',outs') =
           (it (printf "pass: %s -> %s#" (showProg p) (showProg p'))
