@@ -999,17 +999,17 @@ spec = do
         (And
           (EmitInt "d")
           ((Nop `Seq` AwaitInt "d") `And` (Nop `Seq` Fin Nop)
-      )), "_", [], [])
+      )), "_", [])
       (Int "d" (AwaitInt "d" `And'` Fin Nop), [], [])
 
     reactionItPass
-      (Int "d" ((Nop `Seq` AwaitInt "d") `And` (Nop `Seq` EmitInt "d")), "_", [], [])
+      (Int "d" ((Nop `Seq` AwaitInt "d") `And` (Nop `Seq` EmitInt "d")), "_", [])
       (Nop, [], [])
 
   --------------------------------------------------------------------------
   describe "evalProg" $ do
 
-    evalProgItPass 11
+    evalProgItPass (11,[[]])
       [] (G.Var "a"
            (G.Write "a" (Const 1) `G.Seq`
             G.Write "ret" (Read "a" `Add` Const 10)))
@@ -1020,21 +1020,21 @@ spec = do
              (G.Write "a" (Const 1) `G.Seq`
               G.Write "ret" (Read "a" `Add` Const 10))))
 
-    evalProgItPass 1
+    evalProgItPass (1,[[]])
       [] (G.Write "ret" (Const 1) `G.Seq`
           G.Var "ret" (G.Write "ret" (Const 99)))
 
-    evalProgItPass 11
+    evalProgItPass (11,[[]])
       [] (G.Var "a"
            (G.Write "a" (Const 1) `G.Seq`
             G.Var "a" (G.Write "a" (Const 99)) `G.Seq`
             G.Write "ret" (Read "a" `Add` Const 10)))
 
-    evalProgItPass 2
+    evalProgItPass (2,[[]])
       [] (G.Write "ret" (Const 1) `G.Seq`
           G.Var "_" (G.Write "ret" (Const 2)))
 
-    evalProgItPass 11
+    evalProgItPass (11,[[]])
       [] (G.Var "a"
            (G.Write "a" (Const 1) `G.Seq`
             G.Or
@@ -1042,12 +1042,12 @@ spec = do
              (G.Nop) `G.Seq`
            G.Write "ret" (Read "a" `Add` Const 10)))
 
-    evalProgItPass 1
+    evalProgItPass (1,[[]])
       [] (G.Or
            (G.Var "x" (G.Write "ret" (Const 1) `G.Seq` G.AwaitExt "A"))
            (G.Nop))
 
-    evalProgItPass 11
+    evalProgItPass (11,[[]])
       [] (G.Var "a"
            (G.Write "a" (Const 1) `G.Seq`
             G.Loop (G.And
@@ -1055,12 +1055,12 @@ spec = do
                   (G.Break)) `G.Seq`
              G.Write "ret" (Read "a" `Add` Const 10)))
 
-    evalProgItPass 1
+    evalProgItPass (1,[[]])
       [] (G.Loop (G.And
                  (G.Var "x" (G.Write "ret" (Const 1) `G.Seq` G.AwaitExt "A"))
                  (G.Break)))
 
-    evalProgItPass 5 [] (
+    evalProgItPass (5,[[]]) [] (
       (G.Write "ret" (Const 1)) `G.Seq`
       (G.Int "a"
         (G.And
@@ -1068,7 +1068,7 @@ spec = do
           (G.EmitInt "a")
       )))
 
-    evalProgItPass 5 [] (
+    evalProgItPass (5,[[]]) [] (
       (G.Write "ret" (Const 1)) `G.Seq`
       (G.Int "a"
         (G.Or
@@ -1087,7 +1087,7 @@ with
 end
 escape x;
 -}
-    evalProgItPass 99 [] (
+    evalProgItPass (99,[[]]) [] (
       (G.Var "x" (
         (G.Write "x" (Const 10)) `G.Seq`
         (G.Or
@@ -1099,7 +1099,7 @@ escape x;
 
     -- multiple inputs
 
-    evalProgItPass 1
+    evalProgItPass (1,[[],[]])
       ["A"] (G.AwaitExt "A" `G.Seq` G.Write "ret" (Const 1))
 
     evalProgItFail "evalProg: program didn't terminate"
@@ -1111,10 +1111,10 @@ escape x;
     evalProgItFail "evalProg: pending inputs"
       ["A","A"] (G.AwaitExt "A" `G.Seq` G.Write "ret" (Const 1))
 
-    evalProgItPass 1
+    evalProgItPass (1,[[],[],[]])
       ["A","B"] (G.AwaitExt "A" `G.Seq` G.AwaitExt "B" `G.Seq` G.Write "ret" (Const 1))
 
-    evalProgItPass 1 [] (G.Write "ret" (Const 1))
+    evalProgItPass (1,[[]]) [] (G.Write "ret" (Const 1))
 
     evalProgItFail "evtsEmit: undeclared event: a" [] (
       (G.Write "ret" (Const 25)) `G.Seq`
@@ -1131,13 +1131,14 @@ escape x;
           (it (printf "fail: %s ***%s" (showProg p) err)
            (forceEval (steps (p,n,e,vars,outs)) `shouldThrow` errorCall err))
 
-        reactionItPass (p,e,vars,outs) (p',vars',outs') =
+        reactionItPass (p,e,vars) (p',vars',outs') =
           (it (printf "pass: %s | %s -> %s" e (showProg p) (showProg p'))
-            (reaction p e `shouldBe` p'))
+            (reaction p e `shouldBe` (p',outs')))
 
-        evalProgItPass res hist prog =
-          (it (printf "pass: %s | %s ~>%d" (show hist) (G.showProg prog) res) $
-            (evalProg prog hist `shouldBe` res))
+        --evalProgItPass :: (Val,[Outs]) -> [ID_Ext] -> Stmt -> IO a
+        evalProgItPass (res,outss) hist prog =
+          (it (printf "pass: %s | %s ~> %d %s" (show hist) (G.showProg prog) res (show outss)) $
+            (evalProg prog hist `shouldBe` (res,outss)))
 
         evalProgItFail err hist prog =
           (it (printf "fail: %s | %s ***%s" (show hist) (G.showProg prog) err) $

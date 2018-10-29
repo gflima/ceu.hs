@@ -218,11 +218,11 @@ toGrammar p = toG $ remFin $ remAwaitFor $ remAsync
   toG Nop                = G.Nop
   toG _                  = error "toG: unexpected statement (AwaitFor,Fin,Spawn,Async)"
 
-reaction :: E.Stmt -> (ID_Ext,Maybe Val) -> E.Stmt
-reaction p (ext,val) = p''' where
-  (p'',_,_,_,_) = E.steps (E.bcast ext p', 0, [], [], [])
+reaction :: E.Stmt -> (ID_Ext,Maybe Val) -> (E.Stmt,E.Outs)
+reaction p (ext,val) = (p''',outs) where
+  (p'',_,_,_,outs) = E.steps (E.bcast ext p', 0, [], [], [])
   p' = E.Var' ("_"++ext) val p
   (E.Var' _ _ p''') = p''
 
-evalFullProg :: Stmt -> [(ID_Ext,Maybe Val)] -> Val
+evalFullProg :: Stmt -> [(ID_Ext,Maybe Val)] -> (Val,[E.Outs])
 evalFullProg prog hist = E.evalProg_Reaction (toGrammar prog) (("BOOT",Nothing):hist) reaction

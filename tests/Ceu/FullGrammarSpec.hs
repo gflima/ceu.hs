@@ -139,7 +139,7 @@ nop;
     -- `fin` is moved to be between "a" and "b", before "b" is defined,
     -- but `fin` uses "b".
     -- Solution is to reject variables in `fin` that are defined after "a"
-    evalFullProgItPass 99 [] (
+    evalFullProgItPass (99,[[]]) [] (
       (Var "a"
         (Var "b"
           (Seq
@@ -169,7 +169,7 @@ with
     end
 end
 -}
-    evalFullProgItPass 25 [] (
+    evalFullProgItPass (25,[[]]) [] (
       (Int "a" False (
       (Write "ret" (Const 0)) `Seq`
       (Or
@@ -194,7 +194,7 @@ with
     emit a(10);     // no 10
 end
 -}
-    evalFullProgItPass 10 [] (
+    evalFullProgItPass (10,[[]]) [] (
       Int "a" True (
         And
           (AwaitInt "a" (Just "ret"))
@@ -212,13 +212,13 @@ end
           (AwaitInt "a" Nothing)
           (EmitInt "a" (Just (Const 10)))
       ))
-    evalFullProgItPass 99 [] (
+    evalFullProgItPass (99,[[]]) [] (
       Int "a" False (
         And
           ((AwaitInt "a" Nothing) `Seq` (Write "ret" (Const 99)))
           (EmitInt "a" Nothing)
       ))
-    evalFullProgItPass 99 [] (
+    evalFullProgItPass (99,[[]]) [] (
       Int "a" True (
         And
           ((AwaitInt "a" Nothing) `Seq` (Write "ret" (Const 99)))
@@ -243,16 +243,16 @@ end
         (Every "A" (Just "ret") Nop)
         (AwaitExt "F" Nothing)
       )
-    evalFullProgItPass 99 [("A",Just 1),("A",Just 99),("F",Just 2)] (
+    evalFullProgItPass (99,[[],[],[],[]]) [("A",Just 1),("A",Just 99),("F",Just 2)] (
       Or
         (Every "A" (Just "ret") Nop)
         (AwaitExt "F" Nothing)
       )
 
       where
-        evalFullProgItPass res hist prog =
-          (it (printf "pass: %s | %s ~>%d" (show hist) (G.showProg $ toGrammar prog) res) $
-            (evalFullProg prog hist `shouldBe` res))
+        evalFullProgItPass (res,outss) hist prog =
+          (it (printf "pass: %s | %s ~> %d %s" (show hist) (G.showProg $ toGrammar prog) res (show outss)) $
+            (evalFullProg prog hist `shouldBe` (res,outss)))
 
         evalFullProgItFail err hist prog =
           (it (printf "fail: %s | %s ***%s" (show hist) (G.showProg $ toGrammar prog) err) $

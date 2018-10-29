@@ -319,8 +319,8 @@ bcast e stmt = case stmt of
 
 -- Computes a reaction of program plus environment to a single external event.
 -- (pg 6)
-reaction :: Stmt -> ID_Ext -> Stmt
-reaction p ext = p' where (p',_,_,_,outs') = steps (bcast ext p, 0, [], [], [])
+reaction :: Stmt -> ID_Ext -> (Stmt,Outs)
+reaction p ext = (p',outs') where (p',_,_,_,outs') = steps (bcast ext p, 0, [], [], [])
 
 steps :: Desc -> Desc
 steps d
@@ -330,22 +330,22 @@ steps d
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
---evalProg_Reaction :: G.Stmt -> [a] -> (Stmt->a->Stmt) -> Val
+evalProg_Reaction :: G.Stmt -> [a] -> (Stmt->a->(Stmt,Outs)) -> (Val,[Outs])
 evalProg_Reaction prog hist reaction -- enclosing block with "ret" that never terminates
-  = eP (fromGrammar (G.Var "ret" (G.Seq prog (G.AwaitExt "FOREVER")))) hist
+  = eP (fromGrammar (G.Var "ret" (G.Seq prog (G.AwaitExt "FOREVER")))) hist []
   where
-    --eP :: Stmt -> [a] -> Val
-    eP prog hist = case prog of
+    --eP :: Stmt -> [a] -> [Outs] -> (Val,[Outs])
+    eP prog hist outss = case prog of
       (Var' "ret" val (AwaitExt "FOREVER"))
-        | not (null hist) -> traceShow hist error "evalProg: pending inputs"
+        | not (null hist) -> error "evalProg: pending inputs"
         | isNothing val   -> error "evalProg: no return"
-        | otherwise       -> fromJust val
+        | otherwise       -> ((fromJust val), outss)
       _
-        | null hist       -> traceShow prog error "evalProg: program didn't terminate"
-        | otherwise       -> eP prog' (tail hist) where
-                                prog' = reaction prog (head hist)
+        | null hist       -> error "evalProg: program didn't terminate"
+        | otherwise       -> eP prog' (tail hist) (outss++[outs']) where
+                                (prog',outs') = reaction prog (head hist)
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
-evalProg :: G.Stmt -> [ID_Ext] -> Val
+evalProg :: G.Stmt -> [ID_Ext] -> (Val,[Outs])
 evalProg prog hist = evalProg_Reaction prog ("BOOT":hist) reaction
