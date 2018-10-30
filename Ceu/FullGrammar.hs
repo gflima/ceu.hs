@@ -14,15 +14,15 @@ import Debug.Trace
 data Stmt
   = Var ID_Var Stmt                     -- variable declaration
   | Int ID_Int Bool Stmt                -- event declaration
-  | Write ID_Var Expr                   -- assignment statement
+  | Write ID_Var Exp                    -- assignment statement
   | AwaitExt ID_Ext (Maybe ID_Var)      -- await external event
-  | EmitExt ID_Ext (Maybe Expr)         -- emit external event
+  | EmitExt ID_Ext (Maybe Exp)          -- emit external event
   | AwaitFor                            -- await forever
 -- TODO: AwaitTmr
   | AwaitInt ID_Int (Maybe ID_Var)      -- await internal event
-  | EmitInt ID_Int (Maybe Expr)         -- emit internal event
+  | EmitInt ID_Int (Maybe Exp)          -- emit internal event
   | Break                               -- loop escape
-  | If Expr Stmt Stmt                   -- conditional
+  | If Exp Stmt Stmt                    -- conditional
   | Seq Stmt Stmt                       -- sequence
   | Loop Stmt                           -- infinite loop
   | Every ID_Evt (Maybe ID_Var) Stmt    -- event iteration

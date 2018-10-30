@@ -19,13 +19,13 @@ type Desc = (Stmt, Lvl, Vars, Ints, Outs)
 -- Program (pg 5).
 data Stmt
   = Int ID_Int Stmt             -- event declaration
-  | Write ID_Var Expr           -- assignment statement
+  | Write ID_Var Exp            -- assignment statement
   | AwaitExt ID_Ext             -- await external event
-  | EmitExt ID_Ext (Maybe Expr) -- emit internal event
+  | EmitExt ID_Ext (Maybe Exp)  -- emit internal event
   | AwaitInt ID_Int             -- await internal event
   | EmitInt ID_Int              -- emit internal event
   | Break                       -- loop escape
-  | If Expr Stmt Stmt           -- conditional
+  | If Exp Stmt Stmt            -- conditional
   | Seq Stmt Stmt               -- sequence
   | Every ID_Evt Stmt           -- event iteration
   | And Stmt Stmt               -- par/and statement
@@ -90,7 +90,7 @@ showProg stmt = case stmt of
   And' p q             -> printf "(%s @&& %s)" (sP p) (sP q)
   Or' p q              -> printf "(%s @|| %s)" (sP p) (sP q)
   where
-    sE = showExpr
+    sE = showExp
     sP = showProg
     sV = showVars
 
@@ -115,7 +115,7 @@ varsRead vars var = case vars of
   []              -> error ("varsRead: undeclared variable: " ++ var)
 
 -- Evaluates expression in environment.
-varsEval :: Vars -> Expr -> Val
+varsEval :: Vars -> Exp -> Val
 varsEval vars expr = case expr of
   Const val -> val
   Read var  -> varsRead vars var

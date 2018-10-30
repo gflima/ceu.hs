@@ -7,13 +7,13 @@ import Text.Printf
 data Stmt
   = Var ID_Var Stmt             -- variable declaration
   | Int ID_Var Stmt             -- event declaration
-  | Write ID_Var Expr           -- assignment statement
+  | Write ID_Var Exp            -- assignment statement
   | AwaitExt ID_Ext             -- await external event
-  | EmitExt ID_Ext (Maybe Expr) -- emit external event
+  | EmitExt ID_Ext (Maybe Exp)  -- emit external event
   | AwaitInt ID_Int             -- await internal event
   | EmitInt ID_Int              -- emit internal event
   | Break                       -- loop escape
-  | If Expr Stmt Stmt           -- conditional
+  | If Exp Stmt Stmt            -- conditional
   | Seq Stmt Stmt               -- sequence
   | Loop Stmt                   -- infinite loop
   | Every ID_Evt Stmt           -- event iteration
@@ -51,7 +51,7 @@ showProg stmt = case stmt of
   Nop                  -> "nop"
   Error _              -> "err"
   where
-    sE = showExpr
+    sE = showExp
     sP = showProg
 
 -- Checks if program is valid.

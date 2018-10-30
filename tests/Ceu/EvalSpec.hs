@@ -8,8 +8,8 @@ import Control.Exception
 import Test.Hspec
 import Text.Printf
 
--- Declare Expr, Stmt, and Desc as datatypes that can be fully evaluated.
-instance NFData Expr where
+-- Declare Exp, Stmt, and Desc as datatypes that can be fully evaluated.
+instance NFData Exp where
   rnf (Const _)   = ()
   rnf (Read _)    = ()
   rnf (Umn e)     = rnf e
