@@ -121,7 +121,7 @@ spec = do
       `shouldBe` (G.Or (G.Seq (G.Loop (G.Seq (G.Write "x" (Add (Read "x") (Const 1))) (G.AwaitExt "ASYNC"))) (G.AwaitExt "FOREVER")) (G.AwaitExt "A"))
 
   --------------------------------------------------------------------------
-  describe "evalFullProg" $ do
+  describe "evalFullProg - misc" $ do
     it "error \"Hello!\"" $ do
       evaluate $ evalFullProg (Error "Hello!") []
       `shouldThrow` errorCall "Runtime error: Hello!"
@@ -185,6 +185,17 @@ end
           (Write "ret" (Add (Read "ret") (Const 10)))
         )
       ))))
+
+    evalFullProgItPass (99,[[],[]]) [("A",Nothing)]
+      (Seq
+        (Var "x"
+          (Seq
+            (Write "x" (Const 1))
+            (Int "e" False
+              (And
+                (Seq (AwaitExt "A" Nothing) (Seq (Write "x" (Const 0)) (EmitInt "e" Nothing)))
+                (Pause "x" (And (AwaitInt "e" Nothing) (EmitInt "e" Nothing)))))))
+        (Write "ret" (Const 99)))
 
   describe "events" $ do
 

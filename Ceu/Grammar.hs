@@ -19,6 +19,7 @@ data Stmt
   | Every ID_Evt Stmt           -- event iteration
   | And Stmt Stmt               -- par/and statement
   | Or Stmt Stmt                -- par/or statement
+  | Pause ID_Var Stmt           -- pause/suspend statement
   | Fin Stmt                    -- finalization statement
   | Nop                         -- dummy statement (internal)
   | Error String                -- generate runtime error (for testing)
@@ -47,6 +48,7 @@ showProg stmt = case stmt of
   Every evt p          -> printf "(every %s %s)" evt (sP p)
   And p q              -> printf "(%s && %s)" (sP p) (sP q)
   Or p q               -> printf "(%s || %s)" (sP p) (sP q)
+  Pause var p          -> printf "(pause %s %s)" var (sP p)
   Fin p                -> printf "(fin %s)" (sP p)
   Nop                  -> "nop"
   Error _              -> "err"
@@ -65,6 +67,7 @@ checkProg stmt = case stmt of
   Every e p    -> checkEvery (Every e p) && checkProg p
   And p q      -> checkProg p && checkProg q
   Or p q       -> checkProg p && checkProg q
+  Pause _ p    -> checkProg p
   Fin p        -> checkFin (Fin p) && checkProg p
   _            -> True
 
@@ -86,6 +89,7 @@ checkLoop loop = case loop of
       Loop p       -> cL True p
       And p q      -> cL ignBrk p && cL ignBrk q
       Or p q       -> cL ignBrk p && cL ignBrk q
+      Pause _ p    -> cL ignBrk p
       Fin p        -> False       -- runs in zero time
       _            -> False
 
@@ -110,6 +114,7 @@ checkFin finOrEvery = case finOrEvery of
       Seq p q      -> cF p && cF q
       And p q      -> cF p && cF q
       Or p q       -> cF p && cF q
+      Pause _ p    -> cF p
       _            -> True
 
 -- Alias for checkFin.

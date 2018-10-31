@@ -43,7 +43,9 @@ spec = do
 
     checkLoopIt (Loop (Nop `And` Nop `And` Nop))                 False
     checkLoopIt (Loop (Nop `Or` Nop `Or` Nop))                   False
+    checkLoopIt (Loop (Pause "a" Nop))                           False
     checkLoopIt (Loop (Every "A" Nop `Or` AwaitExt "A" `Or` Break)) True
+    checkLoopIt (Loop (Pause "a" (AwaitExt "A")))                True
 
     -- Fin always run in zero time.
     checkLoopIt (Loop (Fin Nop))                                 False
@@ -96,6 +98,7 @@ spec = do
     checkProgIt (Every "A" (Fin Nop))    False
     checkProgIt (And Break Nop)          True
     checkProgIt (Or Nop (EmitInt "a"))   True
+    checkProgIt (Pause "a" Nop)          True
     checkProgIt (Fin Nop)                True
     checkProgIt (Fin (Fin Nop))          False
 

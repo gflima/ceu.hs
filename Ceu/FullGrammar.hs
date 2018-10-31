@@ -31,6 +31,7 @@ data Stmt
   | And Stmt Stmt                       -- par/and statement
   | Or Stmt Stmt                        -- par/or statement
   | Spawn Stmt                          -- spawn statement
+  | Pause ID_Var Stmt                   -- pause/suspend statement
   | Fin (Maybe ID_Var) Stmt             -- finalize statement
   | Async Stmt                          -- async statement
   | Error String                        -- generate runtime error (for testing purposes)
@@ -270,13 +271,14 @@ toGrammar p = toG $ remFin $ remAwaitFor $ remAwaitTmr $ remAsync
   toG (And p1 p2)        = G.And (toG p1) (toG p2)
   toG (Or p1 p2)         = G.Or (toG p1) (toG p2)
   toG (Error msg)        = G.Error msg
+  toG (Pause var p)      = G.Pause var (toG p)
   toG (Fin' p)           = G.Fin (toG p)
   toG Nop                = G.Nop
   toG _                  = error "toG: unexpected statement (AwaitFor,Fin,Spawn,Async)"
 
 reaction :: E.Stmt -> In -> (E.Stmt,E.Outs)
 reaction p (ext,val) = (p''',outs) where
-  (p'',_,_,_,outs) = E.steps (E.bcast ext p', 0, [], [], [])
+  (p'',_,_,_,outs) = E.steps (E.bcast ext [] p', 0, [], [], [])
   p' = E.Var' ("_"++ext) val p
   (E.Var' _ _ p''') = p''
 

@@ -30,6 +30,7 @@ data Stmt
   | Every ID_Evt Stmt           -- event iteration
   | And Stmt Stmt               -- par/and statement
   | Or Stmt Stmt                -- par/or statement
+  | Pause ID_Var Stmt           -- pause/suspend statement
   | Fin Stmt                    -- finalization statement
   | Nop                         -- dummy statement (internal)
   | Error String                -- generate runtime error (for testing purposes)
@@ -59,6 +60,7 @@ fromGrammar (G.Loop p)        = Loop' (fromGrammar p) (fromGrammar p)
 fromGrammar (G.Every id p)    = Every id (fromGrammar p)
 fromGrammar (G.And p1 p2)     = And (fromGrammar p1) (fromGrammar p2)
 fromGrammar (G.Or p1 p2)      = Or (fromGrammar p1) (fromGrammar p2)
+fromGrammar (G.Pause var p)   = Pause var (fromGrammar p)
 fromGrammar (G.Fin p)         = Fin (fromGrammar p)
 fromGrammar G.Nop             = Nop
 fromGrammar (G.Error msg)     = Error msg
@@ -79,13 +81,14 @@ showProg stmt = case stmt of
   Every int p          -> printf "(every %s %s)" int (sP p)
   And p q              -> printf "(%s && %s)" (sP p) (sP q)
   Or p q               -> printf "(%s || %s)" (sP p) (sP q)
+  Pause var p          -> printf "(pause %s %s)" var (sP p)
   Fin p                -> printf "(fin %s)" (sP p)
   Nop                  -> "nop"
   Error _              -> "err"
   CanRun n             -> printf "@canrun(%d)" n
   Var' var val p
-    | isNothing val -> printf "{%s=_: %s}" var (sP p)
-    | otherwise     -> printf "{%s=%d: %s}" var (fromJust val) (sP p)
+    | isNothing val    -> printf "{%s=_: %s}" var (sP p)
+    | otherwise        -> printf "{%s=%d: %s}" var (fromJust val) (sP p)
   Loop' p q            -> printf "(%s @loop %s)" (sP p) (sP q)
   And' p q             -> printf "(%s @&& %s)" (sP p) (sP q)
   Or' p q              -> printf "(%s @|| %s)" (sP p) (sP q)
@@ -146,6 +149,7 @@ isBlocked n stmt = case stmt of
   AwaitInt _   -> True
   Every _ _    -> True
   CanRun m     -> n > m
+  Pause _ p    -> isBlocked n p
   Fin _        -> True
   Seq p _      -> isBlocked n p
   Int _ p      -> isBlocked n p
@@ -164,6 +168,7 @@ clear stmt = case stmt of
   Every _ _    -> Nop
   CanRun _     -> Nop
   Fin p        -> p
+  Pause _ p    -> clear p
   Seq p _      -> clear p
   Int _ p      -> clear p
   Var' _ _ p   -> clear p
@@ -203,7 +208,7 @@ step (Int int p, n, vars, ints, outs)            -- int-adv
   = (Int int p'', n', vars', ints', outs')
     where
       (p', n', vars', (_,go):ints', outs') = stepAdv (p, n, vars, (int,False):ints, outs) id
-      p'' | go = bcast int p'
+      p'' | go = bcast int vars p'
           | otherwise = p'
 
 step (Write var expr, n, vars, ints, outs)       -- write
@@ -284,6 +289,13 @@ step (Or' p q, n, vars, ints, outs)              -- or-adv (pg 7)
   | not $ isBlocked n p = stepAdv (p, n, vars, ints, outs) (\p' -> Or' p' q)
   | otherwise           = stepAdv (q, n, vars, ints, outs) (\q' -> Or' p q')
 
+step (Pause var Nop, n, vars, ints, outs)        -- pause-nop
+  = (Nop, n, vars, ints, outs)
+step (Pause var Break, n, vars, ints, outs)      -- pause-break
+  = (Break, n, vars, ints, outs)
+step (Pause var p, n, vars, ints, outs)          -- pause-adv
+  = stepAdv (p, n, vars, ints, outs) (\p' -> Pause var p')
+
 step (Error msg, _, _, _, _) = error ("Runtime error: " ++ msg)
 
 step (p, n, vars, ints, outs)                    -- pop
@@ -303,17 +315,18 @@ isReducible desc = case desc of
 
 -- Awakes all trails waiting for the given event.
 -- (pg 8, fig 4.i)
-bcast :: ID_Evt -> Stmt -> Stmt
-bcast e stmt = case stmt of
+bcast :: ID_Evt -> Vars -> Stmt -> Stmt
+bcast e vars stmt = case stmt of
+  Var' var val p        -> Var' var val (bcast e ((var,val):vars) p)
   AwaitExt e' | e == e' -> Nop
   AwaitInt e' | e == e' -> Nop
   Every e' p  | e == e' -> Seq p (Every e' p)
-  Seq p q               -> Seq (bcast e p) q
-  Int id p              -> Int id (bcast e p)
-  Var' id val p         -> Var' id val (bcast e p)
-  Loop' p q             -> Loop' (bcast e p) q
-  And' p q              -> And' (bcast e p) (bcast e q)
-  Or' p q               -> Or' (bcast e p) (bcast e q)
+  Seq p q               -> Seq (bcast e vars p) q
+  Int id p              -> Int id (bcast e vars p)
+  Loop' p q             -> Loop' (bcast e vars p) q
+  And' p q              -> And' (bcast e vars p) (bcast e vars q)
+  Or' p q               -> Or' (bcast e vars p) (bcast e vars q)
+  Pause var p           -> Pause var (if (varsEval vars (Read var)) == 1 then p else (bcast e vars p))
   _                     -> stmt -- nothing to do
 
 ----------------------------------------------------------------------------
@@ -322,7 +335,7 @@ bcast e stmt = case stmt of
 -- Computes a reaction of program plus environment to a single external event.
 -- (pg 6)
 reaction :: Stmt -> ID_Ext -> (Stmt,Outs)
-reaction p ext = (p',outs') where (p',_,_,_,outs') = steps (bcast ext p, 0, [], [], [])
+reaction p ext = (p',outs') where (p',_,_,_,outs') = steps (bcast ext [] p, 0, [], [], [])
 
 steps :: Desc -> Desc
 steps d

@@ -29,6 +29,7 @@ instance NFData Stmt where
   rnf (Every _ p)      = rnf p
   rnf (And p q)        = rnf p `deepseq` rnf q
   rnf (Or p q)         = rnf p `deepseq` rnf q
+  rnf (Pause _ p)      = rnf p
   rnf (Fin p)          = rnf p
   rnf (Nop)            = ()
   rnf (Error _)        = ()
@@ -828,6 +829,36 @@ spec = do
                           0, [], [], []))
         `shouldThrow` errorCall "step: cannot advance"
 
+  -- pause --
+  describe "(Pause var p)" $ do
+      it "pass: Nop" $
+        step (Var' "x" Nothing (Pause "x" Nop), 0, [], [], [])
+        `shouldBe` (Var' "x" Nothing Nop, 0, [], [], [])
+
+      it "pass: awake" $
+        step (Var' "x" (Just 0) (Pause "x" (Int "e" (And' (AwaitInt "e") (EmitInt "e")))), 0, [], [], [])
+        `shouldBe` (Var' "x" (Just 0) (Pause "x" (Int "e" (And' Nop (CanRun 0)))),1,[],[],[])
+
+      it "pass: awake - nested reaction inside Pause" $
+        step (Var' "x" (Just 1) (Pause "x" (Int "e" (And' (AwaitInt "e") (EmitInt "e")))), 0, [], [], [])
+        `shouldBe` (Var' "x" (Just 1) (Pause "x" (Int "e" (And' Nop (CanRun 0)))),1,[],[],[])
+
+      it "pass: don't awake - nested reaction outside Pause" $
+        step (Var' "x" (Just 1) (Int "e" (Pause "x" (And' (AwaitInt "e") (EmitInt "e")))), 0, [], [], [])
+        `shouldBe` (Var' "x" (Just 1) (Int "e" (Pause "x" (And' (AwaitInt "e") (CanRun 0)))),1,[],[],[])
+
+      it "pass: awake - nested reaction outside Pause" $
+        step (Var' "x" (Just 0) (Int "e" (Pause "x" (And' (AwaitInt "e") (EmitInt "e")))), 0, [], [], [])
+        `shouldBe` (Var' "x" (Just 0) (Int "e" (Pause "x" (And' Nop (CanRun 0)))),1,[],[],[])
+
+      it "fail: undeclared var" $
+        forceEval (step (Int "e" (Pause "x" (EmitInt "e")), 0, [], [], []))
+        `shouldThrow` errorCall "varsRead: undeclared variable: x"
+
+      it "fail: uninit var" $
+        forceEval (step (Int "e" (Var' "x" Nothing (Pause "x" (EmitInt "e"))), 0, [], [], []))
+        `shouldThrow` errorCall "varsRead: uninitialized variable: x"
+
   --------------------------------------------------------------------------
   describe "steps" $ do
     describe "zero steps (program is blocked)" $ do
@@ -847,6 +878,10 @@ spec = do
       stepsItPass
         (Every "A" Nop, 0, [], [], [])
         (Every "A" Nop, 0, [], [], [])
+
+      stepsItPass
+        (Pause "a" (AwaitExt ""), 0, [], [], [])
+        (Pause "a" (AwaitExt ""), 0, [], [], [])
 
       stepsItPass
         (Fin (Seq Nop Nop), 0, [], [], [])
@@ -978,14 +1013,14 @@ spec = do
 
     describe "one push followed by one+ pops" $ do
       it "pass: lvl == 0 (do nothing)" $ -- CHECK THIS! --
-        let d = (bcast "c" (AwaitInt "d"), 0, [], [], [])
+        let d = (bcast "c" [] (AwaitInt "d"), 0, [], [], [])
             d' = (AwaitInt "d", 0, [], [], []) in
           (steps d `shouldBe` d')
           >> (isReducible d' `shouldBe` False)
           -- >> (isReducible d' `shouldBe` True)
 
       it "pass: lvl > 0, but `Nop`" $
-        let d = (bcast "d" (AwaitInt "d"), 88, [], [], [])
+        let d = (bcast "d" [] (AwaitInt "d"), 88, [], [], [])
             d' = (Nop, 0, [], [], []) in
           (steps d `shouldBe` d')
           >> (isReducible d' `shouldBe` False)
@@ -1005,6 +1040,14 @@ spec = do
     reactionItPass
       (Int "d" ((Nop `Seq` AwaitInt "d") `And` (Nop `Seq` EmitInt "d")), "_", [])
       (Nop, [], [])
+
+    reactionItPass
+      (Var' "x" (Just 0) (Int "e" (Pause "x" (And' (AwaitInt "e") (EmitInt "e")))), "_", [])
+      (Nop, [], [])
+
+    reactionItPass
+      (Var' "x" (Just 1) (Int "e" (Pause "x" (And' (AwaitInt "e") (EmitInt "e")))), "_", [])
+      (Var' "x" (Just 1) (Int "e" (Pause "x" (AwaitInt "e"))), [], [])
 
   --------------------------------------------------------------------------
   describe "evalProg" $ do
@@ -1096,6 +1139,17 @@ escape x;
         ) `G.Seq`
         (G.Write "ret" (Read "x"))
       )))
+
+    evalProgItPass (99,[[],[]]) ["A"]
+      (G.Seq
+        (G.Var "x"
+          (G.Seq
+            (G.Write "x" (Const 1))
+            (G.Int "e"
+              (G.And
+                (G.Seq (G.AwaitExt "A") (G.Seq (G.Write "x" (Const 0)) (G.EmitInt "e")))
+                (G.Pause "x" (G.And (G.AwaitInt "e") (G.EmitInt "e")))))))
+        (G.Write "ret" (Const 99)))
 
     -- multiple inputs
 
