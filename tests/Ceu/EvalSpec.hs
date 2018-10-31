@@ -34,7 +34,7 @@ instance NFData Stmt where
   rnf (Nop)            = ()
   rnf (Error _)        = ()
   rnf (CanRun _)       = ()
-  rnf (Var' _ _ p)     = rnf p
+  rnf (Var _ p)        = rnf p
   rnf (Int _ p)        = rnf p
   rnf (Loop' p q)      = rnf p
   rnf (And' p q)       = rnf p `deepseq` rnf q
@@ -120,11 +120,11 @@ spec = do
     describe "(Var \"x\" p)" $ do
       it "pass: Var \"x\" Nop" $
         step (Var "x" Nop, 0, [], [], [])
-        `shouldBe` (Var' "x" Nothing Nop, 0, [], [], [])
+        `shouldBe` (Var ("x",Nothing) Nop, 0, [], [], [])
 
       it "pass: Var [\"x\"] p" $
         step (Var "x" (Seq Nop Nop), 0, [], [], [])
-        `shouldBe` (Var' "x" Nothing (Seq Nop Nop), 0, [], [], [])
+        `shouldBe` (Var ("x",Nothing) (Seq Nop Nop), 0, [], [], [])
 -}
 
     -- write --
@@ -138,51 +138,51 @@ spec = do
         `shouldThrow` errorCall "varsWrite: undeclared variable: x"
 
       it "pass: [x=?] x=1" $
-        step (Var' "x" Nothing (Write "x" (Const 1)), 0, [], [], [])
-        `shouldBe` (Var' "x" (Just 1) Nop, 0, [], [], [])
+        step (Var ("x",Nothing) (Write "x" (Const 1)), 0, [], [], [])
+        `shouldBe` (Var ("x",(Just 1)) Nop, 0, [], [], [])
 
       it "pass: [x=1] x=2" $
-        step (Var' "x" (Just 1) (Write "x" (Const 2)), 0, [], [], [])
-        `shouldBe` (Var' "x" (Just 2) Nop, 0, [], [], [])
+        step (Var ("x",(Just 1)) (Write "x" (Const 2)), 0, [], [], [])
+        `shouldBe` (Var ("x",(Just 2)) Nop, 0, [], [], [])
 
       -- TODO: test is correct but fails
       it "fail: [x=1,y=?] x=y (uninitialized variable) | TODO: ok" $
-        let p = Var' "x" (Just 1)
-               (Var' "y" Nothing
+        let p = Var ("x",(Just 1))
+               (Var ("y",Nothing)
                  (Write "x" (Read "y"))) in
           (forceEval $ step (p, 0, [], [], []))
           `shouldThrow` errorCall "varsRead: uninitialized variable: y"
 
       it "pass: nop; x=1" $
         step
-        (Var' "x" Nothing
+        (Var ("x",Nothing)
           (Nop `Seq` (Write "x" (Const 1))), 0, [], [], [])
         `shouldBe`
-        (Var' "x" Nothing
+        (Var ("x",Nothing)
           (Write "x" (Const 1)), 0, [], [], [])
 
       it "pass: [x=1,y=?] y=x+2" $
         step (
-          (Var' "x" (Just 1)
-          (Var' "y" Nothing
+          (Var ("x",(Just 1))
+          (Var ("y",Nothing)
             (Write "y" (Read "x" `Add` Const 2))), 0, [], [], []))
-        `shouldBe` (Var' "x" (Just 1) (Var' "y" (Just 3) Nop),0,[],[], [])
+        `shouldBe` (Var ("x",(Just 1)) (Var ("y",(Just 3)) Nop),0,[],[], [])
 
       it "pass: [x=1,y=?] y=x+2" $
         step
-        (Var' "x" (Just 1)
-        (Var' "y" Nothing
+        (Var ("x",(Just 1))
+        (Var ("y",Nothing)
           (Write "y" (Read "x" `Add` Const 2))), 0, [], [], [])
         `shouldBe`
-        (Var' "x" (Just 1)
-        (Var' "y" (Just 3) Nop), 0, [], [], [])
+        (Var ("x",(Just 1))
+        (Var ("y",(Just 3)) Nop), 0, [], [], [])
 
       it "pass: [x=?] x=-(5+1)" $
         step
-        (Var' "x" (Just 0)
+        (Var ("x",(Just 0))
           (Write "x" (Umn (Const 5 `Add` Const 1))), 0, [], [], [])
         `shouldBe`
-        (Var' "x" (Just (-6)) Nop, 0, [], [], [])
+        (Var ("x",(Just (-6))) Nop, 0, [], [], [])
 
     -- emit-int --
   describe "(EmitInt e')" $ do
@@ -463,7 +463,7 @@ spec = do
 
 {-
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (step (And' Break (Var' "_" Nothing Nop), 0, Just "b", [], []))
+        forceEval (step (And' Break (Var ("_",Nothing) Nop), 0, Just "b", [], []))
         `shouldThrow` errorCall "step: cannot advance"
 -}
 
@@ -832,31 +832,31 @@ spec = do
   -- pause --
   describe "(Pause var p)" $ do
       it "pass: Nop" $
-        step (Var' "x" Nothing (Pause "x" Nop), 0, [], [], [])
-        `shouldBe` (Var' "x" Nothing Nop, 0, [], [], [])
+        step (Var ("x",Nothing) (Pause "x" Nop), 0, [], [], [])
+        `shouldBe` (Var ("x",Nothing) Nop, 0, [], [], [])
 
       it "pass: awake" $
-        step (Var' "x" (Just 0) (Pause "x" (Int "e" (And' (AwaitInt "e") (EmitInt "e")))), 0, [], [], [])
-        `shouldBe` (Var' "x" (Just 0) (Pause "x" (Int "e" (And' Nop (CanRun 0)))),1,[],[],[])
+        step (Var ("x",(Just 0)) (Pause "x" (Int "e" (And' (AwaitInt "e") (EmitInt "e")))), 0, [], [], [])
+        `shouldBe` (Var ("x",(Just 0)) (Pause "x" (Int "e" (And' Nop (CanRun 0)))),1,[],[],[])
 
       it "pass: awake - nested reaction inside Pause" $
-        step (Var' "x" (Just 1) (Pause "x" (Int "e" (And' (AwaitInt "e") (EmitInt "e")))), 0, [], [], [])
-        `shouldBe` (Var' "x" (Just 1) (Pause "x" (Int "e" (And' Nop (CanRun 0)))),1,[],[],[])
+        step (Var ("x",(Just 1)) (Pause "x" (Int "e" (And' (AwaitInt "e") (EmitInt "e")))), 0, [], [], [])
+        `shouldBe` (Var ("x",(Just 1)) (Pause "x" (Int "e" (And' Nop (CanRun 0)))),1,[],[],[])
 
       it "pass: don't awake - nested reaction outside Pause" $
-        step (Var' "x" (Just 1) (Int "e" (Pause "x" (And' (AwaitInt "e") (EmitInt "e")))), 0, [], [], [])
-        `shouldBe` (Var' "x" (Just 1) (Int "e" (Pause "x" (And' (AwaitInt "e") (CanRun 0)))),1,[],[],[])
+        step (Var ("x",(Just 1)) (Int "e" (Pause "x" (And' (AwaitInt "e") (EmitInt "e")))), 0, [], [], [])
+        `shouldBe` (Var ("x",(Just 1)) (Int "e" (Pause "x" (And' (AwaitInt "e") (CanRun 0)))),1,[],[],[])
 
       it "pass: awake - nested reaction outside Pause" $
-        step (Var' "x" (Just 0) (Int "e" (Pause "x" (And' (AwaitInt "e") (EmitInt "e")))), 0, [], [], [])
-        `shouldBe` (Var' "x" (Just 0) (Int "e" (Pause "x" (And' Nop (CanRun 0)))),1,[],[],[])
+        step (Var ("x",(Just 0)) (Int "e" (Pause "x" (And' (AwaitInt "e") (EmitInt "e")))), 0, [], [], [])
+        `shouldBe` (Var ("x",(Just 0)) (Int "e" (Pause "x" (And' Nop (CanRun 0)))),1,[],[],[])
 
       it "fail: undeclared var" $
         forceEval (step (Int "e" (Pause "x" (EmitInt "e")), 0, [], [], []))
         `shouldThrow` errorCall "varsRead: undeclared variable: x"
 
       it "fail: uninit var" $
-        forceEval (step (Int "e" (Var' "x" Nothing (Pause "x" (EmitInt "e"))), 0, [], [], []))
+        forceEval (step (Int "e" (Var ("x",Nothing) (Pause "x" (EmitInt "e"))), 0, [], [], []))
         `shouldThrow` errorCall "varsRead: uninitialized variable: x"
 
   --------------------------------------------------------------------------
@@ -913,7 +913,7 @@ spec = do
     describe "one+ steps" $ do
 
       stepsItPass
-        (Var' "x" Nothing (Write "x" (Const 0)), 3, [], [], [])
+        (Var ("x",Nothing) (Write "x" (Const 0)), 3, [], [], [])
         (Nop, 0, [], [], [])
 
       stepsItPass
@@ -1042,12 +1042,12 @@ spec = do
       (Nop, [], [])
 
     reactionItPass
-      (Var' "x" (Just 0) (Int "e" (Pause "x" (And' (AwaitInt "e") (EmitInt "e")))), "_", [])
+      (Var ("x",(Just 0)) (Int "e" (Pause "x" (And' (AwaitInt "e") (EmitInt "e")))), "_", [])
       (Nop, [], [])
 
     reactionItPass
-      (Var' "x" (Just 1) (Int "e" (Pause "x" (And' (AwaitInt "e") (EmitInt "e")))), "_", [])
-      (Var' "x" (Just 1) (Int "e" (Pause "x" (AwaitInt "e"))), [], [])
+      (Var ("x",(Just 1)) (Int "e" (Pause "x" (And' (AwaitInt "e") (EmitInt "e")))), "_", [])
+      (Var ("x",(Just 1)) (Int "e" (Pause "x" (AwaitInt "e"))), [], [])
 
   --------------------------------------------------------------------------
   describe "evalProg" $ do

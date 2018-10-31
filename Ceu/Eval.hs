@@ -18,7 +18,8 @@ type Desc = (Stmt, Lvl, Vars, Ints, Outs)
 
 -- Program (pg 5).
 data Stmt
-  = Int ID_Int Stmt             -- event declaration
+  = Var (ID_Var,Maybe Val) Stmt -- block with environment store
+  | Int ID_Int Stmt             -- event declaration
   | Write ID_Var Exp            -- assignment statement
   | AwaitExt ID_Ext             -- await external event
   | EmitExt ID_Ext (Maybe Exp)  -- emit internal event
@@ -35,7 +36,6 @@ data Stmt
   | Nop                         -- dummy statement (internal)
   | Error String                -- generate runtime error (for testing purposes)
   | CanRun Lvl                  -- wait for stack level (internal)
-  | Var' ID_Var (Maybe Val) Stmt -- block with environment store
   | Loop' Stmt Stmt             -- unrolled Loop (internal)
   | And' Stmt Stmt              -- unrolled And (internal)
   | Or' Stmt Stmt               -- unrolled Or (internal)
@@ -46,7 +46,7 @@ infixr 0 `Or`                   -- `Or` associates to the right
 infixr 0 `And`                  -- `And` associates to the right
 
 fromGrammar :: G.Stmt -> Stmt
-fromGrammar (G.Var id p)      = Var' id Nothing (fromGrammar p)
+fromGrammar (G.Var id p)      = Var (id,Nothing) (fromGrammar p)
 fromGrammar (G.Int id p)      = Int id (fromGrammar p)
 fromGrammar (G.Write id exp)  = Write id exp
 fromGrammar (G.AwaitExt id)   = AwaitExt id
@@ -68,6 +68,9 @@ fromGrammar (G.Error msg)     = Error msg
 -- Shows program.
 showProg :: Stmt -> String
 showProg stmt = case stmt of
+  Var (var,val) p
+    | isNothing val    -> printf "{%s=_: %s}" var (sP p)
+    | otherwise        -> printf "{%s=%d: %s}" var (fromJust val) (sP p)
   Int id stmt          -> printf ":%s %s" id (sP stmt)
   Write var expr       -> printf "%s=%s" var (sE expr)
   AwaitExt ext         -> printf "?%s" ext
@@ -86,9 +89,6 @@ showProg stmt = case stmt of
   Nop                  -> "nop"
   Error _              -> "err"
   CanRun n             -> printf "@canrun(%d)" n
-  Var' var val p
-    | isNothing val    -> printf "{%s=_: %s}" var (sP p)
-    | otherwise        -> printf "{%s=%d: %s}" var (fromJust val) (sP p)
   Loop' p q            -> printf "(%s @loop %s)" (sP p) (sP q)
   And' p q             -> printf "(%s @&& %s)" (sP p) (sP q)
   Or' p q              -> printf "(%s @|| %s)" (sP p) (sP q)
@@ -145,6 +145,8 @@ evtsEmit ints int = case ints of
 -- (pg 8, fig 4.ii)
 isBlocked :: Lvl -> Stmt -> Bool
 isBlocked n stmt = case stmt of
+  Var _ p      -> isBlocked n p
+  Int _ p      -> isBlocked n p
   AwaitExt _   -> True
   AwaitInt _   -> True
   Every _ _    -> True
@@ -152,8 +154,6 @@ isBlocked n stmt = case stmt of
   Pause _ p    -> isBlocked n p
   Fin _        -> True
   Seq p _      -> isBlocked n p
-  Int _ p      -> isBlocked n p
-  Var' _ _ p   -> isBlocked n p
   Loop' p _    -> isBlocked n p
   And' p q     -> isBlocked n p && isBlocked n q
   Or' p q      -> isBlocked n p && isBlocked n q
@@ -163,6 +163,7 @@ isBlocked n stmt = case stmt of
 -- (pg 8, fig 4.iii)
 clear :: Stmt -> Stmt
 clear stmt = case stmt of
+  Var _ p      -> clear p
   AwaitExt _   -> Nop
   AwaitInt _   -> Nop
   Every _ _    -> Nop
@@ -171,7 +172,6 @@ clear stmt = case stmt of
   Pause _ p    -> clear p
   Seq p _      -> clear p
   Int _ p      -> clear p
-  Var' _ _ p   -> clear p
   Loop' p _    -> clear p
   And' p q     -> Seq (clear p) (clear q)
   Or' p q      -> Seq (clear p) (clear q)
@@ -187,16 +187,16 @@ stepAdv d f = (f p, n, vars, ints, outs)
 -- (pg 6)
 step :: Desc -> Desc
 
-step (Var' var val Nop, n, vars, ints, outs)     -- var-nop
+step (Var _ Nop, n, vars, ints, outs)            -- var-nop
   = (Nop, n, vars, ints, outs)
 
-step (Var' var val Break, n, vars, ints, outs)   -- var-brk
+step (Var _ Break, n, vars, ints, outs)          -- var-brk
   = (Break, n, vars, ints, outs)
 
-step (Var' var val p, n, vars, ints, outs)       -- var-adv
-  = (Var' var val' p', n', vars', ints', outs')
+step (Var vv p, n, vars, ints, outs)             -- var-adv
+  = (Var vv' p', n', vars', ints', outs')
     where
-      (p', n', (_,val'):vars', ints', outs') = stepAdv (p, n, (var,val):vars, ints, outs) id
+      (p', n', vv':vars', ints', outs') = stepAdv (p, n, vv:vars, ints, outs) id
 
 step (Int id Nop, n, vars, ints, outs)           -- int-nop
   = (Nop, n, vars, ints, outs)
@@ -317,7 +317,7 @@ isReducible desc = case desc of
 -- (pg 8, fig 4.i)
 bcast :: ID_Evt -> Vars -> Stmt -> Stmt
 bcast e vars stmt = case stmt of
-  Var' var val p        -> Var' var val (bcast e ((var,val):vars) p)
+  Var vv p              -> Var vv (bcast e (vv:vars) p)
   AwaitExt e' | e == e' -> Nop
   AwaitInt e' | e == e' -> Nop
   Every e' p  | e == e' -> Seq p (Every e' p)
@@ -351,7 +351,7 @@ evalProg_Reaction prog ins reaction -- enclosing block with "ret" that never ter
   where
     --eP :: Stmt -> [a] -> [Outs] -> (Val,[Outs])
     eP prog ins outss = case prog of
-      (Var' "ret" val (AwaitExt "FOREVER"))
+      (Var ("ret",val) (AwaitExt "FOREVER"))
         | not (null ins) -> error "evalProg: pending inputs"
         | isNothing val  -> error "evalProg: no return"
         | otherwise      -> ((fromJust val), outss)

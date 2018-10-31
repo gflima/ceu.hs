@@ -279,8 +279,8 @@ toGrammar p = toG $ remFin $ remAwaitFor $ remAwaitTmr $ remAsync
 reaction :: E.Stmt -> In -> (E.Stmt,E.Outs)
 reaction p (ext,val) = (p''',outs) where
   (p'',_,_,_,outs) = E.steps (E.bcast ext [] p', 0, [], [], [])
-  p' = E.Var' ("_"++ext) val p
-  (E.Var' _ _ p''') = p''
+  p' = E.Var (("_"++ext), val) p
+  (E.Var _ p''') = p''
 
 evalFullProg :: Stmt -> [In] -> (Val,[E.Outs])
 evalFullProg prog ins = (val,outss')
