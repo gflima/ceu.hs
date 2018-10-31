@@ -124,6 +124,8 @@ varsEval vars expr = case expr of
   Sub e1 e2 -> (varsEval vars e1) - (varsEval vars e2)
   Mul e1 e2 -> (varsEval vars e1) * (varsEval vars e2)
   Div e1 e2 -> (varsEval vars e1) `div` (varsEval vars e2)
+  Equ e1 e2 -> if (varsEval vars e1) == (varsEval vars e2) then 1 else 0
+  Lte e1 e2 -> if (varsEval vars e1) <= (varsEval vars e2) then 1 else 0
 
 -- Set event in environment.
 evtsEmit :: Ints -> ID_Int -> Ints
@@ -331,21 +333,21 @@ steps d
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
 evalProg_Reaction :: G.Stmt -> [a] -> (Stmt->a->(Stmt,Outs)) -> (Val,[Outs])
-evalProg_Reaction prog hist reaction -- enclosing block with "ret" that never terminates
-  = eP (fromGrammar (G.Var "ret" (G.Seq prog (G.AwaitExt "FOREVER")))) hist []
+evalProg_Reaction prog ins reaction -- enclosing block with "ret" that never terminates
+  = eP (fromGrammar (G.Var "ret" (G.Seq prog (G.AwaitExt "FOREVER")))) ins []
   where
     --eP :: Stmt -> [a] -> [Outs] -> (Val,[Outs])
-    eP prog hist outss = case prog of
+    eP prog ins outss = case prog of
       (Var' "ret" val (AwaitExt "FOREVER"))
-        | not (null hist) -> error "evalProg: pending inputs"
-        | isNothing val   -> error "evalProg: no return"
-        | otherwise       -> ((fromJust val), outss)
+        | not (null ins) -> error "evalProg: pending inputs"
+        | isNothing val  -> error "evalProg: no return"
+        | otherwise      -> ((fromJust val), outss)
       _
-        | null hist       -> error "evalProg: program didn't terminate"
-        | otherwise       -> eP prog' (tail hist) (outss++[outs']) where
-                                (prog',outs') = reaction prog (head hist)
+        | null ins       -> error "evalProg: program didn't terminate"
+        | otherwise      -> eP prog' (tail ins) (outss++[outs']) where
+                               (prog',outs') = reaction prog (head ins)
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
 evalProg :: G.Stmt -> [ID_Ext] -> (Val,[Outs])
-evalProg prog hist = evalProg_Reaction prog ("BOOT":hist) reaction
+evalProg prog ins = evalProg_Reaction prog ("BOOT":ins) reaction

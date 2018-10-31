@@ -10,6 +10,8 @@ import Debug.Trace
 -- "FOREVER"
 -- "ASYNC"
 
+type In = (ID_Ext, Maybe Val)
+
 -- Program (pg 5).
 data Stmt
   = Var ID_Var Stmt                     -- variable declaration
@@ -18,7 +20,7 @@ data Stmt
   | AwaitExt ID_Ext (Maybe ID_Var)      -- await external event
   | EmitExt ID_Ext (Maybe Exp)          -- emit external event
   | AwaitFor                            -- await forever
--- TODO: AwaitTmr
+  | AwaitTmr Exp                        -- await timer
   | AwaitInt ID_Int (Maybe ID_Var)      -- await internal event
   | EmitInt ID_Int (Maybe Exp)          -- emit internal event
   | Break                               -- loop escape
@@ -194,10 +196,63 @@ remAwaitFor (Async p)         = error "remAwaitFor: unexpected statement (Async)
 remAwaitFor AwaitFor          = AwaitExt "FOREVER" Nothing
 remAwaitFor p                 = p
 
+-- remAwaitTmr:
+--  var int tot_ = <DT>;
+--  loop do
+--      await TIMER;
+--      tot_ = tot_ - 1;
+--      if tot_ == 0 then
+--          break;
+--      end
+--  end
+
+remAwaitTmr :: Stmt -> Stmt
+remAwaitTmr (Var id p)        = Var id (remAwaitTmr p)
+remAwaitTmr (Int id b p)      = Int id b (remAwaitTmr p)
+remAwaitTmr (If exp p1 p2)    = If exp (remAwaitTmr p1) (remAwaitTmr p2)
+remAwaitTmr (Seq p1 p2)       = Seq (remAwaitTmr p1) (remAwaitTmr p2)
+remAwaitTmr (Loop p)          = Loop (remAwaitTmr p)
+remAwaitTmr (Every evt var p) = Every evt var (remAwaitTmr p)
+remAwaitTmr (And p1 p2)       = And (remAwaitTmr p1) (remAwaitTmr p2)
+remAwaitTmr (Or p1 p2)        = Or (remAwaitTmr p1) (remAwaitTmr p2)
+remAwaitTmr (Spawn p)         = Spawn (remAwaitTmr p)
+remAwaitTmr (Fin id p)        = Fin id (remAwaitTmr p)
+remAwaitTmr (Async p)         = error "remAwaitTmr: unexpected statement (Async)"
+remAwaitTmr (AwaitTmr exp)    = Var "__timer_await"
+                                  (Seq
+                                    (Write "__timer_await" exp)
+                                    (Loop (
+                                      (AwaitExt "TIMER" Nothing)                `Seq`
+                                      (Write "__timer_await"
+                                        (Sub (Read "__timer_await") (Const 1))) `Seq`
+                                      (If (Equ (Read "__timer_await") (Const 0))
+                                        Break)
+                                        Nop
+                                      )))
+remAwaitTmr p                 = p
+
+-- expdAwaitTmr:
+-- expands ("TIMER",v) -> ("TIMER",Nothing) x v
+expdAwaitTmr :: [In] -> [In]
+expdAwaitTmr []                      = []
+expdAwaitTmr (("TIMER", Just 0):ins) = (expdAwaitTmr ins)
+expdAwaitTmr (("TIMER", Just v):ins) = ("TIMER",Nothing) : (expdAwaitTmr $ ("TIMER",Just(v-1)) : ins)
+expdAwaitTmr (x:ins)                 = x : (expdAwaitTmr ins)
+
+-- joinAwaitTmr:
+-- joins --N outs w/ X out-- from TIMER into --1 outs w/ N*X out--
+-- Boot, Timer,2
+-- [a]   [b] [c] -> [ [a], [b], [c] ] => [ [a],[b,c] ]
+joinAwaitTmr :: [In] -> [E.Outs] -> [E.Outs]
+joinAwaitTmr [] []                                       = []
+joinAwaitTmr (("TIMER", Just 1):ins) (outs:outss)        = outs : (joinAwaitTmr ins outss)
+joinAwaitTmr (("TIMER", Just v):ins) (outs1:outs2:outss) = joinAwaitTmr (("TIMER",Just(v-1)):ins) ((outs1++outs2):outss)
+joinAwaitTmr (x:ins) (outs:outss)                        = outs : (joinAwaitTmr ins outss)
+
 -- toGrammar: Converts full -> basic
 
 toGrammar :: Stmt -> G.Stmt
-toGrammar p = toG $ remFin $ remAwaitFor $ remAsync
+toGrammar p = toG $ remFin $ remAwaitFor $ remAwaitTmr $ remAsync
                   $ remSpawn $ chkSpawn $ remPay $ p where
   toG :: Stmt -> G.Stmt
   toG (Var id p)         = G.Var id (toG p)
@@ -219,11 +274,16 @@ toGrammar p = toG $ remFin $ remAwaitFor $ remAsync
   toG Nop                = G.Nop
   toG _                  = error "toG: unexpected statement (AwaitFor,Fin,Spawn,Async)"
 
-reaction :: E.Stmt -> (ID_Ext,Maybe Val) -> (E.Stmt,E.Outs)
+reaction :: E.Stmt -> In -> (E.Stmt,E.Outs)
 reaction p (ext,val) = (p''',outs) where
   (p'',_,_,_,outs) = E.steps (E.bcast ext p', 0, [], [], [])
   p' = E.Var' ("_"++ext) val p
   (E.Var' _ _ p''') = p''
 
-evalFullProg :: Stmt -> [(ID_Ext,Maybe Val)] -> (Val,[E.Outs])
-evalFullProg prog hist = E.evalProg_Reaction (toGrammar prog) (("BOOT",Nothing):hist) reaction
+evalFullProg :: Stmt -> [In] -> (Val,[E.Outs])
+evalFullProg prog ins = (val,outss')
+  where
+    (val,outss) = E.evalProg_Reaction (toGrammar prog) ins'' reaction
+    ins'   = ("BOOT",Nothing):ins
+    ins''  = expdAwaitTmr ins'
+    outss' = joinAwaitTmr ins' outss

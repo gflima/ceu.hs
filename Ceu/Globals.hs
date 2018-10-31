@@ -22,8 +22,12 @@ data Exp
   | Sub Exp Exp                 -- subtraction
   | Mul Exp Exp                 -- multiplication
   | Div Exp Exp                 -- division
+  | Equ Exp Exp                 -- `==` equal
+  | Lte Exp Exp                 -- `<=` less-than-equal
   deriving (Eq, Show)
 
+infixl 5 `Equ`                  -- `Equ` associates to the left
+infixl 5 `Lte`                  -- `Lte` associates to the left
 infixl 6 `Add`                  -- `Add` associates to the left
 infixl 6 `Sub`                  -- `Sub` associates to the left
 infixl 7 `Mul`                  -- `Mul` associates to the left
@@ -34,11 +38,13 @@ showExp :: Exp -> String
 showExp expr = case expr of
   Const n   -> show n
   Read v    -> v
-  Umn e     -> printf "(-%s)"   (showExp e)
-  Add e1 e2 -> printf "(%s+%s)" (showExp e1) (showExp e2)
-  Sub e1 e2 -> printf "(%s-%s)" (showExp e1) (showExp e2)
-  Mul e1 e2 -> printf "(%s*%s)" (showExp e1) (showExp e2)
-  Div e1 e2 -> printf "(%s/%s)" (showExp e1) (showExp e2)
+  Umn e     -> printf "(-%s)"    (showExp e)
+  Add e1 e2 -> printf "(%s+%s)"  (showExp e1) (showExp e2)
+  Sub e1 e2 -> printf "(%s-%s)"  (showExp e1) (showExp e2)
+  Mul e1 e2 -> printf "(%s*%s)"  (showExp e1) (showExp e2)
+  Div e1 e2 -> printf "(%s/%s)"  (showExp e1) (showExp e2)
+  Equ e1 e2 -> printf "(%s==%s)" (showExp e1) (showExp e2)
+  Lte e1 e2 -> printf "(%s<=%s)" (showExp e1) (showExp e2)
 
 -- Shows list of variables.
 showVars :: [ID_Var] -> String

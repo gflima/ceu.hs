@@ -22,9 +22,9 @@ main = hspec spec
 
 spec :: Spec
 spec = do
+  --describe "TODO" $ do
   --------------------------------------------------------------------------
   describe "remFin" $ do
-
     it "var x; fin x with nop; nop" $ do
       remFin (Var "x" (Seq (Fin (Just "x") Nop) Nop))
       `shouldBe` (Var "x" (Or (Fin' (Seq Nop Nop)) Nop))
@@ -186,6 +186,8 @@ end
         )
       ))))
 
+  describe "events" $ do
+
 {-
 event int a;        // none
 par/and do
@@ -249,7 +251,62 @@ end
         (AwaitExt "F" Nothing)
       )
 
-    -- multiple outputs
+  describe "timers" $ do
+
+    evalFullProgItPass (10,[[],[]]) [("TIMER",Just 10)]
+      (Seq (AwaitTmr (Const 10)) (Write "ret" (Const 10)))
+    evalFullProgItFail "evalProg: pending inputs" [("TIMER",Just 11)]
+      (Seq (AwaitTmr (Const 10)) (Write "ret" (Const 10)))
+    evalFullProgItPass (10,[[],[]]) [("TIMER",Just 10)]
+      ((AwaitTmr (Const 5)) `Seq` (AwaitTmr (Const 5)) `Seq` (Write "ret" (Const 10)))
+    evalFullProgItPass (10,[[],[]]) [("TIMER",Just 10)]
+      ((AwaitTmr (Const 8)) `Seq` (AwaitTmr (Const 2)) `Seq` (Write "ret" (Const 10)))
+
+    evalFullProgItPass (10,[[],[]]) [("TIMER",Just 10)]
+      (Seq
+        (And
+          (AwaitTmr (Const 10))
+          (AwaitTmr (Const 10)))
+        (Write "ret" (Const 10)))
+
+    evalFullProgItPass (10,[[],[]]) [("TIMER",Just 10)]
+      (Seq
+        (And
+          ((AwaitTmr (Const 5)) `Seq` (AwaitTmr (Const 5)))
+          ((AwaitTmr (Const 5)) `Seq` (AwaitTmr (Const 5))))
+        (Write "ret" (Const 10)))
+
+    evalFullProgItPass (10,[[],[]]) [("TIMER",Just 20)]
+      (Seq
+        (And
+          ((AwaitTmr (Const 5)) `Seq` (AwaitTmr (Const 5)))
+          ((AwaitTmr (Const 5)) `Seq` (AwaitTmr (Const 5))))
+        (Seq
+          (AwaitTmr (Const 10))
+          (Write "ret" (Const 10))))
+
+    evalFullProgItPass (10,[[],[]]) [("TIMER",Just 20)]
+      (Seq
+        (And
+          ((AwaitTmr (Const 5)) `Seq` (AwaitTmr (Const 5)))
+          ((AwaitTmr (Const 4)) `Seq` (AwaitTmr (Const 5))))
+        (Seq
+          (AwaitTmr (Const 10))
+          (Write "ret" (Const 10))))
+
+    evalFullProgItPass
+      (10,[[],[("B",Just 1),("A",Just 1),("A",Just 2)],[("B",Just 2),("C",Just 1)]])
+      [("TIMER",Just 10),("TIMER",Just 11)]
+      (Seq
+        (And
+          ((AwaitTmr (Const 5)) `Seq` (EmitExt "A" (Just (Const 1))) `Seq` (AwaitTmr (Const 5)) `Seq` (EmitExt "A" (Just (Const 2))))
+          ((AwaitTmr (Const 4)) `Seq` (EmitExt "B" (Just (Const 1))) `Seq` (AwaitTmr (Const 7) `Seq` (EmitExt "B" (Just (Const 2))))))
+        (
+          (AwaitTmr (Const 10))          `Seq`
+          (EmitExt "C" (Just (Const 1))) `Seq`
+          (Write "ret" (Const 10))))
+
+  describe "outputs" $ do
 
     evalFullProgItPass (1,[[],[("O",Just 1)],[("O",Just 2)],[]]) [("I",Just 1),("I",Just 2),("F",Nothing)]
       (Seq (Write "ret" (Const 1))
