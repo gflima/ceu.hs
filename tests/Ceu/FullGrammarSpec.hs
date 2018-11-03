@@ -186,15 +186,21 @@ end
         )
       ))))
 
-    evalFullProgItPass (99,[[],[]]) [("A",Nothing)]
+    evalFullProgItPass (99,[[]]) []
+      (Int "x" True (Pause "x" (Write "ret" (Const 99))))
+
+    evalFullProgItPass (99,[[]]) []
+      (Or
+        (Seq (AwaitExt "X" Nothing) (Write "ret" (Const 33)))
+        (Int "x" True
+          (Pause "x"
+            (Seq
+              (EmitInt "x" (Just (Const 1)))
+              (Write "ret" (Const 99))))))
+
+    evalFullProgItPass (99,[[],[],[],[],[]]) [("X",(Just 1)),("A",Nothing),("X",(Just 0)),("A",Nothing)]
       (Seq
-        (Var "x"
-          (Seq
-            (Write "x" (Const 1))
-            (Int "e" False
-              (And
-                (Seq (AwaitExt "A" Nothing) (Seq (Write "x" (Const 0)) (EmitInt "e" Nothing)))
-                (Pause "x" (And (AwaitInt "e" Nothing) (EmitInt "e" Nothing)))))))
+        (Pause "X" (AwaitInt "A" Nothing))
         (Write "ret" (Const 99)))
 
   describe "events" $ do
