@@ -180,6 +180,40 @@ chkSpawn p = case p of
   chkS (Async p)     = (notS p) && (chkS p)
   chkS _             = True
 
+-- remPause:
+--  pause e do
+--      <...>
+--  end
+--
+--  var __e = 0;
+--  pause __e do
+--      par/or do
+--          every __e in e do
+--          end
+--      with
+--          <...>
+--      end
+--  end
+remPause :: Stmt -> Stmt
+remPause (Var id p)          = Var id (remPause p)
+remPause (Int id b p)        = Int id b (remPause p)
+remPause (If exp p1 p2)      = If exp (remPause p1) (remPause p2)
+remPause (Seq p1 p2)         = Seq (remPause p1) (remPause p2)
+remPause (Loop p)            = Loop (remPause p)
+remPause (Every evt var p)   = Every evt var (remPause p)
+remPause (And p1 p2)         = And (remPause p1) (remPause p2)
+remPause (Or p1 p2)          = Or (remPause p1) (remPause p2)
+remPause (Spawn p)           = Spawn (remPause p)
+remPause (Pause evt p)       = Var ("__pause_"++evt)
+                                 (Seq
+                                   (Write ("__pause_"++evt) (Const 0))
+                                   (Or
+                                     (Every evt (Just ("__pause_"++evt)) Nop)
+                                     (Pause' ("__pause_"++evt) p)))
+remPause (Fin' p)            = Fin' (remPause p)
+remPause (Async p)           = Async (remPause p)
+remPause p                   = p
+
 -- remFin:
 -- (Fin _  p);A -> (or (Fin' p) A)
 -- (Fin id p);A -> A ||| (Var (Or [(Fin p)] X)
@@ -204,7 +238,7 @@ remFin p = p' where
   rF (And p1 p2)         = ([], And (snd (rF p1)) (snd (rF p2)))
   rF (Or p1 p2)          = ([], Or (snd (rF p1)) (snd (rF p2)))
   rF (Spawn p)           = ([], Spawn (snd (rF p)))
-  rF (Pause' var p)      = ([], Pause' var (snd (rF p)))
+  rF (Pause evt p)       = ([], Pause evt (snd (rF p)))
   rF (Fin id p)          = error "remFin: unexpected statement (Fin)"
   rF (Int id b p)        = ([], Int id b (snd (rF p)))
 
@@ -244,53 +278,19 @@ remAsync p = (rA False p) where
   rA inA   (And p1 p2)       = And (rA inA p1) (rA inA p2)
   rA inA   (Or p1 p2)        = Or (rA inA p1) (rA inA p2)
   rA inA   (Spawn p)         = Spawn (rA inA p)
-  rA inA   (Pause' var p)    = Pause' var (rA inA p)
+  rA inA   (Pause evt p)     = Pause evt (rA inA p)
   rA inA   (Fin id p)        = Fin id (rA inA p)
   rA inA   (Async p)         = (rA True p)
   rA inA   p                 = p
 
 -- TODO: chkAsync: no sync statements
 
--- remPause:
---  pause e do
---      <...>
---  end
---
---  var __e = 0;
---  pause __e do
---      par/or do
---          every __e in e do
---          end
---      with
---          <...>
---      end
---  end
-remPause :: Stmt -> Stmt
-remPause (Var id p)          = Var id (remPause p)
-remPause (Int id b p)        = Int id b (remPause p)
-remPause (If exp p1 p2)      = If exp (remPause p1) (remPause p2)
-remPause (Seq p1 p2)         = Seq (remPause p1) (remPause p2)
-remPause (Loop p)            = Loop (remPause p)
-remPause (Every evt var p)   = Every evt var (remPause p)
-remPause (And p1 p2)         = And (remPause p1) (remPause p2)
-remPause (Or p1 p2)          = Or (remPause p1) (remPause p2)
-remPause (Spawn p)           = Spawn (remPause p)
-remPause (Pause evt p)       = Var ("__pause_"++evt)
-                                 (Seq
-                                   (Write ("__pause_"++evt) (Const 0))
-                                   (Or
-                                     (Every evt (Just ("__pause_"++evt)) Nop)
-                                     (Pause' ("__pause_"++evt) p)))
-remPause (Fin var p)         = Fin var (remPause p)
-remPause (Async p)           = Async (remPause p)
-remPause p                   = p
-
 -- toGrammar: Converts full -> basic
 
 toGrammar :: Stmt -> G.Stmt
 toGrammar p = toG $ remAwaitFor $ remAwaitTmr $ remPay
                   $ remSpawn $ chkSpawn
-                  $ remFin $ remAsync $ remPause $ p where
+                  $ remPause $ remFin $ remAsync $ p where
   toG :: Stmt -> G.Stmt
   toG (Var id p)         = G.Var id (toG p)
   toG (Int id b p)       = G.Int id (toG p)
