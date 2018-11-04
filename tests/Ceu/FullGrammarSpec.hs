@@ -26,32 +26,32 @@ spec = do
   --------------------------------------------------------------------------
   describe "remFin" $ do
     it "var x; fin x with nop; nop" $ do
-      remFin (Var "x" (Seq (Fin (Just "x") Nop) Nop))
+      remFin (Var "x" (Seq (FinPseRes (Just "x") Nop Nop Nop) Nop))
       `shouldBe` (Var "x" (Or (Fin' (Seq Nop Nop)) Nop))
 
     it "var x; { fin x with nop; nop }" $ do
-      remFin (Var "x" (Var "y" (Seq (Fin (Just "x") Nop) Nop)))
+      remFin (Var "x" (Var "y" (Seq (FinPseRes (Just "x") Nop Nop Nop) Nop)))
       `shouldBe` (Var "x" (Or (Fin' (Seq Nop Nop)) (Var "y" Nop)))
 
     it "var x; { fin x with x=1; fin with x=2; x=3 }" $ do
-      remFin (Var "x" (Var "y" (Seq (Fin (Just "x") (Write "x" (Const 1))) (Seq (Fin Nothing (Write "x" (Const 2))) (Write "x" (Const 3))))))
+      remFin (Var "x" (Var "y" (Seq (FinPseRes (Just "x") (Write "x" (Const 1)) Nop Nop) (Seq (FinPseRes Nothing (Write "x" (Const 2)) Nop Nop) (Write "x" (Const 3))))))
       `shouldBe` (Var "x" (Or (Fin' (Seq (Write "x" (Const 1)) Nop)) (Var "y" (Or (Fin' (Write "x" (Const 2))) (Write "x" (Const 3))))))
 
     it "var x; { fin x with x=1; fin x with y=1; y=3 }" $ do
       remFin (Var "x" (Var "_" (
-                (Fin (Just "x") (Write "x" (Const 1))) `Seq`
-                (Fin (Just "x") (Write "y" (Const 1))) `Seq`
+                (FinPseRes (Just "x") (Write "x" (Const 1)) Nop Nop) `Seq`
+                (FinPseRes (Just "x") (Write "y" (Const 1)) Nop Nop) `Seq`
                 (Write "y" (Const 3))
              )))
       `shouldBe` (Var "x" (Or (Fin' (Seq (Write "y" (Const 1)) (Seq (Write "x" (Const 1)) Nop))) (Var "_" (Write "y" (Const 3)))))
 
     it "var x; nop; { fin x with x=1; fin with x=2; x=3; fin x with y=1; fin with y=2; y=3 }; nop" $ do
       remFin (Var "x" (Seq Nop (Seq (Var "_" (
-                (Fin (Just "x") (Write "x" (Const 1))) `Seq`
-                (Fin Nothing    (Write "x" (Const 2))) `Seq`
+                (FinPseRes (Just "x") (Write "x" (Const 1)) Nop Nop) `Seq`
+                (FinPseRes Nothing    (Write "x" (Const 2)) Nop Nop) `Seq`
                 (Write "x" (Const 3))                  `Seq`
-                (Fin (Just "x") (Write "y" (Const 1))) `Seq`
-                (Fin Nothing    (Write "y" (Const 2))) `Seq`
+                (FinPseRes (Just "x") (Write "y" (Const 1)) Nop Nop) `Seq`
+                (FinPseRes Nothing    (Write "y" (Const 2)) Nop Nop) `Seq`
                 (Write "y" (Const 3))
              )) Nop)))
       `shouldBe` (Var "x" (Or (Fin' (Seq (Write "y" (Const 1)) (Seq (Write "x" (Const 1)) Nop))) (Seq Nop (Seq (Var "_" (Or (Fin' (Write "x" (Const 2))) (Seq (Write "x" (Const 3)) (Or (Fin' (Write "y" (Const 2))) (Write "y" (Const 3)))))) Nop))))
@@ -121,7 +121,7 @@ spec = do
       `shouldBe` (G.Or (G.Seq (G.Loop (G.Seq (G.Write "x" (Add (Read "x") (Const 1))) (G.AwaitExt "ASYNC"))) (G.AwaitExt "FOREVER")) (G.AwaitExt "A"))
 
   --------------------------------------------------------------------------
-  describe "evalFullProg - misc" $ do
+  describe "misc" $ do
     it "error \"Hello!\"" $ do
       evaluate $ evalFullProg (Error "Hello!") []
       `shouldThrow` errorCall "Runtime error: Hello!"
@@ -145,7 +145,7 @@ nop;
           (Seq
             (Write "b" (Const 99))
             (Seq
-              (Fin (Just "a") (Write "ret" (Read "b")))
+              (FinPseRes (Just "a") (Write "ret" (Read "b")) Nop Nop)
               Nop
             )
           )
@@ -176,32 +176,15 @@ end
         ((AwaitInt "a" Nothing) `Seq` (Write "ret" (Add (Read "ret") (Const 5))))
         (Or
           (
-            (Fin Nothing (
+            (FinPseRes Nothing (
               (Write "ret" (Mul (Read "ret") (Const 2))) `Seq`
               (EmitInt "a" Nothing)
-            )) `Seq`
+            ) Nop Nop) `Seq`
             AwaitFor
           )
           (Write "ret" (Add (Read "ret") (Const 10)))
         )
       ))))
-
-    evalFullProgItPass (99,[[]]) []
-      (Int "x" True (Pause "x" (Write "ret" (Const 99))))
-
-    evalFullProgItPass (99,[[]]) []
-      (Or
-        (Seq (AwaitExt "X" Nothing) (Write "ret" (Const 33)))
-        (Int "x" True
-          (Pause "x"
-            (Seq
-              (EmitInt "x" (Just (Const 1)))
-              (Write "ret" (Const 99))))))
-
-    evalFullProgItPass (99,[[],[],[],[],[]]) [("X",(Just 1)),("A",Nothing),("X",(Just 0)),("A",Nothing)]
-      (Seq
-        (Pause "X" (AwaitInt "A" Nothing))
-        (Write "ret" (Const 99)))
 
   describe "events" $ do
 
@@ -331,6 +314,44 @@ end
              (Or
                (AwaitExt "F" Nothing)
                (Every "I" (Just "i") (EmitExt "O" (Just (Read "i")))))))
+
+  describe "pause" $ do
+
+    evalFullProgItPass (99,[[]]) []
+      (Int "x" True (Pause "x" (Write "ret" (Const 99))))
+
+    evalFullProgItPass (99,[[]]) []
+      (Or
+        (Seq (AwaitExt "X" Nothing) (Write "ret" (Const 33)))
+        (Int "x" True
+          (Pause "x"
+            (Seq
+              (EmitInt "x" (Just (Const 1)))
+              (Write "ret" (Const 99))))))
+
+    evalFullProgItPass (99,[[],[],[],[],[]]) [("X",(Just 1)),("A",Nothing),("X",(Just 0)),("A",Nothing)]
+      (Seq
+        (Pause "X" (AwaitInt "A" Nothing))
+        (Write "ret" (Const 99)))
+
+{-
+pause/if X with
+    do finalize with
+        emit F;
+    pause with
+        emit P;
+    resume with
+        emit R;
+    end
+    await E;
+end
+    evalFullProgItPass (99,[[],[],[],[],[],[]]) [("X",Just 1),("E",Nothing),("X",Just 0),("E",Nothing)]
+      (Seq
+        (Pause "X"
+          (Seq (FinPseRes Nothing (EmitExt "F" Nothing) (EmitExt "P" Nothing) (EmitExt "R" Nothing) Nop Nop)
+               (AwaitInt "E" Nothing)))
+        (Write "ret" (Const 99)))
+-}
 
       where
         evalFullProgItPass (res,outss) hist prog =

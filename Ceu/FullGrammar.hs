@@ -32,7 +32,7 @@ data Stmt
   | Or Stmt Stmt                        -- par/or statement
   | Spawn Stmt                          -- spawn statement
   | Pause ID_Evt Stmt                   -- pause/suspend statement
-  | Fin (Maybe ID_Var) Stmt             -- finalize statement
+  | FinPseRes (Maybe ID_Var) Stmt Stmt Stmt -- finalize/pause/resume statement
   | Async Stmt                          -- async statement
   | Error String                        -- generate runtime error (for testing purposes)
   | Pause' ID_Var Stmt                  -- pause as in basic Grammar
@@ -220,48 +220,49 @@ remPause p                   = p
 
 remFin :: Stmt -> Stmt
 remFin p = p' where
-  (_,p') = rF p
+  (_,p') = rF Nothing p
 
-  rF :: Stmt -> ([(ID_Var,Stmt)], Stmt)
-  rF (If exp p1 p2)      = ([], If exp (snd (rF p1)) (snd (rF p2)))
+  rF :: (Maybe Stmt) -> Stmt -> ([(ID_Var,(Stmt,Stmt,Stmt))], Stmt)
+  rF pse (If exp p1 p2)      = ([], If exp (snd (rF pse p1)) (snd (rF pse p2)))
 
-  rF (Seq (Fin Nothing p1) p2)   = (l2', Or (Fin' p1) p2')
-                                     where (l2',p2') = (rF p2)
-  rF (Seq (Fin (Just id) p1) p2) = (l2'++[(id,p1)], p2')        -- invert l2/l1
-                                     where (l2',p2') = (rF p2)
-  rF (Seq p1 p2)                 = (l2'++l1', Seq p1' p2')
-                                     where (l1',p1') = (rF p1)
-                                           (l2',p2') = (rF p2)
+  rF pse (Seq (FinPseRes Nothing x y z) p)   = (l2', Or (Fin' x) p')
+                                               where (l2',p') = (rF pse p)
+  rF pse (Seq (FinPseRes (Just id) x y z) p) = (l2'++[(id,(x,y,z))], p')        -- invert l2/l1
+                                               where (l2',p') = (rF pse p)
+  rF pse (Seq p1 p2)                   = (l2'++l1', Seq p1' p2')
+                                         where (l1',p1') = (rF pse p1)
+                                               (l2',p2') = (rF pse p2)
 
-  rF (Loop p)            = ([], Loop (snd (rF p)))
-  rF (Every evt exp p)   = ([], Every evt exp (snd (rF p)))
-  rF (And p1 p2)         = ([], And (snd (rF p1)) (snd (rF p2)))
-  rF (Or p1 p2)          = ([], Or (snd (rF p1)) (snd (rF p2)))
-  rF (Spawn p)           = ([], Spawn (snd (rF p)))
-  rF (Pause evt p)       = ([], Pause evt (snd (rF p)))
-  rF (Fin id p)          = error "remFin: unexpected statement (Fin)"
-  rF (Int id b p)        = ([], Int id b (snd (rF p)))
+  rF pse (Loop p)            = ([], Loop (snd (rF pse p)))
+  rF pse (Every evt exp p)   = ([], Every evt exp (snd (rF pse p)))
+  rF pse (And p1 p2)         = ([], And (snd (rF pse p1)) (snd (rF pse p2)))
+  rF pse (Or p1 p2)          = ([], Or (snd (rF pse p1)) (snd (rF pse p2)))
+  rF pse (Spawn p)           = ([], Spawn (snd (rF pse p)))
+  rF pse (Pause evt p)       = ([], Pause evt (snd (rF pse p)))
+  rF pse (FinPseRes _ _ _ _) = error "remFin: unexpected statement (Fin)"
+  rF pse (Int id b p)        = ([], Int id b (snd (rF pse p)))
 
-  rF (Var id p)          = (l'', Var id p''') where
-                            (l', p')  = (rF p)   -- results from nested p
-                            (p'',l'') = f id l' -- matches l' with current local id
-                            p''' | ((toSeq p'') == Nop) = p' -- nothing to finalize
-                                 | otherwise            = (Or (Fin' (toSeq p'')) p')
+  rF pse (Var id p)          = (l'', Var id p''') where
+                               (l', p')  = (rF pse p)   -- results from nested p
+                               (xyzs,l'') = f id l'     -- matches l' with current local id
+                               xs = map (\(x,y,z)->x) xyzs
+                               p''' | ((toSeq xs) == Nop) = p' -- nothing to finalize
+                                    | otherwise           = (Or (Fin' (toSeq xs)) p')
 
-                            -- recs: Var in Var, [pending finalize] (id->stmts)
-                            -- rets: [stmts to fin] in block, [remaining finalize]
-                            f :: ID_Var -> [(ID_Var,Stmt)] -> ([Stmt], [(ID_Var,Stmt)])
-                            f _ [] = ([], [])
-                            f id1 ((id2,stmt):fs) = (a++a', b++b') where
-                              (a',b') = f id1 fs
-                              (a, b ) | (id2==id1) = ([stmt], [])
-                                      | otherwise  = ([], [(id2,stmt)])
+                               -- recs: Var in Var, [pending finalize] (id->stmts)
+                               -- rets: [stmts to fin] in block, [remaining finalize]
+                               f :: ID_Var -> [(ID_Var,(Stmt,Stmt,Stmt))] -> ([(Stmt,Stmt,Stmt)], [(ID_Var,(Stmt,Stmt,Stmt))])
+                               f _ [] = ([], [])
+                               f id1 ((id2,xyz):fs) = (a++a', b++b') where
+                                 (a',b') = f id1 fs
+                                 (a, b ) | (id2==id1) = ([xyz], [])
+                                         | otherwise  = ([], [(id2,xyz)])
 
-                            toSeq :: [Stmt] -> Stmt
-                            toSeq []     = Nop
-                            toSeq (s:ss) = Seq s (toSeq ss)
+                               toSeq :: [Stmt] -> Stmt
+                               toSeq []     = Nop
+                               toSeq (s:ss) = Seq s (toSeq ss)
 
-  rF p                   = ([], p)
+  rF pse p                   = ([], p)
 
 -- remAsync: Adds AwaitFor in Loops inside Asyncs
 
@@ -279,7 +280,7 @@ remAsync p = (rA False p) where
   rA inA   (Or p1 p2)        = Or (rA inA p1) (rA inA p2)
   rA inA   (Spawn p)         = Spawn (rA inA p)
   rA inA   (Pause evt p)     = Pause evt (rA inA p)
-  rA inA   (Fin id p)        = Fin id (rA inA p)
+  rA inA   (FinPseRes id x y z) = FinPseRes id (rA inA x) (rA inA y) (rA inA z)
   rA inA   (Async p)         = (rA True p)
   rA inA   p                 = p
 
