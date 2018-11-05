@@ -259,8 +259,7 @@ remFin p = p' where
                                          | otherwise  = ([], [(id2,xyz)])
 
                                toSeq :: [Stmt] -> Stmt
-                               toSeq []     = Nop
-                               toSeq (s:ss) = Seq s (toSeq ss)
+                               toSeq ss = foldr (\stmt ret -> (Seq stmt ret)) Nop ss
 
   rF pse p                   = ([], p)
 
