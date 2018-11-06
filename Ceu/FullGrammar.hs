@@ -12,9 +12,11 @@ import Debug.Trace
 
 type In = (ID_Ext, Maybe Val)
 
+type Fin = (Stmt, Stmt, Stmt)
+
 -- Program (pg 5).
 data Stmt
-  = Var ID_Var Stmt                     -- variable declaration
+  = Var ID_Var (Maybe Fin) Stmt         -- variable declaration
   | Int ID_Int Bool Stmt                -- event declaration
   | Write ID_Var Exp                    -- assignment statement
   | AwaitExt ID_Ext (Maybe ID_Var)      -- await external event
@@ -32,7 +34,7 @@ data Stmt
   | Or Stmt Stmt                        -- par/or statement
   | Spawn Stmt                          -- spawn statement
   | Pause ID_Evt Stmt                   -- pause/suspend statement
-  | FinPseRes (Maybe ID_Var) Stmt Stmt Stmt -- finalize/pause/resume statement
+  | Fin Stmt Stmt Stmt                  -- finalize/pause/resume statement
   | Async Stmt                          -- async statement
   | Error String                        -- generate runtime error (for testing purposes)
   | Pause' ID_Var Stmt                  -- pause as in basic Grammar
@@ -47,7 +49,7 @@ infixr 0 `And`                  -- `And` associates to the right
 -- remAwaitFor: Converts AwaitFor into (AwaitExt "FOREVER")
 
 remAwaitFor :: Stmt -> Stmt
-remAwaitFor (Var id p)        = Var id (remAwaitFor p)
+remAwaitFor (Var id Nothing p) = Var id Nothing (remAwaitFor p)
 remAwaitFor (Int id b p)      = Int id b (remAwaitFor p)
 remAwaitFor (If exp p1 p2)    = If exp (remAwaitFor p1) (remAwaitFor p2)
 remAwaitFor (Seq p1 p2)       = Seq (remAwaitFor p1) (remAwaitFor p2)
@@ -71,7 +73,7 @@ remAwaitFor p                 = p
 --  end
 
 remAwaitTmr :: Stmt -> Stmt
-remAwaitTmr (Var id p)        = Var id (remAwaitTmr p)
+remAwaitTmr (Var id Nothing p) = Var id Nothing (remAwaitTmr p)
 remAwaitTmr (Int id b p)      = Int id b (remAwaitTmr p)
 remAwaitTmr (If exp p1 p2)    = If exp (remAwaitTmr p1) (remAwaitTmr p2)
 remAwaitTmr (Seq p1 p2)       = Seq (remAwaitTmr p1) (remAwaitTmr p2)
@@ -81,7 +83,7 @@ remAwaitTmr (And p1 p2)       = And (remAwaitTmr p1) (remAwaitTmr p2)
 remAwaitTmr (Or p1 p2)        = Or (remAwaitTmr p1) (remAwaitTmr p2)
 remAwaitTmr (Pause' var p)    = Pause' var (remAwaitTmr p)
 remAwaitTmr (Fin' p)          = Fin' (remAwaitTmr p)
-remAwaitTmr (AwaitTmr exp)    = Var "__timer_await"
+remAwaitTmr (AwaitTmr exp)    = Var "__timer_await" Nothing
                                   (Seq
                                     (Write "__timer_await" exp)
                                     (Loop (
@@ -118,8 +120,8 @@ joinAwaitTmr (x:ins) (outs:outss)                        = outs : (joinAwaitTmr 
 -- (EmitInt e v)     -> (Write e_ v) ; (EmitInt e Nothing)
 -- (Every e var ...) -> (Every e Nothing ((Write var e_) ; ...)
 remPay :: Stmt -> Stmt
-remPay (Var id p)                = Var id (remPay p)
-remPay (Int int True p)          = Var ("_"++int) (Int int False (remPay p))
+remPay (Var id Nothing p)        = Var id Nothing (remPay p)
+remPay (Int int True p)          = Var ("_"++int) Nothing (Int int False (remPay p))
 remPay (Int int False p)         = Int int False (remPay p)
 remPay (AwaitExt ext (Just var)) = (AwaitExt ext Nothing) `Seq` (Write var (Read ("_"++ext)))
 remPay (AwaitInt int (Just var)) = (AwaitInt int Nothing) `Seq` (Write var (Read ("_"++int)))
@@ -139,7 +141,7 @@ remPay p                         = p
 -- remSpawn: Converts (spawn p1; ...) into (p1;AwaitFor or ...)
 
 remSpawn :: Stmt -> Stmt
-remSpawn (Var id p)          = Var id (remSpawn p)
+remSpawn (Var id Nothing p)  = Var id Nothing (remSpawn p)
 remSpawn (Int id b p)        = Int id b (remSpawn p)
 remSpawn (If exp p1 p2)      = If exp (remSpawn p1) (remSpawn p2)
 remSpawn (Seq (Spawn p1) p2) = Or (Seq (remSpawn p1) AwaitFor) (remSpawn p2)
@@ -166,7 +168,7 @@ chkSpawn p = case p of
   notS p         = True
 
   chkS :: Stmt -> Bool
-  chkS (Var _ p)     = (notS p) && (chkS p)
+  chkS (Var _ _ p)   = (notS p) && (chkS p)
   chkS (Int _ _ p)   = (notS p) && (chkS p)
   chkS (If _ p1 p2)  = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
   chkS (Seq p1 p2)   = (chkS p1) && (notS p2) && (chkS p2)
@@ -195,7 +197,7 @@ chkSpawn p = case p of
 --      end
 --  end
 remPause :: Stmt -> Stmt
-remPause (Var id p)          = Var id (remPause p)
+remPause (Var id Nothing p)  = Var id Nothing (remPause p)
 remPause (Int id b p)        = Int id b (remPause p)
 remPause (If exp p1 p2)      = If exp (remPause p1) (remPause p2)
 remPause (Seq p1 p2)         = Seq (remPause p1) (remPause p2)
@@ -204,7 +206,7 @@ remPause (Every evt var p)   = Every evt var (remPause p)
 remPause (And p1 p2)         = And (remPause p1) (remPause p2)
 remPause (Or p1 p2)          = Or (remPause p1) (remPause p2)
 remPause (Spawn p)           = Spawn (remPause p)
-remPause (Pause evt p)       = Var ("__pause_"++evt)
+remPause (Pause evt p)       = Var ("__pause_"++evt) Nothing
                                  (Seq
                                    (Write ("__pause_"++evt) (Const 0))
                                    (Or
@@ -214,61 +216,12 @@ remPause (Fin' p)            = Fin' (remPause p)
 remPause (Async p)           = Async (remPause p)
 remPause p                   = p
 
--- remFin:
--- (Fin _  p);A -> (or (Fin' p) A)
--- (Fin id p);A -> A ||| (Var (Or [(Fin p)] X)
-
-remFin :: Stmt -> Stmt
-remFin p = p' where
-  (_,p') = rF Nothing p
-
-  rF :: (Maybe Stmt) -> Stmt -> ([(ID_Var,(Stmt,Stmt,Stmt))], Stmt)
-  rF pse (If exp p1 p2)      = ([], If exp (snd (rF pse p1)) (snd (rF pse p2)))
-
-  rF pse (Seq (FinPseRes Nothing x y z) p)   = (l2', Or (Fin' x) p')
-                                               where (l2',p') = (rF pse p)
-  rF pse (Seq (FinPseRes (Just id) x y z) p) = (l2'++[(id,(x,y,z))], p')        -- invert l2/l1
-                                               where (l2',p') = (rF pse p)
-  rF pse (Seq p1 p2)                   = (l2'++l1', Seq p1' p2')
-                                         where (l1',p1') = (rF pse p1)
-                                               (l2',p2') = (rF pse p2)
-
-  rF pse (Loop p)            = ([], Loop (snd (rF pse p)))
-  rF pse (Every evt exp p)   = ([], Every evt exp (snd (rF pse p)))
-  rF pse (And p1 p2)         = ([], And (snd (rF pse p1)) (snd (rF pse p2)))
-  rF pse (Or p1 p2)          = ([], Or (snd (rF pse p1)) (snd (rF pse p2)))
-  rF pse (Spawn p)           = ([], Spawn (snd (rF pse p)))
-  rF pse (Pause evt p)       = ([], Pause evt (snd (rF pse p)))
-  rF pse (FinPseRes _ _ _ _) = error "remFin: unexpected statement (Fin)"
-  rF pse (Int id b p)        = ([], Int id b (snd (rF pse p)))
-
-  rF pse (Var id p)          = (l'', Var id p''') where
-                               (l', p')  = (rF pse p)   -- results from nested p
-                               (xyzs,l'') = f id l'     -- matches l' with current local id
-                               xs = map (\(x,y,z)->x) xyzs
-                               p''' | ((toSeq xs) == Nop) = p' -- nothing to finalize
-                                    | otherwise           = (Or (Fin' (toSeq xs)) p')
-
-                               -- recs: Var in Var, [pending finalize] (id->stmts)
-                               -- rets: [stmts to fin] in block, [remaining finalize]
-                               f :: ID_Var -> [(ID_Var,(Stmt,Stmt,Stmt))] -> ([(Stmt,Stmt,Stmt)], [(ID_Var,(Stmt,Stmt,Stmt))])
-                               f _ [] = ([], [])
-                               f id1 ((id2,xyz):fs) = (a++a', b++b') where
-                                 (a',b') = f id1 fs
-                                 (a, b ) | (id2==id1) = ([xyz], [])
-                                         | otherwise  = ([], [(id2,xyz)])
-
-                               toSeq :: [Stmt] -> Stmt
-                               toSeq ss = foldr (\stmt ret -> (Seq stmt ret)) Nop ss
-
-  rF pse p                   = ([], p)
-
 -- remAsync: Adds AwaitFor in Loops inside Asyncs
 
 remAsync :: Stmt -> Stmt
 remAsync p = (rA False p) where
   rA :: Bool -> Stmt -> Stmt
-  rA inA   (Var id p)        = Var id (rA inA p)
+  rA inA   (Var id Nothing p) = Var id Nothing (rA inA p)
   rA inA   (Int id b p)      = Int id b (rA inA p)
   rA inA   (If exp p1 p2)    = If exp (rA inA p1) (rA inA p2)
   rA inA   (Seq p1 p2)       = Seq (rA inA p1) (rA inA p2)
@@ -279,20 +232,42 @@ remAsync p = (rA False p) where
   rA inA   (Or p1 p2)        = Or (rA inA p1) (rA inA p2)
   rA inA   (Spawn p)         = Spawn (rA inA p)
   rA inA   (Pause evt p)     = Pause evt (rA inA p)
-  rA inA   (FinPseRes id x y z) = FinPseRes id (rA inA x) (rA inA y) (rA inA z)
   rA inA   (Async p)         = (rA True p)
   rA inA   p                 = p
 
 -- TODO: chkAsync: no sync statements
+
+-- remFin:
+-- (Fin x y z);A -> (or (Fin' p) A)
+-- (Fin id p);A -> A ||| (Var (Or [(Fin p)] X)
+
+remFin :: Stmt -> Stmt
+remFin p = rF Nothing p where
+  rF :: (Maybe ID_Evt) -> Stmt -> Stmt
+  rF pse (Var var (Just (x,y,z)) p) = rF pse (Var var Nothing (Seq (Fin x y z) p))
+  rF pse (Var var Nothing p)       = Var var Nothing (rF pse p)
+  rF pse (Int id b p)              = Int id b (rF pse p)
+  rF pse (If exp p1 p2)            = If exp (rF pse p1) (rF pse p2)
+  rF pse (Seq (Fin x y z) p)       = Or (rF pse p) (Fin' x)
+  rF pse (Seq p1 p2)               = Seq (rF pse p1) (rF pse p2)
+  rF pse (Loop p)                  = Loop (rF pse p)
+  rF pse (Every evt exp p)         = Every evt exp (rF pse p)
+  rF pse (And p1 p2)               = And (rF pse p1) (rF pse p2)
+  rF pse (Or p1 p2)                = Or (rF pse p1) (rF pse p2)
+  rF pse (Spawn p)                 = Spawn (rF pse p)
+  rF pse (Pause evt p)             = Pause evt (rF pse p)
+  rF pse (Fin _ _ _)               = error "remFin: unexpected statement (Fin)"
+  rF pse (Async p)                 = Async (rF pse p)
+  rF pse p                         = p
 
 -- toGrammar: Converts full -> basic
 
 toGrammar :: Stmt -> G.Stmt
 toGrammar p = toG $ remAwaitFor $ remAwaitTmr $ remPay
                   $ remSpawn $ chkSpawn
-                  $ remPause $ remFin $ remAsync $ p where
+                  $ remPause $ remAsync $ remFin $ p where
   toG :: Stmt -> G.Stmt
-  toG (Var id p)         = G.Var id (toG p)
+  toG (Var id Nothing p) = G.Var id (toG p)
   toG (Int id b p)       = G.Int id (toG p)
   toG (Write id exp)     = G.Write id exp
   toG (AwaitExt ext var) = G.AwaitExt ext

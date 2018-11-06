@@ -26,35 +26,48 @@ spec = do
   --------------------------------------------------------------------------
   describe "remFin" $ do
     it "var x; fin x with nop; nop" $ do
-      remFin (Var "x" (Seq (FinPseRes (Just "x") Nop Nop Nop) Nop))
-      `shouldBe` (Var "x" (Or (Fin' (Seq Nop Nop)) Nop))
+      remFin (Var "x" (Just (Nop,Nop,Nop)) Nop)
+      `shouldBe` (Var "x" Nothing (Or Nop (Fin' Nop)))
 
     it "var x; { fin x with nop; nop }" $ do
-      remFin (Var "x" (Var "y" (Seq (FinPseRes (Just "x") Nop Nop Nop) Nop)))
-      `shouldBe` (Var "x" (Or (Fin' (Seq Nop Nop)) (Var "y" Nop)))
+      remFin (Var "x" (Just (Nop,Nop,Nop)) (Var "y" Nothing Nop))
+      `shouldBe` (Var "x" Nothing (Or (Var "y" Nothing Nop) (Fin' Nop)))
 
     it "var x; { fin x with x=1; fin with x=2; x=3 }" $ do
-      remFin (Var "x" (Var "y" (Seq (FinPseRes (Just "x") (Write "x" (Const 1)) Nop Nop) (Seq (FinPseRes Nothing (Write "x" (Const 2)) Nop Nop) (Write "x" (Const 3))))))
-      `shouldBe` (Var "x" (Or (Fin' (Seq (Write "x" (Const 1)) Nop)) (Var "y" (Or (Fin' (Write "x" (Const 2))) (Write "x" (Const 3))))))
+      remFin (Var "x" (Just ((Write "x" (Const 1)),Nop,Nop)) (Var "y" Nothing (Seq (Fin (Write "x" (Const 2)) Nop Nop) (Write "x" (Const 3)))))
+      `shouldBe` (Var "x" Nothing (Or (Var "y" Nothing (Or (Write "x" (Const 3)) (Fin' (Write "x" (Const 2))))) (Fin' (Write "x" (Const 1)))))
 
     it "var x; { fin x with x=1; fin x with y=1; y=3 }" $ do
-      remFin (Var "x" (Var "_" (
-                (FinPseRes (Just "x") (Write "x" (Const 1)) Nop Nop) `Seq`
-                (FinPseRes (Just "x") (Write "y" (Const 1)) Nop Nop) `Seq`
-                (Write "y" (Const 3))
-             )))
-      `shouldBe` (Var "x" (Or (Fin' (Seq (Write "y" (Const 1)) (Seq (Write "x" (Const 1)) Nop))) (Var "_" (Write "y" (Const 3)))))
+      remFin (Var "x" (Just (((Write "x" (Const 1)) `Seq` (Write "y" (Const 1))),Nop,Nop)) (Var "_" Nothing (Write "y" (Const 3))))
+      `shouldBe` (Var "x" Nothing (Or (Var "_" Nothing (Write "y" (Const 3))) (Fin' (Seq (Write "x" (Const 1)) (Write "y" (Const 1))))))
 
     it "var x; nop; { fin x with x=1; fin with x=2; x=3; fin x with y=1; fin with y=2; y=3 }; nop" $ do
-      remFin (Var "x" (Seq Nop (Seq (Var "_" (
-                (FinPseRes (Just "x") (Write "x" (Const 1)) Nop Nop) `Seq`
-                (FinPseRes Nothing    (Write "x" (Const 2)) Nop Nop) `Seq`
-                (Write "x" (Const 3))                  `Seq`
-                (FinPseRes (Just "x") (Write "y" (Const 1)) Nop Nop) `Seq`
-                (FinPseRes Nothing    (Write "y" (Const 2)) Nop Nop) `Seq`
-                (Write "y" (Const 3))
-             )) Nop)))
-      `shouldBe` (Var "x" (Or (Fin' (Seq (Write "y" (Const 1)) (Seq (Write "x" (Const 1)) Nop))) (Seq Nop (Seq (Var "_" (Or (Fin' (Write "x" (Const 2))) (Seq (Write "x" (Const 3)) (Or (Fin' (Write "y" (Const 2))) (Write "y" (Const 3)))))) Nop))))
+      remFin
+        (Var "x" (Just ((Write "x" (Const 1) `Seq` (Write "y" (Const 1)) `Seq` Nop),Nop,Nop))
+                 (Seq Nop
+                   (Seq
+                     (Var "_" Nothing (
+                       (Fin (Write "x" (Const 2)) Nop Nop) `Seq`
+                       (Write "x" (Const 3))               `Seq`
+                       (Fin (Write "y" (Const 2)) Nop Nop) `Seq`
+                       (Write "y" (Const 3))))
+                     Nop)))
+      `shouldBe`
+        (Var "x" Nothing
+                 (Or
+                   (Seq
+                     Nop
+                     (Seq
+                       (Var "_" Nothing
+                         (Or
+                           (Seq
+                             (Write "x" (Const 3))
+                             (Or
+                               (Write "y" (Const 3))
+                               (Fin' (Write "y" (Const 2)))))
+                           (Fin' (Write "x" (Const 2)))))
+                       Nop))
+                    (Fin' (Seq (Write "x" (Const 1)) (Seq (Write "y" (Const 1)) Nop)))))
 
   --------------------------------------------------------------------------
   describe "remSpawn" $ do
@@ -104,15 +117,15 @@ spec = do
   describe "toGrammar" $ do
 
     it "var x;" $ do
-      toGrammar (Var "x" Nop)
+      toGrammar (Var "x" Nothing Nop)
       `shouldBe` (G.Var "x" G.Nop)
 
     it "do var x; x = 1 end" $ do
-      toGrammar (Var "x" (Write "x" (Const 1)))
+      toGrammar (Var "x" Nothing (Write "x" (Const 1)))
       `shouldBe` (G.Var "x" (G.Write "x" (Const 1)))
 
     it "spawn do await A; end ;; await B; var x; await FOREVER;" $ do
-      toGrammar (Seq (Spawn (AwaitExt "A" Nothing)) (Seq (AwaitExt "B" Nothing) (Var "x" AwaitFor)))
+      toGrammar (Seq (Spawn (AwaitExt "A" Nothing)) (Seq (AwaitExt "B" Nothing) (Var "x" Nothing AwaitFor)))
       `shouldBe` (G.Or (G.Seq (G.AwaitExt "A") (G.AwaitExt "FOREVER")) (G.Seq (G.AwaitExt "B") (G.Var "x" (G.AwaitExt "FOREVER"))))
 
 
@@ -128,26 +141,20 @@ spec = do
 
 {-
 var a;
-var b = 1;
 do finalize (a) with
     ret = b;
 end
+var b = 1;
 nop;
 -}
 
-    -- TODO-bug:
-    -- `fin` is moved to be between "a" and "b", before "b" is defined,
-    -- but `fin` uses "b".
-    -- Solution is to reject variables in `fin` that are defined after "a"
-    evalFullProgItPass (99,[[]]) [] (
-      (Var "a"
-        (Var "b"
+    -- TODO: OK
+    evalFullProgItFail "varsRead: undeclared variable: b" [] (
+      (Var "a" (Just ((Write "ret" (Read "b")),Nop,Nop))
+        (Var "b" Nothing
           (Seq
             (Write "b" (Const 99))
-            (Seq
-              (FinPseRes (Just "a") (Write "ret" (Read "b")) Nop Nop)
-              Nop
-            )
+            Nop
           )
         )
       ))
@@ -176,7 +183,7 @@ end
         ((AwaitInt "a" Nothing) `Seq` (Write "ret" (Add (Read "ret") (Const 5))))
         (Or
           (
-            (FinPseRes Nothing (
+            (Fin (
               (Write "ret" (Mul (Read "ret") (Const 2))) `Seq`
               (EmitInt "a" Nothing)
             ) Nop Nop) `Seq`
@@ -240,6 +247,7 @@ with
     await F;
 end
 -}
+    -- TODO: OK
     evalFullProgItFail "varsRead: uninitialized variable: _A" [("A",Nothing)] (
       Or
         (Every "A" (Just "ret") Nop)
@@ -310,7 +318,7 @@ end
 
     evalFullProgItPass (1,[[],[("O",Just 1)],[("O",Just 2)],[]]) [("I",Just 1),("I",Just 2),("F",Nothing)]
       (Seq (Write "ret" (Const 1))
-           (Var "i"
+           (Var "i" Nothing
              (Or
                (AwaitExt "F" Nothing)
                (Every "I" (Just "i") (EmitExt "O" (Just (Read "i")))))))
@@ -345,13 +353,15 @@ pause/if X with
     end
     await E;
 end
-    evalFullProgItPass (99,[[],[],[],[],[],[]]) [("X",Just 1),("E",Nothing),("X",Just 0),("E",Nothing)]
+-}
+    evalFullProgItPass (99,[[],[("P",Nothing)],[],[("R",Nothing)],[("F",Nothing)]]) [("X",Just 1),("E",Nothing),("X",Just 0),("E",Nothing)]
       (Seq
         (Pause "X"
-          (Seq (FinPseRes Nothing (EmitExt "F" Nothing) (EmitExt "P" Nothing) (EmitExt "R" Nothing) Nop Nop)
+          (Seq (Fin (EmitExt "F" Nothing) (EmitExt "P" Nothing) (EmitExt "R" Nothing))
                (AwaitInt "E" Nothing)))
         (Write "ret" (Const 99)))
--}
+
+-- TODO: do the same but for Var "a"
 
       where
         evalFullProgItPass (res,outss) hist prog =
