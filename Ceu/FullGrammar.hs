@@ -206,12 +206,25 @@ remPause (Every evt var p)   = Every evt var (remPause p)
 remPause (And p1 p2)         = And (remPause p1) (remPause p2)
 remPause (Or p1 p2)          = Or (remPause p1) (remPause p2)
 remPause (Spawn p)           = Spawn (remPause p)
-remPause (Pause evt p)       = Var ("__pause_"++evt) Nothing
-                                 (Seq
-                                   (Write ("__pause_"++evt) (Const 0))
-                                   (Or
-                                     (Every evt (Just ("__pause_"++evt)) Nop)
-                                     (Pause' ("__pause_"++evt) p)))
+remPause (Pause evt p)       =
+  Var ("__pause_var_"++evt) Nothing
+    (Int ("__pause_int_"++evt) False
+      (Seq
+        (Write ("__pause_var_"++evt) (Const 0))
+        (Or
+          (Var "__tmp" Nothing
+            (Every evt (Just "__tmp")
+              (If (Equ (Read "__tmp") (Const 0))
+                  (Seq (Write ("__pause_var_"++evt) (Const 0))
+                       (EmitInt ("__pause_int_"++evt) Nothing))
+                  Nop)))
+        (Or
+          (Pause' ("__pause_var_"++evt) p)
+          (Var "__tmp" Nothing
+            (Every evt (Just "__tmp")
+              (If (Equ (Read "__tmp") (Const 1))
+                  (Write ("__pause_var_"++evt) (Const 1))
+                  Nop)))))))
 remPause (Fin' p)            = Fin' (remPause p)
 remPause (Async p)           = Async (remPause p)
 remPause p                   = p
@@ -248,14 +261,23 @@ remFin p = rF Nothing p where
   rF pse (Var var Nothing p)       = Var var Nothing (rF pse p)
   rF pse (Int id b p)              = Int id b (rF pse p)
   rF pse (If exp p1 p2)            = If exp (rF pse p1) (rF pse p2)
-  rF pse (Seq (Fin x y z) p)       = Or (rF pse p) (Fin' x)
+
+  rF pse (Seq (Fin x y z) p)       = Or (rF pse p) (And (rF pse yz) (Fin' (rF pse x)))
+    where
+      yz = case (pse,y,z) of
+        (Nothing,  Nop, Nop) -> Nop
+        (Nothing,  _,   _)   -> error "remFin: unexpected pause/resume statement"
+        (Just evt, y,   z)   -> And
+                                  (Every evt Nothing y)
+                                  (Every ("__pause_int_"++evt) Nothing z)
+
   rF pse (Seq p1 p2)               = Seq (rF pse p1) (rF pse p2)
   rF pse (Loop p)                  = Loop (rF pse p)
   rF pse (Every evt exp p)         = Every evt exp (rF pse p)
   rF pse (And p1 p2)               = And (rF pse p1) (rF pse p2)
   rF pse (Or p1 p2)                = Or (rF pse p1) (rF pse p2)
   rF pse (Spawn p)                 = Spawn (rF pse p)
-  rF pse (Pause evt p)             = Pause evt (rF pse p)
+  rF pse (Pause evt p)             = Pause evt (rF (Just evt) p)
   rF pse (Fin _ _ _)               = error "remFin: unexpected statement (Fin)"
   rF pse (Async p)                 = Async (rF pse p)
   rF pse p                         = p

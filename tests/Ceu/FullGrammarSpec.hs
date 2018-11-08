@@ -27,19 +27,19 @@ spec = do
   describe "remFin" $ do
     it "var x; fin x with nop; nop" $ do
       remFin (Var "x" (Just (Nop,Nop,Nop)) Nop)
-      `shouldBe` (Var "x" Nothing (Or Nop (Fin' Nop)))
+      `shouldBe` (Var "x" Nothing (Or Nop (And Nop (Fin' Nop))))
 
     it "var x; { fin x with nop; nop }" $ do
       remFin (Var "x" (Just (Nop,Nop,Nop)) (Var "y" Nothing Nop))
-      `shouldBe` (Var "x" Nothing (Or (Var "y" Nothing Nop) (Fin' Nop)))
+      `shouldBe` (Var "x" Nothing (Or (Var "y" Nothing Nop) (And Nop (Fin' Nop))))
 
     it "var x; { fin x with x=1; fin with x=2; x=3 }" $ do
       remFin (Var "x" (Just ((Write "x" (Const 1)),Nop,Nop)) (Var "y" Nothing (Seq (Fin (Write "x" (Const 2)) Nop Nop) (Write "x" (Const 3)))))
-      `shouldBe` (Var "x" Nothing (Or (Var "y" Nothing (Or (Write "x" (Const 3)) (Fin' (Write "x" (Const 2))))) (Fin' (Write "x" (Const 1)))))
+      `shouldBe` (Var "x" Nothing (Or (Var "y" Nothing (Or (Write "x" (Const 3)) (And Nop (Fin' (Write "x" (Const 2)))))) (And Nop (Fin' (Write "x" (Const 1))))))
 
     it "var x; { fin x with x=1; fin x with y=1; y=3 }" $ do
       remFin (Var "x" (Just (((Write "x" (Const 1)) `Seq` (Write "y" (Const 1))),Nop,Nop)) (Var "_" Nothing (Write "y" (Const 3))))
-      `shouldBe` (Var "x" Nothing (Or (Var "_" Nothing (Write "y" (Const 3))) (Fin' (Seq (Write "x" (Const 1)) (Write "y" (Const 1))))))
+      `shouldBe` (Var "x" Nothing (Or (Var "_" Nothing (Write "y" (Const 3))) (And Nop (Fin' (Seq (Write "x" (Const 1)) (Write "y" (Const 1)))))))
 
     it "var x; nop; { fin x with x=1; fin with x=2; x=3; fin x with y=1; fin with y=2; y=3 }; nop" $ do
       remFin
@@ -64,10 +64,10 @@ spec = do
                              (Write "x" (Const 3))
                              (Or
                                (Write "y" (Const 3))
-                               (Fin' (Write "y" (Const 2)))))
-                           (Fin' (Write "x" (Const 2)))))
+                               (And Nop (Fin' (Write "y" (Const 2))))))
+                           (And Nop (Fin' (Write "x" (Const 2))))))
                        Nop))
-                    (Fin' (Seq (Write "x" (Const 1)) (Seq (Write "y" (Const 1)) Nop)))))
+                    (And Nop (Fin' (Seq (Write "x" (Const 1)) (Seq (Write "y" (Const 1)) Nop))))))
 
   --------------------------------------------------------------------------
   describe "remSpawn" $ do
@@ -342,6 +342,12 @@ end
         (Pause "X" (AwaitInt "A" Nothing))
         (Write "ret" (Const 99)))
 
+    evalFullProgItPass (99,[[],[("P",Nothing)],[]]) [("X",Just 1),("E",Nothing)]
+      (Or
+        (Pause "X"
+          (Seq (Fin Nop (EmitExt "P" Nothing) Nop) AwaitFor))
+        (Seq (AwaitExt "E" Nothing) (Write "ret" (Const 99))))
+
 {-
 pause/if X with
     do finalize with
@@ -358,10 +364,15 @@ end
       (Seq
         (Pause "X"
           (Seq (Fin (EmitExt "F" Nothing) (EmitExt "P" Nothing) (EmitExt "R" Nothing))
-               (AwaitInt "E" Nothing)))
+               (AwaitExt "E" Nothing)))
         (Write "ret" (Const 99)))
 
--- TODO: do the same but for Var "a"
+    evalFullProgItPass (99,[[],[("P",Nothing)],[],[("R",Nothing)],[("F",Nothing)]]) [("X",Just 1),("E",Nothing),("X",Just 0),("E",Nothing)]
+      (Seq
+        (Pause "X"
+          (Var "x" (Just ((EmitExt "F" Nothing),(EmitExt "P" Nothing),(EmitExt "R" Nothing)))
+            (AwaitExt "E" Nothing)))
+        (Write "ret" (Const 99)))
 
       where
         evalFullProgItPass (res,outss) hist prog =
