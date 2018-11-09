@@ -347,7 +347,7 @@ steps d
 -- Returns the last value of global "ret" set by the program.
 evalProg_Reaction :: G.Stmt -> [a] -> (Stmt->a->(Stmt,Outs)) -> (Val,[Outs])
 evalProg_Reaction prog ins reaction -- enclosing block with "ret" that never terminates
-  = eP (fromGrammar (G.Var "ret" (G.Seq prog (G.AwaitExt "FOREVER")))) ins []
+  = eP (fromGrammar $ G.simplify (G.Var "ret" (G.Seq prog (G.AwaitExt "FOREVER")))) ins []
   where
     --eP :: Stmt -> [a] -> [Outs] -> (Val,[Outs])
     eP prog ins outss = case prog of
