@@ -97,7 +97,7 @@ remAwaitTmr (AwaitTmr exp)    = Var "__timer_await" Nothing
 remAwaitTmr p                 = p
 
 -- expdAwaitTmr:
--- expands ("TIMER",v) -> ("TIMER",Nothing) x v
+-- expands ("TIMER",v) -> ("TIMER",Nothing) * v
 expdAwaitTmr :: [In] -> [In]
 expdAwaitTmr []                      = []
 expdAwaitTmr (("TIMER", Just 0):ins) = (expdAwaitTmr ins)

@@ -6,7 +6,7 @@ import Text.Printf
 -- Program (pg 5).
 data Stmt
   = Var ID_Var Stmt             -- variable declaration
-  | Int ID_Var Stmt             -- event declaration
+  | Int ID_Int Stmt             -- event declaration
   | Write ID_Var Exp            -- assignment statement
   | AwaitExt ID_Ext             -- await external event
   | EmitExt ID_Ext (Maybe Exp)  -- emit external event
@@ -120,3 +120,75 @@ checkFin finOrEvery = case finOrEvery of
 -- Alias for checkFin.
 checkEvery :: Stmt -> Bool
 checkEvery = checkFin
+
+simplify :: Stmt -> Stmt
+
+simplify (Var id p) =
+  case p' of
+    Nop   -> Nop
+    Break -> Break
+    otherwise -> Var id p'
+  where p' = simplify p
+
+simplify (Int id p) =
+  case p' of
+    Nop   -> Nop
+    Break -> Break
+    otherwise -> Int id p'
+  where p' = simplify p
+
+simplify (If exp p q) =
+  if p' == q' then p' else (If exp p' q')
+  where p' = simplify p
+        q' = simplify q
+
+simplify (Seq p q) =
+  case (p',q') of
+    (Nop,   q')  -> q'
+    (p',    Nop) -> p'
+    (Break, q')  -> Break
+    otherwise    -> Seq p' q'
+  where p' = simplify p
+        q' = simplify q
+
+simplify (Loop p) =
+  case p' of
+    Break     -> Nop
+    otherwise -> Loop p'
+  where p' = simplify p
+
+simplify (Every evt p) = (Every evt (simplify p))
+
+simplify (And p q) =
+  case (p',q') of
+    (Nop,   q')  -> q'
+    (p',    Nop) -> p'
+    (Break, q')  -> Break
+    otherwise    -> And p' q'
+  where p' = simplify p
+        q' = simplify q
+
+simplify (Or p q) =
+  case (p',q') of
+    (AwaitExt "FOREVER", q') -> q'
+    (p', AwaitExt "FOREVER") -> p'
+    (Nop,   q') -> Nop
+    (Break, q') -> Break
+    otherwise   -> Or p' q'
+  where p'  = simplify p
+        q'  = simplify q
+
+simplify (Pause id p) =
+  case p' of
+    Nop   -> Nop
+    Break -> Break
+    otherwise -> Pause id p'
+  where p' = simplify p
+
+simplify (Fin p) =
+  case p' of
+    Nop       -> Nop
+    otherwise -> Fin p'
+  where p' = simplify p
+
+simplify p = p

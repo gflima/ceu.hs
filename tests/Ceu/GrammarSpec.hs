@@ -113,6 +113,86 @@ spec = do
     checkProgIt (Loop (Nop `Or` Loop (Loop (Loop (AwaitExt "A")))))   False
     checkProgIt (Loop (Break `Or` Loop (Loop (Loop (AwaitExt "A"))))) True
 
+  --------------------------------------------------------------------------
+  describe "simplify" $ do
+    it "Nop -> Nop" $ do
+      simplify Nop `shouldBe` Nop
+    it "Seq -> Nop" $ do
+      simplify (Seq Nop Nop)   `shouldBe` Nop
+    it "Seq -> Nop" $ do
+      simplify (Seq Nop Break) `shouldBe` Break
+    it "Seq -> Nop" $ do
+      simplify (Seq Break Nop) `shouldBe` Break
+    it "Loop-Break -> Nop" $ do
+      simplify (Loop Break)    `shouldBe` Nop
+    it "Seq -> Nop" $ do
+      simplify (Seq (Seq Nop Break) Nop) `shouldBe` Break
+    it "Seq -> Nop" $ do
+      simplify (Seq Nop (Seq Nop Break)) `shouldBe` Break
+    it "Seq -> Nop" $ do
+      simplify (Seq Nop (Seq Nop (Loop Break))) `shouldBe` Nop
+    it "Break;* -> Break" $ do
+      simplify (Seq Break (AwaitExt "")) `shouldBe` Break
+
+    it "Var -> Nop" $ do
+      simplify (Var "" Nop) `shouldBe` Nop
+    it "Var -> Break" $ do
+      simplify (Var "" Break) `shouldBe` Break
+    it "Var -> Break" $ do
+      simplify (Var "" (Seq Nop Break)) `shouldBe` Break
+
+    it "Int -> Nop" $ do
+      simplify (Int "" Nop) `shouldBe` Nop
+    it "Int -> Break" $ do
+      simplify (Int "" Break) `shouldBe` Break
+    it "Int -> Break" $ do
+      simplify (Int "" (Seq Nop Break)) `shouldBe` Break
+
+    it "If a a -> a" $ do
+      simplify (If (Const 1) (AwaitExt "") (AwaitExt "")) `shouldBe` (AwaitExt "")
+    it "If x y -> If x y" $ do
+      simplify (If (Const 1) Break Nop) `shouldBe` (If (Const 1) Break Nop)
+
+    it "Every x y -> Every x y" $ do
+      simplify (Every "a" Break) `shouldBe` (Every "a" Break)
+
+    it "And Nop y -> y" $ do
+      simplify (And Nop (Seq Break Nop)) `shouldBe` Break
+    it "And x Break -> Break" $ do
+      simplify (And (Seq Break Nop) (AwaitExt "")) `shouldBe` Break
+    it "And x Break -> Break" $ do
+      simplify (And (Seq (AwaitExt "") Nop) (AwaitExt "")) `shouldBe` (And (AwaitExt "") (AwaitExt ""))
+
+    it "And Nop y -> y" $ do
+      simplify (And Nop (Seq Break Nop)) `shouldBe` Break
+    it "And Break x -> Break" $ do
+      simplify (And (Seq Break Nop) (AwaitExt "")) `shouldBe` Break
+    it "And x y -> And x y" $ do
+      simplify (And (Seq (AwaitExt "") Nop) (AwaitExt "")) `shouldBe` (And (AwaitExt "") (AwaitExt ""))
+
+    it "Or Nop y -> Nop" $ do
+      simplify (Or Nop (Seq Break Nop)) `shouldBe` Nop
+    it "Or x FOREVER -> x" $ do
+      simplify (Or (AwaitExt "") (AwaitExt "FOREVER")) `shouldBe` (AwaitExt "")
+    it "Or FOREVER x -> x" $ do
+      simplify (Or (AwaitExt "FOREVER") (AwaitExt "")) `shouldBe` (AwaitExt "")
+    it "Or Break x -> Break" $ do
+      simplify (Or (Seq Break Nop) (AwaitExt "")) `shouldBe` Break
+    it "Or x y -> Or x y" $ do
+      simplify (And (Seq (AwaitExt "") Nop) (AwaitExt "")) `shouldBe` (And (AwaitExt "") (AwaitExt ""))
+
+    it "Pause -> Nop" $ do
+      simplify (Pause "" Nop) `shouldBe` Nop
+    it "Pause -> Break" $ do
+      simplify (Pause "" Break) `shouldBe` Break
+    it "Pause -> Break" $ do
+      simplify (Pause "" (Seq Nop Break)) `shouldBe` Break
+
+    it "Fin -> Nop" $ do
+      simplify (Fin (Var "" (Loop Break))) `shouldBe` Nop
+    it "Fin -> Nop" $ do
+      simplify (Fin (Var "" (If (Const 1) Nop Break))) `shouldBe` (Fin (Var "" (If (Const 1) Nop Break)))
+
       where
         checkIt ck p b   =
           (it ((if b then "pass" else "fail") ++ ": " ++ showProg p) $
