@@ -2,6 +2,11 @@ module Ceu.GrammarSpec (main, spec) where
 
 import Ceu.Globals
 import Ceu.Grammar
+import qualified Ceu.Grammar.Check        as Check
+import qualified Ceu.Grammar.Check.Escape as Escape
+import qualified Ceu.Grammar.Check.Loop   as Loop
+import qualified Ceu.Grammar.Check.Fin    as Fin
+import qualified Ceu.Grammar.Check.Every  as Every
 import Test.Hspec
 
 main :: IO ()
@@ -134,8 +139,8 @@ spec = do
         checkIt ck p b   =
           (it ((if b then "pass" else "fail") ++ ": " ++ showProg p) $
             (ck p) `shouldBe` b)
-        checkLoopIt p b  = checkIt checkLoop p b
-        checkFinIt p b   = checkIt checkFin p b
-        checkEveryIt p b = checkIt checkEvery p b
-        checkEscapeIt p b = checkIt checkEscape p b
-        checkProgIt p b  = checkIt checkProg p b
+        checkLoopIt p b   = checkIt Loop.check p b
+        checkFinIt p b    = checkIt Fin.check p b
+        checkEveryIt p b  = checkIt Every.check p b
+        checkEscapeIt p b = checkIt Escape.check p b
+        checkProgIt p b   = checkIt Check.stmts p b

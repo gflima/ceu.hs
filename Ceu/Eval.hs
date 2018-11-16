@@ -1,8 +1,9 @@
 module Ceu.Eval where
 
 import Ceu.Globals
-import qualified Ceu.Grammar as G
+import qualified Ceu.Grammar          as G
 import qualified Ceu.Grammar.Simplify as S
+import qualified Ceu.Grammar.Check    as Check
 import Data.Maybe
 import Text.Printf
 import Debug.Trace
@@ -343,13 +344,7 @@ evalProg_Reaction prog ins reaction -- enclosing block with "ret" that never ter
         | otherwise      -> eP prog' (tail ins) (outss++[outs']) where
                                (prog',outs') = reaction prog (head ins)
 
-    prog' = (fromGrammar $ check $ S.simplify (G.Var "ret" (G.Seq prog (G.AwaitExt "FOREVER"))))
-
-    check :: G.Stmt -> G.Stmt
-    check p
-      | not (G.checkProg p)   = error "checkProg: invalid program"
-      | not (G.checkEscape p) = error "checkProg: invalid program"
-      | otherwise             = p
+    prog' = (fromGrammar $ Check.all $ S.simplify (G.Var "ret" (G.Seq prog (G.AwaitExt "FOREVER"))))
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
