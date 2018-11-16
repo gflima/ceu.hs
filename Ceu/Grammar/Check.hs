@@ -23,21 +23,21 @@ tight _              = True
 -- Checks if program is valid.
 -- Returns all statements that fail.
 
-stmts :: Stmt -> [Stmt]
+stmts :: Stmt -> [(String,Stmt)]
 stmts stmt = case stmt of
   Var _ p       -> stmts p
   Int _ p       -> stmts p
   If _ p q      -> stmts p ++ stmts q
   Seq p q       -> stmts p ++ stmts q
-  s@(Loop p)    -> stmts p ++ (if (Loop.check (Loop p)) then [] else [s])
-  s@(Every e p) -> stmts p ++ (if (tight p) then [] else [s])
+  s@(Loop p)    -> stmts p ++ (if (Loop.check (Loop p)) then [] else [("unbounded `loop` execution", s)])
+  s@(Every e p) -> stmts p ++ (if (tight p) then [] else [("invalid statement in `every`", s)])
   Par p q       -> stmts p ++ stmts q
   Pause _ p     -> stmts p
-  s@(Fin p)     -> stmts p ++ (if (tight p) then [] else [s])
+  s@(Fin p)     -> stmts p ++ (if (tight p) then [] else [("invalid statement in `finalize`", s)])
   Trap p        -> stmts p
   _             -> []
 
-check :: Stmt -> [Stmt]
+check :: Stmt -> [(String,Stmt)]
 check p = (stmts p) ++ (Escape.check p)
 
 go :: Stmt -> Stmt

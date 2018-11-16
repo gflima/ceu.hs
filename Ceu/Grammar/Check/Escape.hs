@@ -5,9 +5,9 @@ import Ceu.Grammar
 -- checks `escape` without enclosing `trap`
 -- returns all errors found
 
-check :: Stmt -> [Stmt]
+check :: Stmt -> [(String,Stmt)]
 check p = cE (-1) p where
-  cE :: Int -> Stmt -> [Stmt]
+  cE :: Int -> Stmt -> [(String,Stmt)]
   cE n (Var _ p)     = (cE n p)
   cE n (Int _ p)     = (cE n p)
   cE n (If _ p1 p2)  = (cE n p1) ++ (cE n p2)
@@ -20,5 +20,5 @@ check p = cE (-1) p where
   cE n (Trap p)      = (cE (n+1) p)
   cE n s@(Escape k)
     | (n >= k)       = []
-    | otherwise      = [s]
+    | otherwise      = [("orphan `escape` statement", s)]
   cE n p             = []

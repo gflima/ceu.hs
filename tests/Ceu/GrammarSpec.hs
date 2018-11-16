@@ -88,14 +88,14 @@ spec = do
 
     -- atomic statements --
     checkEscapeIt (Error "")            []
-    checkEscapeIt (Escape 0)            [(Escape 0)]
+    checkEscapeIt (Escape 0)            [("orphan `escape` statement", Escape 0)]
     checkEscapeIt (Write "x" (Const 0)) []
 
     -- compound statements --
     checkEscapeIt (Trap (Escape 0))                  []
-    checkEscapeIt (Trap (Escape 1))                  [(Escape 1)]
-    checkEscapeIt (Trap (Seq (Escape 0) (Escape 1))) [(Escape 1)]
-    checkEscapeIt (Trap (Seq (Escape 1) (Escape 1))) [(Escape 1),(Escape 1)]
+    checkEscapeIt (Trap (Escape 1))                  [("orphan `escape` statement", Escape 1)]
+    checkEscapeIt (Trap (Seq (Escape 0) (Escape 1))) [("orphan `escape` statement", Escape 1)]
+    checkEscapeIt (Trap (Seq (Escape 1) (Escape 1))) [("orphan `escape` statement", Escape 1),("orphan `escape` statement", Escape 1)]
 
   --------------------------------------------------------------------------
   describe "checkProg -- program is valid" $ do
@@ -114,23 +114,23 @@ spec = do
     checkProgIt (If (Const 0) Nop (Escape 0))   []
     checkProgIt (Seq (Escape 0) Nop)            []
     checkProgIt (Loop (Escape 0))               []
-    checkProgIt (Loop Nop)                      [(Loop Nop)]
+    checkProgIt (Loop Nop)                      [("unbounded `loop` execution", Loop Nop)]
     checkProgIt (Every "A" Nop)                 []
-    checkProgIt (Every "A" (Fin Nop))           [(Every "A" (Fin Nop))]
+    checkProgIt (Every "A" (Fin Nop))           [("invalid statement in `every`", Every "A" (Fin Nop))]
     checkProgIt (Par (Escape 0) Nop)            []
     checkProgIt (Par Nop (EmitInt "a"))         []
     checkProgIt (Pause "a" Nop)                 []
     checkProgIt (Fin Nop)                       []
-    checkProgIt (Fin (Fin Nop))                 [(Fin (Fin Nop))]
+    checkProgIt (Fin (Fin Nop))                 [("invalid statement in `finalize`", Fin (Fin Nop))]
 
     -- misc --
-    checkProgIt (Nop `Seq` (Fin (Loop (Escape 0))))                   [(Fin (Loop (Escape 0)))]
-    checkProgIt (Nop `Seq` (Fin (Loop Nop)))                          [(Loop Nop),(Fin (Loop Nop))]
-    checkProgIt (Var "x" (Fin (Every "A" Nop)))                       [(Fin (Every "A" Nop))]
-    checkProgIt (Loop (Trap (Loop (Escape 0))))                       [(Loop (Trap (Loop (Escape 0))))]
-    checkProgIt (Loop (Trap (Loop (Seq (Escape 0) (Escape 0)))))      [(Loop (Trap (Loop (Seq (Escape 0) (Escape 0)))))]
-    checkProgIt (AwaitInt "a" `Seq` (Fin (Escape 0)) `Par` Nop)       [(Fin (Escape 0))]
-    checkProgIt (AwaitInt "a" `Seq` (Every "A" (Fin Nop)) `Par` Nop)  [(Every "A" (Fin Nop))]
+    checkProgIt (Nop `Seq` (Fin (Loop (Escape 0))))                   [("invalid statement in `finalize`", Fin (Loop (Escape 0)))]
+    checkProgIt (Nop `Seq` (Fin (Loop Nop)))                          [("unbounded `loop` execution", Loop Nop),("invalid statement in `finalize`", Fin (Loop Nop))]
+    checkProgIt (Var "x" (Fin (Every "A" Nop)))                       [("invalid statement in `finalize`", Fin (Every "A" Nop))]
+    checkProgIt (Loop (Trap (Loop (Escape 0))))                       [("unbounded `loop` execution", Loop (Trap (Loop (Escape 0))))]
+    checkProgIt (Loop (Trap (Loop (Seq (Escape 0) (Escape 0)))))      [("unbounded `loop` execution", Loop (Trap (Loop (Seq (Escape 0) (Escape 0)))))]
+    checkProgIt (AwaitInt "a" `Seq` (Fin (Escape 0)) `Par` Nop)       [("invalid statement in `finalize`", Fin (Escape 0))]
+    checkProgIt (AwaitInt "a" `Seq` (Every "A" (Fin Nop)) `Par` Nop)  [("invalid statement in `every`", Every "A" (Fin Nop))]
     checkProgIt (Loop (Nop `Par` Loop (Loop (Loop (AwaitExt "A")))))  []
     checkProgIt (Loop ((Escape 0) `Par` Loop (Loop (Loop (AwaitExt "A"))))) []
 
