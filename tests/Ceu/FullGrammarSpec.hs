@@ -216,6 +216,12 @@ end
           (AwaitInt "a" (Just "ret"))
           (EmitInt "a" (Just (Const 10)))
       ))
+
+-- TODO
+    --evalFullProgItPass (10,[[]]) [] Break
+    --evalFullProgItFail "remBreak: `break` without `loop`" []
+      --Break
+
     evalFullProgItFail "varsWrite: undeclared variable: _a" [] (
       Int "a" False (
         And

@@ -1064,6 +1064,9 @@ spec = do
            (G.Write "a" (Const 1) `G.Seq`
             G.Write "ret" (Read "a" `Add` Const 10)))
 
+    evalProgItFail "checkProg: invalid program"
+      [] (G.Escape 0)
+
     evalProgItFail "evalProg: no return"
       [] (G.Var "a"
            (G.Var "ret"

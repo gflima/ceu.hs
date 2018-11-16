@@ -120,74 +120,22 @@ checkFin finOrEvery = case finOrEvery of
 checkEvery :: Stmt -> Bool
 checkEvery = checkFin
 
--------------------------------------------------------------------------------
+-- checkEscape
 
-simplify :: Stmt -> Stmt
-
-simplify (Var id p) =
-  case p' of
-    Nop       -> Nop
-    Escape n  -> Escape n
-    otherwise -> Var id p'
-  where p' = simplify p
-
-simplify (Int id p) =
-  case p' of
-    Nop       -> Nop
-    Escape n  -> Escape n
-    otherwise -> Int id p'
-  where p' = simplify p
-
-simplify (If exp p q) =
-  if p' == q' then p' else (If exp p' q')
-  where p' = simplify p
-        q' = simplify q
-
-simplify (Seq p q) =
-  case (p',q') of
-    (Nop,      q')  -> q'
-    (p',       Nop) -> p'
-    (Escape n, q')  -> Escape n
-    otherwise       -> Seq p' q'
-  where p' = simplify p
-        q' = simplify q
-
-simplify (Loop p) =
-  case p' of
-    Escape n  -> Escape n
-    otherwise -> Loop p'
-  where p' = simplify p
-
-simplify (Every evt p) = (Every evt (simplify p))   -- cannot contain `Escape`
-
-simplify (Par p q) =
-  case (p',q') of
-    (Nop,   q')    -> q'
-    (p',    Nop)   -> p'
-    (Escape n, q') -> Escape n
-    otherwise      -> Par p' q'
-  where p' = simplify p
-        q' = simplify q
-
-simplify (Pause id p) =
-  case p' of
-    Nop       -> Nop
-    Escape n  -> Escape n
-    otherwise -> Pause id p'
-  where p' = simplify p
-
-simplify (Fin p) =
-  case p' of
-    Nop       -> Nop
-    otherwise -> Fin p'
-  where p' = simplify p
-
-simplify (Trap p) =
-  case p' of
-    Nop       -> Nop
-    Escape 0  -> Nop
-    Escape n  -> Escape n
-    otherwise -> Trap p'
-  where p' = simplify p
-
-simplify p = p
+checkEscape :: Stmt -> Bool
+checkEscape p = cE (-1) p where
+  cE :: Int -> Stmt -> Bool
+  cE n (Var _ p)     = (cE n p)
+  cE n (Int _ p)     = (cE n p)
+  cE n (If _ p1 p2)  = (cE n p1) && (cE n p2)
+  cE n (Seq p1 p2)   = (cE n p1) && (cE n p2)
+  cE n (Loop p)      = (cE (n+1) p)
+  cE n (Every _ p)   = (cE n p)
+  cE n (Par p1 p2)   = (cE n p1) && (cE n p2)
+  cE n (Pause _ p)   = (cE n p)
+  cE n (Fin p)       = (cE n p)
+  cE n (Trap p)      = (cE (n+1) p)
+  cE n (Escape k)
+    | (n >= k)       = True
+    | otherwise      = False --error "checkEscape: `escape` without `trap`"
+  cE n p             = True
