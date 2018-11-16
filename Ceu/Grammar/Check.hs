@@ -23,7 +23,7 @@ stmts stmt = case stmt of
 
 all :: Stmt -> Stmt
 all p
-  | not (stmts p)        = error "checkProg: invalid program"
-  | not (Escape.check p) = error "checkEscape: invalid program"
-  | otherwise            = p
+  | not (stmts p)          = error "checkProg: invalid program"
+  | [] /= (Escape.check p) = error "checkEscape: invalid program"
+  | otherwise              = p
 

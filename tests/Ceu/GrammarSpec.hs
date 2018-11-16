@@ -89,14 +89,15 @@ spec = do
   describe "checkEscape:" $ do
 
     -- atomic statements --
-    checkEscapeIt (Error "")            True
-    checkEscapeIt (Escape 0)            False
-    checkEscapeIt (Write "x" (Const 0)) True
+    checkEscapeIt (Error "")            []
+    checkEscapeIt (Escape 0)            [(Escape 0)]
+    checkEscapeIt (Write "x" (Const 0)) []
 
     -- compound statements --
-    checkEscapeIt (Trap (Escape 0))                  True
-    checkEscapeIt (Trap (Escape 1))                  False
-    checkEscapeIt (Trap (Seq (Escape 0) (Escape 1))) False
+    checkEscapeIt (Trap (Escape 0))                  []
+    checkEscapeIt (Trap (Escape 1))                  [(Escape 1)]
+    checkEscapeIt (Trap (Seq (Escape 0) (Escape 1))) [(Escape 1)]
+    checkEscapeIt (Trap (Seq (Escape 1) (Escape 1))) [(Escape 1),(Escape 1)]
 
   --------------------------------------------------------------------------
   describe "checkProg -- program is valid" $ do
@@ -139,8 +140,11 @@ spec = do
         checkIt ck p b   =
           (it ((if b then "pass" else "fail") ++ ": " ++ showProg p) $
             (ck p) `shouldBe` b)
+        checkIt' ck p b   =
+          (it ((if b==[] then "pass" else "fail") ++ ": " ++ showProg p) $
+            (ck p) `shouldBe` b)
         checkLoopIt p b   = checkIt Loop.check p b
         checkFinIt p b    = checkIt Fin.check p b
         checkEveryIt p b  = checkIt Every.check p b
-        checkEscapeIt p b = checkIt Escape.check p b
+        checkEscapeIt p b = checkIt' Escape.check p b
         checkProgIt p b   = checkIt Check.stmts p b
