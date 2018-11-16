@@ -15,11 +15,11 @@ stmts stmt = case stmt of
   Int _ p       -> stmts p
   If _ p q      -> stmts p ++ stmts q
   Seq p q       -> stmts p ++ stmts q
-  s@(Loop p)    -> (if (Loop.check (Loop p)) then [] else [s]) ++ stmts p
-  s@(Every e p) -> (if (Every.check (Every e p)) then [] else [s]) ++ stmts p
+  s@(Loop p)    -> stmts p ++ (if (Loop.check (Loop p)) then [] else [s])
+  s@(Every e p) -> stmts p ++ (if (Every.check (Every e p)) then [] else [s])
   Par p q       -> stmts p ++ stmts q
   Pause _ p     -> stmts p
-  s@(Fin p)     -> (if (Fin.check (Fin p)) then [] else [s]) ++ stmts p
+  s@(Fin p)     -> stmts p ++ (if (Fin.check (Fin p)) then [] else [s])
   Trap p        -> stmts p
   _             -> []
 

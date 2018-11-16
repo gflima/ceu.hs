@@ -127,7 +127,7 @@ spec = do
 
     -- misc --
     checkProgIt (Nop `Seq` (Fin (Loop (Escape 0))))                   [(Fin (Loop (Escape 0)))]
-    checkProgIt (Nop `Seq` (Fin (Loop Nop)))                          [(Fin (Loop Nop)),(Loop Nop)]
+    checkProgIt (Nop `Seq` (Fin (Loop Nop)))                          [(Loop Nop),(Fin (Loop Nop))]
     checkProgIt (Var "x" (Fin (Every "A" Nop)))                       [(Fin (Every "A" Nop))]
     checkProgIt (Loop (Trap (Loop (Escape 0))))                       [(Loop (Trap (Loop (Escape 0))))]
     checkProgIt (Loop (Trap (Loop (Seq (Escape 0) (Escape 0)))))      [(Loop (Trap (Loop (Seq (Escape 0) (Escape 0)))))]
