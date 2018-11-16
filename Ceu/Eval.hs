@@ -25,25 +25,23 @@ data Stmt
   | EmitExt ID_Ext (Maybe Exp)  -- emit internal event
   | AwaitInt ID_Int             -- await internal event
   | EmitInt ID_Int              -- emit internal event
-  | Break                       -- loop escape
   | If Exp Stmt Stmt            -- conditional
   | Seq Stmt Stmt               -- sequence
   | Every ID_Evt Stmt           -- event iteration
-  | And Stmt Stmt               -- par/and statement
-  | Or Stmt Stmt                -- par/or statement
+  | Par Stmt Stmt               -- par statement
   | Pause ID_Var Stmt           -- pause/suspend statement
   | Fin Stmt                    -- finalization statement
+  | Trap Stmt                   -- enclose escape
+  | Escape Int                  -- escape N traps
   | Nop                         -- dummy statement (internal)
   | Error String                -- generate runtime error (for testing purposes)
   | CanRun Lvl                  -- wait for stack level (internal)
   | Loop' Stmt Stmt             -- unrolled Loop (internal)
-  | And' Stmt Stmt              -- unrolled And (internal)
-  | Or' Stmt Stmt               -- unrolled Or (internal)
+  | Par' Stmt Stmt              -- unrolled Par (internal)
   deriving (Eq, Show)
 
 infixr 1 `Seq`                  -- `Seq` associates to the right
-infixr 0 `Or`                   -- `Or` associates to the right
-infixr 0 `And`                  -- `And` associates to the right
+infixr 0 `Par`                  -- `Par` associates to the right
 
 fromGrammar :: G.Stmt -> Stmt
 fromGrammar (G.Var id p)      = Var (id,Nothing) (fromGrammar p)
@@ -53,15 +51,15 @@ fromGrammar (G.AwaitExt id)   = AwaitExt id
 fromGrammar (G.EmitExt id exp)= EmitExt id exp
 fromGrammar (G.AwaitInt id)   = AwaitInt id
 fromGrammar (G.EmitInt id)    = EmitInt id
-fromGrammar G.Break           = Break
 fromGrammar (G.If exp p1 p2)  = If exp (fromGrammar p1) (fromGrammar p2)
 fromGrammar (G.Seq p1 p2)     = Seq (fromGrammar p1) (fromGrammar p2)
 fromGrammar (G.Loop p)        = Loop' (fromGrammar p) (fromGrammar p)
 fromGrammar (G.Every id p)    = Every id (fromGrammar p)
-fromGrammar (G.And p1 p2)     = And (fromGrammar p1) (fromGrammar p2)
-fromGrammar (G.Or p1 p2)      = Or (fromGrammar p1) (fromGrammar p2)
+fromGrammar (G.Par p1 p2)     = Par (fromGrammar p1) (fromGrammar p2)
 fromGrammar (G.Pause var p)   = Pause var (fromGrammar p)
 fromGrammar (G.Fin p)         = Fin (fromGrammar p)
+fromGrammar (G.Trap p)        = Trap (fromGrammar p)
+fromGrammar (G.Escape n)      = Escape n
 fromGrammar G.Nop             = Nop
 fromGrammar (G.Error msg)     = Error msg
 
@@ -78,20 +76,19 @@ showProg stmt = case stmt of
   EmitExt ext (Just v) -> printf "!%s=%s" ext (sE v)
   AwaitInt int         -> printf "?%s" int
   EmitInt int          -> printf "!%s" int
-  Break                -> "break"
   If expr p q          -> printf "(if %s then %s else %s)" (sE expr) (sP p) (sP q)
   Seq p q              -> printf "%s; %s" (sP p) (sP q)
   Every int p          -> printf "(every %s %s)" int (sP p)
-  And p q              -> printf "(%s && %s)" (sP p) (sP q)
-  Or p q               -> printf "(%s || %s)" (sP p) (sP q)
+  Par p q              -> printf "(%s || %s)" (sP p) (sP q)
   Pause var p          -> printf "(pause %s %s)" var (sP p)
   Fin p                -> printf "(fin %s)" (sP p)
+  Trap p               -> printf "(trap %s)" (sP p)
+  Escape n             -> printf "(escape %d)" n
   Nop                  -> "nop"
   Error _              -> "err"
   CanRun n             -> printf "@canrun(%d)" n
   Loop' p q            -> printf "(%s @loop %s)" (sP p) (sP q)
-  And' p q             -> printf "(%s @&& %s)" (sP p) (sP q)
-  Or' p q              -> printf "(%s @|| %s)" (sP p) (sP q)
+  Par' p q             -> printf "(%s @|| %s)" (sP p) (sP q)
   where
     sE = showExp
     sP = showProg
@@ -154,9 +151,9 @@ isBlocked n stmt = case stmt of
   Pause _ p    -> isBlocked n p
   Fin _        -> True
   Seq p _      -> isBlocked n p
+  Trap p       -> isBlocked n p
   Loop' p _    -> isBlocked n p
-  And' p q     -> isBlocked n p && isBlocked n q
-  Or' p q      -> isBlocked n p && isBlocked n q
+  Par' p q     -> isBlocked n p && isBlocked n q
   _            -> False
 
 -- Obtains the body of all active Fin statements in program.
@@ -164,6 +161,7 @@ isBlocked n stmt = case stmt of
 clear :: Stmt -> Stmt
 clear stmt = case stmt of
   Var _ p      -> clear p
+  Int _ p      -> clear p
   AwaitExt _   -> Nop
   AwaitInt _   -> Nop
   Every _ _    -> Nop
@@ -171,10 +169,9 @@ clear stmt = case stmt of
   Fin p        -> p
   Pause _ p    -> clear p
   Seq p _      -> clear p
-  Int _ p      -> clear p
+  Trap p       -> clear p
   Loop' p _    -> clear p
-  And' p q     -> Seq (clear p) (clear q)
-  Or' p q      -> Seq (clear p) (clear q)
+  Par' p q     -> Seq (clear p) (clear q)
   _            -> error "clear: invalid clear"
 
 -- Helper function used by step in the *-adv rules.
@@ -190,8 +187,8 @@ step :: Desc -> Desc
 step (Var _ Nop, n, vars, ints, outs)            -- var-nop
   = (Nop, n, vars, ints, outs)
 
-step (Var _ Break, n, vars, ints, outs)          -- var-brk
-  = (Break, n, vars, ints, outs)
+step (Var _ (Escape k), n, vars, ints, outs)     -- var-escape
+  = (Escape k, n, vars, ints, outs)
 
 step (Var vv p, n, vars, ints, outs)             -- var-adv
   = (Var vv' p', n', vars', ints', outs')
@@ -201,8 +198,8 @@ step (Var vv p, n, vars, ints, outs)             -- var-adv
 step (Int id Nop, n, vars, ints, outs)           -- int-nop
   = (Nop, n, vars, ints, outs)
 
-step (Int id Break, n, vars, ints, outs)         -- int-brk
-  = (Break, n, vars, ints, outs)
+step (Int id (Escape k), n, vars, ints, outs)    -- int-escape
+  = ((Escape k), n, vars, ints, outs)
 
 step (Int int p, n, vars, ints, outs)            -- int-adv
   = (Int int p'', n', vars', ints', outs')
@@ -228,8 +225,8 @@ step (CanRun m, n, vars, ints, outs)             -- can-run (pg 6)
 step (Seq Nop q, n, vars, ints, outs)            -- seq-nop (pg 6)
   = (q, n, vars, ints, outs)
 
-step (Seq Break q, n, vars, ints, outs)          -- seq-brk (pg 6)
-  = (Break, n, vars, ints, outs)
+step (Seq (Escape k) q, n, vars, ints, outs)     -- seq-escape (pg 6)
+  = (Escape k, n, vars, ints, outs)
 
 step (Seq p q, n, vars, ints, outs)              -- seq-adv (pg 6)
   = stepAdv (p, n, vars, ints, outs) (\p' -> Seq p' q)
@@ -241,60 +238,45 @@ step (If exp p q, n, vars, ints, outs)           -- if-true/false (pg 6)
 step (Loop' Nop q, n, vars, ints, outs)          -- loop-nop (pg 7)
   = (Loop' q q, n, vars, ints, outs)
 
-step (Loop' Break q, n, vars, ints, outs)        -- loop-brk (pg 7)
-  = (Nop, n, vars, ints, outs)
+step (Loop' (Escape k) q, n, vars, ints, outs)   -- loop-escape (pg 7)
+  = ((Escape k), n, vars, ints, outs)
 
 step (Loop' p q, n, vars, ints, outs)            -- loop-adv (pg 7)
   = stepAdv (p, n, vars, ints, outs) (\p' -> Loop' p' q)
 
-step (And p q, n, vars, ints, outs)              -- and-expd (pg 7)
-  = (And' p (Seq (CanRun n) q), n, vars, ints, outs)
+step (Par p q, n, vars, ints, outs)              -- par-expd (pg 7)
+  = (Par' p (Seq (CanRun n) q), n, vars, ints, outs)
 
-step (And' Nop q, n, vars, ints, outs)           -- and-nop1 (pg 7)
+step (Par' Nop q, n, vars, ints, outs)           -- par-nop1 (pg 7)
   = (q, n, vars, ints, outs)
 
-step (And' Break q, n, vars, ints, outs)         -- and brk1 (pg 7)
-  = (Seq (clear q) Break, n, vars, ints, outs)
+step (Par' (Escape k) q, n, vars, ints, outs)    -- and escape1 (pg 7)
+  = (Seq (clear q) (Escape k), n, vars, ints, outs)
 
-step (And' p Nop, n, vars, ints, outs)           -- and-nop2 (pg 7)
-  | not $ isBlocked n p = stepAdv (p, n, vars, ints, outs) (\p' -> And' p' Nop)
+step (Par' p Nop, n, vars, ints, outs)           -- and-nop2 (pg 7)
+  | not $ isBlocked n p = stepAdv (p, n, vars, ints, outs) (\p' -> Par' p' Nop)
   | otherwise           = (p, n, vars, ints, outs)
 
-step (And' p Break, n, vars, ints, outs)         -- and-brk2 (pg 7)
-  | not $ isBlocked n p = stepAdv (p, n, vars, ints, outs) (\p' -> And' p' Break)
-  | otherwise           = (Seq (clear p) Break, n, vars, ints, outs)
+step (Par' p (Escape k), n, vars, ints, outs)    -- and-escape2 (pg 7)
+  | not $ isBlocked n p = stepAdv (p, n, vars, ints, outs) (\p' -> Par' p' (Escape k))
+  | otherwise           = (Seq (clear p) (Escape k), n, vars, ints, outs)
 
-step (And' p q, n, vars, ints, outs)             -- and-adv (pg 7)
-  | not $ isBlocked n p = stepAdv (p, n, vars, ints, outs) (\p' -> And' p' q)
-  | otherwise           = stepAdv (q, n, vars, ints, outs) (\q' -> And' p q')
-
-step (Or p q, n, vars, ints, outs)               -- or-expd (pg 7)
-  = (Or' p (Seq (CanRun n) q), n, vars, ints, outs)
-
-step (Or' Nop q, n, vars, ints, outs)            -- or-nop1 (pg 7)
-  = (clear q, n, vars, ints, outs)
-
-step (Or' Break q, n, vars, ints, outs)          -- or-brk1 (pg 7)
-  = (Seq (clear q) Break, n, vars, ints, outs)
-
-step (Or' p Nop, n, vars, ints, outs)            -- or-nop2 (pg 7)
-  | not $ isBlocked n p = stepAdv (p, n, vars, ints, outs) (\p' -> Or' p' Nop)
-  | otherwise           = (clear p, n, vars, ints, outs)
-
-step (Or' p Break, n, vars, ints, outs)          -- or-brk2 (pg 7)
-  | not $ isBlocked n p = stepAdv (p, n, vars, ints, outs) (\p' -> Or' p' Break)
-  | otherwise           = (Seq (clear p) Break, n, vars, ints, outs)
-
-step (Or' p q, n, vars, ints, outs)              -- or-adv (pg 7)
-  | not $ isBlocked n p = stepAdv (p, n, vars, ints, outs) (\p' -> Or' p' q)
-  | otherwise           = stepAdv (q, n, vars, ints, outs) (\q' -> Or' p q')
+step (Par' p q, n, vars, ints, outs)             -- and-adv (pg 7)
+  | not $ isBlocked n p = stepAdv (p, n, vars, ints, outs) (\p' -> Par' p' q)
+  | otherwise           = stepAdv (q, n, vars, ints, outs) (\q' -> Par' p q')
 
 step (Pause var Nop, n, vars, ints, outs)        -- pause-nop
   = (Nop, n, vars, ints, outs)
-step (Pause var Break, n, vars, ints, outs)      -- pause-break
-  = (Break, n, vars, ints, outs)
+step (Pause var (Escape k), n, vars, ints, outs) -- pause-break
+  = (Escape k, n, vars, ints, outs)
 step (Pause var p, n, vars, ints, outs)          -- pause-adv
   = stepAdv (p, n, vars, ints, outs) (\p' -> Pause var p')
+
+step (Trap (Escape k), n, vars, ints, outs)      -- trap-escape
+  | k == 0    = (Nop, n, vars, ints, outs)
+  | otherwise = (Escape (k-1), n, vars, ints, outs)
+step (Trap p, n, vars, ints, outs)                -- trap-adv
+  = stepAdv (p, n, vars, ints, outs) (\p' -> Trap p')
 
 step (Error msg, _, _, _, _) = error ("Runtime error: " ++ msg)
 
@@ -310,22 +292,22 @@ isReducible :: Desc -> Bool
 isReducible desc = case desc of
   (_,     n, _, _, _) | n>0 -> True
   (Nop,   _, _, _, _)       -> False
-  (Break, _, _, _, _)       -> False
-  (p,     n, _, _, _)    -> not $ isBlocked n p
+  (Escape _, _, _, _, _)    -> False
+  (p,     n, _, _, _)       -> not $ isBlocked n p
 
 -- Awakes all trails waiting for the given event.
 -- (pg 8, fig 4.i)
 bcast :: ID_Evt -> Vars -> Stmt -> Stmt
 bcast e vars stmt = case stmt of
   Var vv p              -> Var vv (bcast e (vv:vars) p)
+  Int id p              -> Int id (bcast e vars p)
   AwaitExt e' | e == e' -> Nop
   AwaitInt e' | e == e' -> Nop
   Every e' p  | e == e' -> Seq p (Every e' p)
   Seq p q               -> Seq (bcast e vars p) q
-  Int id p              -> Int id (bcast e vars p)
+  Trap p                -> Trap (bcast e vars p)
   Loop' p q             -> Loop' (bcast e vars p) q
-  And' p q              -> And' (bcast e vars p) (bcast e vars q)
-  Or' p q               -> Or' (bcast e vars p) (bcast e vars q)
+  Par' p q              -> Par' (bcast e vars p) (bcast e vars q)
   Pause var p           -> Pause var (if (varsEval vars (Read var)) == 1 then p else (bcast e vars p))
   _                     -> stmt -- nothing to do
 

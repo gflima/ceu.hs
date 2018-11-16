@@ -107,6 +107,13 @@ spec = do
       `shouldBe` (Loop (Seq Nop (AwaitExt "ASYNC" Nothing)))
 
   --------------------------------------------------------------------------
+  describe "remBreak" $ do
+
+    it "loop (or break FOR)" $ do
+      remBreak $ remAndOr (Loop (Or Break AwaitFor))
+      `shouldBe` Trap' (Loop (Trap' (Par' (Seq (Escape' 1) (Escape' 0)) (Seq AwaitFor (Escape' 0)))))
+
+  --------------------------------------------------------------------------
   describe "remAwaitFor" $ do
 
     it "await FOREVER;" $ do
@@ -126,12 +133,12 @@ spec = do
 
     it "spawn do await A; end ;; await B; var x; await FOREVER;" $ do
       toGrammar (Seq (Spawn (AwaitExt "A" Nothing)) (Seq (AwaitExt "B" Nothing) (Var "x" Nothing AwaitFor)))
-      `shouldBe` (G.Or (G.Seq (G.AwaitExt "A") (G.AwaitExt "FOREVER")) (G.Seq (G.AwaitExt "B") (G.Var "x" (G.AwaitExt "FOREVER"))))
+      `shouldBe` (G.Trap (G.Par (G.Seq (G.Seq (G.AwaitExt "A") (G.AwaitExt "FOREVER")) (G.Escape 0)) (G.Seq (G.Seq (G.AwaitExt "B") (G.Var "x" (G.AwaitExt "FOREVER"))) (G.Escape 0))))
 
 
     it "spawn do async ret++ end ;; await F;" $ do
       toGrammar (Seq (Spawn (Async (Loop (Write "x" (Add (Read "x") (Const 1)))))) (AwaitExt "A" Nothing))
-      `shouldBe` (G.Or (G.Seq (G.Loop (G.Seq (G.Write "x" (Add (Read "x") (Const 1))) (G.AwaitExt "ASYNC"))) (G.AwaitExt "FOREVER")) (G.AwaitExt "A"))
+      `shouldBe` (G.Trap (G.Par (G.Seq (G.Seq (G.Trap (G.Loop (G.Seq (G.Write "x" (Add (Read "x") (Const 1))) (G.AwaitExt "ASYNC")))) (G.AwaitExt "FOREVER")) (G.Escape 0)) (G.Seq (G.AwaitExt "A") (G.Escape 0))))
 
   --------------------------------------------------------------------------
   describe "misc" $ do
