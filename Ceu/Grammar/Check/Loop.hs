@@ -6,6 +6,8 @@ import Ceu.Grammar
 -- in its body lead to an occurrence of a matching-Escape/AwaitExt/Every.
 -- returns all `loop` that fail
 
+message = "unbounded `loop` execution"
+
 check :: Stmt -> Bool
 
 check (Loop body) = cL 0 body where

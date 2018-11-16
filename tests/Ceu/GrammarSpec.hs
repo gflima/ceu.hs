@@ -5,8 +5,6 @@ import Ceu.Grammar
 import qualified Ceu.Grammar.Check        as Check
 import qualified Ceu.Grammar.Check.Escape as Escape
 import qualified Ceu.Grammar.Check.Loop   as Loop
-import qualified Ceu.Grammar.Check.Fin    as Fin
-import qualified Ceu.Grammar.Check.Every  as Every
 import Test.Hspec
 
 main :: IO ()
@@ -75,15 +73,15 @@ spec = do
     checkFinIt (Fin (Error ""))            True
 
     -- compound statements --
-    checkFinIt (Fin (Var "x" Nop))                                True
-    checkFinIt (Fin (Var "x" (Every "A" Nop)))                    False
-    checkFinIt (Fin (If (Const 0) (Loop (Escape 0)) (Nop)))       False
-    checkFinIt (Fin (If (Const 0) (Write "x" (Const 0)) (Nop)))   True
+    checkFinIt (Fin (Var "x" Nop))                                  True
+    checkFinIt (Fin (Var "x" (Every "A" Nop)))                      False
+    checkFinIt (Fin (If (Const 0) (Loop (Escape 0)) (Nop)))         False
+    checkFinIt (Fin (If (Const 0) (Write "x" (Const 0)) (Nop)))     True
     checkFinIt (Fin (Nop `Seq` Nop `Seq` (AwaitExt "A") `Seq` Nop)) False
-    checkFinIt (Fin (Nop `Seq` Nop `Seq` (EmitInt "a") `Seq` Nop)) True
-    checkFinIt (Fin (Loop (AwaitInt "a")))                        False
-    checkFinIt (Fin (Loop (AwaitExt "A")))                        False
-    checkFinIt (Fin (Nop `Par` Nop `Par` (EmitInt "a")))          True
+    checkFinIt (Fin (Nop `Seq` Nop `Seq` (EmitInt "a") `Seq` Nop))  True
+    checkFinIt (Fin (Loop (AwaitInt "a")))                          False
+    checkFinIt (Fin (Loop (AwaitExt "A")))                          False
+    checkFinIt (Fin (Nop `Par` Nop `Par` (EmitInt "a")))            False
 
   --------------------------------------------------------------------------
   describe "checkEscape:" $ do
@@ -143,8 +141,8 @@ spec = do
         checkIt' ck p b   =
           (it ((if b==[] then "pass" else "fail") ++ ": " ++ showProg p) $
             (ck p) `shouldBe` b)
-        checkLoopIt p b   = checkIt Loop.check p b
-        checkFinIt p b    = checkIt Fin.check p b
-        checkEveryIt p b  = checkIt Every.check p b
-        checkEscapeIt p b = checkIt' Escape.check p b
-        checkProgIt p b   = checkIt' Check.stmts p b
+        checkLoopIt p b      = checkIt Loop.check p b
+        checkFinIt (Fin p) b = checkIt Check.tight p b
+        checkEveryIt p b     = checkIt Check.tight p b
+        checkEscapeIt p b    = checkIt' Escape.check p b
+        checkProgIt p b      = checkIt' Check.stmts p b
