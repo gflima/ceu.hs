@@ -7,23 +7,26 @@ import qualified Ceu.Grammar.Check.Every  as Every
 import qualified Ceu.Grammar.Check.Escape as Escape
 
 -- Checks if program is valid.
-stmts :: Stmt -> Bool
+-- Returns all statements that fail.
+
+stmts :: Stmt -> [Stmt]
 stmts stmt = case stmt of
-  Var _ p      -> stmts p
-  Int _ p      -> stmts p
-  If _ p q     -> stmts p && stmts q
-  Seq p q      -> stmts p && stmts q
-  Loop p       -> Loop.check (Loop p) && stmts p
-  Every e p    -> Every.check (Every e p) && stmts p
-  Par p q      -> stmts p && stmts q
-  Pause _ p    -> stmts p
-  Fin p        -> Fin.check (Fin p) && stmts p
-  Trap p       -> stmts p
-  _            -> True
+  Var _ p       -> stmts p
+  Int _ p       -> stmts p
+  If _ p q      -> stmts p ++ stmts q
+  Seq p q       -> stmts p ++ stmts q
+  s@(Loop p)    -> (if (Loop.check (Loop p)) then [] else [s]) ++ stmts p
+  s@(Every e p) -> (if (Every.check (Every e p)) then [] else [s]) ++ stmts p
+  Par p q       -> stmts p ++ stmts q
+  Pause _ p     -> stmts p
+  s@(Fin p)     -> (if (Fin.check (Fin p)) then [] else [s]) ++ stmts p
+  Trap p        -> stmts p
+  _             -> []
 
-all :: Stmt -> Stmt
-all p
-  | not (stmts p)          = error "checkProg: invalid program"
-  | [] /= (Escape.check p) = error "checkEscape: invalid program"
-  | otherwise              = p
+check :: Stmt -> [Stmt]
+check p = (stmts p) ++ (Escape.check p)
 
+go :: Stmt -> Stmt
+go p
+  | check p == [] = p
+  | otherwise   = error "invalid program"

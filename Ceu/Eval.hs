@@ -344,7 +344,7 @@ evalProg_Reaction prog ins reaction -- enclosing block with "ret" that never ter
         | otherwise      -> eP prog' (tail ins) (outss++[outs']) where
                                (prog',outs') = reaction prog (head ins)
 
-    prog' = (fromGrammar $ Check.all $ S.simplify (G.Var "ret" (G.Seq prog (G.AwaitExt "FOREVER"))))
+    prog' = (fromGrammar $ Check.go $ S.simplify (G.Var "ret" (G.Seq prog (G.AwaitExt "FOREVER"))))
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.

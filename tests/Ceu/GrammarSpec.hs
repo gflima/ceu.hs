@@ -103,38 +103,38 @@ spec = do
   describe "checkProg -- program is valid" $ do
 
     -- atomic statements --
-    checkProgIt (Write "c" (Const 0)) True
-    checkProgIt (AwaitExt "A")        True
-    checkProgIt (AwaitInt "a")        True
-    checkProgIt (EmitInt "a")         True
-    checkProgIt (Escape 0)               True
-    checkProgIt (Nop)                 True
-    checkProgIt (Error "")            True
+    checkProgIt (Write "c" (Const 0)) []
+    checkProgIt (AwaitExt "A")        []
+    checkProgIt (AwaitInt "a")        []
+    checkProgIt (EmitInt "a")         []
+    checkProgIt (Escape 0)            []
+    checkProgIt (Nop)                 []
+    checkProgIt (Error "")            []
 
     -- compound statements --
-    checkProgIt (Var "x" Nop)          True
-    checkProgIt (If (Const 0) Nop (Escape 0)) True
-    checkProgIt (Seq (Escape 0) Nop)          True
-    checkProgIt (Loop (Escape 0))             True
-    checkProgIt (Loop Nop)               False
-    checkProgIt (Every "A" Nop)          True
-    checkProgIt (Every "A" (Fin Nop))    False
-    checkProgIt (Par (Escape 0) Nop)          True
-    checkProgIt (Par Nop (EmitInt "a"))   True
-    checkProgIt (Pause "a" Nop)          True
-    checkProgIt (Fin Nop)                True
-    checkProgIt (Fin (Fin Nop))          False
+    checkProgIt (Var "x" Nop)                   []
+    checkProgIt (If (Const 0) Nop (Escape 0))   []
+    checkProgIt (Seq (Escape 0) Nop)            []
+    checkProgIt (Loop (Escape 0))               []
+    checkProgIt (Loop Nop)                      [(Loop Nop)]
+    checkProgIt (Every "A" Nop)                 []
+    checkProgIt (Every "A" (Fin Nop))           [(Every "A" (Fin Nop))]
+    checkProgIt (Par (Escape 0) Nop)            []
+    checkProgIt (Par Nop (EmitInt "a"))         []
+    checkProgIt (Pause "a" Nop)                 []
+    checkProgIt (Fin Nop)                       []
+    checkProgIt (Fin (Fin Nop))                 [(Fin (Fin Nop))]
 
     -- misc --
-    checkProgIt (Nop `Seq` (Fin (Loop (Escape 0))))                   False
-    checkProgIt (Nop `Seq` (Fin (Loop Nop)))                          False
-    checkProgIt (Var "x" (Fin (Every "A" Nop)))                       False
-    checkProgIt (Loop (Trap (Loop (Escape 0))))                       False
-    checkProgIt (Loop (Trap (Loop (Seq (Escape 0) (Escape 0)))))      False
-    checkProgIt (AwaitInt "a" `Seq` (Fin (Escape 0)) `Par` Nop)       False
-    checkProgIt (AwaitInt "a" `Seq` (Every "A" (Fin Nop)) `Par` Nop)  False
-    checkProgIt (Loop (Nop `Par` Loop (Loop (Loop (AwaitExt "A")))))  False
-    checkProgIt (Loop ((Escape 0) `Par` Loop (Loop (Loop (AwaitExt "A"))))) True
+    checkProgIt (Nop `Seq` (Fin (Loop (Escape 0))))                   [(Fin (Loop (Escape 0)))]
+    checkProgIt (Nop `Seq` (Fin (Loop Nop)))                          [(Fin (Loop Nop)),(Loop Nop)]
+    checkProgIt (Var "x" (Fin (Every "A" Nop)))                       [(Fin (Every "A" Nop))]
+    checkProgIt (Loop (Trap (Loop (Escape 0))))                       [(Loop (Trap (Loop (Escape 0))))]
+    checkProgIt (Loop (Trap (Loop (Seq (Escape 0) (Escape 0)))))      [(Loop (Trap (Loop (Seq (Escape 0) (Escape 0)))))]
+    checkProgIt (AwaitInt "a" `Seq` (Fin (Escape 0)) `Par` Nop)       [(Fin (Escape 0))]
+    checkProgIt (AwaitInt "a" `Seq` (Every "A" (Fin Nop)) `Par` Nop)  [(Every "A" (Fin Nop))]
+    checkProgIt (Loop (Nop `Par` Loop (Loop (Loop (AwaitExt "A")))))  []
+    checkProgIt (Loop ((Escape 0) `Par` Loop (Loop (Loop (AwaitExt "A"))))) []
 
       where
         checkIt ck p b   =
@@ -147,4 +147,4 @@ spec = do
         checkFinIt p b    = checkIt Fin.check p b
         checkEveryIt p b  = checkIt Every.check p b
         checkEscapeIt p b = checkIt' Escape.check p b
-        checkProgIt p b   = checkIt Check.stmts p b
+        checkProgIt p b   = checkIt' Check.stmts p b
