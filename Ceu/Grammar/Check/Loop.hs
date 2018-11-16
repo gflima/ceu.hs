@@ -18,7 +18,7 @@ check (Loop body) = cL 0 body where
     Seq (Escape k) q -> cL n (Escape k)   -- q never executes
     Seq p q          -> cL n p || cL n q
     Loop p           -> cL n p
-    Par p q          -> cL n p && cL n q
+    Par p q          -> cL n p || cL n q
     Pause _ p        -> cL n p
     Trap p           -> cL (n+1) p
     Escape k        -> (k >= n)
