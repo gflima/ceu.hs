@@ -64,24 +64,24 @@ spec = do
   describe "checkFin/Every -- no Loop/Escape/Await*/Every/Fin:" $ do
 
     -- atomic statements --
-    checkFinIt (Fin (Write "x" (Const 0))) True
-    checkFinIt (Fin (AwaitExt "A"))        False
-    checkFinIt (Fin (AwaitInt "a"))        False
-    checkFinIt (Fin (EmitInt "a"))         True
-    checkFinIt (Fin (Escape 0))               False
-    checkFinIt (Fin (Nop))                 True
-    checkFinIt (Fin (Error ""))            True
+    checkFinIt (Fin (Write "x" (Const 0))) []
+    checkFinIt (Fin (AwaitExt "A"))        [AwaitExt "A"]
+    checkFinIt (Fin (AwaitInt "a"))        [AwaitInt "a"]
+    checkFinIt (Fin (EmitInt "a"))         []
+    checkFinIt (Fin (Escape 0))            [Escape 0]
+    checkFinIt (Fin (Nop))                 []
+    checkFinIt (Fin (Error ""))            []
 
     -- compound statements --
-    checkFinIt (Fin (Var "x" Nop))                                  True
-    checkFinIt (Fin (Var "x" (Every "A" Nop)))                      False
-    checkFinIt (Fin (If (Const 0) (Loop (Escape 0)) (Nop)))         False
-    checkFinIt (Fin (If (Const 0) (Write "x" (Const 0)) (Nop)))     True
-    checkFinIt (Fin (Nop `Seq` Nop `Seq` (AwaitExt "A") `Seq` Nop)) False
-    checkFinIt (Fin (Nop `Seq` Nop `Seq` (EmitInt "a") `Seq` Nop))  True
-    checkFinIt (Fin (Loop (AwaitInt "a")))                          False
-    checkFinIt (Fin (Loop (AwaitExt "A")))                          False
-    checkFinIt (Fin (Nop `Par` Nop `Par` (EmitInt "a")))            False
+    checkFinIt (Fin (Var "x" Nop))                                  []
+    checkFinIt (Fin (Var "x" (Every "A" Nop)))                      [Every "A" Nop]
+    checkFinIt (Fin (If (Const 0) (Loop (Escape 0)) (Nop)))         [Escape 0]
+    checkFinIt (Fin (If (Const 0) (Write "x" (Const 0)) (Nop)))     []
+    checkFinIt (Fin (Nop `Seq` Nop `Seq` (AwaitExt "A") `Seq` Nop)) [AwaitExt "A"]
+    checkFinIt (Fin (Nop `Seq` Nop `Seq` (EmitInt "a") `Seq` Nop))  []
+    checkFinIt (Fin (Loop (AwaitInt "a")))                          [AwaitInt "a"]
+    checkFinIt (Fin (Loop (AwaitExt "A")))                          [AwaitExt "A"]
+    checkFinIt (Fin (Nop `Par` Nop `Par` (EmitInt "a")))            [Par Nop (Par Nop (EmitInt "a")),Par Nop (EmitInt "a")]
 
   --------------------------------------------------------------------------
   describe "checkEscape:" $ do
@@ -125,7 +125,7 @@ spec = do
 
     -- misc --
     checkStmtsIt (Nop `Seq` (Fin (Loop (Escape 0))))                   [("invalid statement in `finalize`", Fin (Loop (Escape 0)))]
-    checkStmtsIt (Nop `Seq` (Fin (Loop Nop)))                          [("unbounded `loop` execution", Loop Nop),("invalid statement in `finalize`", Fin (Loop Nop))]
+    checkStmtsIt (Nop `Seq` (Fin (Loop Nop)))                          [("unbounded `loop` execution", Loop Nop)]
     checkStmtsIt (Var "x" (Fin (Every "A" Nop)))                       [("invalid statement in `finalize`", Fin (Every "A" Nop))]
     checkStmtsIt (Loop (Trap (Loop (Escape 0))))                       [("unbounded `loop` execution", Loop (Trap (Loop (Escape 0))))]
     checkStmtsIt (Loop (Trap (Loop (Seq (Escape 0) (Escape 0)))))      [("unbounded `loop` execution", Loop (Trap (Loop (Seq (Escape 0) (Escape 0)))))]
@@ -147,8 +147,8 @@ spec = do
           (it ((if b==[] then "pass" else "fail") ++ ": " ++ showProg p) $
             (ck p) `shouldBe` b)
         checkLoopIt p b      = checkIt Loop.check p b
-        checkFinIt (Fin p) b = checkIt Check.tight p b
-        checkEveryIt p b     = checkIt Check.tight p b
+        checkFinIt (Fin p) b = checkIt' Check.tight p b
+        checkEveryIt p b     = checkIt' Check.tight p b
         checkEscapeIt p b    = checkIt' Escape.check p b
         checkStmtsIt p b     = checkIt' Check.stmts p b
         checkCheckIt p b     = checkIt' Check.check p b
