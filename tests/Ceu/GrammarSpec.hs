@@ -2,9 +2,10 @@ module Ceu.GrammarSpec (main, spec) where
 
 import Ceu.Globals
 import Ceu.Grammar
-import qualified Ceu.Grammar.Check        as Check
-import qualified Ceu.Grammar.Check.Escape as Escape
-import qualified Ceu.Grammar.Check.Loop   as Loop
+import qualified Ceu.Grammar.Check           as Check
+import qualified Ceu.Grammar.Check.Escape    as Escape
+import qualified Ceu.Grammar.Check.Loop      as Loop
+import qualified Ceu.Grammar.Check.Reachable as Reachable
 import Test.Hspec
 
 main :: IO ()
@@ -98,6 +99,25 @@ spec = do
     checkEscapeIt (Trap (Seq (Escape 1) (Escape 1))) [("orphan `escape` statement", Escape 1),("orphan `escape` statement", Escape 1)]
 
   --------------------------------------------------------------------------
+  describe "checkReachable:" $ do
+
+    -- atomic statements --
+    checkReachableIt (Error "")            []
+    checkReachableIt (Write "x" (Const 0)) []
+
+    -- compound statements --
+    checkReachableIt (Seq (Escape 1) (Escape 0)) [("unreachable statement",Escape 0)]
+    checkReachableIt (Seq (Trap (Trap (Escape 1))) (Escape 0)) []
+    checkReachableIt (Seq (Escape 0) (Escape 1)) [("unreachable statement",Escape 1)]
+    checkReachableIt (Seq (AwaitExt "FOREVER") (Escape 1)) [("unreachable statement",Escape 1)]
+    checkReachableIt (Seq (Seq (AwaitExt "FOREVER") Nop) (Escape 1)) [("unreachable statement",Nop),("unreachable statement",Escape 1)]
+    checkReachableIt (Seq (Loop Nop) Nop) [("unreachable statement",Nop)]
+    checkReachableIt (Seq (Every "" Nop) Nop) [("unreachable statement",Nop)]
+    checkReachableIt (Seq (Par Nop (Every "" Nop)) Nop) [("unreachable statement",Nop)]
+    checkReachableIt (Seq (Trap (Loop (Trap (Seq (Escape 0) (Escape 1))))) Nop) [("unreachable statement",Escape 1)]
+    checkReachableIt (Seq (Trap (Loop (Trap (Seq (Escape 0) Nop)))) Nop) [("unreachable statement",Nop),("unreachable statement",Nop)]
+
+  --------------------------------------------------------------------------
   describe "checkStmts -- program is valid" $ do
 
     -- atomic statements --
@@ -138,6 +158,7 @@ spec = do
     -- all
     checkCheckIt (Fin (Escape 0)) [("invalid statement in `finalize`",Fin (Escape 0)),("invalid statement",Escape 0),("orphan `escape` statement",Escape 0)]
     checkCheckIt (Trap (Fin (Escape 0))) [("invalid statement in `finalize`",Fin (Escape 0)),("invalid statement",Escape 0)]
+    checkCheckIt (Seq (Trap (Loop (Trap (Seq (Escape 0) Nop)))) Nop) [("unbounded `loop` execution",Loop (Trap (Seq (Escape 0) Nop))),("unreachable statement",Nop),("unreachable statement",Nop)]
 
       where
         checkIt ck p b   =
@@ -150,5 +171,6 @@ spec = do
         checkFinIt (Fin p) b = checkIt' Check.tight p b
         checkEveryIt p b     = checkIt' Check.tight p b
         checkEscapeIt p b    = checkIt' Escape.check p b
+        checkReachableIt p b = checkIt' Reachable.check p b
         checkStmtsIt p b     = checkIt' Check.stmts p b
         checkCheckIt p b     = checkIt' Check.check p b

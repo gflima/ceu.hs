@@ -1,8 +1,9 @@
 module Ceu.Grammar.Check where
 
 import Ceu.Grammar
-import qualified Ceu.Grammar.Check.Loop   as Loop
-import qualified Ceu.Grammar.Check.Escape as Escape
+import qualified Ceu.Grammar.Check.Loop      as Loop
+import qualified Ceu.Grammar.Check.Escape    as Escape
+import qualified Ceu.Grammar.Check.Reachable as Reachable
 
 tight :: Stmt -> [(String,Stmt)]
 tight p = mapmsg "invalid statement" (tight' (-1) p)
@@ -48,7 +49,7 @@ aux msg s p =
       [(msg, s)] ++ ret
 
 check :: Stmt -> [(String,Stmt)]
-check p = (stmts p) ++ (Escape.check p)
+check p = (stmts p) ++ (Escape.check p) ++ (Reachable.check p)
 
 go :: Stmt -> Stmt
 go p
