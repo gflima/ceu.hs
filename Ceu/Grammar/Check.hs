@@ -5,20 +5,23 @@ import qualified Ceu.Grammar.Check.Loop   as Loop
 import qualified Ceu.Grammar.Check.Escape as Escape
 
 tight :: Stmt -> Bool
-tight (AwaitInt _)   = False
-tight (AwaitExt _)   = False
-tight (Every _ _)    = False
-tight (Fin _)        = False
-tight (Loop _)       = False
-tight (Var _ p)      = tight p
-tight (Int _ p)      = tight p
-tight (If _ p q)     = tight p && tight q
-tight (Seq p q)      = tight p && tight q
-tight (Par p q)      = False
-tight (Pause _ p)    = False
-tight (Trap p)       = tight p
-tight (Escape _)     = False
-tight _              = True
+tight p = tight' (-1) p
+tight' _ (AwaitInt _)   = False
+tight' _ (AwaitExt _)   = False
+tight' _ (Every _ _)    = False
+tight' _ (Fin _)        = False
+tight' _ (Loop _)       = False
+tight' n (Var _ p)      = tight' n p
+tight' n (Int _ p)      = tight' n p
+tight' n (If _ p q)     = tight' n p && tight' n q
+tight' n (Seq p q)      = tight' n p && tight' n q
+tight' n (Par p q)      = False
+tight' n (Pause _ p)    = False
+tight' n (Trap p)       = tight' (n+1) p
+tight' n (Escape k)
+  | (n >= k)  = True
+  | otherwise = False
+tight' _ _              = True
 
 -- Checks if program is valid.
 -- Returns all statements that fail.
