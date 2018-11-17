@@ -2,7 +2,14 @@ module Ceu.FullGrammarSpec (main, spec) where
 
 import Ceu.Globals
 import qualified Ceu.Grammar as G
-import Ceu.FullGrammar
+import Ceu.Full.Grammar
+import Ceu.Full.Eval
+import qualified Ceu.Full.Forever as Forever
+import qualified Ceu.Full.Break   as Break
+import qualified Ceu.Full.AndOr   as AndOr
+import qualified Ceu.Full.Spawn   as Spawn
+import qualified Ceu.Full.Async   as Async
+import qualified Ceu.Full.Fin     as Fin
 import Control.DeepSeq
 import Control.Exception
 import Test.Hspec
@@ -26,23 +33,23 @@ spec = do
   --------------------------------------------------------------------------
   describe "remFin" $ do
     it "var x; fin x with nop; nop" $ do
-      remFin (Var "x" (Just (Nop,Nop,Nop)) Nop)
+      Fin.remove (Var "x" (Just (Nop,Nop,Nop)) Nop)
       `shouldBe` (Var "x" Nothing (Or Nop (And Nop (Fin' Nop))))
 
     it "var x; { fin x with nop; nop }" $ do
-      remFin (Var "x" (Just (Nop,Nop,Nop)) (Var "y" Nothing Nop))
+      Fin.remove (Var "x" (Just (Nop,Nop,Nop)) (Var "y" Nothing Nop))
       `shouldBe` (Var "x" Nothing (Or (Var "y" Nothing Nop) (And Nop (Fin' Nop))))
 
     it "var x; { fin x with x=1; fin with x=2; x=3 }" $ do
-      remFin (Var "x" (Just ((Write "x" (Const 1)),Nop,Nop)) (Var "y" Nothing (Seq (Fin (Write "x" (Const 2)) Nop Nop) (Write "x" (Const 3)))))
+      Fin.remove (Var "x" (Just ((Write "x" (Const 1)),Nop,Nop)) (Var "y" Nothing (Seq (Fin (Write "x" (Const 2)) Nop Nop) (Write "x" (Const 3)))))
       `shouldBe` (Var "x" Nothing (Or (Var "y" Nothing (Or (Write "x" (Const 3)) (And Nop (Fin' (Write "x" (Const 2)))))) (And Nop (Fin' (Write "x" (Const 1))))))
 
     it "var x; { fin x with x=1; fin x with y=1; y=3 }" $ do
-      remFin (Var "x" (Just (((Write "x" (Const 1)) `Seq` (Write "y" (Const 1))),Nop,Nop)) (Var "_" Nothing (Write "y" (Const 3))))
+      Fin.remove (Var "x" (Just (((Write "x" (Const 1)) `Seq` (Write "y" (Const 1))),Nop,Nop)) (Var "_" Nothing (Write "y" (Const 3))))
       `shouldBe` (Var "x" Nothing (Or (Var "_" Nothing (Write "y" (Const 3))) (And Nop (Fin' (Seq (Write "x" (Const 1)) (Write "y" (Const 1)))))))
 
     it "var x; nop; { fin x with x=1; fin with x=2; x=3; fin x with y=1; fin with y=2; y=3 }; nop" $ do
-      remFin
+      Fin.remove
         (Var "x" (Just ((Write "x" (Const 1) `Seq` (Write "y" (Const 1)) `Seq` Nop),Nop,Nop))
                  (Seq Nop
                    (Seq
@@ -73,51 +80,51 @@ spec = do
   describe "remSpawn" $ do
 
     it "spawn nop;" $ do
-      evaluate $ remSpawn (Spawn Nop)
+      evaluate $ Spawn.remove (Spawn Nop)
       `shouldThrow` errorCall "remSpawn: unexpected statement (Spawn)"
 
     it "nop; spawn nop;" $ do
-      forceEval $ remSpawn (Seq Nop (Spawn Nop))
+      forceEval $ Spawn.remove (Seq Nop (Spawn Nop))
       `shouldThrow` errorCall "remSpawn: unexpected statement (Spawn)"
 
     it "spawn nop; nop" $ do
-      remSpawn (Seq (Spawn Nop) Nop)
+      Spawn.remove (Seq (Spawn Nop) Nop)
       `shouldBe` (Or (Seq Nop AwaitFor) Nop)
 
   --------------------------------------------------------------------------
   describe "chkSpawn" $ do
 
     it "spawn nop;" $ do
-      forceEval $ chkSpawn (Spawn Nop)
+      forceEval $ Spawn.check (Spawn Nop)
       `shouldThrow` errorCall "chkSpawn: unexpected statement (Spawn)"
 
     it "nop; spawn nop;" $ do
-      forceEval $ chkSpawn (Seq Nop (Spawn Nop))
+      forceEval $ Spawn.check (Seq Nop (Spawn Nop))
       `shouldThrow` errorCall "chkSpawn: unexpected statement (Spawn)"
 
     it "spawn nop; nop" $ do
-      chkSpawn (Seq (Spawn Nop) Nop)
+      Spawn.check (Seq (Spawn Nop) Nop)
       `shouldBe` (Seq (Spawn Nop) Nop)
 
   --------------------------------------------------------------------------
   describe "remAsync" $ do
 
     it "async { loop nop }" $ do
-      remAsync (Async (Loop Nop))
+      Async.remove (Async (Loop Nop))
       `shouldBe` (Loop (Seq Nop (AwaitExt "ASYNC" Nothing)))
 
   --------------------------------------------------------------------------
   describe "remBreak" $ do
 
     it "loop (or break FOR)" $ do
-      remBreak $ remAndOr (Loop (Or Break AwaitFor))
+      Break.remove $ AndOr.remove (Loop (Or Break AwaitFor))
       `shouldBe` Trap' (Loop (Trap' (Par' (Seq (Escape' 1) (Escape' 0)) (Seq AwaitFor (Escape' 0)))))
 
   --------------------------------------------------------------------------
   describe "remAwaitFor" $ do
 
     it "await FOREVER;" $ do
-      remAwaitFor AwaitFor
+      Forever.remove AwaitFor
       `shouldBe` (AwaitExt "FOREVER" Nothing)
 
   --------------------------------------------------------------------------

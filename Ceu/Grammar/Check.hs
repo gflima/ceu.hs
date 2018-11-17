@@ -54,4 +54,4 @@ check p = (stmts p) ++ (Escape.check p) ++ (Reachable.check p)
 go :: Stmt -> Stmt
 go p
   | check p == [] = p
-  | otherwise   = error "invalid program"
+  | otherwise     = error "invalid program"
