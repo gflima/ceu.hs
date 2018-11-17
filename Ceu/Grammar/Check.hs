@@ -4,8 +4,8 @@ import Ceu.Grammar
 import qualified Ceu.Grammar.Check.Loop   as Loop
 import qualified Ceu.Grammar.Check.Escape as Escape
 
-tight :: Stmt -> [Stmt]
-tight p = tight' (-1) p
+tight :: Stmt -> [(String,Stmt)]
+tight p = map (\s->("invalid statement",s)) (tight' (-1) p)
 tight' _ s@(AwaitInt _) = [s]
 tight' _ s@(AwaitExt _) = [s]
 tight' n s@(Every _ p)  = [s] ++ tight' n p
@@ -33,7 +33,13 @@ stmts stmt = case stmt of
   If _ p q      -> stmts p ++ stmts q
   Seq p q       -> stmts p ++ stmts q
   s@(Loop p)    -> stmts p ++ (if (Loop.check (Loop p)) then [] else [("unbounded `loop` execution", s)])
-  s@(Every e p) -> stmts p ++ (if (tight p == []) then [] else [("invalid statement in `every`", s)])
+  s@(Every e p) -> stmts p ++ msg where
+    msg =
+      let ret = tight p in
+        if (ret == []) then
+          []
+        else
+          [("invalid statement in `every`", s)] ++ ret
   Par p q       -> stmts p ++ stmts q
   Pause _ p     -> stmts p
   s@(Fin p)     -> stmts p ++ (if (tight p == []) then [] else [("invalid statement in `finalize`", s)])

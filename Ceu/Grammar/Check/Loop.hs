@@ -6,8 +6,6 @@ import Ceu.Grammar
 -- in its body lead to an occurrence of a matching-Escape/AwaitExt/Every.
 -- returns all `loop` that fail
 
-message = "unbounded `loop` execution"
-
 check :: Stmt -> Bool
 
 check (Loop body) = cL 0 body where
@@ -23,7 +21,7 @@ check (Loop body) = cL 0 body where
     Par p q          -> cL n p || cL n q
     Pause _ p        -> cL n p
     Trap p           -> cL (n+1) p
-    Escape k        -> (k >= n)
+    Escape k         -> (k >= n)
     _                -> False
 
 check _ = error "checkLoop: expected Loop"

@@ -65,23 +65,23 @@ spec = do
 
     -- atomic statements --
     checkFinIt (Fin (Write "x" (Const 0))) []
-    checkFinIt (Fin (AwaitExt "A"))        [AwaitExt "A"]
-    checkFinIt (Fin (AwaitInt "a"))        [AwaitInt "a"]
+    checkFinIt (Fin (AwaitExt "A"))        [("invalid statement",AwaitExt "A")]
+    checkFinIt (Fin (AwaitInt "a"))        [("invalid statement",AwaitInt "a")]
     checkFinIt (Fin (EmitInt "a"))         []
-    checkFinIt (Fin (Escape 0))            [Escape 0]
+    checkFinIt (Fin (Escape 0))            [("invalid statement",Escape 0)]
     checkFinIt (Fin (Nop))                 []
     checkFinIt (Fin (Error ""))            []
 
     -- compound statements --
     checkFinIt (Fin (Var "x" Nop))                                  []
-    checkFinIt (Fin (Var "x" (Every "A" Nop)))                      [Every "A" Nop]
-    checkFinIt (Fin (If (Const 0) (Loop (Escape 0)) (Nop)))         [Escape 0]
+    checkFinIt (Fin (Var "x" (Every "A" Nop)))                      [("invalid statement",Every "A" Nop)]
+    checkFinIt (Fin (If (Const 0) (Loop (Escape 0)) (Nop)))         [("invalid statement",Escape 0)]
     checkFinIt (Fin (If (Const 0) (Write "x" (Const 0)) (Nop)))     []
-    checkFinIt (Fin (Nop `Seq` Nop `Seq` (AwaitExt "A") `Seq` Nop)) [AwaitExt "A"]
+    checkFinIt (Fin (Nop `Seq` Nop `Seq` (AwaitExt "A") `Seq` Nop)) [("invalid statement",AwaitExt "A")]
     checkFinIt (Fin (Nop `Seq` Nop `Seq` (EmitInt "a") `Seq` Nop))  []
-    checkFinIt (Fin (Loop (AwaitInt "a")))                          [AwaitInt "a"]
-    checkFinIt (Fin (Loop (AwaitExt "A")))                          [AwaitExt "A"]
-    checkFinIt (Fin (Nop `Par` Nop `Par` (EmitInt "a")))            [Par Nop (Par Nop (EmitInt "a")),Par Nop (EmitInt "a")]
+    checkFinIt (Fin (Loop (AwaitInt "a")))                          [("invalid statement",AwaitInt "a")]
+    checkFinIt (Fin (Loop (AwaitExt "A")))                          [("invalid statement",AwaitExt "A")]
+    checkFinIt (Fin (Nop `Par` Nop `Par` (EmitInt "a")))            [("invalid statement",Par Nop (Par Nop (EmitInt "a"))),("invalid statement",Par Nop (EmitInt "a"))]
 
   --------------------------------------------------------------------------
   describe "checkEscape:" $ do
@@ -116,7 +116,7 @@ spec = do
     checkStmtsIt (Loop (Escape 0))               []
     checkStmtsIt (Loop Nop)                      [("unbounded `loop` execution", Loop Nop)]
     checkStmtsIt (Every "A" Nop)                 []
-    checkStmtsIt (Every "A" (Fin Nop))           [("invalid statement in `every`", Every "A" (Fin Nop))]
+    checkStmtsIt (Every "A" (Fin Nop))           [("invalid statement in `every`", Every "A" (Fin Nop)),("invalid statement",Fin Nop)]
     checkStmtsIt (Par (Escape 0) Nop)            []
     checkStmtsIt (Par Nop (EmitInt "a"))         []
     checkStmtsIt (Pause "a" Nop)                 []
@@ -130,7 +130,7 @@ spec = do
     checkStmtsIt (Loop (Trap (Loop (Escape 0))))                       [("unbounded `loop` execution", Loop (Trap (Loop (Escape 0))))]
     checkStmtsIt (Loop (Trap (Loop (Seq (Escape 0) (Escape 0)))))      [("unbounded `loop` execution", Loop (Trap (Loop (Seq (Escape 0) (Escape 0)))))]
     checkStmtsIt (AwaitInt "a" `Seq` (Fin (Escape 0)) `Par` Nop)       [("invalid statement in `finalize`", Fin (Escape 0))]
-    checkStmtsIt (AwaitInt "a" `Seq` (Every "A" (Fin Nop)) `Par` Nop)  [("invalid statement in `every`", Every "A" (Fin Nop))]
+    checkStmtsIt (AwaitInt "a" `Seq` (Every "A" (Fin Nop)) `Par` Nop)  [("invalid statement in `every`", Every "A" (Fin Nop)),("invalid statement",Fin Nop)]
     checkStmtsIt (Loop (Nop `Par` Loop (Loop (Loop (AwaitExt "A")))))  []
     checkStmtsIt (Loop ((Escape 0) `Par` Loop (Loop (Loop (AwaitExt "A"))))) []
     checkStmtsIt (Fin (Escape 0)) [("invalid statement in `finalize`",Fin (Escape 0))]
