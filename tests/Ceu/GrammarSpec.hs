@@ -121,23 +121,23 @@ spec = do
     checkStmtsIt (Par Nop (EmitInt "a"))         []
     checkStmtsIt (Pause "a" Nop)                 []
     checkStmtsIt (Fin Nop)                       []
-    checkStmtsIt (Fin (Fin Nop))                 [("invalid statement in `finalize`", Fin (Fin Nop))]
+    checkStmtsIt (Fin (Fin Nop))                 [("invalid statement in `finalize`", Fin (Fin Nop)),("invalid statement",Fin Nop)]
 
     -- misc --
-    checkStmtsIt (Nop `Seq` (Fin (Loop (Escape 0))))                   [("invalid statement in `finalize`", Fin (Loop (Escape 0)))]
+    checkStmtsIt (Nop `Seq` (Fin (Loop (Escape 0))))                   [("invalid statement in `finalize`", Fin (Loop (Escape 0))),("invalid statement",Escape 0)]
     checkStmtsIt (Nop `Seq` (Fin (Loop Nop)))                          [("unbounded `loop` execution", Loop Nop)]
-    checkStmtsIt (Var "x" (Fin (Every "A" Nop)))                       [("invalid statement in `finalize`", Fin (Every "A" Nop))]
+    checkStmtsIt (Var "x" (Fin (Every "A" Nop)))                       [("invalid statement in `finalize`", Fin (Every "A" Nop)),("invalid statement",Every "A" Nop)]
     checkStmtsIt (Loop (Trap (Loop (Escape 0))))                       [("unbounded `loop` execution", Loop (Trap (Loop (Escape 0))))]
     checkStmtsIt (Loop (Trap (Loop (Seq (Escape 0) (Escape 0)))))      [("unbounded `loop` execution", Loop (Trap (Loop (Seq (Escape 0) (Escape 0)))))]
-    checkStmtsIt (AwaitInt "a" `Seq` (Fin (Escape 0)) `Par` Nop)       [("invalid statement in `finalize`", Fin (Escape 0))]
+    checkStmtsIt (AwaitInt "a" `Seq` (Fin (Escape 0)) `Par` Nop)       [("invalid statement in `finalize`", Fin (Escape 0)),("invalid statement",Escape 0)]
     checkStmtsIt (AwaitInt "a" `Seq` (Every "A" (Fin Nop)) `Par` Nop)  [("invalid statement in `every`", Every "A" (Fin Nop)),("invalid statement",Fin Nop)]
     checkStmtsIt (Loop (Nop `Par` Loop (Loop (Loop (AwaitExt "A")))))  []
     checkStmtsIt (Loop ((Escape 0) `Par` Loop (Loop (Loop (AwaitExt "A"))))) []
-    checkStmtsIt (Fin (Escape 0)) [("invalid statement in `finalize`",Fin (Escape 0))]
+    checkStmtsIt (Fin (Escape 0)) [("invalid statement in `finalize`",Fin (Escape 0)),("invalid statement",Escape 0)]
 
     -- all
-    checkCheckIt (Fin (Escape 0)) [("invalid statement in `finalize`",Fin (Escape 0)),("orphan `escape` statement",Escape 0)]
-    checkCheckIt (Trap (Fin (Escape 0))) [("invalid statement in `finalize`",Fin (Escape 0))]
+    checkCheckIt (Fin (Escape 0)) [("invalid statement in `finalize`",Fin (Escape 0)),("invalid statement",Escape 0),("orphan `escape` statement",Escape 0)]
+    checkCheckIt (Trap (Fin (Escape 0))) [("invalid statement in `finalize`",Fin (Escape 0)),("invalid statement",Escape 0)]
 
       where
         checkIt ck p b   =

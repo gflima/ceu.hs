@@ -54,3 +54,6 @@ showProg stmt = case stmt of
   where
     sE = showExp
     sP = showProg
+
+mapmsg :: String -> [Stmt] -> [(String,Stmt)]
+mapmsg msg l = map (\s->(msg,s)) l

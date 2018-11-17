@@ -5,7 +5,7 @@ import qualified Ceu.Grammar.Check.Loop   as Loop
 import qualified Ceu.Grammar.Check.Escape as Escape
 
 tight :: Stmt -> [(String,Stmt)]
-tight p = map (\s->("invalid statement",s)) (tight' (-1) p)
+tight p = mapmsg "invalid statement" (tight' (-1) p)
 tight' _ s@(AwaitInt _) = [s]
 tight' _ s@(AwaitExt _) = [s]
 tight' n s@(Every _ p)  = [s] ++ tight' n p
@@ -33,18 +33,19 @@ stmts stmt = case stmt of
   If _ p q      -> stmts p ++ stmts q
   Seq p q       -> stmts p ++ stmts q
   s@(Loop p)    -> stmts p ++ (if (Loop.check (Loop p)) then [] else [("unbounded `loop` execution", s)])
-  s@(Every e p) -> stmts p ++ msg where
-    msg =
-      let ret = tight p in
-        if (ret == []) then
-          []
-        else
-          [("invalid statement in `every`", s)] ++ ret
+  s@(Every e p) -> stmts p ++ (aux "invalid statement in `every`" s p)
   Par p q       -> stmts p ++ stmts q
   Pause _ p     -> stmts p
-  s@(Fin p)     -> stmts p ++ (if (tight p == []) then [] else [("invalid statement in `finalize`", s)])
+  s@(Fin p)     -> stmts p ++ (aux "invalid statement in `finalize`" s p)
   Trap p        -> stmts p
   _             -> []
+
+aux msg s p =
+  let ret = tight p in
+    if (ret == []) then
+      []
+    else
+      [(msg, s)] ++ ret
 
 check :: Stmt -> [(String,Stmt)]
 check p = (stmts p) ++ (Escape.check p)

@@ -6,19 +6,22 @@ import Ceu.Grammar
 -- returns all errors found
 
 check :: Stmt -> [(String,Stmt)]
-check p = cE (-1) p where
-  cE :: Int -> Stmt -> [(String,Stmt)]
-  cE n (Var _ p)     = (cE n p)
-  cE n (Int _ p)     = (cE n p)
-  cE n (If _ p1 p2)  = (cE n p1) ++ (cE n p2)
-  cE n (Seq p1 p2)   = (cE n p1) ++ (cE n p2)
-  cE n (Loop p)      = (cE (n+1) p)
-  cE n (Every _ p)   = (cE n p)
-  cE n (Par p1 p2)   = (cE n p1) ++ (cE n p2)
-  cE n (Pause _ p)   = (cE n p)
-  cE n (Fin p)       = (cE n p)
-  cE n (Trap p)      = (cE (n+1) p)
-  cE n s@(Escape k)
-    | (n >= k)       = []
-    | otherwise      = [("orphan `escape` statement", s)]
-  cE n p             = []
+check p = mapmsg "orphan `escape` statement" (escapes p)
+
+escapes :: Stmt -> [Stmt]
+escapes p = escs (-1) p where
+  escs :: Int -> Stmt -> [Stmt]
+  escs n (Var _ p)     = (escs n p)
+  escs n (Int _ p)     = (escs n p)
+  escs n (If _ p1 p2)  = (escs n p1) ++ (escs n p2)
+  escs n (Seq p1 p2)   = (escs n p1) ++ (escs n p2)
+  escs n (Loop p)      = (escs (n+1) p)
+  escs n (Every _ p)   = (escs n p)
+  escs n (Par p1 p2)   = (escs n p1) ++ (escs n p2)
+  escs n (Pause _ p)   = (escs n p)
+  escs n (Fin p)       = (escs n p)
+  escs n (Trap p)      = (escs (n+1) p)
+  escs n s@(Escape k)
+    | (n >= k)         = []
+    | otherwise        = [s]
+  escs _ _             = []
