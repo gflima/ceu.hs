@@ -66,37 +66,37 @@ spec = do
 
     -- atomic statements --
     checkFinIt (Fin (Write "x" (Const 0))) []
-    checkFinIt (Fin (AwaitExt "A"))        [("invalid statement",AwaitExt "A")]
-    checkFinIt (Fin (AwaitInt "a"))        [("invalid statement",AwaitInt "a")]
+    checkFinIt (Fin (AwaitExt "A"))        ["await: invalid statement"]
+    checkFinIt (Fin (AwaitInt "a"))        ["await: invalid statement"]
     checkFinIt (Fin (EmitInt "a"))         []
-    checkFinIt (Fin (Escape 0))            [("invalid statement",Escape 0)]
+    checkFinIt (Fin (Escape 0))            ["escape: invalid statement"]
     checkFinIt (Fin (Nop))                 []
     checkFinIt (Fin (Error ""))            []
 
     -- compound statements --
     checkFinIt (Fin (Var "x" Nop))                                  []
-    checkFinIt (Fin (Var "x" (Every "A" Nop)))                      [("invalid statement",Every "A" Nop)]
-    checkFinIt (Fin (If (Const 0) (Loop (Escape 0)) (Nop)))         [("invalid statement",Escape 0)]
+    checkFinIt (Fin (Var "x" (Every "A" Nop)))                      ["every: invalid statement"]
+    checkFinIt (Fin (If (Const 0) (Loop (Escape 0)) (Nop)))         ["escape: invalid statement"]
     checkFinIt (Fin (If (Const 0) (Write "x" (Const 0)) (Nop)))     []
-    checkFinIt (Fin (Nop `Seq` Nop `Seq` (AwaitExt "A") `Seq` Nop)) [("invalid statement",AwaitExt "A")]
+    checkFinIt (Fin (Nop `Seq` Nop `Seq` (AwaitExt "A") `Seq` Nop)) ["await: invalid statement"]
     checkFinIt (Fin (Nop `Seq` Nop `Seq` (EmitInt "a") `Seq` Nop))  []
-    checkFinIt (Fin (Loop (AwaitInt "a")))                          [("invalid statement",AwaitInt "a")]
-    checkFinIt (Fin (Loop (AwaitExt "A")))                          [("invalid statement",AwaitExt "A")]
-    checkFinIt (Fin (Nop `Par` Nop `Par` (EmitInt "a")))            [("invalid statement",Par Nop (Par Nop (EmitInt "a"))),("invalid statement",Par Nop (EmitInt "a"))]
+    checkFinIt (Fin (Loop (AwaitInt "a")))                          ["await: invalid statement"]
+    checkFinIt (Fin (Loop (AwaitExt "A")))                          ["await: invalid statement"]
+    checkFinIt (Fin (Nop `Par` Nop `Par` (EmitInt "a")))            ["parallel: invalid statement","parallel: invalid statement"]
 
   --------------------------------------------------------------------------
   describe "checkEscape:" $ do
 
     -- atomic statements --
     checkEscapeIt (Error "")            []
-    checkEscapeIt (Escape 0)            [("orphan `escape` statement", Escape 0)]
+    checkEscapeIt (Escape 0)            ["escape: orphan `escape` statement"]
     checkEscapeIt (Write "x" (Const 0)) []
 
     -- compound statements --
     checkEscapeIt (Trap (Escape 0))                  []
-    checkEscapeIt (Trap (Escape 1))                  [("orphan `escape` statement", Escape 1)]
-    checkEscapeIt (Trap (Seq (Escape 0) (Escape 1))) [("orphan `escape` statement", Escape 1)]
-    checkEscapeIt (Trap (Seq (Escape 1) (Escape 1))) [("orphan `escape` statement", Escape 1),("orphan `escape` statement", Escape 1)]
+    checkEscapeIt (Trap (Escape 1))                  ["escape: orphan `escape` statement"]
+    checkEscapeIt (Trap (Seq (Escape 0) (Escape 1))) ["escape: orphan `escape` statement"]
+    checkEscapeIt (Trap (Seq (Escape 1) (Escape 1))) ["escape: orphan `escape` statement", "escape: orphan `escape` statement"]
 
   --------------------------------------------------------------------------
   describe "checkReachable:" $ do
@@ -106,16 +106,16 @@ spec = do
     checkReachableIt (Write "x" (Const 0)) []
 
     -- compound statements --
-    checkReachableIt (Seq (Escape 1) (Escape 0)) [("unreachable statement",Escape 0)]
+    checkReachableIt (Seq (Escape 1) (Escape 0)) ["escape: unreachable statement"]
     checkReachableIt (Seq (Trap (Trap (Escape 1))) (Escape 0)) []
-    checkReachableIt (Seq (Escape 0) (Escape 1)) [("unreachable statement",Escape 1)]
-    checkReachableIt (Seq (AwaitExt "FOREVER") (Escape 1)) [("unreachable statement",Escape 1)]
-    checkReachableIt (Seq (Seq (AwaitExt "FOREVER") Nop) (Escape 1)) [("unreachable statement",Nop),("unreachable statement",Escape 1)]
-    checkReachableIt (Seq (Loop Nop) Nop) [("unreachable statement",Nop)]
-    checkReachableIt (Seq (Every "" Nop) Nop) [("unreachable statement",Nop)]
-    checkReachableIt (Seq (Par Nop (Every "" Nop)) Nop) [("unreachable statement",Nop)]
-    checkReachableIt (Seq (Trap (Loop (Trap (Seq (Escape 0) (Escape 1))))) Nop) [("unreachable statement",Escape 1)]
-    checkReachableIt (Seq (Trap (Loop (Trap (Seq (Escape 0) Nop)))) Nop) [("unreachable statement",Nop),("unreachable statement",Nop)]
+    checkReachableIt (Seq (Escape 0) (Escape 1)) ["escape: unreachable statement"]
+    checkReachableIt (Seq (AwaitExt "FOREVER") (Escape 1)) ["escape: unreachable statement"]
+    checkReachableIt (Seq (Seq (AwaitExt "FOREVER") Nop) (Escape 1)) ["nop: unreachable statement",("escape: unreachable statement")]
+    checkReachableIt (Seq (Loop Nop) Nop) ["nop: unreachable statement"]
+    checkReachableIt (Seq (Every "" Nop) Nop) ["nop: unreachable statement"]
+    checkReachableIt (Seq (Par Nop (Every "" Nop)) Nop) ["nop: unreachable statement"]
+    checkReachableIt (Seq (Trap (Loop (Trap (Seq (Escape 0) (Escape 1))))) Nop) ["escape: unreachable statement"]
+    checkReachableIt (Seq (Trap (Loop (Trap (Seq (Escape 0) Nop)))) Nop) ["nop: unreachable statement", "nop: unreachable statement"]
 
   --------------------------------------------------------------------------
   describe "checkStmts -- program is valid" $ do
@@ -134,31 +134,33 @@ spec = do
     checkStmtsIt (If (Const 0) Nop (Escape 0))   []
     checkStmtsIt (Seq (Escape 0) Nop)            []
     checkStmtsIt (Loop (Escape 0))               []
-    checkStmtsIt (Loop Nop)                      [("unbounded `loop` execution", Loop Nop)]
+    checkStmtsIt (Loop Nop)                      ["loop: unbounded `loop` execution"]
     checkStmtsIt (Every "A" Nop)                 []
-    checkStmtsIt (Every "A" (Fin Nop))           [("invalid statement in `every`", Every "A" (Fin Nop)),("invalid statement",Fin Nop)]
+    checkStmtsIt (Every "A" (Fin Nop))           ["every: invalid statement in `every`", "finalize: invalid statement"]
     checkStmtsIt (Par (Escape 0) Nop)            []
     checkStmtsIt (Par Nop (EmitInt "a"))         []
     checkStmtsIt (Pause "a" Nop)                 []
     checkStmtsIt (Fin Nop)                       []
-    checkStmtsIt (Fin (Fin Nop))                 [("invalid statement in `finalize`", Fin (Fin Nop)),("invalid statement",Fin Nop)]
+    checkStmtsIt (Fin (Fin Nop))                 ["finalize: invalid statement in `finalize`", "finalize: invalid statement"]
 
     -- misc --
-    checkStmtsIt (Nop `Seq` (Fin (Loop (Escape 0))))                   [("invalid statement in `finalize`", Fin (Loop (Escape 0))),("invalid statement",Escape 0)]
-    checkStmtsIt (Nop `Seq` (Fin (Loop Nop)))                          [("unbounded `loop` execution", Loop Nop)]
-    checkStmtsIt (Var "x" (Fin (Every "A" Nop)))                       [("invalid statement in `finalize`", Fin (Every "A" Nop)),("invalid statement",Every "A" Nop)]
-    checkStmtsIt (Loop (Trap (Loop (Escape 0))))                       [("unbounded `loop` execution", Loop (Trap (Loop (Escape 0))))]
-    checkStmtsIt (Loop (Trap (Loop (Seq (Escape 0) (Escape 0)))))      [("unbounded `loop` execution", Loop (Trap (Loop (Seq (Escape 0) (Escape 0)))))]
-    checkStmtsIt (AwaitInt "a" `Seq` (Fin (Escape 0)) `Par` Nop)       [("invalid statement in `finalize`", Fin (Escape 0)),("invalid statement",Escape 0)]
-    checkStmtsIt (AwaitInt "a" `Seq` (Every "A" (Fin Nop)) `Par` Nop)  [("invalid statement in `every`", Every "A" (Fin Nop)),("invalid statement",Fin Nop)]
+    checkStmtsIt (Nop `Seq` (Fin (Loop (Escape 0))))                   ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
+    checkStmtsIt (Nop `Seq` (Fin (Loop Nop)))                          ["loop: unbounded `loop` execution"]
+    checkStmtsIt (Var "x" (Fin (Every "A" Nop)))                       ["finalize: invalid statement in `finalize`", "every: invalid statement"]
+    checkStmtsIt (Loop (Trap (Loop (Escape 0))))                       ["loop: unbounded `loop` execution"]
+    checkStmtsIt (Loop (Trap (Loop (Seq (Escape 0) (Escape 0)))))      ["loop: unbounded `loop` execution"]
+    checkStmtsIt (AwaitInt "a" `Seq` (Fin (Escape 0)) `Par` Nop)       ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
+    checkStmtsIt (AwaitInt "a" `Seq` (Every "A" (Fin Nop)) `Par` Nop)  ["every: invalid statement in `every`", "finalize: invalid statement"]
     checkStmtsIt (Loop (Nop `Par` Loop (Loop (Loop (AwaitExt "A")))))  []
     checkStmtsIt (Loop ((Escape 0) `Par` Loop (Loop (Loop (AwaitExt "A"))))) []
-    checkStmtsIt (Fin (Escape 0)) [("invalid statement in `finalize`",Fin (Escape 0)),("invalid statement",Escape 0)]
+    checkStmtsIt (Fin (Escape 0)) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
 
     -- all
-    checkCheckIt (Fin (Escape 0)) [("invalid statement in `finalize`",Fin (Escape 0)),("invalid statement",Escape 0),("orphan `escape` statement",Escape 0)]
-    checkCheckIt (Trap (Fin (Escape 0))) [("invalid statement in `finalize`",Fin (Escape 0)),("invalid statement",Escape 0)]
-    checkCheckIt (Seq (Trap (Loop (Trap (Seq (Escape 0) Nop)))) Nop) [("unbounded `loop` execution",Loop (Trap (Seq (Escape 0) Nop))),("unreachable statement",Nop),("unreachable statement",Nop)]
+    checkCheckIt (Fin (Escape 0)) ["finalize: invalid statement in `finalize`", "escape: invalid statement", "escape: orphan `escape` statement"]
+    checkCheckIt (Trap (Fin (Escape 0))) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
+    checkCheckIt (Seq (Trap (Loop (Trap (Seq (Escape 0) Nop)))) Nop) ["loop: unbounded `loop` execution", "nop: unreachable statement", "nop: unreachable statement"]
+    checkCheckIt (Trap (Seq (Trap (Par (AwaitExt "FOREVER") (Escape 0))) (Escape 0)))
+      []
 
       where
         checkIt ck p b   =

@@ -327,26 +327,30 @@ steps d
   | otherwise = steps $ step d
   -- | otherwise = traceShow d (steps $ step d)
 
+data Result = Success (Val,[Outs]) | Fail Errors
+  deriving (Show, Eq)
+
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
-evalProg_Reaction :: G.Stmt -> [a] -> (Stmt->a->(Stmt,Outs)) -> (Val,[Outs])
-evalProg_Reaction prog ins reaction -- enclosing block with "ret" that never terminates
-  = eP prog' ins []
+evalProg_Reaction :: G.Stmt -> [a] -> (Stmt->a->(Stmt,Outs)) -> Result
+evalProg_Reaction prog ins reaction = -- enclosing block with "ret" that never terminates
+  let prog' = Check.go (G.Var "ret" (G.Seq prog (G.AwaitExt "FOREVER"))) in
+    case prog' of
+      Check.Fail errs      -> Fail errs
+      Check.Success prog'' -> eP (fromGrammar prog'') ins []
   where
     --eP :: Stmt -> [a] -> [Outs] -> (Val,[Outs])
     eP prog ins outss = case prog of
       (Var ("ret",val) (AwaitExt "FOREVER"))
-        | not (null ins) -> error "evalProg: pending inputs"
-        | isNothing val  -> error "evalProg: no return"
-        | otherwise      -> ((fromJust val), outss)
+        | not (null ins) -> Fail ["pending inputs"]
+        | isNothing val  -> Fail ["no return value"]
+        | otherwise      -> Success ((fromJust val), outss)
       _
-        | null ins       -> error "evalProg: program didn't terminate"
+        | null ins       -> Fail ["program didn't terminate"]
         | otherwise      -> eP prog' (tail ins) (outss++[outs']) where
                                (prog',outs') = reaction prog (head ins)
 
-    prog' = (fromGrammar $ Check.go $ S.simplify (G.Var "ret" (G.Seq prog (G.AwaitExt "FOREVER"))))
-
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
-evalProg :: G.Stmt -> [ID_Ext] -> (Val,[Outs])
+evalProg :: G.Stmt -> [ID_Ext] -> Result
 evalProg prog ins = evalProg_Reaction prog ("BOOT":ins) reaction

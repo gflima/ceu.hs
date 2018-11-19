@@ -2,6 +2,8 @@ module Ceu.Globals where
 
 import Text.Printf
 
+type Errors = [String]
+
 -- Primitive types.
 type ID_Var = String            -- variable identifier
 type ID_Evt = String            -- event identifier

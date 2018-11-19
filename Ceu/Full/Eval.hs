@@ -50,10 +50,11 @@ reaction p (ext,val) = (p''',outs) where
   p' = E.Var (("_"++ext), val) p
   (E.Var _ p''') = p''
 
-evalFullProg :: Stmt -> [In] -> (Val,[E.Outs])
-evalFullProg prog ins = (val,outss')
+evalFullProg :: Stmt -> [In] -> E.Result
+evalFullProg prog ins =
+  let res = E.evalProg_Reaction (toGrammar prog) ins' reaction in
+    case res of
+      E.Success (val,outss) -> E.Success (val, (Timer.join ins' outss))
+      otherwise             -> res
   where
-    (val,outss) = E.evalProg_Reaction (toGrammar prog) ins'' reaction
-    ins'   = ("BOOT",Nothing):ins
-    ins''  = Timer.expand ins'
-    outss' = Timer.join ins' outss
+    ins' = Timer.expand (("BOOT",Nothing):ins)

@@ -2,6 +2,7 @@ module Ceu.FullGrammarSpec (main, spec) where
 
 import Ceu.Globals
 import qualified Ceu.Grammar as G
+import qualified Ceu.Eval    as E
 import Ceu.Full.Grammar
 import Ceu.Full.Eval
 import qualified Ceu.Full.Forever as Forever
@@ -163,7 +164,7 @@ nop;
 -}
 
     -- TODO: OK
-    evalFullProgItFail "varsRead: undeclared variable: b" [] (
+    evalFullProgItFail ["varsRead: undeclared variable: b"] [] (
       (Var "a" (Just ((Write "ret" (Read "b")),Nop,Nop))
         (Var "b" Nothing
           (Seq
@@ -190,7 +191,7 @@ with
     end
 end
 -}
-    evalFullProgItPass (25,[[]]) [] (
+    evalFullProgItSuccess (25,[[]]) [] (
       (Int "a" False (
       (Write "ret" (Const 0)) `Seq`
       (Or
@@ -217,7 +218,7 @@ with
     emit a(10);     // no 10
 end
 -}
-    evalFullProgItPass (10,[[]]) [] (
+    evalFullProgItSuccess (10,[[]]) [] (
       Int "a" True (
         And
           (AwaitInt "a" (Just "ret"))
@@ -225,35 +226,35 @@ end
       ))
 
 -- TODO
-    --evalFullProgItPass (10,[[]]) [] Break
+    --evalFullProgItSuccess (10,[[]]) [] Break
     --evalFullProgItFail "remBreak: `break` without `loop`" []
       --Break
 
-    evalFullProgItFail "varsWrite: undeclared variable: _a" [] (
+    evalFullProgItFail ["varsWrite: undeclared variable: _a"] [] (
       Int "a" False (
         And
           (AwaitInt "a" (Just "ret"))
           (EmitInt "a" (Just (Const 10)))
       ))
-    evalFullProgItFail "varsWrite: undeclared variable: _a" [] (
+    evalFullProgItFail ["varsWrite: undeclared variable: _a"] [] (
       Int "a" False ( -- TODO: OK
         And
           (AwaitInt "a" Nothing)
           (EmitInt "a" (Just (Const 10)))
       ))
-    evalFullProgItPass (99,[[]]) [] (
+    evalFullProgItSuccess (99,[[]]) [] (
       Int "a" False (
         And
           ((AwaitInt "a" Nothing) `Seq` (Write "ret" (Const 99)))
           (EmitInt "a" Nothing)
       ))
-    evalFullProgItPass (99,[[]]) [] (
+    evalFullProgItSuccess (99,[[]]) [] (
       Int "a" True (
         And
           ((AwaitInt "a" Nothing) `Seq` (Write "ret" (Const 99)))
           (EmitInt "a" (Just (Const 10)))
       ))
-    evalFullProgItFail "varsRead: uninitialized variable: _a" [] (
+    evalFullProgItFail ["varsRead: uninitialized variable: _a"] [] (
       Int "a" True (
         And
           (AwaitInt "a" (Just "ret"))
@@ -268,12 +269,12 @@ with
 end
 -}
     -- TODO: OK
-    evalFullProgItFail "varsRead: uninitialized variable: _A" [("A",Nothing)] (
+    evalFullProgItFail ["varsRead: uninitialized variable: _A"] [("A",Nothing)] (
       Or
         (Every "A" (Just "ret") Nop)
         (AwaitExt "F" Nothing)
       )
-    evalFullProgItPass (99,[[],[],[],[]]) [("A",Just 1),("A",Just 99),("F",Just 2)] (
+    evalFullProgItSuccess (99,[[],[],[],[]]) [("A",Just 1),("A",Just 99),("F",Just 2)] (
       Or
         (Every "A" (Just "ret") Nop)
         (AwaitExt "F" Nothing)
@@ -281,30 +282,30 @@ end
 
   describe "timers" $ do
 
-    evalFullProgItPass (10,[[],[]]) [("TIMER",Just 10)]
+    evalFullProgItSuccess (10,[[],[]]) [("TIMER",Just 10)]
       (Seq (AwaitTmr (Const 10)) (Write "ret" (Const 10)))
-    evalFullProgItFail "evalProg: pending inputs" [("TIMER",Just 11)]
+    evalFullProgItFail ["evalProg: pending inputs"] [("TIMER",Just 11)]
       (Seq (AwaitTmr (Const 10)) (Write "ret" (Const 10)))
-    evalFullProgItPass (10,[[],[]]) [("TIMER",Just 10)]
+    evalFullProgItSuccess (10,[[],[]]) [("TIMER",Just 10)]
       ((AwaitTmr (Const 5)) `Seq` (AwaitTmr (Const 5)) `Seq` (Write "ret" (Const 10)))
-    evalFullProgItPass (10,[[],[]]) [("TIMER",Just 10)]
+    evalFullProgItSuccess (10,[[],[]]) [("TIMER",Just 10)]
       ((AwaitTmr (Const 8)) `Seq` (AwaitTmr (Const 2)) `Seq` (Write "ret" (Const 10)))
 
-    evalFullProgItPass (10,[[],[]]) [("TIMER",Just 10)]
+    evalFullProgItSuccess (10,[[],[]]) [("TIMER",Just 10)]
       (Seq
         (And
           (AwaitTmr (Const 10))
           (AwaitTmr (Const 10)))
         (Write "ret" (Const 10)))
 
-    evalFullProgItPass (10,[[],[]]) [("TIMER",Just 10)]
+    evalFullProgItSuccess (10,[[],[]]) [("TIMER",Just 10)]
       (Seq
         (And
           ((AwaitTmr (Const 5)) `Seq` (AwaitTmr (Const 5)))
           ((AwaitTmr (Const 5)) `Seq` (AwaitTmr (Const 5))))
         (Write "ret" (Const 10)))
 
-    evalFullProgItPass (10,[[],[]]) [("TIMER",Just 20)]
+    evalFullProgItSuccess (10,[[],[]]) [("TIMER",Just 20)]
       (Seq
         (And
           ((AwaitTmr (Const 5)) `Seq` (AwaitTmr (Const 5)))
@@ -313,7 +314,7 @@ end
           (AwaitTmr (Const 10))
           (Write "ret" (Const 10))))
 
-    evalFullProgItPass (10,[[],[]]) [("TIMER",Just 20)]
+    evalFullProgItSuccess (10,[[],[]]) [("TIMER",Just 20)]
       (Seq
         (And
           ((AwaitTmr (Const 5)) `Seq` (AwaitTmr (Const 5)))
@@ -322,7 +323,7 @@ end
           (AwaitTmr (Const 10))
           (Write "ret" (Const 10))))
 
-    evalFullProgItPass
+    evalFullProgItSuccess
       (10,[[],[("B",Just 1),("A",Just 1),("A",Just 2)],[("B",Just 2),("C",Just 1)]])
       [("TIMER",Just 10),("TIMER",Just 11)]
       (Seq
@@ -336,7 +337,7 @@ end
 
   describe "outputs" $ do
 
-    evalFullProgItPass (1,[[],[("O",Just 1)],[("O",Just 2)],[]]) [("I",Just 1),("I",Just 2),("F",Nothing)]
+    evalFullProgItSuccess (1,[[],[("O",Just 1)],[("O",Just 2)],[]]) [("I",Just 1),("I",Just 2),("F",Nothing)]
       (Seq (Write "ret" (Const 1))
            (Var "i" Nothing
              (Or
@@ -345,10 +346,10 @@ end
 
   describe "pause" $ do
 
-    evalFullProgItPass (99,[[]]) []
+    evalFullProgItSuccess (99,[[]]) []
       (Int "x" True (Pause "x" (Write "ret" (Const 99))))
 
-    evalFullProgItPass (99,[[]]) []
+    evalFullProgItSuccess (99,[[]]) []
       (Or
         (Seq (AwaitExt "X" Nothing) (Write "ret" (Const 33)))
         (Int "x" True
@@ -357,12 +358,12 @@ end
               (EmitInt "x" (Just (Const 1)))
               (Write "ret" (Const 99))))))
 
-    evalFullProgItPass (99,[[],[],[],[],[]]) [("X",(Just 1)),("A",Nothing),("X",(Just 0)),("A",Nothing)]
+    evalFullProgItSuccess (99,[[],[],[],[],[]]) [("X",(Just 1)),("A",Nothing),("X",(Just 0)),("A",Nothing)]
       (Seq
         (Pause "X" (AwaitInt "A" Nothing))
         (Write "ret" (Const 99)))
 
-    evalFullProgItPass (99,[[],[("P",Nothing)],[]]) [("X",Just 1),("E",Nothing)]
+    evalFullProgItSuccess (99,[[],[("P",Nothing)],[]]) [("X",Just 1),("E",Nothing)]
       (Or
         (Pause "X"
           (Seq (Fin Nop (EmitExt "P" Nothing) Nop) AwaitFor))
@@ -380,14 +381,14 @@ pause/if X with
     await E;
 end
 -}
-    evalFullProgItPass (99,[[],[("P",Nothing)],[],[("R",Nothing)],[("F",Nothing)]]) [("X",Just 1),("E",Nothing),("X",Just 0),("E",Nothing)]
+    evalFullProgItSuccess (99,[[],[("P",Nothing)],[],[("R",Nothing)],[("F",Nothing)]]) [("X",Just 1),("E",Nothing),("X",Just 0),("E",Nothing)]
       (Seq
         (Pause "X"
           (Seq (Fin (EmitExt "F" Nothing) (EmitExt "P" Nothing) (EmitExt "R" Nothing))
                (AwaitExt "E" Nothing)))
         (Write "ret" (Const 99)))
 
-    evalFullProgItPass (99,[[],[("P",Nothing)],[],[("R",Nothing)],[("F",Nothing)]]) [("X",Just 1),("E",Nothing),("X",Just 0),("E",Nothing)]
+    evalFullProgItSuccess (99,[[],[("P",Nothing)],[],[("R",Nothing)],[("F",Nothing)]]) [("X",Just 1),("E",Nothing),("X",Just 0),("E",Nothing)]
       (Seq
         (Pause "X"
           (Var "x" (Just ((EmitExt "F" Nothing),(EmitExt "P" Nothing),(EmitExt "R" Nothing)))
@@ -395,10 +396,10 @@ end
         (Write "ret" (Const 99)))
 
       where
-        evalFullProgItPass (res,outss) hist prog =
+        evalFullProgItSuccess (res,outss) hist prog =
           (it (printf "pass: %s | %s ~> %d %s" (show hist) (G.showProg $ toGrammar prog) res (show outss)) $
-            (evalFullProg prog hist `shouldBe` (res,outss)))
+            (evalFullProg prog hist `shouldBe` E.Success (res,outss)))
 
         evalFullProgItFail err hist prog =
-          (it (printf "fail: %s | %s ***%s" (show hist) (G.showProg $ toGrammar prog) err) $
-            (forceEval (evalFullProg prog hist) `shouldThrow` errorCall err))
+          (it (printf "fail: %s | %s ***%s" (show hist) (G.showProg $ toGrammar prog) (show err)) $
+            (evalFullProg prog hist) `shouldBe` E.Fail err)

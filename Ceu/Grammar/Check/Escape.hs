@@ -1,12 +1,13 @@
 module Ceu.Grammar.Check.Escape where
 
+import Ceu.Globals
 import Ceu.Grammar
 
 -- checks `escape` without enclosing `trap`
 -- returns all errors found
 
-check :: Stmt -> [(String,Stmt)]
-check p = mapmsg "orphan `escape` statement" (escapes p)
+check :: Stmt -> Errors
+check p = errs_stmts_msg_map (escapes p) "orphan `escape` statement"
 
 escapes :: Stmt -> [Stmt]
 escapes p = escs (-1) p where

@@ -55,5 +55,29 @@ showProg stmt = case stmt of
     sE = showExp
     sP = showProg
 
-mapmsg :: String -> [Stmt] -> [(String,Stmt)]
-mapmsg msg l = map (\s->(msg,s)) l
+stmt2word :: Stmt -> String
+stmt2word stmt = case stmt of
+  Var _ _     -> "declaration"
+  Int _ _     -> "declaration"
+  Write _ _   -> "assignment"
+  AwaitExt _  -> "await"
+  EmitExt _ _ -> "emit"
+  AwaitInt _  -> "await"
+  EmitInt _   -> "emit"
+  If _ _ _    -> "if"
+  Seq _ _     -> "sequence"
+  Loop _      -> "loop"
+  Every _ _   -> "every"
+  Par _ _     -> "parallel"
+  Pause _ _   -> "pause/if"
+  Fin _       -> "finalize"
+  Trap _      -> "trap"
+  Escape _    -> "escape"
+  Nop         -> "nop"
+  Error _     -> "err"
+
+err_stmt_msg :: Stmt -> String -> String
+err_stmt_msg stmt msg = (stmt2word stmt) ++ ": " ++ msg
+
+errs_stmts_msg_map :: [Stmt] -> String -> Errors
+errs_stmts_msg_map stmts msg = map (\s -> (stmt2word s) ++ ": " ++ msg) stmts
