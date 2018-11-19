@@ -94,9 +94,11 @@ spec = do
 
     -- compound statements --
     checkEscapeIt (Trap (Escape 0))                  []
-    checkEscapeIt (Trap (Escape 1))                  ["escape: orphan `escape` statement"]
+    checkEscapeIt (Trap (Escape 1))                  ["trap: missing `escape` statement","escape: orphan `escape` statement"]
+    checkEscapeIt (Trap (Trap (Escape 0)))           ["trap: missing `escape` statement"]
+    checkEscapeIt (Trap (Trap (Escape 1)))           ["trap: missing `escape` statement"]
     checkEscapeIt (Trap (Seq (Escape 0) (Escape 1))) ["escape: orphan `escape` statement"]
-    checkEscapeIt (Trap (Seq (Escape 1) (Escape 1))) ["escape: orphan `escape` statement", "escape: orphan `escape` statement"]
+    checkEscapeIt (Trap (Seq (Escape 1) (Escape 1))) ["trap: missing `escape` statement","escape: orphan `escape` statement", "escape: orphan `escape` statement"]
 
   --------------------------------------------------------------------------
   describe "checkReachable:" $ do
@@ -158,9 +160,12 @@ spec = do
     -- all
     checkCheckIt (Fin (Escape 0)) ["finalize: invalid statement in `finalize`", "escape: invalid statement", "escape: orphan `escape` statement"]
     checkCheckIt (Trap (Fin (Escape 0))) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
-    checkCheckIt (Seq (Trap (Loop (Trap (Seq (Escape 0) Nop)))) Nop) ["loop: unbounded `loop` execution", "nop: unreachable statement", "nop: unreachable statement"]
+    checkCheckIt (Seq (Trap (Loop (Trap (Seq (Escape 0) Nop)))) Nop) ["loop: unbounded `loop` execution", "trap: missing `escape` statement", "nop: unreachable statement", "nop: unreachable statement"]
     checkCheckIt (Trap (Seq (Trap (Par (AwaitExt "FOREVER") (Escape 0))) (Escape 0)))
       []
+    checkCheckIt (Trap (Par (Escape 0) (Seq (Par Nop (Fin Nop)) (Escape 0))))
+      ["escape: unreachable statement"]
+
 
       where
         checkIt ck p b   =
