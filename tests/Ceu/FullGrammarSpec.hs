@@ -129,7 +129,7 @@ spec = do
 
     it "loop (or break FOR)" $ do
       Break.remove $ AndOr.remove (Loop (Or Break AwaitFor))
-      `shouldBe` Trap' (Loop (Clear' "Or" (Trap' (Par' (Seq (Escape' 1) (Escape' 0)) (Seq AwaitFor (Escape' 0))))))
+      `shouldBe` Clear' "Loop" (Trap' (Loop (Clear' "Or" (Trap' (Par' (Seq (Escape' 1) (Escape' 0)) (Seq AwaitFor (Escape' 0)))))))
 
     it "loop (or break FOR)" $ do
       (toGrammar $ Forever.remove $ Break.remove $ AndOr.remove (Loop (Or Break AwaitFor)))
@@ -160,7 +160,7 @@ spec = do
 
     it "spawn do async ret++ end ;; await F;" $ do
       toGrammar' (Seq (Spawn (Async (Loop (Write "x" (Add (Read "x") (Const 1)))))) (AwaitExt "A" Nothing))
-      `shouldBe` (G.Trap (G.Par (G.Seq (G.Trap (G.Loop (G.Seq (G.Write "x" (Add (Read "x") (Const 1))) (G.AwaitExt "ASYNC")))) (G.AwaitExt "FOREVER")) (G.Seq (G.AwaitExt "A") (G.Escape 0))))
+      `shouldBe` (G.Trap (G.Par (G.Seq (G.Loop (G.Seq (G.Write "x" (Add (Read "x") (Const 1))) (G.AwaitExt "ASYNC"))) (G.AwaitExt "FOREVER")) (G.Seq (G.AwaitExt "A") (G.Escape 0))))
 
     it "trap terminates" $ do
       toGrammar' (Or (Trap' (Escape' 0)) AwaitFor)
@@ -249,6 +249,11 @@ end
           (Write "ret" (Add (Read "ret") (Const 10)))
         )
       ))))
+
+    evalFullProgItSuccess (25,[[]]) []
+      (Or
+        (Loop (AwaitTmr (Const 5)))
+        (Write "ret" (Const 25)))
 
   describe "events" $ do
 

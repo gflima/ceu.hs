@@ -3,7 +3,7 @@ module Ceu.Full.Clear where
 import qualified Ceu.Grammar as G
 
 import Ceu.Grammar.Check.Reachable (maybeTerminates)
-import Ceu.Grammar.Check.Escape    (removeTrap)
+import Ceu.Grammar.Check.Escape    (escapesAt1, removeTrap)
 
 clear :: String -> G.Stmt -> G.Stmt
 
@@ -18,5 +18,7 @@ clear "Or" (G.Trap (G.Par p1'@(G.Seq p1 (G.Escape 0)) p2'@(G.Seq p2 (G.Escape 0)
       ret
     else
       removeTrap ret
+
+clear "Loop" s@(G.Trap p) = if escapesAt1 p then s else p
 
 clear id _ = error $ "unexpected clear case: " ++ id
