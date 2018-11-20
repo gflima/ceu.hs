@@ -19,7 +19,7 @@ check (Int _ p)    = (check p)
 check (If _ p1 p2) = (check p1) ++ (check p2)
 check (Seq p1 p2)  = (check p1) ++ x ++ (check p2)
   where
-    x = if (infinite p1 || (not $ neverEscapes p1)) then [err_stmt_msg p2 "unreachable statement"] else []
+    x = if (neverTerminates p1) then [err_stmt_msg p2 "unreachable statement"] else []
 check (Loop p)     = (check p)
 check (Every _ p)  = (check p)
 check (Par p1 p2)  = (check p1) ++ (check p2)
@@ -43,16 +43,17 @@ maybeTerminates (Trap p)             = escapesAt1 p || maybeTerminates p
 maybeTerminates (Escape _)           = False
 maybeTerminates _                    = True
 
-infinite :: Stmt -> Bool
-infinite (Var _ p)      = neverEscapes p && infinite p
-infinite (Int _ p)      = neverEscapes p && infinite p
-infinite (AwaitExt ext) = ext == "FOREVER"
-infinite (If _ p1 p2)   = neverEscapes p1 && neverEscapes p2 && infinite p1 && infinite p2
-infinite (Seq p1 p2)    = neverEscapes p1 && (infinite p1 || (neverEscapes p2 && infinite p2))
-infinite (Loop p)       = neverEscapes p
-infinite (Every _ p)    = True
-infinite (Par p1 p2)    = neverEscapes p1 && neverEscapes p2 && (infinite p1 || infinite p2)
-infinite (Pause _ p)    = neverEscapes p && infinite p
-infinite (Fin p)        = True
-infinite (Trap p)       = neverEscapes p && infinite p
-infinite _              = False
+neverTerminates :: Stmt -> Bool
+neverTerminates (Var _ p)            = neverTerminates p
+neverTerminates (Int _ p)            = neverTerminates p
+neverTerminates (AwaitExt "FOREVER") = True
+neverTerminates (If _ p1 p2)         = neverTerminates p1 && neverTerminates p2
+neverTerminates (Seq p1 p2)          = neverTerminates p1 || neverTerminates p2
+neverTerminates (Loop p)             = True
+neverTerminates (Every _ p)          = True
+neverTerminates (Par p1 p2)          = neverTerminates p1 || neverTerminates p2
+neverTerminates (Pause _ p)          = neverTerminates p
+neverTerminates (Fin p)              = True
+neverTerminates (Trap p)             = not $ escapesAt1 p
+neverTerminates (Escape _)           = True
+neverTerminates _                    = False

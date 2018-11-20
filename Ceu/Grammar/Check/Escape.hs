@@ -32,7 +32,7 @@ getEscapes p = escs (-1) p where
     | otherwise        = [(s, k-n)]
   escs _ _             = []
 
-escapesAt1 p = (length $ filter (\(_,n) -> n==1) (getEscapes p)) == 1
+escapesAt1 p = (length $ filter (\(_,n) -> n==1) (getEscapes p)) >= 1
 
 checkTraps :: Stmt -> Errors
 checkTraps (Var _ p)     = (checkTraps p)
