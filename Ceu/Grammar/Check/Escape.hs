@@ -10,10 +10,12 @@ import Debug.Trace
 
 check :: Stmt -> Errors
 check p = (checkTraps p) ++
-          (errs_stmts_msg_map (map (\(s,n)->s) (escapes p)) "orphan `escape` statement")
+          (errs_stmts_msg_map (map (\(s,n)->s) (getEscapes p)) "orphan `escape` statement")
 
-escapes :: Stmt -> [(Stmt,Int)]
-escapes p = escs (-1) p where
+neverEscapes p = (getEscapes p == [])
+
+getEscapes :: Stmt -> [(Stmt,Int)]
+getEscapes p = escs (-1) p where
   escs :: Int -> Stmt -> [(Stmt,Int)]
   escs n (Var _ p)     = (escs n p)
   escs n (Int _ p)     = (escs n p)
@@ -30,6 +32,8 @@ escapes p = escs (-1) p where
     | otherwise        = [(s, k-n)]
   escs _ _             = []
 
+escapesAt1 p = (length $ filter (\(_,n) -> n==1) (getEscapes p)) == 1
+
 checkTraps :: Stmt -> Errors
 checkTraps (Var _ p)     = (checkTraps p)
 checkTraps (Int _ p)     = (checkTraps p)
@@ -42,8 +46,27 @@ checkTraps (Pause _ p)   = (checkTraps p)
 checkTraps (Fin p)       = (checkTraps p)
 checkTraps s@(Trap p)    = res ++ (checkTraps p) where
   res =
-    if (length $ filter (\(_,n) -> n==1) (escapes p)) == 0 then
+    if (length $ filter (\(_,n) -> n==1) (getEscapes p)) == 0 then
       [err_stmt_msg s "missing `escape` statement"]
     else
       []
 checkTraps _             = []
+
+removeTrap :: Stmt -> Stmt
+removeTrap (Trap p) = rT 0 p where
+  rT :: Int -> Stmt -> Stmt
+  rT n (Var var p)      = Var var (rT n p)
+  rT n (Int int p)      = Int int (rT n p)
+  rT n (If exp p1 p2)   = If exp (rT n p1) (rT n p2)
+  rT n (Seq p1 p2)      = Seq (rT n p1) (rT n p2)
+  rT n (Loop p)         = Loop (rT n p)
+  rT n (Every evt p)    = Every evt (rT n p)
+  rT n (Par p1 p2)      = Par (rT n p1) (rT n p2)
+  rT n (Pause var p)    = Pause var (rT n p)
+  rT n (Fin p)          = Fin (rT n p)
+  rT n (Trap p)         = Trap (rT (n+1) p)
+  rT n (Escape k)
+    | k < n = (Escape k)
+    | k > n = (Escape (k-1))
+    | otherwise = error "unexpected `escape` for `trap` being removed"
+  rT n p                = p

@@ -115,11 +115,25 @@ spec = do
       `shouldBe` (Loop (Seq Nop (AwaitExt "ASYNC" Nothing)))
 
   --------------------------------------------------------------------------
+  describe "remAndOr" $ do
+
+    it "(and nop nop)" $ do
+      AndOr.remove (And Nop Nop) `shouldBe` (Par' Nop Nop)
+    it "(or nop awaitFor)" $ do
+      AndOr.remove (Or Nop AwaitFor) `shouldBe` (Clear' "Or" (Trap' (Par' (Seq Nop (Escape' 0)) (Seq AwaitFor (Escape' 0)))))
+    it "(or nop awaitFor)" $ do
+      (toGrammar $ Forever.remove $ AndOr.remove (Or Nop AwaitFor)) `shouldBe` (G.Trap (G.Par (G.Seq G.Nop (G.Escape 0)) (G.AwaitExt "FOREVER")))
+
+  --------------------------------------------------------------------------
   describe "remBreak" $ do
 
     it "loop (or break FOR)" $ do
       Break.remove $ AndOr.remove (Loop (Or Break AwaitFor))
-      `shouldBe` Trap' (Loop (Trap' (Par' (Seq (Escape' 1) (Escape' 0)) (Seq AwaitFor (Escape' 0)))))
+      `shouldBe` Trap' (Loop (Clear' "Or" (Trap' (Par' (Seq (Escape' 1) (Escape' 0)) (Seq AwaitFor (Escape' 0))))))
+
+    it "loop (or break FOR)" $ do
+      (toGrammar $ Forever.remove $ Break.remove $ AndOr.remove (Loop (Or Break AwaitFor)))
+      `shouldBe` (G.Trap (G.Loop (G.Par (G.Escape 0) (G.AwaitExt "FOREVER"))))
 
   --------------------------------------------------------------------------
   describe "remAwaitFor" $ do
@@ -129,24 +143,52 @@ spec = do
       `shouldBe` (AwaitExt "FOREVER" Nothing)
 
   --------------------------------------------------------------------------
-  describe "toGrammar" $ do
+  describe "toGrammar'" $ do
 
     it "var x;" $ do
-      toGrammar (Var "x" Nothing Nop)
+      toGrammar' (Var "x" Nothing Nop)
       `shouldBe` (G.Var "x" G.Nop)
 
     it "do var x; x = 1 end" $ do
-      toGrammar (Var "x" Nothing (Write "x" (Const 1)))
+      toGrammar' (Var "x" Nothing (Write "x" (Const 1)))
       `shouldBe` (G.Var "x" (G.Write "x" (Const 1)))
 
     it "spawn do await A; end ;; await B; var x; await FOREVER;" $ do
-      toGrammar (Seq (Spawn (AwaitExt "A" Nothing)) (Seq (AwaitExt "B" Nothing) (Var "x" Nothing AwaitFor)))
-      `shouldBe` (G.Trap (G.Par (G.Seq (G.Seq (G.AwaitExt "A") (G.AwaitExt "FOREVER")) (G.Escape 0)) (G.Seq (G.Seq (G.AwaitExt "B") (G.Var "x" (G.AwaitExt "FOREVER"))) (G.Escape 0))))
+      toGrammar' (Seq (Spawn (AwaitExt "A" Nothing)) (Seq (AwaitExt "B" Nothing) (Var "x" Nothing AwaitFor)))
+      `shouldBe` (G.Par (G.Seq (G.AwaitExt "A") (G.AwaitExt "FOREVER")) (G.Seq (G.AwaitExt "B") (G.Var "x" (G.AwaitExt "FOREVER"))))
 
 
     it "spawn do async ret++ end ;; await F;" $ do
-      toGrammar (Seq (Spawn (Async (Loop (Write "x" (Add (Read "x") (Const 1)))))) (AwaitExt "A" Nothing))
-      `shouldBe` (G.Trap (G.Par (G.Seq (G.Seq (G.Trap (G.Loop (G.Seq (G.Write "x" (Add (Read "x") (Const 1))) (G.AwaitExt "ASYNC")))) (G.AwaitExt "FOREVER")) (G.Escape 0)) (G.Seq (G.AwaitExt "A") (G.Escape 0))))
+      toGrammar' (Seq (Spawn (Async (Loop (Write "x" (Add (Read "x") (Const 1)))))) (AwaitExt "A" Nothing))
+      `shouldBe` (G.Trap (G.Par (G.Seq (G.Trap (G.Loop (G.Seq (G.Write "x" (Add (Read "x") (Const 1))) (G.AwaitExt "ASYNC")))) (G.AwaitExt "FOREVER")) (G.Seq (G.AwaitExt "A") (G.Escape 0))))
+
+    it "trap terminates" $ do
+      toGrammar' (Or (Trap' (Escape' 0)) AwaitFor)
+      `shouldBe` (G.Trap (G.Par (G.Seq (G.Trap (G.Escape 0)) (G.Escape 0)) (G.AwaitExt "FOREVER")))
+
+    it "removes unused trap" $ do
+      toGrammar' (Seq (Fin Nop Nop Nop) AwaitFor)
+      `shouldBe` (G.Par (G.AwaitExt "FOREVER") (G.Par G.Nop (G.Fin G.Nop)))
+
+    it "nested or/or/fin" $ do
+      toGrammar'
+        (Or
+          AwaitFor
+          (Or
+            (Seq (Fin Nop Nop Nop) AwaitFor)
+            Nop))
+      `shouldBe`
+        G.Trap
+          (G.Par
+            (G.AwaitExt "FOREVER")
+            (G.Seq
+              (G.Trap
+                (G.Par
+                  (G.Par
+                    (G.AwaitExt "FOREVER")
+                    (G.Par G.Nop (G.Fin G.Nop)))
+                  (G.Seq G.Nop (G.Escape 0))))
+              (G.Escape 0)))
 
   --------------------------------------------------------------------------
   describe "misc" $ do
@@ -284,7 +326,7 @@ end
 
     evalFullProgItSuccess (10,[[],[]]) [("TIMER",Just 10)]
       (Seq (AwaitTmr (Const 10)) (Write "ret" (Const 10)))
-    evalFullProgItFail ["evalProg: pending inputs"] [("TIMER",Just 11)]
+    evalFullProgItFail ["pending inputs"] [("TIMER",Just 11)]
       (Seq (AwaitTmr (Const 10)) (Write "ret" (Const 10)))
     evalFullProgItSuccess (10,[[],[]]) [("TIMER",Just 10)]
       ((AwaitTmr (Const 5)) `Seq` (AwaitTmr (Const 5)) `Seq` (Write "ret" (Const 10)))
@@ -397,9 +439,9 @@ end
 
       where
         evalFullProgItSuccess (res,outss) hist prog =
-          (it (printf "pass: %s | %s ~> %d %s" (show hist) (G.showProg $ toGrammar prog) res (show outss)) $
+          (it (printf "pass: %s | %s ~> %d %s" (show hist) (G.showProg $ toGrammar' prog) res (show outss)) $
             (evalFullProg prog hist `shouldBe` E.Success (res,outss)))
 
         evalFullProgItFail err hist prog =
-          (it (printf "fail: %s | %s ***%s" (show hist) (G.showProg $ toGrammar prog) (show err)) $
+          (it (printf "fail: %s | %s ***%s" (show hist) (G.showProg $ toGrammar' prog) (show err)) $
             (evalFullProg prog hist) `shouldBe` E.Fail err)

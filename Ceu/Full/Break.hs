@@ -19,4 +19,5 @@ remove p = rB (-1) p where
   rB n (Pause' var p)      = Pause' var (rB n p)
   rB n (Fin' p)            = Fin' (rB n p)
   rB n (Trap' p)           = Trap' (rB (n+1) p)
+  rB n (Clear' id p)       = Clear' id (rB n p)
   rB n p                   = p

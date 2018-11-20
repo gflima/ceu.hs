@@ -16,33 +16,14 @@ import qualified Ceu.Full.Pause   as Pause
 import qualified Ceu.Full.Async   as Async
 import qualified Ceu.Full.Fin     as Fin
 
--- toGrammar: Converts full -> basic
+-- toGrammar': Converts full -> basic
 
-toGrammar :: Stmt -> G.Stmt
-toGrammar p = toG $ Forever.remove $ Timer.remove $ Payload.remove
-                  $ Break.remove $ AndOr.remove $ Spawn.remove $ Spawn.check
-                  $ Pause.remove $ Async.remove $ Fin.remove
-                  $ p where
-  toG :: Stmt -> G.Stmt
-  toG (Var id Nothing p) = G.Var id (toG p)
-  toG (Int id b p)       = G.Int id (toG p)
-  toG (Write id exp)     = G.Write id exp
-  toG (AwaitExt ext var) = G.AwaitExt ext
-  toG (EmitExt ext exp)  = G.EmitExt ext exp
-  toG (AwaitInt int var) = G.AwaitInt int
-  toG (EmitInt int val)  = G.EmitInt int
-  toG (If exp p1 p2)     = G.If exp (toG p1) (toG p2)
-  toG (Seq p1 p2)        = G.Seq (toG p1) (toG p2)
-  toG (Loop p)           = G.Loop (toG p)
-  toG (Every evt var p)  = G.Every evt (toG p)
-  toG (Error msg)        = G.Error msg
-  toG (Par' p1 p2)       = G.Par (toG p1) (toG p2)
-  toG (Pause' var p)     = G.Pause var (toG p)
-  toG (Fin' p)           = G.Fin (toG p)
-  toG (Trap' p)          = G.Trap (toG p)
-  toG (Escape' n)        = G.Escape n
-  toG Nop                = G.Nop
-  toG p                  = error $ "toG: unexpected statement: "++(show p)
+toGrammar' :: Stmt -> G.Stmt
+toGrammar' p = toGrammar $ Forever.remove $ Timer.remove $ Payload.remove
+                         $ Break.remove $ AndOr.remove
+                         $ Spawn.remove $ Spawn.check
+                         $ Pause.remove $ Async.remove $ Fin.remove
+                         $ p
 
 reaction :: E.Stmt -> In -> (E.Stmt,E.Outs)
 reaction p (ext,val) = (p''',outs) where
@@ -52,9 +33,10 @@ reaction p (ext,val) = (p''',outs) where
 
 evalFullProg :: Stmt -> [In] -> E.Result
 evalFullProg prog ins =
-  let res = E.evalProg_Reaction (toGrammar prog) ins' reaction in
+  let res = E.evalProg_Reaction (toGrammar' prog) ins'' reaction in
     case res of
-      E.Success (val,outss) -> E.Success (val, (Timer.join ins' outss))
+      E.Success (val,outss) -> E.Success (val, Timer.join ins' outss)
       otherwise             -> res
   where
-    ins' = Timer.expand (("BOOT",Nothing):ins)
+    ins'  = ("BOOT",Nothing):ins
+    ins'' = Timer.expand ins'
