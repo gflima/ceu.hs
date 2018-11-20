@@ -156,6 +156,8 @@ spec = do
     checkStmtsIt (Loop (Nop `Par` Loop (Loop (Loop (AwaitExt "A")))))  []
     checkStmtsIt (Loop ((Escape 0) `Par` Loop (Loop (Loop (AwaitExt "A"))))) []
     checkStmtsIt (Fin (Escape 0)) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
+    checkStmtsIt (Loop (Escape 0)) []
+    checkStmtsIt (Loop (AwaitExt "FOREVER")) []
 
     -- all
     checkCheckIt (Fin (Escape 0)) ["finalize: invalid statement in `finalize`", "escape: invalid statement", "escape: orphan `escape` statement"]

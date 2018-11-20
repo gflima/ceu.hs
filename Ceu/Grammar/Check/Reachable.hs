@@ -4,13 +4,16 @@ import Ceu.Globals
 import Ceu.Grammar
 import Ceu.Grammar.Check.Escape (neverEscapes, escapesAt1)
 import Debug.Trace
+import Control.Exception
 
 -- Looks for unreachable statements:
 --  escape 0 ; ...
 --  awaitFor ; ...
 --  every    ; ...
---  loop/inf ; ...
+--  loop     ; ...
 --  par/inf  ; ...
+-- Looks for loop bodies that do not terminate:
+--  loop awaitFor end
 -- Returns all errors found.
 
 check :: Stmt -> Errors
@@ -20,7 +23,11 @@ check (If _ p1 p2) = (check p1) ++ (check p2)
 check (Seq p1 p2)  = (check p1) ++ x ++ (check p2)
   where
     x = if (neverTerminates p1) then [err_stmt_msg p2 "unreachable statement"] else []
-check (Loop p)     = (check p)
+check s@(Loop p)   = err ++ (check p) where
+                       err = if neverTerminates p then
+                         [err_stmt_msg s "`loop` never iterates"]
+                       else
+                         []
 check (Every _ p)  = (check p)
 check (Par p1 p2)  = (check p1) ++ (check p2)
 check (Pause _ p)  = (check p)
@@ -28,20 +35,7 @@ check (Fin p)      = (check p)
 check (Trap p)     = (check p)
 check p            = []
 
-maybeTerminates :: Stmt -> Bool
-maybeTerminates (Var _ p)            = maybeTerminates p
-maybeTerminates (Int _ p)            = maybeTerminates p
-maybeTerminates (AwaitExt "FOREVER") = False
-maybeTerminates (If _ p1 p2)         = maybeTerminates p1 || maybeTerminates p2
-maybeTerminates (Seq p1 p2)          = maybeTerminates p1 && maybeTerminates p2
-maybeTerminates (Loop p)             = False
-maybeTerminates (Every _ p)          = False
-maybeTerminates (Par p1 p2)          = maybeTerminates p1 && maybeTerminates p2
-maybeTerminates (Pause _ p)          = maybeTerminates p
-maybeTerminates (Fin p)              = False
-maybeTerminates (Trap p)             = escapesAt1 p || maybeTerminates p
-maybeTerminates (Escape _)           = False
-maybeTerminates _                    = True
+-------------------------------------------------------------------------------
 
 neverTerminates :: Stmt -> Bool
 neverTerminates (Var _ p)            = neverTerminates p
@@ -57,3 +51,20 @@ neverTerminates (Fin p)              = True
 neverTerminates (Trap p)             = not $ escapesAt1 p
 neverTerminates (Escape _)           = True
 neverTerminates _                    = False
+
+maybeTerminates = not . neverTerminates
+
+alwaysTerminates :: Stmt -> Bool
+alwaysTerminates (Var _ p)            = alwaysTerminates p
+alwaysTerminates (Int _ p)            = alwaysTerminates p
+alwaysTerminates (AwaitExt "FOREVER") = False
+alwaysTerminates (If _ p1 p2)         = alwaysTerminates p1 && alwaysTerminates p2
+alwaysTerminates (Seq p1 p2)          = alwaysTerminates p1 && alwaysTerminates p2
+alwaysTerminates (Loop p)             = False
+alwaysTerminates (Every _ p)          = False
+alwaysTerminates (Par p1 p2)          = alwaysTerminates p1 && alwaysTerminates p2
+alwaysTerminates (Pause _ p)          = alwaysTerminates p
+alwaysTerminates (Fin p)              = False
+alwaysTerminates (Trap p)             = escapesAt1 p
+alwaysTerminates (Escape _)           = False
+alwaysTerminates _                    = True

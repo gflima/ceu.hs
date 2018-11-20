@@ -1108,7 +1108,7 @@ spec = do
            (G.Var "x" (G.Write "ret" (Const 1) `G.Seq` G.AwaitExt "A"))
            (G.Escape 0)))
 
-    evalProgItSuccess (11,[[]])
+    evalProgItFail ["loop: `loop` never iterates"]
       [] (G.Var "a"
            (G.Write "a" (Const 1) `G.Seq`
             G.Trap (G.Loop (G.Par
@@ -1116,10 +1116,23 @@ spec = do
                   (G.Escape 0))) `G.Seq`
              G.Write "ret" (Read "a" `Add` Const 10)))
 
-    evalProgItSuccess (1,[[]])
+    evalProgItSuccess (11,[[]])
+      [] (G.Var "a"
+           (G.Write "a" (Const 1) `G.Seq`
+            G.Trap (G.Par
+                  (G.Var "a" (G.Write "a" (Const 99) `G.Seq` G.AwaitExt "A"))
+                  (G.Escape 0)) `G.Seq`
+            G.Write "ret" (Read "a" `Add` Const 10)))
+
+    evalProgItFail ["loop: `loop` never iterates"]
       [] (G.Trap (G.Loop (G.Par
                  (G.Var "x" (G.Write "ret" (Const 1) `G.Seq` G.AwaitExt "A"))
                  (G.Escape 0))))
+
+    evalProgItSuccess (1,[[]])
+      [] (G.Trap (G.Par
+                 (G.Var "x" (G.Write "ret" (Const 1) `G.Seq` G.AwaitExt "A"))
+                 (G.Escape 0)))
 
     evalProgItSuccess (5,[[]]) [] (
       (G.Write "ret" (Const 1)) `G.Seq`
