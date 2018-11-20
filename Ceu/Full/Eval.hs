@@ -15,6 +15,7 @@ import qualified Ceu.Full.Spawn   as Spawn
 import qualified Ceu.Full.Pause   as Pause
 import qualified Ceu.Full.Async   as Async
 import qualified Ceu.Full.Fin     as Fin
+import qualified Ceu.Full.Trap    as Trap
 
 -- toGrammar': Converts full -> basic
 
@@ -23,7 +24,7 @@ toGrammar' p = toGrammar $ Forever.remove $ Timer.remove $ Payload.remove
                          $ Break.remove $ AndOr.remove
                          $ Spawn.remove $ Spawn.check
                          $ Pause.remove $ Async.remove $ Fin.remove
-                         $ p
+                         $ Trap.remove $ p
 
 reaction :: E.Stmt -> In -> (E.Stmt,E.Outs)
 reaction p (ext,val) = (p''',outs) where

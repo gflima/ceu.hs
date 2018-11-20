@@ -37,6 +37,8 @@ data Stmt
   | Pause ID_Evt Stmt                   -- pause/suspend statement
   | Fin Stmt Stmt Stmt                  -- finalize/pause/resume statement
   | Async Stmt                          -- async statement
+  | Trap (Maybe ID_Var) Stmt            -- trap with optional assignment
+  | Escape (Maybe (ID_Var,(Maybe Exp))) -- escape enclosing trap
   | Error String                        -- generate runtime error (for testing purposes)
   | Par' Stmt Stmt                      -- par as in basic Grammar
   | Pause' ID_Var Stmt                  -- pause as in basic Grammar

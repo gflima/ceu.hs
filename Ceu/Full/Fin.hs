@@ -3,7 +3,6 @@ module Ceu.Full.Fin where
 import Ceu.Globals
 import Ceu.Full.Grammar
 
-
 -- remove:
 -- (Fin x y z);A -> (or (Fin' p) A)
 -- (Fin id p);A -> A ||| (Var (Or [(Fin p)] X)

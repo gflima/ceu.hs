@@ -11,6 +11,7 @@ import qualified Ceu.Full.AndOr   as AndOr
 import qualified Ceu.Full.Spawn   as Spawn
 import qualified Ceu.Full.Async   as Async
 import qualified Ceu.Full.Fin     as Fin
+import qualified Ceu.Full.Trap    as Trap
 import Control.DeepSeq
 import Control.Exception
 import Test.Hspec
@@ -141,6 +142,29 @@ spec = do
     it "await FOREVER;" $ do
       Forever.remove AwaitFor
       `shouldBe` (AwaitExt "FOREVER" Nothing)
+
+  --------------------------------------------------------------------------
+  describe "remTrap" $ do
+
+    it "trap escape;" $ do
+      Trap.remove (Trap Nothing (Escape Nothing))
+      `shouldBe` (Trap' (Escape' 0))
+
+    it "trap/a escape/a;" $ do
+      Trap.remove (Var "a" Nothing (Trap (Just "a") (Escape (Just ("a", Nothing)))))
+      `shouldBe` (Var "a" Nothing (Trap' (Escape' 0)))
+
+    it "trap/a escape/a;" $ do
+      Trap.remove (Var "ret" Nothing (Trap (Just "ret") (Escape (Just  ("ret", Just (Const 1))))))
+      `shouldBe` (Var "ret" Nothing (Trap' (Seq (Write "ret" (Const 1)) (Escape' 0))))
+
+    it "trap/a escape;" $ do
+      Trap.remove (Var "ret" Nothing (Trap (Just "ret") (Escape Nothing)))
+      `shouldBe` (Var "ret" Nothing (Trap' (Escape' 0)))  -- error
+
+    it "trap/a escape/a;" $ do
+      Trap.remove (Var "ret" Nothing (Trap (Just "ret") (Escape (Just  ("xxx", Just (Const 1))))))
+      `shouldBe` (Var "ret" Nothing (Trap' (Escape' 0)))  -- error
 
   --------------------------------------------------------------------------
   describe "toGrammar'" $ do
