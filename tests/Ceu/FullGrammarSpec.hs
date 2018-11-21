@@ -140,7 +140,7 @@ spec = do
     it "(or nop awaitFor)" $ do
       AndOr.compile (Or Nop AwaitFor) `shouldBe` ([], (Clear' "Or" (Trap' (Par' (Seq Nop (Escape' 0)) (Seq AwaitFor (Escape' 0))))))
     it "(or nop awaitFor)" $ do
-      (toGrammar $ Forever.compile $ AndOr.compile (Or Nop AwaitFor)) `shouldBe` ([], (G.Trap (G.Par (G.Seq G.Nop (G.Escape 0)) (G.AwaitExt "FOREVER"))))
+      (toGrammar' (Or Nop AwaitFor)) `shouldBe` (G.Trap (G.Par (G.Seq G.Nop (G.Escape 0)) (G.AwaitExt "FOREVER")))
 
 {---
   --------------------------------------------------------------------------

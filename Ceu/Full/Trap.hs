@@ -30,7 +30,7 @@ compile p = aux [] p where
                                where
                                  (es1,p1') = aux vars p1
                                  (es2,p2') = aux vars p2
-  aux vars (Or p1 p2)        = (es1++es2, Or p1' p1')
+  aux vars (Or p1 p2)        = (es1++es2, Or p1' p2')
                                where
                                  (es1,p1') = aux vars p1
                                  (es2,p2') = aux vars p2

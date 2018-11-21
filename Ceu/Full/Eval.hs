@@ -22,14 +22,15 @@ import qualified Ceu.Full.Trap    as Trap
 toGrammar' :: Stmt -> G.Stmt
 toGrammar' p = toGrammar p' where
   (_,p') =
-                        -- $ Forever.remove $ Timer.remove $ Payload.remove
+    comb Forever.compile $
+                        -- $ Timer.remove $ Payload.remove
                         -- $ Break.remove $
-    comb AndOr.compile $
-    comb Spawn.compile $
-    comb Pause.compile $
-    comb Async.compile $
-    comb Fin.compile   $
-    comb Trap.compile  $
+    comb AndOr.compile   $
+    comb Spawn.compile   $
+    comb Pause.compile   $
+    comb Async.compile   $
+    comb Fin.compile     $
+    comb Trap.compile    $
       ([], p)
 
   comb :: (Stmt -> (Errors,Stmt)) -> (Errors,Stmt) -> (Errors,Stmt)
