@@ -140,19 +140,26 @@ spec = do
     it "(or nop awaitFor)" $ do
       AndOr.compile (Or Nop AwaitFor) `shouldBe` ([], (Clear' "Or" (Trap' (Par' (Seq Nop (Escape' 0)) (Seq AwaitFor (Escape' 0))))))
     it "(or nop awaitFor)" $ do
-      (toGrammar' (Or Nop AwaitFor)) `shouldBe` (G.Trap (G.Par (G.Seq G.Nop (G.Escape 0)) (G.AwaitExt "FOREVER")))
+      (compile' False (Or Nop AwaitFor)) `shouldBe` ([], (G.Trap (G.Par (G.Seq G.Nop (G.Escape 0)) (G.AwaitExt "FOREVER"))))
+
+  --------------------------------------------------------------------------
+  describe "Break.compile" $ do
+
+    it "loop (or break FOR)" $ do
+      compile (Loop (Or Break AwaitFor))
+      `shouldBe` ([], Clear' "Loop" (Trap' (Loop (Clear' "Or" (Trap' (Par' (Seq (Escape' 1) (Escape' 0)) (Seq (AwaitExt "FOREVER" Nothing) (Escape' 0))))))))
+
+    it "loop (or break FOR)" $ do
+      compile' False (Loop (Or Break AwaitFor))
+      `shouldBe` (["loop: `loop` never iterates"], (G.Trap (G.Loop (G.Par (G.Escape 0) (G.AwaitExt "FOREVER")))))
+
+    it "break" $ do
+      Break.compile Break `shouldBe` ([], (Escape' (-1)))
+
+    it "break" $ do
+      compile' False Break `shouldBe` (["xxx"], (G.Escape (-1)))
 
 {---
-  --------------------------------------------------------------------------
-  describe "remBreak" $ do
-
-    it "loop (or break FOR)" $ do
-      Break.remove $ AndOr.remove (Loop (Or Break AwaitFor))
-      `shouldBe` Clear' "Loop" (Trap' (Loop (Clear' "Or" (Trap' (Par' (Seq (Escape' 1) (Escape' 0)) (Seq AwaitFor (Escape' 0)))))))
-
-    it "loop (or break FOR)" $ do
-      (toGrammar $ Forever.remove $ Break.remove $ AndOr.remove (Loop (Or Break AwaitFor)))
-      `shouldBe` (G.Trap (G.Loop (G.Par (G.Escape 0) (G.AwaitExt "FOREVER"))))
 
   --------------------------------------------------------------------------
   describe "remAwaitFor" $ do
@@ -290,11 +297,6 @@ end
           (AwaitInt "a" (Just "ret"))
           (EmitInt "a" (Just (Const 10)))
       ))
-
--- TODO
-    --evalFullProgItSuccess (10,[[]]) [] Break
-    --evalFullProgItFail "remBreak: `break` without `loop`" []
-      --Break
 
     evalFullProgItFail ["varsWrite: undeclared variable: _a"] [] (
       Int "a" False (
@@ -460,7 +462,6 @@ end
           (Var "x" (Just ((EmitExt "F" Nothing),(EmitExt "P" Nothing),(EmitExt "R" Nothing)))
             (AwaitExt "E" Nothing)))
         (Write "ret" (Const 99)))
----}
 
       where
         evalFullProgItSuccess (res,outss) hist prog =
@@ -470,3 +471,4 @@ end
         evalFullProgItFail err hist prog =
           (it (printf "fail: %s | %s ***%s" (show hist) (G.showProg $ toGrammar' prog) (show err)) $
             (evalFullProg prog hist) `shouldBe` E.Fail err)
+---}

@@ -1,23 +1,25 @@
 module Ceu.Full.Break where
 
+import Ceu.Globals
 import Ceu.Full.Grammar
 
--- remove
+-- compile
 
-remove :: Stmt -> Stmt
-remove p = rB (-1) p where
-  rB :: Int -> Stmt -> Stmt
-  rB n (Var var Nothing p) = Var var Nothing (rB n p)
-  rB n (Int int b p)       = Int int b (rB n p)
-  rB n (If exp p1 p2)      = If exp (rB n p1) (rB n p2)
-  rB n (Seq p1 p2)         = Seq (rB n p1) (rB n p2)
-  rB n (Loop p)            = Clear' "Loop" (Trap' (Loop (rB (n+1) p)))
-  rB (-1) Break            = error "remBreak: `break` without `loop`"
-  rB n Break               = Escape' n
-  rB n (Every evt var p)   = Every evt var (rB n p)
-  rB n (Par' p1 p2)        = Par' (rB n p1) (rB n p2)
-  rB n (Pause' var p)      = Pause' var (rB n p)
-  rB n (Fin' p)            = Fin' (rB n p)
-  rB n (Trap' p)           = Trap' (rB (n+1) p)
-  rB n (Clear' id p)       = Clear' id (rB n p)
-  rB n p                   = p
+compile :: Stmt -> (Errors, Stmt)
+compile p = ([], aux (-1) p)
+
+aux :: Int -> Stmt -> Stmt
+aux n (Var var Nothing p) = Var var Nothing (aux n p)
+aux n (Int int b p)       = Int int b (aux n p)
+aux n (If exp p1 p2)      = If exp (aux n p1) (aux n p2)
+aux n (Seq p1 p2)         = Seq (aux n p1) (aux n p2)
+aux n (Loop p)            = Clear' "Loop" (Trap' (Loop (aux (n+1) p)))
+--aux (-1) Break            = error "remBreak: `break` without `loop`"
+aux n Break               = Escape' n
+aux n (Every evt var p)   = Every evt var (aux n p)
+aux n (Par' p1 p2)        = Par' (aux n p1) (aux n p2)
+aux n (Pause' var p)      = Pause' var (aux n p)
+aux n (Fin' p)            = Fin' (aux n p)
+aux n (Trap' p)           = Trap' (aux (n+1) p)
+aux n (Clear' id p)       = Clear' id (aux n p)
+aux n p                   = p
