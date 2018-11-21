@@ -17,16 +17,18 @@ import Ceu.Full.Grammar
 --          <...>
 --      end
 --  end
-remove :: Stmt -> Stmt
-remove (Var id Nothing p)  = Var id Nothing (remove p)
-remove (Int id b p)        = Int id b (remove p)
-remove (If exp p1 p2)      = If exp (remove p1) (remove p2)
-remove (Seq p1 p2)         = Seq (remove p1) (remove p2)
-remove (Loop p)            = Loop (remove p)
-remove (And p1 p2)         = And (remove p1) (remove p2)
-remove (Or p1 p2)          = Or (remove p1) (remove p2)
-remove (Spawn p)           = Spawn (remove p)
-remove (Pause evt p)       =
+compile :: Stmt -> (Errors, Stmt)
+compile p = ([], aux p)
+
+aux (Var id Nothing p)  = Var id Nothing (aux p)
+aux (Int id b p)        = Int id b (aux p)
+aux (If exp p1 p2)      = If exp (aux p1) (aux p2)
+aux (Seq p1 p2)         = Seq (aux p1) (aux p2)
+aux (Loop p)            = Loop (aux p)
+aux (And p1 p2)         = And (aux p1) (aux p2)
+aux (Or p1 p2)          = Or (aux p1) (aux p2)
+aux (Spawn p)           = Spawn (aux p)
+aux (Pause evt p)       =
   Var ("__pause_var_"++evt) Nothing
     (Int ("__pause_int_"++evt) False
       (Seq
@@ -45,4 +47,4 @@ remove (Pause evt p)       =
               (If (Equ (Read "__tmp") (Const 1))
                   (Write ("__pause_var_"++evt) (Const 1))
                   Nop)))))))
-remove p                   = p
+aux p                   = p
