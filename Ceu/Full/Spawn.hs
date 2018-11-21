@@ -1,45 +1,41 @@
 module Ceu.Full.Spawn where
 
+import Ceu.Globals
 import Ceu.Full.Grammar
 
--- remove: Converts (spawn p1; ...) into (p1;AwaitFor or ...)
+-- compile: Converts (spawn p1; ...) into (p1;AwaitFor or ...)
 
-remove :: Stmt -> Stmt
-remove (Var id Nothing p)  = Var id Nothing (remove p)
-remove (Int id b p)        = Int id b (remove p)
-remove (If exp p1 p2)      = If exp (remove p1) (remove p2)
-remove (Seq (Spawn p1) p2) = Or (Seq (remove p1) AwaitFor) (remove p2)
-remove (Seq p1 p2)         = Seq (remove p1) (remove p2)
-remove (Loop p)            = Loop (remove p)
-remove (And p1 p2)         = And (remove p1) (remove p2)
-remove (Or p1 p2)          = Or (remove p1) (remove p2)
-remove (Spawn p)           = error "remSpawn: unexpected statement (Spawn)"
-remove (Pause' var p)      = Pause' var (remove p)
-remove p                   = p
-
--- check: `Spawn` can only appear as first item in `Seq`
-
-check :: Stmt -> Stmt
-check p = case p of
-  (Spawn _) -> error "chkSpawn: unexpected statement (Spawn)"
-  _ | (chkS p) -> p
-    | otherwise -> error "chkSpawn: unexpected statement (Spawn)"
-  where
-
-  notS (Spawn _) = False
-  notS p         = True
-
-  chkS :: Stmt -> Bool
-  chkS (Var _ _ p)   = (notS p) && (chkS p)
-  chkS (Int _ _ p)   = (notS p) && (chkS p)
-  chkS (If _ p1 p2)  = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
-  chkS (Seq p1 p2)   = (chkS p1) && (notS p2) && (chkS p2)
-  chkS (Loop p)      = (notS p) && (chkS p)
-  chkS (Every _ _ p) = (notS p) && (chkS p)
-  chkS (And p1 p2)   = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
-  chkS (Or p1 p2)    = (notS p1) && (notS p2) && (chkS p1) && (chkS p2)
-  chkS (Spawn p)     = (notS p) && (chkS p)
-  chkS (Pause' _ p)  = (notS p)
-  chkS (Fin' p)      = (notS p) && (chkS p)
-  chkS (Async p)     = (notS p) && (chkS p)
-  chkS _             = True
+compile :: Stmt -> (Errors, Stmt)
+compile (Var id Nothing p)  = (es, Var id Nothing p')
+                                where
+                                  (es,p') = compile p
+compile (Int id b p)        = (es, Int id b p')
+                                where
+                                  (es,p') = compile p
+compile (If exp p1 p2)      = (es1++es2, If exp p1' p2')
+                                where
+                                  (es1,p1') = compile p1
+                                  (es2,p2') = compile p2
+compile (Seq (Spawn p1) p2) = compile (Or (Seq p1 AwaitFor) p2)
+compile (Seq p1 p2)         = (es1++es2, Seq p1' p2')
+                                where
+                                  (es1,p1') = compile p1
+                                  (es2,p2') = compile p2
+compile (Loop p)            = (es, Loop p')
+                                where
+                                  (es,p') = compile p
+compile (And p1 p2)         = (es1++es2, And p1' p2')
+                                where
+                                  (es1,p1') = compile p1
+                                  (es2,p2') = compile p2
+compile (Or p1 p2)          = (es1++es2, Or p1' p2')
+                                where
+                                  (es1,p1') = compile p1
+                                  (es2,p2') = compile p2
+compile s@(Spawn p)         = ([err_stmt_msg s "unexpected `spawn`"]++es, p')
+                                where
+                                  (es,p') = compile (Seq s Nop)
+compile (Pause' var p)      = (es, Pause' var p')
+                                where
+                                  (es,p') = compile p
+compile p                   = ([], p)

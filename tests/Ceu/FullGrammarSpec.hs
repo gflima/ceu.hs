@@ -117,37 +117,22 @@ spec = do
       Async.compile (Async (Loop Nop))
       `shouldBe` ([], (Loop (Seq Nop (AwaitExt "ASYNC" Nothing))))
 
+  --------------------------------------------------------------------------
+  describe "Spawn.compile" $ do
+
+    it "spawn nop;" $ do
+      Spawn.compile (Spawn Nop)
+      `shouldBe` (["spawn: unexpected `spawn`"],Or (Seq Nop AwaitFor) Nop)
+
+    it "nop; spawn nop;" $ do
+      Spawn.compile (Seq Nop (Spawn Nop))
+      `shouldBe` (["spawn: unexpected `spawn`"],Seq Nop (Or (Seq Nop AwaitFor) Nop))
+
+    it "spawn nop; nop" $ do
+      Spawn.compile (Seq (Spawn Nop) Nop)
+      `shouldBe` ([], Or (Seq Nop AwaitFor) Nop)
+
 {---
-  --------------------------------------------------------------------------
-  describe "remSpawn" $ do
-
-    it "spawn nop;" $ do
-      evaluate $ Spawn.remove (Spawn Nop)
-      `shouldThrow` errorCall "remSpawn: unexpected statement (Spawn)"
-
-    it "nop; spawn nop;" $ do
-      forceEval $ Spawn.remove (Seq Nop (Spawn Nop))
-      `shouldThrow` errorCall "remSpawn: unexpected statement (Spawn)"
-
-    it "spawn nop; nop" $ do
-      Spawn.remove (Seq (Spawn Nop) Nop)
-      `shouldBe` (Or (Seq Nop AwaitFor) Nop)
-
-  --------------------------------------------------------------------------
-  describe "chkSpawn" $ do
-
-    it "spawn nop;" $ do
-      forceEval $ Spawn.check (Spawn Nop)
-      `shouldThrow` errorCall "chkSpawn: unexpected statement (Spawn)"
-
-    it "nop; spawn nop;" $ do
-      forceEval $ Spawn.check (Seq Nop (Spawn Nop))
-      `shouldThrow` errorCall "chkSpawn: unexpected statement (Spawn)"
-
-    it "spawn nop; nop" $ do
-      Spawn.check (Seq (Spawn Nop) Nop)
-      `shouldBe` (Seq (Spawn Nop) Nop)
-
   --------------------------------------------------------------------------
   describe "remAndOr" $ do
 

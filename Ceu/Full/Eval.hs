@@ -24,8 +24,8 @@ toGrammar' p = toGrammar p' where
   (_,p') =
                         -- $ Forever.remove $ Timer.remove $ Payload.remove
                         -- $ Break.remove $ AndOr.remove
-                        -- $ Spawn.remove $ Spawn.check
-    comb Pause.compile $
+                        -- $ Spawn.remove
+    comb Spawn.compile $ comb Pause.compile $
     comb Async.compile $ comb Fin.compile $ comb Trap.compile $
     ([], p)
 
