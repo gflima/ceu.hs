@@ -74,3 +74,44 @@ toGrammar (Escape' n)         = G.Escape n
 toGrammar (Clear' id p)       = clear id (toGrammar p)
 toGrammar Nop                 = G.Nop
 toGrammar p                   = error $ "toGrammar: unexpected statement: "++(show p)
+
+-------------------------------------------------------------------------------
+
+stmt2word :: Stmt -> String
+stmt2word stmt = case stmt of
+  Var _ _ _    -> "declaration"
+  Int _ _ _    -> "declaration"
+  Write _ _    -> "assignment"
+  AwaitExt _ _ -> "await"
+  AwaitFor     -> "await"
+  AwaitTmr _   -> "await"
+  EmitExt _ _  -> "emit"
+  AwaitInt _ _ -> "await"
+  EmitInt _ _  -> "emit"
+  Break        -> "break"
+  If _ _ _     -> "if"
+  Seq _ _      -> "sequence"
+  Loop _       -> "loop"
+  Every _ _ _  -> "every"
+  And _ _      -> "par/and"
+  Or _ _       -> "par/or"
+  Spawn _      -> "spawn"
+  Pause _ _    -> "pause/if"
+  Fin _ _ _    -> "finalize"
+  Async _      -> "async"
+  Trap _ _     -> "trap"
+  Escape _     -> "escape"
+  Error _      -> "error"
+  Par' _ _     -> "parallel"
+  Pause' _ _   -> "pause/if"
+  Fin' _       -> "finalize"
+  Trap' _      -> "trap"
+  Escape' _    -> "escape"
+  Clear' _ _   -> "clear"
+  Nop          -> "nop"
+
+err_stmt_msg :: Stmt -> String -> String
+err_stmt_msg stmt msg = (stmt2word stmt) ++ ": " ++ msg
+
+errs_stmts_msg_map :: [Stmt] -> String -> Errors
+errs_stmts_msg_map stmts msg = map (\s -> (stmt2word s) ++ ": " ++ msg) stmts

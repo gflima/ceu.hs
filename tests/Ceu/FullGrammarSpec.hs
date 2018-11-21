@@ -144,28 +144,29 @@ spec = do
       `shouldBe` (AwaitExt "FOREVER" Nothing)
 
   --------------------------------------------------------------------------
-  describe "remTrap" $ do
+  describe "Trap.compile" $ do
 
     it "trap escape;" $ do
-      Trap.remove (Trap Nothing (Escape Nothing))
-      `shouldBe` (Trap' (Escape' 0))
+      Trap.compile (Trap Nothing (Escape Nothing))
+      `shouldBe` ([], (Trap' (Escape' 0)))
 
     it "trap/a escape/a;" $ do
-      Trap.remove (Var "a" Nothing (Trap (Just "a") (Escape (Just ("a", Nothing)))))
-      `shouldBe` (Var "a" Nothing (Trap' (Escape' 0)))
+      Trap.compile (Var "a" Nothing (Trap (Just "a") (Escape (Just ("a", Nothing)))))
+      `shouldBe` ([], (Var "a" Nothing (Trap' (Escape' 0))))
 
     it "trap/a escape/a;" $ do
-      Trap.remove (Var "ret" Nothing (Trap (Just "ret") (Escape (Just  ("ret", Just (Const 1))))))
-      `shouldBe` (Var "ret" Nothing (Trap' (Seq (Write "ret" (Const 1)) (Escape' 0))))
+      Trap.compile (Var "ret" Nothing (Trap (Just "ret") (Escape (Just  ("ret", Just (Const 1))))))
+      `shouldBe` ([], (Var "ret" Nothing (Trap' (Seq (Write "ret" (Const 1)) (Escape' 0)))))
 
     it "trap/a escape;" $ do
-      Trap.remove (Var "ret" Nothing (Trap (Just "ret") (Escape Nothing)))
-      `shouldBe` (Var "ret" Nothing (Trap' (Escape' 0)))  -- error
+      Trap.compile (Var "ret" Nothing (Trap (Just "ret") (Escape Nothing)))
+      `shouldBe` (["escape: no matching `trap`"], (Var "ret" Nothing (Trap' (Escape' (-1)))))
 
     it "trap/a escape/a;" $ do
-      Trap.remove (Var "ret" Nothing (Trap (Just "ret") (Escape (Just  ("xxx", Just (Const 1))))))
-      `shouldBe` (Var "ret" Nothing (Trap' (Escape' 0)))  -- error
+      Trap.compile (Var "ret" Nothing (Trap (Just "ret") (Escape (Just  ("xxx", Just (Const 1))))))
+      `shouldBe` (["escape: no matching `trap`"], (Var "ret" Nothing (Trap' (Seq (Write "xxx" (Const 1))(Escape' (-1))))))
 
+{---
   --------------------------------------------------------------------------
   describe "toGrammar'" $ do
 
@@ -465,6 +466,7 @@ end
           (Var "x" (Just ((EmitExt "F" Nothing),(EmitExt "P" Nothing),(EmitExt "R" Nothing)))
             (AwaitExt "E" Nothing)))
         (Write "ret" (Const 99)))
+---}
 
       where
         evalFullProgItSuccess (res,outss) hist prog =

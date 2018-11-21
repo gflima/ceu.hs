@@ -74,7 +74,7 @@ stmt2word stmt = case stmt of
   Trap _      -> "trap"
   Escape _    -> "escape"
   Nop         -> "nop"
-  Error _     -> "err"
+  Error _     -> "error"
 
 err_stmt_msg :: Stmt -> String -> String
 err_stmt_msg stmt msg = (stmt2word stmt) ++ ": " ++ msg

@@ -20,11 +20,13 @@ import qualified Ceu.Full.Trap    as Trap
 -- toGrammar': Converts full -> basic
 
 toGrammar' :: Stmt -> G.Stmt
-toGrammar' p = toGrammar $ Forever.remove $ Timer.remove $ Payload.remove
-                         $ Break.remove $ AndOr.remove
-                         $ Spawn.remove $ Spawn.check
-                         $ Pause.remove $ Async.remove $ Fin.remove
-                         $ Trap.remove $ p
+toGrammar' p = toGrammar p' where
+  (_,p') =
+                        -- $ Forever.remove $ Timer.remove $ Payload.remove
+                        -- $ Break.remove $ AndOr.remove
+                        -- $ Spawn.remove $ Spawn.check
+                        -- $ Pause.remove $ Async.remove $ Fin.remove
+    Trap.compile $ p
 
 reaction :: E.Stmt -> In -> (E.Stmt,E.Outs)
 reaction p (ext,val) = (p''',outs) where
