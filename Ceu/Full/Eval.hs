@@ -25,8 +25,12 @@ toGrammar' p = toGrammar p' where
                         -- $ Forever.remove $ Timer.remove $ Payload.remove
                         -- $ Break.remove $ AndOr.remove
                         -- $ Spawn.remove $ Spawn.check
-                        -- $ Pause.remove $ Async.remove $ Fin.remove
-    Trap.compile $ p
+                        -- $ Pause.remove $ Async.remove $
+    comb Fin.compile $ comb Trap.compile $ ([], p)
+
+  comb :: (Stmt -> (Errors,Stmt)) -> (Errors,Stmt) -> (Errors,Stmt)
+  comb f (es,p) = (es++es',p') where (es',p') = f p
+
 
 reaction :: E.Stmt -> In -> (E.Stmt,E.Outs)
 reaction p (ext,val) = (p''',outs) where

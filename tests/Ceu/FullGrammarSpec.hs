@@ -32,26 +32,58 @@ main = hspec spec
 spec :: Spec
 spec = do
   --describe "TODO" $ do
+
   --------------------------------------------------------------------------
-  describe "remFin" $ do
+  describe "Trap.compile" $ do
+
+    it "trap escape;" $ do
+      Trap.compile (Trap Nothing (Escape Nothing))
+      `shouldBe` ([], (Trap' (Escape' 0)))
+
+    it "trap/a escape/a;" $ do
+      Trap.compile (Var "a" Nothing (Trap (Just "a") (Escape (Just ("a", Nothing)))))
+      `shouldBe` ([], (Var "a" Nothing (Trap' (Escape' 0))))
+
+    it "trap/a escape/a;" $ do
+      Trap.compile (Var "ret" Nothing (Trap (Just "ret") (Escape (Just  ("ret", Just (Const 1))))))
+      `shouldBe` ([], (Var "ret" Nothing (Trap' (Seq (Write "ret" (Const 1)) (Escape' 0)))))
+
+    it "trap/a escape;" $ do
+      Trap.compile (Var "ret" Nothing (Trap (Just "ret") (Escape Nothing)))
+      `shouldBe` (["escape: no matching `trap`"], (Var "ret" Nothing (Trap' (Escape' (-1)))))
+
+    it "trap/a escape/a;" $ do
+      Trap.compile (Var "ret" Nothing (Trap (Just "ret") (Escape (Just  ("xxx", Just (Const 1))))))
+      `shouldBe` (["escape: no matching `trap`"], (Var "ret" Nothing (Trap' (Seq (Write "xxx" (Const 1))(Escape' (-1))))))
+
+  --------------------------------------------------------------------------
+  describe "Fin.compile" $ do
+    it "fin ..." $ do
+      Fin.compile (Fin Nop Nop Nop)
+      `shouldBe` (["finalize: unexpected `finalize`"],Or Nop (And Nop (Fin' Nop)))
+
+    it "fin fin nop" $ do
+      Fin.compile (Fin (Fin Nop Nop Nop) Nop Nop)
+      `shouldBe` (["finalize: unexpected `finalize`","finalize: unexpected `finalize`"],Or Nop (And Nop (Fin' (Or Nop (And Nop (Fin' Nop))))))
+
     it "var x; fin x with nop; nop" $ do
-      Fin.remove (Var "x" (Just (Nop,Nop,Nop)) Nop)
-      `shouldBe` (Var "x" Nothing (Or Nop (And Nop (Fin' Nop))))
+      Fin.compile (Var "x" (Just (Nop,Nop,Nop)) Nop)
+      `shouldBe` ([], (Var "x" Nothing (Or Nop (And Nop (Fin' Nop)))))
 
     it "var x; { fin x with nop; nop }" $ do
-      Fin.remove (Var "x" (Just (Nop,Nop,Nop)) (Var "y" Nothing Nop))
-      `shouldBe` (Var "x" Nothing (Or (Var "y" Nothing Nop) (And Nop (Fin' Nop))))
+      Fin.compile (Var "x" (Just (Nop,Nop,Nop)) (Var "y" Nothing Nop))
+      `shouldBe` ([], (Var "x" Nothing (Or (Var "y" Nothing Nop) (And Nop (Fin' Nop)))))
 
     it "var x; { fin x with x=1; fin with x=2; x=3 }" $ do
-      Fin.remove (Var "x" (Just ((Write "x" (Const 1)),Nop,Nop)) (Var "y" Nothing (Seq (Fin (Write "x" (Const 2)) Nop Nop) (Write "x" (Const 3)))))
-      `shouldBe` (Var "x" Nothing (Or (Var "y" Nothing (Or (Write "x" (Const 3)) (And Nop (Fin' (Write "x" (Const 2)))))) (And Nop (Fin' (Write "x" (Const 1))))))
+      Fin.compile (Var "x" (Just ((Write "x" (Const 1)),Nop,Nop)) (Var "y" Nothing (Seq (Fin (Write "x" (Const 2)) Nop Nop) (Write "x" (Const 3)))))
+      `shouldBe` ([], (Var "x" Nothing (Or (Var "y" Nothing (Or (Write "x" (Const 3)) (And Nop (Fin' (Write "x" (Const 2)))))) (And Nop (Fin' (Write "x" (Const 1)))))))
 
     it "var x; { fin x with x=1; fin x with y=1; y=3 }" $ do
-      Fin.remove (Var "x" (Just (((Write "x" (Const 1)) `Seq` (Write "y" (Const 1))),Nop,Nop)) (Var "_" Nothing (Write "y" (Const 3))))
-      `shouldBe` (Var "x" Nothing (Or (Var "_" Nothing (Write "y" (Const 3))) (And Nop (Fin' (Seq (Write "x" (Const 1)) (Write "y" (Const 1)))))))
+      Fin.compile (Var "x" (Just (((Write "x" (Const 1)) `Seq` (Write "y" (Const 1))),Nop,Nop)) (Var "_" Nothing (Write "y" (Const 3))))
+      `shouldBe` ([], (Var "x" Nothing (Or (Var "_" Nothing (Write "y" (Const 3))) (And Nop (Fin' (Seq (Write "x" (Const 1)) (Write "y" (Const 1))))))))
 
     it "var x; nop; { fin x with x=1; fin with x=2; x=3; fin x with y=1; fin with y=2; y=3 }; nop" $ do
-      Fin.remove
+      Fin.compile
         (Var "x" (Just ((Write "x" (Const 1) `Seq` (Write "y" (Const 1)) `Seq` Nop),Nop,Nop))
                  (Seq Nop
                    (Seq
@@ -62,7 +94,7 @@ spec = do
                        (Write "y" (Const 3))))
                      Nop)))
       `shouldBe`
-        (Var "x" Nothing
+        ([], (Var "x" Nothing
                  (Or
                    (Seq
                      Nop
@@ -76,8 +108,9 @@ spec = do
                                (And Nop (Fin' (Write "y" (Const 2))))))
                            (And Nop (Fin' (Write "x" (Const 2))))))
                        Nop))
-                    (And Nop (Fin' (Seq (Write "x" (Const 1)) (Seq (Write "y" (Const 1)) Nop))))))
+                    (And Nop (Fin' (Seq (Write "x" (Const 1)) (Seq (Write "y" (Const 1)) Nop)))))))
 
+{---
   --------------------------------------------------------------------------
   describe "remSpawn" $ do
 
@@ -143,30 +176,6 @@ spec = do
       Forever.remove AwaitFor
       `shouldBe` (AwaitExt "FOREVER" Nothing)
 
-  --------------------------------------------------------------------------
-  describe "Trap.compile" $ do
-
-    it "trap escape;" $ do
-      Trap.compile (Trap Nothing (Escape Nothing))
-      `shouldBe` ([], (Trap' (Escape' 0)))
-
-    it "trap/a escape/a;" $ do
-      Trap.compile (Var "a" Nothing (Trap (Just "a") (Escape (Just ("a", Nothing)))))
-      `shouldBe` ([], (Var "a" Nothing (Trap' (Escape' 0))))
-
-    it "trap/a escape/a;" $ do
-      Trap.compile (Var "ret" Nothing (Trap (Just "ret") (Escape (Just  ("ret", Just (Const 1))))))
-      `shouldBe` ([], (Var "ret" Nothing (Trap' (Seq (Write "ret" (Const 1)) (Escape' 0)))))
-
-    it "trap/a escape;" $ do
-      Trap.compile (Var "ret" Nothing (Trap (Just "ret") (Escape Nothing)))
-      `shouldBe` (["escape: no matching `trap`"], (Var "ret" Nothing (Trap' (Escape' (-1)))))
-
-    it "trap/a escape/a;" $ do
-      Trap.compile (Var "ret" Nothing (Trap (Just "ret") (Escape (Just  ("xxx", Just (Const 1))))))
-      `shouldBe` (["escape: no matching `trap`"], (Var "ret" Nothing (Trap' (Seq (Write "xxx" (Const 1))(Escape' (-1))))))
-
-{---
   --------------------------------------------------------------------------
   describe "toGrammar'" $ do
 
