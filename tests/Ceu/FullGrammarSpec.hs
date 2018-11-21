@@ -110,6 +110,13 @@ spec = do
                        Nop))
                     (And Nop (Fin' (Seq (Write "x" (Const 1)) (Seq (Write "y" (Const 1)) Nop)))))))
 
+  --------------------------------------------------------------------------
+  describe "Async.compile" $ do
+
+    it "async { loop nop }" $ do
+      Async.compile (Async (Loop Nop))
+      `shouldBe` ([], (Loop (Seq Nop (AwaitExt "ASYNC" Nothing))))
+
 {---
   --------------------------------------------------------------------------
   describe "remSpawn" $ do
@@ -140,13 +147,6 @@ spec = do
     it "spawn nop; nop" $ do
       Spawn.check (Seq (Spawn Nop) Nop)
       `shouldBe` (Seq (Spawn Nop) Nop)
-
-  --------------------------------------------------------------------------
-  describe "remAsync" $ do
-
-    it "async { loop nop }" $ do
-      Async.remove (Async (Loop Nop))
-      `shouldBe` (Loop (Seq Nop (AwaitExt "ASYNC" Nothing)))
 
   --------------------------------------------------------------------------
   describe "remAndOr" $ do

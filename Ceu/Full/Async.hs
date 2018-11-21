@@ -1,23 +1,24 @@
 module Ceu.Full.Async where
 
+import Ceu.Globals
 import Ceu.Full.Grammar
 
--- remove: Adds AwaitFor in Loops inside Asyncs
+-- compile: Adds AwaitFor in Loops inside Asyncs
 
-remove :: Stmt -> Stmt
-remove p = (rA False p) where
-  rA :: Bool -> Stmt -> Stmt
-  rA inA   (Var id Nothing p) = Var id Nothing (rA inA p)
-  rA inA   (Int id b p)       = Int id b (rA inA p)
-  rA inA   (If exp p1 p2)     = If exp (rA inA p1) (rA inA p2)
-  rA inA   (Seq p1 p2)        = Seq (rA inA p1) (rA inA p2)
-  rA True  (Loop p)           = Loop (rA True (Seq p (AwaitExt "ASYNC" Nothing)))
-  rA False (Loop p)           = Loop (rA False p)
-  rA inA   (And p1 p2)        = And (rA inA p1) (rA inA p2)
-  rA inA   (Or p1 p2)         = Or (rA inA p1) (rA inA p2)
-  rA inA   (Spawn p)          = Spawn (rA inA p)
-  rA inA   (Pause evt p)      = Pause evt (rA inA p)
-  rA inA   (Async p)          = (rA True p)
-  rA inA   p                  = p
+compile :: Stmt -> (Errors, Stmt)
+compile p = ([], aux False p) where
+  aux :: Bool -> Stmt -> Stmt
+  aux inA   (Var id Nothing p) = Var id Nothing (aux inA p)
+  aux inA   (Int id b p)       = Int id b (aux inA p)
+  aux inA   (If exp p1 p2)     = If exp (aux inA p1) (aux inA p2)
+  aux inA   (Seq p1 p2)        = Seq (aux inA p1) (aux inA p2)
+  aux True  (Loop p)           = Loop (aux True (Seq p (AwaitExt "ASYNC" Nothing)))
+  aux False (Loop p)           = Loop (aux False p)
+  aux inA   (And p1 p2)        = And (aux inA p1) (aux inA p2)
+  aux inA   (Or p1 p2)         = Or (aux inA p1) (aux inA p2)
+  aux inA   (Spawn p)          = Spawn (aux inA p)
+  aux inA   (Pause evt p)      = Pause evt (aux inA p)
+  aux inA   (Async p)          = (aux True p)
+  aux inA   p                  = p
 
 
