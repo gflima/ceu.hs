@@ -1,19 +1,22 @@
 module Ceu.Full.AndOr where
 
+import Ceu.Globals
 import Ceu.Full.Grammar
 
--- remove
+-- compile
 
-remove :: Stmt -> Stmt
-remove (Var var Nothing p) = Var var Nothing (remove p)
-remove (Int int b p)       = Int int b (remove p)
-remove (If exp p1 p2)      = If exp (remove p1) (remove p2)
-remove (Seq p1 p2)         = Seq (remove p1) (remove p2)
-remove (Loop p)            = Loop (remove p)
-remove (And p1 p2)         = Par' (remove p1) (remove p2)
-remove (Or p1 p2)          = Clear' "Or" (Trap' (Par' p1' p2')) where
-                               p1' = (Seq (remove p1) (Escape' 0))
-                               p2' = (Seq (remove p2) (Escape' 0))
-remove (Pause' var p)      = Pause' var (remove p)
-remove (Trap' p)           = Trap' (remove p)
-remove p                   = p
+compile :: Stmt -> (Errors, Stmt)
+compile p = ([], aux p)
+
+aux (Var var Nothing p) = Var var Nothing (aux p)
+aux (Int int b p)       = Int int b (aux p)
+aux (If exp p1 p2)      = If exp (aux p1) (aux p2)
+aux (Seq p1 p2)         = Seq (aux p1) (aux p2)
+aux (Loop p)            = Loop (aux p)
+aux (And p1 p2)         = Par' (aux p1) (aux p2)
+aux (Or p1 p2)          = Clear' "Or" (Trap' (Par' p1' p2')) where
+                            p1' = (Seq (aux p1) (Escape' 0))
+                            p2' = (Seq (aux p2) (Escape' 0))
+aux (Pause' var p)      = Pause' var (aux p)
+aux (Trap' p)           = Trap' (aux p)
+aux p                   = p

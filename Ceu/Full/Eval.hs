@@ -23,11 +23,14 @@ toGrammar' :: Stmt -> G.Stmt
 toGrammar' p = toGrammar p' where
   (_,p') =
                         -- $ Forever.remove $ Timer.remove $ Payload.remove
-                        -- $ Break.remove $ AndOr.remove
-                        -- $ Spawn.remove
-    comb Spawn.compile $ comb Pause.compile $
-    comb Async.compile $ comb Fin.compile $ comb Trap.compile $
-    ([], p)
+                        -- $ Break.remove $
+    comb AndOr.compile $
+    comb Spawn.compile $
+    comb Pause.compile $
+    comb Async.compile $
+    comb Fin.compile   $
+    comb Trap.compile  $
+      ([], p)
 
   comb :: (Stmt -> (Errors,Stmt)) -> (Errors,Stmt) -> (Errors,Stmt)
   comb f (es,p) = (es++es',p') where (es',p') = f p

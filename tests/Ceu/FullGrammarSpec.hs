@@ -132,17 +132,17 @@ spec = do
       Spawn.compile (Seq (Spawn Nop) Nop)
       `shouldBe` ([], Or (Seq Nop AwaitFor) Nop)
 
-{---
   --------------------------------------------------------------------------
-  describe "remAndOr" $ do
+  describe "AndOr.compile" $ do
 
     it "(and nop nop)" $ do
-      AndOr.remove (And Nop Nop) `shouldBe` (Par' Nop Nop)
+      AndOr.compile (And Nop Nop) `shouldBe` ([], (Par' Nop Nop))
     it "(or nop awaitFor)" $ do
-      AndOr.remove (Or Nop AwaitFor) `shouldBe` (Clear' "Or" (Trap' (Par' (Seq Nop (Escape' 0)) (Seq AwaitFor (Escape' 0)))))
+      AndOr.compile (Or Nop AwaitFor) `shouldBe` ([], (Clear' "Or" (Trap' (Par' (Seq Nop (Escape' 0)) (Seq AwaitFor (Escape' 0))))))
     it "(or nop awaitFor)" $ do
-      (toGrammar $ Forever.remove $ AndOr.remove (Or Nop AwaitFor)) `shouldBe` (G.Trap (G.Par (G.Seq G.Nop (G.Escape 0)) (G.AwaitExt "FOREVER")))
+      (toGrammar $ Forever.compile $ AndOr.compile (Or Nop AwaitFor)) `shouldBe` ([], (G.Trap (G.Par (G.Seq G.Nop (G.Escape 0)) (G.AwaitExt "FOREVER"))))
 
+{---
   --------------------------------------------------------------------------
   describe "remBreak" $ do
 
