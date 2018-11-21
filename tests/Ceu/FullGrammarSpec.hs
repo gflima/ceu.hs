@@ -157,7 +157,7 @@ spec = do
       Break.compile Break `shouldBe` ([], (Escape' (-1)))
 
     it "break" $ do
-      compile' False Break `shouldBe` (["xxx"], (G.Escape (-1)))
+      compile' False Break `shouldBe` (["escape: orphan `escape` statement"], (G.Escape (-1)))
 
 {---
 

@@ -28,7 +28,7 @@ getEscapes p = escs (-1) p where
   escs n (Fin p)       = (escs n p)
   escs n (Trap p)      = (escs (n+1) p)
   escs n s@(Escape k)
-    | (n >= k)         = []
+    | (n>=k) && (k>=0) = []
     | otherwise        = [(s, k-n)]
   escs _ _             = []
 
