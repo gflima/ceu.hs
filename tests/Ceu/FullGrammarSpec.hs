@@ -159,52 +159,53 @@ spec = do
     it "break" $ do
       compile' False Break `shouldBe` (["escape: orphan `escape` statement"], (G.Escape (-1)))
 
-{---
-
   --------------------------------------------------------------------------
-  describe "remAwaitFor" $ do
+  describe "Forever.compile" $ do
 
     it "await FOREVER;" $ do
-      Forever.remove AwaitFor
-      `shouldBe` (AwaitExt "FOREVER" Nothing)
+      Forever.compile AwaitFor
+      `shouldBe` ([], (AwaitExt "FOREVER" Nothing))
 
   --------------------------------------------------------------------------
-  describe "toGrammar'" $ do
+  describe "compile'" $ do
 
     it "var x;" $ do
-      toGrammar' (Var "x" Nothing Nop)
-      `shouldBe` (G.Var "x" G.Nop)
+      compile' False (Var "x" Nothing Nop)
+      `shouldBe` ([], (G.Var "x" G.Nop))
+    it "var x;" $ do
+      compile' True (Var "x" Nothing Nop)
+      `shouldBe` ([], (G.Nop))
 
     it "do var x; x = 1 end" $ do
-      toGrammar' (Var "x" Nothing (Write "x" (Const 1)))
-      `shouldBe` (G.Var "x" (G.Write "x" (Const 1)))
+      compile' False (Var "x" Nothing (Write "x" (Const 1)))
+      `shouldBe` ([], (G.Var "x" (G.Write "x" (Const 1))))
 
     it "spawn do await A; end ;; await B; var x; await FOREVER;" $ do
-      toGrammar' (Seq (Spawn (AwaitExt "A" Nothing)) (Seq (AwaitExt "B" Nothing) (Var "x" Nothing AwaitFor)))
-      `shouldBe` (G.Par (G.Seq (G.AwaitExt "A") (G.AwaitExt "FOREVER")) (G.Seq (G.AwaitExt "B") (G.Var "x" (G.AwaitExt "FOREVER"))))
+      compile' False (Seq (Spawn (AwaitExt "A" Nothing)) (Seq (AwaitExt "B" Nothing) (Var "x" Nothing AwaitFor)))
+      `shouldBe` ([], (G.Par (G.Seq (G.AwaitExt "A") (G.AwaitExt "FOREVER")) (G.Seq (G.AwaitExt "B") (G.Var "x" (G.AwaitExt "FOREVER")))))
 
 
     it "spawn do async ret++ end ;; await F;" $ do
-      toGrammar' (Seq (Spawn (Async (Loop (Write "x" (Add (Read "x") (Const 1)))))) (AwaitExt "A" Nothing))
-      `shouldBe` (G.Trap (G.Par (G.Seq (G.Loop (G.Seq (G.Write "x" (Add (Read "x") (Const 1))) (G.AwaitExt "ASYNC"))) (G.AwaitExt "FOREVER")) (G.Seq (G.AwaitExt "A") (G.Escape 0))))
+      compile' False (Seq (Spawn (Async (Loop (Write "x" (Add (Read "x") (Const 1)))))) (AwaitExt "A" Nothing))
+      `shouldBe` ([], (G.Trap (G.Par (G.Seq (G.Loop (G.Seq (G.Write "x" (Add (Read "x") (Const 1))) (G.AwaitExt "ASYNC"))) (G.AwaitExt "FOREVER")) (G.Seq (G.AwaitExt "A") (G.Escape 0)))))
 
     it "trap terminates" $ do
-      toGrammar' (Or (Trap' (Escape' 0)) AwaitFor)
-      `shouldBe` (G.Trap (G.Par (G.Seq (G.Trap (G.Escape 0)) (G.Escape 0)) (G.AwaitExt "FOREVER")))
+      compile' False (Or (Trap' (Escape' 0)) AwaitFor)
+      `shouldBe` ([], (G.Trap (G.Par (G.Seq (G.Trap (G.Escape 0)) (G.Escape 0)) (G.AwaitExt "FOREVER"))))
 
     it "removes unused trap" $ do
-      toGrammar' (Seq (Fin Nop Nop Nop) AwaitFor)
-      `shouldBe` (G.Par (G.AwaitExt "FOREVER") (G.Par G.Nop (G.Fin G.Nop)))
+      compile' False (Seq (Fin Nop Nop Nop) AwaitFor)
+      `shouldBe` ([], (G.Par (G.AwaitExt "FOREVER") (G.Par G.Nop (G.Fin G.Nop))))
 
     it "nested or/or/fin" $ do
-      toGrammar'
+      compile' False
         (Or
           AwaitFor
           (Or
             (Seq (Fin Nop Nop Nop) AwaitFor)
             Nop))
       `shouldBe`
-        G.Trap
+        ([], G.Trap
           (G.Par
             (G.AwaitExt "FOREVER")
             (G.Seq
@@ -214,8 +215,9 @@ spec = do
                     (G.AwaitExt "FOREVER")
                     (G.Par G.Nop (G.Fin G.Nop)))
                   (G.Seq G.Nop (G.Escape 0))))
-              (G.Escape 0)))
+              (G.Escape 0))))
 
+{---
   --------------------------------------------------------------------------
   describe "misc" $ do
     it "error \"Hello!\"" $ do
