@@ -42,25 +42,15 @@ stmts stmt = case stmt of
   s@(Fin p)     -> stmts p ++ (aux "invalid statement in `finalize`" s p)
   Trap p        -> stmts p
   _             -> []
+  where
+    aux msg s p =
+      let ret = tight p in
+        if (ret == []) then
+          []
+        else
+          [err_stmt_msg s msg] ++ ret
 
-aux msg s p =
-  let ret = tight p in
-    if (ret == []) then
-      []
-    else
-      [err_stmt_msg s msg] ++ ret
-
-check :: Stmt -> Errors
-check p = (stmts p) ++ (Escape.check p) ++ (Reachable.check p)
-
-data Result = Success Stmt | Fail Errors
-
-go :: Stmt -> Result
-go p =
-  let p'   = simplify p
-      errs = check p'
-  in
-    if errs == [] then
-        Success p'
-    else
-        Fail errs
+compile :: Bool -> Stmt -> (Errors,Stmt)
+compile opts p = (es,p') where
+  p' = if opts then simplify p else p
+  es = (stmts p') ++ (Escape.check p') ++ (Reachable.check p')

@@ -334,10 +334,11 @@ data Result = Success (Val,[Outs]) | Fail Errors
 -- Returns the last value of global "ret" set by the program.
 evalProg_Reaction :: G.Stmt -> [a] -> (Stmt->a->(Stmt,Outs)) -> Result
 evalProg_Reaction prog ins reaction = -- enclosing block with "ret" that never terminates
-  let prog' = Check.go (G.Var "ret" (G.Seq prog (G.AwaitExt "FOREVER"))) in
-    case prog' of
-      Check.Fail errs      -> Fail errs
-      Check.Success prog'' -> eP (fromGrammar prog'') ins []
+  let (es,s) = Check.compile True (G.Var "ret" (G.Seq prog (G.AwaitExt "FOREVER"))) in
+    if es == [] then
+      eP (fromGrammar s) ins []
+    else
+      Fail es
   where
     --eP :: Stmt -> [a] -> [Outs] -> (Val,[Outs])
     eP prog ins outss = case prog of

@@ -17,14 +17,13 @@ import qualified Ceu.Full.Async   as Async
 import qualified Ceu.Full.Fin     as Fin
 import qualified Ceu.Full.Trap    as Trap
 
--- toGrammar': Converts full -> basic
+import qualified Ceu.Grammar.Check as Check
 
-toGrammar' :: Stmt -> G.Stmt
-toGrammar' p = toGrammar p' where
-  (_,p') =
+compile :: Stmt -> (Errors, Stmt)
+compile p =
     comb Forever.compile $
                         -- $ Timer.remove $ Payload.remove
-                        -- $ Break.remove $
+    comb Break.compile   $
     comb AndOr.compile   $
     comb Spawn.compile   $
     comb Pause.compile   $
@@ -32,10 +31,15 @@ toGrammar' p = toGrammar p' where
     comb Fin.compile     $
     comb Trap.compile    $
       ([], p)
+  where
+    comb :: (Stmt -> (Errors,Stmt)) -> (Errors,Stmt) -> (Errors,Stmt)
+    comb f (es,p) = (es++es',p') where (es',p') = f p
 
-  comb :: (Stmt -> (Errors,Stmt)) -> (Errors,Stmt) -> (Errors,Stmt)
-  comb f (es,p) = (es++es',p') where (es',p') = f p
-
+compile' :: Bool -> Stmt -> (Errors, G.Stmt)
+compile' opts p = (es'++es'', p'')
+  where
+    (es', p')  = compile p
+    (es'',p'') = Check.compile opts (toGrammar p')
 
 reaction :: E.Stmt -> In -> (E.Stmt,E.Outs)
 reaction p (ext,val) = (p''',outs) where
@@ -45,10 +49,14 @@ reaction p (ext,val) = (p''',outs) where
 
 evalFullProg :: Stmt -> [In] -> E.Result
 evalFullProg prog ins =
-  let res = E.evalProg_Reaction (toGrammar' prog) ins'' reaction in
-    case res of
-      E.Success (val,outss) -> E.Success (val, Timer.join ins' outss)
-      otherwise             -> res
-  where
-    ins'  = ("BOOT",Nothing):ins
-    ins'' = Timer.expand ins'
+  let (es,s) = compile' True prog in
+    if es == [] then
+      let res = E.evalProg_Reaction s ins'' reaction in
+        case res of
+          E.Success (val,outss) -> E.Success (val, Timer.join ins' outss)
+          otherwise             -> res
+    else
+      E.Fail es
+    where
+      ins'  = ("BOOT",Nothing):ins
+      ins'' = Timer.expand ins'
