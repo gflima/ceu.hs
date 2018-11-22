@@ -22,7 +22,8 @@ import qualified Ceu.Grammar.Check as Check
 compile :: Stmt -> (Errors, Stmt)
 compile p =
     comb Forever.compile $
-                        -- $ Timer.remove $ Payload.remove
+    comb Timer.compile   $
+    comb Payload.compile $
     comb Break.compile   $
     comb AndOr.compile   $
     comb Spawn.compile   $

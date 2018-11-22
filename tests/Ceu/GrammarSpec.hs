@@ -168,7 +168,6 @@ spec = do
     checkCheckIt (Trap (Par (Escape 0) (Seq (Par Nop (Fin Nop)) (Escape 0))))
       ["escape: unreachable statement"]
 
-
       where
         checkIt ck p b   =
           (it ((if b then "pass" else "fail") ++ ": " ++ showProg p) $
@@ -176,10 +175,10 @@ spec = do
         checkIt' ck p b   =
           (it ((if b==[] then "pass" else "fail") ++ ": " ++ showProg p) $
             (ck p) `shouldBe` b)
-        checkLoopIt p b      = checkIt Loop.check p b
+        checkLoopIt p b      = checkIt  Loop.check p b
         checkFinIt (Fin p) b = checkIt' Check.tight p b
         checkEveryIt p b     = checkIt' Check.tight p b
         checkEscapeIt p b    = checkIt' Escape.check p b
         checkReachableIt p b = checkIt' Reachable.check p b
         checkStmtsIt p b     = checkIt' Check.stmts p b
-        checkCheckIt p b     = checkIt' Check.check p b
+        checkCheckIt p b     = checkIt' (fst . (Check.compile False)) p b

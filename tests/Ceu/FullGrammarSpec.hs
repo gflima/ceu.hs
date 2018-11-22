@@ -225,7 +225,6 @@ spec = do
                   (G.Seq G.Nop (G.Escape 0))))
               (G.Escape 0))))
 
-{---
   --------------------------------------------------------------------------
   describe "misc" $ do
     it "error \"Hello!\"" $ do
@@ -475,10 +474,9 @@ end
 
       where
         evalFullProgItSuccess (res,outss) hist prog =
-          (it (printf "pass: %s | %s ~> %d %s" (show hist) (G.showProg $ toGrammar' prog) res (show outss)) $
+          (it (printf "pass: %s | %s ~> %d %s" (show hist) (G.showProg $ snd $ compile' True prog) res (show outss)) $
             (evalFullProg prog hist `shouldBe` E.Success (res,outss)))
 
         evalFullProgItFail err hist prog =
-          (it (printf "fail: %s | %s ***%s" (show hist) (G.showProg $ toGrammar' prog) (show err)) $
+          (it (printf "fail: %s | %s ***%s" (show hist) (G.showProg $ snd $ compile' True prog) (show err)) $
             (evalFullProg prog hist) `shouldBe` E.Fail err)
----}

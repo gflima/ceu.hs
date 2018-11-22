@@ -26,7 +26,7 @@ compile p = aux [] p where
   aux vars (Every evt exp p) = (es, Every evt exp p')
                                where
                                  (es,p') = aux vars p
-  aux vars (And p1 p2)       = (es1++es2, And p1' p1')
+  aux vars (And p1 p2)       = (es1++es2, And p1' p2')
                                where
                                  (es1,p1') = aux vars p1
                                  (es2,p2') = aux vars p2
