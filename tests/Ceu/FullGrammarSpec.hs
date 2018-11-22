@@ -133,7 +133,7 @@ spec = do
       `shouldBe` ([], Or (Clean' "Spawn" Nop) Nop)
 
     it "spawn nop; nop" $ do
-      compile' False (Seq (Spawn Nop) Nop)
+      compile' (False,False) (Seq (Spawn Nop) Nop)
       `shouldBe` (["terminating `spawn`"], G.Trap (G.Par (G.Seq G.Nop (G.AwaitExt "FOREVER")) (G.Seq G.Nop (G.Escape 0))))
 
     it "spawn awaitFor; nop" $ do
@@ -148,7 +148,7 @@ spec = do
     it "(or nop awaitFor)" $ do
       AndOr.compile (Or Nop AwaitFor) `shouldBe` ([], (Clean' "Or" (Trap' (Par' (Seq Nop (Escape' 0)) (Seq AwaitFor (Escape' 0))))))
     it "(or nop awaitFor)" $ do
-      (compile' False (Or Nop AwaitFor)) `shouldBe` ([], (G.Trap (G.Par (G.Seq G.Nop (G.Escape 0)) (G.AwaitExt "FOREVER"))))
+      (compile' (False,False) (Or Nop AwaitFor)) `shouldBe` ([], (G.Trap (G.Par (G.Seq G.Nop (G.Escape 0)) (G.AwaitExt "FOREVER"))))
 
   --------------------------------------------------------------------------
   describe "Break.compile" $ do
@@ -158,14 +158,14 @@ spec = do
       `shouldBe` ([], Clean' "Loop" (Trap' (Loop (Clean' "Or" (Trap' (Par' (Seq (Escape' 1) (Escape' 0)) (Seq (AwaitExt "FOREVER" Nothing) (Escape' 0))))))))
 
     it "loop (or break FOR)" $ do
-      compile' False (Loop (Or Break AwaitFor))
+      compile' (False,False) (Loop (Or Break AwaitFor))
       `shouldBe` (["loop: `loop` never iterates"], (G.Trap (G.Loop (G.Par (G.Escape 0) (G.AwaitExt "FOREVER")))))
 
     it "break" $ do
       Break.compile Break `shouldBe` ([], (Escape' (-1)))
 
     it "break" $ do
-      compile' False Break `shouldBe` (["escape: orphan `escape` statement"], (G.Escape (-1)))
+      compile' (False,False) Break `shouldBe` (["escape: orphan `escape` statement"], (G.Escape (-1)))
 
   --------------------------------------------------------------------------
   describe "Forever.compile" $ do
@@ -178,35 +178,35 @@ spec = do
   describe "compile'" $ do
 
     it "var x;" $ do
-      compile' False (Var "x" Nothing Nop)
+      compile' (False,False) (Var "x" Nothing Nop)
       `shouldBe` ([], (G.Var "x" G.Nop))
     it "var x;" $ do
-      compile' True (Var "x" Nothing Nop)
+      compile' (True,False) (Var "x" Nothing Nop)
       `shouldBe` ([], (G.Nop))
 
     it "do var x; x = 1 end" $ do
-      compile' False (Var "x" Nothing (Write "x" (Const 1)))
+      compile' (False,False) (Var "x" Nothing (Write "x" (Const 1)))
       `shouldBe` ([], (G.Var "x" (G.Write "x" (Const 1))))
 
     it "spawn do await A; end ;; await B; var x; await FOREVER;" $ do
-      compile' False (Seq (Spawn (AwaitExt "A" Nothing)) (Seq (AwaitExt "B" Nothing) (Var "x" Nothing AwaitFor)))
+      compile' (False,False) (Seq (Spawn (AwaitExt "A" Nothing)) (Seq (AwaitExt "B" Nothing) (Var "x" Nothing AwaitFor)))
       `shouldBe` (["terminating `spawn`"], (G.Par (G.Seq (G.AwaitExt "A") (G.AwaitExt "FOREVER")) (G.Seq (G.AwaitExt "B") (G.Var "x" (G.AwaitExt "FOREVER")))))
 
 
     it "spawn do async ret++ end ;; await F;" $ do
-      compile' False (Seq (Spawn (Async (Loop (Write "x" (Add (Read "x") (Const 1)))))) (AwaitExt "A" Nothing))
+      compile' (False,False) (Seq (Spawn (Async (Loop (Write "x" (Add (Read "x") (Const 1)))))) (AwaitExt "A" Nothing))
       `shouldBe` ([], (G.Trap (G.Par (G.Loop (G.Seq (G.Write "x" (Add (Read "x") (Const 1))) (G.AwaitExt "ASYNC"))) (G.Seq (G.AwaitExt "A") (G.Escape 0)))))
 
     it "trap terminates" $ do
-      compile' False (Or (Trap' (Escape' 0)) AwaitFor)
+      compile' (False,False) (Or (Trap' (Escape' 0)) AwaitFor)
       `shouldBe` ([], (G.Trap (G.Par (G.Seq (G.Trap (G.Escape 0)) (G.Escape 0)) (G.AwaitExt "FOREVER"))))
 
     it "removes unused trap" $ do
-      compile' False (Seq (Fin Nop Nop Nop) AwaitFor)
+      compile' (False,False) (Seq (Fin Nop Nop Nop) AwaitFor)
       `shouldBe` ([], (G.Par (G.AwaitExt "FOREVER") (G.Par G.Nop (G.Fin G.Nop))))
 
     it "nested or/or/fin" $ do
-      compile' False
+      compile' (False,False)
         (Or
           AwaitFor
           (Or
@@ -474,9 +474,9 @@ end
 
       where
         evalFullProgItSuccess (res,outss) hist prog =
-          (it (printf "pass: %s | %s ~> %d %s" (show hist) (G.showProg $ snd $ compile' True prog) res (show outss)) $
+          (it (printf "pass: %s | %s ~> %d %s" (show hist) (G.showProg $ snd $ compile' (True,True) prog) res (show outss)) $
             (evalFullProg prog hist `shouldBe` E.Success (res,outss)))
 
         evalFullProgItFail err hist prog =
-          (it (printf "fail: %s | %s ***%s" (show hist) (G.showProg $ snd $ compile' True prog) (show err)) $
+          (it (printf "fail: %s | %s ***%s" (show hist) (G.showProg $ snd $ compile' (True,True) prog) (show err)) $
             (evalFullProg prog hist) `shouldBe` E.Fail err)

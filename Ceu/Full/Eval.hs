@@ -2,6 +2,7 @@ module Ceu.Full.Eval where
 
 import Ceu.Globals
 import qualified Ceu.Grammar as G
+import Ceu.Grammar.Check (Options)
 import qualified Ceu.Eval as E
 import Debug.Trace
 
@@ -36,7 +37,7 @@ compile p =
     comb :: (Stmt -> (Errors,Stmt)) -> (Errors,Stmt) -> (Errors,Stmt)
     comb f (es,p) = (es++es',p') where (es',p') = f p
 
-compile' :: Bool -> Stmt -> (Errors, G.Stmt)
+compile' :: Options -> Stmt -> (Errors, G.Stmt)
 compile' opts p = (es'++es''++es''', p''')
   where
     (es',  p')   = compile p
@@ -51,9 +52,9 @@ reaction p (ext,val) = (p''',outs) where
 
 evalFullProg :: Stmt -> [In] -> E.Result
 evalFullProg prog ins =
-  let (es,s) = compile' True prog in
+  let (es,s) = compile' (True,True) prog in
     if es == [] then
-      let res = E.evalProg_Reaction s ins'' reaction in
+      let res = E.run s ins'' reaction in
         case res of
           E.Success (val,outss) -> E.Success (val, Timer.join ins' outss)
           otherwise             -> res

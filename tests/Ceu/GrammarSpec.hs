@@ -181,4 +181,4 @@ spec = do
         checkEscapeIt p b    = checkIt' Escape.check p b
         checkReachableIt p b = checkIt' Reachable.check p b
         checkStmtsIt p b     = checkIt' Check.stmts p b
-        checkCheckIt p b     = checkIt' (fst . (Check.compile False)) p b
+        checkCheckIt p b     = checkIt' (fst . (Check.compile (False,False))) p b

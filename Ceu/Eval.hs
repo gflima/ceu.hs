@@ -332,13 +332,8 @@ data Result = Success (Val,[Outs]) | Fail Errors
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
-evalProg_Reaction :: G.Stmt -> [a] -> (Stmt->a->(Stmt,Outs)) -> Result
-evalProg_Reaction prog ins reaction = -- enclosing block with "ret" that never terminates
-  let (es,s) = Check.compile True (G.Var "ret" (G.Seq prog (G.AwaitExt "FOREVER"))) in
-    if es == [] then
-      eP (fromGrammar s) ins []
-    else
-      Fail es
+run :: G.Stmt -> [a] -> (Stmt->a->(Stmt,Outs)) -> Result
+run prog ins reaction = eP (fromGrammar prog) ins []
   where
     --eP :: Stmt -> [a] -> [Outs] -> (Val,[Outs])
     eP prog ins outss = case prog of
@@ -353,5 +348,10 @@ evalProg_Reaction prog ins reaction = -- enclosing block with "ret" that never t
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "ret" set by the program.
-evalProg :: G.Stmt -> [ID_Ext] -> Result
-evalProg prog ins = evalProg_Reaction prog ("BOOT":ins) reaction
+compile_run :: G.Stmt -> [ID_Ext] -> Result
+compile_run prog ins =
+  let (es,p) = Check.compile (True,True) prog in
+    if es == [] then
+      run p ("BOOT":ins) reaction
+    else
+      Fail es

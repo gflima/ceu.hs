@@ -50,7 +50,17 @@ stmts stmt = case stmt of
         else
           [err_stmt_msg s msg] ++ ret
 
-compile :: Bool -> Stmt -> (Errors,Stmt)
-compile opts p = (es,p') where
-  p' = if opts then simplify p else p
-  es = (stmts p') ++ (Escape.check p') ++ (Reachable.check p')
+type Options = (Bool,Bool)
+
+compile :: Options -> Stmt -> (Errors,Stmt)
+compile (o_simp,o_encl) p = (es2++es4,p3) where
+  p1       = if not o_encl then p else
+              --if not $ Escape.escapesAt1 p then p else
+                --(Var "ret" (Seq (Trap p) (AwaitExt "FOREVER")))
+                (Var "ret" (Seq p (AwaitExt "FOREVER")))
+  (es2,p2) = if not o_encl then ([],p1) else
+              if Reachable.neverTerminates p1 then ([], p1) else
+                --(["missing application `escape`"], Seq p1 (AwaitExt "FOREVER"))
+                ([], p1)
+  p3       = if not o_simp then p2 else simplify p2
+  es4      = (stmts p3) ++ (Escape.check p3) ++ (Reachable.check p3)

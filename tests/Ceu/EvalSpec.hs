@@ -1065,7 +1065,7 @@ spec = do
       (Var ("x",(Just 1)) (Int "e" (Pause "x" (AwaitInt "e"))), [], [])
 
   --------------------------------------------------------------------------
-  describe "evalProg" $ do
+  describe "compile_run" $ do
 
     evalProgItSuccess (11,[[]])
       [] (G.Var "a"
@@ -1223,8 +1223,8 @@ escape x;
 
         evalProgItSuccess (res,outss) hist prog =
           (it (printf "pass: %s | %s ~> %d %s" (show hist) (G.showProg prog) res (show outss)) $
-            (evalProg prog hist `shouldBe` Success (res,outss)))
+            (compile_run prog hist `shouldBe` Success (res,outss)))
 
         evalProgItFail err hist prog =
           (it (printf "pass: %s | %s ***%s" (show hist) (G.showProg prog) (show err)) $
-            (evalProg prog hist `shouldBe` Fail err))
+            (compile_run prog hist `shouldBe` Fail err))
