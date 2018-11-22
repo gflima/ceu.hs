@@ -37,24 +37,28 @@ spec = do
   describe "Trap.compile" $ do
 
     it "trap escape;" $ do
-      Trap.compile (Trap Nothing (Escape Nothing))
+      Trap.compile (Trap Nothing (Escape Nothing Nothing))
       `shouldBe` ([], (Trap' (Escape' 0)))
 
     it "trap/a escape/a;" $ do
-      Trap.compile (Var "a" Nothing (Trap (Just "a") (Escape (Just ("a", Nothing)))))
+      Trap.compile (Var "a" Nothing (Trap (Just "a") (Escape (Just "a") Nothing)))
       `shouldBe` ([], (Var "a" Nothing (Trap' (Escape' 0))))
 
     it "trap/a escape/a;" $ do
-      Trap.compile (Var "ret" Nothing (Trap (Just "ret") (Escape (Just  ("ret", Just (Const 1))))))
+      Trap.compile (Var "ret" Nothing (Trap (Just "ret") (Escape (Just "ret") (Just (Const 1)))))
       `shouldBe` ([], (Var "ret" Nothing (Trap' (Seq (Write "ret" (Const 1)) (Escape' 0)))))
 
     it "trap/a escape;" $ do
-      Trap.compile (Var "ret" Nothing (Trap (Just "ret") (Escape Nothing)))
-      `shouldBe` (["escape: no matching `trap`"], (Var "ret" Nothing (Trap' (Escape' (-1)))))
+      Trap.compile (Var "ret" Nothing (Trap (Just "ret") (Escape Nothing Nothing)))
+      `shouldBe` ([], (Var "ret" Nothing (Trap' (Escape' (-1)))))
 
     it "trap/a escape/a;" $ do
-      Trap.compile (Var "ret" Nothing (Trap (Just "ret") (Escape (Just  ("xxx", Just (Const 1))))))
-      `shouldBe` (["escape: no matching `trap`"], (Var "ret" Nothing (Trap' (Seq (Write "xxx" (Const 1))(Escape' (-1))))))
+      Trap.compile (Var "ret" Nothing (Trap (Just "ret") (Escape (Just "xxx") (Just (Const 1)))))
+      `shouldBe` ([], (Var "ret" Nothing (Trap' (Escape' (-1)))))
+
+    it "trap/a escape/a;" $ do
+      compile' (False,False) (Var "ret" Nothing (Trap (Just "ret") (Escape (Just "xxx") (Just (Const 1)))))
+      `shouldBe` (["trap: missing `escape` statement","escape: orphan `escape` statement"], (G.Var "ret" (G.Trap (G.Escape (-1)))))
 
   --------------------------------------------------------------------------
   describe "Fin.compile" $ do

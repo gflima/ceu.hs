@@ -38,7 +38,7 @@ data Stmt
   | Fin Stmt Stmt Stmt                  -- finalize/pause/resume statement
   | Async Stmt                          -- async statement
   | Trap (Maybe ID_Var) Stmt            -- trap with optional assignment
-  | Escape (Maybe (ID_Var,(Maybe Exp))) -- escape enclosing trap
+  | Escape (Maybe ID_Var) (Maybe Exp)   -- escape enclosing trap
   | Error String                        -- generate runtime error (for testing purposes)
   | Par' Stmt Stmt                      -- par as in basic Grammar
   | Pause' ID_Var Stmt                  -- pause as in basic Grammar
@@ -126,7 +126,7 @@ stmt2word stmt = case stmt of
   Fin _ _ _    -> "finalize"
   Async _      -> "async"
   Trap _ _     -> "trap"
-  Escape _     -> "escape"
+  Escape _ _   -> "escape"
   Error _      -> "error"
   Par' _ _     -> "parallel"
   Pause' _ _   -> "pause/if"
