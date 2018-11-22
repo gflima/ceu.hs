@@ -15,6 +15,6 @@ aux (Loop p)           = Loop (aux p)
 aux (Par' p1 p2)       = Par' (aux p1) (aux p2)
 aux (Pause' var p)     = Pause' var (aux p)
 aux (Trap' p)          = Trap' (aux p)
-aux (Clear' id p)      = Clear' id (aux p)
+aux (Clean' id p)      = Clean' id (aux p)
 aux AwaitFor           = AwaitExt "FOREVER" Nothing
 aux p                  = p

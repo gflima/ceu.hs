@@ -24,5 +24,5 @@ remove (Par' p1 p2)              = Par' (remove p1) (remove p2)
 remove (Pause' var p)            = Pause' var (remove p)
 remove (Fin' p)                  = Fin' (remove p)
 remove (Trap' p)                 = Trap' (remove p)
-remove (Clear' id p)             = Clear' id (remove p)
+remove (Clean' id p)             = Clean' id (remove p)
 remove p                         = p

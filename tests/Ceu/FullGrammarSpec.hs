@@ -122,15 +122,23 @@ spec = do
 
     it "spawn nop;" $ do
       Spawn.compile (Spawn Nop)
-      `shouldBe` (["spawn: unexpected `spawn`"],Or (Seq Nop AwaitFor) Nop)
+      `shouldBe` (["spawn: unexpected `spawn`"],Or (Clean' "Spawn" Nop) Nop)
 
     it "nop; spawn nop;" $ do
       Spawn.compile (Seq Nop (Spawn Nop))
-      `shouldBe` (["spawn: unexpected `spawn`"],Seq Nop (Or (Seq Nop AwaitFor) Nop))
+      `shouldBe` (["spawn: unexpected `spawn`"],Seq Nop (Or (Clean' "Spawn" Nop) Nop))
 
     it "spawn nop; nop" $ do
       Spawn.compile (Seq (Spawn Nop) Nop)
-      `shouldBe` ([], Or (Seq Nop AwaitFor) Nop)
+      `shouldBe` ([], Or (Clean' "Spawn" Nop) Nop)
+
+    it "spawn nop; nop" $ do
+      compile' False (Seq (Spawn Nop) Nop)
+      `shouldBe` (["terminating `spawn`"], G.Trap (G.Par (G.Seq G.Nop (G.AwaitExt "FOREVER")) (G.Seq G.Nop (G.Escape 0))))
+
+    it "spawn awaitFor; nop" $ do
+      Spawn.compile (Seq (Spawn AwaitFor) Nop)
+      `shouldBe` ([], Or (Clean' "Spawn" AwaitFor) Nop)
 
   --------------------------------------------------------------------------
   describe "AndOr.compile" $ do
@@ -138,7 +146,7 @@ spec = do
     it "(and nop nop)" $ do
       AndOr.compile (And Nop Nop) `shouldBe` ([], (Par' Nop Nop))
     it "(or nop awaitFor)" $ do
-      AndOr.compile (Or Nop AwaitFor) `shouldBe` ([], (Clear' "Or" (Trap' (Par' (Seq Nop (Escape' 0)) (Seq AwaitFor (Escape' 0))))))
+      AndOr.compile (Or Nop AwaitFor) `shouldBe` ([], (Clean' "Or" (Trap' (Par' (Seq Nop (Escape' 0)) (Seq AwaitFor (Escape' 0))))))
     it "(or nop awaitFor)" $ do
       (compile' False (Or Nop AwaitFor)) `shouldBe` ([], (G.Trap (G.Par (G.Seq G.Nop (G.Escape 0)) (G.AwaitExt "FOREVER"))))
 
@@ -147,7 +155,7 @@ spec = do
 
     it "loop (or break FOR)" $ do
       compile (Loop (Or Break AwaitFor))
-      `shouldBe` ([], Clear' "Loop" (Trap' (Loop (Clear' "Or" (Trap' (Par' (Seq (Escape' 1) (Escape' 0)) (Seq (AwaitExt "FOREVER" Nothing) (Escape' 0))))))))
+      `shouldBe` ([], Clean' "Loop" (Trap' (Loop (Clean' "Or" (Trap' (Par' (Seq (Escape' 1) (Escape' 0)) (Seq (AwaitExt "FOREVER" Nothing) (Escape' 0))))))))
 
     it "loop (or break FOR)" $ do
       compile' False (Loop (Or Break AwaitFor))
@@ -182,12 +190,12 @@ spec = do
 
     it "spawn do await A; end ;; await B; var x; await FOREVER;" $ do
       compile' False (Seq (Spawn (AwaitExt "A" Nothing)) (Seq (AwaitExt "B" Nothing) (Var "x" Nothing AwaitFor)))
-      `shouldBe` ([], (G.Par (G.Seq (G.AwaitExt "A") (G.AwaitExt "FOREVER")) (G.Seq (G.AwaitExt "B") (G.Var "x" (G.AwaitExt "FOREVER")))))
+      `shouldBe` (["terminating `spawn`"], (G.Par (G.Seq (G.AwaitExt "A") (G.AwaitExt "FOREVER")) (G.Seq (G.AwaitExt "B") (G.Var "x" (G.AwaitExt "FOREVER")))))
 
 
     it "spawn do async ret++ end ;; await F;" $ do
       compile' False (Seq (Spawn (Async (Loop (Write "x" (Add (Read "x") (Const 1)))))) (AwaitExt "A" Nothing))
-      `shouldBe` ([], (G.Trap (G.Par (G.Seq (G.Loop (G.Seq (G.Write "x" (Add (Read "x") (Const 1))) (G.AwaitExt "ASYNC"))) (G.AwaitExt "FOREVER")) (G.Seq (G.AwaitExt "A") (G.Escape 0)))))
+      `shouldBe` ([], (G.Trap (G.Par (G.Loop (G.Seq (G.Write "x" (Add (Read "x") (Const 1))) (G.AwaitExt "ASYNC"))) (G.Seq (G.AwaitExt "A") (G.Escape 0)))))
 
     it "trap terminates" $ do
       compile' False (Or (Trap' (Escape' 0)) AwaitFor)

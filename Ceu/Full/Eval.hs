@@ -36,10 +36,11 @@ compile p =
     comb f (es,p) = (es++es',p') where (es',p') = f p
 
 compile' :: Bool -> Stmt -> (Errors, G.Stmt)
-compile' opts p = (es'++es'', p'')
+compile' opts p = (es'++es''++es''', p''')
   where
-    (es', p')  = compile p
-    (es'',p'') = Check.compile opts (toGrammar p')
+    (es',  p')   = compile p
+    (es'', p'')  = toGrammar p'
+    (es''',p''') = Check.compile opts p''
 
 reaction :: E.Stmt -> In -> (E.Stmt,E.Outs)
 reaction p (ext,val) = (p''',outs) where

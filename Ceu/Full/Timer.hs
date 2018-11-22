@@ -23,7 +23,7 @@ remove (Loop p)           = Loop (remove p)
 remove (Par' p1 p2)       = Par' (remove p1) (remove p2)
 remove (Pause' var p)     = Pause' var (remove p)
 remove (Trap' p)          = Trap' (remove p)
-remove (Clear' id p)      = Clear' id (remove p)
+remove (Clean' id p)      = Clean' id (remove p)
 remove (AwaitTmr exp)     = Var "__timer_await" Nothing
                                    (Seq
                                      (Write "__timer_await" exp)

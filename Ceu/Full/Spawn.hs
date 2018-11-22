@@ -16,7 +16,7 @@ compile (If exp p1 p2)      = (es1++es2, If exp p1' p2')
                                 where
                                   (es1,p1') = compile p1
                                   (es2,p2') = compile p2
-compile (Seq (Spawn p1) p2) = compile (Or (Seq p1 AwaitFor) p2)
+compile (Seq (Spawn p1) p2) = compile (Or (Clean' "Spawn" p1) p2)
 compile (Seq p1 p2)         = (es1++es2, Seq p1' p2')
                                 where
                                   (es1,p1') = compile p1
@@ -36,6 +36,9 @@ compile s@(Spawn p)         = ([err_stmt_msg s "unexpected `spawn`"]++es, p')
                                 where
                                   (es,p') = compile (Seq s Nop)
 compile (Pause' var p)      = (es, Pause' var p')
+                                where
+                                  (es,p') = compile p
+compile (Clean' id p)       = (es, Clean' id p')
                                 where
                                   (es,p') = compile p
 compile p                   = ([], p)
