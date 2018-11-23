@@ -1,4 +1,4 @@
-module Ceu.Full.AndOr where
+module Ceu.Full.ParAndOr where
 
 import Ceu.Globals
 import Ceu.Full.Grammar

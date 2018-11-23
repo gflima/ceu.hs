@@ -7,31 +7,31 @@ import qualified Ceu.Eval as E
 import Debug.Trace
 
 import Ceu.Full.Grammar
-import qualified Ceu.Full.Timer   as Timer
-import qualified Ceu.Full.Forever as Forever
-import qualified Ceu.Full.Payload as Payload
-import qualified Ceu.Full.Break   as Break
-import qualified Ceu.Full.AndOr   as AndOr
-import qualified Ceu.Full.Spawn   as Spawn
-import qualified Ceu.Full.Pause   as Pause
-import qualified Ceu.Full.Async   as Async
-import qualified Ceu.Full.Fin     as Fin
-import qualified Ceu.Full.Trap    as Trap
+import qualified Ceu.Full.Timer    as Timer
+import qualified Ceu.Full.Forever  as Forever
+import qualified Ceu.Full.Payload  as Payload
+import qualified Ceu.Full.Break    as Break
+import qualified Ceu.Full.ParAndOr as ParAndOr
+import qualified Ceu.Full.Spawn    as Spawn
+import qualified Ceu.Full.Pause    as Pause
+import qualified Ceu.Full.Async    as Async
+import qualified Ceu.Full.Fin       as Fin
+import qualified Ceu.Full.Trap     as Trap
 
 import qualified Ceu.Grammar.Check as Check
 
 compile :: Stmt -> (Errors, Stmt)
 compile p =
-    comb Forever.compile $
-    comb Timer.compile   $
-    comb Payload.compile $
-    comb Break.compile   $
-    comb AndOr.compile   $
-    comb Spawn.compile   $
-    comb Pause.compile   $
-    comb Async.compile   $
-    comb Fin.compile     $
-    comb Trap.compile    $
+    comb Forever.compile  $
+    comb Timer.compile    $
+    comb Payload.compile  $
+    comb Break.compile    $
+    comb ParAndOr.compile $
+    comb Spawn.compile    $
+    comb Pause.compile    $
+    comb Async.compile    $
+    comb Fin.compile      $
+    comb Trap.compile     $
       ([], p)
   where
     comb :: (Stmt -> (Errors,Stmt)) -> (Errors,Stmt) -> (Errors,Stmt)

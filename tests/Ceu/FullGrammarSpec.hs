@@ -5,13 +5,13 @@ import qualified Ceu.Grammar as G
 import qualified Ceu.Eval    as E
 import Ceu.Full.Grammar
 import Ceu.Full.Eval
-import qualified Ceu.Full.Forever as Forever
-import qualified Ceu.Full.Break   as Break
-import qualified Ceu.Full.AndOr   as AndOr
-import qualified Ceu.Full.Spawn   as Spawn
-import qualified Ceu.Full.Async   as Async
-import qualified Ceu.Full.Fin     as Fin
-import qualified Ceu.Full.Trap    as Trap
+import qualified Ceu.Full.Forever  as Forever
+import qualified Ceu.Full.Break    as Break
+import qualified Ceu.Full.ParAndOr as ParAndOr
+import qualified Ceu.Full.Spawn    as Spawn
+import qualified Ceu.Full.Async    as Async
+import qualified Ceu.Full.Fin      as Fin
+import qualified Ceu.Full.Trap     as Trap
 import Control.DeepSeq
 import Control.Exception
 import Test.Hspec
@@ -145,12 +145,12 @@ spec = do
       `shouldBe` ([], Or' (Clean' "Spawn" AwaitFor) Nop)
 
   --------------------------------------------------------------------------
-  describe "AndOr.compile" $ do
+  describe "ParAndOr.compile" $ do
 
     it "(and nop nop)" $ do
-      AndOr.compile (And Nop Nop) `shouldBe` ([], (Trap' (Var "__and" Nothing (Seq (Write "__and" (Const 0)) (Par' (Seq Nop (If (Equ (Read "__and") (Const 1)) (Escape' 0) (Seq (Write "__and" (Add (Read "__and") (Const 1))) AwaitFor))) (Seq Nop (If (Equ (Read "__and") (Const 1)) (Escape' 0) (Seq (Write "__and" (Add (Read "__and") (Const 1))) AwaitFor))))))))
+      ParAndOr.compile (And Nop Nop) `shouldBe` ([], (Trap' (Var "__and" Nothing (Seq (Write "__and" (Const 0)) (Par' (Seq Nop (If (Equ (Read "__and") (Const 1)) (Escape' 0) (Seq (Write "__and" (Add (Read "__and") (Const 1))) AwaitFor))) (Seq Nop (If (Equ (Read "__and") (Const 1)) (Escape' 0) (Seq (Write "__and" (Add (Read "__and") (Const 1))) AwaitFor))))))))
     it "(or nop awaitFor)" $ do
-      AndOr.compile (Or Nop AwaitFor) `shouldBe` ([], (Clean' "Or" (Trap' (Par' (Seq Nop (Escape' 0)) (Seq AwaitFor (Escape' 0))))))
+      ParAndOr.compile (Or Nop AwaitFor) `shouldBe` ([], (Clean' "Or" (Trap' (Par' (Seq Nop (Escape' 0)) (Seq AwaitFor (Escape' 0))))))
     it "(or nop awaitFor)" $ do
       (compile' (False,False) (Or Nop AwaitFor)) `shouldBe` ([], (G.Trap (G.Par (G.Seq G.Nop (G.Escape 0)) (G.AwaitExt "FOREVER"))))
 
