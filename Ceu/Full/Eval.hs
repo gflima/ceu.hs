@@ -38,11 +38,13 @@ compile p =
     comb f (es,p) = (es++es',p') where (es',p') = f p
 
 compile' :: Options -> Stmt -> (Errors, G.Stmt)
-compile' opts p = (es'++es''++es''', p''')
+compile' (o_simp,o_encl) p = (es2++es3++es4, p4)
   where
-    (es',  p')   = compile p
-    (es'', p'')  = toGrammar p'
-    (es''',p''') = Check.compile opts p''
+    p1       = if not o_encl then p else
+                (Var "ret" Nothing (Seq (Trap (Just "ret") p) (AwaitFor)))
+    (es2,p2) = compile p1
+    (es3,p3) = toGrammar p2
+    (es4,p4) = Check.compile (o_simp,False) p3
 
 reaction :: E.Stmt -> In -> (E.Stmt,E.Outs)
 reaction p (ext,val) = (p''',outs) where
