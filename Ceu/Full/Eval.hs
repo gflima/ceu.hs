@@ -41,7 +41,7 @@ compile' :: Options -> Stmt -> (Errors, G.Stmt)
 compile' (o_simp,o_encl) p = (es2++es3++es4, p4)
   where
     p1       = if not o_encl then p else
-                (Var "ret" Nothing (Seq (Trap (Just "ret") p) (AwaitFor)))
+                (Var "_ret" Nothing (Seq (Trap (Just "_ret") p) (AwaitFor)))
     (es2,p2) = compile p1
     (es3,p3) = toGrammar p2
     (es4,p4) = Check.compile (o_simp,False) p3

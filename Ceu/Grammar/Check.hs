@@ -56,7 +56,7 @@ compile :: Options -> Stmt -> (Errors,Stmt)
 compile (o_simp,o_encl) p = (es2++es4,p3) where
   p1       = if not o_encl then p else
               if not $ Escape.escapesAt1 p then p else
-                (Var "ret" (Seq (Trap p) (AwaitExt "FOREVER")))
+                (Var "_ret" (Seq (Trap p) (AwaitExt "FOREVER")))
   (es2,p2) = if not o_encl then ([],p1) else
               if Reachable.neverTerminates p1 then ([], p1) else
                 (["missing application `escape`"], Seq p1 (AwaitExt "FOREVER"))

@@ -331,13 +331,13 @@ data Result = Success (Val,[Outs]) | Fail Errors
   deriving (Show, Eq)
 
 -- Evaluates program over history of input events.
--- Returns the last value of global "ret" set by the program.
+-- Returns the last value of global "_ret" set by the program.
 run :: G.Stmt -> [a] -> (Stmt->a->(Stmt,Outs)) -> Result
 run prog ins reaction = eP (fromGrammar prog) ins []
   where
     --eP :: Stmt -> [a] -> [Outs] -> (Val,[Outs])
     eP prog ins outss = case prog of
-      (Var ("ret",val) (AwaitExt "FOREVER"))
+      (Var ("_ret",val) (AwaitExt "FOREVER"))
         | not (null ins) -> Fail ["pending inputs"]
         | isNothing val  -> Fail ["no return value"]
         | otherwise      -> Success ((fromJust val), outss)
@@ -347,7 +347,7 @@ run prog ins reaction = eP (fromGrammar prog) ins []
                                (prog',outs') = reaction prog (head ins)
 
 -- Evaluates program over history of input events.
--- Returns the last value of global "ret" set by the program.
+-- Returns the last value of global "_ret" set by the program.
 compile_run :: G.Stmt -> [ID_Ext] -> Result
 compile_run prog ins =
   let (es,p) = Check.compile (True,True) prog in

@@ -255,6 +255,7 @@ nop;
 
     -- TODO: OK
     evalFullProgItFail ["varsRead: undeclared variable: b"] [] (
+      (Var "ret" Nothing (
       (Var "a" (Just ((Write "ret" (Read "b")),Nop,Nop))
         (Var "b" Nothing
           (Seq
@@ -262,7 +263,7 @@ nop;
             (Escape Nothing (Just (Const 0)))
           )
         )
-      ))
+      ))))
 
 {-
 ret = 0;
@@ -283,6 +284,7 @@ end
 -}
     evalFullProgItSuccess (25,[[]]) [] (
       (Int "a" False (
+      (Var "ret" Nothing (
       (Write "ret" (Const 0)) `Seq`
       (Or
         ((AwaitInt "a" Nothing) `Seq` (Escape Nothing (Just (Add (Read "ret") (Const 5)))))
@@ -296,7 +298,7 @@ end
           )
           (Write "ret" (Add (Read "ret") (Const 10)))
         )
-      ))))
+      ))))))
 
     evalFullProgItSuccess (25,[[]]) []
       (Or
@@ -316,16 +318,16 @@ end
     evalFullProgItSuccess (10,[[]]) [] (
       Int "a" True (
         And
-          (Seq (AwaitInt "a" (Just "ret")) (Escape Nothing (Just (Read "ret"))))
+          (Var "ret" Nothing (Seq (AwaitInt "a" (Just "ret")) (Escape Nothing (Just (Read "ret")))))
           (EmitInt "a" (Just (Const 10)))
       ))
 
-    evalFullProgItFail ["varsWrite: undeclared variable: _a"] [] (
-      Int "a" False (
-        And
-          (Seq (AwaitInt "a" (Just "ret")) (Escape Nothing (Just (Const 0))))
-          (EmitInt "a" (Just (Const 10)))
-      ))
+    evalFullProgItFail ["varsWrite: undeclared variable: _a"] []
+      (Var "ret" Nothing
+        (Int "a" False (
+          And
+            (Seq (AwaitInt "a" (Just "ret")) (Escape Nothing (Just (Const 0))))
+            (EmitInt "a" (Just (Const 10))))))
     evalFullProgItFail ["varsWrite: undeclared variable: _a"] [] (
       Int "a" False
         (Seq -- TODO: OK
@@ -346,12 +348,12 @@ end
           ((AwaitInt "a" Nothing) `Seq` (Escape Nothing (Just (Const 99))))
           (EmitInt "a" (Just (Const 10)))
       ))
-    evalFullProgItFail ["varsRead: uninitialized variable: _a"] [] (
-      Int "a" True (
-        And
-          (Seq (AwaitInt "a" (Just "ret")) (Escape Nothing (Just (Read "ret"))))
-          (EmitInt "a" Nothing)
-      ))
+    evalFullProgItFail ["varsRead: uninitialized variable: _a"] []
+      (Var "ret" Nothing
+        (Int "a" True (
+          And
+            (Seq (AwaitInt "a" (Just "ret")) (Escape Nothing (Just (Read "ret"))))
+            (EmitInt "a" Nothing))))
 
 {-
 par/or do
@@ -361,18 +363,19 @@ with
 end
 -}
     -- TODO: OK
-    evalFullProgItFail ["varsRead: uninitialized variable: _A"] [("A",Nothing)] (
-      Seq
-        (Or
-          (Every "A" (Just "ret") Nop)
-          (AwaitExt "F" Nothing))
-        (Escape Nothing (Just (Read "ret"))))
+    evalFullProgItFail ["varsRead: uninitialized variable: _A"] [("A",Nothing)]
+      (Var "ret" Nothing
+        (Seq
+          (Or
+            (Every "A" (Just "ret") Nop)
+            (AwaitExt "F" Nothing))
+          (Escape Nothing (Just (Read "ret")))))
 
-    evalFullProgItSuccess (99,[[],[],[],[]]) [("A",Just 1),("A",Just 99),("F",Just 2)] (
-      And
-        (Every "A" (Just "ret") Nop)
-        (Seq (AwaitExt "F" Nothing) (Escape Nothing (Just (Read "ret"))))
-      )
+    evalFullProgItSuccess (99,[[],[],[],[]]) [("A",Just 1),("A",Just 99),("F",Just 2)]
+      (Var "ret" Nothing
+        (And
+          (Every "A" (Just "ret") Nop)
+          (Seq (AwaitExt "F" Nothing) (Escape Nothing (Just (Read "ret"))))))
 
   describe "timers" $ do
 
@@ -432,11 +435,10 @@ end
   describe "outputs" $ do
 
     evalFullProgItSuccess (1,[[],[("O",Just 1)],[("O",Just 2)],[]]) [("I",Just 1),("I",Just 2),("F",Nothing)]
-      (Seq (Write "ret" (Const 1))
-           (Var "i" Nothing
-             (Or
-               (Seq (AwaitExt "F" Nothing) (Escape Nothing (Just (Read "ret"))))
-               (Every "I" (Just "i") (EmitExt "O" (Just (Read "i")))))))
+      (Var "i" Nothing
+        (Or
+          (Seq (AwaitExt "F" Nothing) (Escape Nothing (Just (Const 1))))
+          (Every "I" (Just "i") (EmitExt "O" (Just (Read "i"))))))
 
   describe "pause" $ do
 
