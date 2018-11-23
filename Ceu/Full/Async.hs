@@ -19,6 +19,7 @@ compile p = ([], aux False p) where
   aux inA   (Spawn p)          = Spawn (aux inA p)
   aux inA   (Pause evt p)      = Pause evt (aux inA p)
   aux inA   (Async p)          = (aux True p)
+  aux inA   (Trap' p)          = Trap' (aux inA p)
   aux inA   p                  = p
 
 

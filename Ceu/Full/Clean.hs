@@ -20,7 +20,7 @@ clean "Or" (G.Trap (G.Par p1'@(G.Seq p1 (G.Escape 0)) p2'@(G.Seq p2 (G.Escape 0)
     else
       ([], removeTrap ret)
 
-clean "Loop" s@(G.Trap p) = ([], if escapesAt1 p then s else p)
+clean "Loop" s@(G.Trap p) = ([], if escapesAt1 p then s else removeTrap s)
 
 clean "Spawn" p =
   if maybeTerminates p then
@@ -28,4 +28,4 @@ clean "Spawn" p =
   else
     ([], p)
 
-clean id _ = error $ "unexpected clean case: " ++ id
+clean id p = error $ "unexpected clean case: " ++ id ++ "\n" ++ (show p)

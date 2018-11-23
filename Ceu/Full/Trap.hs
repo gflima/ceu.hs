@@ -31,3 +31,21 @@ escape ((Just var'):l) s@(Escape (Just var) val) n
                     Nothing     -> Escape' n
   | otherwise   = escape l s (n+1)
 escape _ _ _ = Escape' (-1)
+
+ins' :: Stmt -> Stmt
+ins' p = (aux 0 p) where
+  aux n (Var var Nothing p) = Var var Nothing (aux n p)
+  aux n (Int int b p)       = Int int b (aux n p)
+  aux n (If exp p1 p2)      = If exp (aux n p1) (aux n p2)
+  aux n (Seq p1 p2)         = Seq (aux n p1) (aux n p2)
+  aux n (Loop p)            = Loop (aux n p)
+  aux n (Every evt var p)   = Every evt var (aux n p)
+  aux n (Par' p1 p2)        = Par' (aux n p1) (aux n p2)
+  aux n (Pause' var p)      = Pause' var (aux n p)
+  aux n (Fin' p)            = Fin' (aux n p)
+  aux n (Clean' id p)       = Clean' id (aux n p)
+  aux n (Trap' p)           = Trap' (aux (n+1) p)
+  aux n (Escape' k)
+    | k >= n = (Escape' (k+1))
+    | k <  n = (Escape' k)
+  aux n p                   = p

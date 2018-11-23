@@ -38,6 +38,9 @@ compile s@(Spawn p)         = ([err_stmt_msg s "unexpected `spawn`"]++es, p')
 compile (Pause' var p)      = (es, Pause' var p')
                                 where
                                   (es,p') = compile p
+compile (Trap' p)           = (es, Trap' p')
+                                where
+                                  (es,p') = compile p
 compile (Clean' id p)       = (es, Clean' id p')
                                 where
                                   (es,p') = compile p

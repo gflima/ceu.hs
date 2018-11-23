@@ -28,6 +28,7 @@ aux (Loop p)            = Loop (aux p)
 aux (And p1 p2)         = And (aux p1) (aux p2)
 aux (Or p1 p2)          = Or (aux p1) (aux p2)
 aux (Spawn p)           = Spawn (aux p)
+aux (Trap' p)           = Trap' (aux p)
 aux (Pause evt p)       =
   Var ("__pause_var_"++evt) Nothing
     (Int ("__pause_int_"++evt) False

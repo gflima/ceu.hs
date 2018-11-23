@@ -66,5 +66,8 @@ compile p = aux Nothing p where
   aux pse (Async p)                  = (es, Async p')
                                         where
                                           (es,p') = aux pse p
+  aux pse (Trap' p)                  = (es, Trap' p')
+                                        where
+                                          (es,p') = aux pse p
   aux pse p                          = ([], p)
 

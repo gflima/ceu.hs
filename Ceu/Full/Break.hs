@@ -2,6 +2,7 @@ module Ceu.Full.Break where
 
 import Ceu.Globals
 import Ceu.Full.Grammar
+import qualified Ceu.Full.Trap as Trap
 
 -- compile
 
@@ -13,7 +14,7 @@ aux n (Var var Nothing p) = Var var Nothing (aux n p)
 aux n (Int int b p)       = Int int b (aux n p)
 aux n (If exp p1 p2)      = If exp (aux n p1) (aux n p2)
 aux n (Seq p1 p2)         = Seq (aux n p1) (aux n p2)
-aux n (Loop p)            = Clean' "Loop" (Trap' (Loop (aux (n+1) p)))
+aux n (Loop p)            = Clean' "Loop" (Trap' (Loop (aux (n+1) (Trap.ins' p))))
 --aux (-1) Break            = error "remBreak: `break` without `loop`"
 aux n Break               = Escape' n
 aux n (Every evt var p)   = Every evt var (aux n p)
