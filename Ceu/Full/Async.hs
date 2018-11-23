@@ -16,6 +16,7 @@ compile p = ([], aux False p) where
   aux False (Loop p)           = Loop (aux False p)
   aux inA   (And p1 p2)        = And (aux inA p1) (aux inA p2)
   aux inA   (Or p1 p2)         = Or (aux inA p1) (aux inA p2)
+  aux inA   (Or' p1 p2)        = Or' (aux inA p1) (aux inA p2)
   aux inA   (Spawn p)          = Spawn (aux inA p)
   aux inA   (Pause evt p)      = Pause evt (aux inA p)
   aux inA   (Async p)          = (aux True p)

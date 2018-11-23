@@ -16,7 +16,7 @@ compile (If exp p1 p2)      = (es1++es2, If exp p1' p2')
                                 where
                                   (es1,p1') = compile p1
                                   (es2,p2') = compile p2
-compile (Seq (Spawn p1) p2) = compile (Or (Clean' "Spawn" p1) p2)
+compile (Seq (Spawn p1) p2) = compile (Or' (Clean' "Spawn" p1) p2)
 compile (Seq p1 p2)         = (es1++es2, Seq p1' p2')
                                 where
                                   (es1,p1') = compile p1
@@ -29,6 +29,10 @@ compile (And p1 p2)         = (es1++es2, And p1' p2')
                                   (es1,p1') = compile p1
                                   (es2,p2') = compile p2
 compile (Or p1 p2)          = (es1++es2, Or p1' p2')
+                                where
+                                  (es1,p1') = compile p1
+                                  (es2,p2') = compile p2
+compile (Or' p1 p2)         = (es1++es2, Or' p1' p2')
                                 where
                                   (es1,p1') = compile p1
                                   (es2,p2') = compile p2

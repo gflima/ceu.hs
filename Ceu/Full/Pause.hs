@@ -27,6 +27,7 @@ aux (Seq p1 p2)         = Seq (aux p1) (aux p2)
 aux (Loop p)            = Loop (aux p)
 aux (And p1 p2)         = And (aux p1) (aux p2)
 aux (Or p1 p2)          = Or (aux p1) (aux p2)
+aux (Or' p1 p2)         = Or' (aux p1) (aux p2)
 aux (Spawn p)           = Spawn (aux p)
 aux (Trap' p)           = Trap' (aux p)
 aux (Pause evt p)       =
@@ -34,14 +35,14 @@ aux (Pause evt p)       =
     (Int ("__pause_int_"++evt) False
       (Seq
         (Write ("__pause_var_"++evt) (Const 0))
-        (Or
+        (Or'
           (Var "__tmp" Nothing
             (Every evt (Just "__tmp")
               (If (Equ (Read "__tmp") (Const 0))
                   (Seq (Write ("__pause_var_"++evt) (Const 0))
                        (EmitInt ("__pause_int_"++evt) Nothing))
                   Nop)))
-        (Or
+        (Or'
           (Pause' ("__pause_var_"++evt) p)
           (Var "__tmp" Nothing
             (Every evt (Just "__tmp")

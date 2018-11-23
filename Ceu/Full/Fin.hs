@@ -22,7 +22,7 @@ compile p = aux Nothing p where
                                           (es1,p1') = aux pse p1
                                           (es2,p2') = aux pse p2
 
-  aux pse (Seq (Fin x y z) p)        = (es'++esX++esY++esZ++esP, Or p' (And yz (Fin' x')))
+  aux pse (Seq (Fin x y z) p)        = (es'++esX++esY++esZ++esP, Or' p' (And yz (Fin' x')))
     where
       (esX,x') = aux pse x
       (esY,y') = aux pse y

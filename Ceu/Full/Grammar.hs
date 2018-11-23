@@ -40,6 +40,7 @@ data Stmt
   | Trap (Maybe ID_Var) Stmt            -- trap with optional assignment
   | Escape (Maybe ID_Var) (Maybe Exp)   -- escape enclosing trap
   | Error String                        -- generate runtime error (for testing purposes)
+  | Or' Stmt Stmt                       -- used as an Or with possibly non-terminating trails
   | Par' Stmt Stmt                      -- par as in basic Grammar
   | Pause' ID_Var Stmt                  -- pause as in basic Grammar
   | Fin' Stmt                           -- fin as in basic Grammar
