@@ -12,6 +12,7 @@ compile p = ([], aux [] p) where
   aux vars (Seq p1 p2)       = Seq (aux vars p1) (aux vars p2)
   aux vars (Loop p)          = Loop (aux vars p)
   aux vars (Every evt exp p) = Every evt exp (aux vars p)
+  aux vars (Par p1 p2)       = Par (aux vars p1) (aux vars p2)
   aux vars (And p1 p2)       = And (aux vars p1) (aux vars p2)
   aux vars (Or p1 p2)        = Or (aux vars p1) (aux vars p2)
   aux vars (Spawn p)         = Spawn (aux vars p)

@@ -24,7 +24,7 @@ compile (Seq p1 p2)         = (es1++es2, Seq p1' p2')
 compile (Loop p)            = (es, Loop p')
                                 where
                                   (es,p') = compile p
-compile (And p1 p2)         = (es1++es2, And p1' p2')
+compile (Par p1 p2)         = (es1++es2, Par p1' p2')
                                 where
                                   (es1,p1') = compile p1
                                   (es2,p2') = compile p2

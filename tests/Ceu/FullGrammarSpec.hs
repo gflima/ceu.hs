@@ -64,27 +64,27 @@ spec = do
   describe "Fin.compile" $ do
     it "fin ..." $ do
       Fin.compile (Fin Nop Nop Nop)
-      `shouldBe` (["finalize: unexpected `finalize`"],Or' Nop (And Nop (Fin' Nop)))
+      `shouldBe` (["finalize: unexpected `finalize`"],Or' Nop (Par Nop (Fin' Nop)))
 
     it "fin fin nop" $ do
       Fin.compile (Fin (Fin Nop Nop Nop) Nop Nop)
-      `shouldBe` (["finalize: unexpected `finalize`","finalize: unexpected `finalize`"],Or' Nop (And Nop (Fin' (Or' Nop (And Nop (Fin' Nop))))))
+      `shouldBe` (["finalize: unexpected `finalize`","finalize: unexpected `finalize`"],Or' Nop (Par Nop (Fin' (Or' Nop (Par Nop (Fin' Nop))))))
 
     it "var x; fin x with nop; nop" $ do
       Fin.compile (Var "x" (Just (Nop,Nop,Nop)) Nop)
-      `shouldBe` ([], (Var "x" Nothing (Or' Nop (And Nop (Fin' Nop)))))
+      `shouldBe` ([], (Var "x" Nothing (Or' Nop (Par Nop (Fin' Nop)))))
 
     it "var x; { fin x with nop; nop }" $ do
       Fin.compile (Var "x" (Just (Nop,Nop,Nop)) (Var "y" Nothing Nop))
-      `shouldBe` ([], (Var "x" Nothing (Or' (Var "y" Nothing Nop) (And Nop (Fin' Nop)))))
+      `shouldBe` ([], (Var "x" Nothing (Or' (Var "y" Nothing Nop) (Par Nop (Fin' Nop)))))
 
     it "var x; { fin x with x=1; fin with x=2; x=3 }" $ do
       Fin.compile (Var "x" (Just ((Write "x" (Const 1)),Nop,Nop)) (Var "y" Nothing (Seq (Fin (Write "x" (Const 2)) Nop Nop) (Write "x" (Const 3)))))
-      `shouldBe` ([], (Var "x" Nothing (Or' (Var "y" Nothing (Or' (Write "x" (Const 3)) (And Nop (Fin' (Write "x" (Const 2)))))) (And Nop (Fin' (Write "x" (Const 1)))))))
+      `shouldBe` ([], (Var "x" Nothing (Or' (Var "y" Nothing (Or' (Write "x" (Const 3)) (Par Nop (Fin' (Write "x" (Const 2)))))) (Par Nop (Fin' (Write "x" (Const 1)))))))
 
     it "var x; { fin x with x=1; fin x with y=1; y=3 }" $ do
       Fin.compile (Var "x" (Just (((Write "x" (Const 1)) `Seq` (Write "y" (Const 1))),Nop,Nop)) (Var "_" Nothing (Write "y" (Const 3))))
-      `shouldBe` ([], (Var "x" Nothing (Or' (Var "_" Nothing (Write "y" (Const 3))) (And Nop (Fin' (Seq (Write "x" (Const 1)) (Write "y" (Const 1))))))))
+      `shouldBe` ([], (Var "x" Nothing (Or' (Var "_" Nothing (Write "y" (Const 3))) (Par Nop (Fin' (Seq (Write "x" (Const 1)) (Write "y" (Const 1))))))))
 
     it "var x; nop; { fin x with x=1; fin with x=2; x=3; fin x with y=1; fin with y=2; y=3 }; nop" $ do
       Fin.compile
@@ -109,10 +109,10 @@ spec = do
                              (Write "x" (Const 3))
                              (Or'
                                (Write "y" (Const 3))
-                               (And Nop (Fin' (Write "y" (Const 2))))))
-                           (And Nop (Fin' (Write "x" (Const 2))))))
+                               (Par Nop (Fin' (Write "y" (Const 2))))))
+                           (Par Nop (Fin' (Write "x" (Const 2))))))
                        Nop))
-                    (And Nop (Fin' (Seq (Write "x" (Const 1)) (Seq (Write "y" (Const 1)) Nop)))))))
+                    (Par Nop (Fin' (Seq (Write "x" (Const 1)) (Seq (Write "y" (Const 1)) Nop)))))))
 
   --------------------------------------------------------------------------
   describe "Async.compile" $ do
@@ -148,7 +148,7 @@ spec = do
   describe "AndOr.compile" $ do
 
     it "(and nop nop)" $ do
-      AndOr.compile (And Nop Nop) `shouldBe` ([], (Par' Nop Nop))
+      AndOr.compile (And Nop Nop) `shouldBe` ([], (Trap' (Var "__and" Nothing (Seq (Write "__and" (Const 0)) (Par' (Seq Nop (If (Equ (Read "__and") (Const 1)) (Escape' 0) (Seq (Write "__and" (Add (Read "__and") (Const 1))) AwaitFor))) (Seq Nop (If (Equ (Read "__and") (Const 1)) (Escape' 0) (Seq (Write "__and" (Add (Read "__and") (Const 1))) AwaitFor))))))))
     it "(or nop awaitFor)" $ do
       AndOr.compile (Or Nop AwaitFor) `shouldBe` ([], (Clean' "Or" (Trap' (Par' (Seq Nop (Escape' 0)) (Seq AwaitFor (Escape' 0))))))
     it "(or nop awaitFor)" $ do
@@ -165,15 +165,13 @@ spec = do
       compile' (False,False) (Loop (Or Break AwaitFor))
       `shouldBe` (["trap: no trails terminate","loop: `loop` never iterates"], (G.Trap (G.Loop (G.Par (G.Escape 0) (G.AwaitExt "FOREVER")))))
 
-    it "loop (and break FOR)" $ do
-      compile' (False,False) (Loop (And Break AwaitFor))
+    it "loop (par break FOR)" $ do
+      compile' (False,False) (Loop (Par Break AwaitFor))
       `shouldBe` (["loop: `loop` never iterates"], (G.Trap (G.Loop (G.Par (G.Escape 0) (G.AwaitExt "FOREVER")))))
 
-    it "break" $ do
-      Break.compile Break `shouldBe` ([], (Escape' (-1)))
-
-    it "break" $ do
-      compile' (False,False) Break `shouldBe` (["escape: orphan `escape` statement"], (G.Escape (-1)))
+    it "loop (and break FOR)" $ do
+      compile' (False,False) (Loop (And Break AwaitFor))
+      `shouldBe` (["if: unreachable statement","if: unreachable statement"],G.Trap (G.Loop (G.Trap (G.Var "__and" (G.Seq (G.Write "__and" (Const 0)) (G.Par (G.Seq (G.Escape 1) (G.If (Equ (Read "__and") (Const 1)) (G.Escape 0) (G.Seq (G.Write "__and" (Add (Read "__and") (Const 1))) (G.AwaitExt "FOREVER")))) (G.Seq (G.AwaitExt "FOREVER") (G.If (Equ (Read "__and") (Const 1)) (G.Escape 0) (G.Seq (G.Write "__and" (Add (Read "__and") (Const 1))) (G.AwaitExt "FOREVER"))))))))))
 
   --------------------------------------------------------------------------
   describe "Forever.compile" $ do
@@ -308,8 +306,13 @@ end
         (Loop (AwaitTmr (Const 5)))
         (Escape Nothing (Just (Const 25))))
 
-    evalFullProgItSuccess (25,[[]]) []
+    evalFullProgItFail ["if: unreachable statement","if: unreachable statement"] []
       (And
+        (Loop (AwaitTmr (Const 5)))
+        (Escape Nothing (Just (Const 25))))
+
+    evalFullProgItSuccess (25,[[]]) []
+      (Par
         (Loop (AwaitTmr (Const 5)))
         (Escape Nothing (Just (Const 25))))
 
@@ -325,7 +328,7 @@ end
 -}
     evalFullProgItSuccess (10,[[]]) [] (
       Int "a" True (
-        And
+        Par
           (Var "ret" Nothing (Seq (AwaitInt "a" (Just "ret")) (Escape Nothing (Just (Read "ret")))))
           (EmitInt "a" (Just (Const 10)))
       ))
@@ -333,7 +336,7 @@ end
     evalFullProgItFail ["varsWrite: undeclared variable: _a"] []
       (Var "ret" Nothing
         (Int "a" False (
-          And
+          Par
             (Seq (AwaitInt "a" (Just "ret")) (Escape Nothing (Just (Const 0))))
             (EmitInt "a" (Just (Const 10))))))
     evalFullProgItFail ["varsWrite: undeclared variable: _a"] [] (
@@ -346,20 +349,20 @@ end
 
     evalFullProgItSuccess (99,[[]]) [] (
       Int "a" False (
-        And
+        Par
           ((AwaitInt "a" Nothing) `Seq` (Escape Nothing (Just (Const 99))))
           (EmitInt "a" Nothing)
       ))
     evalFullProgItSuccess (99,[[]]) [] (
       Int "a" True (
-        And
+        Par
           ((AwaitInt "a" Nothing) `Seq` (Escape Nothing (Just (Const 99))))
           (EmitInt "a" (Just (Const 10)))
       ))
     evalFullProgItFail ["varsRead: uninitialized variable: _a"] []
       (Var "ret" Nothing
         (Int "a" True (
-          And
+          Par
             (Seq (AwaitInt "a" (Just "ret")) (Escape Nothing (Just (Read "ret"))))
             (EmitInt "a" Nothing))))
 
@@ -381,7 +384,7 @@ end
 
     evalFullProgItSuccess (99,[[],[],[],[]]) [("A",Just 1),("A",Just 99),("F",Just 2)]
       (Var "ret" Nothing
-        (And
+        (Par
           (Every "A" (Just "ret") Nop)
           (Seq (AwaitExt "F" Nothing) (Escape Nothing (Just (Read "ret"))))))
 
@@ -444,7 +447,7 @@ end
 
     evalFullProgItSuccess (1,[[],[("O",Just 1)],[("O",Just 2)],[]]) [("I",Just 1),("I",Just 2),("F",Nothing)]
       (Var "i" Nothing
-        (And
+        (Par
           (Seq (AwaitExt "F" Nothing) (Escape Nothing (Just (Const 1))))
           (Every "I" (Just "i") (EmitExt "O" (Just (Read "i"))))))
 
@@ -454,7 +457,7 @@ end
       (Int "x" True (Pause "x" (Escape Nothing (Just (Const 99)))))
 
     evalFullProgItSuccess (99,[[]]) []
-      (And
+      (Par
         (Seq (AwaitExt "X" Nothing) (Escape Nothing (Just (Const 33))))
         (Int "x" True
           (Pause "x"
@@ -468,7 +471,7 @@ end
         (Escape Nothing (Just (Const 99))))
 
     evalFullProgItSuccess (99,[[],[("P",Nothing)],[]]) [("X",Just 1),("E",Nothing)]
-      (And
+      (Par
         (Pause "X"
           (Seq (Fin Nop (EmitExt "P" Nothing) Nop) AwaitFor))
         (Seq (AwaitExt "E" Nothing) (Escape Nothing (Just (Const 99)))))

@@ -33,6 +33,7 @@ data Stmt
   | Every ID_Evt (Maybe ID_Var) Stmt    -- event iteration
   | And Stmt Stmt                       -- par/and statement
   | Or Stmt Stmt                        -- par/or statement
+  | Par Stmt Stmt                       -- par statement
   | Spawn Stmt                          -- spawn statement
   | Pause ID_Evt Stmt                   -- pause/suspend statement
   | Fin Stmt Stmt Stmt                  -- finalize/pause/resume statement

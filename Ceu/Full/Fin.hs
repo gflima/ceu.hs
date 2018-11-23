@@ -22,7 +22,7 @@ compile p = aux Nothing p where
                                           (es1,p1') = aux pse p1
                                           (es2,p2') = aux pse p2
 
-  aux pse (Seq (Fin x y z) p)        = (es'++esX++esY++esZ++esP, Or' p' (And yz (Fin' x')))
+  aux pse (Seq (Fin x y z) p)        = (es'++esX++esY++esZ++esP, Or' p' (Par yz (Fin' x')))
     where
       (esX,x') = aux pse x
       (esY,y') = aux pse y
@@ -32,7 +32,7 @@ compile p = aux Nothing p where
       (es',yz) = case (pse,y,z) of
         (Nothing,  Nop, Nop) -> ([], Nop)
         (Nothing,  _,   _)   -> (["unexpected `pause`/`resume` statement"], Nop)
-        (Just evt, _,   _)   -> ([], And
+        (Just evt, _,   _)   -> ([], Par
                                       (Every evt Nothing y')
                                       (Every ("__pause_int_"++evt) Nothing z'))
 
@@ -46,6 +46,10 @@ compile p = aux Nothing p where
   aux pse (Every evt exp p)          = (es, Every evt exp p')
                                         where
                                           (es,p') = aux pse p
+  aux pse (Par p1 p2)                = (es1++es2, Par p1' p2')
+                                        where
+                                          (es1,p1') = aux pse p1
+                                          (es2,p2') = aux pse p2
   aux pse (And p1 p2)                = (es1++es2, And p1' p2')
                                         where
                                           (es1,p1') = aux pse p1
