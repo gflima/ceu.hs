@@ -249,15 +249,8 @@ step (Loop' p q, n, vars, ints, outs)            -- loop-adv (pg 7)
 step (Par p q, n, vars, ints, outs)              -- par-expd (pg 7)
   = (Par' p (Seq (CanRun n) q), n, vars, ints, outs)
 
-step (Par' Nop q, n, vars, ints, outs)           -- par-nop1 (pg 7)
-  = (q, n, vars, ints, outs)
-
 step (Par' (Escape k) q, n, vars, ints, outs)    -- and escape1 (pg 7)
   = (Seq (clear q) (Escape k), n, vars, ints, outs)
-
-step (Par' p Nop, n, vars, ints, outs)           -- and-nop2 (pg 7)
-  | not $ isBlocked n p = stepAdv (p, n, vars, ints, outs) (\p' -> Par' p' Nop)
-  | otherwise           = (p, n, vars, ints, outs)
 
 step (Par' p (Escape k), n, vars, ints, outs)    -- and-escape2 (pg 7)
   | not $ isBlocked n p = stepAdv (p, n, vars, ints, outs) (\p' -> Par' p' (Escape k))
@@ -285,8 +278,7 @@ step (Error msg, _, _, _, _) = error ("Runtime error: " ++ msg)
 step (p, n, vars, ints, outs)                    -- pop
   | isReducible (p,n,vars,ints, outs) = (p, n-1, vars, ints, outs)
 
---step _ = error "step: cannot advance"
-step p =  traceShow p (error "step: cannot advance")
+step p =  error $ "step: cannot advance" ++ "\n" ++ (show p)
 
 -- Tests whether the description is nst-irreducible.
 -- CHECK: nst should only produce nst-irreducible descriptions.
