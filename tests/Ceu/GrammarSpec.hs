@@ -139,21 +139,28 @@ spec = do
     checkStmtsIt (Loop Nop)                      ["loop: unbounded `loop` execution"]
     checkStmtsIt (Every "A" Nop)                 []
     checkStmtsIt (Every "A" (Fin Nop))           ["every: invalid statement in `every`", "finalize: invalid statement"]
-    checkStmtsIt (Par (Escape 0) Nop)            []
-    checkStmtsIt (Par Nop (EmitInt "a"))         []
+    checkStmtsIt (Par (Escape 0) Nop)            ["parallel: terminating trail"]
+    checkStmtsIt (Par (Escape 0) (AwaitExt "FOREVER"))
+                                                 []
+    checkStmtsIt (Par (AwaitExt "FOREVER") (Seq (EmitInt "a") (AwaitExt "FOREVER")))
+                                                 []
+    checkStmtsIt (Par Nop (EmitInt "a"))         ["parallel: terminating trail"]
     checkStmtsIt (Pause "a" Nop)                 []
     checkStmtsIt (Fin Nop)                       []
     checkStmtsIt (Fin (Fin Nop))                 ["finalize: invalid statement in `finalize`", "finalize: invalid statement"]
 
     -- misc --
-    checkStmtsIt (Nop `Seq` (Fin (Loop (Escape 0))))                   ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
-    checkStmtsIt (Nop `Seq` (Fin (Loop Nop)))                          ["loop: unbounded `loop` execution"]
-    checkStmtsIt (Var "x" (Fin (Every "A" Nop)))                       ["finalize: invalid statement in `finalize`", "every: invalid statement"]
-    checkStmtsIt (Loop (Trap (Loop (Escape 0))))                       ["loop: unbounded `loop` execution"]
-    checkStmtsIt (Loop (Trap (Loop (Seq (Escape 0) (Escape 0)))))      ["loop: unbounded `loop` execution"]
-    checkStmtsIt (AwaitInt "a" `Seq` (Fin (Escape 0)) `Par` Nop)       ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
-    checkStmtsIt (AwaitInt "a" `Seq` (Every "A" (Fin Nop)) `Par` Nop)  ["every: invalid statement in `every`", "finalize: invalid statement"]
-    checkStmtsIt (Loop (Nop `Par` Loop (Loop (Loop (AwaitExt "A")))))  []
+    checkStmtsIt (Nop `Seq` (Fin (Loop (Escape 0)))) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
+    checkStmtsIt (Nop `Seq` (Fin (Loop Nop)))        ["loop: unbounded `loop` execution"]
+    checkStmtsIt (Var "x" (Fin (Every "A" Nop)))     ["finalize: invalid statement in `finalize`", "every: invalid statement"]
+    checkStmtsIt (Loop (Trap (Loop (Escape 0))))     ["loop: unbounded `loop` execution"]
+    checkStmtsIt (Loop (Trap (Loop (Seq (Escape 0) (Escape 0)))))
+                                                     ["loop: unbounded `loop` execution"]
+    checkStmtsIt (AwaitInt "a" `Seq` (Fin (Escape 0)) `Par` (AwaitExt "FOREVER"))
+                                                     ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
+    checkStmtsIt (AwaitInt "a" `Seq` (Every "A" (Fin Nop)) `Par` (AwaitExt "FOREVER"))
+                                                     ["every: invalid statement in `every`", "finalize: invalid statement"]
+    checkStmtsIt (Loop ((AwaitExt "FOREVER") `Par` Loop (Loop (Loop (AwaitExt "A")))))  []
     checkStmtsIt (Loop ((Escape 0) `Par` Loop (Loop (Loop (AwaitExt "A"))))) []
     checkStmtsIt (Fin (Escape 0)) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
     checkStmtsIt (Loop (Escape 0)) []
@@ -165,7 +172,7 @@ spec = do
     checkCheckIt (Seq (Trap (Loop (Trap (Seq (Escape 0) Nop)))) Nop) ["loop: unbounded `loop` execution", "trap: missing `escape` statement", "nop: unreachable statement", "nop: unreachable statement"]
     checkCheckIt (Trap (Seq (Trap (Par (AwaitExt "FOREVER") (Escape 0))) (Escape 0)))
       []
-    checkCheckIt (Trap (Par (Escape 0) (Seq (Par Nop (Fin Nop)) (Escape 0))))
+    checkCheckIt (Trap (Par (Escape 0) (Seq (Par (AwaitExt "FOREVER") (Fin Nop)) (Escape 0))))
       ["escape: unreachable statement"]
 
       where
@@ -176,8 +183,8 @@ spec = do
           (it ((if b==[] then "pass" else "fail") ++ ": " ++ showProg p) $
             (ck p) `shouldBe` b)
         checkLoopIt p b      = checkIt  Loop.check p b
-        checkFinIt (Fin p) b = checkIt' Check.tight p b
-        checkEveryIt p b     = checkIt' Check.tight p b
+        checkFinIt (Fin p) b = checkIt' Check.getTights p b
+        checkEveryIt p b     = checkIt' Check.getTights p b
         checkEscapeIt p b    = checkIt' Escape.check p b
         checkReachableIt p b = checkIt' Reachable.check p b
         checkStmtsIt p b     = checkIt' Check.stmts p b

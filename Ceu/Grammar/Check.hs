@@ -7,24 +7,24 @@ import qualified Ceu.Grammar.Check.Loop      as Loop
 import qualified Ceu.Grammar.Check.Escape    as Escape
 import qualified Ceu.Grammar.Check.Reachable as Reachable
 
-tight :: Stmt -> [String]
-tight p = errs_stmts_msg_map (tight' (-1) p) "invalid statement"
-tight' _ s@(AwaitInt _) = [s]
-tight' _ s@(AwaitExt _) = [s]
-tight' n s@(Every _ p)  = [s] ++ tight' n p
-tight' n s@(Fin p)      = [s] ++ tight' n p
-tight' n s@(Loop p)     = tight' n p
-tight' n (Var _ p)      = tight' n p
-tight' n (Int _ p)      = tight' n p
-tight' n (If _ p q)     = tight' n p ++ tight' n q
-tight' n (Seq p q)      = tight' n p ++ tight' n q
-tight' n s@(Par p q)    = [s] ++ tight' n p ++ tight' n q
-tight' n s@(Pause _ p)  = [s] ++ tight' n p
-tight' n (Trap p)       = tight' (n+1) p
-tight' n s@(Escape k)
-  | (n >= k)  = [s]
-  | otherwise = [s]
-tight' _ _              = []
+getTights :: Stmt -> [String]
+getTights p = errs_stmts_msg_map (aux' (-1) p) "invalid statement" where
+  aux' _ s@(AwaitInt _) = [s]
+  aux' _ s@(AwaitExt _) = [s]
+  aux' n s@(Every _ p)  = [s] ++ aux' n p
+  aux' n s@(Fin p)      = [s] ++ aux' n p
+  aux' n s@(Loop p)     = aux' n p
+  aux' n (Var _ p)      = aux' n p
+  aux' n (Int _ p)      = aux' n p
+  aux' n (If _ p q)     = aux' n p ++ aux' n q
+  aux' n (Seq p q)      = aux' n p ++ aux' n q
+  aux' n s@(Par p q)    = [s] ++ aux' n p ++ aux' n q
+  aux' n s@(Pause _ p)  = [s] ++ aux' n p
+  aux' n (Trap p)       = aux' (n+1) p
+  aux' n s@(Escape k)
+    | (n >= k)  = [s]
+    | otherwise = [s]
+  aux' _ _              = []
 
 -- Checks if program is valid.
 -- Returns all statements that fail.
@@ -35,16 +35,24 @@ stmts stmt = case stmt of
   Int _ p       -> stmts p
   If _ p q      -> stmts p ++ stmts q
   Seq p q       -> stmts p ++ stmts q
-  s@(Loop p)    -> stmts p ++ (if (Loop.check (Loop p)) then [] else [err_stmt_msg s "unbounded `loop` execution"])
+  s@(Loop p)    -> stmts p ++ es where
+                    es = if Loop.check s then
+                           []
+                         else
+                           [err_stmt_msg s "unbounded `loop` execution"]
   s@(Every e p) -> stmts p ++ (aux "invalid statement in `every`" s p)
-  Par p q       -> stmts p ++ stmts q
+  s@(Par p q)   -> es ++ stmts p ++ stmts q where
+                    es = if (Reachable.neverTerminates p) && (Reachable.neverTerminates q) then
+                           []
+                         else
+                           [err_stmt_msg s "terminating trail"]
   Pause _ p     -> stmts p
   s@(Fin p)     -> stmts p ++ (aux "invalid statement in `finalize`" s p)
   Trap p        -> stmts p
   _             -> []
   where
     aux msg s p =
-      let ret = tight p in
+      let ret = getTights p in
         if (ret == []) then
           []
         else

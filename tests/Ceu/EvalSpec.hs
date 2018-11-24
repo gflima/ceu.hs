@@ -1106,26 +1106,26 @@ spec = do
       [] (G.Var "a"
            (G.Write "a" (Const 1) `G.Seq`
             G.Trap (G.Par
-             (G.Var "a" (G.Write "a" (Const 99) `G.Seq` G.AwaitExt "A"))
+             (G.Var "a" (G.Write "a" (Const 99) `G.Seq` G.AwaitExt "A") `G.Seq` (G.AwaitExt "FOREVER"))
              (G.Escape 0)) `G.Seq`
            G.Write "_ret" (Read "a" `Add` Const 10) `G.Seq`
            G.Escape 0))
 
     evalProgItFail ["trap: missing `escape` statement"]
       [] (G.Trap (G.Par
-           (G.Var "x" (G.Write "_ret" (Const 1) `G.Seq` G.AwaitExt "A"))
+           (G.Var "x" (G.Write "_ret" (Const 1) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
            (G.Escape 1)))
 
     evalProgItSuccess (1,[[]])
       [] (G.Seq (G.Trap (G.Par
-           (G.Var "x" (G.Write "_ret" (Const 1) `G.Seq` G.AwaitExt "A"))
+           (G.Var "x" (G.Write "_ret" (Const 1) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
            (G.Escape 0))) (G.Escape 0))
 
     evalProgItFail ["loop: `loop` never iterates"]
       [] (G.Var "a"
            (G.Write "a" (Const 1) `G.Seq`
             G.Trap (G.Loop (G.Par
-                  (G.Var "a" (G.Write "a" (Const 99) `G.Seq` G.AwaitExt "A"))
+                  (G.Var "a" (G.Write "a" (Const 99) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
                   (G.Escape 0))) `G.Seq`
              G.Write "_ret" (Read "a" `Add` Const 10) `G.Seq`
             G.Escape 0))
@@ -1134,19 +1134,19 @@ spec = do
       [] (G.Var "a"
            (G.Write "a" (Const 1) `G.Seq`
             G.Trap (G.Par
-                  (G.Var "a" (G.Write "a" (Const 99) `G.Seq` G.AwaitExt "A"))
+                  (G.Var "a" (G.Write "a" (Const 99) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
                   (G.Escape 0)) `G.Seq`
             G.Write "_ret" (Read "a" `Add` Const 10) `G.Seq`
             G.Escape 0))
 
     evalProgItFail ["loop: `loop` never iterates"]
       [] (G.Seq (G.Trap (G.Loop (G.Par
-                 (G.Var "x" (G.Write "_ret" (Const 1) `G.Seq` G.AwaitExt "A"))
+                 (G.Var "x" (G.Write "_ret" (Const 1) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
                  (G.Escape 0)))) (G.Escape 0))
 
     evalProgItSuccess (1,[[]])
       [] (G.Seq (G.Trap (G.Par
-                 (G.Var "x" (G.Write "_ret" (Const 1) `G.Seq` G.AwaitExt "A"))
+                 (G.Var "x" (G.Write "_ret" (Const 1) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
                  (G.Escape 0))) (G.Escape 0))
 
     evalProgItSuccess (5,[[]]) [] (
@@ -1155,7 +1155,7 @@ spec = do
         (G.Trap
         (G.Par
           ((G.AwaitInt "a") `G.Seq` (G.Write "_ret" (Const 5)) `G.Seq` (G.Escape 0))
-          (G.EmitInt "a")))) `G.Seq`
+          ((G.EmitInt "a") `G.Seq` G.AwaitExt "FOREVER")))) `G.Seq`
       (G.Escape 0))
 
     evalProgItSuccess (5,[[]]) [] (
@@ -1195,8 +1195,8 @@ escape x;
             (G.Write "x" (Const 1))
             (G.Int "e"
               (G.Trap (G.Par
-                (G.Seq (G.AwaitExt "A") (G.Seq (G.Write "x" (Const 0)) (G.EmitInt "e")))
-                (G.Seq (G.Pause "x" (G.Trap (G.Par (G.Seq (G.AwaitInt "e") (G.Escape 0)) (G.EmitInt "e")))) (G.Escape 0)))))))
+                (G.Seq (G.AwaitExt "A") (G.Seq (G.Write "x" (Const 0)) (G.Seq (G.EmitInt "e") (G.AwaitExt "FOREVER"))))
+                (G.Seq (G.Pause "x" (G.Trap (G.Par (G.Seq (G.AwaitInt "e") (G.Escape 0)) (G.EmitInt "e" `G.Seq` G.AwaitExt "FOREVER")))) (G.Escape 0)))))))
         (G.Write "_ret" (Const 99))) (G.Escape 0))
 
     -- multiple inputs
