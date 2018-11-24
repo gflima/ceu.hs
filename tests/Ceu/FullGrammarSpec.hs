@@ -144,6 +144,10 @@ spec = do
       Spawn.compile (Seq (Spawn AwaitFor) Nop)
       `shouldBe` ([], Or' (Clean' "Spawn" AwaitFor) Nop)
 
+    it "spawn escape || escape" $ do
+      compile' (False,False) (Trap (Just "a") (Seq (Spawn (Par (Escape Nothing (Just (Const 1))) (Escape (Just "a") Nothing))) Nop))
+      `shouldBe` (["parallel: escaping `spawn`","escape: escaping statement","escape: escaping statement"],G.Trap (G.Trap (G.Par (G.Par (G.Seq (G.Write "a" (Const 1)) (G.Escape 1)) (G.Escape 1)) (G.Seq G.Nop (G.Escape 0)))))
+
   --------------------------------------------------------------------------
   describe "ParAndOr.compile" $ do
 

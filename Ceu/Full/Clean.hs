@@ -4,7 +4,7 @@ import Ceu.Globals
 import qualified Ceu.Grammar as G
 
 import Ceu.Grammar.Check.Reachable (maybeTerminates)
-import Ceu.Grammar.Check.Escape    (escapesAt1, removeTrap)
+import Ceu.Grammar.Check.Escape    (getEscapes, escapesAt1, removeTrap)
 
 clean :: String -> G.Stmt -> (Errors, G.Stmt)
 
@@ -13,11 +13,18 @@ clean "Or"  p = fin_or [G.err_stmt_msg p "no trails terminate"] p
 
 clean "Loop" s@(G.Trap p) = ([], if escapesAt1 p then s else removeTrap s)
 
-clean "Spawn" p =
-  if maybeTerminates p then
-    ([G.err_stmt_msg p "terminating `spawn`"], G.Seq p (G.AwaitExt "FOREVER"))
-  else
-    ([], p)
+clean "Spawn" p = (es1++es2,p') where
+  (es1,p') =
+    if maybeTerminates p then
+      ([G.err_stmt_msg p "terminating `spawn`"], G.Seq p (G.AwaitExt "FOREVER"))
+    else
+      ([], p)
+  es2 =
+    let escs = (getEscapes p') in
+      if escs == [] then
+        []
+      else
+        [G.err_stmt_msg p "escaping `spawn`"] ++ (G.errs_stmts_msg_map (map fst escs) "escaping statement")
 
 clean id p = error $ "unexpected clean case: " ++ id ++ "\n" ++ (show p)
 
