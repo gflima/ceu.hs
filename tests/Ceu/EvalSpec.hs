@@ -1078,19 +1078,26 @@ spec = do
     evalProgItFail ["escape: orphan `escape` statement"]
       [] (G.Escape 1)
 
-    evalProgItFail ["no return value"]
+    evalProgItFail ["declaration: variable '_ret' is already declared"]
       [] (G.Var "a"
            (G.Var "_ret"
              (G.Write "a" (Const 1) `G.Seq`
               G.Write "_ret" (Read "a" `Add` Const 10) `G.Seq`
               G.Escape 0)))
 
-    evalProgItSuccess (1,[[]])
+    evalProgItFail ["declaration: variable '_ret' is already declared"]
       [] (G.Write "_ret" (Const 1) `G.Seq`
           G.Var "_ret" (G.Write "_ret" (Const 99)) `G.Seq`
           G.Escape 0)
 
     evalProgItSuccess (11,[[]])
+      [] (G.Var "a"
+           (G.Write "a" (Const 1) `G.Seq`
+            G.Var "b" (G.Write "b" (Const 99)) `G.Seq`
+            G.Write "_ret" (Read "a" `Add` Const 10) `G.Seq`
+            G.Escape 0))
+
+    evalProgItFail ["declaration: variable 'a' is already declared"]
       [] (G.Var "a"
            (G.Write "a" (Const 1) `G.Seq`
             G.Var "a" (G.Write "a" (Const 99)) `G.Seq`
@@ -1106,7 +1113,7 @@ spec = do
       [] (G.Var "a"
            (G.Write "a" (Const 1) `G.Seq`
             G.Trap (G.Par
-             (G.Var "a" (G.Write "a" (Const 99) `G.Seq` G.AwaitExt "A") `G.Seq` (G.AwaitExt "FOREVER"))
+             (G.Var "b" (G.Write "b" (Const 99) `G.Seq` G.AwaitExt "A") `G.Seq` (G.AwaitExt "FOREVER"))
              (G.Escape 0)) `G.Seq`
            G.Write "_ret" (Read "a" `Add` Const 10) `G.Seq`
            G.Escape 0))
@@ -1121,7 +1128,7 @@ spec = do
            (G.Var "x" (G.Write "_ret" (Const 1) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
            (G.Escape 0))) (G.Escape 0))
 
-    evalProgItFail ["loop: `loop` never iterates"]
+    evalProgItFail ["loop: `loop` never iterates","declaration: variable 'a' is already declared"]
       [] (G.Var "a"
            (G.Write "a" (Const 1) `G.Seq`
             G.Trap (G.Loop (G.Par
@@ -1134,7 +1141,7 @@ spec = do
       [] (G.Var "a"
            (G.Write "a" (Const 1) `G.Seq`
             G.Trap (G.Par
-                  (G.Var "a" (G.Write "a" (Const 99) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
+                  (G.Var "b" (G.Write "b" (Const 99) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
                   (G.Escape 0)) `G.Seq`
             G.Write "_ret" (Read "a" `Add` Const 10) `G.Seq`
             G.Escape 0))
@@ -1181,7 +1188,7 @@ escape x;
       (G.Var "x" (
         (G.Write "x" (Const 10)) `G.Seq`
         (G.Trap (G.Par
-          (G.Var "x" (G.AwaitExt "FOREVER"))
+          (G.Var "y" (G.AwaitExt "FOREVER"))
           (G.Seq (G.Write "x" (Const 99)) (G.Escape 0))
         )) `G.Seq`
         (G.Write "_ret" (Read "x")) `G.Seq`

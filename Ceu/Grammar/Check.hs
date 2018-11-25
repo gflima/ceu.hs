@@ -6,6 +6,7 @@ import Ceu.Grammar.Simplify
 import qualified Ceu.Grammar.Check.Loop      as Loop
 import qualified Ceu.Grammar.Check.Escape    as Escape
 import qualified Ceu.Grammar.Check.Reachable as Reachable
+import qualified Ceu.Grammar.Check.VarEvt    as VarEvt
 
 getTights :: Stmt -> [String]
 getTights p = errs_stmts_msg_map (aux' (-1) p) "invalid statement" where
@@ -69,4 +70,4 @@ compile (o_simp,o_encl) p = (es2++es4,p3) where
               if Reachable.neverTerminates p1 then ([], p1) else
                 (["missing application `escape`"], Seq p1 (AwaitExt "FOREVER"))
   p3       = if not o_simp then p2 else simplify p2
-  es4      = (stmts p3) ++ (Escape.check p3) ++ (Reachable.check p3)
+  es4      = (stmts p3) ++ (Escape.check p3) ++ (Reachable.check p3) ++ (VarEvt.check p3)

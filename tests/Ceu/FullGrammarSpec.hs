@@ -146,7 +146,7 @@ spec = do
 
     it "spawn escape || escape" $ do
       compile' (False,False) (Trap (Just "a") (Seq (Spawn (Par (Escape Nothing (Just (Const 1))) (Escape (Just "a") Nothing))) Nop))
-      `shouldBe` (["parallel: escaping `spawn`","escape: escaping statement","escape: escaping statement"],G.Trap (G.Trap (G.Par (G.Par (G.Seq (G.Write "a" (Const 1)) (G.Escape 1)) (G.Escape 1)) (G.Seq G.Nop (G.Escape 0)))))
+      `shouldBe` (["parallel: escaping `spawn`","escape: escaping statement","escape: escaping statement","assignment: variable 'a' is not declared"],G.Trap (G.Trap (G.Par (G.Par (G.Seq (G.Write "a" (Const 1)) (G.Escape 1)) (G.Escape 1)) (G.Seq G.Nop (G.Escape 0)))))
 
   --------------------------------------------------------------------------
   describe "ParAndOr.compile" $ do
@@ -204,7 +204,7 @@ spec = do
 
     it "spawn do async ret++ end ;; await F;" $ do
       compile' (False,False) (Seq (Spawn (Async (Loop (Write "x" (Add (Read "x") (Const 1)))))) (AwaitExt "A" Nothing))
-      `shouldBe` ([], (G.Trap (G.Par (G.Loop (G.Seq (G.Write "x" (Add (Read "x") (Const 1))) (G.AwaitExt "ASYNC"))) (G.Seq (G.AwaitExt "A") (G.Escape 0)))))
+      `shouldBe` (["assignment: variable 'x' is not declared","read access to 'x': variable 'x' is not declared"], (G.Trap (G.Par (G.Loop (G.Seq (G.Write "x" (Add (Read "x") (Const 1))) (G.AwaitExt "ASYNC"))) (G.Seq (G.AwaitExt "A") (G.Escape 0)))))
 
     it "trap terminates" $ do
       compile' (False,False) (Or (Trap' (Escape' 0)) AwaitFor)
@@ -253,13 +253,13 @@ nop;
       (Escape Nothing (Just (Const 25)))
 
     -- TODO: OK
-    evalFullProgItFail ["varsRead: undeclared variable: b"] [] (
+    evalFullProgItSuccess (10,[[]]) [] (
       (Var "a" (Just (Nop,Nop,Nop))
-        (Escape Nothing (Just (Const 0)))
+        (Escape Nothing (Just (Const 10)))
       ))
 
     -- TODO: OK
-    evalFullProgItFail ["varsRead: undeclared variable: b"] [] (
+    evalFullProgItFail ["read access to 'b': variable 'b' is not declared"] [] (
       (Var "ret" Nothing (
       (Var "a" (Just ((Write "ret" (Read "b")),Nop,Nop))
         (Var "b" Nothing
@@ -337,15 +337,16 @@ end
           (EmitInt "a" (Just (Const 10)) `Seq` AwaitFor)
       ))
 
-    evalFullProgItFail ["varsWrite: undeclared variable: _a"] []
+    evalFullProgItFail ["read access to '_a': variable '_a' is not declared","assignment: variable '_a' is not declared"] []
       (Var "ret" Nothing
         (Int "a" False (
           Par
             (Seq (AwaitInt "a" (Just "ret")) (Escape Nothing (Just (Const 0))))
             (EmitInt "a" (Just (Const 10)) `Seq` AwaitFor))))
-    evalFullProgItFail ["varsWrite: undeclared variable: _a"] [] (
+
+    evalFullProgItFail ["assignment: variable '_a' is not declared"] [] (
       Int "a" False
-        (Seq -- TODO: OK
+        (Seq
           (And
             (AwaitInt "a" Nothing)
             (EmitInt "a" (Just (Const 10))))
@@ -471,7 +472,7 @@ end
 
     evalFullProgItSuccess (99,[[],[],[],[],[]]) [("X",(Just 1)),("A",Nothing),("X",(Just 0)),("A",Nothing)]
       (Seq
-        (Pause "X" (AwaitInt "A" Nothing))
+        (Pause "X" (AwaitExt "A" Nothing))
         (Escape Nothing (Just (Const 99))))
 
     evalFullProgItSuccess (99,[[],[("P",Nothing)],[]]) [("X",Just 1),("E",Nothing)]

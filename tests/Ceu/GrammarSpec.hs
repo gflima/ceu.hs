@@ -6,6 +6,7 @@ import qualified Ceu.Grammar.Check           as Check
 import qualified Ceu.Grammar.Check.Escape    as Escape
 import qualified Ceu.Grammar.Check.Loop      as Loop
 import qualified Ceu.Grammar.Check.Reachable as Reachable
+import qualified Ceu.Grammar.Check.VarEvt    as VarEvt
 import Test.Hspec
 
 main :: IO ()
@@ -120,6 +121,20 @@ spec = do
     checkReachableIt (Seq (Trap (Loop (Trap (Seq (Escape 0) Nop)))) Nop) ["nop: unreachable statement", "nop: unreachable statement"]
 
   --------------------------------------------------------------------------
+  describe "checkVarEvt -- declarations" $ do
+
+    checkVarEvtIt Nop                               []
+    checkVarEvtIt (Var "a" Nop)                     []
+    checkVarEvtIt (Var "a" (Write "a" (Const 1)))   []
+    checkVarEvtIt (Var "a" (Var "a" Nop))           ["declaration: variable 'a' is already declared"]
+    checkVarEvtIt (Int "e" (Int "e" Nop))           ["declaration: event 'e' is already declared"]
+    checkVarEvtIt (Write "a" (Const 1))             ["assignment: variable 'a' is not declared"]
+    checkVarEvtIt (AwaitInt "e")                    ["await: event 'e' is not declared"]
+    checkVarEvtIt (Every "e" Nop)                   ["every: event 'e' is not declared"]
+    checkVarEvtIt (Pause "a" Nop)                   ["pause/if: variable 'a' is not declared"]
+    checkVarEvtIt (Var "a" (Write "a" (Umn (Read "b")))) ["read access to 'b': variable 'b' is not declared"]
+
+  --------------------------------------------------------------------------
   describe "checkStmts -- program is valid" $ do
 
     -- atomic statements --
@@ -187,5 +202,6 @@ spec = do
         checkEveryIt p b     = checkIt' Check.getTights p b
         checkEscapeIt p b    = checkIt' Escape.check p b
         checkReachableIt p b = checkIt' Reachable.check p b
+        checkVarEvtIt p b    = checkIt' VarEvt.check p b
         checkStmtsIt p b     = checkIt' Check.stmts p b
         checkCheckIt p b     = checkIt' (fst . (Check.compile (False,False))) p b
