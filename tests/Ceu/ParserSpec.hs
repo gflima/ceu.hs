@@ -6,6 +6,7 @@ import Text.Parsec.String (Parser)
 import FunctionsAndTypesForParsing
 
 import Ceu.Parser.Token
+import Ceu.Parser.Exp
 import Ceu.Parser.Stmt
 import Ceu.Grammar.Globals (Exp(..))
 import Ceu.Grammar.Full.Grammar (Stmt(..))
@@ -18,7 +19,7 @@ spec = do
 
     describe "tk_num" $ do
         it "''" $
-            parse tk_num "\n "
+            parse (s>>tk_num) "\n "
             `shouldBe` Left "(line 2, column 2):\nunexpected end of input\nexpecting digit"
         it "''" $
             parse tk_num ""
@@ -35,7 +36,7 @@ spec = do
 
     describe "tk_var" $ do
         it "''" $
-            parse tk_var "\n "
+            parse (s>>tk_var) "\n "
             `shouldBe` Left "(line 2, column 2):\nunexpected end of input"
         it "''" $
             parse tk_var ""
@@ -52,7 +53,7 @@ spec = do
 
     describe "tk_int" $ do
         it "''" $
-            parse tk_int "\n "
+            parse (s>>tk_int) "\n "
             `shouldBe` Left "(line 2, column 2):\nunexpected end of input"
         it "''" $
             parse tk_int ""
@@ -67,11 +68,34 @@ spec = do
             parse tk_int "var"
             `shouldBe` Left "TODO: id cannot be a keyword"
 
+    describe "expr" $ do
+        describe "const" $ do
+            it "0" $
+                parse expr_const "0"
+                `shouldBe` Right (Const 0)
+        describe "read" $ do
+            it "a" $
+                parse expr_read "a"
+                `shouldBe` Right (Read "a")
+            it "aaa" $
+                parse expr_read "aaa"
+                `shouldBe` Right (Read "aaa")
+        describe "expr" $ do
+            it "0" $
+                parse expr "0"
+                `shouldBe` Right (Const 0)
+            it "aaa" $
+                parse expr "aaa"
+                `shouldBe` Right (Read "aaa")
+
     describe "stmt" $ do
         describe "escape" $ do
             it "escape 0" $
                 parse stmt_escape "escape 0"
                 `shouldBe` Right (Escape Nothing (Just (Const 0)))
+            it "escape aaa" $
+                parse stmt_escape "escape aaa"
+                `shouldBe` Right (Escape Nothing (Just (Read "aaa")))
 
     where
         parse :: Parser a -> String -> Either String a

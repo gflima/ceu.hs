@@ -21,6 +21,9 @@ spec = do
         it "escape 1" $
             run "escape 1" []
             `shouldBe` Right (1, [[]])
+        it "escape a" $
+            run "escape a" []
+            `shouldBe` Left "read access to 'a': variable 'a' is not declared\n"
         it "escape" $
             run "escape" []
             `shouldBe` Right (1, [[]])
