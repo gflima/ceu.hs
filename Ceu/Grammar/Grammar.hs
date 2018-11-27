@@ -1,6 +1,6 @@
-module Ceu.Grammar where
+module Ceu.Grammar.Grammar where
 
-import Ceu.Globals
+import Ceu.Grammar.Globals
 import Text.Printf
 
 -- Program (pg 5).

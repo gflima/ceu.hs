@@ -1,7 +1,7 @@
-module Ceu.Full.Spawn where
+module Ceu.Grammar.Full.Compile.Spawn where
 
-import Ceu.Globals
-import Ceu.Full.Grammar
+import Ceu.Grammar.Globals
+import Ceu.Grammar.Full.Grammar
 
 -- compile: Converts (spawn p1; ...) into (p1;AwaitFor or ...)
 

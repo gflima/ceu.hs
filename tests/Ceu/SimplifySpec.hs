@@ -1,7 +1,7 @@
 module Ceu.SimplifySpec (main, spec) where
 
-import Ceu.Globals
-import Ceu.Grammar
+import Ceu.Grammar.Globals
+import Ceu.Grammar.Grammar
 import Ceu.Grammar.Simplify
 import Test.Hspec
 

@@ -1,17 +1,17 @@
 module Ceu.FullGrammarSpec (main, spec) where
 
-import Ceu.Globals
-import qualified Ceu.Grammar as G
-import qualified Ceu.Eval    as E
-import Ceu.Full.Grammar
-import Ceu.Full.Eval
-import qualified Ceu.Full.Forever  as Forever
-import qualified Ceu.Full.Break    as Break
-import qualified Ceu.Full.ParAndOr as ParAndOr
-import qualified Ceu.Full.Spawn    as Spawn
-import qualified Ceu.Full.Async    as Async
-import qualified Ceu.Full.Fin      as Fin
-import qualified Ceu.Full.Trap     as Trap
+import Ceu.Grammar.Globals
+import qualified Ceu.Grammar.Grammar as G
+import qualified Ceu.Eval            as E
+import Ceu.Grammar.Full.Grammar
+import Ceu.Grammar.Full.Eval
+import qualified Ceu.Grammar.Full.Compile.Forever  as Forever
+import qualified Ceu.Grammar.Full.Compile.Break    as Break
+import qualified Ceu.Grammar.Full.Compile.ParAndOr as ParAndOr
+import qualified Ceu.Grammar.Full.Compile.Spawn    as Spawn
+import qualified Ceu.Grammar.Full.Compile.Async    as Async
+import qualified Ceu.Grammar.Full.Compile.Fin      as Fin
+import qualified Ceu.Grammar.Full.Compile.Trap     as Trap
 import Control.DeepSeq
 import Control.Exception
 import Test.Hspec

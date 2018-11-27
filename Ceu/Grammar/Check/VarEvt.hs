@@ -2,8 +2,8 @@ module Ceu.Grammar.Check.VarEvt where
 
 import Data.Char (toUpper)
 
-import Ceu.Globals
-import Ceu.Grammar
+import Ceu.Grammar.Globals
+import Ceu.Grammar.Grammar
 
 check :: Stmt -> Errors
 check p = aux [] [] p

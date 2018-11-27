@@ -1,7 +1,7 @@
-module Ceu.Full.Payload where
+module Ceu.Grammar.Full.Compile.Payload where
 
-import Ceu.Globals
-import Ceu.Full.Grammar
+import Ceu.Grammar.Globals
+import Ceu.Grammar.Full.Grammar
 
 -- compile:
 -- (Int e True ...)  -> (Var e_ (Int e False) ...)

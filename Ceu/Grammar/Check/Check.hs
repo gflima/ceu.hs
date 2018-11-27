@@ -1,7 +1,7 @@
-module Ceu.Grammar.Check where
+module Ceu.Grammar.Check.Check where
 
-import Ceu.Globals
-import Ceu.Grammar
+import Ceu.Grammar.Globals
+import Ceu.Grammar.Grammar
 import Ceu.Grammar.Simplify
 import qualified Ceu.Grammar.Check.Loop      as Loop
 import qualified Ceu.Grammar.Check.Escape    as Escape

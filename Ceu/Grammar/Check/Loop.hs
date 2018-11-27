@@ -1,6 +1,6 @@
 module Ceu.Grammar.Check.Loop where
 
-import Ceu.Grammar
+import Ceu.Grammar.Grammar
 
 -- Receives a Loop statement and checks whether all execution paths
 -- in its body lead to an occurrence of a matching-Escape/AwaitExt/Every.

@@ -1,4 +1,4 @@
-module Ceu.Globals where
+module Ceu.Grammar.Globals where
 
 import Text.Printf
 

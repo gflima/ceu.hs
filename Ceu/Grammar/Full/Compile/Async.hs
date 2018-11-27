@@ -1,7 +1,7 @@
-module Ceu.Full.Async where
+module Ceu.Grammar.Full.Compile.Async where
 
-import Ceu.Globals
-import Ceu.Full.Grammar
+import Ceu.Grammar.Globals
+import Ceu.Grammar.Full.Grammar
 
 -- compile: Adds AwaitFor in Loops inside Asyncs
 

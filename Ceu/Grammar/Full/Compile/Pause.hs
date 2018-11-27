@@ -1,7 +1,7 @@
-module Ceu.Full.Pause where
+module Ceu.Grammar.Full.Compile.Pause where
 
-import Ceu.Globals
-import Ceu.Full.Grammar
+import Ceu.Grammar.Globals
+import Ceu.Grammar.Full.Grammar
 
 -- remove:
 --  pause e do

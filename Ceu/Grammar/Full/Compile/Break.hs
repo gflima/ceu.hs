@@ -1,8 +1,8 @@
-module Ceu.Full.Break where
+module Ceu.Grammar.Full.Compile.Break where
 
-import Ceu.Globals
-import Ceu.Full.Grammar
-import qualified Ceu.Full.Trap as Trap
+import Ceu.Grammar.Globals
+import Ceu.Grammar.Full.Grammar
+import qualified Ceu.Grammar.Full.Compile.Trap as Trap
 
 -- compile
 

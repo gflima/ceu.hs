@@ -1,9 +1,9 @@
-module Ceu.Full.Grammar where
+module Ceu.Grammar.Full.Grammar where
 
-import Ceu.Globals
-import qualified Ceu.Grammar as G
+import Ceu.Grammar.Globals
+import qualified Ceu.Grammar.Grammar as G
 import qualified Ceu.Eval as E
-import Ceu.Full.Clean
+import Ceu.Grammar.Full.Clean
 import Debug.Trace
 
 -- Special events:

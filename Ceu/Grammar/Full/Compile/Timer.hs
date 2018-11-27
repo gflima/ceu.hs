@@ -1,8 +1,8 @@
-module Ceu.Full.Timer where
+module Ceu.Grammar.Full.Compile.Timer where
 
-import Ceu.Globals
+import Ceu.Grammar.Globals
 import qualified Ceu.Eval as E
-import Ceu.Full.Grammar
+import Ceu.Grammar.Full.Grammar
 
 -- compile:
 --  var int tot_ = <DT>;

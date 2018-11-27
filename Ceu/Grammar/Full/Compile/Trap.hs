@@ -1,7 +1,7 @@
-module Ceu.Full.Trap where
+module Ceu.Grammar.Full.Compile.Trap where
 
-import Ceu.Globals
-import Ceu.Full.Grammar
+import Ceu.Grammar.Globals
+import Ceu.Grammar.Full.Grammar
 
 compile :: Stmt -> (Errors, Stmt)
 compile p = ([], aux [] p) where
