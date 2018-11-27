@@ -5,11 +5,17 @@ import Data.Char (isLower, isLetter, isDigit)
 import Control.Applicative (many)
 
 import Text.Parsec.String            (Parser)
-import Text.Parsec.String.Char       (oneOf, digit, satisfy, string)
+import Text.Parsec.String.Char       (char, oneOf, digit, satisfy, string)
 import Text.Parsec.String.Combinator (many1)
 
 s :: Parser ()
 s = void $ many $ oneOf " \n\t"
+
+tk_minus :: Parser ()
+tk_minus = do
+    n <- char '-'
+    s
+    return ()
 
 tk_num :: Parser Int
 tk_num = do
@@ -26,6 +32,7 @@ tk_var = do
 
 tk_int = tk_var
 
+tk_escape :: Parser ()
 tk_escape = do
     void <- string "escape"
     s

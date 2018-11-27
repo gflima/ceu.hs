@@ -17,10 +17,18 @@ main = hspec spec
 spec :: Spec
 spec = do
 
+    describe "void" $ do
+        it "void" $
+            run "" []
+            `shouldBe` Left "(line 1, column 1):\nunexpected end of input\nexpecting \"escape\""
+
     describe "escape" $ do
         it "escape 1" $
             run "escape 1" []
             `shouldBe` Right (1, [[]])
+        it "escape -1" $
+            run "escape -1" []
+            `shouldBe` Right (-1, [[]])
         it "escape a" $
             run "escape a" []
             `shouldBe` Left "read access to 'a': variable 'a' is not declared\n"
