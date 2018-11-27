@@ -39,11 +39,13 @@ exp = do
     e <- exp_const
     return e
 
+stmt_escape :: Parser Stmt
 stmt_escape = do
     void <- string "escape"
     e    <- exp
     return $ Escape Nothing (Just e)
 
+stmt :: Parser Stmt
 stmt = do
     s <- stmt_escape
     return s
