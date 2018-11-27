@@ -320,8 +320,7 @@ steps d
   | otherwise = steps $ step d
   -- | otherwise = traceShow d (steps $ step d)
 
-data Result = Success (Val,[Outs]) | Fail Errors
-  deriving (Show, Eq)
+type Result = Either Errors (Val,[Outs])
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "_ret" set by the program.
@@ -331,11 +330,11 @@ run prog ins reaction = eP (fromGrammar prog) ins []
     --eP :: Stmt -> [a] -> [Outs] -> (Val,[Outs])
     eP prog ins outss = case prog of
       (Var ("_ret",val) (AwaitExt "FOREVER"))
-        | not (null ins) -> Fail ["pending inputs"]
-        | isNothing val  -> Fail ["no return value"]
-        | otherwise      -> Success ((fromJust val), outss)
+        | not (null ins) -> Left ["pending inputs"]
+        | isNothing val  -> Left ["no return value"]
+        | otherwise      -> Right ((fromJust val), outss)
       _
-        | null ins       -> Fail ["program didn't terminate"]
+        | null ins       -> Left ["program didn't terminate"]
         | otherwise      -> eP prog' (tail ins) (outss++[outs']) where
                                (prog',outs') = reaction prog (head ins)
 
@@ -347,4 +346,4 @@ compile_run prog ins =
     if es == [] then
       run p ("BOOT":ins) reaction
     else
-      Fail es
+      Left es

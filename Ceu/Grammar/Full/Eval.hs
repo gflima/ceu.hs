@@ -57,10 +57,10 @@ evalFullProg prog ins =
     if es == [] then
       let res = E.run s ins'' reaction in
         case res of
-          E.Success (val,outss) -> E.Success (val, Timer.join ins' outss)
-          otherwise             -> res
+          Right (val,outss) -> Right (val, Timer.join ins' outss)
+          otherwise         -> res
     else
-      E.Fail es
+      Left es
     where
       ins'  = ("BOOT",Nothing):ins
       ins'' = Timer.expand ins'

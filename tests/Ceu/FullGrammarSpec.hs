@@ -249,17 +249,17 @@ var b = 1;
 nop;
 -}
 
-    evalFullProgItSuccess (25,[[]]) []
+    evalFullProgItRight (25,[[]]) []
       (Escape Nothing (Just (Const 25)))
 
     -- TODO: OK
-    evalFullProgItSuccess (10,[[]]) [] (
+    evalFullProgItRight (10,[[]]) [] (
       (Var "a" (Just (Nop,Nop,Nop))
         (Escape Nothing (Just (Const 10)))
       ))
 
     -- TODO: OK
-    evalFullProgItFail ["read access to 'b': variable 'b' is not declared"] [] (
+    evalFullProgItLeft ["read access to 'b': variable 'b' is not declared"] [] (
       (Var "ret" Nothing (
       (Var "a" (Just ((Write "ret" (Read "b")),Nop,Nop))
         (Var "b" Nothing
@@ -287,7 +287,7 @@ with
     end
 end
 -}
-    evalFullProgItSuccess (25,[[]]) [] (
+    evalFullProgItRight (25,[[]]) [] (
       (Int "a" False (
       (Var "ret" Nothing (
       (Write "ret" (Const 0)) `Seq`
@@ -305,17 +305,17 @@ end
         )
       ))))))
 
-    evalFullProgItFail ["trap: no trails terminate"] []
+    evalFullProgItLeft ["trap: no trails terminate"] []
       (Or
         (Loop (AwaitTmr (Const 5)))
         (Escape Nothing (Just (Const 25))))
 
-    evalFullProgItFail ["if: unreachable statement","if: unreachable statement"] []
+    evalFullProgItLeft ["if: unreachable statement","if: unreachable statement"] []
       (And
         (Loop (AwaitTmr (Const 5)))
         (Escape Nothing (Just (Const 25))))
 
-    evalFullProgItSuccess (25,[[]]) []
+    evalFullProgItRight (25,[[]]) []
       (Par
         (Loop (AwaitTmr (Const 5)))
         (Escape Nothing (Just (Const 25))))
@@ -330,21 +330,21 @@ with
     emit a(10);     // no 10
 end
 -}
-    evalFullProgItSuccess (10,[[]]) [] (
+    evalFullProgItRight (10,[[]]) [] (
       Int "a" True (
         Par
           (Var "ret" Nothing (Seq (AwaitInt "a" (Just "ret")) (Escape Nothing (Just (Read "ret")))))
           (EmitInt "a" (Just (Const 10)) `Seq` AwaitFor)
       ))
 
-    evalFullProgItFail ["read access to '_a': variable '_a' is not declared","assignment: variable '_a' is not declared"] []
+    evalFullProgItLeft ["read access to '_a': variable '_a' is not declared","assignment: variable '_a' is not declared"] []
       (Var "ret" Nothing
         (Int "a" False (
           Par
             (Seq (AwaitInt "a" (Just "ret")) (Escape Nothing (Just (Const 0))))
             (EmitInt "a" (Just (Const 10)) `Seq` AwaitFor))))
 
-    evalFullProgItFail ["assignment: variable '_a' is not declared"] [] (
+    evalFullProgItLeft ["assignment: variable '_a' is not declared"] [] (
       Int "a" False
         (Seq
           (And
@@ -352,19 +352,19 @@ end
             (EmitInt "a" (Just (Const 10))))
           (Escape Nothing (Just (Const 0)))))
 
-    evalFullProgItSuccess (99,[[]]) [] (
+    evalFullProgItRight (99,[[]]) [] (
       Int "a" False (
         Par
           ((AwaitInt "a" Nothing) `Seq` (Escape Nothing (Just (Const 99))))
           (EmitInt "a" Nothing `Seq` AwaitFor)
       ))
-    evalFullProgItSuccess (99,[[]]) [] (
+    evalFullProgItRight (99,[[]]) [] (
       Int "a" True (
         Par
           ((AwaitInt "a" Nothing) `Seq` (Escape Nothing (Just (Const 99))))
           (EmitInt "a" (Just (Const 10)) `Seq` AwaitFor)
       ))
-    evalFullProgItFail ["varsRead: uninitialized variable: _a"] []
+    evalFullProgItLeft ["varsRead: uninitialized variable: _a"] []
       (Var "ret" Nothing
         (Int "a" True (
           Par
@@ -379,7 +379,7 @@ with
 end
 -}
     -- TODO: OK
-    evalFullProgItFail ["varsRead: uninitialized variable: _A"] [("A",Nothing)]
+    evalFullProgItLeft ["varsRead: uninitialized variable: _A"] [("A",Nothing)]
       (Var "ret" Nothing
         (Seq
           (Or
@@ -387,7 +387,7 @@ end
             (AwaitExt "F" Nothing))
           (Escape Nothing (Just (Read "ret")))))
 
-    evalFullProgItSuccess (99,[[],[],[],[]]) [("A",Just 1),("A",Just 99),("F",Just 2)]
+    evalFullProgItRight (99,[[],[],[],[]]) [("A",Just 1),("A",Just 99),("F",Just 2)]
       (Var "ret" Nothing
         (Par
           (Every "A" (Just "ret") Nop)
@@ -395,30 +395,30 @@ end
 
   describe "timers" $ do
 
-    evalFullProgItSuccess (10,[[],[]]) [("TIMER",Just 10)]
+    evalFullProgItRight (10,[[],[]]) [("TIMER",Just 10)]
       (Seq (AwaitTmr (Const 10)) (Escape Nothing (Just (Const 10))))
-    evalFullProgItFail ["pending inputs"] [("TIMER",Just 11)]
+    evalFullProgItLeft ["pending inputs"] [("TIMER",Just 11)]
       (Seq (AwaitTmr (Const 10)) (Escape Nothing (Just (Const 10))))
-    evalFullProgItSuccess (10,[[],[]]) [("TIMER",Just 10)]
+    evalFullProgItRight (10,[[],[]]) [("TIMER",Just 10)]
       ((AwaitTmr (Const 5)) `Seq` (AwaitTmr (Const 5)) `Seq` (Escape Nothing (Just (Const 10))))
-    evalFullProgItSuccess (10,[[],[]]) [("TIMER",Just 10)]
+    evalFullProgItRight (10,[[],[]]) [("TIMER",Just 10)]
       ((AwaitTmr (Const 8)) `Seq` (AwaitTmr (Const 2)) `Seq` (Escape Nothing (Just (Const 10))))
 
-    evalFullProgItSuccess (10,[[],[]]) [("TIMER",Just 10)]
+    evalFullProgItRight (10,[[],[]]) [("TIMER",Just 10)]
       (Seq
         (And
           (AwaitTmr (Const 10))
           (AwaitTmr (Const 10)))
         (Escape Nothing (Just (Const 10))))
 
-    evalFullProgItSuccess (10,[[],[]]) [("TIMER",Just 10)]
+    evalFullProgItRight (10,[[],[]]) [("TIMER",Just 10)]
       (Seq
         (And
           ((AwaitTmr (Const 5)) `Seq` (AwaitTmr (Const 5)))
           ((AwaitTmr (Const 5)) `Seq` (AwaitTmr (Const 5))))
         (Escape Nothing (Just (Const 10))))
 
-    evalFullProgItSuccess (10,[[],[]]) [("TIMER",Just 20)]
+    evalFullProgItRight (10,[[],[]]) [("TIMER",Just 20)]
       (Seq
         (And
           ((AwaitTmr (Const 5)) `Seq` (AwaitTmr (Const 5)))
@@ -427,7 +427,7 @@ end
           (AwaitTmr (Const 10))
           (Escape Nothing (Just (Const 10)))))
 
-    evalFullProgItSuccess (10,[[],[]]) [("TIMER",Just 20)]
+    evalFullProgItRight (10,[[],[]]) [("TIMER",Just 20)]
       (Seq
         (And
           ((AwaitTmr (Const 5)) `Seq` (AwaitTmr (Const 5)))
@@ -436,7 +436,7 @@ end
           (AwaitTmr (Const 10))
           (Escape Nothing (Just (Const 10)))))
 
-    evalFullProgItSuccess
+    evalFullProgItRight
       (10,[[],[("B",Just 1),("A",Just 1),("A",Just 2)],[("B",Just 2),("C",Just 1)]])
       [("TIMER",Just 10),("TIMER",Just 11)]
       (Seq
@@ -450,7 +450,7 @@ end
 
   describe "outputs" $ do
 
-    evalFullProgItSuccess (1,[[],[("O",Just 1)],[("O",Just 2)],[]]) [("I",Just 1),("I",Just 2),("F",Nothing)]
+    evalFullProgItRight (1,[[],[("O",Just 1)],[("O",Just 2)],[]]) [("I",Just 1),("I",Just 2),("F",Nothing)]
       (Var "i" Nothing
         (Par
           (Seq (AwaitExt "F" Nothing) (Escape Nothing (Just (Const 1))))
@@ -458,10 +458,10 @@ end
 
   describe "pause" $ do
 
-    evalFullProgItSuccess (99,[[]]) []
+    evalFullProgItRight (99,[[]]) []
       (Int "x" True (Pause "x" (Escape Nothing (Just (Const 99)))))
 
-    evalFullProgItSuccess (99,[[]]) []
+    evalFullProgItRight (99,[[]]) []
       (Par
         (Seq (AwaitExt "X" Nothing) (Escape Nothing (Just (Const 33))))
         (Int "x" True
@@ -470,12 +470,12 @@ end
               (EmitInt "x" (Just (Const 1)))
               (Escape Nothing (Just (Const 99)))))))
 
-    evalFullProgItSuccess (99,[[],[],[],[],[]]) [("X",(Just 1)),("A",Nothing),("X",(Just 0)),("A",Nothing)]
+    evalFullProgItRight (99,[[],[],[],[],[]]) [("X",(Just 1)),("A",Nothing),("X",(Just 0)),("A",Nothing)]
       (Seq
         (Pause "X" (AwaitExt "A" Nothing))
         (Escape Nothing (Just (Const 99))))
 
-    evalFullProgItSuccess (99,[[],[("P",Nothing)],[]]) [("X",Just 1),("E",Nothing)]
+    evalFullProgItRight (99,[[],[("P",Nothing)],[]]) [("X",Just 1),("E",Nothing)]
       (Par
         (Pause "X"
           (Seq (Fin Nop (EmitExt "P" Nothing) Nop) AwaitFor))
@@ -493,14 +493,14 @@ pause/if X with
     await E;
 end
 -}
-    evalFullProgItSuccess (99,[[],[("P",Nothing)],[],[("R",Nothing)],[("F",Nothing)]]) [("X",Just 1),("E",Nothing),("X",Just 0),("E",Nothing)]
+    evalFullProgItRight (99,[[],[("P",Nothing)],[],[("R",Nothing)],[("F",Nothing)]]) [("X",Just 1),("E",Nothing),("X",Just 0),("E",Nothing)]
       (Seq
         (Pause "X"
           (Seq (Fin (EmitExt "F" Nothing) (EmitExt "P" Nothing) (EmitExt "R" Nothing))
                (AwaitExt "E" Nothing)))
         (Escape Nothing (Just (Const 99))))
 
-    evalFullProgItSuccess (99,[[],[("P",Nothing)],[],[("R",Nothing)],[("F",Nothing)]]) [("X",Just 1),("E",Nothing),("X",Just 0),("E",Nothing)]
+    evalFullProgItRight (99,[[],[("P",Nothing)],[],[("R",Nothing)],[("F",Nothing)]]) [("X",Just 1),("E",Nothing),("X",Just 0),("E",Nothing)]
       (Seq
         (Pause "X"
           (Var "x" (Just ((EmitExt "F" Nothing),(EmitExt "P" Nothing),(EmitExt "R" Nothing)))
@@ -508,10 +508,10 @@ end
         (Escape Nothing (Just (Const 99))))
 
       where
-        evalFullProgItSuccess (res,outss) hist prog =
+        evalFullProgItRight (res,outss) hist prog =
           (it (printf "pass: %s | %s ~> %d %s" (show hist) (G.showProg $ snd $ compile' (True,True) prog) res (show outss)) $
-            (evalFullProg prog hist `shouldBe` E.Success (res,outss)))
+            (evalFullProg prog hist `shouldBe` Right (res,outss)))
 
-        evalFullProgItFail err hist prog =
+        evalFullProgItLeft err hist prog =
           (it (printf "fail: %s | %s ***%s" (show hist) (G.showProg $ snd $ compile' (True,True) prog) (show err)) $
-            (evalFullProg prog hist) `shouldBe` E.Fail err)
+            (evalFullProg prog hist) `shouldBe` Left err)
