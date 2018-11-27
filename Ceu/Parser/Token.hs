@@ -11,6 +11,18 @@ import Text.Parsec.String.Combinator (many1)
 s :: Parser ()
 s = void $ many $ oneOf " \n\t"
 
+tk_parens_open :: Parser ()
+tk_parens_open = do
+    n <- char '('
+    s
+    return ()
+
+tk_parens_close :: Parser ()
+tk_parens_close = do
+    n <- char ')'
+    s
+    return ()
+
 tk_minus :: Parser ()
 tk_minus = do
     n <- char '-'

@@ -18,6 +18,13 @@ spec :: Spec
 spec = do
 
     describe "tokens" $ do
+        describe "tk_parens_*" $ do
+            it "(" $
+                parse tk_parens_open "( "
+                `shouldBe` Right ()
+            it ")" $
+                parse tk_parens_close ") "
+                `shouldBe` Right ()
         describe "tk_minus" $ do
             it "-" $
                 parse tk_minus "- "
@@ -90,6 +97,13 @@ spec = do
             it "--1" $
                 parse expr_umn "--1"
                 `shouldBe` Right (Umn (Umn (Const 1)))
+        describe "parens" $ do
+            it "(1)" $
+                parse expr_parens "(1)"
+                `shouldBe` Right (Const 1)
+            it "((--1))" $
+                parse expr_parens "((--1))"
+                `shouldBe` Right (Umn (Umn (Const 1)))
         describe "expr" $ do
             it "0" $
                 parse expr "0"
@@ -100,6 +114,9 @@ spec = do
             it "-1" $
                 parse expr "- 1 "
                 `shouldBe` Right (Umn (Const 1))
+            it "(aaa)" $
+                parse expr "( aaa  ) "
+                `shouldBe` Right (Read "aaa")
 
     describe "stmt" $ do
         describe "escape" $ do
