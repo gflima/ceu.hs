@@ -5,7 +5,7 @@ import Test.Hspec
 import Text.Parsec.String (Parser)
 import FunctionsAndTypesForParsing
 
-import Ceu.Parser.Parser
+import Ceu.Parser.Stmt          (stmt)
 import Ceu.Eval                 (Outs)
 import Ceu.Grammar.Globals      (Val)
 import Ceu.Grammar.Full.Grammar (In)

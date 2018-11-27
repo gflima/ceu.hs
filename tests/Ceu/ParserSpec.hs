@@ -5,9 +5,10 @@ import Test.Hspec
 import Text.Parsec.String (Parser)
 import FunctionsAndTypesForParsing
 
-import Ceu.Parser.Parser
-import Ceu.Grammar.Globals
-import Ceu.Grammar.Full.Grammar
+import Ceu.Parser.Token
+import Ceu.Parser.Stmt
+import Ceu.Grammar.Globals (Exp(..))
+import Ceu.Grammar.Full.Grammar (Stmt(..))
 
 main :: IO ()
 main = hspec spec
@@ -15,38 +16,55 @@ main = hspec spec
 spec :: Spec
 spec = do
 
-    describe "num" $ do
+    describe "tk_num" $ do
         it "''" $
-            parse num "\n "
+            parse tk_num "\n "
             `shouldBe` Left "(line 2, column 2):\nunexpected end of input\nexpecting digit"
         it "''" $
-            parse num ""
+            parse tk_num ""
             `shouldBe` Left "(line 1, column 1):\nunexpected end of input\nexpecting digit"
         it "1" $
-            parse num "1"
+            parse tk_num "1"
             `shouldBe` Right 1
         it "10" $
-            parse num "10"
+            parse tk_num "10"
             `shouldBe` Right 10
         it "a" $
-            parse num "a"
+            parse tk_num "a"
             `shouldBe` Left "(line 1, column 1):\nunexpected \"a\"\nexpecting digit"
 
-    describe "id_var_evt" $ do
+    describe "tk_var" $ do
         it "''" $
-            parse id_var "\n "
+            parse tk_var "\n "
             `shouldBe` Left "(line 2, column 2):\nunexpected end of input"
         it "''" $
-            parse id_var ""
+            parse tk_var ""
             `shouldBe` Left "(line 1, column 1):\nunexpected end of input"
         it "id" $
-            parse id_var "id"
+            parse tk_var "id"
             `shouldBe` Right "id"
         it "1" $
-            parse id_var "1"
+            parse tk_var "1"
             `shouldBe` Left "(line 1, column 1):\nunexpected \"1\""
         it "var" $
-            parse id_var "var"
+            parse tk_var "var"
+            `shouldBe` Left "TODO: id cannot be a keyword"
+
+    describe "tk_int" $ do
+        it "''" $
+            parse tk_int "\n "
+            `shouldBe` Left "(line 2, column 2):\nunexpected end of input"
+        it "''" $
+            parse tk_int ""
+            `shouldBe` Left "(line 1, column 1):\nunexpected end of input"
+        it "id" $
+            parse tk_int "id"
+            `shouldBe` Right "id"
+        it "1" $
+            parse tk_int "1"
+            `shouldBe` Left "(line 1, column 1):\nunexpected \"1\""
+        it "var" $
+            parse tk_int "var"
             `shouldBe` Left "TODO: id cannot be a keyword"
 
     describe "stmt" $ do
