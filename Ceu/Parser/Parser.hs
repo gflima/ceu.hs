@@ -9,8 +9,8 @@ import Text.Parsec.String (Parser)
 import Text.Parsec.String.Char (oneOf, char, digit, satisfy, string)
 import Text.Parsec.String.Combinator (many1, choice, chainl1)
 
-import Ceu.Globals
-import Ceu.Full.Grammar
+import Ceu.Grammar.Globals
+import Ceu.Grammar.Full.Grammar
 
 s :: Parser ()
 s = void $ many $ oneOf " \n\t"

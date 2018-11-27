@@ -1,4 +1,4 @@
-module Test.Parser (main, spec) where
+module Test.ParserSpec (main, spec) where
 
 import Test.Hspec
 
@@ -6,8 +6,8 @@ import Text.Parsec.String (Parser)
 import FunctionsAndTypesForParsing
 
 import Ceu.Parser.Parser
-import Ceu.Globals
-import Ceu.Full.Grammar
+import Ceu.Grammar.Globals
+import Ceu.Grammar.Full.Grammar
 
 main :: IO ()
 main = hspec spec
