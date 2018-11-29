@@ -20,8 +20,8 @@ import Ceu.Grammar.Full.Grammar
 compile :: Stmt -> (Errors, Stmt)
 compile p = ([], aux p)
 
-aux (Var id Nothing p)  = Var id Nothing (aux p)
-aux (Int id b p)        = Int id b (aux p)
+aux (Var' id Nothing p) = Var' id Nothing (aux p)
+aux (Int' id b p)       = Int' id b (aux p)
 aux (If exp p1 p2)      = If exp (aux p1) (aux p2)
 aux (Seq p1 p2)         = Seq (aux p1) (aux p2)
 aux (Loop p)            = Loop (aux p)
@@ -32,12 +32,12 @@ aux (Or' p1 p2)         = Or' (aux p1) (aux p2)
 aux (Spawn p)           = Spawn (aux p)
 aux (Trap' p)           = Trap' (aux p)
 aux (Pause evt p)       =
-  Var ("__pause_var_"++evt) Nothing
-    (Int ("__pause_int_"++evt) False
+  Var' ("__pause_var_"++evt) Nothing
+    (Int' ("__pause_int_"++evt) False
       (Seq
         (Write ("__pause_var_"++evt) (Const 0))
         (Or'
-          (Var "__tmp" Nothing
+          (Var' "__tmp" Nothing
             (Every evt (Just "__tmp")
               (If (Equ (Read "__tmp") (Const 0))
                   (Seq (Write ("__pause_var_"++evt) (Const 0))
@@ -45,7 +45,7 @@ aux (Pause evt p)       =
                   Nop)))
         (Or'
           (Pause' ("__pause_var_"++evt) p)
-          (Var "__tmp" Nothing
+          (Var' "__tmp" Nothing
             (Every evt (Just "__tmp")
               (If (Equ (Read "__tmp") (Const 1))
                   (Write ("__pause_var_"++evt) (Const 1))

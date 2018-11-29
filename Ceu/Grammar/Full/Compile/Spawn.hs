@@ -6,10 +6,10 @@ import Ceu.Grammar.Full.Grammar
 -- compile: Converts (spawn p1; ...) into (p1;AwaitFor or ...)
 
 compile :: Stmt -> (Errors, Stmt)
-compile (Var id Nothing p)  = (es, Var id Nothing p')
+compile (Var' id Nothing p) = (es, Var' id Nothing p')
                                 where
                                   (es,p') = compile p
-compile (Int id b p)        = (es, Int id b p')
+compile (Int' id b p)       = (es, Int' id b p')
                                 where
                                   (es,p') = compile p
 compile (If exp p1 p2)      = (es1++es2, If exp p1' p2')
