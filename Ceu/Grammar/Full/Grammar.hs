@@ -84,9 +84,6 @@ toGrammar (Loop p)             = (es, G.Loop p')
 toGrammar (Every evt var p)    = (es, G.Every evt p')
                                  where
                                    (es,p') = toGrammar p
-toGrammar (Scope p)            = (es, p')
-                                 where
-                                   (es,p') = toGrammar p
 toGrammar (Error msg)          = ([], G.Error msg)
 toGrammar (Par' p1 p2)         = (es1++es2, G.Par p1' p2')
                                  where

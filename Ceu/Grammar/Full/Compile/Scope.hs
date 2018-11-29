@@ -9,8 +9,8 @@ aux :: Stmt -> Stmt
 aux (Var var fin)            = Var' var (aux_fin fin) Nop
 aux (Int int b)              = Int' int b Nop
 aux (If exp p1 p2)           = If exp (aux p1) (aux p2)
-aux (Seq s@(Var var fin) p2) = Var' var (aux_fin fin) p2
-aux (Seq s@(Int int b) p2)   = Int' int b p2
+aux (Seq s@(Var var fin) p2) = Var' var (aux_fin fin) (aux p2)
+aux (Seq s@(Int int b) p2)   = Int' int b (aux p2)
 aux (Seq p1 p2)              = Seq (aux p1) (aux p2)
 aux (Loop p)                 = Loop (aux p)
 aux (Every evt exp p)        = Every evt exp (aux p)

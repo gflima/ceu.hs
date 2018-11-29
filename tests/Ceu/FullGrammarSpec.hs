@@ -69,6 +69,14 @@ spec = do
       compile' (False,False) (Seq (Scope (Int "x" False)) (EmitInt "x" Nothing))
       `shouldBe` (["emit: event 'x' is not declared"], G.Seq (G.Int "x" G.Nop) (G.EmitInt "x"))
 
+    it "scope escape 1 end" $ do
+      compile' (False,False) (Scope (Escape Nothing (Just (Const 1))))
+      `shouldBe` (["escape: orphan `escape` statement"],G.Escape (-1))
+
+    it "scope escape 1 end" $ do
+      compile' (False,True) (Scope (Escape Nothing (Just (Const 1))))
+      `shouldBe` ([],G.Var "_ret" (G.Seq (G.Trap (G.Seq (G.Write "_ret" (Const 1)) (G.Escape 0))) (G.AwaitExt "FOREVER")))
+
   --------------------------------------------------------------------------
   describe "Trap.compile" $ do
 
