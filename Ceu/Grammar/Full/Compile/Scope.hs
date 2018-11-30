@@ -1,5 +1,7 @@
 module Ceu.Grammar.Full.Compile.Scope where
 
+import Debug.Trace
+
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Full.Grammar
 

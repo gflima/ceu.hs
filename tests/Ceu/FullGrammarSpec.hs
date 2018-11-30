@@ -61,6 +61,14 @@ spec = do
       compile' (False,False) (Seq (Scope (Var "x" Nothing Nothing)) (Write "x" (Const 1)))
       `shouldBe` (["assignment: variable 'x' is not declared"], G.Seq (G.Var "x" G.Nop) (G.Write "x" (Const 1)))
 
+    it "var x" $ do
+      compile' (False,True) (Var "x" Nothing Nothing)
+      `shouldBe` (["trap: missing `escape` statement","await: unreachable statement"], G.Var "_ret" (G.Seq (G.Trap (G.Var "x" G.Nop)) (G.AwaitExt "FOREVER")))
+
+    it "var x" $ do
+      compile' (True,True) (Var "x" Nothing Nothing)
+      `shouldBe` ([], G.Var "_ret" (G.AwaitExt "FOREVER"))
+
     it "int x" $ do
       Scope.compile (Int "x" False)
       `shouldBe` ([], (Int' "x" False Nop))
@@ -102,7 +110,7 @@ spec = do
 
     it "trap/a escape;" $ do
       Trap.compile (Var' "ret" Nothing (Trap (Just "ret") (Escape Nothing Nothing)))
-      `shouldBe` ([], (Var' "ret" Nothing (Trap' (Escape' (-1)))))
+      `shouldBe` ([], (Var' "ret" Nothing (Trap' (Escape' 0))))
 
     it "trap/a escape/a;" $ do
       Trap.compile (Var' "ret" Nothing (Trap (Just "ret") (Escape (Just "xxx") (Just (Const 1)))))
