@@ -47,6 +47,12 @@ spec = do
         it "(1+2)*3" $
             run "escape (1+2)*3" []
             `shouldBe` Right (9, [[]])
+        it "1+2-3" $
+            run "escape 1+2-3" []
+            `shouldBe` Right (0, [[]])
+        it "1+2*3/4" $
+            run "escape 1+2*3/4" []
+            `shouldBe` Right (2, [[]])
         it "escape a" $
             run "escape a" []
             `shouldBe` Left "read access to 'a': variable 'a' is not declared\n"

@@ -116,19 +116,19 @@ spec = do
             it "((--1))" $
                 parse expr_parens "((--1))"
                 `shouldBe` Right (Umn (Umn (Const 1)))
-        describe "add" $ do
+        describe "add_sub" $ do
             it "1+1" $
-                parse expr_add "1+1"
+                parse expr_add_sub "1+1"
                 `shouldBe` Right (Add (Const 1) (Const 1))
             it "1+2+3" $
-                parse expr_add "1 + 2+3"
+                parse expr_add_sub "1 + 2+3"
                 `shouldBe` Right (Add (Add (Const 1) (Const 2)) (Const 3))
-        describe "mul" $ do
+        describe "mul_div" $ do
             it "1*1" $
-                parse expr_mul "1*1"
+                parse expr_mul_div "1*1"
                 `shouldBe` Right (Mul (Const 1) (Const 1))
             it "1*2*3" $
-                parse expr_mul "1 * 2*3"
+                parse expr_mul_div "1 * 2*3"
                 `shouldBe` Right (Mul (Mul (Const 1) (Const 2)) (Const 3))
         describe "expr" $ do
             it "0" $
@@ -143,9 +143,15 @@ spec = do
             it "(aaa)" $
                 parse expr "( aaa  ) "
                 `shouldBe` Right (Read "aaa")
+            it "1+2-3" $
+                parse expr "1+2-3"
+                `shouldBe` Right (Sub (Add (Const 1) (Const 2)) (Const 3))
             it "1+2*3" $
                 parse expr "1+2*3"
                 `shouldBe` Right (Add (Const 1) (Mul (Const 2) (Const 3)))
+            it "1+2*3/4" $
+                parse expr "1+2*3/4"
+                `shouldBe` Right (Add (Const 1) (Div (Mul (Const 2) (Const 3)) (Const 4)))
             it "(1+2)*3" $
                 parse expr "(1+2)*3"
                 `shouldBe` Right (Mul (Add (Const 1) (Const 2)) (Const 3))

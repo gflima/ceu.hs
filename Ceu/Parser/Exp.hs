@@ -37,23 +37,29 @@ expr_prim = (expr_const <|> expr_read <|> expr_umn <|> expr_parens)
 
 -------------------------------------------------------------------------------
 
-expr_add :: Parser Exp
-expr_add = chainl1 expr_mul op where
+expr_add_sub :: Parser Exp
+expr_add_sub = chainl1 expr_mul_div op where
     op = do
         void <- tk_char '+'
         return Add
+     <|> do
+        void <- tk_char '-'
+        return Sub
 
-expr_mul :: Parser Exp
-expr_mul = chainl1 expr_prim op where
+expr_mul_div :: Parser Exp
+expr_mul_div = chainl1 expr_prim op where
     op = do
         void <- tk_char '*'
         return Mul
+     <|> do
+        void <- tk_char '/'
+        return Div
 
 -------------------------------------------------------------------------------
 
 expr :: Parser Exp
 expr = do
-    e <- expr_add
+    e <- expr_add_sub
     return e
 
 
