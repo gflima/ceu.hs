@@ -1,14 +1,15 @@
 module Ceu.Parser.Stmt where
 
-import Control.Applicative ((<|>))
+import Control.Monad                    (guard)
 
-import Text.Parsec.String (Parser)
-import Text.Parsec.String.Combinator (chainr1)
+import Text.Parsec.Prim                 ((<|>), try)
+import Text.Parsec.String               (Parser)
+import Text.Parsec.String.Combinator    (chainr1)
 
-import Ceu.Parser.Token (tk_key, tk_var, tk_str)
-import Ceu.Parser.Exp   (expr)
+import Ceu.Parser.Token                 (tk_key, tk_var, tk_type, tk_str)
+import Ceu.Parser.Exp                   (expr)
 
-import Ceu.Grammar.Full.Grammar (Stmt(..))
+import Ceu.Grammar.Full.Grammar         (Stmt(..))
 
 -------------------------------------------------------------------------------
 
@@ -25,8 +26,9 @@ stmt_escape = do
 stmt_var :: Parser Stmt
 stmt_var = do
     void <- tk_key "var"
-    void <- tk_key "int"
+    tp   <- tk_type
     var  <- tk_var
+    guard $ tp == "int"         -- TODO
     return $ Var var Nothing
 
 stmt_attr :: Parser Stmt
@@ -40,7 +42,7 @@ stmt_attr = do
 
 stmt1 :: Parser Stmt
 stmt1 = do
-    stmt <- stmt_escape <|> stmt_do
+    stmt <- try stmt_escape <|> try stmt_do <|> try stmt_var <|> try stmt_attr
     return stmt
 
 stmt_seq :: Parser Stmt

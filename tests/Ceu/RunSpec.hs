@@ -20,7 +20,7 @@ spec = do
     describe "void" $ do
         it "void" $
             run "" []
-            `shouldBe` Left "(line 1, column 1):\nunexpected end of input\nexpecting \"escape\" or \"do\""
+            `shouldBe` Left "(line 1, column 1):\nunexpected end of input\nexpecting \"escape\", \"do\" or \"var\""
 
     describe "escape" $ do
         it "escape 1" $

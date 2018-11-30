@@ -1,9 +1,8 @@
 module Ceu.Parser.Exp where
 
-import Control.Applicative ((<|>))
-
-import Text.Parsec.String (Parser)
-import Text.Parsec.String.Combinator (chainl1)
+import Text.Parsec.Prim                 ((<|>))
+import Text.Parsec.String               (Parser)
+import Text.Parsec.String.Combinator    (chainl1)
 
 import Ceu.Parser.Token (tk_num, tk_var, tk_str)
 

@@ -1,8 +1,8 @@
 module Test.ParserSpec (main, spec) where
 
 import Test.Hspec
-import Control.Applicative ((<|>))
 
+import Text.Parsec.Prim
 import Text.Parsec.String (Parser)
 import FunctionsAndTypesForParsing
 
@@ -17,6 +17,8 @@ main = hspec spec
 
 spec :: Spec
 spec = do
+
+    describe "TODO" $ do
 
     describe "tokens" $ do
         describe "tk_str" $ do
@@ -60,7 +62,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"1\""
             it "var" $
                 parse tk_var "var"
-                `shouldBe` Left "TODO: id cannot be a keyword"
+                `shouldBe` Left "(line 1, column 4):\nunexpected end of input\nexpecting digit, letter or \"_\""
         describe "tk_int" $ do
             it "''" $
                 parse (s>>tk_int) "\n "
@@ -76,7 +78,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"1\""
             it "var" $
                 parse tk_int "var"
-                `shouldBe` Left "TODO: id cannot be a keyword"
+                `shouldBe` Left "(line 1, column 4):\nunexpected end of input\nexpecting digit, letter or \"_\""
 
         describe "tk_key" $ do
             it "do" $
@@ -177,7 +179,7 @@ spec = do
                 parse (tk_key "do" >> stmt_nop >> tk_key "end") "do end"
                 `shouldBe` Right ()
             it "do end" $
-                parse (tk_key "do" >> (stmt_escape <|> stmt_nop) >> tk_key "end") "do end"
+                parse (tk_key "do" >> (try stmt_escape <|> try stmt_nop) >> tk_key "end") "do end"
                 `shouldBe` Right ()
             it "do end" $
                 parse stmt_do "do end"
@@ -193,21 +195,25 @@ spec = do
                 parse stmt_var "var int x"
                 `shouldBe` Right (Var "x" Nothing)
             it "var var x" $
-                parse stmt_var "var int x"
-                `shouldBe` Left "TODO: type cannot be keyword"
+                parse stmt_var "var var x"
+                `shouldBe` Left "(line 1, column 8):\nunexpected \" \"\nexpecting digit, letter or \"_\""
 
         describe "attr" $ do
             it "x <- 1" $
                 parse stmt_attr "x <- 1"
                 `shouldBe` Right (Write "x" (Const 1))
             it "var <- 1" $
-                parse stmt_attr "x <- 1"
-                `shouldBe` Left "TODO: var cannot be keyword"
+                parse stmt_attr "var <- 1"
+                `shouldBe` Left "(line 1, column 4):\nunexpected \" \"\nexpecting digit, letter or \"_\""
 
         describe "stmt" $ do
+            it "var int x; escape 1" $
+                parse stmt "var int x escape 1"
+                `shouldBe` Right (Seq (Var "x" Nothing) (Escape Nothing (Just (Const 1))))
+
             it "var int x; x<-1; escape x" $
                 parse stmt "var int x x <- 1 escape x"
-                `shouldBe` Left "TODO: stmts"
+                `shouldBe` Right (Seq (Var "x" Nothing) (Seq (Write "x" (Const 1)) (Escape Nothing (Just (Read "x")))))
 
             it "do ... end" $
                 parse stmt "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end"
