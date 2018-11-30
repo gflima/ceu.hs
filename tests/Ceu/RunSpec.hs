@@ -74,10 +74,10 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "var int a" $
             run "var int a" []
-            `shouldBe` Right (1, [[]])
+            `shouldBe` Left "trap: missing `escape` statement\nawait: unreachable statement\n"
         it "var int a <- 1" $
             run "var int a <- 1" []
-            `shouldBe` Right (1, [[]])
+            `shouldBe` Left "trap: missing `escape` statement\nawait: unreachable statement\n"
 
     describe "do-end:" $ do
         it "do escape 1 end" $

@@ -68,4 +68,4 @@ compile (o_simp,o_encl) p = (es3,p2) where
   p1       = if not o_encl then p else
               (Var "_ret" (Seq (Trap p) (AwaitExt "FOREVER")))
   p2       = if not o_simp then p1 else simplify p1
-  es3      = (stmts p2) ++ (Escape.check p2) ++ (Reachable.check p2) ++ (VarEvt.check p2)
+  es3      = (stmts p1) ++ (Escape.check p1) ++ (Reachable.check p1) ++ (VarEvt.check p1)

@@ -43,7 +43,7 @@ spec = do
 
     it "var x <- 1" $ do
       Scope.compile (Var "x" (Just (Const 1)) Nothing)
-      `shouldBe` ([], (Seq (Var' "x" Nothing Nop) (Write "x" (Const 1))))
+      `shouldBe` ([], Var' "x" Nothing (Write "x" (Const 1)))
 
     it "var x; Nop" $ do
       Scope.compile (Seq (Var "x" Nothing Nothing) Nop)
@@ -67,7 +67,7 @@ spec = do
 
     it "var x" $ do
       compile' (True,True) (Var "x" Nothing Nothing)
-      `shouldBe` ([], G.Var "_ret" (G.AwaitExt "FOREVER"))
+      `shouldBe` (["trap: missing `escape` statement","await: unreachable statement"], G.Var "_ret" (G.AwaitExt "FOREVER"))
 
     it "int x" $ do
       Scope.compile (Int "x" False)

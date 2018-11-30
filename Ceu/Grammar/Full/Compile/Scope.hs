@@ -8,7 +8,7 @@ import Ceu.Grammar.Full.Grammar
 compile :: Stmt -> (Errors, Stmt)
 compile p = ([], aux p)
 aux :: Stmt -> Stmt
-aux (Var var (Just val) fin) = Seq (Var' var (aux_fin fin) Nop) (Write var val)
+aux (Var var (Just val) fin) = Var' var (aux_fin fin) (Write var val)
 aux (Var var Nothing fin)    = Var' var (aux_fin fin) Nop
 aux (Int int b)              = Int' int b Nop
 aux (If exp p1 p2)           = If exp (aux p1) (aux p2)

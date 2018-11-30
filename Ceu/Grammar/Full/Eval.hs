@@ -21,7 +21,7 @@ import qualified Ceu.Grammar.Full.Compile.Scope    as Scope
 import qualified Ceu.Grammar.Check.Check as Check
 
 compile :: Stmt -> (Errors, Stmt)
-compile p =
+compile p = --traceShowId $ 
     comb Forever.compile  $
     comb Timer.compile    $
     comb Payload.compile  $

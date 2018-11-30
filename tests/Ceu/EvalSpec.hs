@@ -1075,7 +1075,7 @@ spec = do
             G.Write "_ret" (Read "a" `Add` Const 10) `G.Seq`
             G.Escape 0))
 
-    evalProgItFail ["escape: orphan `escape` statement"]
+    evalProgItFail ["trap: missing `escape` statement","escape: orphan `escape` statement","await: unreachable statement"]
       [] (G.Escape 1)
 
     evalProgItFail ["declaration: variable '_ret' is already declared"]
