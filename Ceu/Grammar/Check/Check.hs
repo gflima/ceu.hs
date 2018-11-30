@@ -1,5 +1,7 @@
 module Ceu.Grammar.Check.Check where
 
+import Debug.Trace
+
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Grammar
 import Ceu.Grammar.Simplify
