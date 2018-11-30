@@ -6,10 +6,12 @@ import Ceu.Grammar.Full.Grammar
 compile :: Stmt -> (Errors, Stmt)
 compile p = ([], aux p)
 aux :: Stmt -> Stmt
-aux (Var var fin)            = Var' var (aux_fin fin) Nop
+aux (Var var (Just val) fin) = Seq (Var' var (aux_fin fin) Nop) (Write var val)
+aux (Var var Nothing fin)    = Var' var (aux_fin fin) Nop
 aux (Int int b)              = Int' int b Nop
 aux (If exp p1 p2)           = If exp (aux p1) (aux p2)
-aux (Seq s@(Var var fin) p2) = Var' var (aux_fin fin) (aux p2)
+aux (Seq s@(Var var (Just val) fin) p2) = Var' var (aux_fin fin) (Seq (Write var val) (aux p2))
+aux (Seq s@(Var var Nothing fin) p2)    = Var' var (aux_fin fin) (aux p2)
 aux (Seq s@(Int int b) p2)   = Int' int b (aux p2)
 aux (Seq p1 p2)              = Seq (aux p1) (aux p2)
 aux (Loop p)                 = Loop (aux p)

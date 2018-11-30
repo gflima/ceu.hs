@@ -38,19 +38,27 @@ spec = do
   describe "Scope.compile" $ do
 
     it "var x" $ do
-      Scope.compile (Var "x" Nothing)
+      Scope.compile (Var "x" Nothing Nothing)
       `shouldBe` ([], (Var' "x" Nothing Nop))
+
+    it "var x <- 1" $ do
+      Scope.compile (Var "x" (Just (Const 1)) Nothing)
+      `shouldBe` ([], (Seq (Var' "x" Nothing Nop) (Write "x" (Const 1))))
 
     it "var x; Nop" $ do
-      Scope.compile (Seq (Var "x" Nothing) Nop)
+      Scope.compile (Seq (Var "x" Nothing Nothing) Nop)
       `shouldBe` ([], (Var' "x" Nothing Nop))
 
+    it "var x <- 1 ; Nop" $ do
+      Scope.compile (Seq (Var "x" (Just (Const 1)) Nothing) Nop)
+      `shouldBe` ([], (Var' "x" Nothing (Seq (Write "x" (Const 1)) Nop)))
+
     it "scope var x end ; var y" $ do
-      Scope.compile (Seq (Scope (Var "x" Nothing)) (Var "y" Nothing))
+      Scope.compile (Seq (Scope (Var "x" Nothing Nothing)) (Var "y" Nothing Nothing))
       `shouldBe` ([],Seq (Var' "x" Nothing Nop) (Var' "y" Nothing Nop))
 
     it "scope var x end ; x=1" $ do
-      compile' (False,False) (Seq (Scope (Var "x" Nothing)) (Write "x" (Const 1)))
+      compile' (False,False) (Seq (Scope (Var "x" Nothing Nothing)) (Write "x" (Const 1)))
       `shouldBe` (["assignment: variable 'x' is not declared"], G.Seq (G.Var "x" G.Nop) (G.Write "x" (Const 1)))
 
     it "int x" $ do

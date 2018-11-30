@@ -4,7 +4,7 @@ import Control.Monad                    (guard)
 
 import Text.Parsec.Prim                 ((<|>), try)
 import Text.Parsec.String               (Parser)
-import Text.Parsec.String.Combinator    (chainr1)
+import Text.Parsec.String.Combinator    (chainr1, optionMaybe)
 
 import Ceu.Parser.Token                 (tk_key, tk_var, tk_type, tk_str)
 import Ceu.Parser.Exp                   (expr)
@@ -29,7 +29,8 @@ stmt_var = do
     tp   <- tk_type
     var  <- tk_var
     guard $ tp == "int"         -- TODO
-    return $ Var var Nothing
+    exp  <- optionMaybe $ (tk_str "<-") *> expr
+    return $ Var var exp Nothing
 
 stmt_write :: Parser Stmt
 stmt_write = do

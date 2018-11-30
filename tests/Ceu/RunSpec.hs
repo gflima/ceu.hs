@@ -65,10 +65,13 @@ spec = do
     describe "vars" $ do
         it "var int a,b" $
             run "var int a,b;" []           -- TODO: support a,b,c?
-            `shouldBe` Left "(line 1, column 10):\nunexpected ','\nexpecting digit, letter, \"_\", \"escape\", \"do\", \"var\" or end of input"
+            `shouldBe` Left "(line 1, column 10):\nunexpected ','\nexpecting digit, letter, \"_\", \"<-\", \"escape\", \"do\", \"var\" or end of input"
         it "a <- 1; escape a;" $
             run "a <- 1; escape a" []
             `shouldBe` Left "assignment: variable 'a' is not declared\nread access to 'a': variable 'a' is not declared\n"
+        it "var int a <- 1; escape a;" $
+            run "var int a <- 1; escape a" []
+            `shouldBe` Right (1, [[]])
 
     describe "do-end" $ do
         it "do escape 1 end" $
