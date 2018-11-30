@@ -41,6 +41,12 @@ spec = do
         it "escape ((-9999))" $
             run "escape ((-9999))" []
             `shouldBe` Right (-9999, [[]])
+        it "1+2*3" $
+            run "escape 1+2*3" []
+            `shouldBe` Right (7, [[]])
+        it "(1+2)*3" $
+            run "escape (1+2)*3" []
+            `shouldBe` Right (9, [[]])
         it "escape a" $
             run "escape a" []
             `shouldBe` Left "read access to 'a': variable 'a' is not declared\n"

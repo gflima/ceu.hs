@@ -28,9 +28,7 @@ stmt1 = do
     return stmt
 
 stmt_seq :: Parser Stmt
-stmt_seq = chainr1 stmt1 op where
-    op = do
-        return Seq
+stmt_seq = chainr1 stmt1 (do return Seq) where
 
 stmt_do :: Parser Stmt
 stmt_do = do

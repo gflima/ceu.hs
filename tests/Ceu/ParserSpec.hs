@@ -116,6 +116,20 @@ spec = do
             it "((--1))" $
                 parse expr_parens "((--1))"
                 `shouldBe` Right (Umn (Umn (Const 1)))
+        describe "add" $ do
+            it "1+1" $
+                parse expr_add "1+1"
+                `shouldBe` Right (Add (Const 1) (Const 1))
+            it "1+2+3" $
+                parse expr_add "1 + 2+3"
+                `shouldBe` Right (Add (Add (Const 1) (Const 2)) (Const 3))
+        describe "mul" $ do
+            it "1*1" $
+                parse expr_mul "1*1"
+                `shouldBe` Right (Mul (Const 1) (Const 1))
+            it "1*2*3" $
+                parse expr_mul "1 * 2*3"
+                `shouldBe` Right (Mul (Mul (Const 1) (Const 2)) (Const 3))
         describe "expr" $ do
             it "0" $
                 parse expr "0"
@@ -129,6 +143,12 @@ spec = do
             it "(aaa)" $
                 parse expr "( aaa  ) "
                 `shouldBe` Right (Read "aaa")
+            it "1+2*3" $
+                parse expr "1+2*3"
+                `shouldBe` Right (Add (Const 1) (Mul (Const 2) (Const 3)))
+            it "(1+2)*3" $
+                parse expr "(1+2)*3"
+                `shouldBe` Right (Mul (Add (Const 1) (Const 2)) (Const 3))
 
     describe "stmt" $ do
         describe "nop" $ do
