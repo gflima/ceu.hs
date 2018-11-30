@@ -35,6 +35,9 @@ spec = do
         it "escape - - 1" $
             run "escape - - 1" []
             `shouldBe` Right (1, [[]])
+        it "escape ((1))" $
+            run "escape ((1))" []
+            `shouldBe` Right (1, [[]])
         it "escape ((-9999))" $
             run "escape ((-9999))" []
             `shouldBe` Right (-9999, [[]])

@@ -3,6 +3,7 @@ module Ceu.Parser.Stmt where
 import Control.Applicative ((<|>))
 
 import Text.Parsec.String (Parser)
+import Text.Parsec.String.Combinator (chainr1)
 
 import Ceu.Parser.Token (tk_key)
 import Ceu.Parser.Exp   (expr)
@@ -27,10 +28,9 @@ stmt1 = do
     return stmt
 
 stmt_seq :: Parser Stmt
-stmt_seq = do
-    p1 <- stmt1
-    p2 <- stmt <|> stmt_nop
-    return $ Seq p1 p2
+stmt_seq = chainr1 stmt1 op where
+    op = do
+        return Seq
 
 stmt_do :: Parser Stmt
 stmt_do = do
