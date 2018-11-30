@@ -20,7 +20,7 @@ spec = do
     describe "void" $ do
         it "void" $
             run "" []
-            `shouldBe` Left "(line 1, column 1):\nunexpected end of input\nexpecting \"escape\""
+            `shouldBe` Left "(line 1, column 1):\nunexpected end of input\nexpecting \"escape\" or \"do\""
 
     describe "escape" $ do
         it "escape 1" $
@@ -43,6 +43,23 @@ spec = do
             `shouldBe` Left "read access to 'a': variable 'a' is not declared\n"
         it "escape" $
             run "escape" []
+            `shouldBe` Left "TODO: escape w/o expression"
+
+    describe "do-end" $ do
+        it "do escape 1 end" $
+            run "do escape 1 end" []
+            `shouldBe` Right (1, [[]])
+        it "do end escape 1" $
+            run "do end escape 1" []
+            `shouldBe` Right (1, [[]])
+        it "do do do do escape 1 end end end end" $
+            run "do do do do escape 1 end end end end" []
+            `shouldBe` Right (1, [[]])
+        it "do do do do end end end end escape 1" $
+            run "do do do do end end end end escape 1" []
+            `shouldBe` Right (1, [[]])
+        it "do ... end" $ do
+            run "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end escape 1" []
             `shouldBe` Right (1, [[]])
 
     where

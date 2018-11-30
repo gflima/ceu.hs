@@ -4,7 +4,7 @@ import Control.Applicative ((<|>))
 
 import Text.Parsec.String (Parser)
 
-import Ceu.Parser.Token (tk_num, tk_var, tk_minus, tk_parens_open, tk_parens_close)
+import Ceu.Parser.Token (tk_num, tk_var, tk_minus, tk_char)
 
 import Ceu.Grammar.Globals (Exp(..))
 
@@ -26,9 +26,9 @@ expr_umn = do
 
 expr_parens :: Parser Exp
 expr_parens = do
-    void <- tk_parens_open
+    void <- tk_char '('
     exp  <- expr
-    void <- tk_parens_close
+    void <- tk_char ')'
     return exp
 
 expr :: Parser Exp

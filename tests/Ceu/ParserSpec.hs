@@ -1,6 +1,7 @@
 module Test.ParserSpec (main, spec) where
 
 import Test.Hspec
+import Control.Applicative ((<|>))
 
 import Text.Parsec.String (Parser)
 import FunctionsAndTypesForParsing
@@ -18,12 +19,12 @@ spec :: Spec
 spec = do
 
     describe "tokens" $ do
-        describe "tk_parens_*" $ do
+        describe "tk_char" $ do
             it "(" $
-                parse tk_parens_open "( "
+                parse (tk_char '(') "( "
                 `shouldBe` Right ()
             it ")" $
-                parse tk_parens_close ") "
+                parse (tk_char ')') ") "
                 `shouldBe` Right ()
         describe "tk_minus" $ do
             it "-" $
@@ -78,6 +79,17 @@ spec = do
                 parse tk_int "var"
                 `shouldBe` Left "TODO: id cannot be a keyword"
 
+        describe "tk_key" $ do
+            it "do" $
+                parse (tk_key "do") "do "
+                `shouldBe` Right ()
+            it "end" $
+                parse (tk_key "end") "end"
+                `shouldBe` Right ()
+            it "escape" $
+                parse (tk_key "escape") "escape\n"
+                `shouldBe` Right ()
+
     describe "expr" $ do
         describe "const" $ do
             it "0" $
@@ -119,6 +131,11 @@ spec = do
                 `shouldBe` Right (Read "aaa")
 
     describe "stmt" $ do
+        describe "nop" $ do
+            it "-" $
+                parse stmt_nop ""
+                `shouldBe` Right Nop
+
         describe "escape" $ do
             it "escape 0" $
                 parse stmt_escape "escape 0"
@@ -127,6 +144,27 @@ spec = do
                 parse stmt_escape "escape aaa"
                 `shouldBe` Right (Escape Nothing (Just (Read "aaa")))
 
+        describe "do-end" $ do
+            it "do escape 1 end" $
+                parse stmt_do "do escape 1 end"
+                `shouldBe` Right (Scope (Seq (Escape Nothing (Just (Const 1))) Nop))
+            it "do end" $
+                parse (tk_key "do" >> stmt_nop >> tk_key "end") "do end"
+                `shouldBe` Right ()
+            it "do end" $
+                parse (tk_key "do" >> (stmt_escape <|> stmt_nop) >> tk_key "end") "do end"
+                `shouldBe` Right ()
+            it "do end" $
+                parse stmt_do "do end"
+                `shouldBe` Right (Scope Nop)
+            it "do ... end" $
+                parse stmt "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end"
+                `shouldBe` Right (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope (Seq (Scope Nop) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)) Nop)
+
+        describe "seq" $ do
+            it "do end escape 1" $
+                parse stmt_seq "do end escape 1"
+                `shouldBe` Right (Seq (Scope Nop) (Seq (Escape Nothing (Just (Const 1))) Nop))
     where
         parse :: Parser a -> String -> Either String a
         parse rule input =
