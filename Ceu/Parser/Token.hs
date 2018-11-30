@@ -22,7 +22,7 @@ tk_reserved :: Parser ()
 tk_reserved = foldr1 (<|>) (map tk_key keywords)
 
 s :: Parser ()
-s = void $ many $ oneOf " \n\t"
+s = void $ many $ oneOf " ;\n\t"
 
 tk_str :: String -> Parser ()
 tk_str str = do

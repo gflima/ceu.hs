@@ -186,13 +186,13 @@ spec = do
                 `shouldBe` Right (Scope Nop)
 
         describe "seq" $ do
-            it "do end escape 1" $
+            it "do end; escape 1" $
                 parse stmt_seq "do end escape 1"
                 `shouldBe` Right (Seq (Scope Nop) (Escape Nothing (Just (Const 1))))
 
         describe "var" $ do
             it "var int x" $
-                parse stmt_var "var int x"
+                parse stmt_var "var int x;"
                 `shouldBe` Right (Var "x" Nothing)
             it "var var x" $
                 parse stmt_var "var var x"
@@ -208,11 +208,11 @@ spec = do
 
         describe "stmt" $ do
             it "var int x; escape 1" $
-                parse stmt "var int x escape 1"
+                parse stmt "var int x ;escape 1"
                 `shouldBe` Right (Seq (Var "x" Nothing) (Escape Nothing (Just (Const 1))))
 
             it "var int x; x<-1; escape x" $
-                parse stmt "var int x x <- 1 escape x"
+                parse stmt "var int x ; x <- 1 ; escape x"
                 `shouldBe` Right (Seq (Var "x" Nothing) (Seq (Write "x" (Const 1)) (Escape Nothing (Just (Read "x")))))
 
             it "do ... end" $
@@ -222,7 +222,7 @@ spec = do
     where
         parse :: Parser a -> String -> Either String a
         parse rule input =
-            let v = regularParse rule input in
+            let v = parseWithEof rule input in
                 case v of
                     (Right v') -> Right v'
                     (Left  v') -> Left (show v')

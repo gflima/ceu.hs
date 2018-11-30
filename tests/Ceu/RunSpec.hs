@@ -64,19 +64,23 @@ spec = do
 
     describe "do-end" $ do
         it "do escape 1 end" $
-            run "do escape 1 end" []
+            run "do escape 1; end" []
             `shouldBe` Right (1, [[]])
         it "do end escape 1" $
-            run "do end escape 1" []
+            run "do end escape 1;" []
             `shouldBe` Right (1, [[]])
         it "do do do do escape 1 end end end end" $
             run "do do do do escape 1 end end end end" []
             `shouldBe` Right (1, [[]])
         it "do do do do end end end end escape 1" $
-            run "do do do do end end end end escape 1" []
+            run "do do do; do end ; end end end ;escape 1" []
             `shouldBe` Right (1, [[]])
         it "do ... end" $ do
             run "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end escape 1" []
+            `shouldBe` Right (1, [[]])
+
+        it "var int x; x<-1; escape x" $
+            run "var int x; x <- 1 ;escape x" []
             `shouldBe` Right (1, [[]])
 
     where
