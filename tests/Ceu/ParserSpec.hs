@@ -19,16 +19,15 @@ spec :: Spec
 spec = do
 
     describe "tokens" $ do
-        describe "tk_char" $ do
+        describe "tk_str" $ do
             it "(" $
-                parse (tk_char '(') "( "
+                parse (tk_str "(") "( "
                 `shouldBe` Right ()
             it ")" $
-                parse (tk_char ')') ") "
+                parse (tk_str ")") ") "
                 `shouldBe` Right ()
-        describe "tk_minus" $ do
             it "-" $
-                parse tk_minus "- "
+                parse (tk_str "-") "- "
                 `shouldBe` Right ()
         describe "tk_num" $ do
             it "''" $
@@ -183,14 +182,37 @@ spec = do
             it "do end" $
                 parse stmt_do "do end"
                 `shouldBe` Right (Scope Nop)
-            it "do ... end" $
-                parse stmt "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end"
-                `shouldBe` Right (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope Nop))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 
         describe "seq" $ do
             it "do end escape 1" $
                 parse stmt_seq "do end escape 1"
                 `shouldBe` Right (Seq (Scope Nop) (Escape Nothing (Just (Const 1))))
+
+        describe "var" $ do
+            it "var int x" $
+                parse stmt_var "var int x"
+                `shouldBe` Right (Var "x" Nothing)
+            it "var var x" $
+                parse stmt_var "var int x"
+                `shouldBe` Left "TODO: type cannot be keyword"
+
+        describe "attr" $ do
+            it "x <- 1" $
+                parse stmt_attr "x <- 1"
+                `shouldBe` Right (Write "x" (Const 1))
+            it "var <- 1" $
+                parse stmt_attr "x <- 1"
+                `shouldBe` Left "TODO: var cannot be keyword"
+
+        describe "stmt" $ do
+            it "var int x; x<-1; escape x" $
+                parse stmt "var int x x <- 1 escape x"
+                `shouldBe` Left "TODO: stmts"
+
+            it "do ... end" $
+                parse stmt "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end"
+                `shouldBe` Right (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope Nop))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+
     where
         parse :: Parser a -> String -> Either String a
         parse rule input =

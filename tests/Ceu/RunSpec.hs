@@ -26,6 +26,14 @@ spec = do
         it "escape 1" $
             run "escape 1" []
             `shouldBe` Right (1, [[]])
+        it "escape a" $
+            run "escape a" []
+            `shouldBe` Left "read access to 'a': variable 'a' is not declared\n"
+        it "escape" $
+            run "escape" []
+            `shouldBe` Left "TODO: escape w/o expression"
+
+    describe "exps" $ do
         it "escape -1" $
             run "escape -1" []
             `shouldBe` Right (-1, [[]])
@@ -53,12 +61,6 @@ spec = do
         it "1+2*3/4" $
             run "escape 1+2*3/4" []
             `shouldBe` Right (2, [[]])
-        it "escape a" $
-            run "escape a" []
-            `shouldBe` Left "read access to 'a': variable 'a' is not declared\n"
-        it "escape" $
-            run "escape" []
-            `shouldBe` Left "TODO: escape w/o expression"
 
     describe "do-end" $ do
         it "do escape 1 end" $

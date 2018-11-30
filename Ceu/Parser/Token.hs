@@ -12,15 +12,9 @@ import Text.Parsec.String.Combinator (many1, notFollowedBy)
 s :: Parser ()
 s = void $ many $ oneOf " \n\t"
 
-tk_char :: Char -> Parser ()
-tk_char c = do
-    n <- char c
-    s
-    return ()
-
-tk_minus :: Parser ()
-tk_minus = do
-    n <- char '-'
+tk_str :: String -> Parser ()
+tk_str str = do
+    n <- string str
     s
     return ()
 

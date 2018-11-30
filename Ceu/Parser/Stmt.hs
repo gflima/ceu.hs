@@ -5,10 +5,12 @@ import Control.Applicative ((<|>))
 import Text.Parsec.String (Parser)
 import Text.Parsec.String.Combinator (chainr1)
 
-import Ceu.Parser.Token (tk_key)
+import Ceu.Parser.Token (tk_key, tk_var, tk_str)
 import Ceu.Parser.Exp   (expr)
 
 import Ceu.Grammar.Full.Grammar (Stmt(..))
+
+-------------------------------------------------------------------------------
 
 stmt_nop :: Parser Stmt
 stmt_nop = do
@@ -19,6 +21,20 @@ stmt_escape = do
     void <- tk_key "escape"
     e    <- expr
     return $ Escape Nothing (Just e)
+
+stmt_var :: Parser Stmt
+stmt_var = do
+    void <- tk_key "var"
+    void <- tk_key "int"
+    var  <- tk_var
+    return $ Var var Nothing
+
+stmt_attr :: Parser Stmt
+stmt_attr = do
+    var  <- tk_var
+    void <- tk_str "<-"
+    exp  <- expr
+    return $ Write var exp
 
 -------------------------------------------------------------------------------
 
