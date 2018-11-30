@@ -17,12 +17,12 @@ main = hspec spec
 spec :: Spec
 spec = do
 
-    describe "void" $ do
+    describe "void:" $ do
         it "void" $
             run "" []
             `shouldBe` Left "(line 1, column 1):\nunexpected end of input\nexpecting \"escape\", \"do\" or \"var\""
 
-    describe "escape" $ do
+    describe "escape:" $ do
         it "escape 1" $
             run "escape 1" []
             `shouldBe` Right (1, [[]])
@@ -33,7 +33,7 @@ spec = do
             run "escape" []
             `shouldBe` Left "TODO: escape w/o expression"
 
-    describe "exps" $ do
+    describe "exps:" $ do
         it "escape -1" $
             run "escape -1" []
             `shouldBe` Right (-1, [[]])
@@ -62,9 +62,9 @@ spec = do
             run "escape 1+2*3/4" []
             `shouldBe` Right (2, [[]])
 
-    describe "vars" $ do
+    describe "vars:" $ do
         it "var int a,b" $
-            run "var int a,b;" []           -- TODO: support a,b,c?
+            run "var int a,b;" []           -- TODO: support a,b,c? (problem w/ assign/finalization)
             `shouldBe` Left "(line 1, column 10):\nunexpected ','\nexpecting digit, letter, \"_\", \"<-\", \"escape\", \"do\", \"var\" or end of input"
         it "a <- 1; escape a;" $
             run "a <- 1; escape a" []
@@ -72,8 +72,14 @@ spec = do
         it "var int a <- 1; escape a;" $
             run "var int a <- 1; escape a" []
             `shouldBe` Right (1, [[]])
+        it "var int a" $
+            run "var int a" []
+            `shouldBe` Right (1, [[]])
+        it "var int a <- 1" $
+            run "var int a <- 1" []
+            `shouldBe` Right (1, [[]])
 
-    describe "do-end" $ do
+    describe "do-end:" $ do
         it "do escape 1 end" $
             run "do escape 1; end" []
             `shouldBe` Right (1, [[]])

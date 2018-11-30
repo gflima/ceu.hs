@@ -18,10 +18,10 @@ main = hspec spec
 spec :: Spec
 spec = do
 
-    describe "TODO" $ do
+    describe "TODO:" $ do
 
-    describe "tokens" $ do
-        describe "tk_str" $ do
+    describe "tokens:" $ do
+        describe "tk_str:" $ do
             it "(" $
                 parse (tk_str "(") "( "
                 `shouldBe` Right ()
@@ -31,7 +31,7 @@ spec = do
             it "-" $
                 parse (tk_str "-") "- "
                 `shouldBe` Right ()
-        describe "tk_num" $ do
+        describe "tk_num:" $ do
             it "''" $
                 parse (s>>tk_num) "\n "
                 `shouldBe` Left "(line 2, column 2):\nunexpected end of input\nexpecting digit"
@@ -47,7 +47,7 @@ spec = do
             it "a" $
                 parse tk_num "a"
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"a\"\nexpecting digit"
-        describe "tk_var" $ do
+        describe "tk_var:" $ do
             it "''" $
                 parse (s>>tk_var) "\n "
                 `shouldBe` Left "(line 2, column 2):\nunexpected end of input"
@@ -63,7 +63,7 @@ spec = do
             it "var" $
                 parse tk_var "var"
                 `shouldBe` Left "(line 1, column 4):\nunexpected end of input\nexpecting digit, letter or \"_\""
-        describe "tk_int" $ do
+        describe "tk_int:" $ do
             it "''" $
                 parse (s>>tk_int) "\n "
                 `shouldBe` Left "(line 2, column 2):\nunexpected end of input"
@@ -80,7 +80,7 @@ spec = do
                 parse tk_int "var"
                 `shouldBe` Left "(line 1, column 4):\nunexpected end of input\nexpecting digit, letter or \"_\""
 
-        describe "tk_key" $ do
+        describe "tk_key:" $ do
             it "do" $
                 parse (tk_key "do") "do "
                 `shouldBe` Right ()
@@ -91,47 +91,47 @@ spec = do
                 parse (tk_key "escape") "escape\n"
                 `shouldBe` Right ()
 
-    describe "expr" $ do
-        describe "const" $ do
+    describe "expr:" $ do
+        describe "const:" $ do
             it "0" $
                 parse expr_const "0"
                 `shouldBe` Right (Const 0)
-        describe "read" $ do
+        describe "read:" $ do
             it "a" $
                 parse expr_read "a"
                 `shouldBe` Right (Read "a")
             it "aaa" $
                 parse expr_read "aaa"
                 `shouldBe` Right (Read "aaa")
-        describe "umn" $ do
+        describe "umn:" $ do
             it "-1" $
                 parse expr_umn "-1"
                 `shouldBe` Right (Umn (Const 1))
             it "--1" $
                 parse expr_umn "--1"
                 `shouldBe` Right (Umn (Umn (Const 1)))
-        describe "parens" $ do
+        describe "parens:" $ do
             it "(1)" $
                 parse expr_parens "(1)"
                 `shouldBe` Right (Const 1)
             it "((--1))" $
                 parse expr_parens "((--1))"
                 `shouldBe` Right (Umn (Umn (Const 1)))
-        describe "add_sub" $ do
+        describe "add_sub:" $ do
             it "1+1" $
                 parse expr_add_sub "1+1"
                 `shouldBe` Right (Add (Const 1) (Const 1))
             it "1+2+3" $
                 parse expr_add_sub "1 + 2+3"
                 `shouldBe` Right (Add (Add (Const 1) (Const 2)) (Const 3))
-        describe "mul_div" $ do
+        describe "mul_div:" $ do
             it "1*1" $
                 parse expr_mul_div "1*1"
                 `shouldBe` Right (Mul (Const 1) (Const 1))
             it "1*2*3" $
                 parse expr_mul_div "1 * 2*3"
                 `shouldBe` Right (Mul (Mul (Const 1) (Const 2)) (Const 3))
-        describe "expr" $ do
+        describe "expr:" $ do
             it "0" $
                 parse expr "0"
                 `shouldBe` Right (Const 0)
@@ -157,13 +157,13 @@ spec = do
                 parse expr "(1+2)*3"
                 `shouldBe` Right (Mul (Add (Const 1) (Const 2)) (Const 3))
 
-    describe "stmt" $ do
-        describe "nop" $ do
+    describe "stmt:" $ do
+        describe "nop:" $ do
             it "-" $
                 parse stmt_nop ""
                 `shouldBe` Right Nop
 
-        describe "escape" $ do
+        describe "escape:" $ do
             it "escape 0" $
                 parse stmt_escape "escape 0"
                 `shouldBe` Right (Escape Nothing (Just (Const 0)))
@@ -171,7 +171,7 @@ spec = do
                 parse stmt_escape "escape aaa"
                 `shouldBe` Right (Escape Nothing (Just (Read "aaa")))
 
-        describe "do-end" $ do
+        describe "do-end:" $ do
             it "do escape 1 end" $
                 parse stmt_do "do escape 1 end"
                 `shouldBe` Right (Scope (Escape Nothing (Just (Const 1))))
@@ -185,12 +185,12 @@ spec = do
                 parse stmt_do "do end"
                 `shouldBe` Right (Scope Nop)
 
-        describe "seq" $ do
+        describe "seq:" $ do
             it "do end; escape 1" $
                 parse stmt_seq "do end escape 1"
                 `shouldBe` Right (Seq (Scope Nop) (Escape Nothing (Just (Const 1))))
 
-        describe "var" $ do
+        describe "var:" $ do
             it "var int x" $
                 parse stmt_var "var int x;"
                 `shouldBe` Right (Var "x" Nothing Nothing)
@@ -201,7 +201,7 @@ spec = do
                 parse stmt_var "var int a <- 1"
                 `shouldBe` Right (Var "a" (Just (Const 1)) Nothing)
 
-        describe "write" $ do
+        describe "write:" $ do
             it "x <- 1" $
                 parse stmt_write "x <- 1"
                 `shouldBe` Right (Write "x" (Const 1))
@@ -209,7 +209,7 @@ spec = do
                 parse stmt_write "var <- 1"
                 `shouldBe` Left "(line 1, column 4):\nunexpected \" \"\nexpecting digit, letter or \"_\""
 
-        describe "stmt" $ do
+        describe "stmt:" $ do
             it "var int x; escape 1" $
                 parse stmt "var int x ;escape 1"
                 `shouldBe` Right (Seq (Var "x" Nothing Nothing) (Escape Nothing (Just (Const 1))))
