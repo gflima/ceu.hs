@@ -31,8 +31,8 @@ stmt_var = do
     guard $ tp == "int"         -- TODO
     return $ Var var Nothing
 
-stmt_attr :: Parser Stmt
-stmt_attr = do
+stmt_write :: Parser Stmt
+stmt_write = do
     var  <- tk_var
     void <- tk_str "<-"
     exp  <- expr
@@ -42,7 +42,7 @@ stmt_attr = do
 
 stmt1 :: Parser Stmt
 stmt1 = do
-    stmt <- try stmt_escape <|> try stmt_do <|> try stmt_var <|> try stmt_attr
+    stmt <- try stmt_escape <|> try stmt_do <|> try stmt_var <|> try stmt_write
     return stmt
 
 stmt_seq :: Parser Stmt

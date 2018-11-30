@@ -197,13 +197,16 @@ spec = do
             it "var var x" $
                 parse stmt_var "var var x"
                 `shouldBe` Left "(line 1, column 8):\nunexpected \" \"\nexpecting digit, letter or \"_\""
+            it "var a <- 1" $
+                parse stmt_var "var a <- 1"
+                `shouldBe` Left "TODO: optional assignment"
 
-        describe "attr" $ do
+        describe "write" $ do
             it "x <- 1" $
-                parse stmt_attr "x <- 1"
+                parse stmt_write "x <- 1"
                 `shouldBe` Right (Write "x" (Const 1))
             it "var <- 1" $
-                parse stmt_attr "var <- 1"
+                parse stmt_write "var <- 1"
                 `shouldBe` Left "(line 1, column 4):\nunexpected \" \"\nexpecting digit, letter or \"_\""
 
         describe "stmt" $ do

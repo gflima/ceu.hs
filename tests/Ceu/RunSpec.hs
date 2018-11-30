@@ -62,6 +62,14 @@ spec = do
             run "escape 1+2*3/4" []
             `shouldBe` Right (2, [[]])
 
+    describe "vars" $ do
+        it "var int a,b" $
+            run "var int a,b;" []           -- TODO: support a,b,c?
+            `shouldBe` Left "(line 1, column 10):\nunexpected ','\nexpecting digit, letter, \"_\", \"escape\", \"do\", \"var\" or end of input"
+        it "a <- 1; escape a;" $
+            run "a <- 1; escape a" []
+            `shouldBe` Left "assignment: variable 'a' is not declared\nread access to 'a': variable 'a' is not declared\n"
+
     describe "do-end" $ do
         it "do escape 1 end" $
             run "do escape 1; end" []
@@ -86,7 +94,7 @@ spec = do
     where
         run :: String -> [In] -> Either String (Val,[Outs])
         run input hist =
-            let v = regularParse stmt input in
+            let v = parseWithEof stmt input in
                 case v of
                     (Right stmt) ->
                         let ret = evalFullProg stmt hist in
