@@ -78,6 +78,19 @@ spec = do
         it "var int a <- 1" $
             run "var int a <- 1" []
             `shouldBe` Left "trap: missing `escape` statement\nawait: unreachable statement\n"
+        it "var int a ; a <- 1" $
+            run "var int a ; a <- 1 ; escape a" []
+            `shouldBe` Right (1, [[]])
+        it "var int x; x<-1; escape x" $
+            run "var int x; x <- 1 ;escape x" []
+            `shouldBe` Right (1, [[]])
+
+        it "hide a" $
+            run "var int a ; var int a ; escape 0" []
+            `shouldBe` Left "declaration: variable 'a' is already declared\n"
+        it "do a=1 end ; a=2" $
+            run "do var int a <- 1; end var int a <- 2 ; escape a" []
+            `shouldBe` Left "TODO: declared but not used"
 
     describe "do-end:" $ do
         it "do escape 1 end" $
@@ -94,10 +107,6 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "do ... end" $ do
             run "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end escape 1" []
-            `shouldBe` Right (1, [[]])
-
-        it "var int x; x<-1; escape x" $
-            run "var int x; x <- 1 ;escape x" []
             `shouldBe` Right (1, [[]])
 
     where
