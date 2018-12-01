@@ -4,7 +4,7 @@ import Control.Monad                    (guard)
 
 import Text.Parsec.Prim                 ((<|>), try)
 import Text.Parsec.String               (Parser)
-import Text.Parsec.String.Combinator    (chainr1, optionMaybe)
+import Text.Parsec.String.Combinator    (chainr1, option, optionMaybe)
 
 import Ceu.Parser.Token                 (tk_key, tk_var, tk_type, tk_str)
 import Ceu.Parser.Exp                   (expr)
@@ -23,6 +23,13 @@ stmt_escape = do
     e    <- expr
     return $ Escape Nothing (Just e)
 
+stmt_do :: Parser Stmt
+stmt_do = do
+    void <- tk_key "do"
+    p    <- stmt <|> stmt_nop
+    void <- tk_key "end"
+    return $ Scope p
+
 stmt_var :: Parser Stmt
 stmt_var = do
     void <- tk_key "var"
@@ -39,22 +46,26 @@ stmt_write = do
     exp  <- expr
     return $ Write var exp
 
+stmt_if :: Parser Stmt
+stmt_if = do
+    void <- tk_key "if"
+    cnd  <- expr
+    void <- tk_key "then"
+    s1   <- stmt
+    s2   <- option Nop (try $ tk_key "else" *> stmt)
+    void <- tk_key "end"
+    return $ If cnd s1 s2
+
 -------------------------------------------------------------------------------
 
 stmt1 :: Parser Stmt
 stmt1 = do
-    stmt <- try stmt_escape <|> try stmt_do <|> try stmt_var <|> try stmt_write
-    return stmt
+    s <- try stmt_escape <|> try stmt_do <|> try stmt_var <|> try stmt_write <|>
+         try stmt_if
+    return s
 
 stmt_seq :: Parser Stmt
-stmt_seq = chainr1 stmt1 (do return Seq) where
-
-stmt_do :: Parser Stmt
-stmt_do = do
-    void <- tk_key "do"
-    p    <- stmt <|> stmt_nop
-    void <- tk_key "end"
-    return $ Scope p
+stmt_seq = option Nop (chainr1 stmt1 (do return Seq))
 
 stmt :: Parser Stmt
 stmt = do

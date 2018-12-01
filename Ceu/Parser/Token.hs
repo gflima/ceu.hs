@@ -14,8 +14,11 @@ types = [
 
 keywords = [
     "do",
-    "escape",
+    "else",
     "end",
+    "escape",
+    "if",
+    "then",
     "var"
   ]
 tk_reserved :: Parser ()

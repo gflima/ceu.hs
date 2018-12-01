@@ -20,7 +20,7 @@ spec = do
     describe "void:" $ do
         it "void" $
             run "" []
-            `shouldBe` Left "(line 1, column 1):\nunexpected end of input\nexpecting \"escape\", \"do\" or \"var\""
+            `shouldBe` Left "trap: missing `escape` statement\nawait: unreachable statement\n"
 
     describe "escape:" $ do
         it "escape 1" $
@@ -65,7 +65,7 @@ spec = do
     describe "vars:" $ do
         it "var int a,b" $
             run "var int a,b;" []           -- TODO: support a,b,c? (problem w/ assign/finalization)
-            `shouldBe` Left "(line 1, column 10):\nunexpected ','\nexpecting digit, letter, \"_\", \"<-\", \"escape\", \"do\", \"var\" or end of input"
+            `shouldBe` Left "(line 1, column 10):\nunexpected ','\nexpecting digit, letter, \"_\", \"<-\", \"escape\", \"do\", \"var\", \"if\" or end of input"
         it "a <- 1; escape a;" $
             run "a <- 1; escape a" []
             `shouldBe` Left "assignment: variable 'a' is not declared\nread access to 'a': variable 'a' is not declared\n"
@@ -91,6 +91,20 @@ spec = do
         it "do a=1 end ; a=2" $
             run "do var int a <- 1; end var int a <- 2 ; escape a" []
             `shouldBe` Left "TODO: declared but not used"
+
+    describe "if-then-else" $ do
+        it "if 0 then escape 0 else escape 1 end" $
+            run "if 0 then escape 0 else escape 1 end" []
+            `shouldBe` Right (1, [[]])
+        it "if 1 then escape 1 end" $
+            run "if 1 then escape 1 end" []
+            `shouldBe` Right (1, [[]])
+        it "if then (if then else end) end" $
+            run "if 1 then ; if 0 then else escape 1 end ; end" []
+            `shouldBe` Right (1, [[]])
+        it "if then (if then end) else end" $
+            run "if 0 then ; if 0 then end ; else escape 1 end" []
+            `shouldBe` Right (1, [[]])
 
     describe "do-end:" $ do
         it "do escape 1 end" $
