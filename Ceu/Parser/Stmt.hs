@@ -1,14 +1,17 @@
 module Ceu.Parser.Stmt where
 
+import Debug.Trace
 import Control.Monad                    (guard)
+import Control.Applicative              (many)
 
 import Text.Parsec.Prim                 ((<|>), try)
 import Text.Parsec.String               (Parser)
-import Text.Parsec.String.Combinator    (chainr1, option, optionMaybe)
+import Text.Parsec.String.Combinator    (chainl, chainr1, option, optionMaybe)
 
 import Ceu.Parser.Token                 (tk_key, tk_var, tk_type, tk_str)
 import Ceu.Parser.Exp                   (expr)
 
+import Ceu.Grammar.Globals              (Exp(..))
 import Ceu.Grammar.Full.Grammar         (Stmt(..))
 
 -------------------------------------------------------------------------------
@@ -52,9 +55,10 @@ stmt_if = do
     cnd  <- expr
     void <- tk_key "then"
     s1   <- stmt
+    ss   <- many $ (try $ (,) <$> (tk_key "else/if" *> expr) <*> (tk_key "then" *> stmt))
     s2   <- option Nop (try $ tk_key "else" *> stmt)
     void <- tk_key "end"
-    return $ If cnd s1 s2
+    return $ foldr (\(c,s) acc -> If c s acc) s2 ([(cnd,s1)] ++ ss)
 
 -------------------------------------------------------------------------------
 

@@ -92,7 +92,7 @@ spec = do
             run "do var int a <- 1; end var int a <- 2 ; escape a" []
             `shouldBe` Left "TODO: declared but not used"
 
-    describe "if-then-else" $ do
+    describe "if-then-else/if-else" $ do
         it "if 0 then escape 0 else escape 1 end" $
             run "if 0 then escape 0 else escape 1 end" []
             `shouldBe` Right (1, [[]])
@@ -105,6 +105,13 @@ spec = do
         it "if then (if then end) else end" $
             run "if 0 then ; if 0 then end ; else escape 1 end" []
             `shouldBe` Right (1, [[]])
+        it "if 1 then a=1; a=2; if 1 then escape a end end" $
+            run "if 1 then var int a<-1 ; a<-2; if 1 then escape a end end" []
+            `shouldBe` Right (2, [[]])
+        it "if 0 then . else/if 1 then escape 1 else ." $
+            run "if 0 then escape 0 else/if 1 then escape 1 else escape 0 end" []
+            `shouldBe` Right (1, [[]])
+
 
     describe "do-end:" $ do
         it "do escape 1 end" $

@@ -209,7 +209,7 @@ spec = do
                 parse stmt_write "var <- 1"
                 `shouldBe` Left "(line 1, column 4):\nunexpected \" \"\nexpecting digit, letter or \"_\""
 
-        describe "if-then-else" $ do
+        describe "if-then-else/if-else" $ do
             it "if 0 then escape 0" $
                 parse stmt_if "if 0 then escape"
                 `shouldBe` Left "(line 1, column 11):\nunexpected \"s\"\nexpecting \"end\""
@@ -233,6 +233,9 @@ spec = do
             it "if then (if then end) else end" $
                 parse stmt_if "if 0 then ; if 0 then end ; else escape 1 end"
                 `shouldBe` Right (If (Const 0) (If (Const 0) Nop Nop) (Escape Nothing (Just (Const 1))))
+            it "if 0 then . else/if 1 then escape 1 else ." $
+                parse stmt_if "if 0 then escape 0 else/if 1 then escape 1 else escape 0 end"
+                `shouldBe` Right (If (Const 0) (Escape Nothing (Just (Const 0))) (If (Const 1) (Escape Nothing (Just (Const 1))) (Escape Nothing (Just (Const 0)))))
 
         describe "stmt:" $ do
             it "var int x; escape 1" $

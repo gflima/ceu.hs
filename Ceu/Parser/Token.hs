@@ -15,6 +15,7 @@ types = [
 keywords = [
     "do",
     "else",
+    "else/if",
     "end",
     "escape",
     "if",
