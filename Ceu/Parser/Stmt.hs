@@ -33,7 +33,10 @@ stmt_var = do
     var  <- tk_var
     guard $ tp == "int"         -- TODO
     exp  <- optionMaybe $ (tk_str "<-") *> expr
-    return $ Var var exp Nothing
+    return $
+        case exp of
+            (Just e) -> Seq (Var var Nothing) (Write var e)
+            Nothing  -> Var var Nothing
 
 stmt_write :: Parser Stmt
 stmt_write = do

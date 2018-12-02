@@ -204,13 +204,13 @@ spec = do
         describe "var:" $ do
             it "var int x" $
                 parse stmt_var "var int x;"
-                `shouldBe` Right (Var "x" Nothing Nothing)
+                `shouldBe` Right (Var "x" Nothing)
             it "var var x" $
                 parse stmt_var "var var x"
                 `shouldBe` Left "(line 1, column 8):\nunexpected \" \"\nexpecting digit, letter or \"_\""
             it "var int a <- 1" $
                 parse stmt_var "var int a <- 1"
-                `shouldBe` Right (Var "a" (Just (Const 1)) Nothing)
+                `shouldBe` Right (Seq (Var "a" Nothing) (Write "a" (Const 1)))
 
         describe "write:" $ do
             it "x <- 1" $
@@ -317,11 +317,11 @@ spec = do
         describe "stmt:" $ do
             it "var int x; escape 1" $
                 parse stmt "var int x ;escape 1"
-                `shouldBe` Right (Seq (Var "x" Nothing Nothing) (Escape Nothing (Just (Const 1))))
+                `shouldBe` Right (Seq (Var "x" Nothing) (Escape Nothing (Just (Const 1))))
 
             it "var int x; x<-1; escape x" $
                 parse stmt "var int x ; x <- 1 ; escape x"
-                `shouldBe` Right (Seq (Var "x" Nothing Nothing) (Seq (Write "x" (Const 1)) (Escape Nothing (Just (Read "x")))))
+                `shouldBe` Right (Seq (Var "x" Nothing) (Seq (Write "x" (Const 1)) (Escape Nothing (Just (Read "x")))))
 
             it "do ... end" $
                 parse stmt "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end"

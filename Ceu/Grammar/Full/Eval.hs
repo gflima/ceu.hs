@@ -17,6 +17,7 @@ import qualified Ceu.Grammar.Full.Compile.Async    as Async
 import qualified Ceu.Grammar.Full.Compile.Fin      as Fin
 import qualified Ceu.Grammar.Full.Compile.Trap     as Trap
 import qualified Ceu.Grammar.Full.Compile.Scope    as Scope
+import qualified Ceu.Grammar.Full.Compile.Seq      as Seq
 
 import qualified Ceu.Grammar.Check.Check as Check
 
@@ -33,6 +34,7 @@ compile p = --traceShowId $
     comb Fin.compile      $
     comb Trap.compile     $
     comb Scope.compile    $
+    comb Seq.compile      $
       ([], p)
   where
     comb :: (Stmt -> (Errors,Stmt)) -> (Errors,Stmt) -> (Errors,Stmt)
@@ -42,7 +44,7 @@ compile' :: Check.Options -> Stmt -> (Errors, G.Stmt)
 compile' (o_simp,o_encl) p = (es2++es3++es4, p4)
   where
     p1       = if not o_encl then p else
-                (Seq (Var "_ret" Nothing Nothing) (Seq (Trap (Just "_ret") p) (AwaitFor)))
+                (Seq (Var "_ret" Nothing) (Seq (Trap (Just "_ret") p) (AwaitFor)))
     (es2,p2) = compile p1
     (es3,p3) = toGrammar p2
     (es4,p4) = Check.compile (o_simp,False) p3

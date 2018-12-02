@@ -38,35 +38,31 @@ spec = do
   describe "Scope.compile" $ do
 
     it "var x" $ do
-      Scope.compile (Var "x" Nothing Nothing)
+      Scope.compile (Var "x" Nothing)
       `shouldBe` ([], (Var' "x" Nothing Nop))
 
-    it "var x <- 1" $ do
-      Scope.compile (Var "x" (Just (Const 1)) Nothing)
-      `shouldBe` ([], Var' "x" Nothing (Write "x" (Const 1)))
-
     it "var x; Nop" $ do
-      Scope.compile (Seq (Var "x" Nothing Nothing) Nop)
+      Scope.compile (Seq (Var "x" Nothing) Nop)
       `shouldBe` ([], (Var' "x" Nothing Nop))
 
     it "var x <- 1 ; Nop" $ do
-      Scope.compile (Seq (Var "x" (Just (Const 1)) Nothing) Nop)
+      Scope.compile (Seq (Var "x" Nothing) (Seq (Write "x" (Const 1)) Nop))
       `shouldBe` ([], (Var' "x" Nothing (Seq (Write "x" (Const 1)) Nop)))
 
     it "scope var x end ; var y" $ do
-      Scope.compile (Seq (Scope (Var "x" Nothing Nothing)) (Var "y" Nothing Nothing))
+      Scope.compile (Seq (Scope (Var "x" Nothing)) (Var "y" Nothing))
       `shouldBe` ([],Seq (Var' "x" Nothing Nop) (Var' "y" Nothing Nop))
 
     it "scope var x end ; x=1" $ do
-      compile' (False,False) (Seq (Scope (Var "x" Nothing Nothing)) (Write "x" (Const 1)))
+      compile' (False,False) (Seq (Scope (Var "x" Nothing)) (Write "x" (Const 1)))
       `shouldBe` (["assignment: variable 'x' is not declared"], G.Seq (G.Var "x" G.Nop) (G.Write "x" (Const 1)))
 
     it "var x" $ do
-      compile' (False,True) (Var "x" Nothing Nothing)
+      compile' (False,True) (Var "x" Nothing)
       `shouldBe` (["trap: missing `escape` statement","await: unreachable statement"], G.Var "_ret" (G.Seq (G.Trap (G.Var "x" G.Nop)) (G.AwaitExt "FOREVER")))
 
     it "var x" $ do
-      compile' (True,True) (Var "x" Nothing Nothing)
+      compile' (True,True) (Var "x" Nothing)
       `shouldBe` (["trap: missing `escape` statement","await: unreachable statement"], G.Var "_ret" (G.AwaitExt "FOREVER"))
 
     it "int x" $ do

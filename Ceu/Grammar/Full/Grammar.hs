@@ -17,7 +17,7 @@ type Fin = (Stmt, Stmt, Stmt)
 
 -- Program (pg 5).
 data Stmt
-  = Var ID_Var (Maybe Exp) (Maybe Fin)  -- variable declaration
+  = Var ID_Var (Maybe Fin)              -- variable declaration
   | Int ID_Int Bool                     -- event declaration
   | Write ID_Var Exp                    -- assignment statement
   | AwaitExt ID_Ext (Maybe ID_Var)      -- await external event
@@ -110,7 +110,7 @@ toGrammar p                    = error $ "toGrammar: unexpected statement: "++(s
 
 stmt2word :: Stmt -> String
 stmt2word stmt = case stmt of
-  Var _ _ _    -> "declaration"
+  Var _ _      -> "declaration"
   Int _ _      -> "declaration"
   Write _ _    -> "assignment"
   AwaitExt _ _ -> "await"
