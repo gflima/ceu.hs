@@ -8,7 +8,7 @@ import Text.Parsec.Prim                 ((<|>), try)
 import Text.Parsec.String               (Parser)
 import Text.Parsec.String.Combinator    (many1, chainl, chainr1, option, optionMaybe)
 
-import Ceu.Parser.Token                 (tk_key, tk_var, tk_type, tk_str)
+import Ceu.Parser.Token                 (tk_key, tk_ext, tk_var, tk_type, tk_str)
 import Ceu.Parser.Exp                   (expr)
 
 import Ceu.Grammar.Globals              (Exp(..))
@@ -26,13 +26,6 @@ stmt_escape = do
     e    <- expr
     return $ Escape Nothing (Just e)
 
-stmt_do :: Parser Stmt
-stmt_do = do
-    void <- tk_key "do"
-    p    <- stmt <|> stmt_nop
-    void <- tk_key "end"
-    return $ Scope p
-
 stmt_var :: Parser Stmt
 stmt_var = do
     void <- tk_key "var"
@@ -49,6 +42,23 @@ stmt_write = do
     exp  <- expr
     return $ Write var exp
 
+-------------------------------------------------------------------------------
+
+stmt_awaitext :: Parser Stmt
+stmt_awaitext = do
+    void <- tk_key "await"
+    ext  <- tk_ext
+    return $ AwaitExt ext Nothing
+
+-------------------------------------------------------------------------------
+
+stmt_do :: Parser Stmt
+stmt_do = do
+    void <- tk_key "do"
+    p    <- stmt <|> stmt_nop
+    void <- tk_key "end"
+    return $ Scope p
+
 stmt_if :: Parser Stmt
 stmt_if = do
     void <- tk_key "if"
@@ -59,6 +69,8 @@ stmt_if = do
     s2   <- option Nop (try $ tk_key "else" *> stmt)
     void <- tk_key "end"
     return $ foldr (\(c,s) acc -> If c s acc) s2 ([(cnd,s1)] ++ ss)
+
+-------------------------------------------------------------------------------
 
 stmt_par :: Parser Stmt
 stmt_par = do
@@ -91,8 +103,9 @@ stmt_paror = do
 
 stmt1 :: Parser Stmt
 stmt1 = do
-    s <- try stmt_escape <|> try stmt_do <|> try stmt_var <|> try stmt_write <|>
-         try stmt_if <|>
+    s <- try stmt_escape <|> try stmt_var <|> try stmt_write <|>
+         try stmt_awaitext <|>
+         try stmt_do <|> stmt_if <|>
          try stmt_par <|> try stmt_parand <|> try stmt_paror
     return s
 

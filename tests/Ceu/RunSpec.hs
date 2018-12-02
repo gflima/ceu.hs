@@ -65,7 +65,7 @@ spec = do
     describe "vars:" $ do
         it "var int a,b" $
             run "var int a,b;" []           -- TODO: support a,b,c? (problem w/ assign/finalization)
-            `shouldBe` Left "(line 1, column 10):\nunexpected ','\nexpecting digit, letter, \"_\", \"<-\", \"escape\", \"do\", \"var\", \"if\", \"par\", \"par/and\", \"par/or\" or end of input"
+            `shouldBe` Left "(line 1, column 10):\nunexpected ','\nexpecting digit, letter, \"_\", \"<-\", \"escape\", \"var\", \"await\", \"do\", \"if\", \"par\", \"par/and\", \"par/or\" or end of input"
         it "a <- 1; escape a;" $
             run "a <- 1; escape a" []
             `shouldBe` Left "assignment: variable 'a' is not declared\nread access to 'a': variable 'a' is not declared\n"
@@ -84,13 +84,41 @@ spec = do
         it "var int x; x<-1; escape x" $
             run "var int x; x <- 1 ;escape x" []
             `shouldBe` Right (1, [[]])
-
         it "hide a" $
             run "var int a ; var int a ; escape 0" []
             `shouldBe` Left "declaration: variable 'a' is already declared\n"
         it "do a=1 end ; a=2" $
             run "do var int a <- 1; end var int a <- 2 ; escape a" []
             `shouldBe` Left "TODO: declared but not used"
+
+-------------------------------------------------------------------------------
+
+    describe "awaitext:" $ do
+        it "await X ; escape 1" $
+            run "await X ; escape 1" []
+            `shouldBe` Left "program didn't terminate\n"
+        it "await X ; escape 1" $
+            run "await X ; escape 1" [("X",Nothing)]
+            `shouldBe` Right (1,[[],[]])
+
+-------------------------------------------------------------------------------
+
+    describe "do-end:" $ do
+        it "do escape 1 end" $
+            run "do escape 1; end" []
+            `shouldBe` Right (1, [[]])
+        it "do end escape 1" $
+            run "do end escape 1;" []
+            `shouldBe` Right (1, [[]])
+        it "do do do do escape 1 end end end end" $
+            run "do do do do escape 1 end end end end" []
+            `shouldBe` Right (1, [[]])
+        it "do do do do end end end end escape 1" $
+            run "do do do; do end ; end end end ;escape 1" []
+            `shouldBe` Right (1, [[]])
+        it "do ... end" $ do
+            run "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end escape 1" []
+            `shouldBe` Right (1, [[]])
 
     describe "if-then-else/if-else" $ do
         it "if 0 then escape 0 else escape 1 end" $
@@ -111,6 +139,8 @@ spec = do
         it "if 0 then . else/if 1 then escape 1 else ." $
             run "if 0 then escape 0 else/if 1 then escape 1 else escape 0 end" []
             `shouldBe` Right (1, [[]])
+
+-------------------------------------------------------------------------------
 
     describe "par:" $ do
         it "par" $
@@ -144,23 +174,6 @@ spec = do
         it "par/or" $
             run "par/or do with escape 2 with escape 3 end ; escape 1" []
             `shouldBe` Left "trap: no trails terminate\n"
-
-    describe "do-end:" $ do
-        it "do escape 1 end" $
-            run "do escape 1; end" []
-            `shouldBe` Right (1, [[]])
-        it "do end escape 1" $
-            run "do end escape 1;" []
-            `shouldBe` Right (1, [[]])
-        it "do do do do escape 1 end end end end" $
-            run "do do do do escape 1 end end end end" []
-            `shouldBe` Right (1, [[]])
-        it "do do do do end end end end escape 1" $
-            run "do do do; do end ; end end end ;escape 1" []
-            `shouldBe` Right (1, [[]])
-        it "do ... end" $ do
-            run "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end escape 1" []
-            `shouldBe` Right (1, [[]])
 
     where
         run :: String -> [In] -> Either String (Val,[Outs])

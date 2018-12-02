@@ -1,7 +1,7 @@
 module Ceu.Parser.Token where
 
 import Control.Monad (void, guard)
-import Data.Char (isLower, isLetter, isDigit)
+import Data.Char (isLower, isUpper)
 
 import Text.Parsec.Prim              (many, (<|>))
 import Text.Parsec.String            (Parser)
@@ -13,6 +13,7 @@ types = [
   ]
 
 keywords = [
+    "await",
     "do",
     "else",
     "else/if",
@@ -43,6 +44,15 @@ tk_num = do
     n <- many1 digit
     s
     return (read n)
+
+tk_ext :: Parser String
+tk_ext = do
+    --void  <- notFollowedBy tk_reserved
+    first <- satisfy isUpper
+    rest  <- many $ (digit <|> satisfy isUpper <|> char '_')
+    guard $ not $ elem (first:rest) (keywords++types)
+    s
+    return (first:rest)
 
 tk_var :: Parser String
 tk_var = do

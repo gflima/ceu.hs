@@ -31,6 +31,7 @@ spec = do
             it "-" $
                 parse (tk_str "-") "- "
                 `shouldBe` Right ()
+
         describe "tk_num:" $ do
             it "''" $
                 parse (s>>tk_num) "\n "
@@ -47,6 +48,7 @@ spec = do
             it "a" $
                 parse tk_num "a"
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"a\"\nexpecting digit"
+
         describe "tk_var:" $ do
             it "''" $
                 parse (s>>tk_var) "\n "
@@ -57,6 +59,9 @@ spec = do
             it "id" $
                 parse tk_var "id"
                 `shouldBe` Right "id"
+            it "Id" $
+                parse tk_var "Id"
+                `shouldBe` Left "(line 1, column 1):\nunexpected \"I\""
             it "1" $
                 parse tk_var "1"
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"1\""
@@ -79,6 +84,28 @@ spec = do
             it "var" $
                 parse tk_int "var"
                 `shouldBe` Left "(line 1, column 4):\nunexpected end of input\nexpecting digit, letter or \"_\""
+        describe "tk_ext:" $ do
+            it "''" $
+                parse (s>>tk_ext) "\n "
+                `shouldBe` Left "(line 2, column 2):\nunexpected end of input"
+            it "''" $
+                parse tk_ext ""
+                `shouldBe` Left "(line 1, column 1):\nunexpected end of input"
+            it "id" $
+                parse tk_ext "id"
+                `shouldBe` Left "(line 1, column 1):\nunexpected \"i\""
+            it "Id" $
+                parse tk_ext "Id"
+                `shouldBe` Left "(line 1, column 2):\nunexpected 'd'\nexpecting digit, \"_\" or end of input"
+            it "1" $
+                parse tk_ext "1"
+                `shouldBe` Left "(line 1, column 1):\nunexpected \"1\""
+            it "var" $
+                parse tk_ext "var"
+                `shouldBe` Left "(line 1, column 1):\nunexpected \"v\""
+            it "ID" $
+                parse tk_ext "ID"
+                `shouldBe` Right "ID"
 
         describe "tk_key:" $ do
             it "do" $
@@ -89,6 +116,9 @@ spec = do
                 `shouldBe` Right ()
             it "escape" $
                 parse (tk_key "escape") "escape\n"
+                `shouldBe` Right ()
+            it "par/or" $
+                parse (tk_key "par/or") "par/or\n"
                 `shouldBe` Right ()
 
     describe "expr:" $ do
@@ -171,25 +201,6 @@ spec = do
                 parse stmt_escape "escape aaa"
                 `shouldBe` Right (Escape Nothing (Just (Read "aaa")))
 
-        describe "do-end:" $ do
-            it "do escape 1 end" $
-                parse stmt_do "do escape 1 end"
-                `shouldBe` Right (Scope (Escape Nothing (Just (Const 1))))
-            it "do end" $
-                parse (tk_key "do" >> stmt_nop >> tk_key "end") "do end"
-                `shouldBe` Right ()
-            it "do end" $
-                parse (tk_key "do" >> (try stmt_escape <|> try stmt_nop) >> tk_key "end") "do end"
-                `shouldBe` Right ()
-            it "do end" $
-                parse stmt_do "do end"
-                `shouldBe` Right (Scope Nop)
-
-        describe "seq:" $ do
-            it "do end; escape 1" $
-                parse stmt_seq "do end escape 1"
-                `shouldBe` Right (Seq (Scope Nop) (Escape Nothing (Just (Const 1))))
-
         describe "var:" $ do
             it "var int x" $
                 parse stmt_var "var int x;"
@@ -208,6 +219,32 @@ spec = do
             it "var <- 1" $
                 parse stmt_write "var <- 1"
                 `shouldBe` Left "(line 1, column 4):\nunexpected \" \"\nexpecting digit, letter or \"_\""
+
+-------------------------------------------------------------------------------
+
+        describe "awaitext:" $ do
+            it "await X" $
+                parse stmt_awaitext "await X"
+                `shouldBe` Right (AwaitExt "X" Nothing)
+            it "await x" $
+                parse stmt_awaitext "await x"
+                `shouldBe` Left "(line 1, column 7):\nunexpected \"x\""
+
+-------------------------------------------------------------------------------
+
+        describe "do-end:" $ do
+            it "do escape 1 end" $
+                parse stmt_do "do escape 1 end"
+                `shouldBe` Right (Scope (Escape Nothing (Just (Const 1))))
+            it "do end" $
+                parse (tk_key "do" >> stmt_nop >> tk_key "end") "do end"
+                `shouldBe` Right ()
+            it "do end" $
+                parse (tk_key "do" >> (try stmt_escape <|> try stmt_nop) >> tk_key "end") "do end"
+                `shouldBe` Right ()
+            it "do end" $
+                parse stmt_do "do end"
+                `shouldBe` Right (Scope Nop)
 
         describe "if-then-else/if-else" $ do
             it "if 0 then escape 0" $
@@ -236,6 +273,8 @@ spec = do
             it "if 0 then . else/if 1 then escape 1 else ." $
                 parse stmt_if "if 0 then escape 0 else/if 1 then escape 1 else escape 0 end"
                 `shouldBe` Right (If (Const 0) (Escape Nothing (Just (Const 0))) (If (Const 1) (Escape Nothing (Just (Const 1))) (Escape Nothing (Just (Const 0)))))
+
+-------------------------------------------------------------------------------
 
         describe "par:" $ do
             it "par" $
@@ -269,6 +308,11 @@ spec = do
             it "par/or" $
                 parse stmt_paror "par/or do escape 1 with escape 2 with escape 3 end"
                 `shouldBe` Right (Or (Escape Nothing (Just (Const 1))) (Or (Escape Nothing (Just (Const 2))) (Escape Nothing (Just (Const 3)))))
+
+        describe "seq:" $ do
+            it "do end; escape 1" $
+                parse stmt_seq "do end escape 1"
+                `shouldBe` Right (Seq (Scope Nop) (Escape Nothing (Just (Const 1))))
 
         describe "stmt:" $ do
             it "var int x; escape 1" $
