@@ -237,6 +237,39 @@ spec = do
                 parse stmt_if "if 0 then escape 0 else/if 1 then escape 1 else escape 0 end"
                 `shouldBe` Right (If (Const 0) (Escape Nothing (Just (Const 0))) (If (Const 1) (Escape Nothing (Just (Const 1))) (Escape Nothing (Just (Const 0)))))
 
+        describe "par:" $ do
+            it "par" $
+                parse stmt_par "par do with end"
+                `shouldBe` Right (Par Nop Nop)
+            it "par" $
+                parse stmt_par "par do escape 1 with escape 1 end"
+                `shouldBe` Right (Par (Escape Nothing (Just (Const 1))) (Escape Nothing (Just (Const 1))))
+            it "par" $
+                parse stmt_par "par do escape 1 with escape 2 with escape 3 end"
+                `shouldBe` Right (Par (Escape Nothing (Just (Const 1))) (Par (Escape Nothing (Just (Const 2))) (Escape Nothing (Just (Const 3)))))
+
+        describe "par/and:" $ do
+            it "par/and" $
+                parse stmt_parand "par/and do with end"
+                `shouldBe` Right (And Nop Nop)
+            it "par/and" $
+                parse stmt_parand "par/and do escape 1 with escape 1 end"
+                `shouldBe` Right (And (Escape Nothing (Just (Const 1))) (Escape Nothing (Just (Const 1))))
+            it "par/and" $
+                parse stmt_parand "par/and do escape 1 with escape 2 with escape 3 end"
+                `shouldBe` Right (And (Escape Nothing (Just (Const 1))) (And (Escape Nothing (Just (Const 2))) (Escape Nothing (Just (Const 3)))))
+
+        describe "par/or:" $ do
+            it "par/or" $
+                parse stmt_paror "par/or do with end"
+                `shouldBe` Right (Or Nop Nop)
+            it "par/or" $
+                parse stmt_paror "par/or do escape 1 with escape 1 end"
+                `shouldBe` Right (Or (Escape Nothing (Just (Const 1))) (Escape Nothing (Just (Const 1))))
+            it "par/or" $
+                parse stmt_paror "par/or do escape 1 with escape 2 with escape 3 end"
+                `shouldBe` Right (Or (Escape Nothing (Just (Const 1))) (Or (Escape Nothing (Just (Const 2))) (Escape Nothing (Just (Const 3)))))
+
         describe "stmt:" $ do
             it "var int x; escape 1" $
                 parse stmt "var int x ;escape 1"

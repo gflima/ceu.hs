@@ -10,7 +10,9 @@ check p = aux [] [] p
 
 aux vars ints s@(Var var p)   = es++es' where
                                  es' = aux (s:vars) ints p
-                                 es = if not $ contains var vars then [] else
+                                 es = if (take 2 var == "__") || (not $ contains var vars) then
+                                        []
+                                      else
                                         [err_stmt_msg s "variable '" ++ var ++ "' is already declared"]
 
 aux vars ints s@(Int int p)   = es++es' where

@@ -217,6 +217,8 @@ spec = do
       ParAndOr.compile (Or Nop AwaitFor) `shouldBe` ([], (Clean' "Or" (Trap' (Par' (Seq Nop (Escape' 0)) (Seq AwaitFor (Escape' 0))))))
     it "(or nop awaitFor)" $ do
       (compile' (False,False) (Or Nop AwaitFor)) `shouldBe` ([], (G.Trap (G.Par (G.Seq G.Nop (G.Escape 0)) (G.AwaitExt "FOREVER"))))
+    it "(and nop (and nop nop))" $ do
+      (compile' (False,False) (And Nop (And Nop Nop))) `shouldBe` ([],G.Trap (G.Var "__and" (G.Seq (G.Write "__and" (Const 0)) (G.Par (G.Seq G.Nop (G.If (Equ (Read "__and") (Const 1)) (G.Escape 0) (G.Seq (G.Write "__and" (Add (Read "__and") (Const 1))) (G.AwaitExt "FOREVER")))) (G.Seq (G.Trap (G.Var "__and" (G.Seq (G.Write "__and" (Const 0)) (G.Par (G.Seq G.Nop (G.If (Equ (Read "__and") (Const 1)) (G.Escape 0) (G.Seq (G.Write "__and" (Add (Read "__and") (Const 1))) (G.AwaitExt "FOREVER")))) (G.Seq G.Nop (G.If (Equ (Read "__and") (Const 1)) (G.Escape 0) (G.Seq (G.Write "__and" (Add (Read "__and") (Const 1))) (G.AwaitExt "FOREVER")))))))) (G.If (Equ (Read "__and") (Const 1)) (G.Escape 0) (G.Seq (G.Write "__and" (Add (Read "__and") (Const 1))) (G.AwaitExt "FOREVER"))))))))
 
   --------------------------------------------------------------------------
   describe "Break.compile" $ do

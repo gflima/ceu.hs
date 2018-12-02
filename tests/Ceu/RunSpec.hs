@@ -65,7 +65,7 @@ spec = do
     describe "vars:" $ do
         it "var int a,b" $
             run "var int a,b;" []           -- TODO: support a,b,c? (problem w/ assign/finalization)
-            `shouldBe` Left "(line 1, column 10):\nunexpected ','\nexpecting digit, letter, \"_\", \"<-\", \"escape\", \"do\", \"var\", \"if\" or end of input"
+            `shouldBe` Left "(line 1, column 10):\nunexpected ','\nexpecting digit, letter, \"_\", \"<-\", \"escape\", \"do\", \"var\", \"if\", \"par\", \"par/and\", \"par/or\" or end of input"
         it "a <- 1; escape a;" $
             run "a <- 1; escape a" []
             `shouldBe` Left "assignment: variable 'a' is not declared\nread access to 'a': variable 'a' is not declared\n"
@@ -112,6 +112,38 @@ spec = do
             run "if 0 then escape 0 else/if 1 then escape 1 else escape 0 end" []
             `shouldBe` Right (1, [[]])
 
+    describe "par:" $ do
+        it "par" $
+            run "par do with end" []
+            `shouldBe` Left "parallel: terminating trail\ntrap: missing `escape` statement\nawait: unreachable statement\n"
+        it "par" $
+            run "par do escape 1 with escape 1 end" []
+            `shouldBe` Right (1, [[]])
+        it "par" $
+            run "par do escape 1 with escape 2 with escape 3 end" []
+            `shouldBe` Right (1, [[]])
+
+    describe "par/and:" $ do
+        it "par/and" $
+            run "par/and do with end" []
+            `shouldBe` Left "trap: missing `escape` statement\nawait: unreachable statement\n"
+        it "par/and; escape 1" $
+            run "par/and do with end ; escape 1;" []
+            `shouldBe` Right (1, [[]])
+        it "par/and ... with ... with escape 3 end" $
+            run "par/and do with with escape 3 end" []
+            `shouldBe` Left "if: unreachable statement\n"
+
+    describe "par/or:" $ do
+        it "par/or" $
+            run "par/or do with end" []
+            `shouldBe` Left "trap: missing `escape` statement\nawait: unreachable statement\n"
+        it "par/or" $
+            run "par/or do with end ; escape 1" []
+            `shouldBe` Right (1, [[]])
+        it "par/or" $
+            run "par/or do with escape 2 with escape 3 end ; escape 1" []
+            `shouldBe` Left "trap: no trails terminate\n"
 
     describe "do-end:" $ do
         it "do escape 1 end" $

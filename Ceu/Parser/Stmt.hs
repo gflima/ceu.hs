@@ -6,7 +6,7 @@ import Control.Applicative              (many)
 
 import Text.Parsec.Prim                 ((<|>), try)
 import Text.Parsec.String               (Parser)
-import Text.Parsec.String.Combinator    (chainl, chainr1, option, optionMaybe)
+import Text.Parsec.String.Combinator    (many1, chainl, chainr1, option, optionMaybe)
 
 import Ceu.Parser.Token                 (tk_key, tk_var, tk_type, tk_str)
 import Ceu.Parser.Exp                   (expr)
@@ -60,12 +60,40 @@ stmt_if = do
     void <- tk_key "end"
     return $ foldr (\(c,s) acc -> If c s acc) s2 ([(cnd,s1)] ++ ss)
 
+stmt_par :: Parser Stmt
+stmt_par = do
+    void <- tk_key "par"
+    void <- tk_key "do"
+    s1   <- stmt
+    ss   <- many1 $ (try $ tk_key "with") *> stmt
+    void <- tk_key "end"
+    return $ foldr1 (\s acc -> Par s acc) ([s1]++ss)
+
+stmt_parand :: Parser Stmt
+stmt_parand = do
+    void <- tk_key "par/and"
+    void <- tk_key "do"
+    s1   <- stmt
+    ss   <- many1 $ (try $ tk_key "with") *> stmt
+    void <- tk_key "end"
+    return $ foldr1 (\s acc -> And s acc) ([s1]++ss)
+
+stmt_paror :: Parser Stmt
+stmt_paror = do
+    void <- tk_key "par/or"
+    void <- tk_key "do"
+    s1   <- stmt
+    ss   <- many1 $ (try $ tk_key "with") *> stmt
+    void <- tk_key "end"
+    return $ foldr1 (\s acc -> Or s acc) ([s1]++ss)
+
 -------------------------------------------------------------------------------
 
 stmt1 :: Parser Stmt
 stmt1 = do
     s <- try stmt_escape <|> try stmt_do <|> try stmt_var <|> try stmt_write <|>
-         try stmt_if
+         try stmt_if <|>
+         try stmt_par <|> try stmt_parand <|> try stmt_paror
     return s
 
 stmt_seq :: Parser Stmt

@@ -19,8 +19,12 @@ keywords = [
     "end",
     "escape",
     "if",
+    "par",
+    "par/and",
+    "par/or",
     "then",
-    "var"
+    "var",
+    "with"
   ]
 tk_reserved :: Parser ()
 tk_reserved = foldr1 (<|>) (map tk_key keywords)
