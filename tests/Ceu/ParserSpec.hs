@@ -18,7 +18,7 @@ main = hspec spec
 spec :: Spec
 spec = do
 
-    describe "TODO:" $ do
+    --describe "TODO:" $ do
 
     describe "tokens:" $ do
         describe "tk_str:" $ do
@@ -204,7 +204,7 @@ spec = do
         describe "var:" $ do
             it "var int x" $
                 parse stmt_var "var int x;"
-                `shouldBe` Right (Var "x" Nothing)
+                `shouldBe` Right (Seq (Var "x" Nothing) Nop)
             it "var var x" $
                 parse stmt_var "var var x"
                 `shouldBe` Left "(line 1, column 8):\nunexpected \" \"\nexpecting digit, letter or \"_\""
@@ -224,10 +224,10 @@ spec = do
 
         describe "awaitext:" $ do
             it "await X" $
-                parse stmt_awaitext "await X"
+                parse (stmt_awaitext Nothing) "await X"
                 `shouldBe` Right (AwaitExt "X" Nothing)
             it "await x" $
-                parse stmt_awaitext "await x"
+                parse (stmt_awaitext Nothing) "await x"
                 `shouldBe` Left "(line 1, column 7):\nunexpected \"x\""
 
 -------------------------------------------------------------------------------
@@ -317,11 +317,11 @@ spec = do
         describe "stmt:" $ do
             it "var int x; escape 1" $
                 parse stmt "var int x ;escape 1"
-                `shouldBe` Right (Seq (Var "x" Nothing) (Escape Nothing (Just (Const 1))))
+                `shouldBe` Right (Seq (Seq (Var "x" Nothing) Nop) (Escape Nothing (Just (Const 1))))
 
             it "var int x; x<-1; escape x" $
                 parse stmt "var int x ; x <- 1 ; escape x"
-                `shouldBe` Right (Seq (Var "x" Nothing) (Seq (Write "x" (Const 1)) (Escape Nothing (Just (Read "x")))))
+                `shouldBe` Right (Seq (Seq (Var "x" Nothing) Nop) (Seq (Write "x" (Const 1)) (Escape Nothing (Just (Read "x")))))
 
             it "do ... end" $
                 parse stmt "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end"

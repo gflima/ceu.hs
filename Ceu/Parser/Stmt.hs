@@ -16,6 +16,20 @@ import Ceu.Grammar.Full.Grammar         (Stmt(..))
 
 -------------------------------------------------------------------------------
 
+attr_exp :: String -> Parser Stmt
+attr_exp var = do
+    void <- tk_str "<-"
+    exp  <- expr
+    return $ Write var exp
+
+attr_awaitext :: String -> Parser Stmt
+attr_awaitext var = do
+    void <- tk_str "<-"
+    p    <- stmt_awaitext (Just var)
+    return p
+
+-------------------------------------------------------------------------------
+
 stmt_nop :: Parser Stmt
 stmt_nop = do
     return $ Nop
@@ -32,11 +46,8 @@ stmt_var = do
     tp   <- tk_type
     var  <- tk_var
     guard $ tp == "int"         -- TODO
-    exp  <- optionMaybe $ (tk_str "<-") *> expr
-    return $
-        case exp of
-            (Just e) -> Seq (Var var Nothing) (Write var e)
-            Nothing  -> Var var Nothing
+    p    <- option Nop (try (attr_exp var) <|> try (attr_awaitext var))
+    return $ Seq (Var var Nothing) p
 
 stmt_write :: Parser Stmt
 stmt_write = do
@@ -47,11 +58,11 @@ stmt_write = do
 
 -------------------------------------------------------------------------------
 
-stmt_awaitext :: Parser Stmt
-stmt_awaitext = do
+stmt_awaitext :: (Maybe String) -> Parser Stmt
+stmt_awaitext var = do
     void <- tk_key "await"
     ext  <- tk_ext
-    return $ AwaitExt ext Nothing
+    return $ AwaitExt ext var
 
 -------------------------------------------------------------------------------
 
@@ -107,7 +118,7 @@ stmt_paror = do
 stmt1 :: Parser Stmt
 stmt1 = do
     s <- try stmt_escape <|> try stmt_var <|> try stmt_write <|>
-         try stmt_awaitext <|>
+         try (stmt_awaitext Nothing) <|>
          try stmt_do <|> stmt_if <|>
          try stmt_par <|> try stmt_parand <|> try stmt_paror
     return s
