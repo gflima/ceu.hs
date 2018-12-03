@@ -90,6 +90,9 @@ spec = do
         it "do a=1 end ; a=2" $
             run "do var int a <- 1; end var int a <- 2 ; escape a" []
             `shouldBe` Left "TODO: declared but not used"
+        it "var int x <- await X ; escape x" $
+            run "var int x <- await X ; escape x" [("X",Just 1)]
+            `shouldBe` Right (1, [[],[]])
 
 -------------------------------------------------------------------------------
 
@@ -100,6 +103,9 @@ spec = do
         it "await X ; escape 1" $
             run "await X ; escape 1" [("X",Nothing)]
             `shouldBe` Right (1,[[],[]])
+        it "var int x <- await X ; await X ; escape x" $
+            run "var int x <- await X ; await X ; escape x" [("X",Just 1),("X",Nothing)]
+            `shouldBe` Right (1, [[],[],[]])
 
 -------------------------------------------------------------------------------
 

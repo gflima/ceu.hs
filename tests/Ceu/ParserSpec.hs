@@ -211,6 +211,9 @@ spec = do
             it "var int a <- 1" $
                 parse stmt_var "var int a <- 1"
                 `shouldBe` Right (Seq (Var "a" Nothing) (Write "a" (Const 1)))
+            it "var int x <- await X" $
+                parse stmt_var "var int x <- await X"
+                `shouldBe` Right (Seq (Var "x" Nothing) (AwaitExt "X" (Just "x")))
 
         describe "write:" $ do
             it "x <- 1" $
