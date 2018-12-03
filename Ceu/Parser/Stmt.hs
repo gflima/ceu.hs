@@ -58,6 +58,13 @@ stmt_write = do
 
 -------------------------------------------------------------------------------
 
+stmt_emitext :: Parser Stmt
+stmt_emitext = do
+    void <- tk_key "emit"
+    ext  <- tk_ext
+    exp  <- optionMaybe (tk_str "->" *> expr)
+    return $ EmitExt ext exp
+
 stmt_awaitext :: (Maybe String) -> Parser Stmt
 stmt_awaitext var = do
     void <- tk_key "await"
@@ -118,7 +125,7 @@ stmt_paror = do
 stmt1 :: Parser Stmt
 stmt1 = do
     s <- try stmt_escape <|> try stmt_var <|> try stmt_write <|>
-         try (stmt_awaitext Nothing) <|>
+         try (stmt_awaitext Nothing) <|> try stmt_emitext <|>
          try stmt_do <|> stmt_if <|>
          try stmt_par <|> try stmt_parand <|> try stmt_paror
     return s

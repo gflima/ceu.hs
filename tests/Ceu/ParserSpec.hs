@@ -233,6 +233,17 @@ spec = do
                 parse (stmt_awaitext Nothing) "await x"
                 `shouldBe` Left "(line 1, column 7):\nunexpected \"x\""
 
+        describe "emitext:" $ do
+            it "emit X" $
+                parse stmt_emitext "emit X"
+                `shouldBe` Right (EmitExt "X" Nothing)
+            it "emit x" $
+                parse stmt_emitext "emit x"
+                `shouldBe` Left "(line 1, column 6):\nunexpected \"x\""
+            it "emit X -> 1" $
+                parse stmt_emitext "emit X -> 1"
+                `shouldBe` Right (EmitExt "X" (Just (Const 1)))
+
 -------------------------------------------------------------------------------
 
         describe "do-end:" $ do

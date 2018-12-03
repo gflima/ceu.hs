@@ -65,7 +65,7 @@ spec = do
     describe "vars:" $ do
         it "var int a,b" $
             run "var int a,b;" []           -- TODO: support a,b,c? (problem w/ assign/finalization)
-            `shouldBe` Left "(line 1, column 10):\nunexpected ','\nexpecting digit, letter, \"_\", \"<-\", \"escape\", \"var\", \"await\", \"do\", \"if\", \"par\", \"par/and\", \"par/or\" or end of input"
+            `shouldBe` Left "(line 1, column 10):\nunexpected ','\nexpecting digit, letter, \"_\", \"<-\", \"escape\", \"var\", \"await\", \"emit\", \"do\", \"if\", \"par\", \"par/and\", \"par/or\" or end of input"
         it "a <- 1; escape a;" $
             run "a <- 1; escape a" []
             `shouldBe` Left "assignment: variable 'a' is not declared\nread access to 'a': variable 'a' is not declared\n"
@@ -106,6 +106,20 @@ spec = do
         it "var int x <- await X ; await X ; escape x" $
             run "var int x <- await X ; await X ; escape x" [("X",Just 1),("X",Nothing)]
             `shouldBe` Right (1, [[],[],[]])
+
+    describe "emitext:" $ do
+        it "emit X" $
+            run "emit X ; escape 1;" []
+            `shouldBe` Right (1,[[("X",Nothing)]])
+        it "emit x" $
+            run "emit x" []
+            `shouldBe` Left "(line 1, column 6):\nunexpected \"x\""
+        it "emit X -> 1" $
+            run "emit X -> 1 ; escape 2;" []
+            `shouldBe` Right (2,[[("X",Just 1)]])
+        it "var int x <- await X; emit X -> x ; escape x+1" $    -- TODO: X in/out
+            run "var int x <- await X; emit X -> x ; escape x+1" [("X",Just 1)]
+            `shouldBe` Right (2,[[],[("X",Just 1)]])
 
 -------------------------------------------------------------------------------
 

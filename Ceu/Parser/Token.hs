@@ -17,6 +17,7 @@ keywords = [
     "do",
     "else",
     "else/if",
+    "emit",
     "end",
     "escape",
     "if",
