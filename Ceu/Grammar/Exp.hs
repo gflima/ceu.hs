@@ -25,17 +25,27 @@ infixl 6 `Sub`                  -- `Sub` associates to the left
 infixl 7 `Mul`                  -- `Mul` associates to the left
 infixl 7 `Div`                  -- `Div` associates to the left
 
-#if 1
+#ifndef SOURCE
 
 newtype Exp = Exp (Exp' Exp)
   deriving (Eq, Show)
 
-getExp :: Exp -> Exp' Exp
-getExp (Exp x) = x
+getExp' :: Exp -> Exp' Exp
+getExp' (Exp x) = x
+
+newExp :: Exp' Exp -> Exp
+newExp exp = Exp exp
 
 #else
 
---newtype Exp = Exp (Exp' Exp, Type)
+newtype Exp = Exp (Exp' Exp, Source)
+  deriving (Eq, Show)
+
+getExp' :: Exp -> Exp' Exp
+getExp' (Exp (x,_)) = x
+
+newExp :: Exp' Exp -> Exp
+newExp exp = Exp (exp, ("",0,0))
 
 #endif
 
@@ -44,7 +54,7 @@ getExp (Exp x) = x
 -- Shows expression
 
 showExp :: Exp -> String
-showExp expr = case getExp expr of
+showExp expr = case getExp' expr of
   Const n   -> show n
   Read v    -> v
   Umn e     -> printf "(-%s)"    (showExp e)
@@ -56,7 +66,7 @@ showExp expr = case getExp expr of
   Lte e1 e2 -> printf "(%s<=%s)" (showExp e1) (showExp e2)
 
 exp2word :: Exp -> String
-exp2word ext = case getExp ext of
+exp2word ext = case getExp' ext of
   Const n       -> "constant " ++ (show n)
   Read var      -> "read access to '" ++ var ++ "'"
   Umn _         -> "unary minus"

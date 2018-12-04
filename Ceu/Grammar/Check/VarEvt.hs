@@ -59,7 +59,7 @@ contains id dcls = elem id $ map f dcls where
 -------------------------------------------------------------------------------
 
 getErrs :: [Stmt] -> Exp -> Errors
-getErrs vars exp = case getExp exp of
+getErrs vars exp = case getExp' exp of
   Read var  -> if (map toUpper var)==var || contains var vars then [] else
                               [err_exp_msg exp "variable '" ++ var ++ "' is not declared"]
   Umn e     -> getErrs vars e

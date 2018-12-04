@@ -1,7 +1,7 @@
 module Ceu.Grammar.Full.Eval where
 
 import Ceu.Grammar.Globals
-import qualified Ceu.Grammar.Grammar as G
+import qualified Ceu.Grammar.Stmt as G
 import qualified Ceu.Eval as E
 import Debug.Trace
 

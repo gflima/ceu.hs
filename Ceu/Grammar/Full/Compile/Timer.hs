@@ -1,6 +1,7 @@
 module Ceu.Grammar.Full.Compile.Timer where
 
 import Ceu.Grammar.Globals
+import Ceu.Grammar.Exp
 import qualified Ceu.Eval as E
 import Ceu.Grammar.Full.Grammar
 
@@ -32,8 +33,8 @@ aux (AwaitTmr exp)      = Var' "__timer_await" Nothing
                                (Loop (
                                  (AwaitExt "TIMER" Nothing)                `Seq`
                                  (Write "__timer_await"
-                                   (Sub (Read "__timer_await") (Const 1))) `Seq`
-                                 (If (Equ (Read "__timer_await") (Const 0))
+                                   (Exp$Sub (Exp$Read "__timer_await") (Exp$Const 1))) `Seq`
+                                 (If (Exp$Equ (Exp$Read "__timer_await") (Exp$Const 0))
                                    (Escape' 0))
                                    Nop
                                  ))))
