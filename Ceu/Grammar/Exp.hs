@@ -30,22 +30,28 @@ infixl 7 `Div`                  -- `Div` associates to the left
 newtype Exp = Exp (Exp' Exp)
   deriving (Eq, Show)
 
-getExp' :: Exp -> Exp' Exp
-getExp' (Exp x) = x
-
 newExp :: Exp' Exp -> Exp
 newExp exp = Exp exp
+
+getExp' :: Exp -> Exp' Exp
+getExp' (Exp e) = e
+
+getSource :: Exp -> (Maybe Source)
+getSource _ = Nothing
 
 #else
 
 newtype Exp = Exp (Exp' Exp, Source)
   deriving (Eq, Show)
 
-getExp' :: Exp -> Exp' Exp
-getExp' (Exp (x,_)) = x
-
 newExp :: Exp' Exp -> Exp
 newExp exp = Exp (exp, ("",0,0))
+
+getExp' :: Exp -> Exp' Exp
+getExp' (Exp (e,_)) = e
+
+getSource :: Exp -> (Maybe Source)
+getSource (Exp (_,s)) = Just s
 
 #endif
 
@@ -78,5 +84,7 @@ exp2word ext = case getExp' ext of
   Lte _ _       -> "less-then comparison"
 
 err_exp_msg :: Exp -> String -> String
-err_exp_msg exp msg = (exp2word exp) ++ ": " ++ msg
-
+err_exp_msg exp msg = source ++ (exp2word exp) ++ ": " ++ msg where
+  source = case getSource exp of
+    Just (_, ln, cl) -> "(line "++(show ln)++", column "++(show cl)++"): "
+    Nothing          -> ""

@@ -28,7 +28,7 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "escape a" $
             run "escape a" []
-            `shouldBe` Left "read access to 'a': variable 'a' is not declared\n"
+            `shouldBe` Left "(line 1, column 8): read access to 'a': variable 'a' is not declared\n"
         it "escape" $
             run "escape" []
             `shouldBe` Left "TODO: escape w/o expression"
@@ -68,7 +68,7 @@ spec = do
             `shouldBe` Left "(line 1, column 10):\nunexpected ','\nexpecting digit, letter, \"_\", \"<-\", \"escape\", \"var\", \"await\", \"emit\", \"do\", \"if\", \"par\", \"par/and\", \"par/or\" or end of input"
         it "a <- 1; escape a;" $
             run "a <- 1; escape a" []
-            `shouldBe` Left "assignment: variable 'a' is not declared\nread access to 'a': variable 'a' is not declared\n"
+            `shouldBe` Left "assignment: variable 'a' is not declared\n(line 1, column 16): read access to 'a': variable 'a' is not declared\n"
         it "var int a <- 1; escape a;" $
             run "var int a <- 1; escape a" []
             `shouldBe` Right (1, [[]])
