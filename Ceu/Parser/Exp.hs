@@ -2,10 +2,10 @@ module Ceu.Parser.Exp where
 
 import Debug.Trace
 
-import Text.Parsec.Prim                 ((<|>), getPosition)
-import Text.Parsec.Pos                  (SourcePos, sourceName, sourceLine, sourceColumn)
-import Text.Parsec.String               (Parser)
-import Text.Parsec.String.Combinator    (chainl1)
+import Text.Parsec.Prim          ((<|>), getPosition)
+import Text.Parsec.Pos           (SourcePos, sourceName, sourceLine, sourceColumn)
+import Text.Parsec.String        (Parser)
+import Text.Parsec.Combinator    (chainl1)
 
 import Ceu.Parser.Token (tk_num, tk_var, tk_str)
 
