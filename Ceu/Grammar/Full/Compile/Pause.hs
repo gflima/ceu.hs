@@ -36,19 +36,19 @@ aux (Pause evt p)       =
   Var' ("__pause_var_"++evt) Nothing
     (Int' ("__pause_int_"++evt) False
       (Seq
-        (Write ("__pause_var_"++evt) (Exp$Const 0))
+        (Write ("__pause_var_"++evt) (newExp$Const 0))
         (Or'
           (Var' "__tmp" Nothing
             (Every evt (Just "__tmp")
-              (If (Exp$Equ (Exp$Read "__tmp") (Exp$Const 0))
-                  (Seq (Write ("__pause_var_"++evt) (Exp$Const 0))
+              (If (newExp$Equ (newExp$Read "__tmp") (newExp$Const 0))
+                  (Seq (Write ("__pause_var_"++evt) (newExp$Const 0))
                        (EmitInt ("__pause_int_"++evt) Nothing))
                   Nop)))
         (Or'
           (Pause' ("__pause_var_"++evt) p)
           (Var' "__tmp" Nothing
             (Every evt (Just "__tmp")
-              (If (Exp$Equ (Exp$Read "__tmp") (Exp$Const 1))
-                  (Write ("__pause_var_"++evt) (Exp$Const 1))
+              (If (newExp$Equ (newExp$Read "__tmp") (newExp$Const 1))
+                  (Write ("__pause_var_"++evt) (newExp$Const 1))
                   Nop)))))))
 aux p                   = p

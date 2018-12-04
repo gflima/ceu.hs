@@ -19,15 +19,15 @@ aux (Par p1 p2)          = Par' (aux p1) (aux p2)
 
 aux (And p1 p2)          = Trap' (Var' "__and" Nothing
                             (Seq
-                              (Write "__and" (Exp$Const 0))
+                              (Write "__and" (newExp$Const 0))
                               (Par' p1' p2')))
                           where
                             p1' = Seq (Trap.ins' (aux p1)) check
                             p2' = Seq (Trap.ins' (aux p2)) check
-                            check = (If (Exp$Equ (Exp$Read "__and") (Exp$Const 1))
+                            check = (If (newExp$Equ (newExp$Read "__and") (newExp$Const 1))
                                       (Escape' 0)
                                       (Seq
-                                        (Write "__and" (Exp$Add (Exp$Read "__and") (Exp$Const 1)))
+                                        (Write "__and" (newExp$Add (newExp$Read "__and") (newExp$Const 1)))
                                         AwaitFor))
 
 aux (Or p1 p2)           = Clean' "Or" (Trap' (Par' p1' p2')) where
