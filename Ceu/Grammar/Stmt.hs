@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module Ceu.Grammar.Stmt where
 
 import Ceu.Grammar.Globals
@@ -5,22 +7,22 @@ import Ceu.Grammar.Exp
 import Text.Printf
 
 -- Program (pg 5).
-data Stmt
-  = Var ID_Var Stmt             -- variable declaration
-  | Int ID_Int Stmt             -- event declaration
+data Stmt' a
+  = Var ID_Var a                -- variable declaration
+  | Int ID_Int a                -- event declaration
   | Write ID_Var Exp            -- assignment statement
   | AwaitExt ID_Ext             -- await external event
   | EmitExt ID_Ext (Maybe Exp)  -- emit external event
   | AwaitInt ID_Int             -- await internal event
   | EmitInt ID_Int              -- emit internal event
-  | If Exp Stmt Stmt            -- conditional
-  | Seq Stmt Stmt               -- sequence
-  | Loop Stmt                   -- infinite loop
-  | Every ID_Evt Stmt           -- event iteration
-  | Par Stmt Stmt               -- par statement
-  | Pause ID_Var Stmt           -- pause/suspend statement
-  | Fin Stmt                    -- finalization statement
-  | Trap Stmt                   -- enclose escape
+  | If Exp a a                  -- conditional
+  | Seq a a                     -- sequence
+  | Loop a                      -- infinite loop
+  | Every ID_Evt a              -- event iteration
+  | Par a a                     -- par statement
+  | Pause ID_Var a              -- pause/suspend statement
+  | Fin a                       -- finalization statement
+  | Trap a                      -- enclose escape
   | Escape Int                  -- escape N traps
   | Nop                         -- dummy statement (internal)
   | Error String                -- generate runtime error (for testing)
@@ -29,9 +31,43 @@ data Stmt
 infixr 1 `Seq`                  -- `Seq` associates to the right
 infixr 0 `Par`                  -- `Par` associates to the right
 
+-------------------------------------------------------------------------------
+
+#ifndef SOURCE
+
+newtype Stmt = Stmt (Stmt' Stmt)
+  deriving (Eq, Show)
+
+newStmt :: Stmt' Stmt -> Stmt
+newStmt exp = Stmt exp
+
+getStmt' :: Stmt -> Stmt' Stmt
+getStmt' (Stmt e) = e
+
+getSource :: Stmt -> (Maybe Source)
+getSource _ = Nothing
+
+#else
+
+newtype Stmt = Stmt (Stmt' Stmt, Source)
+  deriving (Eq, Show)
+
+newStmt :: Stmt' Stmt -> Stmt
+newStmt exp = Stmt (exp, ("",0,0))
+
+getStmt' :: Stmt -> Stmt' Stmt
+getStmt' (Stmt (e,_)) = e
+
+getSource :: Stmt -> (Maybe Source)
+getSource (Stmt (_,s)) = Just s
+
+#endif
+
+-------------------------------------------------------------------------------
+
 -- Shows program.
 showProg :: Stmt -> String
-showProg stmt = case stmt of
+showProg stmt = case getStmt' stmt of
   Var id p             -> printf "{%s: %s}" id (sP p)
   Int id p             -> printf "{%s: %s}" id (sP p)
   Write id expr        -> printf "%s=%s" id (sE expr)
@@ -57,7 +93,7 @@ showProg stmt = case stmt of
     sP = showProg
 
 stmt2word :: Stmt -> String
-stmt2word stmt = case stmt of
+stmt2word stmt = case getStmt' stmt of
   Var _ _     -> "declaration"
   Int _ _     -> "declaration"
   Write _ _   -> "assignment"

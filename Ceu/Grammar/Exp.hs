@@ -25,6 +25,8 @@ infixl 6 `Sub`                  -- `Sub` associates to the left
 infixl 7 `Mul`                  -- `Mul` associates to the left
 infixl 7 `Div`                  -- `Div` associates to the left
 
+-------------------------------------------------------------------------------
+
 #ifndef SOURCE
 
 newtype Exp = Exp (Exp' Exp)

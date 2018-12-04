@@ -9,52 +9,55 @@ import Ceu.Grammar.Stmt
 check :: Stmt -> Errors
 check p = aux [] [] p
 
-aux vars ints s@(Var var p)   = es++es' where
-                                 es' = aux (s:vars) ints p
-                                 es = if (take 2 var == "__") || (not $ contains var vars) then
-                                        []
-                                      else
-                                        [err_stmt_msg s "variable '" ++ var ++ "' is already declared"]
+aux vars ints s = case getStmt' s of
 
-aux vars ints s@(Int int p)   = es++es' where
-                                 es' = aux vars (s:ints) p
-                                 es = if not $ contains int ints then [] else
-                                       [err_stmt_msg s "event '" ++ int ++ "' is already declared"]
+  Var var p     -> es++es' where
+                   es' = aux (s:vars) ints p
+                   es = if (take 2 var == "__") || (not $ contains var vars) then
+                          []
+                        else
+                          [err_stmt_msg s "variable '" ++ var ++ "' is already declared"]
 
-aux vars _ s@(Write var exp)  = es1++es2 where
-                                 es1 = if (map toUpper var)==var || contains var vars then [] else
-                                         [err_stmt_msg s "variable '" ++ var ++ "' is not declared"]
-                                 es2 = getErrs vars exp
+  Int int p     -> es++es' where
+                   es' = aux vars (s:ints) p
+                   es = if not $ contains int ints then [] else
+                          [err_stmt_msg s "event '" ++ int ++ "' is already declared"]
 
-aux _ ints s@(AwaitInt int)   = if contains int ints then [] else
-                                  [err_stmt_msg s "event '" ++ int ++ "' is not declared"]
+  Write var exp -> es1++es2 where
+                   es1 = if (map toUpper var)==var || contains var vars then [] else
+                          [err_stmt_msg s "variable '" ++ var ++ "' is not declared"]
+                   es2 = getErrs vars exp
 
-aux _ ints s@(EmitInt int)    = if contains int ints then [] else
-                                  [err_stmt_msg s "event '" ++ int ++ "' is not declared"]
+  AwaitInt int  -> if contains int ints then [] else
+                    [err_stmt_msg s "event '" ++ int ++ "' is not declared"]
 
-aux vars ints (If exp p1 p2)  = es ++ (aux vars ints p1) ++ (aux vars ints p2) where
-                                 es = getErrs vars exp
+  EmitInt int   -> if contains int ints then [] else
+                    [err_stmt_msg s "event '" ++ int ++ "' is not declared"]
 
-aux vars ints (Seq p1 p2)     = (aux vars ints p1) ++ (aux vars ints p2)
-aux vars ints (Loop p)        = (aux vars ints p)
-aux vars ints s@(Every evt p) = es ++ (aux vars ints p) where
-                                es = if (map toUpper evt)==evt || contains evt ints then [] else
-                                      [err_stmt_msg s "event '" ++ evt ++ "' is not declared"]
+  If exp p1 p2  -> es ++ (aux vars ints p1) ++ (aux vars ints p2) where
+                   es = getErrs vars exp
+
+  Seq p1 p2     -> (aux vars ints p1) ++ (aux vars ints p2)
+  Loop p        -> (aux vars ints p)
+  Every evt p   -> es ++ (aux vars ints p) where
+                   es = if (map toUpper evt)==evt || contains evt ints then [] else
+                          [err_stmt_msg s "event '" ++ evt ++ "' is not declared"]
             
-aux vars ints (Par p1 p2)     = (aux vars ints p1) ++ (aux vars ints p2)
-aux vars ints s@(Pause var p) = es ++ (aux vars ints p) where
-                                 es = if contains var vars then [] else
-                                      [err_stmt_msg s "variable '" ++ var ++ "' is not declared"]
-aux vars ints (Fin p)         = (aux vars ints p)
-aux vars ints (Trap p)        = (aux vars ints p)
-aux vars ints p               = []
+  Par p1 p2     -> (aux vars ints p1) ++ (aux vars ints p2)
+  Pause var p   -> es ++ (aux vars ints p) where
+                   es = if contains var vars then [] else
+                          [err_stmt_msg s "variable '" ++ var ++ "' is not declared"]
+  Fin p         -> (aux vars ints p)
+  Trap p        -> (aux vars ints p)
+  otherwise     -> []
 
 -------------------------------------------------------------------------------
 
 contains :: String -> [Stmt] -> Bool
 contains id dcls = elem id $ map f dcls where
-                    f (Var var _) = var
-                    f (Int int _) = int
+                    f dcl = case getStmt' dcl of
+                              Var var _ -> var
+                              Int int _ -> int
 
 -------------------------------------------------------------------------------
 

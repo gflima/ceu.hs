@@ -7,21 +7,21 @@ import Ceu.Grammar.Stmt
 -- returns all `loop` that fail
 
 check :: Stmt -> Bool
-
-check (Loop body) = cL 0 body where
-  cL n stmt = case stmt of
-    AwaitExt _       -> True
-    Every _ _        -> True
-    Var _ p          -> cL n p
-    Int _ p          -> cL n p
-    If _ p q         -> cL n p && cL n q
-    Seq (Escape k) q -> cL n (Escape k)   -- q never executes
-    Seq p q          -> cL n p || cL n q
-    Loop p           -> cL n p
-    Par p q          -> cL n p || cL n q
-    Pause _ p        -> cL n p
-    Trap p           -> cL (n+1) p
-    Escape k         -> (k >= n)
-    _                -> False
-
-check _ = error "checkLoop: expected Loop"
+check s = case getStmt' s of
+  Loop body -> cL 0 (getStmt' body) where
+    cL n stmt = case stmt of
+      AwaitExt _       -> True
+      Every _ _        -> True
+      Var _ p          -> cL n (getStmt' p)
+      Int _ p          -> cL n (getStmt' p)
+      If _ p q         -> cL n (getStmt' p) && cL n (getStmt' q)
+      Seq p q          -> case getStmt' p of
+                            Escape k  -> cL n (Escape k) -- q never executes
+                            otherwise -> cL n (getStmt' p) || cL n (getStmt' q)
+      Loop p           -> cL n (getStmt' p)
+      Par p q          -> cL n (getStmt' p) || cL n (getStmt' q)
+      Pause _ p        -> cL n (getStmt' p)
+      Trap p           -> cL (n+1) (getStmt' p)
+      Escape k         -> (k >= n)
+      _                -> False
+  otherwise -> error "checkLoop: expected Loop"
