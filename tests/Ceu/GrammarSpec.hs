@@ -1,7 +1,8 @@
 module Ceu.GrammarSpec (main, spec) where
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Grammar
+import Ceu.Grammar.Exp
+import Ceu.Grammar.Stmt
 import qualified Ceu.Grammar.Check.Check     as Check
 import qualified Ceu.Grammar.Check.Escape    as Escape
 import qualified Ceu.Grammar.Check.Loop      as Loop
@@ -18,7 +19,7 @@ spec = do
   describe "checkLoop -- matching-Break/AwaitExt/Every in all paths" $ do
 
     -- atomic statements --
-    checkLoopIt (Loop (Write "x" (Umn (Const 1)))) False
+    checkLoopIt (Loop (Write "x" (Exp$Umn (Exp$Const 1)))) False
     checkLoopIt (Loop (AwaitExt "A"))              True
     checkLoopIt (Loop (AwaitInt "a"))              False
     checkLoopIt (Loop (EmitInt "a"))               False
@@ -31,9 +32,9 @@ spec = do
     checkLoopIt (Loop (Var "x" (Var "y" (Escape 0))))            True
     checkLoopIt (Loop (Var "x" (Var "y" Nop)))                   False
 
-    checkLoopIt (Loop (If (Const 0) (Escape 0) Nop))             False
-    checkLoopIt (Loop (If (Const 0) (Fin Nop) Nop))              False
-    checkLoopIt (Loop (If (Const 0) (Every "A" Nop) (AwaitExt "A"))) True
+    checkLoopIt (Loop (If (Exp$Const 0) (Escape 0) Nop))         False
+    checkLoopIt (Loop (If (Exp$Const 0) (Fin Nop) Nop))          False
+    checkLoopIt (Loop (If (Exp$Const 0) (Every "A" Nop) (AwaitExt "A"))) True
 
     checkLoopIt (Loop (Nop `Seq` Nop `Seq` (Escape 0) `Seq` Nop)) True
     checkLoopIt (Loop (Trap (Loop (Escape 0))))                  False
@@ -66,7 +67,7 @@ spec = do
   describe "checkFin/Every -- no Loop/Escape/Await*/Every/Fin:" $ do
 
     -- atomic statements --
-    checkFinIt (Fin (Write "x" (Const 0))) []
+    checkFinIt (Fin (Write "x" (Exp$Const 0))) []
     checkFinIt (Fin (AwaitExt "A"))        ["await: invalid statement"]
     checkFinIt (Fin (AwaitInt "a"))        ["await: invalid statement"]
     checkFinIt (Fin (EmitInt "a"))         []
@@ -77,8 +78,8 @@ spec = do
     -- compound statements --
     checkFinIt (Fin (Var "x" Nop))                                  []
     checkFinIt (Fin (Var "x" (Every "A" Nop)))                      ["every: invalid statement"]
-    checkFinIt (Fin (If (Const 0) (Loop (Escape 0)) (Nop)))         ["escape: invalid statement"]
-    checkFinIt (Fin (If (Const 0) (Write "x" (Const 0)) (Nop)))     []
+    checkFinIt (Fin (If (Exp$Const 0) (Loop (Escape 0)) (Nop)))     ["escape: invalid statement"]
+    checkFinIt (Fin (If (Exp$Const 0) (Write "x" (Exp$Const 0)) (Nop))) []
     checkFinIt (Fin (Nop `Seq` Nop `Seq` (AwaitExt "A") `Seq` Nop)) ["await: invalid statement"]
     checkFinIt (Fin (Nop `Seq` Nop `Seq` (EmitInt "a") `Seq` Nop))  []
     checkFinIt (Fin (Loop (AwaitInt "a")))                          ["await: invalid statement"]
@@ -89,9 +90,9 @@ spec = do
   describe "checkEscape:" $ do
 
     -- atomic statements --
-    checkEscapeIt (Error "")            []
-    checkEscapeIt (Escape 0)            ["escape: orphan `escape` statement"]
-    checkEscapeIt (Write "x" (Const 0)) []
+    checkEscapeIt (Error "")                []
+    checkEscapeIt (Escape 0)                ["escape: orphan `escape` statement"]
+    checkEscapeIt (Write "x" (Exp$Const 0)) []
 
     -- compound statements --
     checkEscapeIt (Trap (Escape 0))                  []
@@ -105,8 +106,8 @@ spec = do
   describe "checkReachable:" $ do
 
     -- atomic statements --
-    checkReachableIt (Error "")            []
-    checkReachableIt (Write "x" (Const 0)) []
+    checkReachableIt (Error "")                []
+    checkReachableIt (Write "x" (Exp$Const 0)) []
 
     -- compound statements --
     checkReachableIt (Seq (Escape 1) (Escape 0)) ["escape: unreachable statement"]
@@ -123,22 +124,22 @@ spec = do
   --------------------------------------------------------------------------
   describe "checkVarEvt -- declarations" $ do
 
-    checkVarEvtIt Nop                               []
-    checkVarEvtIt (Var "a" Nop)                     []
-    checkVarEvtIt (Var "a" (Write "a" (Const 1)))   []
-    checkVarEvtIt (Var "a" (Var "a" Nop))           ["declaration: variable 'a' is already declared"]
-    checkVarEvtIt (Int "e" (Int "e" Nop))           ["declaration: event 'e' is already declared"]
-    checkVarEvtIt (Write "a" (Const 1))             ["assignment: variable 'a' is not declared"]
-    checkVarEvtIt (AwaitInt "e")                    ["await: event 'e' is not declared"]
-    checkVarEvtIt (Every "e" Nop)                   ["every: event 'e' is not declared"]
-    checkVarEvtIt (Pause "a" Nop)                   ["pause/if: variable 'a' is not declared"]
-    checkVarEvtIt (Var "a" (Write "a" (Umn (Read "b")))) ["read access to 'b': variable 'b' is not declared"]
+    checkVarEvtIt Nop                                 []
+    checkVarEvtIt (Var "a" Nop)                       []
+    checkVarEvtIt (Var "a" (Write "a" (Exp$Const 1))) []
+    checkVarEvtIt (Var "a" (Var "a" Nop))             ["declaration: variable 'a' is already declared"]
+    checkVarEvtIt (Int "e" (Int "e" Nop))       ["declaration: event 'e' is already declared"]
+    checkVarEvtIt (Write "a" (Exp$Const 1))     ["assignment: variable 'a' is not declared"]
+    checkVarEvtIt (AwaitInt "e")                ["await: event 'e' is not declared"]
+    checkVarEvtIt (Every "e" Nop)               ["every: event 'e' is not declared"]
+    checkVarEvtIt (Pause "a" Nop)               ["pause/if: variable 'a' is not declared"]
+    checkVarEvtIt (Var "a" (Write "a" (Exp$Umn (Exp$Read "b")))) ["read access to 'b': variable 'b' is not declared"]
 
   --------------------------------------------------------------------------
   describe "checkStmts -- program is valid" $ do
 
     -- atomic statements --
-    checkStmtsIt (Write "c" (Const 0)) []
+    checkStmtsIt (Write "c" (Exp$Const 0)) []
     checkStmtsIt (AwaitExt "A")        []
     checkStmtsIt (AwaitInt "a")        []
     checkStmtsIt (EmitInt "a")         []
@@ -148,7 +149,7 @@ spec = do
 
     -- compound statements --
     checkStmtsIt (Var "x" Nop)                   []
-    checkStmtsIt (If (Const 0) Nop (Escape 0))   []
+    checkStmtsIt (If (Exp$Const 0) Nop (Escape 0)) []
     checkStmtsIt (Seq (Escape 0) Nop)            []
     checkStmtsIt (Loop (Escape 0))               []
     checkStmtsIt (Loop Nop)                      ["loop: unbounded `loop` execution"]

@@ -3,7 +3,8 @@ module Ceu.Grammar.Check.VarEvt where
 import Data.Char (toUpper)
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Grammar
+import Ceu.Grammar.Exp
+import Ceu.Grammar.Stmt
 
 check :: Stmt -> Errors
 check p = aux [] [] p
@@ -58,13 +59,14 @@ contains id dcls = elem id $ map f dcls where
 -------------------------------------------------------------------------------
 
 getErrs :: [Stmt] -> Exp -> Errors
-getErrs vars e@(Read var) = if (map toUpper var)==var || contains var vars then [] else
-                              [err_exp_msg e "variable '" ++ var ++ "' is not declared"]
-getErrs vars (Umn e)      = getErrs vars e
-getErrs vars (Add e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
-getErrs vars (Sub e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
-getErrs vars (Mul e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
-getErrs vars (Div e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
-getErrs vars (Equ e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
-getErrs vars (Lte e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
-getErrs vars _            = []
+getErrs vars exp = case getExp exp of
+  Read var  -> if (map toUpper var)==var || contains var vars then [] else
+                              [err_exp_msg exp "variable '" ++ var ++ "' is not declared"]
+  Umn e     -> getErrs vars e
+  Add e1 e2 -> (getErrs vars e1) ++ (getErrs vars e2)
+  Sub e1 e2 -> (getErrs vars e1) ++ (getErrs vars e2)
+  Mul e1 e2 -> (getErrs vars e1) ++ (getErrs vars e2)
+  Div e1 e2 -> (getErrs vars e1) ++ (getErrs vars e2)
+  Equ e1 e2 -> (getErrs vars e1) ++ (getErrs vars e2)
+  Lte e1 e2 -> (getErrs vars e1) ++ (getErrs vars e2)
+  otherwise -> []

@@ -1,7 +1,8 @@
 module Ceu.Eval where
 
 import Ceu.Grammar.Globals
-import qualified Ceu.Grammar.Grammar     as G
+import Ceu.Grammar.Exp
+import qualified Ceu.Grammar.Stmt        as G
 import qualified Ceu.Grammar.Simplify    as S
 import qualified Ceu.Grammar.Check.Check as Check
 import Data.Maybe
@@ -94,7 +95,6 @@ showProg stmt = case stmt of
   where
     sE = showExp
     sP = showProg
-    sV = showVars
 
 ----------------------------------------------------------------------------
 -- Environment
@@ -118,7 +118,7 @@ varsRead vars var = case vars of
 
 -- Evaluates expression in environment.
 varsEval :: Vars -> Exp -> Val
-varsEval vars expr = case expr of
+varsEval vars expr = case getExp expr of
   Const val -> val
   Read var  -> varsRead vars var
   Umn e     -> negate $ varsEval vars e
@@ -303,7 +303,7 @@ bcast e vars stmt = case stmt of
   Trap p                -> Trap (bcast e vars p)
   Loop' p q             -> Loop' (bcast e vars p) q
   Par' p q              -> Par' (bcast e vars p) (bcast e vars q)
-  Pause var p           -> Pause var (if (varsEval vars (Read var)) == 1 then p else (bcast e vars p))
+  Pause var p           -> Pause var (if (varsEval vars (Exp $ Read var)) == 1 then p else (bcast e vars p))
   _                     -> stmt -- nothing to do
 
 ----------------------------------------------------------------------------
