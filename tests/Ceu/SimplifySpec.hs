@@ -1,6 +1,5 @@
 module Ceu.SimplifySpec (main, spec) where
 
-import Ceu.Grammar.Globals
 import Ceu.Grammar.Exp
 import Ceu.Grammar.Stmt
 import Ceu.Grammar.Simplify

@@ -1,6 +1,5 @@
 module Ceu.GrammarSpec (main, spec) where
 
-import Ceu.Grammar.Globals
 import Ceu.Grammar.Exp
 import Ceu.Grammar.Stmt
 import qualified Ceu.Grammar.Check.Check     as Check

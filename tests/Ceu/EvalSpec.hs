@@ -1,6 +1,5 @@
 module Ceu.EvalSpec (main, spec) where
 
-import Ceu.Grammar.Globals
 import Ceu.Grammar.Exp
 import qualified Ceu.Grammar.Stmt as G
 import Ceu.Eval
