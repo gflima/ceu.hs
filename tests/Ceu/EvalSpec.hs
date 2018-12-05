@@ -1,3 +1,21 @@
+{-# LANGUAGE CPP #-}
+
+#define AWAITEXT    G.Stmt$G.AwaitExt
+#define AWAITINT    G.Stmt$G.AwaitInt
+#define EMITEXT     G.Stmt$G.EmitExt
+#define EMITINT     G.Stmt$G.EmitInt
+#define ESCAPE      G.Stmt$G.Escape
+#define EVERY       G.Stmt$G.Every
+#define FIN         G.Stmt$G.Fin
+#define INT         G.Stmt$G.Int
+#define LOOP        G.Stmt$G.Loop
+#define PAR         G.Stmt$G.Par
+#define PAUSE       G.Stmt$G.Pause
+#define SEQ         G.Stmt$G.Seq
+#define TRAP        G.Stmt$G.Trap
+#define VAR         G.Stmt$G.Var
+#define WRITE       G.Stmt$G.Write
+
 module Ceu.EvalSpec (main, spec) where
 
 import Ceu.Grammar.Exp
@@ -1075,110 +1093,110 @@ spec = do
   describe "compile_run" $ do
 
     evalProgItSuccess (11,[[]])
-      [] (G.Stmt$G.Var "a"
-           (G.Stmt$G.Seq
-            (G.Stmt$G.Write "a" (Exp$Const 1))
-            (G.Stmt$G.Seq
-              (G.Stmt$G.Write "_ret" (Exp$Add (Exp$Read "a") (Exp$Const 10)))
-              (G.Stmt$G.Escape 0))))
+      [] (VAR "a"
+           (SEQ
+            (WRITE "a" (Exp$Const 1))
+            (SEQ
+              (WRITE "_ret" (Exp$Add (Exp$Read "a") (Exp$Const 10)))
+              (ESCAPE 0))))
 
     evalProgItFail ["trap: missing `escape` statement","escape: orphan `escape` statement","await: unreachable statement"]
-      [] (G.Stmt$G.Escape 1)
+      [] (ESCAPE 1)
 
     evalProgItFail ["declaration: variable '_ret' is already declared"]
-      [] (G.Stmt$G.Var "a"
-           (G.Stmt$G.Var "_ret"
-             ((G.Stmt$G.Write "a" (Exp$Const 1)) `sseq`
-              (G.Stmt$G.Write "_ret" (Exp$Add (Exp$Read "a") (Exp$Const 10))) `sseq`
-              (G.Stmt$G.Escape 0))))
+      [] (VAR "a"
+           (VAR "_ret"
+             ((WRITE "a" (Exp$Const 1)) `sseq`
+              (WRITE "_ret" (Exp$Add (Exp$Read "a") (Exp$Const 10))) `sseq`
+              (ESCAPE 0))))
 
     evalProgItFail ["declaration: variable '_ret' is already declared"]
-      [] ((G.Stmt$G.Write "_ret" (Exp$Const 1)) `sseq`
-          (G.Stmt$G.Var "_ret" (G.Stmt$G.Write "_ret" (Exp$Const 99))) `sseq`
-          (G.Stmt$G.Escape 0))
+      [] ((WRITE "_ret" (Exp$Const 1)) `sseq`
+          (VAR "_ret" (WRITE "_ret" (Exp$Const 99))) `sseq`
+          (ESCAPE 0))
 
     evalProgItSuccess (11,[[]])
-      [] (G.Stmt$G.Var "a"
-           ((G.Stmt$G.Write "a" (Exp$Const 1)) `sseq`
-            (G.Stmt$G.Var "b" (G.Stmt$G.Write "b" (Exp$Const 99))) `sseq`
-            (G.Stmt$G.Write "_ret" (Exp$Add (Exp$Read "a") (Exp$Const 10))) `sseq`
-            (G.Stmt$G.Escape 0)))
+      [] (VAR "a"
+           ((WRITE "a" (Exp$Const 1)) `sseq`
+            (VAR "b" (WRITE "b" (Exp$Const 99))) `sseq`
+            (WRITE "_ret" (Exp$Add (Exp$Read "a") (Exp$Const 10))) `sseq`
+            (ESCAPE 0)))
 
     evalProgItFail ["declaration: variable 'a' is already declared"]
-      [] (G.Stmt$G.Var "a"
-           ((G.Stmt$G.Write "a" (Exp$Const 1)) `sseq`
-            (G.Stmt$G.Var "a" (G.Stmt$G.Write "a" (Exp$Const 99))) `sseq`
-            (G.Stmt$G.Write "_ret" (Exp$Add (Exp$Read "a") (Exp$Const 10))) `sseq`
-            (G.Stmt$G.Escape 0)))
+      [] (VAR "a"
+           ((WRITE "a" (Exp$Const 1)) `sseq`
+            (VAR "a" (WRITE "a" (Exp$Const 99))) `sseq`
+            (WRITE "_ret" (Exp$Add (Exp$Read "a") (Exp$Const 10))) `sseq`
+            (ESCAPE 0)))
 
     evalProgItSuccess (2,[[]])
-      [] ((G.Stmt$G.Write "_ret" (Exp$Const 1)) `sseq`
-          (G.Stmt$G.Var "_" (G.Stmt$G.Write "_ret" (Exp$Const 2))) `sseq`
-          (G.Stmt$G.Escape 0))
+      [] ((WRITE "_ret" (Exp$Const 1)) `sseq`
+          (VAR "_" (WRITE "_ret" (Exp$Const 2))) `sseq`
+          (ESCAPE 0))
 
     evalProgItSuccess (11,[[]])
-      [] (G.Stmt$G.Var "a"
-           ((G.Stmt$G.Write "a" (Exp$Const 1)) `sseq`
-            (G.Stmt$G.Trap (G.Stmt$G.Par
-             (G.Stmt$G.Var "b" (((G.Stmt$G.Write "b" (Exp$Const 99)) `sseq` (G.Stmt$G.AwaitExt "A")) `sseq` (G.Stmt$G.AwaitExt "FOREVER")))
-             (G.Stmt$G.Escape 0))) `sseq`
-           (G.Stmt$G.Write "_ret" (Exp$Add (Exp$Read "a") (Exp$Const 10))) `sseq`
-           (G.Stmt$G.Escape 0)))
+      [] (VAR "a"
+           ((WRITE "a" (Exp$Const 1)) `sseq`
+            (TRAP (PAR
+             (VAR "b" (((WRITE "b" (Exp$Const 99)) `sseq` (AWAITEXT "A")) `sseq` (AWAITEXT "FOREVER")))
+             (ESCAPE 0))) `sseq`
+           (WRITE "_ret" (Exp$Add (Exp$Read "a") (Exp$Const 10))) `sseq`
+           (ESCAPE 0)))
 
     evalProgItFail ["trap: missing `escape` statement"]
-      [] (G.Stmt$G.Trap (G.Stmt$G.Par
-           (G.Stmt$G.Var "x" ((G.Stmt$G.Write "_ret" (Exp$Const 1)) `sseq` (G.Stmt$G.AwaitExt "A") `sseq` (G.Stmt$G.AwaitExt "FOREVER")))
-           (G.Stmt$G.Escape 1)))
+      [] (TRAP (PAR
+           (VAR "x" ((WRITE "_ret" (Exp$Const 1)) `sseq` (AWAITEXT "A") `sseq` (AWAITEXT "FOREVER")))
+           (ESCAPE 1)))
 
     evalProgItSuccess (1,[[]])
-      [] (G.Stmt$G.Seq (G.Stmt$G.Trap (G.Stmt$G.Par
-           (G.Stmt$G.Var "x" ((G.Stmt$G.Write "_ret" (Exp$Const 1)) `sseq` (G.Stmt$G.AwaitExt "A") `sseq` (G.Stmt$G.AwaitExt "FOREVER")))
-           (G.Stmt$G.Escape 0))) (G.Stmt$G.Escape 0))
+      [] (SEQ (TRAP (PAR
+           (VAR "x" ((WRITE "_ret" (Exp$Const 1)) `sseq` (AWAITEXT "A") `sseq` (AWAITEXT "FOREVER")))
+           (ESCAPE 0))) (ESCAPE 0))
 
     evalProgItFail ["loop: `loop` never iterates","declaration: variable 'a' is already declared"]
-      [] (G.Stmt$G.Var "a"
-           ((G.Stmt$G.Write "a" (Exp$Const 1)) `sseq`
-            (G.Stmt$G.Trap (G.Stmt$G.Loop (G.Stmt$G.Par
-                  (G.Stmt$G.Var "a" ((G.Stmt$G.Write "a" (Exp$Const 99)) `sseq` (G.Stmt$G.AwaitExt "A") `sseq` (G.Stmt$G.AwaitExt "FOREVER")))
-                  (G.Stmt$G.Escape 0)))) `sseq`
-             (G.Stmt$G.Write "_ret" (Exp$Add (Exp$Read "a") (Exp$Const 10))) `sseq`
-            (G.Stmt$G.Escape 0)))
+      [] (VAR "a"
+           ((WRITE "a" (Exp$Const 1)) `sseq`
+            (TRAP (LOOP (PAR
+                  (VAR "a" ((WRITE "a" (Exp$Const 99)) `sseq` (AWAITEXT "A") `sseq` (AWAITEXT "FOREVER")))
+                  (ESCAPE 0)))) `sseq`
+             (WRITE "_ret" (Exp$Add (Exp$Read "a") (Exp$Const 10))) `sseq`
+            (ESCAPE 0)))
 
     evalProgItSuccess (11,[[]])
-      [] (G.Stmt$G.Var "a"
-           ((G.Stmt$G.Write "a" (Exp$Const 1)) `sseq`
-            (G.Stmt$G.Trap (G.Stmt$G.Par
-                  (G.Stmt$G.Var "b" ((G.Stmt$G.Write "b" (Exp$Const 99)) `sseq` (G.Stmt$G.AwaitExt "A") `sseq` (G.Stmt$G.AwaitExt "FOREVER")))
-                  (G.Stmt$G.Escape 0))) `sseq`
-            (G.Stmt$G.Write "_ret" (Exp$Add (Exp$Read "a") (Exp$Const 10))) `sseq`
-            (G.Stmt$G.Escape 0)))
+      [] (VAR "a"
+           ((WRITE "a" (Exp$Const 1)) `sseq`
+            (TRAP (PAR
+                  (VAR "b" ((WRITE "b" (Exp$Const 99)) `sseq` (AWAITEXT "A") `sseq` (AWAITEXT "FOREVER")))
+                  (ESCAPE 0))) `sseq`
+            (WRITE "_ret" (Exp$Add (Exp$Read "a") (Exp$Const 10))) `sseq`
+            (ESCAPE 0)))
 
     evalProgItFail ["loop: `loop` never iterates"]
-      [] (G.Stmt$G.Seq (G.Stmt$G.Trap (G.Stmt$G.Loop (G.Stmt$G.Par
-                 (G.Stmt$G.Var "x" ((G.Stmt$G.Write "_ret" (Exp$Const 1)) `sseq` (G.Stmt$G.AwaitExt "A") `sseq` (G.Stmt$G.AwaitExt "FOREVER")))
-                 (G.Stmt$G.Escape 0)))) (G.Stmt$G.Escape 0))
+      [] (SEQ (TRAP (LOOP (PAR
+                 (VAR "x" ((WRITE "_ret" (Exp$Const 1)) `sseq` (AWAITEXT "A") `sseq` (AWAITEXT "FOREVER")))
+                 (ESCAPE 0)))) (ESCAPE 0))
 
     evalProgItSuccess (1,[[]])
-      [] (G.Stmt$G.Seq (G.Stmt$G.Trap (G.Stmt$G.Par
-                 (G.Stmt$G.Var "x" ((G.Stmt$G.Write "_ret" (Exp$Const 1)) `sseq` (G.Stmt$G.AwaitExt "A") `sseq` (G.Stmt$G.AwaitExt "FOREVER")))
-                 (G.Stmt$G.Escape 0))) (G.Stmt$G.Escape 0))
+      [] (SEQ (TRAP (PAR
+                 (VAR "x" ((WRITE "_ret" (Exp$Const 1)) `sseq` (AWAITEXT "A") `sseq` (AWAITEXT "FOREVER")))
+                 (ESCAPE 0))) (ESCAPE 0))
 
     evalProgItSuccess (5,[[]]) [] (
-      ((G.Stmt$G.Write "_ret" (Exp$Const 1))) `sseq`
-      (G.Stmt$G.Int "a"
-        (G.Stmt$G.Trap
-        (G.Stmt$G.Par
-          ((G.Stmt$G.AwaitInt "a") `sseq` (G.Stmt$G.Write "_ret" (Exp$Const 5)) `sseq` (G.Stmt$G.Escape 0))
-          ((G.Stmt$G.EmitInt "a") `sseq` (G.Stmt$G.AwaitExt "FOREVER"))))) `sseq`
-      (G.Stmt$G.Escape 0))
+      ((WRITE "_ret" (Exp$Const 1))) `sseq`
+      (INT "a"
+        (TRAP
+        (PAR
+          ((AWAITINT "a") `sseq` (WRITE "_ret" (Exp$Const 5)) `sseq` (ESCAPE 0))
+          ((EMITINT "a") `sseq` (AWAITEXT "FOREVER"))))) `sseq`
+      (ESCAPE 0))
 
     evalProgItSuccess (5,[[]]) [] (
-      (G.Stmt$G.Write "_ret" (Exp$Const 1)) `sseq`
-      (G.Stmt$G.Int "a"
-        (G.Stmt$G.Trap (G.Stmt$G.Par
-          ((G.Stmt$G.AwaitInt "a") `sseq` (G.Stmt$G.Write "_ret" (Exp$Const 5)) `sseq` (G.Stmt$G.Escape 0))
-          (G.Stmt$G.Seq (G.Stmt$G.Trap (G.Stmt$G.Par (G.Stmt$G.Fin (G.Stmt$G.EmitInt "a")) (G.Stmt$G.Escape 0))) (G.Stmt$G.Escape 0)))
-      )) `sseq` (G.Stmt$G.Escape 0))
+      (WRITE "_ret" (Exp$Const 1)) `sseq`
+      (INT "a"
+        (TRAP (PAR
+          ((AWAITINT "a") `sseq` (WRITE "_ret" (Exp$Const 5)) `sseq` (ESCAPE 0))
+          (SEQ (TRAP (PAR (FIN (EMITINT "a")) (ESCAPE 0))) (ESCAPE 0)))
+      )) `sseq` (ESCAPE 0))
 
 {-
 var x;
@@ -1192,51 +1210,51 @@ end
 escape x;
 -}
     evalProgItSuccess (99,[[]]) [] (
-      (G.Stmt$G.Var "x" (
-        (G.Stmt$G.Write "x" (Exp$Const 10)) `sseq`
-        (G.Stmt$G.Trap (G.Stmt$G.Par
-          (G.Stmt$G.Var "y" (G.Stmt$G.AwaitExt "FOREVER"))
-          (G.Stmt$G.Seq (G.Stmt$G.Write "x" (Exp$Const 99)) (G.Stmt$G.Escape 0))
+      (VAR "x" (
+        (WRITE "x" (Exp$Const 10)) `sseq`
+        (TRAP (PAR
+          (VAR "y" (AWAITEXT "FOREVER"))
+          (SEQ (WRITE "x" (Exp$Const 99)) (ESCAPE 0))
         )) `sseq`
-        (G.Stmt$G.Write "_ret" (Exp$Read "x")) `sseq`
-        (G.Stmt$G.Escape 0)
+        (WRITE "_ret" (Exp$Read "x")) `sseq`
+        (ESCAPE 0)
       )))
 
     evalProgItSuccess (99,[[],[]]) ["A"]
-      (G.Stmt$G.Seq (G.Stmt$G.Seq
-        (G.Stmt$G.Var "x"
-          (G.Stmt$G.Seq
-            (G.Stmt$G.Write "x" (Exp$Const 1))
-            (G.Stmt$G.Int "e"
-              (G.Stmt$G.Trap (G.Stmt$G.Par
-                (G.Stmt$G.Seq (G.Stmt$G.AwaitExt "A") (G.Stmt$G.Seq (G.Stmt$G.Write "x" (Exp$Const 0)) (G.Stmt$G.Seq (G.Stmt$G.EmitInt "e") (G.Stmt$G.AwaitExt "FOREVER"))))
-                (G.Stmt$G.Seq (G.Stmt$G.Pause "x" (G.Stmt$G.Trap (G.Stmt$G.Par (G.Stmt$G.Seq (G.Stmt$G.AwaitInt "e") (G.Stmt$G.Escape 0)) ((G.Stmt$G.EmitInt "e") `sseq` (G.Stmt$G.AwaitExt "FOREVER"))))) (G.Stmt$G.Escape 0)))))))
-        (G.Stmt$G.Write "_ret" (Exp$Const 99))) (G.Stmt$G.Escape 0))
+      (SEQ (SEQ
+        (VAR "x"
+          (SEQ
+            (WRITE "x" (Exp$Const 1))
+            (INT "e"
+              (TRAP (PAR
+                (SEQ (AWAITEXT "A") (SEQ (WRITE "x" (Exp$Const 0)) (SEQ (EMITINT "e") (AWAITEXT "FOREVER"))))
+                (SEQ (PAUSE "x" (TRAP (PAR (SEQ (AWAITINT "e") (ESCAPE 0)) ((EMITINT "e") `sseq` (AWAITEXT "FOREVER"))))) (ESCAPE 0)))))))
+        (WRITE "_ret" (Exp$Const 99))) (ESCAPE 0))
 
     -- multiple inputs
 
     evalProgItSuccess (1,[[],[]])
-      ["A"] ((G.Stmt$G.AwaitExt "A") `sseq` (G.Stmt$G.Write "_ret" (Exp$Const 1)) `sseq` (G.Stmt$G.Escape 0))
+      ["A"] ((AWAITEXT "A") `sseq` (WRITE "_ret" (Exp$Const 1)) `sseq` (ESCAPE 0))
 
     evalProgItFail ["program didn't terminate"]
-      [] ((G.Stmt$G.AwaitExt "A") `sseq` (G.Stmt$G.Write "_ret" (Exp$Const 1)) `sseq` (G.Stmt$G.Escape 0))
+      [] ((AWAITEXT "A") `sseq` (WRITE "_ret" (Exp$Const 1)) `sseq` (ESCAPE 0))
 
     evalProgItFail ["program didn't terminate"]
-      ["B"] ((G.Stmt$G.AwaitExt "A") `sseq` (G.Stmt$G.Write "_ret" (Exp$Const 1)) `sseq` (G.Stmt$G.Escape 0))
+      ["B"] ((AWAITEXT "A") `sseq` (WRITE "_ret" (Exp$Const 1)) `sseq` (ESCAPE 0))
 
     evalProgItFail ["pending inputs"]
-      ["A","A"] ((G.Stmt$G.AwaitExt "A") `sseq` (G.Stmt$G.Write "_ret" (Exp$Const 1)) `sseq` (G.Stmt$G.Escape 0))
+      ["A","A"] ((AWAITEXT "A") `sseq` (WRITE "_ret" (Exp$Const 1)) `sseq` (ESCAPE 0))
 
     evalProgItSuccess (1,[[],[],[]])
-      ["A","B"] ((G.Stmt$G.AwaitExt "A") `sseq` (G.Stmt$G.AwaitExt "B") `sseq` (G.Stmt$G.Write "_ret" (Exp$Const 1)) `sseq` (G.Stmt$G.Escape 0))
+      ["A","B"] ((AWAITEXT "A") `sseq` (AWAITEXT "B") `sseq` (WRITE "_ret" (Exp$Const 1)) `sseq` (ESCAPE 0))
 
-    evalProgItSuccess (1,[[]]) [] ((G.Stmt$G.Write "_ret" (Exp$Const 1)) `sseq` (G.Stmt$G.Escape 0))
+    evalProgItSuccess (1,[[]]) [] ((WRITE "_ret" (Exp$Const 1)) `sseq` (ESCAPE 0))
 
     -- multiple outputs
 
     evalProgItSuccess (1,[[],[("O",Nothing)],[("O",Nothing)],[]]) ["I","I","F"]
-      (G.Stmt$G.Seq (G.Stmt$G.Seq (G.Stmt$G.Write "_ret" (Exp$Const 1))
-        (G.Stmt$G.Trap (G.Stmt$G.Par (G.Stmt$G.Seq (G.Stmt$G.AwaitExt "F") (G.Stmt$G.Escape 0)) (G.Stmt$G.Every "I" (G.Stmt$G.EmitExt "O" Nothing))))) (G.Stmt$G.Escape 0))
+      (SEQ (SEQ (WRITE "_ret" (Exp$Const 1))
+        (TRAP (PAR (SEQ (AWAITEXT "F") (ESCAPE 0)) (EVERY "I" (EMITEXT "O" Nothing))))) (ESCAPE 0))
 
       where
         stepsItPass (p,n,e,vars,outs) (p',n',e',vars',outs') =
