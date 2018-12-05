@@ -1,7 +1,7 @@
 module Ceu.GrammarSpec (main, spec) where
 
-import Ceu.Grammar.Globals
-import Ceu.Grammar.Grammar
+import Ceu.Grammar.Exp
+import Ceu.Grammar.Stmt
 import qualified Ceu.Grammar.Check.Check     as Check
 import qualified Ceu.Grammar.Check.Escape    as Escape
 import qualified Ceu.Grammar.Check.Loop      as Loop

@@ -1,7 +1,7 @@
 module Ceu.Grammar.Check.Reachable where
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Grammar
+import Ceu.Grammar.Stmt
 import Ceu.Grammar.Check.Escape (neverEscapes, escapesAt1)
 import Debug.Trace
 import Control.Exception

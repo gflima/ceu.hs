@@ -1,18 +1,18 @@
 module Ceu.Parser.Stmt where
 
 import Debug.Trace
-import Control.Monad                    (guard)
-import Control.Applicative              (many)
+import Control.Monad             (guard)
+import Control.Applicative       (many)
 
-import Text.Parsec.Prim                 ((<|>), try)
-import Text.Parsec.String               (Parser)
-import Text.Parsec.String.Combinator    (many1, chainl, chainr1, option, optionMaybe)
+import Text.Parsec.Prim          ((<|>), try)
+import Text.Parsec.String        (Parser)
+import Text.Parsec.Combinator    (many1, chainl, chainr1, option, optionMaybe)
 
-import Ceu.Parser.Token                 (tk_key, tk_ext, tk_var, tk_type, tk_str)
-import Ceu.Parser.Exp                   (expr)
+import Ceu.Parser.Token          (tk_key, tk_ext, tk_var, tk_type, tk_str)
+import Ceu.Parser.Exp            (expr)
 
-import Ceu.Grammar.Globals              (Exp(..))
-import Ceu.Grammar.Full.Grammar         (Stmt(..))
+import Ceu.Grammar.Exp           (Exp(..))
+import Ceu.Grammar.Full.Grammar  (Stmt(..))
 
 -------------------------------------------------------------------------------
 

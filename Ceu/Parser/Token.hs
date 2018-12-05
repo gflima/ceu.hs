@@ -3,10 +3,10 @@ module Ceu.Parser.Token where
 import Control.Monad (void, guard)
 import Data.Char (isLower, isUpper)
 
-import Text.Parsec.Prim              (many, (<|>))
-import Text.Parsec.String            (Parser)
-import Text.Parsec.String.Char       (char, oneOf, digit, satisfy, string, letter)
-import Text.Parsec.String.Combinator (many1, notFollowedBy)
+import Text.Parsec.Prim       (many, (<|>))
+import Text.Parsec.String     (Parser)
+import Text.Parsec.Char       (char, oneOf, digit, satisfy, string, letter)
+import Text.Parsec.Combinator (many1, notFollowedBy)
 
 types = [
     "int"

@@ -2,14 +2,14 @@ module Test.ParserSpec (main, spec) where
 
 import Test.Hspec
 
+import qualified Text.Parsec as P (eof, parse)
 import Text.Parsec.Prim
 import Text.Parsec.String (Parser)
-import FunctionsAndTypesForParsing
 
 import Ceu.Parser.Token
 import Ceu.Parser.Exp
 import Ceu.Parser.Stmt
-import Ceu.Grammar.Globals (Exp(..))
+import Ceu.Grammar.Exp          (Exp(..))
 import Ceu.Grammar.Full.Grammar (Stmt(..))
 
 main :: IO ()
@@ -344,7 +344,7 @@ spec = do
     where
         parse :: Parser a -> String -> Either String a
         parse rule input =
-            let v = parseWithEof rule input in
+            let v = P.parse (rule <* P.eof) "" input in
                 case v of
                     (Right v') -> Right v'
                     (Left  v') -> Left (show v')

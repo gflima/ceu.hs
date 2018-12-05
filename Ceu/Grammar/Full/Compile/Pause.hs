@@ -1,6 +1,7 @@
 module Ceu.Grammar.Full.Compile.Pause where
 
 import Ceu.Grammar.Globals
+import Ceu.Grammar.Exp
 import Ceu.Grammar.Full.Grammar
 
 -- remove:

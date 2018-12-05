@@ -1,7 +1,7 @@
 module Ceu.Grammar.Check.Escape where
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Grammar
+import Ceu.Grammar.Stmt
 import Debug.Trace
 
 -- Checks `escape` without enclosing `trap`

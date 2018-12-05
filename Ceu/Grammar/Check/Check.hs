@@ -3,7 +3,7 @@ module Ceu.Grammar.Check.Check where
 import Debug.Trace
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Grammar
+import Ceu.Grammar.Stmt
 import Ceu.Grammar.Simplify
 import qualified Ceu.Grammar.Check.Loop      as Loop
 import qualified Ceu.Grammar.Check.Escape    as Escape

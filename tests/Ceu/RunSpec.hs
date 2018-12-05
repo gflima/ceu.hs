@@ -2,8 +2,7 @@ module Test.RunSpec (main, spec) where
 
 import Test.Hspec
 
-import Text.Parsec.String (Parser)
-import FunctionsAndTypesForParsing
+import Text.Parsec (eof, parse)
 
 import Ceu.Parser.Stmt          (stmt)
 import Ceu.Eval                 (Outs)
@@ -198,10 +197,10 @@ spec = do
     where
         run :: String -> [In] -> Either String (Val,[Outs])
         run input hist =
-            let v = parseWithEof stmt input in
+            let v = parse (stmt <* eof) "" input in
                 case v of
-                    (Right stmt) ->
-                        let ret = evalFullProg stmt hist in
+                    (Right p) ->
+                        let ret = evalFullProg p hist in
                             case ret of
                                 (Left errs)           -> Left $ concatMap (\s->s++"\n") errs
                                 (Right r@(res,outss)) -> Right r

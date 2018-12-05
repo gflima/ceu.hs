@@ -1,8 +1,8 @@
 module Ceu.FullGrammarSpec (main, spec) where
 
-import Ceu.Grammar.Globals
-import qualified Ceu.Grammar.Grammar as G
-import qualified Ceu.Eval            as E
+import Ceu.Grammar.Exp
+import qualified Ceu.Grammar.Stmt as G
+import qualified Ceu.Eval         as E
 import Ceu.Grammar.Full.Grammar
 import Ceu.Grammar.Full.Eval
 import qualified Ceu.Grammar.Full.Compile.Forever  as Forever

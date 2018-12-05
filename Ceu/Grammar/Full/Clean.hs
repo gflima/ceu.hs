@@ -1,7 +1,7 @@
 module Ceu.Grammar.Full.Clean where
 
 import Ceu.Grammar.Globals
-import qualified Ceu.Grammar.Grammar as G
+import qualified Ceu.Grammar.Stmt as G
 
 import Ceu.Grammar.Check.Reachable (maybeTerminates)
 import Ceu.Grammar.Check.Escape    (getEscapes, escapesAt1, removeTrap)

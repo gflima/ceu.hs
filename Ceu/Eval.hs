@@ -1,7 +1,8 @@
 module Ceu.Eval where
 
 import Ceu.Grammar.Globals
-import qualified Ceu.Grammar.Grammar     as G
+import Ceu.Grammar.Exp
+import qualified Ceu.Grammar.Stmt        as G
 import qualified Ceu.Grammar.Simplify    as S
 import qualified Ceu.Grammar.Check.Check as Check
 import Data.Maybe
@@ -94,7 +95,6 @@ showProg stmt = case stmt of
   where
     sE = showExp
     sP = showProg
-    sV = showVars
 
 ----------------------------------------------------------------------------
 -- Environment

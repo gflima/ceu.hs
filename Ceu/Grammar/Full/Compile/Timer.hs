@@ -1,6 +1,7 @@
 module Ceu.Grammar.Full.Compile.Timer where
 
 import Ceu.Grammar.Globals
+import Ceu.Grammar.Exp
 import qualified Ceu.Eval as E
 import Ceu.Grammar.Full.Grammar
 

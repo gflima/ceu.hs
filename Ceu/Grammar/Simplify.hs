@@ -1,6 +1,6 @@
 module Ceu.Grammar.Simplify where
 
-import Ceu.Grammar.Grammar
+import Ceu.Grammar.Stmt
 
 simplify :: Stmt -> Stmt
 
