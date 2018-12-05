@@ -12,6 +12,11 @@ import Test.Hspec
 main :: IO ()
 main = hspec spec
 
+sseq a b = Stmt $ Seq a b
+spar a b = Stmt $ Par a b
+infixr 1 `sseq`
+infixr 0 `spar`
+
 spec :: Spec
 spec = do
   --------------------------------------------------------------------------
@@ -35,31 +40,25 @@ spec = do
     checkLoopIt (Stmt$Loop (Stmt$If (Exp$Const 0) (Stmt$Fin (Stmt Nop)) (Stmt Nop)))          False
     checkLoopIt (Stmt$Loop (Stmt$If (Exp$Const 0) (Stmt$Every "A" (Stmt Nop)) (Stmt$AwaitExt "A"))) True
 
-{-
-    checkLoopIt (Stmt$Loop ((Stmt Nop) `Stmt$Seq` (Stmt Nop) `Stmt$Seq` (Stmt$Escape 0) `Stmt$Seq` (Stmt Nop))) True
+    checkLoopIt (Stmt$Loop ((Stmt Nop) `sseq` (Stmt Nop) `sseq` (Stmt$Escape 0) `sseq` (Stmt Nop))) True
     checkLoopIt (Stmt$Loop (Stmt$Trap (Stmt$Loop (Stmt$Escape 0))))                  False
-    checkLoopIt (Stmt$Loop ((Stmt Nop) `Stmt$Seq` (Stmt Nop) `Stmt$Seq` (Stmt$Loop (Stmt$Escape 0))))   True
-    checkLoopIt (Stmt$Loop ((Stmt$Escape 0) `Stmt$Seq` Stmt$Loop (Stmt Nop)))               True
-    checkLoopIt (Stmt$Loop ((Stmt Nop) `Stmt$Seq` Stmt$Loop (Stmt Nop)))                      False
--}
+    checkLoopIt (Stmt$Loop ((Stmt Nop) `sseq` (Stmt Nop) `sseq` (Stmt$Loop (Stmt$Escape 0))))   True
+    checkLoopIt (Stmt$Loop ((Stmt$Escape 0) `sseq` (Stmt$Loop (Stmt Nop))))               True
+    checkLoopIt (Stmt$Loop ((Stmt Nop) `sseq` (Stmt$Loop (Stmt Nop))))                      False
 
     checkLoopIt (Stmt$Loop (Stmt$Loop (Stmt$Loop (Stmt$AwaitExt "A"))))              True
     checkLoopIt (Stmt$Loop (Stmt$Loop (Stmt$Escape 0)))                         True
     checkLoopIt (Stmt$Loop (Stmt$Trap (Stmt$Loop (Stmt$Escape 0))))                  False
     checkLoopIt (Stmt$Loop (Stmt$Loop (Stmt$Trap (Stmt$Loop (Stmt$Escape 0)))))           False
-{-
-    checkLoopIt (Stmt$Loop (Stmt$Trap (Stmt$Loop (Stmt$Escape 0)) `Stmt$Seq` (Stmt$Trap (Stmt$Loop (Stmt$Escape 0))))) False
-    checkLoopIt (Stmt$Loop (Stmt$Loop (Stmt$AwaitExt "A") `Stmt$Seq` Stmt$Loop (Stmt Nop)))      True
--}
+    checkLoopIt (Stmt$Loop ((Stmt$Trap (Stmt$Loop (Stmt$Escape 0))) `sseq` (Stmt$Trap (Stmt$Loop (Stmt$Escape 0))))) False
+    checkLoopIt (Stmt$Loop ((Stmt$Loop (Stmt$AwaitExt "A")) `sseq` (Stmt$Loop (Stmt Nop))))      True
     checkLoopIt (Stmt$Loop (Stmt$Loop (Stmt$Seq (Stmt$Escape 0) (Stmt$Escape 0))))        True
     checkLoopIt (Stmt$Loop (Stmt$Trap (Stmt$Loop (Stmt$Seq (Stmt$Escape 0) (Stmt$Escape 0))))) False
     checkLoopIt (Stmt$Loop (Stmt$Trap (Stmt$Loop (Stmt$Seq (Stmt$Escape 0) (Stmt$Escape 1))))) False
 
-{-
-    checkLoopIt (Stmt$Loop ((Stmt Nop) `Stmt$Par` (Stmt Nop) `Stmt$Par` (Stmt Nop)))                 False
+    checkLoopIt (Stmt$Loop ((Stmt Nop) `spar` (Stmt Nop) `spar` (Stmt Nop)))                 False
     checkLoopIt (Stmt$Loop (Stmt$Pause "a" (Stmt Nop)))                           False
-    checkLoopIt (Stmt$Loop (Stmt$Every "A" (Stmt Nop) `Stmt$Par` Stmt$AwaitExt "A" `Stmt$Par` (Stmt$Escape 0))) True
--}
+    checkLoopIt (Stmt$Loop ((Stmt$Every "A" (Stmt Nop)) `spar` (Stmt$AwaitExt "A") `spar` (Stmt$Escape 0))) True
     checkLoopIt (Stmt$Loop (Stmt$Pause "a" (Stmt$AwaitExt "A")))                True
 
     -- Stmt$Fin always run in zero time.
@@ -85,15 +84,11 @@ spec = do
     checkFinIt (Stmt$Fin (Stmt$Var "x" (Stmt$Every "A" (Stmt Nop))))                      ["every: invalid statement"]
     checkFinIt (Stmt$Fin (Stmt$If (Exp$Const 0) (Stmt$Loop (Stmt$Escape 0)) ((Stmt Nop))))     ["escape: invalid statement"]
     checkFinIt (Stmt$Fin (Stmt$If (Exp$Const 0) (Stmt$Write "x" (Exp$Const 0)) ((Stmt Nop)))) []
-{-
-    checkFinIt (Stmt$Fin ((Stmt Nop) `Stmt$Seq` (Stmt Nop) `Stmt$Seq` (Stmt$AwaitExt "A") `Stmt$Seq` (Stmt Nop))) ["await: invalid statement"]
-    checkFinIt (Stmt$Fin ((Stmt Nop) `Stmt$Seq` (Stmt Nop) `Stmt$Seq` (Stmt$EmitInt "a") `Stmt$Seq` (Stmt Nop)))  []
--}
+    checkFinIt (Stmt$Fin ((Stmt Nop) `sseq` (Stmt Nop) `sseq` (Stmt$AwaitExt "A") `sseq` (Stmt Nop))) ["await: invalid statement"]
+    checkFinIt (Stmt$Fin ((Stmt Nop) `sseq` (Stmt Nop) `sseq` (Stmt$EmitInt "a") `sseq` (Stmt Nop)))  []
     checkFinIt (Stmt$Fin (Stmt$Loop (Stmt$AwaitInt "a")))                          ["await: invalid statement"]
     checkFinIt (Stmt$Fin (Stmt$Loop (Stmt$AwaitExt "A")))                          ["await: invalid statement"]
-{-
-    checkFinIt (Stmt$Fin ((Stmt Nop) `Stmt$Par` (Stmt Nop) `Stmt$Par` (Stmt$EmitInt "a")))            ["parallel: invalid statement","parallel: invalid statement"]
--}
+    checkFinIt (Stmt$Fin ((Stmt Nop) `spar` (Stmt Nop) `spar` (Stmt$EmitInt "a")))            ["parallel: invalid statement","parallel: invalid statement"]
 
   --------------------------------------------------------------------------
   describe "checkEscape:" $ do
@@ -175,22 +170,18 @@ spec = do
     checkStmtsIt (Stmt$Fin (Stmt$Fin (Stmt Nop)))                 ["finalize: invalid statement in `finalize`", "finalize: invalid statement"]
 
     -- misc --
-{-
-    checkStmtsIt ((Stmt Nop) `Stmt$Seq` (Stmt$Fin (Stmt$Loop (Stmt$Escape 0)))) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
-    checkStmtsIt ((Stmt Nop) `Stmt$Seq` (Stmt$Fin (Stmt$Loop (Stmt Nop))))        ["loop: unbounded `loop` execution"]
--}
+    checkStmtsIt ((Stmt Nop) `sseq` (Stmt$Fin (Stmt$Loop (Stmt$Escape 0)))) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
+    checkStmtsIt ((Stmt Nop) `sseq` (Stmt$Fin (Stmt$Loop (Stmt Nop))))        ["loop: unbounded `loop` execution"]
     checkStmtsIt (Stmt$Var "x" (Stmt$Fin (Stmt$Every "A" (Stmt Nop))))     ["finalize: invalid statement in `finalize`", "every: invalid statement"]
     checkStmtsIt (Stmt$Loop (Stmt$Trap (Stmt$Loop (Stmt$Escape 0))))     ["loop: unbounded `loop` execution"]
     checkStmtsIt (Stmt$Loop (Stmt$Trap (Stmt$Loop (Stmt$Seq (Stmt$Escape 0) (Stmt$Escape 0)))))
                                                      ["loop: unbounded `loop` execution"]
-{-
-    checkStmtsIt (Stmt$AwaitInt "a" `Stmt$Seq` (Stmt$Fin (Stmt$Escape 0)) `Stmt$Par` (Stmt$AwaitExt "FOREVER"))
+    checkStmtsIt ((Stmt$AwaitInt "a") `sseq` (Stmt$Fin (Stmt$Escape 0)) `spar` (Stmt$AwaitExt "FOREVER"))
                                                      ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
-    checkStmtsIt (Stmt$AwaitInt "a" `Stmt$Seq` (Stmt$Every "A" (Stmt$Fin (Stmt Nop))) `Stmt$Par` (Stmt$AwaitExt "FOREVER"))
+    checkStmtsIt ((Stmt$AwaitInt "a") `sseq` (Stmt$Every "A" (Stmt$Fin (Stmt Nop))) `spar` (Stmt$AwaitExt "FOREVER"))
                                                      ["every: invalid statement in `every`", "finalize: invalid statement"]
-    checkStmtsIt (Stmt$Loop ((Stmt$AwaitExt "FOREVER") `Stmt$Par` Stmt$Loop (Stmt$Loop (Stmt$Loop (Stmt$AwaitExt "A")))))  []
-    checkStmtsIt (Stmt$Loop ((Stmt$Escape 0) `Stmt$Par` Stmt$Loop (Stmt$Loop (Stmt$Loop (Stmt$AwaitExt "A"))))) []
--}
+    checkStmtsIt (Stmt$Loop ((Stmt$AwaitExt "FOREVER") `spar` (Stmt$Loop (Stmt$Loop (Stmt$Loop (Stmt$AwaitExt "A"))))))  []
+    checkStmtsIt (Stmt$Loop ((Stmt$Escape 0) `spar` (Stmt$Loop (Stmt$Loop (Stmt$Loop (Stmt$AwaitExt "A")))))) []
     checkStmtsIt (Stmt$Fin (Stmt$Escape 0)) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
     checkStmtsIt (Stmt$Loop (Stmt$Escape 0)) []
     checkStmtsIt (Stmt$Loop (Stmt$AwaitExt "FOREVER")) []
