@@ -47,24 +47,25 @@ infixr 1 `Seq`                  -- `Seq` associates to the right
 infixr 0 `Par`                  -- `Par` associates to the right
 
 fromGrammar :: G.Stmt -> Stmt
-fromGrammar (G.Var id p)      = Var (id,Nothing) (fromGrammar p)
-fromGrammar (G.Int id p)      = Int id (fromGrammar p)
-fromGrammar (G.Write id exp)  = Write id exp
-fromGrammar (G.AwaitExt id)   = AwaitExt id
-fromGrammar (G.EmitExt id exp)= EmitExt id exp
-fromGrammar (G.AwaitInt id)   = AwaitInt id
-fromGrammar (G.EmitInt id)    = EmitInt id
-fromGrammar (G.If exp p1 p2)  = If exp (fromGrammar p1) (fromGrammar p2)
-fromGrammar (G.Seq p1 p2)     = Seq (fromGrammar p1) (fromGrammar p2)
-fromGrammar (G.Loop p)        = Loop' (fromGrammar p) (fromGrammar p)
-fromGrammar (G.Every id p)    = Every id (fromGrammar p)
-fromGrammar (G.Par p1 p2)     = Par (fromGrammar p1) (fromGrammar p2)
-fromGrammar (G.Pause var p)   = Pause var (fromGrammar p)
-fromGrammar (G.Fin p)         = Fin (fromGrammar p)
-fromGrammar (G.Trap p)        = Trap (fromGrammar p)
-fromGrammar (G.Escape n)      = Escape n
-fromGrammar G.Nop             = Nop
-fromGrammar (G.Error msg)     = Error msg
+fromGrammar p = case G.getStmt' p of
+  (G.Var id p)       -> Var (id,Nothing) (fromGrammar p)
+  (G.Int id p)       -> Int id (fromGrammar p)
+  (G.Write id exp)   -> Write id exp
+  (G.AwaitExt id)    -> AwaitExt id
+  (G.EmitExt id exp) -> EmitExt id exp
+  (G.AwaitInt id)    -> AwaitInt id
+  (G.EmitInt id)     -> EmitInt id
+  (G.If exp p1 p2)   -> If exp (fromGrammar p1) (fromGrammar p2)
+  (G.Seq p1 p2)      -> Seq (fromGrammar p1) (fromGrammar p2)
+  (G.Loop p)         -> Loop' (fromGrammar p) (fromGrammar p)
+  (G.Every id p)     -> Every id (fromGrammar p)
+  (G.Par p1 p2)      -> Par (fromGrammar p1) (fromGrammar p2)
+  (G.Pause var p)    -> Pause var (fromGrammar p)
+  (G.Fin p)          -> Fin (fromGrammar p)
+  (G.Trap p)         -> Trap (fromGrammar p)
+  (G.Escape n)       -> Escape n
+  G.Nop              -> Nop
+  (G.Error msg)      -> Error msg
 
 -- Shows program.
 showProg :: Stmt -> String
