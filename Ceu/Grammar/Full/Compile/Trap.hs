@@ -4,49 +4,49 @@ import Debug.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Full.Grammar
 
-compile :: Stmt -> (Errors, Stmt)
+compile :: Stmt ann -> (Errors, Stmt ann)
 compile p = ([], aux [] p) where
-  aux :: [Maybe ID_Var] -> Stmt -> Stmt
-  aux vars (Var' var fin p)  = Var' var fin (aux vars p)
-  aux vars (Int' id b p)     = Int' id b (aux vars p)
-  aux vars (If exp p1 p2)    = If exp (aux vars p1) (aux vars p2)
-  aux vars (Seq p1 p2)       = Seq (aux vars p1) (aux vars p2)
-  aux vars (Loop p)          = Loop (aux vars p)
-  aux vars (Every evt exp p) = Every evt exp (aux vars p)
-  aux vars (Par p1 p2)       = Par (aux vars p1) (aux vars p2)
-  aux vars (And p1 p2)       = And (aux vars p1) (aux vars p2)
-  aux vars (Or p1 p2)        = Or (aux vars p1) (aux vars p2)
-  aux vars (Spawn p)         = Spawn (aux vars p)
-  aux vars (Pause evt p)     = Pause evt (aux vars p)
-  aux vars (Fin a b c)       = Fin (aux vars a) (aux vars b) (aux vars c)
-  aux vars (Async p)         = Async (aux vars p)
-  aux vars (Trap var p)      = Trap' (aux (var:vars) p)
-  aux vars s@(Escape _ _)    = escape vars s 0
-  aux vars p                 = p
+  aux :: [Maybe ID_Var] -> Stmt ann -> Stmt ann
+  aux vars (Var' z var fin p)  = Var' z var fin (aux vars p)
+  aux vars (Int' z id b p)     = Int' z id b (aux vars p)
+  aux vars (If z exp p1 p2)    = If z exp (aux vars p1) (aux vars p2)
+  aux vars (Seq z p1 p2)       = Seq z (aux vars p1) (aux vars p2)
+  aux vars (Loop z p)          = Loop z (aux vars p)
+  aux vars (Every z evt exp p) = Every z evt exp (aux vars p)
+  aux vars (Par z p1 p2)       = Par z (aux vars p1) (aux vars p2)
+  aux vars (And z p1 p2)       = And z (aux vars p1) (aux vars p2)
+  aux vars (Or z p1 p2)        = Or z (aux vars p1) (aux vars p2)
+  aux vars (Spawn z p)         = Spawn z (aux vars p)
+  aux vars (Pause z evt p)     = Pause z evt (aux vars p)
+  aux vars (Fin z a b c)       = Fin z (aux vars a) (aux vars b) (aux vars c)
+  aux vars (Async z p)         = Async z (aux vars p)
+  aux vars (Trap z var p)      = Trap' z (aux (var:vars) p)
+  aux vars s@(Escape _ _ _)    = escape vars s 0
+  aux vars p                   = p
 
-escape :: [Maybe ID_Var] -> Stmt -> Int -> Stmt
-escape ((Just var):_) (Escape Nothing (Just val)) _ = Seq (Write var val) (Escape' 0)
-escape ((Just var'):l) s@(Escape (Just var) val) n
+escape :: [Maybe ID_Var] -> Stmt ann -> Int -> Stmt ann
+escape ((Just var):_) (Escape z Nothing (Just val)) _ = Seq z (Write z var val) (Escape' z 0)
+escape ((Just var'):l) s@(Escape z (Just var) val) n
   | var == var' = case val of
-                    (Just val') -> Seq (Write var val') (Escape' n)
-                    Nothing     -> Escape' n
+                    (Just val') -> Seq z (Write z var val') (Escape' z n)
+                    Nothing     -> Escape' z n
   | otherwise   = escape l s (n+1)
-escape _ _ _ = Escape' (-1)
+escape _ (Escape z _ _) _ = Escape' z (-1)
 
-ins' :: Stmt -> Stmt
+ins' :: Stmt ann -> Stmt ann
 ins' p = (aux 0 p) where
-  aux n (Var' var Nothing p) = Var' var Nothing (aux n p)
-  aux n (Int' int b p)       = Int' int b (aux n p)
-  aux n (If exp p1 p2)       = If exp (aux n p1) (aux n p2)
-  aux n (Seq p1 p2)          = Seq (aux n p1) (aux n p2)
-  aux n (Loop p)             = Loop (aux n p)
-  aux n (Every evt var p)    = Every evt var (aux n p)
-  aux n (Par' p1 p2)         = Par' (aux n p1) (aux n p2)
-  aux n (Pause' var p)       = Pause' var (aux n p)
-  aux n (Fin' p)             = Fin' (aux n p)
-  aux n (Clean' id p)        = Clean' id (aux n p)
-  aux n (Trap' p)            = Trap' (aux (n+1) p)
-  aux n (Escape' k)
-    | k >= n = (Escape' (k+1))
-    | k <  n = (Escape' k)
-  aux n p                   = p
+  aux n (Var' z var Nothing p) = Var' z var Nothing (aux n p)
+  aux n (Int' z int b p)       = Int' z int b (aux n p)
+  aux n (If z exp p1 p2)       = If z exp (aux n p1) (aux n p2)
+  aux n (Seq z p1 p2)          = Seq z (aux n p1) (aux n p2)
+  aux n (Loop z p)             = Loop z (aux n p)
+  aux n (Every z evt var p)    = Every z evt var (aux n p)
+  aux n (Par' z p1 p2)         = Par' z (aux n p1) (aux n p2)
+  aux n (Pause' z var p)       = Pause' z var (aux n p)
+  aux n (Fin' z p)             = Fin' z (aux n p)
+  aux n (Clean' z id p)        = Clean' z id (aux n p)
+  aux n (Trap' z p)            = Trap' z (aux (n+1) p)
+  aux n (Escape' z k)
+    | k >= n                   = (Escape' z (k+1))
+    | k <  n                   = (Escape' z k)
+  aux n p                      = p

@@ -6,22 +6,22 @@ import Ceu.Grammar.Stmt
 -- in its body lead to an occurrence of a matching-Escape/AwaitExt/Every.
 -- returns all `loop` that fail
 
-check :: Stmt -> Bool
+check :: (Stmt ann) -> Bool
 
-check (Loop body) = cL 0 body where
+check (Loop _ body) = cL 0 body where
   cL n stmt = case stmt of
-    AwaitExt _       -> True
-    Every _ _        -> True
-    Var _ p          -> cL n p
-    Int _ p          -> cL n p
-    If _ p q         -> cL n p && cL n q
-    Seq (Escape k) q -> cL n (Escape k)   -- q never executes
-    Seq p q          -> cL n p || cL n q
-    Loop p           -> cL n p
-    Par p q          -> cL n p || cL n q
-    Pause _ p        -> cL n p
-    Trap p           -> cL (n+1) p
-    Escape k         -> (k >= n)
-    _                -> False
+    AwaitExt _ _           -> True
+    Every _ _ _            -> True
+    Var _ _ p              -> cL n p
+    Int _ _ p              -> cL n p
+    If _ _ p q             -> cL n p && cL n q
+    Seq _ s@(Escape _ _) q -> cL n s   -- q never executes
+    Seq _ p q              -> cL n p || cL n q
+    Loop _ p               -> cL n p
+    Par _ p q              -> cL n p || cL n q
+    Pause _ _ p            -> cL n p
+    Trap _ p               -> cL (n+1) p
+    Escape _ k             -> (k >= n)
+    _                      -> False
 
 check _ = error "checkLoop: expected Loop"

@@ -11,18 +11,19 @@ import Text.Parsec.Combinator    (many1, chainl, chainr1, option, optionMaybe)
 import Ceu.Parser.Token          (tk_key, tk_ext, tk_var, tk_type, tk_str)
 import Ceu.Parser.Exp            (expr)
 
+import Ceu.Grammar.Globals       (Source)
 import Ceu.Grammar.Exp           (Exp(..))
 import Ceu.Grammar.Full.Grammar  (Stmt(..))
 
 -------------------------------------------------------------------------------
 
-attr_exp :: String -> Parser Stmt
+attr_exp :: String -> Parser (Stmt Source)
 attr_exp var = do
     void <- tk_str "<-"
     exp  <- expr
     return $ Write var exp
 
-attr_awaitext :: String -> Parser Stmt
+attr_awaitext :: String -> Parser (Stmt Source)
 attr_awaitext var = do
     void <- tk_str "<-"
     p    <- stmt_awaitext (Just var)
@@ -30,17 +31,17 @@ attr_awaitext var = do
 
 -------------------------------------------------------------------------------
 
-stmt_nop :: Parser Stmt
+stmt_nop :: Parser (Stmt Source)
 stmt_nop = do
     return $ Nop
 
-stmt_escape :: Parser Stmt
+stmt_escape :: Parser (Stmt Source)
 stmt_escape = do
     void <- tk_key "escape"
     e    <- expr
     return $ Escape Nothing (Just e)
 
-stmt_var :: Parser Stmt
+stmt_var :: Parser (Stmt Source)
 stmt_var = do
     void <- tk_key "var"
     tp   <- tk_type
@@ -49,7 +50,7 @@ stmt_var = do
     p    <- option Nop (try (attr_exp var) <|> try (attr_awaitext var))
     return $ Seq (Var var Nothing) p
 
-stmt_write :: Parser Stmt
+stmt_write :: Parser (Stmt Source)
 stmt_write = do
     var  <- tk_var
     void <- tk_str "<-"
@@ -58,14 +59,14 @@ stmt_write = do
 
 -------------------------------------------------------------------------------
 
-stmt_emitext :: Parser Stmt
+stmt_emitext :: Parser (Stmt Source)
 stmt_emitext = do
     void <- tk_key "emit"
     ext  <- tk_ext
     exp  <- optionMaybe (tk_str "->" *> expr)
     return $ EmitExt ext exp
 
-stmt_awaitext :: (Maybe String) -> Parser Stmt
+stmt_awaitext :: (Maybe String) -> Parser (Stmt Source)
 stmt_awaitext var = do
     void <- tk_key "await"
     ext  <- tk_ext
@@ -73,14 +74,14 @@ stmt_awaitext var = do
 
 -------------------------------------------------------------------------------
 
-stmt_do :: Parser Stmt
+stmt_do :: Parser (Stmt Source)
 stmt_do = do
     void <- tk_key "do"
     p    <- stmt <|> stmt_nop
     void <- tk_key "end"
     return $ Scope p
 
-stmt_if :: Parser Stmt
+stmt_if :: Parser (Stmt Source)
 stmt_if = do
     void <- tk_key "if"
     cnd  <- expr
@@ -93,7 +94,7 @@ stmt_if = do
 
 -------------------------------------------------------------------------------
 
-stmt_par :: Parser Stmt
+stmt_par :: Parser (Stmt Source)
 stmt_par = do
     void <- tk_key "par"
     void <- tk_key "do"
@@ -102,7 +103,7 @@ stmt_par = do
     void <- tk_key "end"
     return $ foldr1 (\s acc -> Par s acc) ([s1]++ss)
 
-stmt_parand :: Parser Stmt
+stmt_parand :: Parser (Stmt Source)
 stmt_parand = do
     void <- tk_key "par/and"
     void <- tk_key "do"
@@ -111,7 +112,7 @@ stmt_parand = do
     void <- tk_key "end"
     return $ foldr1 (\s acc -> And s acc) ([s1]++ss)
 
-stmt_paror :: Parser Stmt
+stmt_paror :: Parser (Stmt Source)
 stmt_paror = do
     void <- tk_key "par/or"
     void <- tk_key "do"
@@ -122,7 +123,7 @@ stmt_paror = do
 
 -------------------------------------------------------------------------------
 
-stmt1 :: Parser Stmt
+stmt1 :: Parser (Stmt Source)
 stmt1 = do
     s <- try stmt_escape <|> try stmt_var <|> try stmt_write <|>
          try (stmt_awaitext Nothing) <|> try stmt_emitext <|>
@@ -130,10 +131,10 @@ stmt1 = do
          try stmt_par <|> try stmt_parand <|> try stmt_paror
     return s
 
-stmt_seq :: Parser Stmt
+stmt_seq :: Parser (Stmt Source)
 stmt_seq = option Nop (chainr1 stmt1 (do return Seq))
 
-stmt :: Parser Stmt
+stmt :: Parser (Stmt Source)
 stmt = do
     s <- stmt_seq
     return s

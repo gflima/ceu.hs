@@ -7,36 +7,36 @@ import qualified Ceu.Grammar.Full.Compile.Trap as Trap
 
 -- compile
 
-compile :: Stmt -> (Errors, Stmt)
+compile :: Stmt ann -> (Errors, Stmt ann)
 compile p = ([], aux p)
 
-aux (Var' var Nothing p) = Var' var Nothing (aux p)
-aux (Int' int b p)       = Int' int b (aux p)
-aux (If exp p1 p2)       = If exp (aux p1) (aux p2)
-aux (Seq p1 p2)          = Seq (aux p1) (aux p2)
-aux (Loop p)             = Loop (aux p)
-aux (Par p1 p2)          = Par' (aux p1) (aux p2)
+aux (Var' z var Nothing p) = Var' z var Nothing (aux p)
+aux (Int' z int b p)       = Int' z int b (aux p)
+aux (If z exp p1 p2)       = If z exp (aux p1) (aux p2)
+aux (Seq z p1 p2)          = Seq z (aux p1) (aux p2)
+aux (Loop z p)             = Loop z (aux p)
+aux (Par z p1 p2)          = Par' z (aux p1) (aux p2)
 
-aux (And p1 p2)          = Trap' (Var' "__and" Nothing
-                            (Seq
-                              (Write "__and" (Const () 0))
-                              (Par' p1' p2')))
-                          where
-                            p1' = Seq (Trap.ins' (aux p1)) check
-                            p2' = Seq (Trap.ins' (aux p2)) check
-                            check = (If (Equ () (Read () "__and") (Const () 1))
-                                      (Escape' 0)
-                                      (Seq
-                                        (Write "__and" (Add () (Read () "__and") (Const () 1)))
-                                        AwaitFor))
+aux (And z p1 p2)          = Trap' z (Var' z "__and" Nothing
+                              (Seq z
+                                (Write z "__and" (Const z 0))
+                                (Par' z p1' p2')))
+                             where
+                              p1' = Seq z (Trap.ins' (aux p1)) check
+                              p2' = Seq z (Trap.ins' (aux p2)) check
+                              check = (If z (Equ z (Read z "__and") (Const z 1))
+                                        (Escape' z 0)
+                                        (Seq z
+                                          (Write z "__and" (Add z (Read z "__and") (Const z 1)))
+                                          (AwaitFor z)))
 
-aux (Or p1 p2)           = Clean' "Or" (Trap' (Par' p1' p2')) where
-                            p1' = (Seq (Trap.ins' (aux p1)) (Escape' 0))
-                            p2' = (Seq (Trap.ins' (aux p2)) (Escape' 0))
-aux (Or' p1 p2)          = Clean' "Or'" (Trap' (Par' p1' p2')) where
-                            p1' = (Seq (Trap.ins' (aux p1)) (Escape' 0))
-                            p2' = (Seq (Trap.ins' (aux p2)) (Escape' 0))
-aux (Pause' var p)       = Pause' var (aux p)
-aux (Trap' p)            = Trap' (aux p)
-aux (Clean' id p)        = Clean' id (aux p)
-aux p                    = p
+aux (Or z p1 p2)           = Clean' z "Or" (Trap' z (Par' z p1' p2')) where
+                             p1' = (Seq z (Trap.ins' (aux p1)) (Escape' z 0))
+                             p2' = (Seq z (Trap.ins' (aux p2)) (Escape' z 0))
+aux (Or' z p1 p2)          = Clean' z "Or'" (Trap' z (Par' z p1' p2')) where
+                             p1' = (Seq z (Trap.ins' (aux p1)) (Escape' z 0))
+                             p2' = (Seq z (Trap.ins' (aux p2)) (Escape' z 0))
+aux (Pause' z var p)       = Pause' z var (aux p)
+aux (Trap' z p)            = Trap' z (aux p)
+aux (Clean' z id p)        = Clean' z id (aux p)
+aux p                      = p

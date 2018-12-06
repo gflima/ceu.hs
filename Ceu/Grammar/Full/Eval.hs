@@ -21,7 +21,7 @@ import qualified Ceu.Grammar.Full.Compile.Seq      as Seq
 
 import qualified Ceu.Grammar.Check.Check as Check
 
-compile :: Stmt -> (Errors, Stmt)
+compile :: Stmt ann -> (Errors, Stmt ann)
 compile p = --traceShowId $ 
     comb Forever.compile  $
     comb Timer.compile    $
@@ -37,25 +37,26 @@ compile p = --traceShowId $
     comb Seq.compile      $
       ([], p)
   where
-    comb :: (Stmt -> (Errors,Stmt)) -> (Errors,Stmt) -> (Errors,Stmt)
+    comb :: (Stmt ann -> (Errors,Stmt ann)) -> (Errors,Stmt ann) -> (Errors,Stmt ann)
     comb f (es,p) = (es++es',p') where (es',p') = f p
 
-compile' :: Check.Options -> Stmt -> (Errors, G.Stmt)
+compile' :: (Eq ann, Show ann) => Check.Options -> Stmt ann -> (Errors, G.Stmt ann)
 compile' (o_simp,o_encl) p = (es2++es3++es4, p4)
   where
     p1       = if not o_encl then p else
-                (Seq (Var "_ret" Nothing) (Seq (Trap (Just "_ret") p) (AwaitFor)))
+                (Seq z (Var z "_ret" Nothing) (Seq z (Trap z (Just "_ret") p) (AwaitFor z)))
     (es2,p2) = compile p1
     (es3,p3) = toGrammar p2
     (es4,p4) = Check.compile (o_simp,False) p3
+    z        = getAnn p
 
-reaction :: E.Stmt -> In -> (E.Stmt,E.Outs)
+reaction :: E.Stmt ann -> In -> (E.Stmt ann, E.Outs)
 reaction p (ext,val) = (p''',outs) where
   (p'',_,_,_,outs) = E.steps (E.bcast ext [] p', 0, [], [], [])
-  p' = E.Var (("_"++ext), val) p
-  (E.Var _ p''') = p''
+  p' = E.Var (E.getAnn p) (("_"++ext), val) p
+  (E.Var _ _ p''') = p''
 
-evalFullProg :: Stmt -> [In] -> E.Result
+evalFullProg :: (Eq ann, Show ann) => Stmt ann -> [In] -> E.Result
 evalFullProg prog ins =
   let (es,s) = compile' (True,True) prog in
     if es == [] then

@@ -2,72 +2,72 @@ module Ceu.Grammar.Simplify where
 
 import Ceu.Grammar.Stmt
 
-simplify :: Stmt -> Stmt
+simplify :: (Eq ann) => (Stmt ann) -> (Stmt ann)
 
-simplify (Var id p) =
+simplify (Var z id p) =
   case p' of
-    Nop       -> Nop
-    Escape n  -> Escape n
-    otherwise -> Var id p'
+    Nop z'      -> Nop z'
+    Escape z' n -> Escape z' n
+    otherwise   -> Var z id p'
   where p' = simplify p
 
-simplify (Int id p) =
+simplify (Int z id p) =
   case p' of
-    Nop       -> Nop
-    Escape n  -> Escape n
-    otherwise -> Int id p'
+    Nop z'      -> Nop z'
+    Escape z' n -> Escape z' n
+    otherwise   -> Int z id p'
   where p' = simplify p
 
-simplify (If exp p q) =
-  if p' == q' then p' else (If exp p' q')
+simplify (If z exp p q) =
+  if p' == q' then p' else (If z exp p' q')
   where p' = simplify p
         q' = simplify q
 
-simplify (Seq p q) =
+simplify (Seq z p q) =
   case (p',q') of
-    (Nop,      q')  -> q'
-    (p',       Nop) -> p'
-    (Escape n, q')  -> Escape n
-    otherwise       -> Seq p' q'
+    (Nop _,      q')  -> q'
+    (p',       Nop _) -> p'
+    (Escape z' n, q') -> Escape z' n
+    otherwise         -> Seq z p' q'
   where p' = simplify p
         q' = simplify q
 
-simplify (Loop p) =
+simplify (Loop z p) =
   case p' of
-    Escape n  -> Escape n
-    otherwise -> Loop p'
+    Escape z' n -> Escape z' n
+    otherwise   -> Loop z p'
   where p' = simplify p
 
-simplify (Every evt p) = (Every evt (simplify p))   -- cannot contain `Escape`
+simplify (Every z evt p) = (Every z evt (simplify p))   -- cannot contain `Escape`
 
-simplify (Par p q) =
+simplify (Par z p q) =
   case (p',q') of
-    (Nop,   q')    -> q'
-    (p',    Nop)   -> p'
-    (Escape n, q') -> Escape n
-    otherwise      -> Par p' q'
+    (Nop _,   q')     -> q'
+    (p',    Nop _)    -> p'
+    (Escape z' n, q') -> Escape z' n
+    otherwise         -> Par z p' q'
   where p' = simplify p
         q' = simplify q
 
-simplify (Pause id p) =
+simplify (Pause z id p) =
   case p' of
-    Nop       -> Nop
-    Escape n  -> Escape n
-    otherwise -> Pause id p'
+    Nop z'      -> Nop z'
+    Escape z' n -> Escape z' n
+    otherwise   -> Pause z id p'
   where p' = simplify p
 
-simplify (Fin p) =
+simplify (Fin z p) =
   case p' of
-    Nop       -> Nop
-    otherwise -> Fin p'
+    Nop z'    -> Nop z'
+    otherwise -> Fin z p'
   where p' = simplify p
 
-simplify (Trap p) =
+simplify (Trap z p) =
   case p' of
-    Nop       -> Nop
-    Escape 0  -> Nop
-    Escape n  -> Escape n
-    otherwise -> Trap p'
+    Nop z'      -> Nop z'
+    Escape z' 0 -> Nop z'
+    Escape z' n -> Escape z' n
+    otherwise   -> Trap z p'
   where p' = simplify p
 
 simplify p = p

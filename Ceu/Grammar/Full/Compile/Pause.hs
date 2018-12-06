@@ -18,37 +18,37 @@ import Ceu.Grammar.Full.Grammar
 --          <...>
 --      end
 --  end
-compile :: Stmt -> (Errors, Stmt)
+compile :: (Stmt ann) -> (Errors, Stmt ann)
 compile p = ([], aux p)
 
-aux (Var' id Nothing p) = Var' id Nothing (aux p)
-aux (Int' id b p)       = Int' id b (aux p)
-aux (If exp p1 p2)      = If exp (aux p1) (aux p2)
-aux (Seq p1 p2)         = Seq (aux p1) (aux p2)
-aux (Loop p)            = Loop (aux p)
-aux (Par p1 p2)         = Par (aux p1) (aux p2)
-aux (And p1 p2)         = And (aux p1) (aux p2)
-aux (Or p1 p2)          = Or (aux p1) (aux p2)
-aux (Or' p1 p2)         = Or' (aux p1) (aux p2)
-aux (Spawn p)           = Spawn (aux p)
-aux (Trap' p)           = Trap' (aux p)
-aux (Pause evt p)       =
-  Var' ("__pause_var_"++evt) Nothing
-    (Int' ("__pause_int_"++evt) False
-      (Seq
-        (Write ("__pause_var_"++evt) (Const () 0))
-        (Or'
-          (Var' "__tmp" Nothing
-            (Every evt (Just "__tmp")
-              (If (Equ () (Read () "__tmp") (Const () 0))
-                  (Seq (Write ("__pause_var_"++evt) (Const () 0))
-                       (EmitInt ("__pause_int_"++evt) Nothing))
-                  Nop)))
-        (Or'
-          (Pause' ("__pause_var_"++evt) p)
-          (Var' "__tmp" Nothing
-            (Every evt (Just "__tmp")
-              (If (Equ () (Read () "__tmp") (Const () 1))
-                  (Write ("__pause_var_"++evt) (Const () 1))
-                  Nop)))))))
-aux p                   = p
+aux (Var' z id Nothing p) = Var' z id Nothing (aux p)
+aux (Int' z id b p)       = Int' z id b (aux p)
+aux (If z exp p1 p2)      = If z exp (aux p1) (aux p2)
+aux (Seq z p1 p2)         = Seq z (aux p1) (aux p2)
+aux (Loop z p)            = Loop z (aux p)
+aux (Par z p1 p2)         = Par z (aux p1) (aux p2)
+aux (And z p1 p2)         = And z (aux p1) (aux p2)
+aux (Or z p1 p2)          = Or z (aux p1) (aux p2)
+aux (Or' z p1 p2)         = Or' z (aux p1) (aux p2)
+aux (Spawn z p)           = Spawn z (aux p)
+aux (Trap' z p)           = Trap' z (aux p)
+aux (Pause z evt p)       =
+  Var' z ("__pause_var_"++evt) Nothing
+    (Int' z ("__pause_int_"++evt) False
+      (Seq z
+        (Write z ("__pause_var_"++evt) (Const z 0))
+        (Or' z
+          (Var' z "__tmp" Nothing
+            (Every z evt (Just "__tmp")
+              (If z (Equ z (Read z "__tmp") (Const z 0))
+                  (Seq z (Write z ("__pause_var_"++evt) (Const z 0))
+                       (EmitInt z ("__pause_int_"++evt) Nothing))
+                  (Nop z))))
+        (Or' z
+          (Pause' z ("__pause_var_"++evt) p)
+          (Var' z "__tmp" Nothing
+            (Every z evt (Just "__tmp")
+              (If z (Equ z (Read z "__tmp") (Const z 1))
+                  (Write z ("__pause_var_"++evt) (Const z 1))
+                  (Nop z))))))))
+aux p                     = p

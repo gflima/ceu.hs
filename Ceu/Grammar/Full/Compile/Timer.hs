@@ -15,30 +15,31 @@ import Ceu.Grammar.Full.Grammar
 --      end
 --  end
 
-compile :: Stmt -> (Errors, Stmt)
+compile :: Stmt ann -> (Errors, Stmt ann)
 compile p = ([], aux p)
-aux (Var' id Nothing p) = Var' id Nothing (aux p)
-aux (Int' id b p)       = Int' id b (aux p)
-aux (If exp p1 p2)      = If exp (aux p1) (aux p2)
-aux (Seq p1 p2)         = Seq (aux p1) (aux p2)
-aux (Loop p)            = Loop (aux p)
-aux (Par' p1 p2)        = Par' (aux p1) (aux p2)
-aux (Pause' var p)      = Pause' var (aux p)
-aux (Trap' p)           = Trap' (aux p)
-aux (Clean' id p)       = Clean' id (aux p)
-aux (AwaitTmr exp)      = Var' "__timer_await" Nothing
-                           (Seq
-                             (Write "__timer_await" exp)
-                             (Trap'
-                               (Loop (
-                                 (AwaitExt "TIMER" Nothing)                `Seq`
-                                 (Write "__timer_await"
-                                   (Sub () (Read () "__timer_await") (Const () 1))) `Seq`
-                                 (If (Equ () (Read () "__timer_await") (Const () 0))
-                                   (Escape' 0))
-                                   Nop
-                                 ))))
-aux p                   = p
+aux (Var' z id Nothing p) = Var' z id Nothing (aux p)
+aux (Int' z id b p)       = Int' z id b (aux p)
+aux (If z exp p1 p2)      = If z exp (aux p1) (aux p2)
+aux (Seq z p1 p2)         = Seq z (aux p1) (aux p2)
+aux (Loop z p)            = Loop z (aux p)
+aux (Par' z p1 p2)        = Par' z (aux p1) (aux p2)
+aux (Pause' z var p)      = Pause' z var (aux p)
+aux (Trap' z p)           = Trap' z (aux p)
+aux (Clean' z id p)       = Clean' z id (aux p)
+aux (AwaitTmr z exp)      = Var' z "__timer_await" Nothing
+                            (Seq z
+                              (Write z "__timer_await" exp)
+                              (Trap' z
+                                (Loop z
+                                  (Seq z
+                                    (AwaitExt z "TIMER" Nothing)
+                                    (Seq z
+                                      (Write z "__timer_await"
+                                        (Sub z (Read z "__timer_await") (Const z 1)))
+                                      (If z (Equ z (Read z "__timer_await") (Const z 0))
+                                        (Escape' z 0)
+                                        (Nop z)))))))
+aux p                     = p
 
 -- expand:
 -- expands ("TIMER",v) -> ("TIMER",Nothing) * v

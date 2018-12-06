@@ -6,21 +6,21 @@ import qualified Ceu.Grammar.Full.Compile.Trap as Trap
 
 -- compile
 
-compile :: Stmt -> (Errors, Stmt)
+compile :: Stmt ann -> (Errors, Stmt ann)
 compile p = ([], aux (-1) p)
 
-aux :: Int -> Stmt -> Stmt
-aux n (Var' var Nothing p) = Var' var Nothing (aux n p)
-aux n (Int' int b p)       = Int' int b (aux n p)
-aux n (If exp p1 p2)       = If exp (aux n p1) (aux n p2)
-aux n (Seq p1 p2)          = Seq (aux n p1) (aux n p2)
-aux n (Loop p)             = Clean' "Loop" (Trap' (Loop (aux (n+1) (Trap.ins' p))))
+aux :: Int -> Stmt ann -> Stmt ann
+aux n (Var' z var Nothing p) = Var' z var Nothing (aux n p)
+aux n (Int' z int b p)       = Int' z int b (aux n p)
+aux n (If z exp p1 p2)       = If z exp (aux n p1) (aux n p2)
+aux n (Seq z p1 p2)          = Seq z (aux n p1) (aux n p2)
+aux n (Loop z p)             = Clean' z "Loop" (Trap' z (Loop z (aux (n+1) (Trap.ins' p))))
 --aux (-1) Break            = error "remBreak: `break` without `loop`"
-aux n Break                = Escape' n
-aux n (Every evt var p)    = Every evt var (aux n p)
-aux n (Par' p1 p2)         = Par' (aux n p1) (aux n p2)
-aux n (Pause' var p)       = Pause' var (aux n p)
-aux n (Fin' p)             = Fin' (aux n p)
-aux n (Trap' p)            = Trap' (aux (n+1) p)
-aux n (Clean' id p)        = Clean' id (aux n p)
-aux n p                    = p
+aux n (Break z)              = Escape' z n
+aux n (Every z evt var p)    = Every z evt var (aux n p)
+aux n (Par' z p1 p2)         = Par' z (aux n p1) (aux n p2)
+aux n (Pause' z var p)       = Pause' z var (aux n p)
+aux n (Fin' z p)             = Fin' z (aux n p)
+aux n (Trap' z p)            = Trap' z (aux (n+1) p)
+aux n (Clean' z id p)        = Clean' z id (aux n p)
+aux n p                      = p
