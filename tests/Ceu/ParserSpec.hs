@@ -191,34 +191,34 @@ spec = do
         describe "nop:" $ do
             it "-" $
                 parse stmt_nop ""
-                `shouldBe` Right Nop
+                `shouldBe` Right (Nop ("",1,1))
 
         describe "escape:" $ do
             it "escape 0" $
                 parse stmt_escape "escape 0"
-                `shouldBe` Right (Escape Nothing (Just (Const ("",1,8) 0)))
+                `shouldBe` Right (Escape ("",1,1) Nothing (Just (Const ("",1,8) 0)))
             it "escape aaa" $
                 parse stmt_escape "escape aaa"
-                `shouldBe` Right (Escape Nothing (Just (Read ("",1,8) "aaa")))
+                `shouldBe` Right (Escape ("",1,1) Nothing (Just (Read ("",1,8) "aaa")))
 
         describe "var:" $ do
             it "var int x" $
                 parse stmt_var "var int x;"
-                `shouldBe` Right (Seq (Var "x" Nothing) Nop)
+                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (Nop ("",1,1)))
             it "var var x" $
                 parse stmt_var "var var x"
                 `shouldBe` Left "(line 1, column 8):\nunexpected \" \"\nexpecting digit, letter or \"_\""
             it "var int a <- 1" $
                 parse stmt_var "var int a <- 1"
-                `shouldBe` Right (Seq (Var "a" Nothing) (Write "a" (Const ("",1,14) 1)))
+                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "a" Nothing) (Write ("",1,11) "a" (Const ("",1,14) 1)))
             it "var int x <- await X" $
                 parse stmt_var "var int x <- await X"
-                `shouldBe` Right (Seq (Var "x" Nothing) (AwaitExt "X" (Just "x")))
+                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (AwaitExt ("",1,14) "X" (Just "x")))
 
         describe "write:" $ do
             it "x <- 1" $
                 parse stmt_write "x <- 1"
-                `shouldBe` Right (Write "x" (Const ("",1,6) 1))
+                `shouldBe` Right (Write ("",1,1) "x" (Const ("",1,6) 1))
             it "var <- 1" $
                 parse stmt_write "var <- 1"
                 `shouldBe` Left "(line 1, column 4):\nunexpected \" \"\nexpecting digit, letter or \"_\""
@@ -228,7 +228,7 @@ spec = do
         describe "awaitext:" $ do
             it "await X" $
                 parse (stmt_awaitext Nothing) "await X"
-                `shouldBe` Right (AwaitExt "X" Nothing)
+                `shouldBe` Right (AwaitExt ("",1,1) "X" Nothing)
             it "await x" $
                 parse (stmt_awaitext Nothing) "await x"
                 `shouldBe` Left "(line 1, column 7):\nunexpected \"x\""
@@ -236,20 +236,20 @@ spec = do
         describe "emitext:" $ do
             it "emit X" $
                 parse stmt_emitext "emit X"
-                `shouldBe` Right (EmitExt "X" Nothing)
+                `shouldBe` Right (EmitExt ("",1,1) "X" Nothing)
             it "emit x" $
                 parse stmt_emitext "emit x"
                 `shouldBe` Left "(line 1, column 6):\nunexpected \"x\""
             it "emit X -> 1" $
                 parse stmt_emitext "emit X -> 1"
-                `shouldBe` Right (EmitExt "X" (Just (Const ("",1,11) 1)))
+                `shouldBe` Right (EmitExt ("",1,1) "X" (Just (Const ("",1,11) 1)))
 
 -------------------------------------------------------------------------------
 
         describe "do-end:" $ do
             it "do escape 1 end" $
                 parse stmt_do "do escape 1 end"
-                `shouldBe` Right (Scope (Escape Nothing (Just (Const ("",1,11) 1))))
+                `shouldBe` Right (Scope ("",1,1) (Escape ("",1,4) Nothing (Just (Const ("",1,11) 1))))
             it "do end" $
                 parse (tk_key "do" >> stmt_nop >> tk_key "end") "do end"
                 `shouldBe` Right ()
@@ -258,7 +258,7 @@ spec = do
                 `shouldBe` Right ()
             it "do end" $
                 parse stmt_do "do end"
-                `shouldBe` Right (Scope Nop)
+                `shouldBe` Right (Scope ("",1,1) (Nop ("",1,4)))
 
         describe "if-then-else/if-else" $ do
             it "if 0 then escape 0" $
@@ -271,75 +271,75 @@ spec = do
 
             it "if 0 then escape 0 else escape 1 end" $
                 parse stmt_if "if 0 then escape 0 else escape 1 end"
-                `shouldBe` Right (If (Const ("",1,4) 0) (Escape Nothing (Just (Const ("",1,18) 0))) (Escape Nothing (Just (Const ("",1,32) 1))))
+                `shouldBe` Right (If ("",1,1) (Const ("",1,4) 0) (Escape ("",1,11) Nothing (Just (Const ("",1,18) 0))) (Escape ("",1,25) Nothing (Just (Const ("",1,32) 1))))
             it "if 1 then escape 1 end" $
                 parse stmt_if "if 1 then escape 1 end"
-                `shouldBe` Right (If (Const ("",1,4) 1) (Escape Nothing (Just (Const ("",1,18) 1))) Nop)
+                `shouldBe` Right (If ("",1,1) (Const ("",1,4) 1) (Escape ("",1,11) Nothing (Just (Const ("",1,18) 1))) (Nop ("",1,20)))
             it "if then escape 1 end" $
                 parse stmt_if "if then escape 1 end"
                 `shouldBe` Left "(line 1, column 8):\nunexpected \" \"\nexpecting digit, letter or \"_\""
             it "if then (if then else end) end" $
                 parse stmt_if "if 1 then ; if 0 then else escape 1 end ; end"
-                `shouldBe` Right (If (Const ("",1,4) 1) (If (Const ("",1,16) 0) Nop (Escape Nothing (Just (Const ("",1,35) 1)))) Nop)
+                `shouldBe` Right (If ("",1,1) (Const ("",1,4) 1) (If ("",1,13) (Const ("",1,16) 0) (Nop ("",1,23)) (Escape ("",1,28) Nothing (Just (Const ("",1,35) 1)))) (Nop ("",1,43)))
             it "if then (if then end) else end" $
                 parse stmt_if "if 0 then ; if 0 then end ; else escape 1 end"
-                `shouldBe` Right (If (Const ("",1,4) 0) (If (Const ("",1,16) 0) Nop Nop) (Escape Nothing (Just (Const ("",1,41) 1))))
+                `shouldBe` Right (If ("",1,1) (Const ("",1,4) 0) (If ("",1,13) (Const ("",1,16) 0) (Nop ("",1,23)) (Nop ("",1,23))) (Escape ("",1,34) Nothing (Just (Const ("",1,41) 1))))
             it "if 0 then . else/if 1 then escape 1 else ." $
                 parse stmt_if "if 0 then escape 0 else/if 1 then escape 1 else escape 0 end"
-                `shouldBe` Right (If (Const ("",1,4) 0) (Escape Nothing (Just (Const ("",1,18) 0))) (If (Const ("",1,28) 1) (Escape Nothing (Just (Const ("",1,42) 1))) (Escape Nothing (Just (Const ("",1,56) 0)))))
+                `shouldBe` Right (If ("",1,1) (Const ("",1,4) 0) (Escape ("",1,11) Nothing (Just (Const ("",1,18) 0))) (If ("",1,20) (Const ("",1,28) 1) (Escape ("",1,35) Nothing (Just (Const ("",1,42) 1))) (Escape ("",1,49) Nothing (Just (Const ("",1,56) 0)))))
 
 -------------------------------------------------------------------------------
 
         describe "par:" $ do
             it "par" $
                 parse stmt_par "par do with end"
-                `shouldBe` Right (Par Nop Nop)
+                `shouldBe` Right (Par ("",1,1) (Nop ("",1,8)) (Par ("",1,8) (Nop ("",1,13)) (AwaitFor ("",1,13))))
             it "par" $
                 parse stmt_par "par do escape 1 with escape 1 end"
-                `shouldBe` Right (Par (Escape Nothing (Just (Const ("",1,15) 1))) (Escape Nothing (Just (Const ("",1,29) 1))))
+                `shouldBe` Right (Par ("",1,1) (Escape ("",1,8) Nothing (Just (Const ("",1,15) 1))) (Par ("",1,17) (Escape ("",1,22) Nothing (Just (Const ("",1,29) 1))) (AwaitFor ("",1,31))))
             it "par" $
                 parse stmt_par "par do escape 1 with escape 2 with escape 3 end"
-                `shouldBe` Right (Par (Escape Nothing (Just (Const ("",1,15) 1))) (Par (Escape Nothing (Just (Const ("",1,29) 2))) (Escape Nothing (Just (Const ("",1,43) 3)))))
+                `shouldBe` Right (Par ("",1,1) (Escape ("",1,8) Nothing (Just (Const ("",1,15) 1))) (Par ("",1,17) (Escape ("",1,22) Nothing (Just (Const ("",1,29) 2))) (Par ("",1,31) (Escape ("",1,36) Nothing (Just (Const ("",1,43) 3))) (AwaitFor ("",1,45)))))
 
         describe "par/and:" $ do
             it "par/and" $
                 parse stmt_parand "par/and do with end"
-                `shouldBe` Right (And Nop Nop)
+                `shouldBe` Right (And ("",1,1) (Nop ("",1,12)) (And ("",1,12) (Nop ("",1,17)) (Nop ("",1,17))))
             it "par/and" $
                 parse stmt_parand "par/and do escape 1 with escape 1 end"
-                `shouldBe` Right (And (Escape Nothing (Just (Const ("",1,19) 1))) (Escape Nothing (Just (Const ("",1,33) 1))))
+                `shouldBe` Right (And ("",1,1) (Escape ("",1,12) Nothing (Just (Const ("",1,19) 1))) (And ("",1,21) (Escape ("",1,26) Nothing (Just (Const ("",1,33) 1))) (Nop ("",1,35))))
             it "par/and" $
                 parse stmt_parand "par/and do escape 1 with escape 2 with escape 3 end"
-                `shouldBe` Right (And (Escape Nothing (Just (Const ("",1,19) 1))) (And (Escape Nothing (Just (Const ("",1,33) 2))) (Escape Nothing (Just (Const ("",1,47) 3)))))
+                `shouldBe` Right (And ("",1,1) (Escape ("",1,12) Nothing (Just (Const ("",1,19) 1))) (And ("",1,21) (Escape ("",1,26) Nothing (Just (Const ("",1,33) 2))) (And ("",1,35) (Escape ("",1,40) Nothing (Just (Const ("",1,47) 3))) (Nop ("",1,49)))))
 
         describe "par/or:" $ do
             it "par/or" $
                 parse stmt_paror "par/or do with end"
-                `shouldBe` Right (Or Nop Nop)
+                `shouldBe` Right (Or ("",1,1) (Nop ("",1,11)) (Or ("",1,11) (Nop ("",1,16)) (AwaitFor ("",1,16))))
             it "par/or" $
                 parse stmt_paror "par/or do escape 1 with escape 1 end"
-                `shouldBe` Right (Or (Escape Nothing (Just (Const ("",1,18) 1))) (Escape Nothing (Just (Const ("",1,32) 1))))
+                `shouldBe` Right (Or ("",1,1) (Escape ("",1,11) Nothing (Just (Const ("",1,18) 1))) (Or ("",1,20) (Escape ("",1,25) Nothing (Just (Const ("",1,32) 1))) (AwaitFor ("",1,34))))
             it "par/or" $
                 parse stmt_paror "par/or do escape 1 with escape 2 with escape 3 end"
-                `shouldBe` Right (Or (Escape Nothing (Just (Const ("",1,18) 1))) (Or (Escape Nothing (Just (Const ("",1,32) 2))) (Escape Nothing (Just (Const ("",1,46) 3)))))
+                `shouldBe` Right (Or ("",1,1) (Escape ("",1,11) Nothing (Just (Const ("",1,18) 1))) (Or ("",1,20) (Escape ("",1,25) Nothing (Just (Const ("",1,32) 2))) (Or ("",1,34) (Escape ("",1,39) Nothing (Just (Const ("",1,46) 3))) (AwaitFor ("",1,48)))))
 
         describe "seq:" $ do
             it "do end; escape 1" $
-                parse stmt_seq "do end escape 1"
-                `shouldBe` Right (Seq (Scope Nop) (Escape Nothing (Just (Const ("",1,15) 1))))
+                parse (stmt_seq ("",1,1)) "do end escape 1"
+                `shouldBe` Right (Seq ("",1,1) (Scope ("",1,1) (Nop ("",1,4))) (Escape ("",1,8) Nothing (Just (Const ("",1,15) 1))))
 
         describe "stmt:" $ do
             it "var int x; escape 1" $
                 parse stmt "var int x ;escape 1"
-                `shouldBe` Right (Seq (Seq (Var "x" Nothing) Nop) (Escape Nothing (Just (Const ("",1,19) 1))))
+                `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (Nop ("",1,1))) (Escape ("",1,12) Nothing (Just (Const ("",1,19) 1))))
 
             it "var int x; x<-1; escape x" $
                 parse stmt "var int x ; x <- 1 ; escape x"
-                `shouldBe` Right (Seq (Seq (Var "x" Nothing) Nop) (Seq (Write "x" (Const ("",1,18) 1)) (Escape Nothing (Just (Read ("",1,29) "x")))))
+                `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (Nop ("",1,1))) (Seq ("",1,1) (Write ("",1,13) "x" (Const ("",1,18) 1)) (Escape ("",1,22) Nothing (Just (Read ("",1,29) "x")))))
 
             it "do ... end" $
                 parse stmt "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end"
-                `shouldBe` Right (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope (Scope Nop))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+                `shouldBe` Right (Scope ("",1,1) (Scope ("",1,4) (Scope ("",1,7) (Scope ("",1,10) (Scope ("",1,13) (Scope ("",1,16) (Scope ("",1,19) (Scope ("",1,22) (Scope ("",1,25) (Scope ("",1,28) (Scope ("",1,31) (Scope ("",1,34) (Scope ("",1,37) (Scope ("",1,40) (Scope ("",1,43) (Scope ("",1,46) (Scope ("",1,49) (Scope ("",1,52) (Scope ("",1,55) (Scope ("",1,58) (Scope ("",1,61) (Scope ("",1,64) (Scope ("",1,67) (Scope ("",1,70) (Scope ("",1,73) (Scope ("",1,76) (Scope ("",1,79) (Scope ("",1,82) (Scope ("",1,85) (Scope ("",1,88) (Scope ("",1,91) (Scope ("",1,94) (Scope ("",1,97) (Scope ("",1,100) (Scope ("",1,103) (Scope ("",1,106) (Scope ("",1,109) (Scope ("",1,112) (Scope ("",1,115) (Scope ("",1,118) (Scope ("",1,121) (Scope ("",1,124) (Scope ("",1,127) (Scope ("",1,130) (Scope ("",1,133) (Scope ("",1,136) (Scope ("",1,139) (Scope ("",1,142) (Scope ("",1,145) (Scope ("",1,148) (Scope ("",1,151) (Scope ("",1,154) (Scope ("",1,157) (Scope ("",1,160) (Scope ("",1,163) (Scope ("",1,166) (Scope ("",1,169) (Scope ("",1,172) (Scope ("",1,175) (Scope ("",1,178) (Scope ("",1,181) (Scope ("",1,184) (Scope ("",1,187) (Scope ("",1,190) (Scope ("",1,193) (Scope ("",1,196) (Scope ("",1,199) (Scope ("",1,202) (Scope ("",1,205) (Scope ("",1,208) (Scope ("",1,211) (Scope ("",1,214) (Scope ("",1,217) (Scope ("",1,220) (Scope ("",1,223) (Scope ("",1,226) (Scope ("",1,229) (Scope ("",1,232) (Scope ("",1,235) (Scope ("",1,238) (Scope ("",1,241) (Scope ("",1,244) (Scope ("",1,247) (Scope ("",1,250) (Scope ("",1,253) (Scope ("",1,256) (Scope ("",1,259) (Scope ("",1,262) (Scope ("",1,265) (Scope ("",1,268) (Scope ("",1,271) (Scope ("",1,274) (Scope ("",1,277) (Scope ("",1,280) (Scope ("",1,283) (Scope ("",1,286) (Scope ("",1,289) (Scope ("",1,292) (Scope ("",1,295) (Scope ("",1,298) (Scope ("",1,301) (Scope ("",1,304) (Scope ("",1,307) (Scope ("",1,310) (Scope ("",1,313) (Scope ("",1,316) (Scope ("",1,319) (Scope ("",1,322) (Scope ("",1,325) (Scope ("",1,328) (Scope ("",1,331) (Scope ("",1,334) (Scope ("",1,337) (Scope ("",1,340) (Scope ("",1,343) (Scope ("",1,346) (Scope ("",1,349) (Scope ("",1,352) (Scope ("",1,355) (Scope ("",1,358) (Scope ("",1,361) (Scope ("",1,364) (Scope ("",1,367) (Scope ("",1,370) (Scope ("",1,373) (Scope ("",1,376) (Scope ("",1,379) (Scope ("",1,382) (Scope ("",1,385) (Scope ("",1,388) (Scope ("",1,391) (Scope ("",1,394) (Scope ("",1,397) (Scope ("",1,400) (Scope ("",1,403) (Scope ("",1,406) (Scope ("",1,409) (Scope ("",1,412) (Scope ("",1,415) (Scope ("",1,418) (Scope ("",1,421) (Scope ("",1,424) (Scope ("",1,427) (Scope ("",1,430) (Scope ("",1,433) (Scope ("",1,436) (Scope ("",1,439) (Scope ("",1,442) (Scope ("",1,445) (Scope ("",1,448) (Scope ("",1,451) (Scope ("",1,454) (Scope ("",1,457) (Scope ("",1,460) (Scope ("",1,463) (Scope ("",1,466) (Scope ("",1,469) (Scope ("",1,472) (Scope ("",1,475) (Scope ("",1,478) (Scope ("",1,481) (Scope ("",1,484) (Scope ("",1,487) (Scope ("",1,490) (Scope ("",1,493) (Scope ("",1,496) (Scope ("",1,499) (Scope ("",1,502) (Scope ("",1,505) (Scope ("",1,508) (Scope ("",1,511) (Scope ("",1,514) (Scope ("",1,517) (Scope ("",1,520) (Scope ("",1,523) (Scope ("",1,526) (Scope ("",1,529) (Scope ("",1,532) (Scope ("",1,535) (Scope ("",1,538) (Scope ("",1,541) (Scope ("",1,544) (Scope ("",1,547) (Scope ("",1,550) (Scope ("",1,553) (Scope ("",1,556) (Scope ("",1,559) (Scope ("",1,562) (Scope ("",1,565) (Scope ("",1,568) (Scope ("",1,571) (Scope ("",1,574) (Scope ("",1,577) (Scope ("",1,580) (Scope ("",1,583) (Scope ("",1,586) (Scope ("",1,589) (Scope ("",1,592) (Scope ("",1,595) (Scope ("",1,598) (Scope ("",1,601) (Scope ("",1,604) (Scope ("",1,607) (Scope ("",1,610) (Scope ("",1,613) (Scope ("",1,616) (Scope ("",1,619) (Scope ("",1,622) (Scope ("",1,625) (Scope ("",1,628) (Scope ("",1,631) (Scope ("",1,634) (Scope ("",1,637) (Scope ("",1,640) (Scope ("",1,643) (Scope ("",1,646) (Scope ("",1,649) (Scope ("",1,652) (Scope ("",1,655) (Scope ("",1,658) (Scope ("",1,661) (Scope ("",1,664) (Scope ("",1,667) (Scope ("",1,670) (Scope ("",1,673) (Scope ("",1,676) (Scope ("",1,679) (Scope ("",1,682) (Scope ("",1,685) (Scope ("",1,688) (Scope ("",1,691) (Scope ("",1,694) (Scope ("",1,697) (Scope ("",1,700) (Scope ("",1,703) (Scope ("",1,706) (Scope ("",1,709) (Scope ("",1,712) (Scope ("",1,715) (Scope ("",1,718) (Scope ("",1,721) (Scope ("",1,724) (Scope ("",1,727) (Scope ("",1,730) (Scope ("",1,733) (Scope ("",1,736) (Scope ("",1,739) (Scope ("",1,742) (Scope ("",1,745) (Scope ("",1,748) (Scope ("",1,751) (Scope ("",1,754) (Scope ("",1,757) (Scope ("",1,760) (Scope ("",1,763) (Scope ("",1,766) (Nop ("",1,769))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 
     where
         parse :: Parser a -> String -> Either String a
@@ -348,4 +348,3 @@ spec = do
                 case v of
                     (Right v') -> Right v'
                     (Left  v') -> Left (show v')
-                
