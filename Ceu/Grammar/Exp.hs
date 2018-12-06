@@ -5,51 +5,58 @@ import Text.Printf
 import Ceu.Grammar.Globals
 
 -- Expession.
-data Exp
-  = Const Val                   -- constant
-  | Read ID_Var                 -- variable read
-  | Umn Exp                     -- unary minus
-  | Add Exp Exp                 -- addition
-  | Sub Exp Exp                 -- subtraction
-  | Mul Exp Exp                 -- multiplication
-  | Div Exp Exp                 -- division
-  | Equ Exp Exp                 -- `==` equal
-  | Lte Exp Exp                 -- `<=` less-than-equal
+data Exp ann
+  = Const ann Val                 -- constant
+  | Read  ann ID_Var              -- variable read
+  | Umn   ann (Exp ann)           -- unary minus
+  | Add   ann (Exp ann) (Exp ann) -- addition
+  | Sub   ann (Exp ann) (Exp ann) -- subtraction
+  | Mul   ann (Exp ann) (Exp ann) -- multiplication
+  | Div   ann (Exp ann) (Exp ann) -- division
+  | Equ   ann (Exp ann) (Exp ann) -- `==` equal
+  | Lte   ann (Exp ann) (Exp ann) -- `<=` less-than-equal
   deriving (Eq, Show)
 
-infixl 5 `Equ`                  -- `Equ` associates to the left
-infixl 5 `Lte`                  -- `Lte` associates to the left
-infixl 6 `Add`                  -- `Add` associates to the left
-infixl 6 `Sub`                  -- `Sub` associates to the left
-infixl 7 `Mul`                  -- `Mul` associates to the left
-infixl 7 `Div`                  -- `Div` associates to the left
+eEqu a b = Equ () a b
+eLte a b = Lte () a b
+eAdd a b = Add () a b
+eSub a b = Sub () a b
+eMul a b = Mul () a b
+eDiv a b = Div () a b
+
+infixl 5 `eEqu` -- `Equ` associates to the left
+infixl 5 `eLte` -- `Lte` associates to the left
+infixl 6 `eAdd` -- `Add` associates to the left
+infixl 6 `eSub` -- `Sub` associates to the left
+infixl 7 `eMul` -- `Mul` associates to the left
+infixl 7 `eDiv` -- `Div` associates to the left
 
 -- Shows expression.
-showExp :: Exp -> String
+showExp :: Exp ann -> String
 showExp expr = case expr of
-  Const n   -> show n
-  Read v    -> v
-  Umn e     -> printf "(-%s)"    (showExp e)
-  Add e1 e2 -> printf "(%s+%s)"  (showExp e1) (showExp e2)
-  Sub e1 e2 -> printf "(%s-%s)"  (showExp e1) (showExp e2)
-  Mul e1 e2 -> printf "(%s*%s)"  (showExp e1) (showExp e2)
-  Div e1 e2 -> printf "(%s/%s)"  (showExp e1) (showExp e2)
-  Equ e1 e2 -> printf "(%s==%s)" (showExp e1) (showExp e2)
-  Lte e1 e2 -> printf "(%s<=%s)" (showExp e1) (showExp e2)
+  Const _ n     -> show n
+  Read  _ v     -> v
+  Umn   _ e     -> printf "(-%s)"    (showExp e)
+  Add   _ e1 e2 -> printf "(%s+%s)"  (showExp e1) (showExp e2)
+  Sub   _ e1 e2 -> printf "(%s-%s)"  (showExp e1) (showExp e2)
+  Mul   _ e1 e2 -> printf "(%s*%s)"  (showExp e1) (showExp e2)
+  Div   _ e1 e2 -> printf "(%s/%s)"  (showExp e1) (showExp e2)
+  Equ   _ e1 e2 -> printf "(%s==%s)" (showExp e1) (showExp e2)
+  Lte   _ e1 e2 -> printf "(%s<=%s)" (showExp e1) (showExp e2)
 
 -------------------------------------------------------------------------------
 
-exp2word :: Exp -> String
+exp2word :: Exp ann -> String
 exp2word ext = case ext of
-  Const n       -> "constant " ++ (show n)
-  Read var      -> "read access to '" ++ var ++ "'"
-  Umn _         -> "unary minus"
-  Add _ _       -> "addition"
-  Sub _ _       -> "subtraction"
-  Mul _ _       -> "multiplication"
-  Div _ _       -> "division"
-  Equ _ _       -> "equal comparison"
-  Lte _ _       -> "less-then comparison"
+  Const _ n   -> "constant " ++ (show n)
+  Read  _ var -> "read access to '" ++ var ++ "'"
+  Umn   _ _   -> "unary minus"
+  Add   _ _ _ -> "addition"
+  Sub   _ _ _ -> "subtraction"
+  Mul   _ _ _ -> "multiplication"
+  Div   _ _ _ -> "division"
+  Equ   _ _ _ -> "equal comparison"
+  Lte   _ _ _ -> "less-then comparison"
 
-err_exp_msg :: Exp -> String -> String
+err_exp_msg :: Exp ann -> String -> String
 err_exp_msg exp msg = (exp2word exp) ++ ": " ++ msg

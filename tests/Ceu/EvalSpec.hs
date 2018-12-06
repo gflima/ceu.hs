@@ -9,14 +9,14 @@ import Test.Hspec
 import Text.Printf
 
 -- Declare Exp, Stmt, and Desc as datatypes that can be fully evaluated.
-instance NFData Exp where
-  rnf (Const _)   = ()
-  rnf (Read _)    = ()
-  rnf (Umn e)     = rnf e
-  rnf (Add e1 e2) = rnf e1 `deepseq` rnf e2
-  rnf (Sub e1 e2) = rnf e1 `deepseq` rnf e2
-  rnf (Mul e1 e2) = rnf e1 `deepseq` rnf e2
-  rnf (Div e1 e2) = rnf e1 `deepseq` rnf e2
+instance NFData (Exp ann) where
+  rnf (Const _ _)     = ()
+  rnf (Read  _ _)     = ()
+  rnf (Umn   _ e)     = rnf e
+  rnf (Add   _ e1 e2) = rnf e1 `deepseq` rnf e2
+  rnf (Sub   _ e1 e2) = rnf e1 `deepseq` rnf e2
+  rnf (Mul   _ e1 e2) = rnf e1 `deepseq` rnf e2
+  rnf (Div   _ e1 e2) = rnf e1 `deepseq` rnf e2
 
 instance NFData Stmt where
   rnf (Write var expr) = rnf expr
@@ -84,25 +84,25 @@ spec = do
           varsRead vars "x" `shouldBe` 1
 
   describe "varsEval vars exp" $ do
-      it "pass: vars == [] && exp == (Const _)" $
-        varsEval [] (Const 0) `shouldBe` 0
+      it "pass: vars == [] && exp == (Const () _)" $
+        varsEval [] (Const () 0) `shouldBe` 0
 
       it "fail: undeclared variable" $
-        forceEval (varsEval [] (Read "x"))
+        forceEval (varsEval [] (Read () "x"))
         `shouldThrow` errorCall "varsRead: undeclared variable: x"
 
       it "fail: uninitialized variable" $
-        forceEval (varsEval [("x",Nothing)] (Read "x"))
+        forceEval (varsEval [("x",Nothing)] (Read () "x"))
         `shouldThrow` errorCall "varsRead: uninitialized variable: x"
 
       it "pass: eval in simple env" $
         let vars = [("x",Just 1),("y",Just 2)] in
-          varsEval vars (((Read "x") `Sub` Const 3) `Add` Umn (Read "y"))
+          varsEval vars (((Read () "x") `eSub` Const () 3) `eAdd` Umn () (Read () "y"))
           `shouldBe` (-4)
 
       it "pass: eval in complex env" $
         let vars = [("y",Just 2),("x",Just 1),("y",Just 99),("x",Just 99)] in
-          varsEval vars (((Read "x") `Sub` Const 3) `Add` Umn (Read "y"))
+          varsEval vars (((Read () "x") `eSub` Const () 3) `eAdd` Umn () (Read () "y"))
           `shouldBe` (-4)
 
   --------------------------------------------------------------------------
@@ -129,26 +129,26 @@ spec = do
     -- write --
     describe "(Write id exp)" $ do
       it "fail: [] x=y (undeclared variable)" $
-        (forceEval $ step (Write "x" (Read "y"), 0, [], [], []))
+        (forceEval $ step (Write "x" (Read () "y"), 0, [], [], []))
         `shouldThrow` errorCall "varsWrite: undeclared variable: x"
 
       it "fail: [] x=1 (undeclared variable)" $
-        (forceEval $ step (Write "x" (Const 1), 0, [], [], []))
+        (forceEval $ step (Write "x" (Const () 1), 0, [], [], []))
         `shouldThrow` errorCall "varsWrite: undeclared variable: x"
 
       it "pass: [x=?] x=1" $
-        step (Var ("x",Nothing) (Write "x" (Const 1)), 0, [], [], [])
+        step (Var ("x",Nothing) (Write "x" (Const () 1)), 0, [], [], [])
         `shouldBe` (Var ("x",(Just 1)) Nop, 0, [], [], [])
 
       it "pass: [x=1] x=2" $
-        step (Var ("x",(Just 1)) (Write "x" (Const 2)), 0, [], [], [])
+        step (Var ("x",(Just 1)) (Write "x" (Const () 2)), 0, [], [], [])
         `shouldBe` (Var ("x",(Just 2)) Nop, 0, [], [], [])
 
       -- TODO: test is correct but fails
       it "fail: [x=1,y=?] x=y (uninitialized variable) | TODO: ok" $
         let p = Var ("x",(Just 1))
                (Var ("y",Nothing)
-                 (Write "x" (Read "y"))) in
+                 (Write "x" (Read () "y"))) in
           (forceEval $ step (p, 0, [], [], []))
           `shouldThrow` errorCall "varsRead: uninitialized variable: y"
 
@@ -157,29 +157,29 @@ spec = do
         `shouldThrow` errorCall "evtsEmit: undeclared event: a"
 
       it "fail: TODO: ok" $
-        (forceEval $ step (Var ("_ret",Nothing) ((Write "_ret" (Const 25)) `Seq` (EmitInt "a")), 0, [], [], []))
+        (forceEval $ step (Var ("_ret",Nothing) ((Write "_ret" (Const () 25)) `Seq` (EmitInt "a")), 0, [], [], []))
         `shouldThrow` errorCall "evtsEmit: undeclared event: a"
 
       it "pass: nop; x=1" $
         step
         (Var ("x",Nothing)
-          (Nop `Seq` (Write "x" (Const 1))), 0, [], [], [])
+          (Nop `Seq` (Write "x" (Const () 1))), 0, [], [], [])
         `shouldBe`
         (Var ("x",Nothing)
-          (Write "x" (Const 1)), 0, [], [], [])
+          (Write "x" (Const () 1)), 0, [], [], [])
 
       it "pass: [x=1,y=?] y=x+2" $
         step (
           (Var ("x",(Just 1))
           (Var ("y",Nothing)
-            (Write "y" (Read "x" `Add` Const 2))), 0, [], [], []))
+            (Write "y" (Read () "x" `eAdd` Const () 2))), 0, [], [], []))
         `shouldBe` (Var ("x",(Just 1)) (Var ("y",(Just 3)) Nop),0,[],[], [])
 
       it "pass: [x=1,y=?] y=x+2" $
         step
         (Var ("x",(Just 1))
         (Var ("y",Nothing)
-          (Write "y" (Read "x" `Add` Const 2))), 0, [], [], [])
+          (Write "y" (Read () "x" `eAdd` Const () 2))), 0, [], [], [])
         `shouldBe`
         (Var ("x",(Just 1))
         (Var ("y",(Just 3)) Nop), 0, [], [], [])
@@ -187,7 +187,7 @@ spec = do
       it "pass: [x=?] x=-(5+1)" $
         step
         (Var ("x",(Just 0))
-          (Write "x" (Umn (Const 5 `Add` Const 1))), 0, [], [], [])
+          (Write "x" (Umn () (Const () 5 `eAdd` Const () 1))), 0, [], [], [])
         `shouldBe`
         (Var ("x",(Just (-6))) Nop, 0, [], [], [])
 
@@ -294,15 +294,15 @@ spec = do
   -- if-true/false --
   describe "(If exp p q)" $ do
       it "fail: undeclared variable" $
-        forceEval (step (If (Read "x") Nop (Escape 0), 0, [], [], []))
+        forceEval (step (If (Read () "x") Nop (Escape 0), 0, [], [], []))
         `shouldThrow` errorCall "varsRead: undeclared variable: x"
 
       it "pass: x == 0" $
-        step (If (Read "x") Nop (Escape 0), 0, [("x",Just 0)], [], [])
+        step (If (Read () "x") Nop (Escape 0), 0, [("x",Just 0)], [], [])
         `shouldBe` ((Escape 0), 0, [("x",Just 0)], [], [])
 
       it "pass: x /= 0" $
-        step (If (Read "x") Nop (Escape 0), 0, [("x",Just 1)], [], [])
+        step (If (Read () "x") Nop (Escape 0), 0, [("x",Just 1)], [], [])
         `shouldBe` (Nop, 0, [("x",Just 1)], [], [])
 
 {-
@@ -922,7 +922,7 @@ spec = do
     describe "one+ steps" $ do
 
       stepsItPass
-        (Var ("x",Nothing) (Write "x" (Const 0)), 3, [], [], [])
+        (Var ("x",Nothing) (Write "x" (Const () 0)), 3, [], [], [])
         (Nop, 0, [], [], [])
 
       stepsItPass
@@ -1071,8 +1071,8 @@ spec = do
 
     evalProgItSuccess (11,[[]])
       [] (G.Var "a"
-           (G.Write "a" (Const 1) `G.Seq`
-            G.Write "_ret" (Read "a" `Add` Const 10) `G.Seq`
+           (G.Write "a" (Const () 1) `G.Seq`
+            G.Write "_ret" (Read () "a" `eAdd` Const () 10) `G.Seq`
             G.Escape 0))
 
     evalProgItFail ["trap: missing `escape` statement","escape: orphan `escape` statement","await: unreachable statement"]
@@ -1081,95 +1081,95 @@ spec = do
     evalProgItFail ["declaration: variable '_ret' is already declared"]
       [] (G.Var "a"
            (G.Var "_ret"
-             (G.Write "a" (Const 1) `G.Seq`
-              G.Write "_ret" (Read "a" `Add` Const 10) `G.Seq`
+             (G.Write "a" (Const () 1) `G.Seq`
+              G.Write "_ret" (Read () "a" `eAdd` Const () 10) `G.Seq`
               G.Escape 0)))
 
     evalProgItFail ["declaration: variable '_ret' is already declared"]
-      [] (G.Write "_ret" (Const 1) `G.Seq`
-          G.Var "_ret" (G.Write "_ret" (Const 99)) `G.Seq`
+      [] (G.Write "_ret" (Const () 1) `G.Seq`
+          G.Var "_ret" (G.Write "_ret" (Const () 99)) `G.Seq`
           G.Escape 0)
 
     evalProgItSuccess (11,[[]])
       [] (G.Var "a"
-           (G.Write "a" (Const 1) `G.Seq`
-            G.Var "b" (G.Write "b" (Const 99)) `G.Seq`
-            G.Write "_ret" (Read "a" `Add` Const 10) `G.Seq`
+           (G.Write "a" (Const () 1) `G.Seq`
+            G.Var "b" (G.Write "b" (Const () 99)) `G.Seq`
+            G.Write "_ret" (Read () "a" `eAdd` Const () 10) `G.Seq`
             G.Escape 0))
 
     evalProgItFail ["declaration: variable 'a' is already declared"]
       [] (G.Var "a"
-           (G.Write "a" (Const 1) `G.Seq`
-            G.Var "a" (G.Write "a" (Const 99)) `G.Seq`
-            G.Write "_ret" (Read "a" `Add` Const 10) `G.Seq`
+           (G.Write "a" (Const () 1) `G.Seq`
+            G.Var "a" (G.Write "a" (Const () 99)) `G.Seq`
+            G.Write "_ret" (Read () "a" `eAdd` Const () 10) `G.Seq`
             G.Escape 0))
 
     evalProgItSuccess (2,[[]])
-      [] (G.Write "_ret" (Const 1) `G.Seq`
-          G.Var "_" (G.Write "_ret" (Const 2)) `G.Seq`
+      [] (G.Write "_ret" (Const () 1) `G.Seq`
+          G.Var "_" (G.Write "_ret" (Const () 2)) `G.Seq`
           G.Escape 0)
 
     evalProgItSuccess (11,[[]])
       [] (G.Var "a"
-           (G.Write "a" (Const 1) `G.Seq`
+           (G.Write "a" (Const () 1) `G.Seq`
             G.Trap (G.Par
-             (G.Var "b" (G.Write "b" (Const 99) `G.Seq` G.AwaitExt "A") `G.Seq` (G.AwaitExt "FOREVER"))
+             (G.Var "b" (G.Write "b" (Const () 99) `G.Seq` G.AwaitExt "A") `G.Seq` (G.AwaitExt "FOREVER"))
              (G.Escape 0)) `G.Seq`
-           G.Write "_ret" (Read "a" `Add` Const 10) `G.Seq`
+           G.Write "_ret" (Read () "a" `eAdd` Const () 10) `G.Seq`
            G.Escape 0))
 
     evalProgItFail ["trap: missing `escape` statement"]
       [] (G.Trap (G.Par
-           (G.Var "x" (G.Write "_ret" (Const 1) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
+           (G.Var "x" (G.Write "_ret" (Const () 1) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
            (G.Escape 1)))
 
     evalProgItSuccess (1,[[]])
       [] (G.Seq (G.Trap (G.Par
-           (G.Var "x" (G.Write "_ret" (Const 1) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
+           (G.Var "x" (G.Write "_ret" (Const () 1) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
            (G.Escape 0))) (G.Escape 0))
 
     evalProgItFail ["loop: `loop` never iterates","declaration: variable 'a' is already declared"]
       [] (G.Var "a"
-           (G.Write "a" (Const 1) `G.Seq`
+           (G.Write "a" (Const () 1) `G.Seq`
             G.Trap (G.Loop (G.Par
-                  (G.Var "a" (G.Write "a" (Const 99) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
+                  (G.Var "a" (G.Write "a" (Const () 99) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
                   (G.Escape 0))) `G.Seq`
-             G.Write "_ret" (Read "a" `Add` Const 10) `G.Seq`
+             G.Write "_ret" (Read () "a" `eAdd` Const () 10) `G.Seq`
             G.Escape 0))
 
     evalProgItSuccess (11,[[]])
       [] (G.Var "a"
-           (G.Write "a" (Const 1) `G.Seq`
+           (G.Write "a" (Const () 1) `G.Seq`
             G.Trap (G.Par
-                  (G.Var "b" (G.Write "b" (Const 99) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
+                  (G.Var "b" (G.Write "b" (Const () 99) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
                   (G.Escape 0)) `G.Seq`
-            G.Write "_ret" (Read "a" `Add` Const 10) `G.Seq`
+            G.Write "_ret" (Read () "a" `eAdd` Const () 10) `G.Seq`
             G.Escape 0))
 
     evalProgItFail ["loop: `loop` never iterates"]
       [] (G.Seq (G.Trap (G.Loop (G.Par
-                 (G.Var "x" (G.Write "_ret" (Const 1) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
+                 (G.Var "x" (G.Write "_ret" (Const () 1) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
                  (G.Escape 0)))) (G.Escape 0))
 
     evalProgItSuccess (1,[[]])
       [] (G.Seq (G.Trap (G.Par
-                 (G.Var "x" (G.Write "_ret" (Const 1) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
+                 (G.Var "x" (G.Write "_ret" (Const () 1) `G.Seq` G.AwaitExt "A" `G.Seq` G.AwaitExt "FOREVER"))
                  (G.Escape 0))) (G.Escape 0))
 
     evalProgItSuccess (5,[[]]) [] (
-      (G.Write "_ret" (Const 1)) `G.Seq`
+      (G.Write "_ret" (Const () 1)) `G.Seq`
       (G.Int "a"
         (G.Trap
         (G.Par
-          ((G.AwaitInt "a") `G.Seq` (G.Write "_ret" (Const 5)) `G.Seq` (G.Escape 0))
+          ((G.AwaitInt "a") `G.Seq` (G.Write "_ret" (Const () 5)) `G.Seq` (G.Escape 0))
           ((G.EmitInt "a") `G.Seq` G.AwaitExt "FOREVER")))) `G.Seq`
       (G.Escape 0))
 
     evalProgItSuccess (5,[[]]) [] (
-      (G.Write "_ret" (Const 1)) `G.Seq`
+      (G.Write "_ret" (Const () 1)) `G.Seq`
       (G.Int "a"
         (G.Trap (G.Par
-          ((G.AwaitInt "a") `G.Seq` (G.Write "_ret" (Const 5)) `G.Seq` (G.Escape 0))
+          ((G.AwaitInt "a") `G.Seq` (G.Write "_ret" (Const () 5)) `G.Seq` (G.Escape 0))
           (G.Seq (G.Trap (G.Par (G.Fin (G.EmitInt "a")) (G.Escape 0))) (G.Escape 0)))
       )) `G.Seq` (G.Escape 0))
 
@@ -1186,12 +1186,12 @@ escape x;
 -}
     evalProgItSuccess (99,[[]]) [] (
       (G.Var "x" (
-        (G.Write "x" (Const 10)) `G.Seq`
+        (G.Write "x" (Const () 10)) `G.Seq`
         (G.Trap (G.Par
           (G.Var "y" (G.AwaitExt "FOREVER"))
-          (G.Seq (G.Write "x" (Const 99)) (G.Escape 0))
+          (G.Seq (G.Write "x" (Const () 99)) (G.Escape 0))
         )) `G.Seq`
-        (G.Write "_ret" (Read "x")) `G.Seq`
+        (G.Write "_ret" (Read () "x")) `G.Seq`
         (G.Escape 0)
       )))
 
@@ -1199,36 +1199,36 @@ escape x;
       (G.Seq (G.Seq
         (G.Var "x"
           (G.Seq
-            (G.Write "x" (Const 1))
+            (G.Write "x" (Const () 1))
             (G.Int "e"
               (G.Trap (G.Par
-                (G.Seq (G.AwaitExt "A") (G.Seq (G.Write "x" (Const 0)) (G.Seq (G.EmitInt "e") (G.AwaitExt "FOREVER"))))
+                (G.Seq (G.AwaitExt "A") (G.Seq (G.Write "x" (Const () 0)) (G.Seq (G.EmitInt "e") (G.AwaitExt "FOREVER"))))
                 (G.Seq (G.Pause "x" (G.Trap (G.Par (G.Seq (G.AwaitInt "e") (G.Escape 0)) (G.EmitInt "e" `G.Seq` G.AwaitExt "FOREVER")))) (G.Escape 0)))))))
-        (G.Write "_ret" (Const 99))) (G.Escape 0))
+        (G.Write "_ret" (Const () 99))) (G.Escape 0))
 
     -- multiple inputs
 
     evalProgItSuccess (1,[[],[]])
-      ["A"] (G.AwaitExt "A" `G.Seq` G.Write "_ret" (Const 1) `G.Seq` (G.Escape 0))
+      ["A"] (G.AwaitExt "A" `G.Seq` G.Write "_ret" (Const () 1) `G.Seq` (G.Escape 0))
 
     evalProgItFail ["program didn't terminate"]
-      [] (G.AwaitExt "A" `G.Seq` G.Write "_ret" (Const 1) `G.Seq` G.Escape 0)
+      [] (G.AwaitExt "A" `G.Seq` G.Write "_ret" (Const () 1) `G.Seq` G.Escape 0)
 
     evalProgItFail ["program didn't terminate"]
-      ["B"] (G.AwaitExt "A" `G.Seq` G.Write "_ret" (Const 1) `G.Seq` G.Escape 0)
+      ["B"] (G.AwaitExt "A" `G.Seq` G.Write "_ret" (Const () 1) `G.Seq` G.Escape 0)
 
     evalProgItFail ["pending inputs"]
-      ["A","A"] (G.AwaitExt "A" `G.Seq` G.Write "_ret" (Const 1) `G.Seq` G.Escape 0)
+      ["A","A"] (G.AwaitExt "A" `G.Seq` G.Write "_ret" (Const () 1) `G.Seq` G.Escape 0)
 
     evalProgItSuccess (1,[[],[],[]])
-      ["A","B"] (G.AwaitExt "A" `G.Seq` G.AwaitExt "B" `G.Seq` G.Write "_ret" (Const 1) `G.Seq` G.Escape 0)
+      ["A","B"] (G.AwaitExt "A" `G.Seq` G.AwaitExt "B" `G.Seq` G.Write "_ret" (Const () 1) `G.Seq` G.Escape 0)
 
-    evalProgItSuccess (1,[[]]) [] (G.Write "_ret" (Const 1) `G.Seq` G.Escape 0)
+    evalProgItSuccess (1,[[]]) [] (G.Write "_ret" (Const () 1) `G.Seq` G.Escape 0)
 
     -- multiple outputs
 
     evalProgItSuccess (1,[[],[("O",Nothing)],[("O",Nothing)],[]]) ["I","I","F"]
-      (G.Seq (G.Seq (G.Write "_ret" (Const 1))
+      (G.Seq (G.Seq (G.Write "_ret" (Const () 1))
         (G.Trap (G.Par (G.Seq (G.AwaitExt "F") (G.Escape 0)) (G.Every "I" (G.EmitExt "O" Nothing))))) (G.Escape 0))
 
       where

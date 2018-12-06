@@ -15,55 +15,55 @@ toSource pos = (sourceName pos, sourceLine pos, sourceColumn pos)
 
 -------------------------------------------------------------------------------
 
-expr_const :: Parser Exp
+expr_const :: Parser (Exp ())
 expr_const = do
     num <- tk_num
-    return $ Const num
+    return $ Const () num
 
-expr_read :: Parser Exp
+expr_read :: Parser (Exp ())
 expr_read = do
     str <- tk_var
-    return $ Read str
+    return $ Read () str
 
-expr_umn :: Parser Exp
+expr_umn :: Parser (Exp ())
 expr_umn = do
     void <- tk_str "-"
     exp  <- expr
-    return $ Umn exp
+    return $ Umn () exp
 
-expr_parens :: Parser Exp
+expr_parens :: Parser (Exp ())
 expr_parens = do
     void <- tk_str "("
     exp  <- expr
     void <- tk_str ")"
     return exp
 
-expr_prim :: Parser Exp
+expr_prim :: Parser (Exp ())
 expr_prim = (expr_const <|> expr_read <|> expr_umn <|> expr_parens)
 
 -------------------------------------------------------------------------------
 
-expr_add_sub :: Parser Exp
+expr_add_sub :: Parser (Exp ())
 expr_add_sub = chainl1 expr_mul_div op where
     op = do
         void <- tk_str "+"
-        return Add
+        return (\a b -> Add () a b)
      <|> do
         void <- tk_str "-"
-        return Sub
+        return (\a b -> Sub () a b)
 
-expr_mul_div :: Parser Exp
+expr_mul_div :: Parser (Exp ())
 expr_mul_div = chainl1 expr_prim op where
     op = do
         void <- tk_str "*"
-        return Mul
+        return (\a b -> Mul () a b)
      <|> do
         void <- tk_str "/"
-        return Div
+        return (\a b -> Div () a b)
 
 -------------------------------------------------------------------------------
 
-expr :: Parser Exp
+expr :: Parser (Exp ())
 expr = do
     e <- expr_add_sub
     return e

@@ -18,41 +18,41 @@ type Fin = (Stmt, Stmt, Stmt)
 
 -- Program (pg 5).
 data Stmt
-  = Var ID_Var (Maybe Fin)              -- variable declaration
-  | Int ID_Int Bool                     -- event declaration
-  | Write ID_Var Exp                    -- assignment statement
-  | AwaitExt ID_Ext (Maybe ID_Var)      -- await external event
-  | EmitExt ID_Ext (Maybe Exp)          -- emit external event
-  | AwaitFor                            -- await forever
-  | AwaitTmr Exp                        -- await timer
-  | AwaitInt ID_Int (Maybe ID_Var)      -- await internal event
-  | EmitInt ID_Int (Maybe Exp)          -- emit internal event
-  | Break                               -- loop escape
-  | If Exp Stmt Stmt                    -- conditional
-  | Seq Stmt Stmt                       -- sequence
-  | Loop Stmt                           -- infinite loop
-  | Every ID_Evt (Maybe ID_Var) Stmt    -- event iteration
-  | And Stmt Stmt                       -- par/and statement
-  | Or Stmt Stmt                        -- par/or statement
-  | Par Stmt Stmt                       -- par statement
-  | Spawn Stmt                          -- spawn statement
-  | Pause ID_Evt Stmt                   -- pause/suspend statement
-  | Fin Stmt Stmt Stmt                  -- finalize/pause/resume statement
-  | Async Stmt                          -- async statement
-  | Trap (Maybe ID_Var) Stmt            -- trap with optional assignment
-  | Escape (Maybe ID_Var) (Maybe Exp)   -- escape enclosing trap
-  | Scope Stmt                          -- scope for local variables
-  | Error String                        -- generate runtime error (for testing purposes)
-  | Var' ID_Var (Maybe Fin) Stmt        -- variable declaration w/ stmts in scope
-  | Int' ID_Int Bool Stmt               -- event declaration w/ stmts in scope
-  | Or' Stmt Stmt                       -- used as an Or with possibly non-terminating trails
-  | Par' Stmt Stmt                      -- par as in basic Grammar
-  | Pause' ID_Var Stmt                  -- pause as in basic Grammar
-  | Fin' Stmt                           -- fin as in basic Grammar
-  | Trap' Stmt                          -- trap as in basic Grammar
-  | Escape' Int                         -- escape as in basic Grammar
-  | Clean' String Stmt                  -- temporary statement
-  | Nop                                 -- nop as in basic Grammar
+  = Var ID_Var (Maybe Fin)                  -- variable declaration
+  | Int ID_Int Bool                         -- event declaration
+  | Write ID_Var (Exp ())                   -- assignment statement
+  | AwaitExt ID_Ext (Maybe ID_Var)          -- await external event
+  | EmitExt ID_Ext (Maybe (Exp ()))         -- emit external event
+  | AwaitFor                                -- await forever
+  | AwaitTmr (Exp ())                       -- await timer
+  | AwaitInt ID_Int (Maybe ID_Var)          -- await internal event
+  | EmitInt ID_Int (Maybe (Exp ()))         -- emit internal event
+  | Break                                   -- loop escape
+  | If (Exp ()) Stmt Stmt                   -- conditional
+  | Seq Stmt Stmt                           -- sequence
+  | Loop Stmt                               -- infinite loop
+  | Every ID_Evt (Maybe ID_Var) Stmt        -- event iteration
+  | And Stmt Stmt                           -- par/and statement
+  | Or Stmt Stmt                            -- par/or statement
+  | Par Stmt Stmt                           -- par statement
+  | Spawn Stmt                              -- spawn statement
+  | Pause ID_Evt Stmt                       -- pause/suspend statement
+  | Fin Stmt Stmt Stmt                      -- finalize/pause/resume statement
+  | Async Stmt                              -- async statement
+  | Trap (Maybe ID_Var) Stmt                -- trap with optional assignment
+  | Escape (Maybe ID_Var) (Maybe (Exp ()))  -- escape enclosing trap
+  | Scope Stmt                              -- scope for local variables
+  | Error String                            -- generate runtime error (for testing purposes)
+  | Var' ID_Var (Maybe Fin) Stmt            -- variable declaration w/ stmts in scope
+  | Int' ID_Int Bool Stmt                   -- event declaration w/ stmts in scope
+  | Or' Stmt Stmt                           -- used as an Or with possibly non-terminating trails
+  | Par' Stmt Stmt                          -- par as in basic Grammar
+  | Pause' ID_Var Stmt                      -- pause as in basic Grammar
+  | Fin' Stmt                               -- fin as in basic Grammar
+  | Trap' Stmt                              -- trap as in basic Grammar
+  | Escape' Int                             -- escape as in basic Grammar
+  | Clean' String Stmt                      -- temporary statement
+  | Nop                                     -- nop as in basic Grammar
   deriving (Eq, Show)
 
 infixr 1 `Seq`                  -- `Seq` associates to the right

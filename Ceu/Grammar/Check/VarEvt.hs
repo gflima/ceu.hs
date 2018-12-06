@@ -58,14 +58,14 @@ contains id dcls = elem id $ map f dcls where
 
 -------------------------------------------------------------------------------
 
-getErrs :: [Stmt] -> Exp -> Errors
-getErrs vars e@(Read var) = if (map toUpper var)==var || contains var vars then [] else
-                              [err_exp_msg e "variable '" ++ var ++ "' is not declared"]
-getErrs vars (Umn e)      = getErrs vars e
-getErrs vars (Add e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
-getErrs vars (Sub e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
-getErrs vars (Mul e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
-getErrs vars (Div e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
-getErrs vars (Equ e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
-getErrs vars (Lte e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
-getErrs vars _            = []
+getErrs :: [Stmt] -> Exp ann -> Errors
+getErrs vars e@(Read _ var) = if (map toUpper var)==var || contains var vars then [] else
+                                [err_exp_msg e "variable '" ++ var ++ "' is not declared"]
+getErrs vars (Umn _ e)      = getErrs vars e
+getErrs vars (Add _ e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
+getErrs vars (Sub _ e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
+getErrs vars (Mul _ e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
+getErrs vars (Div _ e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
+getErrs vars (Equ _ e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
+getErrs vars (Lte _ e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
+getErrs vars _              = []

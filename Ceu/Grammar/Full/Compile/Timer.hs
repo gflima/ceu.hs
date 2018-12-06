@@ -33,8 +33,8 @@ aux (AwaitTmr exp)      = Var' "__timer_await" Nothing
                                (Loop (
                                  (AwaitExt "TIMER" Nothing)                `Seq`
                                  (Write "__timer_await"
-                                   (Sub (Read "__timer_await") (Const 1))) `Seq`
-                                 (If (Equ (Read "__timer_await") (Const 0))
+                                   (Sub () (Read () "__timer_await") (Const () 1))) `Seq`
+                                 (If (Equ () (Read () "__timer_await") (Const () 0))
                                    (Escape' 0))
                                    Nop
                                  ))))

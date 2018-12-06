@@ -6,24 +6,24 @@ import Text.Printf
 
 -- Program (pg 5).
 data Stmt
-  = Var ID_Var Stmt             -- variable declaration
-  | Int ID_Int Stmt             -- event declaration
-  | Write ID_Var Exp            -- assignment statement
-  | AwaitExt ID_Ext             -- await external event
-  | EmitExt ID_Ext (Maybe Exp)  -- emit external event
-  | AwaitInt ID_Int             -- await internal event
-  | EmitInt ID_Int              -- emit internal event
-  | If Exp Stmt Stmt            -- conditional
-  | Seq Stmt Stmt               -- sequence
-  | Loop Stmt                   -- infinite loop
-  | Every ID_Evt Stmt           -- event iteration
-  | Par Stmt Stmt               -- par statement
-  | Pause ID_Var Stmt           -- pause/suspend statement
-  | Fin Stmt                    -- finalization statement
-  | Trap Stmt                   -- enclose escape
-  | Escape Int                  -- escape N traps
-  | Nop                         -- dummy statement (internal)
-  | Error String                -- generate runtime error (for testing)
+  = Var ID_Var Stmt                 -- variable declaration
+  | Int ID_Int Stmt                 -- event declaration
+  | Write ID_Var (Exp ())           -- assignment statement
+  | AwaitExt ID_Ext                 -- await external event
+  | EmitExt ID_Ext (Maybe (Exp ())) -- emit external event
+  | AwaitInt ID_Int                 -- await internal event
+  | EmitInt ID_Int                  -- emit internal event
+  | If (Exp ()) Stmt Stmt           -- conditional
+  | Seq Stmt Stmt                   -- sequence
+  | Loop Stmt                       -- infinite loop
+  | Every ID_Evt Stmt               -- event iteration
+  | Par Stmt Stmt                   -- par statement
+  | Pause ID_Var Stmt               -- pause/suspend statement
+  | Fin Stmt                        -- finalization statement
+  | Trap Stmt                       -- enclose escape
+  | Escape Int                      -- escape N traps
+  | Nop                             -- dummy statement (internal)
+  | Error String                    -- generate runtime error (for testing)
   deriving (Eq, Show)
 
 infixr 1 `Seq`                  -- `Seq` associates to the right

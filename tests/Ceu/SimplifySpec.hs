@@ -46,9 +46,9 @@ spec = do
       simplify (Int "" (Seq Nop (Escape 0))) `shouldBe` (Escape 0)
 
     it "If a a -> a" $ do
-      simplify (If (Const 1) (AwaitExt "") (AwaitExt "")) `shouldBe` (AwaitExt "")
+      simplify (If (Const () 1) (AwaitExt "") (AwaitExt "")) `shouldBe` (AwaitExt "")
     it "If x y -> If x y" $ do
-      simplify (If (Const 1) (Escape 0) Nop) `shouldBe` (If (Const 1) (Escape 0) Nop)
+      simplify (If (Const () 1) (Escape 0) Nop) `shouldBe` (If (Const () 1) (Escape 0) Nop)
 
     it "Every x y -> Every x y" $ do
       simplify (Every "a" (Escape 0)) `shouldBe` (Every "a" (Escape 0))
@@ -77,7 +77,7 @@ spec = do
     it "Fin -> Nop" $ do
       simplify (Fin (Var "" (Trap (Escape 0)))) `shouldBe` Nop
     it "Fin -> Nop" $ do
-      simplify (Fin (Var "" (If (Const 1) Nop (Escape 0)))) `shouldBe` (Fin (Var "" (If (Const 1) Nop (Escape 0))))
+      simplify (Fin (Var "" (If (Const () 1) Nop (Escape 0)))) `shouldBe` (Fin (Var "" (If (Const () 1) Nop (Escape 0))))
 
     it "Trap Nop -> Nop" $ do
       simplify (Trap Nop) `shouldBe` Nop

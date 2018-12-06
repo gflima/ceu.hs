@@ -21,26 +21,26 @@ type Desc = (Stmt, Lvl, Vars, Ints, Outs)
 
 -- Program (pg 5).
 data Stmt
-  = Var (ID_Var,Maybe Val) Stmt -- block with environment store
-  | Int ID_Int Stmt             -- event declaration
-  | Write ID_Var Exp            -- assignment statement
-  | AwaitExt ID_Ext             -- await external event
-  | EmitExt ID_Ext (Maybe Exp)  -- emit internal event
-  | AwaitInt ID_Int             -- await internal event
-  | EmitInt ID_Int              -- emit internal event
-  | If Exp Stmt Stmt            -- conditional
-  | Seq Stmt Stmt               -- sequence
-  | Every ID_Evt Stmt           -- event iteration
-  | Par Stmt Stmt               -- par statement
-  | Pause ID_Var Stmt           -- pause/suspend statement
-  | Fin Stmt                    -- finalization statement
-  | Trap Stmt                   -- enclose escape
-  | Escape Int                  -- escape N traps
-  | Nop                         -- dummy statement (internal)
-  | Error String                -- generate runtime error (for testing purposes)
-  | CanRun Lvl                  -- wait for stack level (internal)
-  | Loop' Stmt Stmt             -- unrolled Loop (internal)
-  | Par' Stmt Stmt              -- unrolled Par (internal)
+  = Var (ID_Var,Maybe Val) Stmt     -- block with environment store
+  | Int ID_Int Stmt                 -- event declaration
+  | Write ID_Var (Exp ())           -- assignment statement
+  | AwaitExt ID_Ext                 -- await external event
+  | EmitExt ID_Ext (Maybe (Exp ())) -- emit internal event
+  | AwaitInt ID_Int                 -- await internal event
+  | EmitInt ID_Int                  -- emit internal event
+  | If (Exp ()) Stmt Stmt           -- conditional
+  | Seq Stmt Stmt                   -- sequence
+  | Every ID_Evt Stmt               -- event iteration
+  | Par Stmt Stmt                   -- par statement
+  | Pause ID_Var Stmt               -- pause/suspend statement
+  | Fin Stmt                        -- finalization statement
+  | Trap Stmt                       -- enclose escape
+  | Escape Int                      -- escape N traps
+  | Nop                             -- dummy statement (internal)
+  | Error String                    -- generate runtime error (for testing purposes)
+  | CanRun Lvl                      -- wait for stack level (internal)
+  | Loop' Stmt Stmt                 -- unrolled Loop (internal)
+  | Par' Stmt Stmt                  -- unrolled Par (internal)
   deriving (Eq, Show)
 
 infixr 1 `Seq`                  -- `Seq` associates to the right
@@ -117,17 +117,17 @@ varsRead vars var = case vars of
   []              -> error ("varsRead: undeclared variable: " ++ var)
 
 -- Evaluates expression in environment.
-varsEval :: Vars -> Exp -> Val
+varsEval :: Vars -> (Exp ann) -> Val
 varsEval vars expr = case expr of
-  Const val -> val
-  Read var  -> varsRead vars var
-  Umn e     -> negate $ varsEval vars e
-  Add e1 e2 -> (varsEval vars e1) + (varsEval vars e2)
-  Sub e1 e2 -> (varsEval vars e1) - (varsEval vars e2)
-  Mul e1 e2 -> (varsEval vars e1) * (varsEval vars e2)
-  Div e1 e2 -> (varsEval vars e1) `div` (varsEval vars e2)
-  Equ e1 e2 -> if (varsEval vars e1) == (varsEval vars e2) then 1 else 0
-  Lte e1 e2 -> if (varsEval vars e1) <= (varsEval vars e2) then 1 else 0
+  Const _ val   -> val
+  Read  _ var   -> varsRead vars var
+  Umn   _ e     -> negate $ varsEval vars e
+  Add   _ e1 e2 -> (varsEval vars e1) + (varsEval vars e2)
+  Sub   _ e1 e2 -> (varsEval vars e1) - (varsEval vars e2)
+  Mul   _ e1 e2 -> (varsEval vars e1) * (varsEval vars e2)
+  Div   _ e1 e2 -> (varsEval vars e1) `div` (varsEval vars e2)
+  Equ   _ e1 e2 -> if (varsEval vars e1) == (varsEval vars e2) then 1 else 0
+  Lte   _ e1 e2 -> if (varsEval vars e1) <= (varsEval vars e2) then 1 else 0
 
 -- Set event in environment.
 evtsEmit :: Ints -> ID_Int -> Ints
@@ -303,7 +303,7 @@ bcast e vars stmt = case stmt of
   Trap p                -> Trap (bcast e vars p)
   Loop' p q             -> Loop' (bcast e vars p) q
   Par' p q              -> Par' (bcast e vars p) (bcast e vars q)
-  Pause var p           -> Pause var (if (varsEval vars (Read var)) == 1 then p else (bcast e vars p))
+  Pause var p           -> Pause var (if (varsEval vars (Read () var)) == 1 then p else (bcast e vars p))
   _                     -> stmt -- nothing to do
 
 ----------------------------------------------------------------------------
