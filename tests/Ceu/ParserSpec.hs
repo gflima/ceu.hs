@@ -293,35 +293,35 @@ spec = do
         describe "par:" $ do
             it "par" $
                 parse stmt_par "par do with end"
-                `shouldBe` Right (Par ("",1,1) (Nop ("",1,8)) (Par ("",1,8) (Nop ("",1,13)) (AwaitFor ("",1,13))))
+                `shouldBe` Right (Par ("",1,1) (Nop ("",1,8)) (Nop ("",1,13)))
             it "par" $
                 parse stmt_par "par do escape 1 with escape 1 end"
-                `shouldBe` Right (Par ("",1,1) (Escape ("",1,8) Nothing (Just (Const ("",1,15) 1))) (Par ("",1,17) (Escape ("",1,22) Nothing (Just (Const ("",1,29) 1))) (AwaitFor ("",1,31))))
+                `shouldBe` Right (Par ("",1,1) (Escape ("",1,8) Nothing (Just (Const ("",1,15) 1))) (Escape ("",1,22) Nothing (Just (Const ("",1,29) 1))))
             it "par" $
                 parse stmt_par "par do escape 1 with escape 2 with escape 3 end"
-                `shouldBe` Right (Par ("",1,1) (Escape ("",1,8) Nothing (Just (Const ("",1,15) 1))) (Par ("",1,17) (Escape ("",1,22) Nothing (Just (Const ("",1,29) 2))) (Par ("",1,31) (Escape ("",1,36) Nothing (Just (Const ("",1,43) 3))) (AwaitFor ("",1,45)))))
+                `shouldBe` Right (Par ("",1,1) (Escape ("",1,8) Nothing (Just (Const ("",1,15) 1))) (Par ("",1,17) (Escape ("",1,22) Nothing (Just (Const ("",1,29) 2))) (Escape ("",1,36) Nothing (Just (Const ("",1,43) 3)))))
 
         describe "par/and:" $ do
             it "par/and" $
                 parse stmt_parand "par/and do with end"
-                `shouldBe` Right (And ("",1,1) (Nop ("",1,12)) (And ("",1,12) (Nop ("",1,17)) (Nop ("",1,17))))
+                `shouldBe` Right (And ("",1,1) (Nop ("",1,12)) (Nop ("",1,17)))
             it "par/and" $
                 parse stmt_parand "par/and do escape 1 with escape 1 end"
-                `shouldBe` Right (And ("",1,1) (Escape ("",1,12) Nothing (Just (Const ("",1,19) 1))) (And ("",1,21) (Escape ("",1,26) Nothing (Just (Const ("",1,33) 1))) (Nop ("",1,35))))
+                `shouldBe` Right (And ("",1,1) (Escape ("",1,12) Nothing (Just (Const ("",1,19) 1))) (Escape ("",1,26) Nothing (Just (Const ("",1,33) 1))))
             it "par/and" $
                 parse stmt_parand "par/and do escape 1 with escape 2 with escape 3 end"
-                `shouldBe` Right (And ("",1,1) (Escape ("",1,12) Nothing (Just (Const ("",1,19) 1))) (And ("",1,21) (Escape ("",1,26) Nothing (Just (Const ("",1,33) 2))) (And ("",1,35) (Escape ("",1,40) Nothing (Just (Const ("",1,47) 3))) (Nop ("",1,49)))))
+                `shouldBe` Right (And ("",1,1) (Escape ("",1,12) Nothing (Just (Const ("",1,19) 1))) (And ("",1,21) (Escape ("",1,26) Nothing (Just (Const ("",1,33) 2))) (Escape ("",1,40) Nothing (Just (Const ("",1,47) 3)))))
 
         describe "par/or:" $ do
             it "par/or" $
                 parse stmt_paror "par/or do with end"
-                `shouldBe` Right (Or ("",1,1) (Nop ("",1,11)) (Or ("",1,11) (Nop ("",1,16)) (AwaitFor ("",1,16))))
+                `shouldBe` Right (Or ("",1,1) (Nop ("",1,11)) (Nop ("",1,16)))
             it "par/or" $
                 parse stmt_paror "par/or do escape 1 with escape 1 end"
-                `shouldBe` Right (Or ("",1,1) (Escape ("",1,11) Nothing (Just (Const ("",1,18) 1))) (Or ("",1,20) (Escape ("",1,25) Nothing (Just (Const ("",1,32) 1))) (AwaitFor ("",1,34))))
+                `shouldBe` Right (Or ("",1,1) (Escape ("",1,11) Nothing (Just (Const ("",1,18) 1))) (Escape ("",1,25) Nothing (Just (Const ("",1,32) 1))))
             it "par/or" $
                 parse stmt_paror "par/or do escape 1 with escape 2 with escape 3 end"
-                `shouldBe` Right (Or ("",1,1) (Escape ("",1,11) Nothing (Just (Const ("",1,18) 1))) (Or ("",1,20) (Escape ("",1,25) Nothing (Just (Const ("",1,32) 2))) (Or ("",1,34) (Escape ("",1,39) Nothing (Just (Const ("",1,46) 3))) (AwaitFor ("",1,48)))))
+                `shouldBe` Right (Or ("",1,1) (Escape ("",1,11) Nothing (Just (Const ("",1,18) 1))) (Or ("",1,20) (Escape ("",1,25) Nothing (Just (Const ("",1,32) 2))) (Escape ("",1,39) Nothing (Just (Const ("",1,46) 3)))))
 
         describe "seq:" $ do
             it "do end; escape 1" $

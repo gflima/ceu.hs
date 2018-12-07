@@ -111,10 +111,10 @@ stmt_par = do
     void <- tk_key "do"
     s1   <- stmt
     ss   <- many1 $ (try $ (,) <$> getPosition <*> (tk_key "with" *> stmt))
-    pos2 <- getPosition
+    --pos2 <- getPosition
     void <- tk_key "end"
-    return $ foldr (\(p,s) acc -> Par (toSource p) s acc)
-                   (AwaitFor $ toSource pos2) ([(pos1,s1)]++ss)
+    return $ snd $ foldr1 (\(p,s) acc -> (p, Par (toSource p) s (snd acc)))
+                          ([(pos1,s1)]++ss)
 
 stmt_parand :: Parser (Stmt Source)
 stmt_parand = do
@@ -123,10 +123,10 @@ stmt_parand = do
     void <- tk_key "do"
     s1   <- stmt
     ss   <- many1 $ (try $ (,) <$> getPosition <*> (tk_key "with" *> stmt))
-    pos2 <- getPosition
+    --pos2 <- getPosition
     void <- tk_key "end"
-    return $ foldr (\(p,s) acc -> And (toSource p) s acc)
-                   (Nop $ toSource pos2) ([(pos1,s1)]++ss)
+    return $ snd $ foldr1 (\(p,s) acc -> (p, And (toSource p) s (snd acc)))
+                          ([(pos1,s1)]++ss)
 
 stmt_paror :: Parser (Stmt Source)
 stmt_paror = do
@@ -135,10 +135,10 @@ stmt_paror = do
     void <- tk_key "do"
     s1   <- stmt
     ss   <- many1 $ (try $ (,) <$> getPosition <*> (tk_key "with" *> stmt))
-    pos2 <- getPosition
+    --pos2 <- getPosition
     void <- tk_key "end"
-    return $ foldr (\(p,s) acc -> Or (toSource p) s acc)
-                   (AwaitFor $ toSource pos2) ([(pos1,s1)]++ss)
+    return $ snd $ foldr1 (\(p,s) acc -> (p, Or (toSource p) s (snd acc)))
+                          ([(pos1,s1)]++ss)
 
 -------------------------------------------------------------------------------
 

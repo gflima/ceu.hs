@@ -164,7 +164,7 @@ spec = do
     describe "par:" $ do
         it "par" $
             run "par do with end" []
-            `shouldBe` Left "parallel: terminating trail\nparallel: terminating trail\ntrap: missing `escape` statement\nawait: unreachable statement\n"
+            `shouldBe` Left "parallel: terminating trail\ntrap: missing `escape` statement\nawait: unreachable statement\n"
         it "par" $
             run "par do escape 1 with escape 1 end" []
             `shouldBe` Right (1, [[]])
@@ -192,7 +192,7 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "par/or" $
             run "par/or do with escape 2 with escape 3 end ; escape 1" []
-            `shouldBe` Left "trap: no trails terminate\ntrap: no trails terminate\n"
+            `shouldBe` Left "trap: no trails terminate\n"
 
     where
         run :: String -> [In] -> Either String (Val,[Outs])
