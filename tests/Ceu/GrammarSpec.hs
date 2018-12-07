@@ -194,8 +194,8 @@ spec = do
           (it ((if b==[] then "pass" else "fail") ++ ": " ++ showProg p) $
             (ck p) `shouldBe` b)
         checkLoopIt p b      = checkIt  Loop.check p b
-        checkFinIt (Fin () p) b = checkIt' Check.getTights p b
-        checkEveryIt p b     = checkIt' Check.getTights p b
+        checkFinIt (Fin () p) b = checkIt' Check.getComplexs p b
+        checkEveryIt p b     = checkIt' Check.getComplexs p b
         checkEscapeIt p b    = checkIt' Escape.check p b
         checkReachableIt p b = checkIt' Reachable.check p b
         checkVarEvtIt p b    = checkIt' VarEvt.check p b

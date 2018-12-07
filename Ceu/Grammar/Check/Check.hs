@@ -10,8 +10,8 @@ import qualified Ceu.Grammar.Check.Escape    as Escape
 import qualified Ceu.Grammar.Check.Reachable as Reachable
 import qualified Ceu.Grammar.Check.VarEvt    as VarEvt
 
-getTights :: (Stmt ann) -> [String]
-getTights p = errs_stmts_msg_map (aux' (-1) p) "invalid statement" where
+getComplexs :: (Stmt ann) -> [String]
+getComplexs p = errs_stmts_msg_map (aux' (-1) p) "invalid statement" where
   aux' _ s@(AwaitInt _ _) = [s]
   aux' _ s@(AwaitExt _ _) = [s]
   aux' n s@(Every _ _ p)  = [s] ++ aux' n p
@@ -55,7 +55,7 @@ stmts stmt = case stmt of
   _               -> []
   where
     aux msg s p =
-      let ret = getTights p in
+      let ret = getComplexs p in
         if (ret == []) then
           []
         else
