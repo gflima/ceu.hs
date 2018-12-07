@@ -56,19 +56,32 @@ spec = do
     it "Every () x y -> Every () x y" $ do
       simplify' (Every () "a" (Escape () 0)) `shouldBe` (Every () "a" (Escape () 0))
 
-    it "Par () (Nop ()) y -> y" $ do
-      simplify' (Par () (Nop ()) (Seq () (Escape () 0) (Nop ()))) `shouldBe` (Escape () 0)
+  describe "pars:" $ do
+    --it "Par () (Nop ()) y -> y" $ do
+      --simplify' (Par () (Nop ()) (Seq () (Escape () 0) (Nop ()))) `shouldBe` (Escape () 0)
     it "Par () x Break -> Break" $ do
       simplify' (Par () (Seq () (Escape () 0) (Nop ())) (AwaitExt () "")) `shouldBe` (Escape () 0)
     it "Par () x Break -> Break" $ do
       simplify' (Par () (Seq () (AwaitExt () "") (Nop ())) (AwaitExt () "")) `shouldBe` (Par () (AwaitExt () "") (AwaitExt () ""))
 
-    it "Par () (Nop ()) y -> y" $ do
-      simplify' (Par () (Nop ()) (Seq () (Escape () 0) (Nop ()))) `shouldBe` (Escape () 0)
+    --it "Par () (Nop ()) y -> y" $ do
+      --simplify' (Par () (Nop ()) (Seq () (Escape () 0) (Nop ()))) `shouldBe` (Escape () 0)
     it "Par () Break x -> Break" $ do
       simplify' (Par () (Seq () (Escape () 0) (Nop ())) (AwaitExt () "")) `shouldBe` (Escape () 0)
     it "Par () x y -> Par () x y" $ do
       simplify' (Par () (Seq () (AwaitExt () "") (Nop ())) (AwaitExt () "")) `shouldBe` (Par () (AwaitExt () "") (AwaitExt () ""))
+    it "par for par for par for" $ do
+      simplify' (Par () (AwaitExt () "FOREVER") (Par () (AwaitExt () "FOREVER") (AwaitExt () "FOREVER")))
+      `shouldBe` (AwaitExt () "FOREVER")
+    it "nop or nop or nop" $ do
+      simplify' (Trap () (Par () (Seq () (Nop ()) (Escape () 0)) (Seq () (Trap () (Par () (Seq () (Nop ()) (Escape () 0)) (AwaitExt () "FOREVER"))) (Escape () 0))))
+      `shouldBe` (Nop ())
+    it "nop and nop" $ do
+      simplify' (Trap () (Var () "__and" (Seq () (Write () "__and" (Const () 0)) (Par () (Seq () (Nop ()) (If () (Equ () (Read () "__and") (Const () 1)) (Escape () 0) (Seq () (Write () "__and" (Add () (Read () "__and") (Const () 1))) (AwaitExt () "FOREVER")))) (Seq () (Nop ()) (If () (Equ () (Read () "__and") (Const () 1)) (Escape () 0) (Seq () (Write () "__and" (Add () (Read () "__and") (Const () 1))) (AwaitExt () "FOREVER"))))))))
+      `shouldBe` (Nop ())
+    it "nop and nop and nop" $ do
+      simplify' (Trap () (Var () "__and" (Seq () (Write () "__and" (Const () 0)) (Par () (If () (Equ () (Read () "__and") (Const () 1)) (Escape () 0) (Seq () (Write () "__and" (Add () (Read () "__and") (Const () 1))) (AwaitExt () "FOREVER"))) (Seq () (Trap () (Var () "__and" (Seq () (Write () "__and" (Const () 0)) (Par () (If () (Equ () (Read () "__and") (Const () 1)) (Escape () 0) (Seq () (Write () "__and" (Add () (Read () "__and") (Const () 1))) (AwaitExt () "FOREVER"))) (If () (Equ () (Read () "__and") (Const () 1)) (Escape () 0) (Seq () (Write () "__and" (Add () (Read () "__and") (Const () 1))) (AwaitExt () "FOREVER"))))))) (If () (Equ () (Read () "__and") (Const () 1)) (Escape () 0) (Seq () (Write () "__and" (Add () (Read () "__and") (Const () 1))) (AwaitExt () "FOREVER"))))))))
+      `shouldBe` (Nop ())
 
     it "Pause () -> (Nop ())" $ do
       simplify' (Pause () "" (Nop ())) `shouldBe` (Nop ())
