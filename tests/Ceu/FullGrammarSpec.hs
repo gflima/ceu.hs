@@ -209,14 +209,13 @@ spec = do
   describe "ParAndOr.compile" $ do
 
     it "(and nop nop)" $ do
-      ParAndOr.compile (And () (Nop ()) (Nop ())) `shouldBe` ([], (Trap' () (Var' () "__and" Nothing (Seq () (Write () "__and" (Const () 0)) (Par' () (Seq () (Nop ()) (If () (Equ () (Read () "__and") (Const () 1)) (Escape' () 0) (Seq () (Write () "__and" (Add () (Read () "__and") (Const () 1))) (AwaitFor ())))) (Seq () (Nop ()) (If () (Equ () (Read () "__and") (Const () 1)) (Escape' () 0) (Seq () (Write () "__and" (Add () (Read () "__and") (Const () 1))) (AwaitFor ())))))))))
+      ParAndOr.compile (And () (Nop ()) (Nop ())) `shouldBe` ([], (Clean' () "And" (Trap' () (Var' () "__and" Nothing (Seq () (Write () "__and" (Const () 0)) (Par' () (Seq () (Nop ()) (If () (Equ () (Read () "__and") (Const () 1)) (Escape' () 0) (Seq () (Write () "__and" (Add () (Read () "__and") (Const () 1))) (AwaitFor ())))) (Seq () (Nop ()) (If () (Equ () (Read () "__and") (Const () 1)) (Escape' () 0) (Seq () (Write () "__and" (Add () (Read () "__and") (Const () 1))) (AwaitFor ()))))))))))
     it "(or nop awaitFor)" $ do
       ParAndOr.compile (Or () (Nop ()) (AwaitFor ())) `shouldBe` ([], (Clean' () "Or" (Trap' () (Par' () (Seq () (Nop ()) (Escape' () 0)) (Seq () (AwaitFor ()) (Escape' () 0))))))
     it "(or nop awaitFor)" $ do
       (compile' (False,False) (Or () (Nop ()) (AwaitFor ()))) `shouldBe` ([], (G.Trap () (G.Par () (G.Seq () (G.Nop ()) (G.Escape () 0)) (G.AwaitExt () "FOREVER"))))
     it "(and nop (and nop nop))" $ do
-      (compile' (False,False) (And () (Nop ()) (And () (Nop ()) (Nop ())))) `shouldBe` ([],G.Trap () (G.Var () "__and" (G.Seq () (G.Write () "__and" (Const () 0)) (G.Par () (G.Seq () (G.Nop ()) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.AwaitExt () "FOREVER")))) (G.Seq () (G.Trap () (G.Var () "__and" (G.Seq () (G.Write () "__and" (Const () 0)) (G.Par () (G.Seq () (G.Nop ()) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.AwaitExt () "FOREVER")))) (G.Seq () (G.Nop ()) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.AwaitExt () "FOREVER")))))))) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.AwaitExt () "FOREVER"))))))))
-
+      (compile' (False,False) (And () (Nop ()) (And () (Nop ()) (Nop ())))) `shouldBe` ([], G.Seq () (G.Nop ()) (G.Seq () (G.Nop ()) (G.Nop ())))
     it "par for par for par for" $ do
       (compile' (True,False) (Par () (AwaitFor ()) (Par () (AwaitFor ()) (AwaitFor ()))))
       `shouldBe` ([], G.AwaitExt () "FOREVER")
@@ -225,6 +224,9 @@ spec = do
       `shouldBe` ([], G.Nop ())
     it "and nop and nop and nop" $ do
       (compile' (True,False) (And () (Nop ()) (And () (Nop ()) (Nop ()))))
+      `shouldBe` ([], G.Nop ())
+    it "(loop break) ; await X and nop" $ do
+      (compile' (True,False) (And () (Seq () (Loop () (Break ())) (AwaitExt () "X" Nothing)) (Nop ())))
       `shouldBe` ([], G.Nop ())
 
   --------------------------------------------------------------------------
@@ -244,7 +246,7 @@ spec = do
 
     it "loop (and break FOR)" $ do
       compile' (False,False) (Loop () (And () (Break ()) (AwaitFor ())))
-      `shouldBe` (["if: unreachable statement","if: unreachable statement"],G.Trap () (G.Loop () (G.Trap () (G.Var () "__and" (G.Seq () (G.Write () "__and" (Const () 0)) (G.Par () (G.Seq () (G.Escape () 1) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.AwaitExt () "FOREVER")))) (G.Seq () (G.AwaitExt () "FOREVER") (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.AwaitExt () "FOREVER"))))))))))
+      `shouldBe` (["loop: `loop` never iterates","await: unreachable statement"],G.Trap () (G.Loop () (G.Seq () (G.Escape () 0) (G.AwaitExt () "FOREVER"))))
 
   --------------------------------------------------------------------------
   describe "Forever.compile" $ do

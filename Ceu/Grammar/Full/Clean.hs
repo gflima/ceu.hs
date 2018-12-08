@@ -1,12 +1,26 @@
 module Ceu.Grammar.Full.Clean where
 
 import Ceu.Grammar.Globals
+import Ceu.Grammar.Exp
 import qualified Ceu.Grammar.Stmt as G
 
-import Ceu.Grammar.Check.Reachable (maybeTerminates)
+import Ceu.Grammar.Check.Reachable (maybeTerminates, alwaysInstantaneous)
 import Ceu.Grammar.Check.Escape    (getEscapes, escapesAt1, removeTrap)
 
 clean :: (Eq ann, Show ann) => String -> (G.Stmt ann) -> (Errors, G.Stmt ann)
+
+clean "And"
+  s@(G.Trap z
+    (G.Var _ "__and"
+      (G.Seq _
+        (G.Write _ "__and" (Const _ 0))
+        (G.Par _
+          (G.Seq _ p1 chk1)
+          (G.Seq _ p2 chk2))
+    )))
+    | alwaysInstantaneous p1                          = ([], removeTrap (G.Trap z (G.Seq z p1 p2)))
+    -- | neverInstantaneous p1 && alwaysInstantaneous p2 = G.Par () p1 p2
+    | otherwise                                       = ([], s)
 
 clean "Or'" p = fin_or [] p
 clean "Or"  p = fin_or [G.err_stmt_msg p "no trails terminate"] p

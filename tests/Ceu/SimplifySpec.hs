@@ -73,15 +73,6 @@ spec = do
     it "par for par for par for" $ do
       simplify' (Par () (AwaitExt () "FOREVER") (Par () (AwaitExt () "FOREVER") (AwaitExt () "FOREVER")))
       `shouldBe` (AwaitExt () "FOREVER")
-    it "nop or nop or nop" $ do
-      simplify' (Trap () (Par () (Seq () (Nop ()) (Escape () 0)) (Seq () (Trap () (Par () (Seq () (Nop ()) (Escape () 0)) (AwaitExt () "FOREVER"))) (Escape () 0))))
-      `shouldBe` (Nop ())
-    it "nop and nop" $ do
-      simplify' (Trap () (Var () "__and" (Seq () (Write () "__and" (Const () 0)) (Par () (Seq () (Nop ()) (If () (Equ () (Read () "__and") (Const () 1)) (Escape () 0) (Seq () (Write () "__and" (Add () (Read () "__and") (Const () 1))) (AwaitExt () "FOREVER")))) (Seq () (Nop ()) (If () (Equ () (Read () "__and") (Const () 1)) (Escape () 0) (Seq () (Write () "__and" (Add () (Read () "__and") (Const () 1))) (AwaitExt () "FOREVER"))))))))
-      `shouldBe` (Nop ())
-    it "nop and nop and nop" $ do
-      simplify' (Trap () (Var () "__and" (Seq () (Write () "__and" (Const () 0)) (Par () (If () (Equ () (Read () "__and") (Const () 1)) (Escape () 0) (Seq () (Write () "__and" (Add () (Read () "__and") (Const () 1))) (AwaitExt () "FOREVER"))) (Seq () (Trap () (Var () "__and" (Seq () (Write () "__and" (Const () 0)) (Par () (If () (Equ () (Read () "__and") (Const () 1)) (Escape () 0) (Seq () (Write () "__and" (Add () (Read () "__and") (Const () 1))) (AwaitExt () "FOREVER"))) (If () (Equ () (Read () "__and") (Const () 1)) (Escape () 0) (Seq () (Write () "__and" (Add () (Read () "__and") (Const () 1))) (AwaitExt () "FOREVER"))))))) (If () (Equ () (Read () "__and") (Const () 1)) (Escape () 0) (Seq () (Write () "__and" (Add () (Read () "__and") (Const () 1))) (AwaitExt () "FOREVER"))))))))
-      `shouldBe` (Nop ())
 
     it "Pause () -> (Nop ())" $ do
       simplify' (Pause () "" (Nop ())) `shouldBe` (Nop ())

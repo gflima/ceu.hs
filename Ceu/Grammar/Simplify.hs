@@ -67,27 +67,8 @@ simplify (Trap z p) =
     Nop z'      -> Nop z'
     Escape z' 0 -> Nop z'
     Escape z' n -> Escape z' n
-
-    -- special case for AND
-{-
-    Var () "__and"
-      (Seq ()
-        (Write () "__and" (Const () 0))
-        (Par ()
-          (If () (Equ () (Read () "__and") (Const () 1))
-            (Escape () 0)
-            (Seq ()
-              (Write () "__and" (Add () (Read () "__and") (Const () 1)))
-              (AwaitExt () "FOREVER")))
-          (If () (Equ () (Read () "__and") (Const () 1))
-            (Escape () 0)
-            (Seq ()
-              (Write () "__and" (Add () (Read () "__and") (Const () 1)))
-              (AwaitExt () "FOREVER")))))
--}
-
     otherwise   -> Trap z p'
-  where p' = simplify p
+  where
+    p' = simplify p
 
 simplify p = p
-

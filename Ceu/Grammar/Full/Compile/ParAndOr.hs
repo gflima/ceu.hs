@@ -17,10 +17,12 @@ aux (Seq z p1 p2)          = Seq z (aux p1) (aux p2)
 aux (Loop z p)             = Loop z (aux p)
 aux (Par z p1 p2)          = Par' z (aux p1) (aux p2)
 
-aux (And z p1 p2)          = Trap' z (Var' z "__and" Nothing
-                              (Seq z
-                                (Write z "__and" (Const z 0))
-                                (Par' z p1' p2')))
+aux (And z p1 p2)          = Clean' z "And"
+                              (Trap' z
+                                (Var' z "__and" Nothing
+                                  (Seq z
+                                    (Write z "__and" (Const z 0))
+                                    (Par' z p1' p2'))))
                              where
                               p1' = Seq z (Trap.ins' (aux p1)) check
                               p2' = Seq z (Trap.ins' (aux p2)) check

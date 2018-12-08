@@ -68,3 +68,38 @@ alwaysTerminates (Fin _ p)              = False
 alwaysTerminates (Trap _ p)             = escapesAt1 p
 alwaysTerminates (Escape _ _)           = False
 alwaysTerminates _                      = True
+
+-------------------------------------------------------------------------------
+
+alwaysInstantaneous :: (Stmt ann) -> Bool
+alwaysInstantaneous p = aux p where
+  aux (Var _ _ p)    = aux p
+  aux (Int _ _ p)    = aux p
+  aux (AwaitExt _ _) = False
+  aux (AwaitInt _ _) = False
+  aux (If _ _ p1 p2) = aux p1 && aux p2
+  aux (Seq _ p1 p2)  = aux p1 && aux p2
+  aux (Loop _ p)     = False
+  aux (Every _ _ _)  = False
+  aux (Par _ _ _)    = False
+  aux (Pause _ _ p)  = aux p
+  aux (Fin _ p)      = False
+  aux (Trap _ p)     = aux p
+  aux _              = True
+
+{-
+neverInstantaneous :: (Stmt ann) -> Bool
+neverInstantaneous p = aux p where
+  aux (Var _ _ p)    = aux p
+  aux (Int _ _ p)    = aux p
+  aux (AwaitExt _ _) = True
+  aux (If _ _ p1 p2) = aux p1 && aux p2
+  aux (Seq _ p1 p2)  = aux p1 || aux p2
+  aux (Loop _ p)     = True
+  aux (Every _ _ _)  = True
+  aux (Par _ _ _)    = True
+  aux (Pause _ _ p)  = aux p
+  aux (Fin _ p)      = True
+  aux (Trap _ p)     = aux p
+  aux _              = False
+-}

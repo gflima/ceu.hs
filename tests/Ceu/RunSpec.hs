@@ -181,6 +181,9 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "par/and ... with ... with escape 3 end" $
             run "par/and do with with escape 3 end" []
+            `shouldBe` Right (3, [[]])
+        it "par/and ... with ... with escape 3 end" $
+            run "par/and do await X with await Y with escape 3 end" []
             `shouldBe` Left "if: unreachable statement\n"
 
     describe "par/or:" $ do
