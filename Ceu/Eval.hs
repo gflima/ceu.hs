@@ -178,10 +178,13 @@ isBlocked n stmt = case stmt of
   Pause _ _ p    -> isBlocked n p
   Fin _ _        -> True
   Seq _ p _      -> isBlocked n p
-  Trap _ p       -> isBlocked n p
+  Trap _ p       -> isBlockedNop n p
   Loop' _ p _    -> isBlocked n p
-  Par' _ p q     -> isBlocked n p && isBlocked n q
+  Par' _ p q     -> isBlockedNop n p && isBlockedNop n q
   _              -> False
+
+isBlockedNop n (Nop _) = True
+isBlockedNop n p       = isBlocked n p
 
 -- Obtains the body of all active Fin statements in program.
 -- (pg 8, fig 4.iii)
@@ -272,18 +275,18 @@ step (Loop' z p q, n, vars, ints, outs)            -- loop-adv (pg 7)
   = stepAdv (p, n, vars, ints, outs) (\p' -> Loop' z p' q)
 
 step (Par z p q, n, vars, ints, outs)              -- par-expd (pg 7)
-  = (Par' z (Seq z p (AwaitExt z "FOREVER")) (Seq z (CanRun z n) (Seq z q (AwaitExt z "FOREVER"))), n, vars, ints, outs)
+  = (Par' z p (Seq z (CanRun z n) q ), n, vars, ints, outs)
 
 step (Par' z s@(Escape _ _) q, n, vars, ints, outs)    -- and escape1 (pg 7)
   = (Seq z (clear q) s, n, vars, ints, outs)
 
 step (Par' z p s@(Escape _ _), n, vars, ints, outs)    -- and-escape2 (pg 7)
-  | not $ isBlocked n p = stepAdv (p, n, vars, ints, outs) (\p' -> Par' z p' s)
-  | otherwise           = (Seq z (clear p) s, n, vars, ints, outs)
+  | not $ isBlockedNop n p = stepAdv (p, n, vars, ints, outs) (\p' -> Par' z p' s)
+  | otherwise              = (Seq z (clear p) s, n, vars, ints, outs)
 
 step (Par' z p q, n, vars, ints, outs)             -- and-adv (pg 7)
-  | not $ isBlocked n p = stepAdv (p, n, vars, ints, outs) (\p' -> Par' z p' q)
-  | otherwise           = stepAdv (q, n, vars, ints, outs) (\q' -> Par' z p q')
+  | not $ isBlockedNop n p = stepAdv (p, n, vars, ints, outs) (\p' -> Par' z p' q)
+  | otherwise              = stepAdv (q, n, vars, ints, outs) (\q' -> Par' z p q')
 
 step (Pause _ var s@(Nop _), n, vars, ints, outs)        -- pause-nop
   = (s, n, vars, ints, outs)
