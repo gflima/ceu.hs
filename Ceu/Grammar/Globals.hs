@@ -4,6 +4,18 @@ type Errors = [String]
 
 type Source = (String, Int, Int)        -- filename, line, column
 
+class ToSourceString a where
+  toSourceString :: a -> String
+
+class INode a where
+  toSource :: a -> String
+  toWord   :: a -> String
+  toError  :: a -> String -> String
+  toError stmt msg = (toSource stmt) ++ (toWord stmt) ++ ": " ++ msg where
+
+errs_nodes_msg_map :: (INode a) => [a] -> String -> Errors
+errs_nodes_msg_map node msg = map (\s -> (toWord s) ++ ": " ++ msg) node
+
 -- Primitive types.
 type ID_Var = String            -- variable identifier
 type ID_Evt = String            -- event identifier

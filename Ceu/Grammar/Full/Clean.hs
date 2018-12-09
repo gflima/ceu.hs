@@ -8,7 +8,7 @@ import qualified Ceu.Grammar.Stmt as G
 import Ceu.Grammar.Check (maybeTerminates, alwaysInstantaneous, getEscapes,
                           escapesAt0, removeTrap)
 
-clean :: Eq ann => String -> (G.Stmt ann) -> (Errors, G.Stmt ann)
+clean :: (Eq ann, ToSourceString ann) => String -> (G.Stmt ann) -> (Errors, G.Stmt ann)
 
 clean "And"
   s@(G.Trap z
@@ -24,17 +24,17 @@ clean "And"
     | otherwise              = (es, s)
   where
     es = if maybeTerminates p1 && maybeTerminates p2 then [] else
-          [G.err_stmt_msg s "all trails must terminate"]
+          [toError s "all trails must terminate"]
 
 clean "Or'" p = fin_or [] p
-clean "Or"  p = fin_or [G.err_stmt_msg p "no trails terminate"] p
+clean "Or"  p = fin_or [toError p "no trails terminate"] p
 
 clean "Loop" s@(G.Trap _ p) = ([], if escapesAt0 p then s else removeTrap s)
 
 clean "Spawn" p = (es1++es2,p') where
   (es1,p') =
     if maybeTerminates p then
-      ([G.err_stmt_msg p "terminating `spawn`"], G.Seq (G.getAnn p) p (G.AwaitExt (G.getAnn p) "FOREVER"))
+      ([toError p "terminating `spawn`"], G.Seq (G.getAnn p) p (G.AwaitExt (G.getAnn p) "FOREVER"))
     else
       ([], p)
   es2 =
@@ -42,7 +42,7 @@ clean "Spawn" p = (es1++es2,p') where
       if escs == [] then
         []
       else
-        [G.err_stmt_msg p "escaping `spawn`"] ++ (G.errs_stmts_msg_map (map fst escs) "escaping statement")
+        [toError p "escaping `spawn`"] ++ (errs_nodes_msg_map (map fst escs) "escaping statement")
 
 clean id p = error $ "unexpected clean case: " ++ id ++ "\n" -- ++ (show p)
 

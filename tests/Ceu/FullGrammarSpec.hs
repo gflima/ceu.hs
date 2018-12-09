@@ -1,5 +1,6 @@
 module Ceu.FullGrammarSpec (main, spec) where
 
+import Ceu.Grammar.ToSourceString.Unit
 import Ceu.Grammar.Exp
 import qualified Ceu.Grammar.Stmt as G
 import qualified Ceu.Eval         as E

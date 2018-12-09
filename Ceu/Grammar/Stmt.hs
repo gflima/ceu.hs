@@ -100,8 +100,6 @@ stmt2word stmt = case stmt of
   Nop _         -> "nop"
   Error _ _     -> "error"
 
-err_stmt_msg :: (Stmt ann) -> String -> String
-err_stmt_msg stmt msg = (stmt2word stmt) ++ ": " ++ msg
-
-errs_stmts_msg_map :: [Stmt ann] -> String -> Errors
-errs_stmts_msg_map stmts msg = map (\s -> (stmt2word s) ++ ": " ++ msg) stmts
+instance (ToSourceString ann) => INode (Stmt ann) where
+  toWord        = stmt2word
+  toSource stmt = toSourceString $ getAnn stmt

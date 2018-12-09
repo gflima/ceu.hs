@@ -2,8 +2,8 @@ module Ceu.Grammar.Check where
 
 import Debug.Trace
 
-import Ceu.Grammar.Globals  (Errors)
-import Ceu.Grammar.Stmt     (Stmt(..), getAnn, err_stmt_msg, errs_stmts_msg_map)
+import Ceu.Grammar.Globals
+import Ceu.Grammar.Stmt     (Stmt(..), getAnn)
 import Ceu.Grammar.Simplify (simplify)
 import qualified Ceu.Grammar.VarEvt as VarEvt
 
@@ -11,42 +11,42 @@ import qualified Ceu.Grammar.VarEvt as VarEvt
 
 type Options = (Bool,Bool)
 
-compile :: Eq ann => Options -> (Stmt ann) -> (Errors, Stmt ann)
+compile :: (Eq ann, ToSourceString ann) => Options -> (Stmt ann) -> (Errors, Stmt ann)
 compile (o_simp,o_encl) p = (es3,p2) where
   p1   = if not o_encl then p else
           (Var z "_ret" (Seq z (Trap z p) (AwaitExt z "FOREVER")))
   p2   = if not o_simp then p1 else simplify p1
   es3  = escs ++ (stmts p1) ++ (VarEvt.check p1)
   z    = getAnn p
-  escs = errs_stmts_msg_map (map (\(s,n)->s) (getEscapes p1)) "orphan `escape` statement"
+  escs = errs_nodes_msg_map (map (\(s,n)->s) (getEscapes p1)) "orphan `escape` statement"
 
 
-stmts :: (Stmt ann) -> Errors
+stmts :: (ToSourceString ann) => (Stmt ann) -> Errors
 stmts stmt = case stmt of
   Var _ _ p       -> stmts p
   Int _ _ p       -> stmts p
   If _ _ p q      -> stmts p ++ stmts q
   Seq _ p q       -> stmts p ++ stmts q ++ es where
                      es = if (maybeTerminates p) then [] else
-                            [err_stmt_msg q "unreachable statement"]
+                            [toError q "unreachable statement"]
   s@(Loop _ p)    -> stmts p ++ es1 ++ es2 where
                      es1 = if boundedLoop s then [] else
-                            [err_stmt_msg s "unbounded `loop` execution"]
+                            [toError s "unbounded `loop` execution"]
                      es2 = if maybeTerminates p then [] else
-                            [err_stmt_msg s "`loop` never iterates"]
+                            [toError s "`loop` never iterates"]
   s@(Every _ e p) -> stmts p ++ (aux "invalid statement in `every`" s p)
   s@(Par _ p q)   -> es ++ stmts p ++ stmts q where
                      es = if (neverTerminates p) && (neverTerminates q) then
                              []
                           else
-                             [err_stmt_msg s "terminating trail"]
+                             [toError s "terminating trail"]
   Pause _ _ p     -> stmts p
   s@(Fin _ p)     -> stmts p ++ (aux "invalid statement in `finalize`" s p)
   s@(Trap _ p)    -> stmts p ++ es1 ++ es2 where
                      es1 = if neverTerminates p then [] else
-                             [err_stmt_msg s "terminating `trap` body"]
+                             [toError s "terminating `trap` body"]
                      es2 = if escapesAt0 p then [] else
-                             [err_stmt_msg s "missing `escape` statement"]
+                             [toError s "missing `escape` statement"]
   _               -> []
   where
     aux msg s p =
@@ -54,12 +54,12 @@ stmts stmt = case stmt of
         if (ret == []) then
           []
         else
-          [err_stmt_msg s msg] ++ ret
+          [toError s msg] ++ ret
 
 -------------------------------------------------------------------------------
 
-getComplexs :: (Stmt ann) -> [String]
-getComplexs p = errs_stmts_msg_map (aux' (-1) p) "invalid statement" where
+getComplexs :: (ToSourceString ann) => (Stmt ann) -> [String]
+getComplexs p = errs_nodes_msg_map (aux' (-1) p) "invalid statement" where
   aux' _ s@(AwaitInt _ _) = [s]
   aux' _ s@(AwaitExt _ _) = [s]
   aux' n s@(Every _ _ p)  = [s] ++ aux' n p

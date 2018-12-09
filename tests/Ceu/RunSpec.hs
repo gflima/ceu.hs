@@ -6,7 +6,8 @@ import Text.Parsec (eof, parse)
 
 import Ceu.Parser.Stmt          (stmt)
 import Ceu.Eval                 (Outs)
-import Ceu.Grammar.Globals      (Val)
+import Ceu.Grammar.ToSourceString.Source
+import Ceu.Grammar.Globals      (Source(..), Val)
 import Ceu.Grammar.Full.Grammar (In)
 import Ceu.Grammar.Full.Eval    (evalFullProg)
 
@@ -19,7 +20,7 @@ spec = do
     describe "void:" $ do
         it "void" $
             run "" []
-            `shouldBe` Left "trap: terminating `trap` body\ntrap: missing `escape` statement\nawait: unreachable statement\n"
+            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nawait: unreachable statement\n"
 
     describe "escape:" $ do
         it "escape 1" $
@@ -67,16 +68,16 @@ spec = do
             `shouldBe` Left "(line 1, column 10):\nunexpected ','\nexpecting digit, letter, \"_\", \"<-\", \"escape\", \"var\", \"await\", \"emit\", \"do\", \"if\", \"par\", \"par/and\", \"par/or\" or end of input"
         it "a <- 1; escape a;" $
             run "a <- 1; escape a" []
-            `shouldBe` Left "assignment: variable 'a' is not declared\nread access to 'a': variable 'a' is not declared\n"
+            `shouldBe` Left "(line 1, column 1):\nassignment: variable 'a' is not declared\nread access to 'a': variable 'a' is not declared\n"
         it "var int a <- 1; escape a;" $
             run "var int a <- 1; escape a" []
             `shouldBe` Right (1, [[]])
         it "var int a" $
             run "var int a" []
-            `shouldBe` Left "trap: terminating `trap` body\ntrap: missing `escape` statement\nawait: unreachable statement\n"
+            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nawait: unreachable statement\n"
         it "var int a <- 1" $
             run "var int a <- 1" []
-            `shouldBe` Left "trap: terminating `trap` body\ntrap: missing `escape` statement\nawait: unreachable statement\n"
+            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nawait: unreachable statement\n"
         it "var int a ; a <- 1" $
             run "var int a ; a <- 1 ; escape a" []
             `shouldBe` Right (1, [[]])
@@ -85,7 +86,7 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "hide a" $
             run "var int a ; var int a ; escape 0" []
-            `shouldBe` Left "declaration: variable 'a' is already declared\n"
+            `shouldBe` Left "(line 1, column 13):\ndeclaration: variable 'a' is already declared\n"
         it "do a=1 end ; a=2" $
             run "do var int a <- 1; end var int a <- 2 ; escape a" []
             `shouldBe` Left "TODO: declared but not used"
@@ -146,7 +147,7 @@ spec = do
         it "if 1 then escape 1 end" $
             run "if 1 then escape 1 end" []
             --`shouldBe` Right (1, [[]])
-            `shouldBe` Left "trap: terminating `trap` body\n"
+            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n"
         it "if then (if then else end) end" $
             run "if 1 then if 0 then await FOREVER else escape 1 end ; end ; await FOREVER; " []
             `shouldBe` Right (1, [[]])
@@ -165,7 +166,7 @@ spec = do
     describe "par:" $ do
         it "par" $
             run "par do with end" []
-            `shouldBe` Left "parallel: terminating trail\ntrap: missing `escape` statement\nawait: unreachable statement\n"
+            `shouldBe` Left "(line 1, column 1):\nparallel: terminating trail\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nawait: unreachable statement\n"
         it "par" $
             run "par do escape 1 with escape 1 end" []
             `shouldBe` Right (1, [[]])
@@ -176,7 +177,7 @@ spec = do
     describe "par/and:" $ do
         it "par/and" $
             run "par/and do with end" []
-            `shouldBe` Left "trap: terminating `trap` body\ntrap: missing `escape` statement\nawait: unreachable statement\n"
+            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nawait: unreachable statement\n"
         it "par/and; escape 1" $
             run "par/and do with end ; escape 1;" []
             `shouldBe` Right (1, [[]])
@@ -191,7 +192,7 @@ spec = do
     describe "par/or:" $ do
         it "par/or" $
             run "par/or do with end" []
-            `shouldBe` Left "trap: terminating `trap` body\ntrap: missing `escape` statement\nawait: unreachable statement\n"
+            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nawait: unreachable statement\n"
         it "par/or" $
             run "par/or do with end ; escape 1" []
             `shouldBe` Right (1, [[]])

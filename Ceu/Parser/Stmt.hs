@@ -9,7 +9,7 @@ import Text.Parsec.String        (Parser)
 import Text.Parsec.Combinator    (many1, chainl, chainr1, option, optionMaybe)
 
 import Ceu.Parser.Token          (tk_key, tk_ext, tk_var, tk_type, tk_str)
-import Ceu.Parser.Exp            (toSource, expr)
+import Ceu.Parser.Exp            (pos2src, expr)
 
 import Ceu.Grammar.Globals       (Source)
 import Ceu.Grammar.Exp           (Exp(..))
@@ -22,7 +22,7 @@ attr_exp var = do
     pos  <- getPosition
     void <- tk_str "<-"
     exp  <- expr
-    return $ Write (toSource pos) var exp
+    return $ Write (pos2src pos) var exp
 
 attr_awaitext :: String -> Parser (Stmt Source)
 attr_awaitext var = do
@@ -35,14 +35,14 @@ attr_awaitext var = do
 stmt_nop :: Parser (Stmt Source)
 stmt_nop = do
     pos  <- getPosition
-    return $ Nop (toSource pos)
+    return $ Nop (pos2src pos)
 
 stmt_escape :: Parser (Stmt Source)
 stmt_escape = do
     pos  <- getPosition
     void <- tk_key "escape"
     e    <- expr
-    return $ Escape (toSource pos) Nothing (Just e)
+    return $ Escape (pos2src pos) Nothing (Just e)
 
 stmt_var :: Parser (Stmt Source)
 stmt_var = do
@@ -51,8 +51,8 @@ stmt_var = do
     tp   <- tk_type
     var  <- tk_var
     guard $ tp == "int"         -- TODO
-    p    <- option (Nop $ toSource pos) (try (attr_exp var) <|> try (attr_awaitext var))
-    return $ Seq (toSource pos) (Var (toSource pos) var Nothing) p
+    p    <- option (Nop $ pos2src pos) (try (attr_exp var) <|> try (attr_awaitext var))
+    return $ Seq (pos2src pos) (Var (pos2src pos) var Nothing) p
 
 stmt_write :: Parser (Stmt Source)
 stmt_write = do
@@ -60,7 +60,7 @@ stmt_write = do
     var  <- tk_var
     void <- tk_str "<-"
     exp  <- expr
-    return $ Write (toSource pos) var exp
+    return $ Write (pos2src pos) var exp
 
 -------------------------------------------------------------------------------
 
@@ -70,14 +70,14 @@ stmt_emitext = do
     void <- tk_key "emit"
     ext  <- tk_ext
     exp  <- optionMaybe (tk_str "->" *> expr)
-    return $ EmitExt (toSource pos) ext exp
+    return $ EmitExt (pos2src pos) ext exp
 
 stmt_awaitext :: (Maybe String) -> Parser (Stmt Source)
 stmt_awaitext var = do
     pos  <- getPosition
     void <- tk_key "await"
     ext  <- tk_ext
-    return $ AwaitExt (toSource pos) ext var
+    return $ AwaitExt (pos2src pos) ext var
 
 -------------------------------------------------------------------------------
 
@@ -87,7 +87,7 @@ stmt_do = do
     void <- tk_key "do"
     p    <- stmt <|> stmt_nop
     void <- tk_key "end"
-    return $ Scope (toSource pos) p
+    return $ Scope (pos2src pos) p
 
 stmt_if :: Parser (Stmt Source)
 stmt_if = do
@@ -98,9 +98,9 @@ stmt_if = do
     s1   <- stmt
     ss   <- many $ (try $ (,,) <$> getPosition <*> (tk_key "else/if" *> expr) <*> (tk_key "then" *> stmt))
     pos2 <- getPosition
-    s2   <- option (Nop $ toSource pos2) (try $ tk_key "else" *> stmt)
+    s2   <- option (Nop $ pos2src pos2) (try $ tk_key "else" *> stmt)
     void <- tk_key "end"
-    return $ foldr (\(p,c,s) acc -> If (toSource p) c s acc) s2 ([(pos1,cnd,s1)] ++ ss)
+    return $ foldr (\(p,c,s) acc -> If (pos2src p) c s acc) s2 ([(pos1,cnd,s1)] ++ ss)
 
 -------------------------------------------------------------------------------
 
@@ -113,7 +113,7 @@ stmt_par = do
     ss   <- many1 $ (try $ (,) <$> getPosition <*> (tk_key "with" *> stmt))
     --pos2 <- getPosition
     void <- tk_key "end"
-    return $ snd $ foldr1 (\(p,s) acc -> (p, Par (toSource p) s (snd acc)))
+    return $ snd $ foldr1 (\(p,s) acc -> (p, Par (pos2src p) s (snd acc)))
                           ([(pos1,s1)]++ss)
 
 stmt_parand :: Parser (Stmt Source)
@@ -125,7 +125,7 @@ stmt_parand = do
     ss   <- many1 $ (try $ (,) <$> getPosition <*> (tk_key "with" *> stmt))
     --pos2 <- getPosition
     void <- tk_key "end"
-    return $ snd $ foldr1 (\(p,s) acc -> (p, And (toSource p) s (snd acc)))
+    return $ snd $ foldr1 (\(p,s) acc -> (p, And (pos2src p) s (snd acc)))
                           ([(pos1,s1)]++ss)
 
 stmt_paror :: Parser (Stmt Source)
@@ -137,7 +137,7 @@ stmt_paror = do
     ss   <- many1 $ (try $ (,) <$> getPosition <*> (tk_key "with" *> stmt))
     --pos2 <- getPosition
     void <- tk_key "end"
-    return $ snd $ foldr1 (\(p,s) acc -> (p, Or (toSource p) s (snd acc)))
+    return $ snd $ foldr1 (\(p,s) acc -> (p, Or (pos2src p) s (snd acc)))
                           ([(pos1,s1)]++ss)
 
 -------------------------------------------------------------------------------
@@ -156,6 +156,6 @@ stmt_seq src = option (Nop src) (chainr1 stmt1 (do return (\a b->Seq src a b)))
 stmt :: Parser (Stmt Source)
 stmt = do
     pos <- getPosition
-    s   <- stmt_seq (toSource pos)
+    s   <- stmt_seq (pos2src pos)
     return s
 

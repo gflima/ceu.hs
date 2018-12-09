@@ -9,6 +9,7 @@ import Text.Parsec.String (Parser)
 import Ceu.Parser.Token
 import Ceu.Parser.Exp
 import Ceu.Parser.Stmt
+import Ceu.Grammar.ToSourceString.Source
 import Ceu.Grammar.Exp          (Exp(..))
 import Ceu.Grammar.Full.Grammar (Stmt(..))
 

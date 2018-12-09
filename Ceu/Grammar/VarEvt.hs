@@ -6,7 +6,7 @@ import Ceu.Grammar.Globals
 import Ceu.Grammar.Exp
 import Ceu.Grammar.Stmt
 
-check :: (Stmt ann) -> Errors
+check :: (ToSourceString ann) => (Stmt ann) -> Errors
 check p = aux [] [] p
 
 aux vars ints s@(Var _ var p)   = es++es' where
@@ -14,23 +14,23 @@ aux vars ints s@(Var _ var p)   = es++es' where
                                   es = if (take 2 var == "__") || (not $ contains var vars) then
                                         []
                                       else
-                                        [err_stmt_msg s "variable '" ++ var ++ "' is already declared"]
+                                        [toError s "variable '" ++ var ++ "' is already declared"]
 
 aux vars ints s@(Int _ int p)   = es++es' where
                                   es' = aux vars (s:ints) p
                                   es = if not $ contains int ints then [] else
-                                       [err_stmt_msg s "event '" ++ int ++ "' is already declared"]
+                                       [toError s "event '" ++ int ++ "' is already declared"]
 
 aux vars _ s@(Write _ var exp)  = es1++es2 where
                                   es1 = if (map toUpper var)==var || contains var vars then [] else
-                                         [err_stmt_msg s "variable '" ++ var ++ "' is not declared"]
+                                         [toError s "variable '" ++ var ++ "' is not declared"]
                                   es2 = getErrs vars exp
 
 aux _ ints s@(AwaitInt _ int)   = if contains int ints then [] else
-                                  [err_stmt_msg s "event '" ++ int ++ "' is not declared"]
+                                  [toError s "event '" ++ int ++ "' is not declared"]
 
 aux _ ints s@(EmitInt _ int)    = if contains int ints then [] else
-                                  [err_stmt_msg s "event '" ++ int ++ "' is not declared"]
+                                  [toError s "event '" ++ int ++ "' is not declared"]
 
 aux vars ints (If _ exp p1 p2)  = es ++ (aux vars ints p1) ++ (aux vars ints p2) where
                                   es = getErrs vars exp
@@ -39,12 +39,12 @@ aux vars ints (Seq _ p1 p2)     = (aux vars ints p1) ++ (aux vars ints p2)
 aux vars ints (Loop _ p)        = (aux vars ints p)
 aux vars ints s@(Every _ evt p) = es ++ (aux vars ints p) where
                                   es = if (map toUpper evt)==evt || contains evt ints then [] else
-                                      [err_stmt_msg s "event '" ++ evt ++ "' is not declared"]
+                                      [toError s "event '" ++ evt ++ "' is not declared"]
             
 aux vars ints (Par _ p1 p2)     = (aux vars ints p1) ++ (aux vars ints p2)
 aux vars ints s@(Pause _ var p) = es ++ (aux vars ints p) where
                                   es = if contains var vars then [] else
-                                      [err_stmt_msg s "variable '" ++ var ++ "' is not declared"]
+                                      [toError s "variable '" ++ var ++ "' is not declared"]
 aux vars ints (Fin _ p)         = (aux vars ints p)
 aux vars ints (Trap _ p)        = (aux vars ints p)
 aux vars ints p                 = []

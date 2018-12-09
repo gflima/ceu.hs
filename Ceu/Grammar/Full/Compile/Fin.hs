@@ -7,9 +7,9 @@ import Ceu.Grammar.Full.Grammar
 -- (Fin f1 f2 f3);A -> (or (Fin' p) A)
 -- (Fin id p);A -> A ||| (Var' (Or [(Fin p)] X)
 
-compile :: (Stmt ann) -> (Errors, Stmt ann)
+compile :: (ToSourceString ann) => (Stmt ann) -> (Errors, Stmt ann)
 compile p = aux Nothing p where
-  aux :: (Maybe ID_Evt) -> (Stmt ann) -> (Errors, Stmt ann)
+  aux :: (ToSourceString ann) => (Maybe ID_Evt) -> (Stmt ann) -> (Errors, Stmt ann)
   aux pse (Var' z var (Just (f1,f2,f3)) p) = aux pse (Var' z var Nothing (Seq z (Fin z f1 f2 f3) p))
   aux pse (Var' z var Nothing p)      = (es, Var' z var Nothing p')
                                         where
@@ -64,7 +64,7 @@ compile p = aux Nothing p where
   aux pse (Pause z evt p)             = (es, Pause z evt p')
                                         where
                                           (es,p') = (aux (Just evt) p)
-  aux pse s@(Fin z _ _ _)             = ([err_stmt_msg s "unexpected `finalize`"]++es, p')
+  aux pse s@(Fin z _ _ _)             = ([toError s "unexpected `finalize`"]++es, p')
                                         where
                                           (es,p') = aux pse (Seq z s (Nop z))
   aux pse (Async z p)                 = (es, Async z p')

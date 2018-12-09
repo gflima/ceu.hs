@@ -10,8 +10,8 @@ import Ceu.Parser.Token (tk_num, tk_var, tk_str)
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Exp (Exp(..))
 
-toSource :: SourcePos -> Source
-toSource pos = (sourceName pos, sourceLine pos, sourceColumn pos)
+pos2src :: SourcePos -> Source
+pos2src pos = (sourceName pos, sourceLine pos, sourceColumn pos)
 
 -------------------------------------------------------------------------------
 
@@ -19,20 +19,20 @@ expr_const :: Parser (Exp Source)
 expr_const = do
     pos <- getPosition
     num <- tk_num
-    return $ Const (toSource pos) num
+    return $ Const (pos2src pos) num
 
 expr_read :: Parser (Exp Source)
 expr_read = do
     pos <- getPosition
     str <- tk_var
-    return $ Read (toSource pos) str
+    return $ Read (pos2src pos) str
 
 expr_umn :: Parser (Exp Source)
 expr_umn = do
     pos  <- getPosition
     void <- tk_str "-"
     exp  <- expr
-    return $ Umn (toSource pos) exp
+    return $ Umn (pos2src pos) exp
 
 expr_parens :: Parser (Exp Source)
 expr_parens = do
@@ -51,22 +51,22 @@ expr_add_sub = chainl1 expr_mul_div op where
     op = do
         pos  <- getPosition
         void <- tk_str "+"
-        return (\a b -> Add (toSource pos) a b)
+        return (\a b -> Add (pos2src pos) a b)
      <|> do
         pos  <- getPosition
         void <- tk_str "-"
-        return (\a b -> Sub (toSource pos) a b)
+        return (\a b -> Sub (pos2src pos) a b)
 
 expr_mul_div :: Parser (Exp Source)
 expr_mul_div = chainl1 expr_prim op where
     op = do
         pos  <- getPosition
         void <- tk_str "*"
-        return (\a b -> Mul (toSource pos) a b)
+        return (\a b -> Mul (pos2src pos) a b)
      <|> do
         pos  <- getPosition
         void <- tk_str "/"
-        return (\a b -> Div (toSource pos) a b)
+        return (\a b -> Div (pos2src pos) a b)
 
 -------------------------------------------------------------------------------
 
@@ -74,5 +74,3 @@ expr :: Parser (Exp Source)
 expr = do
     e <- expr_add_sub
     return e
-
-
