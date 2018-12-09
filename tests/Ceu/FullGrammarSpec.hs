@@ -248,7 +248,7 @@ spec = do
 
     it "loop (and break FOR)" $ do
       compile' (False,False) (Loop () (And () (Break ()) (AwaitFor ())))
-      `shouldBe` (["await: unreachable statement","loop: `loop` never iterates"],G.Trap () (G.Loop () (G.Seq () (G.Escape () 0) (G.AwaitExt () "FOREVER"))))
+      `shouldBe` (["trap: all trails must terminate","await: unreachable statement","loop: `loop` never iterates"],G.Trap () (G.Loop () (G.Seq () (G.Escape () 0) (G.AwaitExt () "FOREVER"))))
 
   --------------------------------------------------------------------------
   describe "Forever.compile" $ do
@@ -385,7 +385,7 @@ end
         (Loop () (AwaitTmr () (Const () 5)))
         (Escape () Nothing (Just (Const () 25))))
 
-    evalFullProgItLeft ["if: unreachable statement","if: unreachable statement","trap: terminating `trap` body"] []
+    evalFullProgItLeft ["trap: all trails must terminate","if: unreachable statement","if: unreachable statement","trap: terminating `trap` body"] []
       (And ()
         (Loop () (AwaitTmr () (Const () 5)))
         (Escape () Nothing (Just (Const () 25))))
