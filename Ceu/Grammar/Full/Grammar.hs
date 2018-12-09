@@ -101,7 +101,7 @@ getAnn (Escape'  z _    ) = z
 getAnn (Clean'   z _ _  ) = z
 getAnn (Nop      z      ) = z
 
-toGrammar :: (Eq ann, Show ann) => (Stmt ann) -> (Errors, G.Stmt ann)
+toGrammar :: Eq ann => (Stmt ann) -> (Errors, G.Stmt ann)
 toGrammar (Var' z var Nothing p) = (es, G.Var z var p')
                                  where
                                    (es,p') = toGrammar p
@@ -147,7 +147,7 @@ toGrammar (Clean' _ id p)        = (es++es', p'')
                                    (es, p')  = toGrammar p
                                    (es',p'') = clean id p'
 toGrammar (Nop z)                 = ([], G.Nop z)
-toGrammar p                    = error $ "toGrammar: unexpected statement: "++(show p)
+toGrammar p                    = error $ "toGrammar: unexpected statement: " -- ++(show p)
 
 -------------------------------------------------------------------------------
 

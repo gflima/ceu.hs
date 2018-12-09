@@ -3,11 +3,8 @@ module Ceu.GrammarSpec (main, spec) where
 import Ceu.Grammar.Globals (Errors)
 import Ceu.Grammar.Exp
 import Ceu.Grammar.Stmt
-import qualified Ceu.Grammar.Check.Check     as Check
-import qualified Ceu.Grammar.Check.Escape    as Escape
-import qualified Ceu.Grammar.Check.Loop      as Loop
-import qualified Ceu.Grammar.Check.Reachable as Reachable
-import qualified Ceu.Grammar.Check.VarEvt    as VarEvt
+import qualified Ceu.Grammar.Check  as Check
+import qualified Ceu.Grammar.VarEvt as VarEvt
 import Test.Hspec
 
 main :: IO ()
@@ -90,36 +87,36 @@ spec = do
   describe "checkEscape:" $ do
 
     -- atomic statements --
-    checkEscapeIt (Error () "")               []
-    checkEscapeIt (Escape () 0)               ["escape: orphan `escape` statement"]
-    checkEscapeIt (Write () "x" (Const () 0)) []
+    checkCheckIt (Error () "")               []
+    checkCheckIt (Escape () 0)               ["escape: orphan `escape` statement"]
+    checkCheckIt (Write () "x" (Const () 0)) ["assignment: variable 'x' is not declared"]
 
     -- compound statements --
-    checkEscapeIt (Trap () (Escape () 0))     []
-    checkEscapeIt (Trap () (Escape () 1))     ["trap: missing `escape` statement","escape: orphan `escape` statement"]
-    checkEscapeIt (Trap () (Trap () (Escape () 0))) ["trap: missing `escape` statement"]
-    checkEscapeIt (Trap () (Trap () (Escape () 1))) ["trap: missing `escape` statement"]
-    checkEscapeIt (Trap () (Seq () (Escape () 0) (Escape () 1))) ["escape: orphan `escape` statement"]
-    checkEscapeIt (Trap () (Seq () (Escape () 1) (Escape () 1))) ["trap: missing `escape` statement","escape: orphan `escape` statement", "escape: orphan `escape` statement"]
+    checkCheckIt (Trap () (Escape () 0))     []
+    checkCheckIt (Trap () (Escape () 1))     ["escape: orphan `escape` statement", "trap: missing `escape` statement"]
+    checkCheckIt (Trap () (Trap () (Escape () 0))) ["trap: terminating `trap` body","trap: missing `escape` statement"]
+    checkCheckIt (Trap () (Trap () (Escape () 1))) ["trap: missing `escape` statement"]
+    checkCheckIt (Trap () (Seq () (Escape () 0) (Escape () 1))) ["escape: orphan `escape` statement","escape: unreachable statement"]
+    checkCheckIt (Trap () (Seq () (Escape () 1) (Escape () 1))) ["escape: orphan `escape` statement","escape: orphan `escape` statement","escape: unreachable statement", "trap: missing `escape` statement"]
 
   --------------------------------------------------------------------------
   describe "checkReachable:" $ do
 
     -- atomic statements --
-    checkReachableIt (Error () "")               []
-    checkReachableIt (Write () "x" (Const () 0)) []
+    checkStmtsIt (Error () "")               []
+    checkStmtsIt (Write () "x" (Const () 0)) []
 
     -- compound statements --
-    checkReachableIt (Seq () (Escape () 1) (Escape () 0)) ["escape: unreachable statement"]
-    checkReachableIt (Seq () (Trap () (Trap () (Escape () 1))) (Escape () 0)) []
-    checkReachableIt (Seq () (Escape () 0) (Escape () 1)) ["escape: unreachable statement"]
-    checkReachableIt (Seq () (AwaitExt () "FOREVER") (Escape () 1)) ["escape: unreachable statement"]
-    checkReachableIt (Seq () (Seq () (AwaitExt () "FOREVER") (Nop ())) (Escape () 1)) ["nop: unreachable statement",("escape: unreachable statement")]
-    checkReachableIt (Seq () (Loop () (Nop ())) (Nop ())) ["nop: unreachable statement"]
-    checkReachableIt (Seq () (Every () "" (Nop ())) (Nop ())) ["nop: unreachable statement"]
-    checkReachableIt (Seq () (Par () (Nop ()) (Every () "" (Nop ()))) (Nop ())) ["nop: unreachable statement"]
-    checkReachableIt (Seq () (Trap () (Loop () (Trap () (Seq () (Escape () 0) (Escape () 1))))) (Nop ())) ["escape: unreachable statement"]
-    checkReachableIt (Seq () (Trap () (Loop () (Trap () (Seq () (Escape () 0) (Nop ()))))) (Nop ())) ["nop: unreachable statement", "nop: unreachable statement"]
+    checkStmtsIt (Seq () (Escape () 1) (Escape () 0)) ["escape: unreachable statement"]
+    checkStmtsIt (Seq () (Trap () (Trap () (Escape () 1))) (Escape () 0)) ["trap: missing `escape` statement"]
+    checkStmtsIt (Seq () (Escape () 0) (Escape () 1)) ["escape: unreachable statement"]
+    checkStmtsIt (Seq () (AwaitExt () "FOREVER") (Escape () 1)) ["escape: unreachable statement"]
+    checkStmtsIt (Seq () (Seq () (AwaitExt () "FOREVER") (Nop ())) (Escape () 1)) ["nop: unreachable statement",("escape: unreachable statement")]
+    checkStmtsIt (Seq () (Loop () (Nop ())) (Nop ())) ["loop: unbounded `loop` execution","nop: unreachable statement"]
+    checkStmtsIt (Seq () (Every () "" (Nop ())) (Nop ())) ["nop: unreachable statement"]
+    checkStmtsIt (Seq () (Par () (Nop ()) (Every () "" (Nop ()))) (Nop ())) ["parallel: terminating trail","nop: unreachable statement"]
+    checkStmtsIt (Seq () (Trap () (Loop () (Trap () (Seq () (Escape () 0) (Escape () 1))))) (Nop ())) ["escape: unreachable statement","loop: unbounded `loop` execution"]
+    checkStmtsIt (Seq () (Trap () (Loop () (Trap () (Seq () (Escape () 0) (Nop ()))))) (Nop ())) ["nop: unreachable statement", "loop: unbounded `loop` execution","trap: missing `escape` statement","nop: unreachable statement"]
 
   --------------------------------------------------------------------------
   describe "checkVarEvt -- declarations" $ do
@@ -150,8 +147,8 @@ spec = do
     -- compound statements --
     checkStmtsIt (Var () "x" (Nop ()))                 []
     checkStmtsIt (If () (Const () 0) (Nop ()) (Escape () 0)) []
-    checkStmtsIt (Seq () (Escape () 0) (Nop ()))       []
-    checkStmtsIt (Loop () (Escape () 0))               []
+    checkStmtsIt (Seq () (Escape () 0) (Nop ()))       ["nop: unreachable statement"]
+    checkStmtsIt (Loop () (Escape () 0))               ["loop: `loop` never iterates"]
     checkStmtsIt (Loop () (Nop ()))                    ["loop: unbounded `loop` execution"]
     checkStmtsIt (Every () "A" (Nop ()))               []
     checkStmtsIt (Every () "A" (Fin () (Nop ())))      ["every: invalid statement in `every`", "finalize: invalid statement"]
@@ -164,23 +161,22 @@ spec = do
     checkStmtsIt (Fin () (Fin () (Nop ())))            ["finalize: invalid statement in `finalize`", "finalize: invalid statement"]
 
     -- misc --
-    checkStmtsIt ((Nop ()) `sSeq` (Fin () (Loop () (Escape () 0)))) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
+    checkStmtsIt ((Nop ()) `sSeq` (Fin () (Loop () (Escape () 0)))) ["loop: `loop` never iterates","finalize: invalid statement in `finalize`", "escape: invalid statement"]
     checkStmtsIt ((Nop ()) `sSeq` (Fin () (Loop () (Nop ())))) ["loop: unbounded `loop` execution"]
     checkStmtsIt (Var () "x" (Fin () (Every () "A" (Nop ())))) ["finalize: invalid statement in `finalize`", "every: invalid statement"]
-    checkStmtsIt (Loop () (Trap () (Loop () (Escape () 0))))   ["loop: unbounded `loop` execution"]
-    checkStmtsIt (Loop () (Trap () (Loop () (Seq () (Escape () 0) (Escape () 0))))) ["loop: unbounded `loop` execution"]
+    checkStmtsIt (Loop () (Trap () (Loop () (Escape () 0))))   ["loop: `loop` never iterates","loop: unbounded `loop` execution"]
+    checkStmtsIt (Loop () (Trap () (Loop () (Seq () (Escape () 0) (Escape () 0))))) ["escape: unreachable statement","loop: `loop` never iterates","loop: unbounded `loop` execution"]
     checkStmtsIt (AwaitInt () "a" `sSeq` (Fin () (Escape () 0)) `sPar` (AwaitExt () "FOREVER")) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
     checkStmtsIt (AwaitInt () "a" `sSeq` (Every () "A" (Fin () (Nop ()))) `sPar` (AwaitExt () "FOREVER")) ["every: invalid statement in `every`", "finalize: invalid statement"]
-    checkStmtsIt (Loop () ((AwaitExt () "FOREVER") `sPar` Loop () (Loop () (Loop () (AwaitExt () "A")))))  []
-    checkStmtsIt (Loop () ((Escape () 0) `sPar` Loop () (Loop () (Loop () (AwaitExt () "A"))))) []
+    checkStmtsIt (Loop () ((AwaitExt () "FOREVER") `sPar` Loop () (Loop () (Loop () (AwaitExt () "A")))))  ["loop: `loop` never iterates","loop: `loop` never iterates","loop: `loop` never iterates"]
+    checkStmtsIt (Loop () ((Escape () 0) `sPar` Loop () (Loop () (Loop () (AwaitExt () "A"))))) ["loop: `loop` never iterates","loop: `loop` never iterates","loop: `loop` never iterates"]
     checkStmtsIt (Fin () (Escape () 0)) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
-    checkStmtsIt (Loop () (Escape () 0)) []
-    checkStmtsIt (Loop () (AwaitExt () "FOREVER")) []
+    checkStmtsIt (Loop () (AwaitExt () "FOREVER")) ["loop: `loop` never iterates"]
 
     -- all
-    checkCheckIt (Fin () (Escape () 0)) ["finalize: invalid statement in `finalize`", "escape: invalid statement", "escape: orphan `escape` statement"]
+    checkCheckIt (Fin () (Escape () 0)) ["escape: orphan `escape` statement", "finalize: invalid statement in `finalize`", "escape: invalid statement"]
     checkCheckIt (Trap () (Fin () (Escape () 0))) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
-    checkCheckIt (Seq () (Trap () (Loop () (Trap () (Seq () (Escape () 0) (Nop ()))))) (Nop ())) ["loop: unbounded `loop` execution", "trap: missing `escape` statement", "nop: unreachable statement", "nop: unreachable statement"]
+    checkCheckIt (Seq () (Trap () (Loop () (Trap () (Seq () (Escape () 0) (Nop ()))))) (Nop ())) ["nop: unreachable statement", "loop: unbounded `loop` execution", "trap: missing `escape` statement", "nop: unreachable statement"]
     checkCheckIt (Trap () (Seq () (Trap () (Par () (AwaitExt () "FOREVER") (Escape () 0))) (Escape () 0)))
       []
     checkCheckIt (Trap () (Par () (Escape () 0) (Seq () (Par () (AwaitExt () "FOREVER") (Fin () (Nop ()))) (Escape () 0))))
@@ -193,11 +189,9 @@ spec = do
         checkIt' ck p b   =
           (it ((if b==[] then "pass" else "fail") ++ ": " ++ showProg p) $
             (ck p) `shouldBe` b)
-        checkLoopIt p b      = checkIt  Loop.check p b
+        checkLoopIt p b      = checkIt  Check.boundedLoop p b
         checkFinIt (Fin () p) b = checkIt' Check.getComplexs p b
         checkEveryIt p b     = checkIt' Check.getComplexs p b
-        checkEscapeIt p b    = checkIt' Escape.check p b
-        checkReachableIt p b = checkIt' Reachable.check p b
         checkVarEvtIt p b    = checkIt' VarEvt.check p b
         checkStmtsIt p b     = checkIt' Check.stmts p b
         checkCheckIt :: Stmt () -> Errors -> Spec

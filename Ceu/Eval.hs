@@ -2,9 +2,9 @@ module Ceu.Eval where
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Exp
-import qualified Ceu.Grammar.Stmt        as G
-import qualified Ceu.Grammar.Simplify    as S
-import qualified Ceu.Grammar.Check.Check as Check
+import qualified Ceu.Grammar.Stmt     as G
+import qualified Ceu.Grammar.Simplify as S
+import qualified Ceu.Grammar.Check    as Check
 import Data.Maybe
 import Text.Printf
 import Debug.Trace
@@ -202,6 +202,7 @@ clear stmt = case stmt of
   Trap _ p       -> clear p
   Loop' _ p _    -> clear p
   Par' z p q     -> Seq z (clear p) (clear q)
+  Nop z          -> Nop z   -- because of blocked (Par Nop Nop)
   _              -> error "clear: invalid clear"
 
 -- Helper function used by step in the *-adv rules.

@@ -1,4 +1,4 @@
-module Ceu.Grammar.Check.VarEvt where
+module Ceu.Grammar.VarEvt where
 
 import Data.Char (toUpper)
 

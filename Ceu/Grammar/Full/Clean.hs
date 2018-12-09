@@ -1,13 +1,14 @@
 module Ceu.Grammar.Full.Clean where
 
+import Debug.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Exp
 import qualified Ceu.Grammar.Stmt as G
 
-import Ceu.Grammar.Check.Reachable (maybeTerminates, alwaysInstantaneous)
-import Ceu.Grammar.Check.Escape    (getEscapes, escapesAt1, removeTrap)
+import Ceu.Grammar.Check (maybeTerminates, alwaysInstantaneous, getEscapes,
+                          escapesAt0, removeTrap)
 
-clean :: (Eq ann, Show ann) => String -> (G.Stmt ann) -> (Errors, G.Stmt ann)
+clean :: Eq ann => String -> (G.Stmt ann) -> (Errors, G.Stmt ann)
 
 clean "And"
   s@(G.Trap z
@@ -18,14 +19,14 @@ clean "And"
           (G.Seq _ p1 chk1)
           (G.Seq _ p2 chk2))
     )))
-    | alwaysInstantaneous p1                          = ([], removeTrap (G.Trap z (G.Seq z p1 p2)))
+    | alwaysInstantaneous p1 = ([], removeTrap (G.Trap z (G.Seq z p1 p2)))
     -- | neverInstantaneous p1 && alwaysInstantaneous p2 = G.Par () p1 p2
-    | otherwise                                       = ([], s)
+    | otherwise              = ([], s)
 
 clean "Or'" p = fin_or [] p
 clean "Or"  p = fin_or [G.err_stmt_msg p "no trails terminate"] p
 
-clean "Loop" s@(G.Trap _ p) = ([], if escapesAt1 p then s else removeTrap s)
+clean "Loop" s@(G.Trap _ p) = ([], if escapesAt0 p then s else removeTrap s)
 
 clean "Spawn" p = (es1++es2,p') where
   (es1,p') =
@@ -40,7 +41,9 @@ clean "Spawn" p = (es1++es2,p') where
       else
         [G.err_stmt_msg p "escaping `spawn`"] ++ (G.errs_stmts_msg_map (map fst escs) "escaping statement")
 
-clean id p = error $ "unexpected clean case: " ++ id ++ "\n" ++ (show p)
+clean id p = error $ "unexpected clean case: " ++ id ++ "\n" -- ++ (show p)
+
+-------------------------------------------------------------------------------
 
 fin_or err (G.Trap z1 (G.Par z2 p1'@(G.Seq _ p1 (G.Escape _ 0)) p2'@(G.Seq _ p2 (G.Escape _ 0)))) =
   let t1 = maybeTerminates p1

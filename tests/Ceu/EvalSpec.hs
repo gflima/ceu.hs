@@ -49,6 +49,8 @@ main = hspec spec
 spec :: Spec
 spec = do
   --------------------------------------------------------------------------
+  --describe "TODO" $ do
+
   describe "Env/Envs" $ do
 
       it "fail: undeclared variable" $
@@ -495,9 +497,9 @@ spec = do
           (step (Par' () (Escape () 0) q, 0, [], [], [])
             `shouldBe` (Seq () (clear q) (Escape () 0), 0, [], [], []))
 
-      it "fail: q == (Nop ()) (invalid clear)" $
-        forceEval (step (Par' () (Escape () 0) (Nop ()), 0, [], [], []))
-        `shouldThrow` errorCall "clear: invalid clear"
+      it "pass: clear Par'" $
+        (step (Par' () (Escape () 0) (Nop ()), 0, [], [], []))
+        `shouldBe` (Seq () (Nop ()) (Escape () 0), 0, [], [], [])
 
       it "fail: q == (Escape () 0) (invalid clear)" $
         forceEval (step (Par' () (Escape () 0) (Escape () 0), 0, [], [], []))
@@ -522,10 +524,6 @@ spec = do
       it "pass: p == (Nop ())" $
         step (Par' () (AwaitExt () "FOREVER") (AwaitExt () "FOREVER"), 1, [], [], [])
         `shouldBe` (Par' () (AwaitExt () "FOREVER") (AwaitExt () "FOREVER"),0,[],[],[])
-
-      it "fail: p == (Escape () 0) (invalid clear)" $
-        forceEval (step (Par' () (Escape () 0) (Nop ()), 0, [], [], []))
-        `shouldThrow` errorCall "clear: invalid clear"
 
   -- par-brk2 --
   describe "(Par' () p (Escape () 0))" $ do
@@ -677,14 +675,6 @@ spec = do
           (step (Par' () (Escape () 0) q, 0, [], [], [])
             `shouldBe` (Seq () (clear q) (Escape () 0), 0, [], [], []))
 
-      it "fail: q == (Nop ()) (invalid clear)" $
-        forceEval (step (Par' () (Escape () 0) (Nop ()), 0, [], [], []))
-        `shouldThrow` errorCall "clear: invalid clear"
-
-      it "fail: q == (Escape () 0) (invalid clear)" $
-        forceEval (step (Par' () (Escape () 0) (Escape () 0), 0, [], [], []))
-        `shouldThrow` errorCall "clear: invalid clear"
-
   -- or-brk1 --
   describe "(Par' () (Escape () 0) q)" $ do
       it "pass: lvl == 0" $
@@ -726,14 +716,6 @@ spec = do
           (step (Par' () (Escape () 0) q, 0, [], [], [])
             `shouldBe` (Seq () clear_q (Escape () 0), 0, [], [], []))
 
-      it "fail: q == (Nop ()) (invalid clear)" $
-        forceEval (step (Par' () (Escape () 0) (Nop ()), 0, [], [], []))
-        `shouldThrow` errorCall "clear: invalid clear"
-
-      it "fail: q == (Escape () 0) (invalid clear)" $
-        forceEval (step (Par' () (Escape () 0) (Escape () 0), 0, [], [], []))
-        `shouldThrow` errorCall "clear: invalid clear"
-
   -- or-nop2 --
   describe "(Par' () p (Nop ()))" $ do
       it "pass: lvl == 0 && isBlocked p" $
@@ -755,14 +737,6 @@ spec = do
         forceEval (step (Par' () (Fin () (Nop ())) (Nop ()), 0, Just "b", [], []))
         `shouldThrow` errorCall "step: cannot advance"
 -}
-
-      it "fail: p == (Nop ()) (invalid clear)" $
-        forceEval (step (Par' () (Escape () 0) (Nop ()), 0, [], [], []))
-        `shouldThrow` errorCall "clear: invalid clear"
-
-      it "fail: p == (Escape () 0) (invalid clear)" $
-        forceEval (step (Par' () (Escape () 0) (Escape () 0), 0, [], [], []))
-        `shouldThrow` errorCall "clear: invalid clear"
 
   -- or-brk2 --
   describe "(Par' () p (Escape () 0))" $ do
@@ -1098,7 +1072,7 @@ spec = do
             G.Write () "_ret" (Read () "a" `eAdd` Const () 10) `G.sSeq`
             G.Escape () 0))
 
-    evalProgItFail ["trap: missing `escape` statement","escape: orphan `escape` statement","await: unreachable statement"]
+    evalProgItFail ["escape: orphan `escape` statement","trap: missing `escape` statement","await: unreachable statement"]
       [] (G.Escape () 1)
 
     evalProgItFail ["declaration: variable '_ret' is already declared"]
