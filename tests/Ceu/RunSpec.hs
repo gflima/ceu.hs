@@ -19,7 +19,7 @@ spec = do
     describe "void:" $ do
         it "void" $
             run "" []
-            `shouldBe` Left "trap: missing `escape` statement\nawait: unreachable statement\n"
+            `shouldBe` Left "trap: terminating `trap` body\ntrap: missing `escape` statement\nawait: unreachable statement\n"
 
     describe "escape:" $ do
         it "escape 1" $
@@ -73,10 +73,10 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "var int a" $
             run "var int a" []
-            `shouldBe` Left "trap: missing `escape` statement\nawait: unreachable statement\n"
+            `shouldBe` Left "trap: terminating `trap` body\ntrap: missing `escape` statement\nawait: unreachable statement\n"
         it "var int a <- 1" $
             run "var int a <- 1" []
-            `shouldBe` Left "trap: missing `escape` statement\nawait: unreachable statement\n"
+            `shouldBe` Left "trap: terminating `trap` body\ntrap: missing `escape` statement\nawait: unreachable statement\n"
         it "var int a ; a <- 1" $
             run "var int a ; a <- 1 ; escape a" []
             `shouldBe` Right (1, [[]])
@@ -145,15 +145,16 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "if 1 then escape 1 end" $
             run "if 1 then escape 1 end" []
-            `shouldBe` Right (1, [[]])
+            --`shouldBe` Right (1, [[]])
+            `shouldBe` Left "trap: terminating `trap` body\n"
         it "if then (if then else end) end" $
-            run "if 1 then ; if 0 then else escape 1 end ; end" []
+            run "if 1 then if 0 then await FOREVER else escape 1 end ; end ; await FOREVER; " []
             `shouldBe` Right (1, [[]])
         it "if then (if then end) else end" $
-            run "if 0 then ; if 0 then end ; else escape 1 end" []
+            run "if 0 then ; if 0 then end ; else escape 1 end ; await FOREVER" []
             `shouldBe` Right (1, [[]])
         it "if 1 then a=1; a=2; if 1 then escape a end end" $
-            run "if 1 then var int a<-1 ; a<-2; if 1 then escape a end end" []
+            run "if 1 then var int a<-1 ; a<-2; if 1 then escape a end end ; await FOREVER" []
             `shouldBe` Right (2, [[]])
         it "if 0 then . else/if 1 then escape 1 else ." $
             run "if 0 then escape 0 else/if 1 then escape 1 else escape 0 end" []
@@ -175,7 +176,7 @@ spec = do
     describe "par/and:" $ do
         it "par/and" $
             run "par/and do with end" []
-            `shouldBe` Left "trap: missing `escape` statement\nawait: unreachable statement\n"
+            `shouldBe` Left "trap: terminating `trap` body\ntrap: missing `escape` statement\nawait: unreachable statement\n"
         it "par/and; escape 1" $
             run "par/and do with end ; escape 1;" []
             `shouldBe` Right (1, [[]])
@@ -184,12 +185,12 @@ spec = do
             `shouldBe` Right (3, [[]])
         it "par/and ... with ... with escape 3 end" $
             run "par/and do await X with await Y with escape 3 end" []
-            `shouldBe` Left "if: unreachable statement\n"
+            `shouldBe` Left "if: unreachable statement\ntrap: terminating `trap` body\n"
 
     describe "par/or:" $ do
         it "par/or" $
             run "par/or do with end" []
-            `shouldBe` Left "trap: missing `escape` statement\nawait: unreachable statement\n"
+            `shouldBe` Left "trap: terminating `trap` body\ntrap: missing `escape` statement\nawait: unreachable statement\n"
         it "par/or" $
             run "par/or do with end ; escape 1" []
             `shouldBe` Right (1, [[]])
