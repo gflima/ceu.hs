@@ -182,10 +182,11 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "par/and ... with ... with escape 3 end" $
             run "par/and do with with escape 3 end" []
-            `shouldBe` Right (3, [[]])
+            --`shouldBe` Right (3, [[]])
+            `shouldBe` Left "trap: all trails must terminate\ntrap: all trails must terminate\n"
         it "par/and ... with ... with escape 3 end" $
             run "par/and do await X with await Y with escape 3 end" []
-            `shouldBe` Left "if: unreachable statement\ntrap: terminating `trap` body\n"
+            `shouldBe` Left "trap: all trails must terminate\nif: unreachable statement\ntrap: terminating `trap` body\n"
 
     describe "par/or:" $ do
         it "par/or" $

@@ -82,19 +82,19 @@ getComplexs p = errs_stmts_msg_map (aux' (-1) p) "invalid statement" where
 -- returns all `loop` that fail
 
 boundedLoop :: (Stmt ann) -> Bool
-boundedLoop (Loop _ body) = cL 0 body where
-  cL n stmt = case stmt of
+boundedLoop (Loop _ body) = aux 0 body where
+  aux n stmt = case stmt of
     AwaitExt _ _           -> True
     Every _ _ _            -> True
-    Var _ _ p              -> cL n p
-    Int _ _ p              -> cL n p
-    If _ _ p q             -> cL n p && cL n q
-    Seq _ s@(Escape _ _) q -> cL n s   -- q never executes
-    Seq _ p q              -> cL n p || cL n q
-    Loop _ p               -> cL n p
-    Par _ p q              -> cL n p || cL n q
-    Pause _ _ p            -> cL n p
-    Trap _ p               -> cL (n+1) p
+    Var _ _ p              -> aux n p
+    Int _ _ p              -> aux n p
+    If _ _ p q             -> aux n p && aux n q
+    Seq _ s@(Escape _ _) q -> aux n s   -- q never executes
+    Seq _ p q              -> aux n p || aux n q
+    Loop _ p               -> aux n p
+    Par _ p q              -> aux n p || aux n q
+    Pause _ _ p            -> aux n p
+    Trap _ p               -> aux (n+1) p
     Escape _ k             -> (k >= n)
     _                      -> False
 
