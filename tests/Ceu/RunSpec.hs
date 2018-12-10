@@ -28,7 +28,7 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "escape a" $
             run "escape a" []
-            `shouldBe` Left "read access to 'a': variable 'a' is not declared\n"
+            `shouldBe` Left "(line 1, column 8):\nread access to 'a': variable 'a' is not declared\n"
         it "escape" $
             run "escape" []
             `shouldBe` Left "TODO: escape w/o expression"
@@ -68,7 +68,7 @@ spec = do
             `shouldBe` Left "(line 1, column 10):\nunexpected ','\nexpecting digit, letter, \"_\", \"<-\", \"escape\", \"var\", \"await\", \"emit\", \"do\", \"if\", \"par\", \"par/and\", \"par/or\" or end of input"
         it "a <- 1; escape a;" $
             run "a <- 1; escape a" []
-            `shouldBe` Left "(line 1, column 1):\nassignment: variable 'a' is not declared\nread access to 'a': variable 'a' is not declared\n"
+            `shouldBe` Left "(line 1, column 1):\nassignment: variable 'a' is not declared\n(line 1, column 16):\nread access to 'a': variable 'a' is not declared\n"
         it "var int a <- 1; escape a;" $
             run "var int a <- 1; escape a" []
             `shouldBe` Right (1, [[]])
@@ -166,7 +166,7 @@ spec = do
     describe "par:" $ do
         it "par" $
             run "par do with end" []
-            `shouldBe` Left "(line 1, column 1):\nparallel: terminating trail\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nawait: unreachable statement\n"
+            `shouldBe` Left "(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nparallel: terminating trail\n(line 1, column 1):\nawait: unreachable statement\n"
         it "par" $
             run "par do escape 1 with escape 1 end" []
             `shouldBe` Right (1, [[]])
@@ -184,10 +184,10 @@ spec = do
         it "par/and ... with ... with escape 3 end" $
             run "par/and do with with escape 3 end" []
             --`shouldBe` Right (3, [[]])
-            `shouldBe` Left "trap: all trails must terminate\ntrap: all trails must terminate\n"
+            `shouldBe` Left "(line 1, column 12):\nsequence: trail must terminate\n(line 1, column 22):\nsequence: trail must terminate\n"
         it "par/and ... with ... with escape 3 end" $
             run "par/and do await X with await Y with escape 3 end" []
-            `shouldBe` Left "trap: all trails must terminate\nif: unreachable statement\ntrap: terminating `trap` body\n"
+            `shouldBe` Left "(line 1, column 38):\nsequence: trail must terminate\n(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 20):\nif: unreachable statement\n"
 
     describe "par/or:" $ do
         it "par/or" $
@@ -198,7 +198,7 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "par/or" $
             run "par/or do with escape 2 with escape 3 end ; escape 1" []
-            `shouldBe` Left "trap: no trails terminate\n"
+            `shouldBe` Left "(line 1, column 11):\ntrap: no trails terminate\n"
 
     where
         run :: String -> [In] -> Either String (Val,[Outs])

@@ -98,7 +98,7 @@ spec = do
     checkCheckIt (Trap () (Trap () (Escape () 0))) ["trap: terminating `trap` body","trap: missing `escape` statement"]
     checkCheckIt (Trap () (Trap () (Escape () 1))) ["trap: missing `escape` statement"]
     checkCheckIt (Trap () (Seq () (Escape () 0) (Escape () 1))) ["escape: orphan `escape` statement","escape: unreachable statement"]
-    checkCheckIt (Trap () (Seq () (Escape () 1) (Escape () 1))) ["escape: orphan `escape` statement","escape: orphan `escape` statement","escape: unreachable statement", "trap: missing `escape` statement"]
+    checkCheckIt (Trap () (Seq () (Escape () 1) (Escape () 1))) ["escape: orphan `escape` statement","escape: orphan `escape` statement", "trap: missing `escape` statement","escape: unreachable statement"]
 
   --------------------------------------------------------------------------
   describe "checkReachable:" $ do
@@ -117,7 +117,7 @@ spec = do
     checkStmtsIt (Seq () (Every () "" (Nop ())) (Nop ())) ["nop: unreachable statement"]
     checkStmtsIt (Seq () (Par () (Nop ()) (Every () "" (Nop ()))) (Nop ())) ["parallel: terminating trail","nop: unreachable statement"]
     checkStmtsIt (Seq () (Trap () (Loop () (Trap () (Seq () (Escape () 0) (Escape () 1))))) (Nop ())) ["escape: unreachable statement","loop: unbounded `loop` execution"]
-    checkStmtsIt (Seq () (Trap () (Loop () (Trap () (Seq () (Escape () 0) (Nop ()))))) (Nop ())) ["nop: unreachable statement", "loop: unbounded `loop` execution","trap: missing `escape` statement","nop: unreachable statement"]
+    checkStmtsIt (Seq () (Trap () (Loop () (Trap () (Seq () (Escape () 0) (Nop ()))))) (Nop ())) ["trap: missing `escape` statement","nop: unreachable statement", "loop: unbounded `loop` execution","nop: unreachable statement"]
 
   --------------------------------------------------------------------------
   describe "checkVarEvt -- declarations" $ do
@@ -177,7 +177,7 @@ spec = do
     -- all
     checkCheckIt (Fin () (Escape () 0)) ["escape: orphan `escape` statement", "finalize: invalid statement in `finalize`", "escape: invalid statement"]
     checkCheckIt (Trap () (Fin () (Escape () 0))) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
-    checkCheckIt (Seq () (Trap () (Loop () (Trap () (Seq () (Escape () 0) (Nop ()))))) (Nop ())) ["nop: unreachable statement", "loop: unbounded `loop` execution", "trap: missing `escape` statement", "nop: unreachable statement"]
+    checkCheckIt (Seq () (Trap () (Loop () (Trap () (Seq () (Escape () 0) (Nop ()))))) (Nop ())) ["trap: missing `escape` statement", "nop: unreachable statement", "loop: unbounded `loop` execution", "nop: unreachable statement"]
     checkCheckIt (Trap () (Seq () (Trap () (Par () (AwaitExt () "FOREVER") (Escape () 0))) (Escape () 0)))
       []
     checkCheckIt (Trap () (Par () (Escape () 0) (Seq () (Par () (AwaitExt () "FOREVER") (Fin () (Nop ()))) (Escape () 0))))

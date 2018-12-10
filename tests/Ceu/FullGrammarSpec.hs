@@ -227,7 +227,7 @@ spec = do
       `shouldBe` ([], G.Nop ())
     it "(loop break) ; await X and nop" $ do
       (compile' (True,True) (And () (Seq () (Loop () (Break ())) (AwaitExt () "X" Nothing)) (Nop ())))
-      `shouldBe` (["loop: `loop` never iterates","trap: terminating `trap` body","trap: missing `escape` statement","await: unreachable statement"], G.Var () "_ret" (G.Seq () (G.Trap () (G.Trap () (G.Var () "__and" (G.Seq () (G.Write () "__and" (Const () 0)) (G.Par () (G.Seq () (G.AwaitExt () "X") (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.AwaitExt () "FOREVER")))) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.AwaitExt () "FOREVER")))))))) (G.AwaitExt () "FOREVER")))
+      `shouldBe` (["trap: terminating `trap` body","trap: missing `escape` statement","loop: `loop` never iterates","await: unreachable statement"], G.Var () "_ret" (G.Seq () (G.Trap () (G.Trap () (G.Var () "__and" (G.Seq () (G.Write () "__and" (Const () 0)) (G.Par () (G.Seq () (G.AwaitExt () "X") (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.AwaitExt () "FOREVER")))) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.AwaitExt () "FOREVER")))))))) (G.AwaitExt () "FOREVER")))
     it "(loop break) ; await X and nop" $ do
       (compile' (False,True) (Seq () (And () (Seq () (Loop () (Break ())) (AwaitExt () "X" Nothing)) (Nop ())) (Escape () Nothing (Just (Const () 1))) ))
       `shouldBe` (["loop: `loop` never iterates"], G.Var () "_ret" (G.Seq () (G.Trap () (G.Seq () (G.Trap () (G.Var () "__and" (G.Seq () (G.Write () "__and" (Const () 0)) (G.Par () (G.Seq () (G.Seq () (G.Trap () (G.Loop () (G.Escape () 0))) (G.AwaitExt () "X")) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.AwaitExt () "FOREVER")))) (G.Seq () (G.Nop ()) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.AwaitExt () "FOREVER")))))))) (G.Seq () (G.Write () "_ret" (Const () 1)) (G.Escape () 0)))) (G.AwaitExt () "FOREVER")))
@@ -249,7 +249,7 @@ spec = do
 
     it "loop (and break FOR)" $ do
       compile' (False,False) (Loop () (And () (Break ()) (AwaitFor ())))
-      `shouldBe` (["trap: all trails must terminate","await: unreachable statement","loop: `loop` never iterates"],G.Trap () (G.Loop () (G.Seq () (G.Escape () 0) (G.AwaitExt () "FOREVER"))))
+      `shouldBe` (["escape: trail must terminate","await: trail must terminate","await: unreachable statement","loop: `loop` never iterates"],G.Trap () (G.Loop () (G.Seq () (G.Escape () 0) (G.AwaitExt () "FOREVER"))))
 
   --------------------------------------------------------------------------
   describe "Forever.compile" $ do
@@ -386,7 +386,7 @@ end
         (Loop () (AwaitTmr () (Const () 5)))
         (Escape () Nothing (Just (Const () 25))))
 
-    evalFullProgItLeft ["trap: all trails must terminate","if: unreachable statement","if: unreachable statement","trap: terminating `trap` body"] []
+    evalFullProgItLeft ["loop: trail must terminate","sequence: trail must terminate","trap: terminating `trap` body","if: unreachable statement","if: unreachable statement"] []
       (And ()
         (Loop () (AwaitTmr () (Const () 5)))
         (Escape () Nothing (Just (Const () 25))))

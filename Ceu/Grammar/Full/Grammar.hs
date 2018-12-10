@@ -142,7 +142,7 @@ toGrammar (Trap' z p)            = (es, G.Trap z p')
                                  where
                                    (es,p') = toGrammar p
 toGrammar (Escape' z n)          = ([], G.Escape z n)
-toGrammar (Clean' _ id p)        = (es++es', p'')
+toGrammar (Clean' _ id p)        = (es'++es, p'')
                                  where
                                    (es, p')  = toGrammar p
                                    (es',p'') = clean id p'

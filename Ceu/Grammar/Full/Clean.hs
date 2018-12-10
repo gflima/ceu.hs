@@ -19,12 +19,14 @@ clean "And"
           (G.Seq _ p1 chk1)
           (G.Seq _ p2 chk2))
     )))
-    | alwaysInstantaneous p1 = (es, removeTrap (G.Trap z (G.Seq z p1 p2)))
+    | alwaysInstantaneous p1 = (es1++es2, removeTrap (G.Trap z (G.Seq z p1 p2)))
     -- | neverInstantaneous p1 && alwaysInstantaneous p2 = G.Par () p1 p2
-    | otherwise              = (es, s)
+    | otherwise              = (es1++es2, s)
   where
-    es = if maybeTerminates p1 && maybeTerminates p2 then [] else
-          [toError s "all trails must terminate"]
+    es1 = if maybeTerminates p1 then [] else
+            [toError p1 "trail must terminate"]
+    es2 = if maybeTerminates p2 then [] else
+            [toError p2 "trail must terminate"]
 
 clean "Or'" p = fin_or [] p
 clean "Or"  p = fin_or [toError p "no trails terminate"] p

@@ -42,7 +42,7 @@ stmts stmt = case stmt of
                              [toError s "terminating trail"]
   Pause _ _ p     -> stmts p
   s@(Fin _ p)     -> stmts p ++ (aux "invalid statement in `finalize`" s p)
-  s@(Trap _ p)    -> stmts p ++ es1 ++ es2 where
+  s@(Trap _ p)    -> es1 ++ es2 ++ stmts p where
                      es1 = if neverTerminates p then [] else
                              [toError s "terminating `trap` body"]
                      es2 = if escapesAt0 p then [] else
