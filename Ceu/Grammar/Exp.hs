@@ -31,6 +31,17 @@ infixl 6 `eSub` -- `Sub` associates to the left
 infixl 7 `eMul` -- `Mul` associates to the left
 infixl 7 `eDiv` -- `Div` associates to the left
 
+getAnn :: Exp ann -> ann
+getAnn (Const z _)   = z
+getAnn (Read  z _)   = z
+getAnn (Umn   z _)   = z
+getAnn (Add   z _ _) = z
+getAnn (Sub   z _ _) = z
+getAnn (Mul   z _ _) = z
+getAnn (Div   z _ _) = z
+getAnn (Equ   z _ _) = z
+getAnn (Lte   z _ _) = z
+
 -- Shows expression.
 showExp :: Exp ann -> String
 showExp expr = case expr of
@@ -58,5 +69,6 @@ exp2word ext = case ext of
   Equ   _ _ _ -> "equal comparison"
   Lte   _ _ _ -> "less-then comparison"
 
-err_exp_msg :: Exp ann -> String -> String
-err_exp_msg exp msg = (exp2word exp) ++ ": " ++ msg
+instance (ToSourceString ann) => INode (Exp ann) where
+  toWord       = exp2word
+  toSource exp = toSourceString $ getAnn exp

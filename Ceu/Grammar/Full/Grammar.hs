@@ -1,7 +1,7 @@
 module Ceu.Grammar.Full.Grammar where
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Exp
+import Ceu.Grammar.Exp (Exp(..))
 import qualified Ceu.Grammar.Stmt as G
 import qualified Ceu.Eval as E
 import Ceu.Grammar.Full.Clean

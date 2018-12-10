@@ -1,7 +1,7 @@
 module Ceu.Grammar.Stmt where
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Exp
+import Ceu.Grammar.Exp (Exp(..), showExp)
 import Text.Printf
 
 -- Program (pg 5).

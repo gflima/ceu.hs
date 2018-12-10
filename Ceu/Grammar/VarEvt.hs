@@ -58,9 +58,9 @@ contains id dcls = elem id $ map f dcls where
 
 -------------------------------------------------------------------------------
 
-getErrs :: [Stmt ann] -> Exp ann -> Errors
+getErrs :: (ToSourceString ann) => [Stmt ann] -> Exp ann -> Errors
 getErrs vars e@(Read _ var) = if (map toUpper var)==var || contains var vars then [] else
-                                [err_exp_msg e "variable '" ++ var ++ "' is not declared"]
+                                [toError e "variable '" ++ var ++ "' is not declared"]
 getErrs vars (Umn _ e)      = getErrs vars e
 getErrs vars (Add _ e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
 getErrs vars (Sub _ e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
