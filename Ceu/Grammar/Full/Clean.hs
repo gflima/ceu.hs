@@ -8,7 +8,7 @@ import qualified Ceu.Grammar.Stmt as G
 import Ceu.Grammar.Check (maybeTerminates, alwaysInstantaneous, getEscapes,
                           escapesAt0, removeTrap)
 
-clean :: (Eq ann, ToSourceString ann) => String -> (G.Stmt ann) -> (Errors, G.Stmt ann)
+clean :: (Eq ann, Ann ann) => String -> (G.Stmt ann) -> (Errors, G.Stmt ann)
 
 clean "And"
   s@(G.Trap z

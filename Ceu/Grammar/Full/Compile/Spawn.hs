@@ -5,7 +5,7 @@ import Ceu.Grammar.Full.Grammar
 
 -- compile: Converts (spawn p1; ...) into (p1;AwaitFor or ...)
 
-compile :: (ToSourceString ann) => Stmt ann -> (Errors, Stmt ann)
+compile :: (Ann ann) => Stmt ann -> (Errors, Stmt ann)
 compile (Var' z id Nothing p)    = (es, Var' z id Nothing p')
                                    where
                                      (es,p') = compile p

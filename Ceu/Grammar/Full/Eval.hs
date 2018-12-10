@@ -21,7 +21,7 @@ import qualified Ceu.Grammar.Full.Compile.Seq      as Seq
 
 import qualified Ceu.Grammar.Check as Check
 
-compile :: (ToSourceString ann) => Stmt ann -> (Errors, Stmt ann)
+compile :: (Ann ann) => Stmt ann -> (Errors, Stmt ann)
 compile p = --traceShowId $ 
     comb Forever.compile  $
     comb Timer.compile    $
@@ -40,7 +40,7 @@ compile p = --traceShowId $
     comb :: (Stmt ann -> (Errors,Stmt ann)) -> (Errors,Stmt ann) -> (Errors,Stmt ann)
     comb f (es,p) = (es++es',p') where (es',p') = f p
 
-compile' :: (Eq ann, ToSourceString ann) => Check.Options -> Stmt ann -> (Errors, G.Stmt ann)
+compile' :: (Eq ann, Ann ann) => Check.Options -> Stmt ann -> (Errors, G.Stmt ann)
 compile' (o_simp,o_encl) p = (es2++es3++es4, p4)
   where
     p1       = if not o_encl then p else
@@ -56,7 +56,7 @@ reaction p (ext,val) = (p''',outs) where
   p' = E.Var (E.getAnn p) (("_"++ext), val) p
   (E.Var _ _ p''') = p''
 
-evalFullProg :: (Eq ann, ToSourceString ann) => Stmt ann -> [In] -> E.Result
+evalFullProg :: (Eq ann, Ann ann) => Stmt ann -> [In] -> E.Result
 evalFullProg prog ins =
   let (es,s) = compile' (True,True) prog in
     if es == [] then

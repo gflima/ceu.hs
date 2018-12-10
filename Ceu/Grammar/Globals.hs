@@ -4,8 +4,9 @@ type Errors = [String]
 
 type Source = (String, Int, Int)        -- filename, line, column
 
-class ToSourceString a where
+class Ann a where
   toSourceString :: a -> String
+  toN            :: a -> Int
 
 class INode a where
   toSource :: a -> String

@@ -4,7 +4,7 @@ import qualified Ceu.Grammar.Globals   as G
 import qualified Ceu.Grammar.Stmt      as S
 import qualified Ceu.Grammar.Full.Eval as F
 import qualified Ceu.Code.Gen          as C
-import Ceu.Grammar.ToSourceString.Source
+import Ceu.Grammar.Ann.All
 
 go :: String -> String
 go input =

@@ -6,7 +6,7 @@ import Ceu.Grammar.Globals
 import Ceu.Grammar.Exp
 import Ceu.Grammar.Stmt
 
-check :: (ToSourceString ann) => (Stmt ann) -> Errors
+check :: (Ann ann) => (Stmt ann) -> Errors
 check p = aux [] [] p
 
 aux vars ints s@(Var _ var p)   = es++es' where
@@ -58,7 +58,7 @@ contains id dcls = elem id $ map f dcls where
 
 -------------------------------------------------------------------------------
 
-getErrs :: (ToSourceString ann) => [Stmt ann] -> Exp ann -> Errors
+getErrs :: (Ann ann) => [Stmt ann] -> Exp ann -> Errors
 getErrs vars e@(Read _ var) = if (map toUpper var)==var || contains var vars then [] else
                                 [toError e "variable '" ++ var ++ "' is not declared"]
 getErrs vars (Umn _ e)      = getErrs vars e

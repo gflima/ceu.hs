@@ -1,9 +1,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module Ceu.Grammar.ToSourceString.Source where
+module Ceu.Grammar.Ann.Source where
 
-import Ceu.Grammar.Globals (Source, ToSourceString(..))
+import Ceu.Grammar.Globals (Source, Ann(..))
 
-instance ToSourceString Source where
+instance Ann Source where
     toSourceString (_,ln,cl) = "(line " ++ (show ln) ++ ", column " ++ (show cl) ++ "):\n"
+    toN _ = 0

@@ -101,7 +101,7 @@ getAnn (Escape'  z _    ) = z
 getAnn (Clean'   z _ _  ) = z
 getAnn (Nop      z      ) = z
 
-toGrammar :: (Eq ann, ToSourceString ann) => (Stmt ann) -> (Errors, G.Stmt ann)
+toGrammar :: (Eq ann, Ann ann) => (Stmt ann) -> (Errors, G.Stmt ann)
 toGrammar (Var' z var Nothing p) = (es, G.Var z var p')
                                  where
                                    (es,p') = toGrammar p
@@ -187,6 +187,6 @@ stmt2word stmt = case stmt of
   Clean' _ _ _   -> "clean"
   Nop _          -> "nop"
 
-instance (ToSourceString ann) => INode (Stmt ann) where
+instance (Ann ann) => INode (Stmt ann) where
   toWord        = stmt2word
   toSource stmt = toSourceString $ getAnn stmt

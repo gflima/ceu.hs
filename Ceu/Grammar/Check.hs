@@ -11,7 +11,7 @@ import qualified Ceu.Grammar.VarEvt as VarEvt
 
 type Options = (Bool,Bool)
 
-compile :: (Eq ann, ToSourceString ann) => Options -> (Stmt ann) -> (Errors, Stmt ann)
+compile :: (Eq ann, Ann ann) => Options -> (Stmt ann) -> (Errors, Stmt ann)
 compile (o_simp,o_encl) p = (es3,p2) where
   p1   = if not o_encl then p else
           (Var z "_ret" (Seq z (Trap z p) (AwaitExt z "FOREVER")))
@@ -21,7 +21,7 @@ compile (o_simp,o_encl) p = (es3,p2) where
   escs = errs_nodes_msg_map (map (\(s,n)->s) (getEscapes p1)) "orphan `escape` statement"
 
 
-stmts :: (ToSourceString ann) => (Stmt ann) -> Errors
+stmts :: (Ann ann) => (Stmt ann) -> Errors
 stmts stmt = case stmt of
   Var _ _ p       -> stmts p
   Int _ _ p       -> stmts p
@@ -58,7 +58,7 @@ stmts stmt = case stmt of
 
 -------------------------------------------------------------------------------
 
-getComplexs :: (ToSourceString ann) => (Stmt ann) -> [String]
+getComplexs :: (Ann ann) => (Stmt ann) -> [String]
 getComplexs p = errs_nodes_msg_map (aux' (-1) p) "invalid statement" where
   aux' _ s@(AwaitInt _ _) = [s]
   aux' _ s@(AwaitExt _ _) = [s]

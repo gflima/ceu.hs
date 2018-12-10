@@ -100,6 +100,6 @@ stmt2word stmt = case stmt of
   Nop _         -> "nop"
   Error _ _     -> "error"
 
-instance (ToSourceString ann) => INode (Stmt ann) where
+instance (Ann ann) => INode (Stmt ann) where
   toWord        = stmt2word
   toSource stmt = toSourceString $ getAnn stmt

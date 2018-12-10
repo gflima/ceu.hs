@@ -69,6 +69,6 @@ exp2word ext = case ext of
   Equ   _ _ _ -> "equal comparison"
   Lte   _ _ _ -> "less-then comparison"
 
-instance (ToSourceString ann) => INode (Exp ann) where
+instance (Ann ann) => INode (Exp ann) where
   toWord       = exp2word
   toSource exp = toSourceString $ getAnn exp

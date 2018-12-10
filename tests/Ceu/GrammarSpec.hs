@@ -1,7 +1,7 @@
 module Ceu.GrammarSpec (main, spec) where
 
-import Ceu.Grammar.Globals (Errors, ToSourceString(..))
-import Ceu.Grammar.ToSourceString.Unit
+import Ceu.Grammar.Globals (Errors, Ann(..))
+import Ceu.Grammar.Ann.Unit
 import Ceu.Grammar.Exp
 import Ceu.Grammar.Stmt
 import qualified Ceu.Grammar.Check  as Check
