@@ -10,5 +10,5 @@ data All = All { n      :: Int
                }
 
 instance Ann All where
-    getSource (All _ (_,ln,cl)) = "(line " ++ (show ln) ++ ", column " ++ (show cl) ++ "):\n"
+    getSource (All _ src) = Just src
     getN v = (n v)

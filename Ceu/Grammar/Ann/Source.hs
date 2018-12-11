@@ -6,5 +6,5 @@ module Ceu.Grammar.Ann.Source where
 import Ceu.Grammar.Globals (Source, Ann(..))
 
 instance Ann Source where
-    getSource (_,ln,cl) = "(line " ++ (show ln) ++ ", column " ++ (show cl) ++ "):\n"
+    getSource src = Just src
     getN _ = 0
