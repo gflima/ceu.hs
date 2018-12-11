@@ -70,5 +70,6 @@ exp2word ext = case ext of
   Lte   _ _ _ -> "less-then comparison"
 
 instance (Ann ann) => INode (Exp ann) where
-  toWord       = exp2word
-  toSource exp = toSourceString $ getAnn exp
+  toWord   = exp2word
+  toSource = getSource . getAnn
+  toN      = getN . getAnn

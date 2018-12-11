@@ -5,13 +5,14 @@ type Errors = [String]
 type Source = (String, Int, Int)        -- filename, line, column
 
 class Ann a where
-  toSourceString :: a -> String
-  toN            :: a -> Int
+  getSource :: a -> String
+  getN      :: a -> Int
 
 class INode a where
   toSource :: a -> String
   toWord   :: a -> String
   toError  :: a -> String -> String
+  toN      :: a -> Int
   toError stmt msg = (toSource stmt) ++ (toWord stmt) ++ ": " ++ msg where
 
 errs_nodes_msg_map :: (INode a) => [a] -> String -> Errors

@@ -188,5 +188,6 @@ stmt2word stmt = case stmt of
   Nop _          -> "nop"
 
 instance (Ann ann) => INode (Stmt ann) where
-  toWord        = stmt2word
-  toSource stmt = toSourceString $ getAnn stmt
+  toWord   = stmt2word
+  toSource = getSource . getAnn
+  toN      = getN . getAnn

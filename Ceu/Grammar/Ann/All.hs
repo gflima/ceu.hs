@@ -10,5 +10,5 @@ data All = All { n      :: Int
                }
 
 instance Ann All where
-    toSourceString (All _ (_,ln,cl)) = "(line " ++ (show ln) ++ ", column " ++ (show cl) ++ "):\n"
-    toN v = (n v)
+    getSource (All _ (_,ln,cl)) = "(line " ++ (show ln) ++ ", column " ++ (show cl) ++ "):\n"
+    getN v = (n v)
