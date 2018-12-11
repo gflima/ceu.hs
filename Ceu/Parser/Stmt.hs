@@ -27,8 +27,8 @@ attr_exp var = do
 attr_awaitext :: String -> Parser (Stmt Source)
 attr_awaitext var = do
     void <- tk_str "<-"
-    p    <- stmt_awaitext (Just var)
-    return p
+    s    <- stmt_awaitext (Just var)
+    return s
 
 -------------------------------------------------------------------------------
 
@@ -51,8 +51,8 @@ stmt_var = do
     tp   <- tk_type
     var  <- tk_var
     guard $ tp == "int"         -- TODO
-    p    <- option (Nop $ pos2src pos) (try (attr_exp var) <|> try (attr_awaitext var))
-    return $ Seq (pos2src pos) (Var (pos2src pos) var Nothing) p
+    s    <- option (Nop $ pos2src pos) (try (attr_exp var) <|> try (attr_awaitext var))
+    return $ Seq (pos2src pos) (Var (pos2src pos) var Nothing) s
 
 stmt_write :: Parser (Stmt Source)
 stmt_write = do
@@ -85,9 +85,9 @@ stmt_do :: Parser (Stmt Source)
 stmt_do = do
     pos  <- getPosition
     void <- tk_key "do"
-    p    <- stmt <|> stmt_nop
+    s    <- stmt
     void <- tk_key "end"
-    return $ Scope (pos2src pos) p
+    return $ Scope (pos2src pos) s
 
 stmt_if :: Parser (Stmt Source)
 stmt_if = do
@@ -101,6 +101,16 @@ stmt_if = do
     s2   <- option (Nop $ pos2src pos2) (try $ tk_key "else" *> stmt)
     void <- tk_key "end"
     return $ foldr (\(p,c,s) acc -> If (pos2src p) c s acc) s2 ([(pos1,cnd,s1)] ++ ss)
+
+stmt_loop :: Parser (Stmt Source)
+stmt_loop = do
+    pos1 <- getPosition
+    void <- tk_key "loop"
+    void <- tk_key "do"
+    s    <- stmt
+    --pos2 <- getPosition
+    void <- tk_key "end"
+    return $ Loop (pos2src pos1) s
 
 -------------------------------------------------------------------------------
 
@@ -146,7 +156,7 @@ stmt1 :: Parser (Stmt Source)
 stmt1 = do
     s <- try stmt_escape <|> try stmt_var <|> try stmt_write <|>
          try (stmt_awaitext Nothing) <|> try stmt_emitext <|>
-         try stmt_do <|> stmt_if <|>
+         try stmt_do <|> try stmt_if <|> try stmt_loop <|>
          try stmt_par <|> try stmt_parand <|> try stmt_paror
     return s
 

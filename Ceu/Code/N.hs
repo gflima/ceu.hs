@@ -10,6 +10,8 @@ add p = p' where (_,p') = stmt 0 p
 
 stmt :: Int -> (Stmt Source) -> (Int, Stmt All)
 
+stmt n (Nop src) = (n, Nop All{source=src,n=n})
+
 stmt n (Var src var p) =
     (n', Var All{source=src,n=n} var p')
     where
@@ -42,6 +44,11 @@ stmt n (Seq src p1 p2) =
     where
         (n1',p1') = stmt (n+1)   p1
         (n2',p2') = stmt (n1'+1) p2
+
+stmt n (Loop src p) =
+    (n', Loop All{source=src,n=n} p')
+    where
+        (n',p') = stmt (n+1) p
 
 stmt n (Par src p1 p2) =
     (n2', Par All{source=src,n=n} p1' p2')

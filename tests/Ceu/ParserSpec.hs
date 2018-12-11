@@ -296,6 +296,17 @@ spec = do
                 parse stmt_if "if 0 then escape 0 else/if 1 then escape 1 else escape 0 end"
                 `shouldBe` Right (If ("",1,1) (Const ("",1,4) 0) (Escape ("",1,11) Nothing (Just (Const ("",1,18) 0))) (If ("",1,20) (Const ("",1,28) 1) (Escape ("",1,35) Nothing (Just (Const ("",1,42) 1))) (Escape ("",1,49) Nothing (Just (Const ("",1,56) 0)))))
 
+        describe "loop" $ do
+            it "loop do end" $
+                parse stmt_loop "loop do end"
+                `shouldBe` Right (Loop ("",1,1) (Nop ("",1,9)))
+            it "loop do v<-1 end" $
+                parse stmt_loop "loop do v<-1 end"
+                `shouldBe` Right (Loop ("",1,1) (Write ("",1,9) "v" (Const ("",1,12) 1)))
+            it "loop do v<-1 ; await FOREVER end" $
+                parse stmt_loop "loop do v<-1 ; await FOREVER end"
+                `shouldBe` Right (Loop ("",1,1) (Seq ("",1,9) (Write ("",1,9) "v" (Const ("",1,12) 1)) (AwaitExt ("",1,16) "FOREVER" Nothing)))
+
 -------------------------------------------------------------------------------
 
         describe "par:" $ do
