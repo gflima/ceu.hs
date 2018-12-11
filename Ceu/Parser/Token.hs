@@ -3,10 +3,10 @@ module Ceu.Parser.Token where
 import Control.Monad (void, guard)
 import Data.Char (isLower, isUpper)
 
-import Text.Parsec.Prim       (many, (<|>))
+import Text.Parsec.Prim       (many, (<|>), (<?>), try)
 import Text.Parsec.String     (Parser)
-import Text.Parsec.Char       (char, oneOf, digit, satisfy, string, letter)
-import Text.Parsec.Combinator (many1, notFollowedBy)
+import Text.Parsec.Char       (char, oneOf, digit, satisfy, string, letter, anyChar, newline)
+import Text.Parsec.Combinator (many1, notFollowedBy, manyTill, eof)
 
 types = [
     "int"
@@ -32,7 +32,10 @@ tk_reserved :: Parser ()
 tk_reserved = foldr1 (<|>) (map tk_key keywords)
 
 s :: Parser ()
-s = void $ many $ oneOf " ;\n\t"
+s = void $ many $ (void $ oneOf " ;\n\t") <|> comm
+
+comm :: Parser ()
+comm = void $ try $ (string "//" >> (manyTill anyChar (void newline<|>eof)) <?> "")
 
 tk_str :: String -> Parser ()
 tk_str str = do

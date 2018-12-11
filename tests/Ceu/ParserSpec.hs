@@ -22,6 +22,13 @@ spec = do
     --describe "TODO:" $ do
 
     describe "tokens:" $ do
+        describe "comm:" $ do
+            it "// xxx " $
+                parse comm "// xxx "
+                `shouldBe` Right ()
+            it "/ xxx " $
+                parse comm "/ xxx "
+                `shouldBe` Left "(line 1, column 1):\nunexpected \" \"\nexpecting \"//\""
         describe "tk_str:" $ do
             it "(" $
                 parse (tk_str "(") "( "
