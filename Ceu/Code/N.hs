@@ -43,6 +43,12 @@ stmt n (Seq src p1 p2) =
         (n1',p1') = stmt (n+1)   p1
         (n2',p2') = stmt (n1'+1) p2
 
+stmt n (Par src p1 p2) =
+    (n2', Par All{source=src,n=n} p1' p2')
+    where
+        (n1',p1') = stmt (n+1)   p1
+        (n2',p2') = stmt (n1'+1) p2
+
 stmt n (Trap src p) =
     (n', Trap All{source=src,n=n} p')
     where
