@@ -178,18 +178,25 @@ spec = do
     checkCheckIt (Fin () (Escape () 0)) ["escape: orphan `escape` statement", "finalize: invalid statement in `finalize`", "escape: invalid statement"]
     checkCheckIt (Trap () (Fin () (Escape () 0))) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
     checkCheckIt (Seq () (Trap () (Loop () (Trap () (Seq () (Escape () 0) (Nop ()))))) (Nop ())) ["trap: missing `escape` statement", "nop: unreachable statement", "loop: unbounded `loop` execution", "nop: unreachable statement"]
-    checkCheckIt (Trap () (Seq () (Trap () (Par () (AwaitInp () "FOREVER") (Escape () 0))) (Escape () 0)))
+    checkCheckIt (Inp () "FOREVER" (Trap () (Seq () (Trap () (Par () (AwaitInp () "FOREVER") (Escape () 0))) (Escape () 0))))
       []
-    checkCheckIt (Trap () (Par () (Escape () 0) (Seq () (Par () (AwaitInp () "FOREVER") (Fin () (Nop ()))) (Escape () 0))))
+    checkCheckIt (Trap () (Par () (Escape () 0) (Seq () (Par () (Inp () "FOREVER" (AwaitInp () "FOREVER")) (Fin () (Nop ()))) (Escape () 0))))
       ["escape: unreachable statement"]
 
-    describe "out:" $ do
+    describe "ext:" $ do
         it "emit O" $
             (fst $ Check.compile (False,False) (EmitExt () "O" Nothing))
             `shouldBe` ["emit: identifier 'O' is not declared"]
         it "out O; emit O" $
             Check.compile (False,False) (Out () "O" (EmitExt () "O" Nothing))
             `shouldBe` ([],Out () "O" (EmitExt () "O" Nothing))
+
+        it "await I" $
+            (fst $ Check.compile (False,False) (AwaitInp () "I"))
+            `shouldBe` ["await: identifier 'I' is not declared"]
+        it "inp I; await I" $
+            Check.compile (False,False) (Inp () "I" (AwaitInp () "I"))
+            `shouldBe` ([], (Inp () "I" (AwaitInp () "I")))
 
       where
         checkIt ck p b   =

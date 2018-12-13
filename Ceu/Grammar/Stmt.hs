@@ -7,10 +7,11 @@ import Text.Printf
 -- Program (pg 5).
 data Stmt ann
   = Var      ann ID_Var (Stmt ann)                  -- variable declaration
+  | Inp      ann ID_Inp (Stmt ann)                  -- input declaration
+  | Out      ann ID_Out (Stmt ann)                  -- output declaration
   | Evt      ann ID_Evt (Stmt ann)                  -- event declaration
-  | Out      ann ID_Ext (Stmt ann)                  -- output declaration
   | Write    ann ID_Var (Exp ann)                   -- assignment statement
-  | AwaitInp ann ID_Ext                             -- await external event
+  | AwaitInp ann ID_Inp                             -- await external event
   | EmitExt  ann ID_Ext (Maybe (Exp ann))           -- emit external event
   | AwaitEvt ann ID_Evt                             -- await internal event
   | EmitEvt  ann ID_Evt                             -- emit internal event
@@ -35,8 +36,9 @@ infixr 0 `sPar` -- `Par` associates to the right
 
 getAnn :: Stmt ann -> ann
 getAnn (Var      z _ _)   = z
-getAnn (Evt      z _ _)   = z
+getAnn (Inp      z _ _)   = z
 getAnn (Out      z _ _)   = z
+getAnn (Evt      z _ _)   = z
 getAnn (Write    z _ _)   = z
 getAnn (AwaitInp z _)     = z
 getAnn (EmitExt  z _ _)   = z
@@ -58,8 +60,9 @@ getAnn (Error    z _)     = z
 showProg :: (Stmt ann) -> String
 showProg stmt = case stmt of
   Var      _ id p         -> printf "{%s: %s}" id (sP p)
-  Evt      _ id p         -> printf "{%s: %s}" id (sP p)
+  Inp      _ id p         -> printf "{%s: %s}" id (sP p)
   Out      _ id p         -> printf "{%s: %s}" id (sP p)
+  Evt      _ id p         -> printf "{%s: %s}" id (sP p)
   Write    _ id expr      -> printf "%s=%s" id (sE expr)
   AwaitInp _ ext          -> printf "?%s" ext
   EmitExt  _ ext Nothing  -> printf "!%s" ext
@@ -85,8 +88,9 @@ showProg stmt = case stmt of
 stmt2word :: (Stmt ann) -> String
 stmt2word stmt = case stmt of
   Var _ _ _     -> "declaration"
-  Evt _ _ _     -> "declaration"
+  Inp _ _ _     -> "declaration"
   Out _ _ _     -> "declaration"
+  Evt _ _ _     -> "declaration"
   Write _ _ _   -> "assignment"
   AwaitInp _ _  -> "await"
   EmitExt _ _ _ -> "emit"

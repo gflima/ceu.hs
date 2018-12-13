@@ -73,8 +73,9 @@ getAnn (Par'     z _ _)   = z
 
 fromGrammar :: (G.Stmt ann) -> (Stmt ann)
 fromGrammar (G.Var z id p)      = Var z (id,Nothing) (fromGrammar p)
-fromGrammar (G.Evt z id p)      = Evt z id (fromGrammar p)
+fromGrammar (G.Inp z id p)      = (fromGrammar p)
 fromGrammar (G.Out z id p)      = (fromGrammar p)
+fromGrammar (G.Evt z id p)      = Evt z id (fromGrammar p)
 fromGrammar (G.Write z id exp)  = Write z id exp
 fromGrammar (G.AwaitInp z id)   = AwaitInp z id
 fromGrammar (G.EmitExt z id exp)= EmitExt z id exp
@@ -341,7 +342,7 @@ bcast e vars stmt = case stmt of
 
 -- Computes a reaction of program plus environment to a single external event.
 -- (pg 6)
-reaction :: (Stmt ann) -> ID_Ext -> (Stmt ann, Outs)
+reaction :: (Stmt ann) -> ID_Inp -> (Stmt ann, Outs)
 reaction p ext = (p',outs') where (p',_,_,_,outs') = steps (bcast ext [] p, 0, [], [], [])
 
 steps :: Desc ann -> Desc ann
@@ -370,7 +371,7 @@ run prog ins reaction = eP (fromGrammar prog) ins []
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "_ret" set by the program.
-compile_run :: (Eq ann, Ann ann) => (G.Stmt ann) -> [ID_Ext] -> Result
+compile_run :: (Eq ann, Ann ann) => (G.Stmt ann) -> [ID_Inp] -> Result
 compile_run prog ins =
   let (es,p) = Check.compile (True,True) prog in
     if es == [] then

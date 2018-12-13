@@ -8,8 +8,9 @@ compile :: Stmt ann -> (Errors, Stmt ann)
 compile p = ([], aux [] p) where
   aux :: [Maybe ID_Var] -> Stmt ann -> Stmt ann
   aux vars (Var' z var fin p)  = Var' z var fin (aux vars p)
-  aux vars (Evt' z id b p)     = Evt' z id b (aux vars p)
+  aux vars (Inp' z id b p)     = Inp' z id b (aux vars p)
   aux vars (Out' z id b p)     = Out' z id b (aux vars p)
+  aux vars (Evt' z id b p)     = Evt' z id b (aux vars p)
   aux vars (If z exp p1 p2)    = If z exp (aux vars p1) (aux vars p2)
   aux vars (Seq z p1 p2)       = Seq z (aux vars p1) (aux vars p2)
   aux vars (Loop z p)          = Loop z (aux vars p)
@@ -37,8 +38,9 @@ escape _ (Escape z _ _) _ = Escape' z (-1)
 ins' :: Stmt ann -> Stmt ann
 ins' p = (aux 0 p) where
   aux n (Var' z var Nothing p) = Var' z var Nothing (aux n p)
+  aux n (Inp' z inp b p)       = Inp' z inp b (aux n p)
+  aux n (Out' z out b p)       = Out' z out b (aux n p)
   aux n (Evt' z int b p)       = Evt' z int b (aux n p)
-  aux n (Out' z int b p)       = Out' z int b (aux n p)
   aux n (If z exp p1 p2)       = If z exp (aux n p1) (aux n p2)
   aux n (Seq z p1 p2)          = Seq z (aux n p1) (aux n p2)
   aux n (Loop z p)             = Loop z (aux n p)

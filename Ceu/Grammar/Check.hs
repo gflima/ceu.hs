@@ -24,8 +24,9 @@ compile (o_simp,o_encl) p = (es3,p2) where
 stmts :: (Ann ann) => (Stmt ann) -> Errors
 stmts stmt = case stmt of
   Var _ _ p       -> stmts p
-  Evt _ _ p       -> stmts p
+  Inp _ _ p       -> stmts p
   Out _ _ p       -> stmts p
+  Evt _ _ p       -> stmts p
   If _ _ p q      -> stmts p ++ stmts q
   Seq _ p q       -> stmts p ++ stmts q ++ es where
                      es = if (maybeTerminates p) then [] else
@@ -67,8 +68,9 @@ getComplexs p = errs_nodes_msg_map (aux' (-1) p) "invalid statement" where
   aux' n s@(Fin _ p)      = [s] ++ aux' n p
   aux' n s@(Loop _ p)     = aux' n p
   aux' n (Var _ _ p)      = aux' n p
-  aux' n (Evt _ _ p)      = aux' n p
+  aux' n (Inp _ _ p)      = aux' n p
   aux' n (Out _ _ p)      = aux' n p
+  aux' n (Evt _ _ p)      = aux' n p
   aux' n (If _ _ p q)     = aux' n p ++ aux' n q
   aux' n (Seq _ p q)      = aux' n p ++ aux' n q
   aux' n s@(Par _ p q)    = [s] ++ aux' n p ++ aux' n q
@@ -89,8 +91,9 @@ boundedLoop (Loop _ body) = aux 0 body where
     AwaitInp _ _           -> True
     Every _ _ _            -> True
     Var _ _ p              -> aux n p
-    Evt _ _ p              -> aux n p
+    Inp _ _ p              -> aux n p
     Out _ _ p              -> aux n p
+    Evt _ _ p              -> aux n p
     If _ _ p q             -> aux n p && aux n q
     Seq _ s@(Escape _ _) q -> aux n s   -- q never executes
     Seq _ p q              -> aux n p || aux n q
@@ -111,8 +114,9 @@ getEscapes :: (Stmt ann) -> [(Stmt ann,Int)]
 getEscapes p = escs 0 p where
   escs :: Int -> (Stmt ann) -> [(Stmt ann,Int)]
   escs n (Var _ _ p)     = (escs n p)
-  escs n (Evt _ _ p)     = (escs n p)
+  escs n (Inp _ _ p)     = (escs n p)
   escs n (Out _ _ p)     = (escs n p)
+  escs n (Evt _ _ p)     = (escs n p)
   escs n (If _ _ p1 p2)  = (escs n p1) ++ (escs n p2)
   escs n (Seq _ p1 p2)   = (escs n p1) ++ (escs n p2)
   escs n (Loop _ p)      = (escs n p)
@@ -130,8 +134,9 @@ removeTrap :: (Stmt ann) -> (Stmt ann)
 removeTrap (Trap _ p) = rT 0 p where
   rT :: Int -> (Stmt ann) -> (Stmt ann)
   rT n (Var z id p)     = Var z id (rT n p)
-  rT n (Evt z id p)     = Evt z id (rT n p)
+  rT n (Inp z id p)     = Inp z id (rT n p)
   rT n (Out z id p)     = Out z id (rT n p)
+  rT n (Evt z id p)     = Evt z id (rT n p)
   rT n (If z exp p1 p2) = If z exp (rT n p1) (rT n p2)
   rT n (Seq z p1 p2)    = Seq z (rT n p1) (rT n p2)
   rT n (Loop z p)       = Loop z (rT n p)
@@ -150,8 +155,9 @@ removeTrap (Trap _ p) = rT 0 p where
 
 neverTerminates :: (Stmt ann) -> Bool
 neverTerminates (Var _ _ p)            = neverTerminates p
-neverTerminates (Evt _ _ p)            = neverTerminates p
+neverTerminates (Inp _ _ p)            = neverTerminates p
 neverTerminates (Out _ _ p)            = neverTerminates p
+neverTerminates (Evt _ _ p)            = neverTerminates p
 neverTerminates (AwaitInp _ "FOREVER") = True
 neverTerminates (If _ _ p1 p2)         = neverTerminates p1 && neverTerminates p2
 neverTerminates (Seq _ p1 p2)          = neverTerminates p1 || neverTerminates p2
@@ -168,8 +174,9 @@ maybeTerminates = not . neverTerminates
 
 alwaysTerminates :: (Stmt ann) -> Bool
 alwaysTerminates (Var _ _ p)            = alwaysTerminates p
-alwaysTerminates (Evt _ _ p)            = alwaysTerminates p
+alwaysTerminates (Inp _ _ p)            = alwaysTerminates p
 alwaysTerminates (Out _ _ p)            = alwaysTerminates p
+alwaysTerminates (Evt _ _ p)            = alwaysTerminates p
 alwaysTerminates (AwaitInp _ "FOREVER") = False
 alwaysTerminates (If _ _ p1 p2)         = alwaysTerminates p1 && alwaysTerminates p2
 alwaysTerminates (Seq _ p1 p2)          = alwaysTerminates p1 && alwaysTerminates p2
@@ -187,7 +194,9 @@ alwaysTerminates _                      = True
 alwaysInstantaneous :: (Stmt ann) -> Bool
 alwaysInstantaneous p = aux p where
   aux (Var _ _ p)    = aux p
+  aux (Inp _ _ p)    = aux p
   aux (Out _ _ p)    = aux p
+  aux (Evt _ _ p)    = aux p
   aux (AwaitInp _ _) = False
   aux (AwaitEvt _ _) = False
   aux (If _ _ p1 p2) = aux p1 && aux p2
@@ -204,8 +213,9 @@ alwaysInstantaneous p = aux p where
 neverInstantaneous :: (Stmt ann) -> Bool
 neverInstantaneous p = aux p where
   aux (Var _ _ p)    = aux p
-  aux (Evt _ _ p)    = aux p
+  aux (Inp _ _ p)    = aux p
   aux (Out _ _ p)    = aux p
+  aux (Evt _ _ p)    = aux p
   aux (AwaitInp _ _) = True
   aux (If _ _ p1 p2) = aux p1 && aux p2
   aux (Seq _ p1 p2)  = aux p1 || aux p2

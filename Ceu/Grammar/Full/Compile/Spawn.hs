@@ -9,10 +9,13 @@ compile :: (Ann ann) => Stmt ann -> (Errors, Stmt ann)
 compile (Var' z id Nothing p)    = (es, Var' z id Nothing p')
                                    where
                                      (es,p') = compile p
-compile (Evt' z id b p)          = (es, Evt' z id b p')
+compile (Inp' z id b p)          = (es, Inp' z id b p')
                                    where
                                      (es,p') = compile p
 compile (Out' z id b p)          = (es, Out' z id b p')
+                                   where
+                                     (es,p') = compile p
+compile (Evt' z id b p)          = (es, Evt' z id b p')
                                    where
                                      (es,p') = compile p
 compile (If z exp p1 p2)         = (es1++es2, If z exp p1' p2')

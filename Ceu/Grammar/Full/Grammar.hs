@@ -12,17 +12,18 @@ import Debug.Trace
 -- "FOREVER"
 -- "ASYNC"
 
-type In = (ID_Ext, Maybe Val)
+type In = (ID_Inp, Maybe Val)
 
 type Fin ann = (Stmt ann, Stmt ann, Stmt ann)
 
 -- Program (pg 5).
 data Stmt ann
   = Var      ann ID_Var (Maybe (Fin ann))            -- variable declaration
+  | Inp      ann ID_Inp Bool                         -- output declaration
+  | Out      ann ID_Out Bool                         -- output declaration
   | Evt      ann ID_Evt Bool                         -- event declaration
-  | Out      ann ID_Ext Bool                         -- output declaration
   | Write    ann ID_Var (Exp ann)                    -- assignment statement
-  | AwaitInp ann ID_Ext (Maybe ID_Var)               -- await external event
+  | AwaitInp ann ID_Inp (Maybe ID_Var)               -- await external event
   | EmitExt  ann ID_Ext (Maybe (Exp ann))            -- emit external event
   | AwaitFor ann                                     -- await forever
   | AwaitTmr ann (Exp ann)                           -- await timer
@@ -45,8 +46,9 @@ data Stmt ann
   | Scope    ann (Stmt ann)                          -- scope for local variables
   | Error    ann String                              -- generate runtime error (for testing purposes)
   | Var'     ann ID_Var (Maybe (Fin ann)) (Stmt ann) -- variable declaration w/ stmts in scope
+  | Inp'     ann ID_Inp Bool (Stmt ann)              -- output declaration w/ stmts in scope
+  | Out'     ann ID_Out Bool (Stmt ann)              -- output declaration w/ stmts in scope
   | Evt'     ann ID_Evt Bool (Stmt ann)              -- event declaration w/ stmts in scope
-  | Out'     ann ID_Ext Bool (Stmt ann)              -- output declaration w/ stmts in scope
   | Or'      ann (Stmt ann) (Stmt ann)               -- used as an Or with possibly non-terminating trails
   | Par'     ann (Stmt ann) (Stmt ann)               -- par as in basic Grammar
   | Pause'   ann ID_Var (Stmt ann)                   -- pause as in basic Grammar
@@ -68,8 +70,9 @@ infixr 0 `sOr`
 
 getAnn :: Stmt ann -> ann
 getAnn (Var      z _ _  ) = z
-getAnn (Evt      z _ _  ) = z
+getAnn (Inp      z _ _  ) = z
 getAnn (Out      z _ _  ) = z
+getAnn (Evt      z _ _  ) = z
 getAnn (Write    z _ _  ) = z
 getAnn (AwaitInp z _ _  ) = z
 getAnn (EmitExt  z _ _  ) = z
@@ -108,14 +111,17 @@ toGrammar :: (Eq ann, Ann ann) => (Stmt ann) -> (Errors, G.Stmt ann)
 toGrammar (Var' z var Nothing p) = (es, G.Var z var p')
                                  where
                                    (es,p') = toGrammar p
+toGrammar (Inp' z inp b p)       = (es, G.Inp z inp p')
+                                 where
+                                   (es,p') = toGrammar p
+toGrammar (Out' z out b p)       = (es, G.Out z out p')
+                                 where
+                                   (es,p') = toGrammar p
 toGrammar (Evt' z int b p)       = (es, G.Evt z int p')
                                  where
                                    (es,p') = toGrammar p
-toGrammar (Out' z ext b p)       = (es, G.Out z ext p')
-                                 where
-                                   (es,p') = toGrammar p
 toGrammar (Write z var exp)      = ([], G.Write z var exp)
-toGrammar (AwaitInp z ext var)   = ([], G.AwaitInp z ext)
+toGrammar (AwaitInp z inp var)   = ([], G.AwaitInp z inp)
 toGrammar (EmitExt z ext exp)    = ([], G.EmitExt z ext exp)
 toGrammar (AwaitEvt z int var)   = ([], G.AwaitEvt z int)
 toGrammar (EmitEvt z int val)    = ([], G.EmitEvt z int)
@@ -160,8 +166,9 @@ toGrammar p                      = error $ "toGrammar: unexpected statement: " -
 stmt2word :: (Stmt ann) -> String
 stmt2word stmt = case stmt of
   Var _ _ _      -> "declaration"
-  Evt _ _ _      -> "declaration"
+  Inp _ _ _      -> "declaration"
   Out _ _ _      -> "declaration"
+  Evt _ _ _      -> "declaration"
   Write _ _ _    -> "assignment"
   AwaitInp _ _ _ -> "await"
   AwaitFor _     -> "await"
@@ -185,8 +192,9 @@ stmt2word stmt = case stmt of
   Scope _ _      -> "scope"
   Error _ _      -> "error"
   Var' _ _ _ _   -> "declaration"
-  Evt' _ _ _ _   -> "declaration"
+  Inp' _ _ _ _   -> "declaration"
   Out' _ _ _ _   -> "declaration"
+  Evt' _ _ _ _   -> "declaration"
   Par' _ _ _     -> "parallel"
   Pause' _ _ _   -> "pause/if"
   Fin' _ _       -> "finalize"

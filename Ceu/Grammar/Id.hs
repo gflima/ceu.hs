@@ -13,10 +13,12 @@ check p = stmt [] p
 stmt :: (Ann ann) => [Stmt ann] -> Stmt ann -> Errors
 
 stmt ids s@(Var _ id p) = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
-stmt ids s@(Evt _ id p) = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
+stmt ids s@(Inp _ id p) = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
 stmt ids s@(Out _ id p) = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
+stmt ids s@(Evt _ id p) = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
 
 stmt ids s@(Write    _ id exp) = (errUndeclaredInvalid ids (id,s) isVar) ++ (expr ids exp)
+stmt ids s@(AwaitInp _ id)     = (errUndeclaredInvalid ids (id,s) isInp)
 stmt ids s@(EmitExt  _ id exp) = (errUndeclaredInvalid ids (id,s) isExt) ++ es
                                  where
                                     es = case exp of
@@ -40,19 +42,25 @@ stmt ids p                 = []
 isVar (Var _ _ _) = True
 isVar _           = False
 
-isEvt (Evt _ _ _) = True
-isEvt _           = False
-
-isInpEvt (Evt _ _ _) = True
-isInpEvt _           = False
-
+isExt (Inp _ _ _) = True
 isExt (Out _ _ _) = True
 isExt _           = False
 
+isInp (Inp _ _ _) = True
+isInp _           = False
+
+isEvt (Evt _ _ _) = True
+isEvt _           = False
+
+isInpEvt (Inp _ _ _) = True
+isInpEvt (Evt _ _ _) = True
+isInpEvt _           = False
+
 getId :: Stmt ann -> String
 getId (Var      _ id _) = id
-getId (Evt      _ id _) = id
+getId (Inp      _ id _) = id
 getId (Out      _ id _) = id
+getId (Evt      _ id _) = id
 
 find' :: String -> [Stmt ann] -> Maybe (Stmt ann)
 find' id ids = find (\s -> getId s == id) ids
