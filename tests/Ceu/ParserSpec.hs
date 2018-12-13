@@ -210,18 +210,18 @@ spec = do
                 `shouldBe` Right (Escape ("",1,1) Nothing (Just (Read ("",1,8) "aaa")))
 
         describe "var:" $ do
-            it "var int x" $
-                parse stmt_var "var int x;"
+            it "var x: int" $
+                parse stmt_var "var x: int;"
                 `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (Nop ("",1,1)))
             it "var var x" $
                 parse stmt_var "var var x"
                 `shouldBe` Left "(line 1, column 8):\nunexpected \" \"\nexpecting digit, letter or \"_\""
-            it "var int a <- 1" $
-                parse stmt_var "var int a <- 1"
-                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "a" Nothing) (Write ("",1,11) "a" (Const ("",1,14) 1)))
-            it "var int x <- await X" $
-                parse stmt_var "var int x <- await X"
-                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (AwaitExt ("",1,14) "X" (Just "x")))
+            it "var a: int <- 1" $
+                parse stmt_var "var a : int <- 1"
+                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "a" Nothing) (Write ("",1,13) "a" (Const ("",1,16) 1)))
+            it "var x : int <- await X" $
+                parse stmt_var "var x : int <- await X"
+                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (AwaitExt ("",1,16) "X" (Just "x")))
 
         describe "write:" $ do
             it "x <- 1" $
@@ -348,12 +348,12 @@ spec = do
                 `shouldBe` Right (Seq ("",1,1) (Scope ("",1,1) (Nop ("",1,4))) (Escape ("",1,8) Nothing (Just (Const ("",1,15) 1))))
 
         describe "stmt:" $ do
-            it "var int x; escape 1" $
-                parse stmt "var int x ;escape 1"
+            it "var x:int; escape 1" $
+                parse stmt "var x:int ;escape 1"
                 `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (Nop ("",1,1))) (Escape ("",1,12) Nothing (Just (Const ("",1,19) 1))))
 
-            it "var int x; x<-1; escape x" $
-                parse stmt "var int x ; x <- 1 ; escape x"
+            it "var x:int; x<-1; escape x" $
+                parse stmt "var x:int ; x <- 1 ; escape x"
                 `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (Nop ("",1,1))) (Seq ("",1,1) (Write ("",1,13) "x" (Const ("",1,18) 1)) (Escape ("",1,22) Nothing (Just (Read ("",1,29) "x")))))
 
             it "do ... end" $

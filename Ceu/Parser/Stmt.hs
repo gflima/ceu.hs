@@ -48,8 +48,9 @@ stmt_var :: Parser (Stmt Source)
 stmt_var = do
     pos  <- getPosition
     void <- tk_key "var"
-    tp   <- tk_type
     var  <- tk_var
+    void <- tk_str ":"
+    tp   <- tk_type
     guard $ tp == "int"         -- TODO
     s    <- option (Nop $ pos2src pos) (try (attr_exp var) <|> try (attr_awaitext var))
     return $ Seq (pos2src pos) (Var (pos2src pos) var Nothing) s
