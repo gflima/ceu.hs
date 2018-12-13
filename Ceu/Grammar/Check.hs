@@ -14,7 +14,7 @@ type Options = (Bool,Bool)
 compile :: (Eq ann, Ann ann) => Options -> (Stmt ann) -> (Errors, Stmt ann)
 compile (o_simp,o_encl) p = (es3,p2) where
   p1   = if not o_encl then p else
-          (Var z "_ret" (Seq z (Trap z p) (AwaitInp z "FOREVER")))
+          (Var z "_ret" (Inp z "FOREVER" (Seq z (Trap z p) (AwaitInp z "FOREVER"))))
   p2   = if not o_simp then p1 else simplify p1
   es3  = escs ++ (stmts p1) ++ (Id.check p1)
   z    = getAnn p

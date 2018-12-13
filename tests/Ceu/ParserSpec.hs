@@ -230,6 +230,12 @@ spec = do
             it "output x: int" $
                 parse stmt_output "output x: int"
                 `shouldBe` Left "(line 1, column 8):\nunexpected \"x\""
+            it "input X: int" $
+                parse stmt_input "input X: int"
+                `shouldBe` Right (Inp ("",1,1) "X" True)
+            it "input x: int" $
+                parse stmt_input "input x: int"
+                `shouldBe` Left "(line 1, column 7):\nunexpected \"x\""
 
         describe "write:" $ do
             it "x <- 1" $

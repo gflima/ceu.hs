@@ -21,6 +21,7 @@ keywords = [
     "end",
     "escape",
     "if",
+    "input",
     "loop",
     "output",
     "par",
