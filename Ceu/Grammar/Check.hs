@@ -5,7 +5,7 @@ import Debug.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Stmt     (Stmt(..), getAnn)
 import Ceu.Grammar.Simplify (simplify)
-import qualified Ceu.Grammar.VarEvt as VarEvt
+import qualified Ceu.Grammar.Id as Id
 
 -------------------------------------------------------------------------------
 
@@ -16,7 +16,7 @@ compile (o_simp,o_encl) p = (es3,p2) where
   p1   = if not o_encl then p else
           (Var z "_ret" (Seq z (Trap z p) (AwaitExt z "FOREVER")))
   p2   = if not o_simp then p1 else simplify p1
-  es3  = escs ++ (stmts p1) ++ (VarEvt.check p1)
+  es3  = escs ++ (stmts p1) ++ (Id.check p1)
   z    = getAnn p
   escs = errs_nodes_msg_map (map (\(s,n)->s) (getEscapes p1)) "orphan `escape` statement"
 

@@ -1,4 +1,4 @@
-module Ceu.Grammar.VarEvt where
+module Ceu.Grammar.Id where
 
 import Data.Char (toUpper)
 import Data.List (find)

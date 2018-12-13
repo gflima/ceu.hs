@@ -5,7 +5,7 @@ import Ceu.Grammar.Ann.Unit
 import Ceu.Grammar.Exp
 import Ceu.Grammar.Stmt
 import qualified Ceu.Grammar.Check  as Check
-import qualified Ceu.Grammar.VarEvt as VarEvt
+import qualified Ceu.Grammar.Id as Id
 import Test.Hspec
 
 main :: IO ()
@@ -120,18 +120,18 @@ spec = do
     checkStmtsIt (Seq () (Trap () (Loop () (Trap () (Seq () (Escape () 0) (Nop ()))))) (Nop ())) ["trap: missing `escape` statement","nop: unreachable statement", "loop: unbounded `loop` execution","nop: unreachable statement"]
 
   --------------------------------------------------------------------------
-  describe "checkVarEvt -- declarations" $ do
+  describe "checkId -- declarations" $ do
 
-    checkVarEvtIt (Nop ())                                 []
-    checkVarEvtIt (Var () "a" (Nop ()))                    []
-    checkVarEvtIt (Var () "a" (Write () "a" (Const () 1))) []
-    checkVarEvtIt (Var () "a" (Var () "a" (Nop ())))       ["declaration: identifier 'a' is already declared"]
-    checkVarEvtIt (Int () "e" (Int () "e" (Nop ())))       ["declaration: identifier 'e' is already declared"]
-    checkVarEvtIt (Write () "a" (Const () 1))              ["assignment: identifier 'a' is not declared"]
-    checkVarEvtIt (AwaitInt () "e")                        ["await: identifier 'e' is not declared"]
-    checkVarEvtIt (Every () "e" (Nop ()))                  ["every: identifier 'e' is not declared"]
-    checkVarEvtIt (Pause () "a" (Nop ()))                  ["pause/if: identifier 'a' is not declared"]
-    checkVarEvtIt (Var () "a" (Write () "a" (Umn () (Read () "b")))) ["read access to 'b': identifier 'b' is not declared"]
+    checkIdIt (Nop ())                                 []
+    checkIdIt (Var () "a" (Nop ()))                    []
+    checkIdIt (Var () "a" (Write () "a" (Const () 1))) []
+    checkIdIt (Var () "a" (Var () "a" (Nop ())))       ["declaration: identifier 'a' is already declared"]
+    checkIdIt (Int () "e" (Int () "e" (Nop ())))       ["declaration: identifier 'e' is already declared"]
+    checkIdIt (Write () "a" (Const () 1))              ["assignment: identifier 'a' is not declared"]
+    checkIdIt (AwaitInt () "e")                        ["await: identifier 'e' is not declared"]
+    checkIdIt (Every () "e" (Nop ()))                  ["every: identifier 'e' is not declared"]
+    checkIdIt (Pause () "a" (Nop ()))                  ["pause/if: identifier 'a' is not declared"]
+    checkIdIt (Var () "a" (Write () "a" (Umn () (Read () "b")))) ["read access to 'b': identifier 'b' is not declared"]
 
   --------------------------------------------------------------------------
   describe "checkStmts -- program is valid" $ do
@@ -193,7 +193,7 @@ spec = do
         checkLoopIt p b      = checkIt  Check.boundedLoop p b
         checkFinIt (Fin () p) b = checkIt' Check.getComplexs p b
         checkEveryIt p b     = checkIt' Check.getComplexs p b
-        checkVarEvtIt p b    = checkIt' VarEvt.check p b
+        checkIdIt p b    = checkIt' Id.check p b
         checkStmtsIt p b     = checkIt' Check.stmts p b
         checkCheckIt :: Stmt () -> Errors -> Spec
         checkCheckIt p b     = checkIt' (fst . (Check.compile (False,False))) p b
