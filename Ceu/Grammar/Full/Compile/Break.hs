@@ -14,6 +14,7 @@ compile p = ([], aux (-1) p)
 aux :: Int -> Stmt ann -> Stmt ann
 aux n (Var' z var Nothing p) = Var' z var Nothing (aux n p)
 aux n (Int' z int b p)       = Int' z int b (aux n p)
+aux n (Out' z int b p)       = Out' z int b (aux n p)
 aux n (If z exp p1 p2)       = If z exp (aux n p1) (aux n p2)
 aux n (Seq z p1 p2)          = Seq z (aux n p1) (aux n p2)
 aux n (Loop z p)             = Clean' z "Loop" (Trap' z (Loop z (aux 0 (Trap.ins' p))))

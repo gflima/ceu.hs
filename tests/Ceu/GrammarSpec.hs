@@ -183,6 +183,14 @@ spec = do
     checkCheckIt (Trap () (Par () (Escape () 0) (Seq () (Par () (AwaitExt () "FOREVER") (Fin () (Nop ()))) (Escape () 0))))
       ["escape: unreachable statement"]
 
+    describe "out:" $ do
+        it "emit O" $
+            (fst $ Check.compile (False,False) (EmitExt () "O" Nothing))
+            `shouldBe` ["emit: identifier 'O' is not declared"]
+        it "out O; emit O" $
+            Check.compile (False,False) (Out () "O" (EmitExt () "O" Nothing))
+            `shouldBe` ([],Out () "O" (EmitExt () "O" Nothing))
+
       where
         checkIt ck p b   =
           (it ((if b then "pass" else "fail") ++ ": " ++ showProg p) $

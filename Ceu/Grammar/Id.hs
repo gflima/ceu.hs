@@ -12,20 +12,25 @@ check p = stmt [] p
 
 stmt :: (Ann ann) => [Stmt ann] -> Stmt ann -> Errors
 
-stmt ids s@(Var _ var p)   = (errDeclared ids (var,s)) ++ (stmt (s:ids) p)
-stmt ids s@(Int _ int p)   = (errDeclared ids (int,s)) ++ (stmt (s:ids) p)
-stmt ids s@(Out _ ext p)   = (errDeclared ids (ext,s)) ++ (stmt (s:ids) p)
+stmt ids s@(Var _ id p) = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
+stmt ids s@(Int _ id p) = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
+stmt ids s@(Out _ id p) = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
 
-stmt ids s@(Write    _ var exp) = (errUndeclaredInvalid ids (var,s) isVar) ++ (expr ids exp)
-stmt ids s@(AwaitInt _ int)     = (errUndeclaredInvalid ids (int,s) isInt)
-stmt ids s@(EmitInt  _ int)     = (errUndeclaredInvalid ids (int,s) isInt)
+stmt ids s@(Write    _ id exp) = (errUndeclaredInvalid ids (id,s) isVar) ++ (expr ids exp)
+stmt ids s@(EmitExt  _ id exp) = (errUndeclaredInvalid ids (id,s) isExt) ++ es
+                                 where
+                                    es = case exp of
+                                        Nothing -> []
+                                        Just e  -> (expr ids e)
+stmt ids s@(AwaitInt _ id)     = (errUndeclaredInvalid ids (id,s) isInt)
+stmt ids s@(EmitInt  _ id)     = (errUndeclaredInvalid ids (id,s) isInt)
 
 stmt ids (If  _ exp p1 p2) = (expr ids exp) ++ (stmt ids p1) ++ (stmt ids p2)
 stmt ids (Seq _ p1 p2)     = (stmt ids p1) ++ (stmt ids p2)
 stmt ids (Loop _ p)        = (stmt ids p)
 stmt ids s@(Every _ evt p) = (errUndeclaredInvalid ids (evt,s) isEvt) ++ (stmt ids p)
 stmt ids (Par _ p1 p2)     = (stmt ids p1) ++ (stmt ids p2)
-stmt ids s@(Pause _ var p) = (errUndeclaredInvalid ids (var,s) isVar) ++ (stmt ids p)
+stmt ids s@(Pause _ id p) = (errUndeclaredInvalid ids (id,s) isVar) ++ (stmt ids p)
 stmt ids (Fin _ p)         = (stmt ids p)
 stmt ids (Trap _ p)        = (stmt ids p)
 stmt ids p                 = []
@@ -41,10 +46,13 @@ isInt _           = False
 isEvt (Int _ _ _) = True
 isEvt _           = False
 
+isExt (Out _ _ _) = True
+isExt _           = False
+
 getId :: Stmt ann -> String
-getId (Var      _ var _) = var
-getId (Int      _ int _) = int
-getId (Out      _ ext _) = ext
+getId (Var      _ id _) = id
+getId (Int      _ id _) = id
+getId (Out      _ id _) = id
 
 find' :: String -> [Stmt ann] -> Maybe (Stmt ann)
 find' id ids = find (\s -> getId s == id) ids
@@ -67,7 +75,7 @@ errUndeclaredInvalid ids (id,use) pred =
 -------------------------------------------------------------------------------
 
 expr :: (Ann ann) => [Stmt ann] -> Exp ann -> Errors
-expr ids e@(Read _ var) = errUndeclaredInvalid ids (var,e) isVar
+expr ids e@(Read _ id) = errUndeclaredInvalid ids (id,e) isVar
 expr ids (Umn _ e)      = expr ids e
 expr ids (Add _ e1 e2)  = (expr ids e1) ++ (expr ids e2)
 expr ids (Sub _ e1 e2)  = (expr ids e1) ++ (expr ids e2)

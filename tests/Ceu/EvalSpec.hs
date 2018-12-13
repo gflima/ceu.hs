@@ -1226,6 +1226,11 @@ escape x;
 
     -- multiple outputs
 
+    describe "out:" $ do
+        it "out O; emit O" $
+            compile_run (G.Out () "O" (G.Seq () (G.EmitExt () "O" Nothing) (G.Seq () (G.Write () "_ret" (Const () 1)) (G.Escape () 0)))) []
+            `shouldBe` Right (1,[[("O",Nothing)]])
+
     evalProgItSuccess (1,[[],[("O",Nothing)],[("O",Nothing)],[]]) ["I","I","F"]
       (G.Seq () (G.Seq () (G.Write () "_ret" (Const () 1))
         (G.Trap () (G.Par () (G.Seq () (G.AwaitExt () "F") (G.Escape () 0)) (G.Every () "I" (G.EmitExt () "O" Nothing))))) (G.Escape () 0))

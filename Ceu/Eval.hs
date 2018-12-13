@@ -74,6 +74,7 @@ getAnn (Par'     z _ _)   = z
 fromGrammar :: (G.Stmt ann) -> (Stmt ann)
 fromGrammar (G.Var z id p)      = Var z (id,Nothing) (fromGrammar p)
 fromGrammar (G.Int z id p)      = Int z id (fromGrammar p)
+fromGrammar (G.Out z id p)      = (fromGrammar p)
 fromGrammar (G.Write z id exp)  = Write z id exp
 fromGrammar (G.AwaitExt z id)   = AwaitExt z id
 fromGrammar (G.EmitExt z id exp)= EmitExt z id exp

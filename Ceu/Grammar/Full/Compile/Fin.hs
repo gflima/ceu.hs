@@ -17,6 +17,9 @@ compile p = aux Nothing p where
   aux pse (Int' z id b p)             = (es, Int' z id b p')
                                         where
                                           (es,p') = aux pse p
+  aux pse (Out' z id b p)             = (es, Out' z id b p')
+                                        where
+                                          (es,p') = aux pse p
   aux pse (If z exp p1 p2)            = (es1++es2, If z exp p1' p2')
                                         where
                                           (es1,p1') = aux pse p1

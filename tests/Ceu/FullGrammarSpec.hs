@@ -57,7 +57,7 @@ spec = do
 
       it "scope var x end ; x=1" $ do
         compile' (False,False) (Seq () (Scope () (Var () "x" Nothing)) (Write () "x" (Const () 1)))
-        `shouldBe` (["assignment: variable 'x' is not declared"], G.Seq () (G.Var () "x" (G.Nop ())) (G.Write () "x" (Const () 1)))
+        `shouldBe` (["assignment: identifier 'x' is not declared"], G.Seq () (G.Var () "x" (G.Nop ())) (G.Write () "x" (Const () 1)))
 
       it "var x" $ do
         compile' (False,True) (Var () "x" Nothing)
@@ -82,24 +82,24 @@ spec = do
 
       it "scope int x end ; x=1" $ do
         compile' (False,False) (Seq () (Scope () (Int () "x" False)) (EmitInt () "x" Nothing))
-        `shouldBe` (["emit: event 'x' is not declared"], G.Seq () (G.Int () "x" (G.Nop ())) (G.EmitInt () "x"))
+        `shouldBe` (["emit: identifier 'x' is not declared"], G.Seq () (G.Int () "x" (G.Nop ())) (G.EmitInt () "x"))
 
-    describe "ext:" $ do
-      it "ext X" $ do
-        Scope.compile (Ext () "X" False)
-        `shouldBe` ([], (Ext' () "X" False (Nop ())))
+    describe "output:" $ do
+      it "output X" $ do
+        Scope.compile (Out () "X" False)
+        `shouldBe` ([], (Out' () "X" False (Nop ())))
 
-      it "ext X; (Nop ())" $ do
-        Scope.compile (Seq () (Ext () "X" False) (Nop ()))
-        `shouldBe` ([], (Ext' () "X" False (Nop ())))
+      it "output X; (Nop ())" $ do
+        Scope.compile (Seq () (Out () "X" False) (Nop ()))
+        `shouldBe` ([], (Out' () "X" False (Nop ())))
 
       it "scope ext X end ; ext y" $ do
-        Scope.compile (Seq () (Scope () (Ext () "X" False)) (Ext () "Y" False))
-        `shouldBe` ([],Seq () (Ext' () "X" False (Nop ())) (Ext' () "Y" False (Nop ())))
+        Scope.compile (Seq () (Scope () (Out () "X" False)) (Out () "Y" False))
+        `shouldBe` ([],Seq () (Out' () "X" False (Nop ())) (Out' () "Y" False (Nop ())))
 
       it "scope ext X end ; X=1" $ do
-        compile' (False,False) (Seq () (Scope () (Ext () "X" False)) (EmitInt () "X" Nothing))
-        `shouldBe` (["emit: event 'X' is not declared"], G.Seq () (G.Ext () "X" (G.Nop ())) (G.EmitInt () "X"))
+        compile' (False,False) (Seq () (Scope () (Out () "X" False)) (EmitInt () "X" Nothing))
+        `shouldBe` (["emit: identifier 'X' is not declared"], G.Seq () (G.Out () "X" (G.Nop ())) (G.EmitInt () "X"))
 
       it "scope escape 1 end" $ do
         compile' (False,False) (Scope () (Escape () Nothing (Just (Const () 1))))
@@ -222,7 +222,7 @@ spec = do
 
     it "spawn escape || escape" $ do
       compile' (False,False) (Trap () (Just "a") (Seq () (Spawn () (Par () (Escape () Nothing (Just (Const () 1))) (Escape () (Just "a") Nothing))) (Nop ())))
-      `shouldBe` (["parallel: escaping `spawn`","escape: escaping statement","escape: escaping statement","trap: terminating `trap` body","assignment: variable 'a' is not declared"],G.Trap () (G.Trap () (G.Par () (G.Par () (G.Seq () (G.Write () "a" (Const () 1)) (G.Escape () 1)) (G.Escape () 1)) (G.Seq () (G.Nop ()) (G.Escape () 0)))))
+      `shouldBe` (["parallel: escaping `spawn`","escape: escaping statement","escape: escaping statement","trap: terminating `trap` body","assignment: identifier 'a' is not declared"],G.Trap () (G.Trap () (G.Par () (G.Par () (G.Seq () (G.Write () "a" (Const () 1)) (G.Escape () 1)) (G.Escape () 1)) (G.Seq () (G.Nop ()) (G.Escape () 0)))))
 
   --------------------------------------------------------------------------
   describe "ParAndOr.compile" $ do
@@ -297,7 +297,7 @@ spec = do
 
     it "spawn do async ret++ end ;; await F;" $ do
       compile' (False,False) (Seq () (Spawn () (Async () (Loop () (Write () "x" (Add () (Read () "x") (Const () 1)))))) (AwaitExt () "A" Nothing))
-      `shouldBe` (["assignment: variable 'x' is not declared","read access to 'x': variable 'x' is not declared"], (G.Trap () (G.Par () (G.Loop () (G.Seq () (G.Write () "x" (Add () (Read () "x") (Const () 1))) (G.AwaitExt () "ASYNC"))) (G.Seq () (G.AwaitExt () "A") (G.Escape () 0)))))
+      `shouldBe` (["assignment: identifier 'x' is not declared","read access to 'x': identifier 'x' is not declared"], (G.Trap () (G.Par () (G.Loop () (G.Seq () (G.Write () "x" (Add () (Read () "x") (Const () 1))) (G.AwaitExt () "ASYNC"))) (G.Seq () (G.AwaitExt () "A") (G.Escape () 0)))))
 
     it "trap terminates" $ do
       compile' (False,False) (Or () (Trap' () (Escape' () 0)) (AwaitFor ()))
@@ -352,7 +352,7 @@ nop;
       ))
 
     -- TODO: OK
-    evalFullProgItLeft ["read access to 'b': variable 'b' is not declared"] [] (
+    evalFullProgItLeft ["read access to 'b': identifier 'b' is not declared"] [] (
       (Var' () "ret" Nothing (
       (Var' () "a" (Just ((Write () "ret" (Read () "b")),(Nop ()),(Nop ())))
         (Var' () "b" Nothing
@@ -432,14 +432,14 @@ end
           (EmitInt () "a" (Just (Const () 10)) `sSeq` (AwaitFor ()))
       ))
 
-    evalFullProgItLeft ["read access to '_a': variable '_a' is not declared","assignment: variable '_a' is not declared"] []
+    evalFullProgItLeft ["read access to '_a': identifier '_a' is not declared","assignment: identifier '_a' is not declared"] []
       (Var' () "ret" Nothing
         (Int' () "a" False (
           Par ()
             (Seq () (AwaitInt () "a" (Just "ret")) (Escape () Nothing (Just (Const () 0))))
             (EmitInt () "a" (Just (Const () 10)) `sSeq` (AwaitFor ())))))
 
-    evalFullProgItLeft ["assignment: variable '_a' is not declared"] [] (
+    evalFullProgItLeft ["assignment: identifier '_a' is not declared"] [] (
       Int' () "a" False
         (Seq ()
           (And ()
@@ -543,6 +543,28 @@ end
           (EmitExt () "C" (Just (Const () 1))) `sSeq`
           (Escape () Nothing (Just (Const () 10)))))
 
+    it "xxx" $
+        evalFullProg
+            (Seq ()
+                ((Out () "A" True) `sSeq` (Out () "B" True) `sSeq` (Out () "C" True))
+                (Seq ()
+                    (And ()
+                        ((AwaitTmr () (Const () 5))             `sSeq`
+                        (EmitExt () "A" (Just (Const () 1)))    `sSeq`
+                        (AwaitTmr () (Const () 5))              `sSeq`
+                        (EmitExt () "A" (Just (Const () 2))))
+
+                        ((AwaitTmr () (Const () 4))             `sSeq`
+                        (EmitExt () "B" (Just (Const () 1)))    `sSeq`
+                        (AwaitTmr () (Const () 7)               `sSeq`
+                        (EmitExt () "B" (Just (Const () 2))))))
+                    (
+                        (AwaitTmr () (Const () 10))          `sSeq`
+                        (EmitExt () "C" (Just (Const () 1))) `sSeq`
+                        (Escape () Nothing (Just (Const () 10))))))
+            [("TIMER",Just 10),("TIMER",Just 11)]
+        `shouldBe` Right (10,[[],[("B",Just 1),("A",Just 1),("A",Just 2)],[("B",Just 2),("C",Just 1)]])
+
   describe "outputs" $ do
 
     evalFullProgItRight (1,[[],[("O",Just 1)],[("O",Just 2)],[]]) [("I",Just 1),("I",Just 2),("F",Nothing)]
@@ -588,19 +610,16 @@ pause/if X with
     await E;
 end
 -}
-    evalFullProgItRight (99,[[],[("P",Nothing)],[],[("R",Nothing)],[("F",Nothing)]]) [("X",Just 1),("E",Nothing),("X",Just 0),("E",Nothing)]
-      (Seq ()
-        (Pause () "X"
-          (Seq () (Fin () (EmitExt () "F" Nothing) (EmitExt () "P" Nothing) (EmitExt () "R" Nothing))
-               (AwaitExt () "E" Nothing)))
-        (Escape () Nothing (Just (Const () 99))))
-
-    evalFullProgItRight (99,[[],[("P",Nothing)],[],[("R",Nothing)],[("F",Nothing)]]) [("X",Just 1),("E",Nothing),("X",Just 0),("E",Nothing)]
-      (Seq ()
-        (Pause () "X"
-          (Var' () "x" (Just ((EmitExt () "F" Nothing),(EmitExt () "P" Nothing),(EmitExt () "R" Nothing)))
-            (AwaitExt () "E" Nothing)))
-        (Escape () Nothing (Just (Const () 99))))
+    it "pause" $
+        evalFullProg
+            (Seq () ((Out () "F" False) `sSeq` (Out () "P" False) `sSeq` (Out () "R" False))
+            (Seq ()
+                (Pause () "X"
+                    (Var' () "x" (Just ((EmitExt () "F" Nothing),(EmitExt () "P" Nothing),(EmitExt () "R" Nothing)))
+                        (AwaitExt () "E" Nothing)))
+                (Escape () Nothing (Just (Const () 99)))))
+            [("X",Just 1),("E",Nothing),("X",Just 0),("E",Nothing)]
+        `shouldBe` Right (99,[[],[("P",Nothing)],[],[("R",Nothing)],[("F",Nothing)]])
 
       where
         evalFullProgItRight (res,outss) hist prog =
