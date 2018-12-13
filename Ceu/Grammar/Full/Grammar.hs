@@ -22,7 +22,7 @@ data Stmt ann
   | Evt      ann ID_Evt Bool                         -- event declaration
   | Out      ann ID_Ext Bool                         -- output declaration
   | Write    ann ID_Var (Exp ann)                    -- assignment statement
-  | AwaitExt ann ID_Ext (Maybe ID_Var)               -- await external event
+  | AwaitInp ann ID_Ext (Maybe ID_Var)               -- await external event
   | EmitExt  ann ID_Ext (Maybe (Exp ann))            -- emit external event
   | AwaitFor ann                                     -- await forever
   | AwaitTmr ann (Exp ann)                           -- await timer
@@ -71,7 +71,7 @@ getAnn (Var      z _ _  ) = z
 getAnn (Evt      z _ _  ) = z
 getAnn (Out      z _ _  ) = z
 getAnn (Write    z _ _  ) = z
-getAnn (AwaitExt z _ _  ) = z
+getAnn (AwaitInp z _ _  ) = z
 getAnn (EmitExt  z _ _  ) = z
 getAnn (AwaitFor z      ) = z
 getAnn (AwaitTmr z _    ) = z
@@ -115,7 +115,7 @@ toGrammar (Out' z ext b p)       = (es, G.Out z ext p')
                                  where
                                    (es,p') = toGrammar p
 toGrammar (Write z var exp)      = ([], G.Write z var exp)
-toGrammar (AwaitExt z ext var)   = ([], G.AwaitExt z ext)
+toGrammar (AwaitInp z ext var)   = ([], G.AwaitInp z ext)
 toGrammar (EmitExt z ext exp)    = ([], G.EmitExt z ext exp)
 toGrammar (AwaitEvt z int var)   = ([], G.AwaitEvt z int)
 toGrammar (EmitEvt z int val)    = ([], G.EmitEvt z int)
@@ -163,7 +163,7 @@ stmt2word stmt = case stmt of
   Evt _ _ _      -> "declaration"
   Out _ _ _      -> "declaration"
   Write _ _ _    -> "assignment"
-  AwaitExt _ _ _ -> "await"
+  AwaitInp _ _ _ -> "await"
   AwaitFor _     -> "await"
   AwaitTmr _ _   -> "await"
   EmitExt _ _ _  -> "emit"

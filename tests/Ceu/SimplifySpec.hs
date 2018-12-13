@@ -32,7 +32,7 @@ spec = do
     it "Seq () -> (Nop ())" $ do
       simplify' (Seq () (Nop ()) (Seq () (Nop ()) (Trap () (Escape () 0)))) `shouldBe` (Nop ())
     it "Break;* -> Break" $ do
-      simplify' (Seq () (Escape () 0) (AwaitExt () "")) `shouldBe` (Escape () 0)
+      simplify' (Seq () (Escape () 0) (AwaitInp () "")) `shouldBe` (Escape () 0)
 
     it "Var () -> (Nop ())" $ do
       simplify' (Var () "" (Nop ())) `shouldBe` (Nop ())
@@ -49,7 +49,7 @@ spec = do
       simplify' (Evt () "" (Seq () (Nop ()) (Escape () 0))) `shouldBe` (Escape () 0)
 
     it "If () a a -> a" $ do
-      simplify' (If () (Const () 1) (AwaitExt () "") (AwaitExt () "")) `shouldBe` (AwaitExt () "")
+      simplify' (If () (Const () 1) (AwaitInp () "") (AwaitInp () "")) `shouldBe` (AwaitInp () "")
     it "If () x y -> If () x y" $ do
       simplify' (If () (Const () 1) (Escape () 0) (Nop ())) `shouldBe` (If () (Const () 1) (Escape () 0) (Nop ()))
 
@@ -60,19 +60,19 @@ spec = do
     --it "Par () (Nop ()) y -> y" $ do
       --simplify' (Par () (Nop ()) (Seq () (Escape () 0) (Nop ()))) `shouldBe` (Escape () 0)
     it "Par () x Break -> Break" $ do
-      simplify' (Par () (Seq () (Escape () 0) (Nop ())) (AwaitExt () "")) `shouldBe` (Escape () 0)
+      simplify' (Par () (Seq () (Escape () 0) (Nop ())) (AwaitInp () "")) `shouldBe` (Escape () 0)
     it "Par () x Break -> Break" $ do
-      simplify' (Par () (Seq () (AwaitExt () "") (Nop ())) (AwaitExt () "")) `shouldBe` (Par () (AwaitExt () "") (AwaitExt () ""))
+      simplify' (Par () (Seq () (AwaitInp () "") (Nop ())) (AwaitInp () "")) `shouldBe` (Par () (AwaitInp () "") (AwaitInp () ""))
 
     --it "Par () (Nop ()) y -> y" $ do
       --simplify' (Par () (Nop ()) (Seq () (Escape () 0) (Nop ()))) `shouldBe` (Escape () 0)
     it "Par () Break x -> Break" $ do
-      simplify' (Par () (Seq () (Escape () 0) (Nop ())) (AwaitExt () "")) `shouldBe` (Escape () 0)
+      simplify' (Par () (Seq () (Escape () 0) (Nop ())) (AwaitInp () "")) `shouldBe` (Escape () 0)
     it "Par () x y -> Par () x y" $ do
-      simplify' (Par () (Seq () (AwaitExt () "") (Nop ())) (AwaitExt () "")) `shouldBe` (Par () (AwaitExt () "") (AwaitExt () ""))
+      simplify' (Par () (Seq () (AwaitInp () "") (Nop ())) (AwaitInp () "")) `shouldBe` (Par () (AwaitInp () "") (AwaitInp () ""))
     it "par for par for par for" $ do
-      simplify' (Par () (AwaitExt () "FOREVER") (Par () (AwaitExt () "FOREVER") (AwaitExt () "FOREVER")))
-      `shouldBe` (AwaitExt () "FOREVER")
+      simplify' (Par () (AwaitInp () "FOREVER") (Par () (AwaitInp () "FOREVER") (AwaitInp () "FOREVER")))
+      `shouldBe` (AwaitInp () "FOREVER")
 
     it "Pause () -> (Nop ())" $ do
       simplify' (Pause () "" (Nop ())) `shouldBe` (Nop ())
@@ -93,4 +93,4 @@ spec = do
     it "Trap () (Escape () n) -> Escape () n" $ do
       simplify' (Trap () (Escape () 1)) `shouldBe` (Escape () 1)
     it "Trap () p -> Trap () p" $ do
-      simplify' (Trap () (AwaitExt () "")) `shouldBe` (Trap () (AwaitExt () ""))
+      simplify' (Trap () (AwaitInp () "")) `shouldBe` (Trap () (AwaitInp () ""))

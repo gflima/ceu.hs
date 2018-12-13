@@ -33,7 +33,7 @@ aux (AwaitTmr z exp)      = Var' z "__timer_await" Nothing
                               (Trap' z
                                 (Loop z
                                   (Seq z
-                                    (AwaitExt z "TIMER" Nothing)
+                                    (AwaitInp z "TIMER" Nothing)
                                     (Seq z
                                       (Write z "__timer_await"
                                         (Sub z (Read z "__timer_await") (Const z 1)))

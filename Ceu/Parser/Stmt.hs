@@ -88,7 +88,7 @@ stmt_awaitext var = do
     pos  <- getPosition
     void <- tk_key "await"
     ext  <- tk_ext
-    return $ AwaitExt (pos2src pos) ext var
+    return $ AwaitInp (pos2src pos) ext var
 
 -------------------------------------------------------------------------------
 

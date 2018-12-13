@@ -221,7 +221,7 @@ spec = do
                 `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "a" Nothing) (Write ("",1,13) "a" (Const ("",1,16) 1)))
             it "var x : int <- await X" $
                 parse stmt_var "var x : int <- await X"
-                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (AwaitExt ("",1,16) "X" (Just "x")))
+                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (AwaitInp ("",1,16) "X" (Just "x")))
 
         describe "ext:" $ do
             it "output X: int" $
@@ -244,7 +244,7 @@ spec = do
         describe "awaitext:" $ do
             it "await X" $
                 parse (stmt_awaitext Nothing) "await X"
-                `shouldBe` Right (AwaitExt ("",1,1) "X" Nothing)
+                `shouldBe` Right (AwaitInp ("",1,1) "X" Nothing)
             it "await x" $
                 parse (stmt_awaitext Nothing) "await x"
                 `shouldBe` Left "(line 1, column 7):\nunexpected \"x\""
@@ -313,7 +313,7 @@ spec = do
                 `shouldBe` Right (Loop ("",1,1) (Write ("",1,9) "v" (Const ("",1,12) 1)))
             it "loop do v<-1 ; await FOREVER end" $
                 parse stmt_loop "loop do v<-1 ; await FOREVER end"
-                `shouldBe` Right (Loop ("",1,1) (Seq ("",1,9) (Write ("",1,9) "v" (Const ("",1,12) 1)) (AwaitExt ("",1,16) "FOREVER" Nothing)))
+                `shouldBe` Right (Loop ("",1,1) (Seq ("",1,9) (Write ("",1,9) "v" (Const ("",1,12) 1)) (AwaitInp ("",1,16) "FOREVER" Nothing)))
 
 -------------------------------------------------------------------------------
 

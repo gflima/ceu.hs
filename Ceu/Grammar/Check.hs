@@ -14,7 +14,7 @@ type Options = (Bool,Bool)
 compile :: (Eq ann, Ann ann) => Options -> (Stmt ann) -> (Errors, Stmt ann)
 compile (o_simp,o_encl) p = (es3,p2) where
   p1   = if not o_encl then p else
-          (Var z "_ret" (Seq z (Trap z p) (AwaitExt z "FOREVER")))
+          (Var z "_ret" (Seq z (Trap z p) (AwaitInp z "FOREVER")))
   p2   = if not o_simp then p1 else simplify p1
   es3  = escs ++ (stmts p1) ++ (Id.check p1)
   z    = getAnn p
@@ -62,7 +62,7 @@ stmts stmt = case stmt of
 getComplexs :: (Ann ann) => (Stmt ann) -> [String]
 getComplexs p = errs_nodes_msg_map (aux' (-1) p) "invalid statement" where
   aux' _ s@(AwaitEvt _ _) = [s]
-  aux' _ s@(AwaitExt _ _) = [s]
+  aux' _ s@(AwaitInp _ _) = [s]
   aux' n s@(Every _ _ p)  = [s] ++ aux' n p
   aux' n s@(Fin _ p)      = [s] ++ aux' n p
   aux' n s@(Loop _ p)     = aux' n p
@@ -80,13 +80,13 @@ getComplexs p = errs_nodes_msg_map (aux' (-1) p) "invalid statement" where
   aux' _ _                = []
 
 -- Receives a Loop statement and checks whether all execution paths
--- in its body lead to an occurrence of a matching-Escape/AwaitExt/Every.
+-- in its body lead to an occurrence of a matching-Escape/AwaitInp/Every.
 -- returns all `loop` that fail
 
 boundedLoop :: (Stmt ann) -> Bool
 boundedLoop (Loop _ body) = aux 0 body where
   aux n stmt = case stmt of
-    AwaitExt _ _           -> True
+    AwaitInp _ _           -> True
     Every _ _ _            -> True
     Var _ _ p              -> aux n p
     Evt _ _ p              -> aux n p
@@ -152,7 +152,7 @@ neverTerminates :: (Stmt ann) -> Bool
 neverTerminates (Var _ _ p)            = neverTerminates p
 neverTerminates (Evt _ _ p)            = neverTerminates p
 neverTerminates (Out _ _ p)            = neverTerminates p
-neverTerminates (AwaitExt _ "FOREVER") = True
+neverTerminates (AwaitInp _ "FOREVER") = True
 neverTerminates (If _ _ p1 p2)         = neverTerminates p1 && neverTerminates p2
 neverTerminates (Seq _ p1 p2)          = neverTerminates p1 || neverTerminates p2
 neverTerminates (Loop _ p)             = True
@@ -170,7 +170,7 @@ alwaysTerminates :: (Stmt ann) -> Bool
 alwaysTerminates (Var _ _ p)            = alwaysTerminates p
 alwaysTerminates (Evt _ _ p)            = alwaysTerminates p
 alwaysTerminates (Out _ _ p)            = alwaysTerminates p
-alwaysTerminates (AwaitExt _ "FOREVER") = False
+alwaysTerminates (AwaitInp _ "FOREVER") = False
 alwaysTerminates (If _ _ p1 p2)         = alwaysTerminates p1 && alwaysTerminates p2
 alwaysTerminates (Seq _ p1 p2)          = alwaysTerminates p1 && alwaysTerminates p2
 alwaysTerminates (Loop _ p)             = False
@@ -188,7 +188,7 @@ alwaysInstantaneous :: (Stmt ann) -> Bool
 alwaysInstantaneous p = aux p where
   aux (Var _ _ p)    = aux p
   aux (Out _ _ p)    = aux p
-  aux (AwaitExt _ _) = False
+  aux (AwaitInp _ _) = False
   aux (AwaitEvt _ _) = False
   aux (If _ _ p1 p2) = aux p1 && aux p2
   aux (Seq _ p1 p2)  = aux p1 && aux p2
@@ -206,7 +206,7 @@ neverInstantaneous p = aux p where
   aux (Var _ _ p)    = aux p
   aux (Evt _ _ p)    = aux p
   aux (Out _ _ p)    = aux p
-  aux (AwaitExt _ _) = True
+  aux (AwaitInp _ _) = True
   aux (If _ _ p1 p2) = aux p1 && aux p2
   aux (Seq _ p1 p2)  = aux p1 || aux p2
   aux (Loop _ p)     = True

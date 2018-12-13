@@ -14,7 +14,7 @@ type Lvl = Int
 -- Environment.
 type Vars = [(ID_Var, Maybe Val)]
 type Evts = [(ID_Evt, Bool)]
-type Outs = [(ID_Ext, Maybe Val)]
+type Outs = [(ID_Out, Maybe Val)]
 
 -- Description (pg 6).
 type Desc ann = (Stmt ann, Lvl, Vars, Evts, Outs)
@@ -24,8 +24,8 @@ data Stmt ann
   = Var      ann (ID_Var,Maybe Val) (Stmt ann)   -- block with environment store
   | Evt      ann ID_Evt (Stmt ann)               -- event declaration
   | Write    ann ID_Var (Exp ann)                -- assignment statement
-  | AwaitExt ann ID_Ext                          -- await external event
-  | EmitExt  ann ID_Ext (Maybe (Exp ann))        -- emit internal event
+  | AwaitInp ann ID_Inp                          -- await external event
+  | EmitExt  ann ID_Ext (Maybe (Exp ann))        -- emit external event
   | AwaitEvt ann ID_Evt                          -- await internal event
   | EmitEvt  ann ID_Evt                          -- emit internal event
   | If       ann (Exp ann) (Stmt ann) (Stmt ann) -- conditional
@@ -53,7 +53,7 @@ getAnn :: Stmt ann -> ann
 getAnn (Var      z _ _)   = z
 getAnn (Evt      z _ _)   = z
 getAnn (Write    z _ _)   = z
-getAnn (AwaitExt z _)     = z
+getAnn (AwaitInp z _)     = z
 getAnn (EmitExt  z _ _)   = z
 getAnn (AwaitEvt z _)     = z
 getAnn (EmitEvt  z _)     = z
@@ -76,7 +76,7 @@ fromGrammar (G.Var z id p)      = Var z (id,Nothing) (fromGrammar p)
 fromGrammar (G.Evt z id p)      = Evt z id (fromGrammar p)
 fromGrammar (G.Out z id p)      = (fromGrammar p)
 fromGrammar (G.Write z id exp)  = Write z id exp
-fromGrammar (G.AwaitExt z id)   = AwaitExt z id
+fromGrammar (G.AwaitInp z id)   = AwaitInp z id
 fromGrammar (G.EmitExt z id exp)= EmitExt z id exp
 fromGrammar (G.AwaitEvt z id)   = AwaitEvt z id
 fromGrammar (G.EmitEvt z id)    = EmitEvt z id
@@ -100,7 +100,7 @@ showProg stmt = case stmt of
     | otherwise          -> printf "{%s=%d: %s}" var (fromJust val) (sP p)
   Evt _ id stmt          -> printf ":%s %s" id (sP stmt)
   Write _ var expr       -> printf "%s=%s" var (sE expr)
-  AwaitExt _ ext         -> printf "?%s" ext
+  AwaitInp _ ext         -> printf "?%s" ext
   EmitExt _ ext Nothing  -> printf "!%s" ext
   EmitExt _ ext (Just v) -> printf "!%s=%s" ext (sE v)
   AwaitEvt _ int         -> printf "?%s" int
@@ -172,7 +172,7 @@ isBlocked :: Lvl -> (Stmt ann) -> Bool
 isBlocked n stmt = case stmt of
   Var _ _ p      -> isBlocked n p
   Evt _ _ p      -> isBlocked n p
-  AwaitExt _ _   -> True
+  AwaitInp _ _   -> True
   AwaitEvt _ _   -> True
   Every _ _ _    -> True
   CanRun _ m     -> n > m
@@ -193,7 +193,7 @@ clear :: (Stmt ann) -> (Stmt ann)
 clear stmt = case stmt of
   Var _ _ p      -> clear p
   Evt _ _ p      -> clear p
-  AwaitExt z _   -> Nop z
+  AwaitInp z _   -> Nop z
   AwaitEvt z _   -> Nop z
   Every z _ _    -> Nop z
   CanRun z _     -> Nop z
@@ -326,7 +326,7 @@ bcast :: ID -> Vars -> (Stmt ann) -> (Stmt ann)
 bcast e vars stmt = case stmt of
   Var z vv p              -> Var z vv (bcast e (vv:vars) p)
   Evt z id p              -> Evt z id (bcast e vars p)
-  AwaitExt z e' | e == e' -> Nop z
+  AwaitInp z e' | e == e' -> Nop z
   AwaitEvt z e' | e == e' -> Nop z
   Every z e' p  | e == e' -> Seq z p (Every z e' p)
   Seq z p q               -> Seq z (bcast e vars p) q
@@ -359,7 +359,7 @@ run prog ins reaction = eP (fromGrammar prog) ins []
   where
     --eP :: Stmt -> [a] -> [Outs] -> (Val,[Outs])
     eP prog ins outss = case prog of
-      (Var _ ("_ret",val) (AwaitExt _ "FOREVER"))
+      (Var _ ("_ret",val) (AwaitInp _ "FOREVER"))
         | not (null ins) -> Left ["pending inputs"]
         | isNothing val  -> Left ["no return value"]
         | otherwise      -> Right ((fromJust val), outss)

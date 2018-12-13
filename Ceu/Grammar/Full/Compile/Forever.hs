@@ -3,7 +3,7 @@ module Ceu.Grammar.Full.Compile.Forever where
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Full.Grammar
 
--- compile: Converts AwaitFor into (AwaitExt "FOREVER")
+-- compile: Converts AwaitFor into (AwaitInp "FOREVER")
 
 compile :: (Stmt ann) -> (Errors, Stmt ann)
 compile p = ([], aux p)
@@ -17,5 +17,5 @@ aux (Par' z p1 p2)        = Par' z (aux p1) (aux p2)
 aux (Pause' z var p)      = Pause' z var (aux p)
 aux (Trap' z p)           = Trap' z (aux p)
 aux (Clean' z id p)       = Clean' z id (aux p)
-aux (AwaitFor z)          = AwaitExt z "FOREVER" Nothing
+aux (AwaitFor z)          = AwaitInp z "FOREVER" Nothing
 aux p                     = p

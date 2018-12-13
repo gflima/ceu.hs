@@ -10,7 +10,7 @@ data Stmt ann
   | Evt      ann ID_Evt (Stmt ann)                  -- event declaration
   | Out      ann ID_Ext (Stmt ann)                  -- output declaration
   | Write    ann ID_Var (Exp ann)                   -- assignment statement
-  | AwaitExt ann ID_Ext                             -- await external event
+  | AwaitInp ann ID_Ext                             -- await external event
   | EmitExt  ann ID_Ext (Maybe (Exp ann))           -- emit external event
   | AwaitEvt ann ID_Evt                             -- await internal event
   | EmitEvt  ann ID_Evt                             -- emit internal event
@@ -38,7 +38,7 @@ getAnn (Var      z _ _)   = z
 getAnn (Evt      z _ _)   = z
 getAnn (Out      z _ _)   = z
 getAnn (Write    z _ _)   = z
-getAnn (AwaitExt z _)     = z
+getAnn (AwaitInp z _)     = z
 getAnn (EmitExt  z _ _)   = z
 getAnn (AwaitEvt z _)     = z
 getAnn (EmitEvt  z _)     = z
@@ -61,7 +61,7 @@ showProg stmt = case stmt of
   Evt      _ id p         -> printf "{%s: %s}" id (sP p)
   Out      _ id p         -> printf "{%s: %s}" id (sP p)
   Write    _ id expr      -> printf "%s=%s" id (sE expr)
-  AwaitExt _ ext          -> printf "?%s" ext
+  AwaitInp _ ext          -> printf "?%s" ext
   EmitExt  _ ext Nothing  -> printf "!%s" ext
   EmitExt  _ ext (Just v) -> printf "!%s=%s" ext (sE v)
   AwaitEvt _ int          -> printf "?%s" int
@@ -88,7 +88,7 @@ stmt2word stmt = case stmt of
   Evt _ _ _     -> "declaration"
   Out _ _ _     -> "declaration"
   Write _ _ _   -> "assignment"
-  AwaitExt _ _  -> "await"
+  AwaitInp _ _  -> "await"
   EmitExt _ _ _ -> "emit"
   AwaitEvt _ _  -> "await"
   EmitEvt _ _   -> "emit"

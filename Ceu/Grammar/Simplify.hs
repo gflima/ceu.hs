@@ -49,8 +49,8 @@ simplify (Every z evt p) = (Every z evt (simplify p))   -- cannot contain `Escap
 
 simplify (Par z p q) =
   case (p',q') of
-    (AwaitExt _ "FOREVER", q') -> q'
-    (p', AwaitExt _ "FOREVER") -> p'
+    (AwaitInp _ "FOREVER", q') -> q'
+    (p', AwaitInp _ "FOREVER") -> p'
     (Escape z' n, q')          -> Escape z' n
     otherwise                  -> Par z p' q'
   where p' = simplify p
