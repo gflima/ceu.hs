@@ -1,3 +1,4 @@
+import System.IO (hPutStrLn, stderr)
 import qualified Text.Parsec           as Parsec
 import qualified Ceu.Parser.Token      as Token
 import qualified Ceu.Parser.Stmt       as Parser
@@ -18,5 +19,6 @@ go input =
 
 main :: IO ()
 main = do
-  src <- readFile "x.ceu"
-  putStrLn $ let (es,out) = go src in es++"\n\n"++out
+    src <- readFile "x1.ceu"
+    let (es,out) = go src in
+        hPutStrLn stderr es >> putStrLn  out
