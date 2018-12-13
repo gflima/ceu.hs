@@ -19,25 +19,25 @@ type Fin ann = (Stmt ann, Stmt ann, Stmt ann)
 -- Program (pg 5).
 data Stmt ann
   = Var      ann ID_Var (Maybe (Fin ann))            -- variable declaration
-  | Int      ann ID_Int Bool                         -- event declaration
+  | Evt      ann ID_Evt Bool                         -- event declaration
   | Out      ann ID_Ext Bool                         -- output declaration
   | Write    ann ID_Var (Exp ann)                    -- assignment statement
   | AwaitExt ann ID_Ext (Maybe ID_Var)               -- await external event
   | EmitExt  ann ID_Ext (Maybe (Exp ann))            -- emit external event
   | AwaitFor ann                                     -- await forever
   | AwaitTmr ann (Exp ann)                           -- await timer
-  | AwaitInt ann ID_Int (Maybe ID_Var)               -- await internal event
-  | EmitInt  ann ID_Int (Maybe (Exp ann))            -- emit internal event
+  | AwaitEvt ann ID_Evt (Maybe ID_Var)               -- await internal event
+  | EmitEvt  ann ID_Evt (Maybe (Exp ann))            -- emit internal event
   | Break    ann                                     -- loop escape
   | If       ann (Exp ann) (Stmt ann) (Stmt ann)     -- conditional
   | Seq      ann (Stmt ann) (Stmt ann)               -- sequence
   | Loop     ann (Stmt ann)                          -- infinite loop
-  | Every    ann ID_Evt (Maybe ID_Var) (Stmt ann)    -- event iteration
+  | Every    ann ID (Maybe ID_Var) (Stmt ann)        -- event iteration
   | And      ann (Stmt ann) (Stmt ann)               -- par/and statement
   | Or       ann (Stmt ann) (Stmt ann)               -- par/or statement
   | Par      ann (Stmt ann) (Stmt ann)               -- par statement
   | Spawn    ann (Stmt ann)                          -- spawn statement
-  | Pause    ann ID_Evt (Stmt ann)                   -- pause/suspend statement
+  | Pause    ann ID (Stmt ann)                       -- pause/suspend statement
   | Fin      ann (Stmt ann) (Stmt ann) (Stmt ann)    -- finalize/pause/resume statement
   | Async    ann (Stmt ann)                          -- async statement
   | Trap     ann (Maybe ID_Var) (Stmt ann)           -- trap with optional assignment
@@ -45,7 +45,7 @@ data Stmt ann
   | Scope    ann (Stmt ann)                          -- scope for local variables
   | Error    ann String                              -- generate runtime error (for testing purposes)
   | Var'     ann ID_Var (Maybe (Fin ann)) (Stmt ann) -- variable declaration w/ stmts in scope
-  | Int'     ann ID_Int Bool (Stmt ann)              -- event declaration w/ stmts in scope
+  | Evt'     ann ID_Evt Bool (Stmt ann)              -- event declaration w/ stmts in scope
   | Out'     ann ID_Ext Bool (Stmt ann)              -- output declaration w/ stmts in scope
   | Or'      ann (Stmt ann) (Stmt ann)               -- used as an Or with possibly non-terminating trails
   | Par'     ann (Stmt ann) (Stmt ann)               -- par as in basic Grammar
@@ -68,15 +68,15 @@ infixr 0 `sOr`
 
 getAnn :: Stmt ann -> ann
 getAnn (Var      z _ _  ) = z
-getAnn (Int      z _ _  ) = z
+getAnn (Evt      z _ _  ) = z
 getAnn (Out      z _ _  ) = z
 getAnn (Write    z _ _  ) = z
 getAnn (AwaitExt z _ _  ) = z
 getAnn (EmitExt  z _ _  ) = z
 getAnn (AwaitFor z      ) = z
 getAnn (AwaitTmr z _    ) = z
-getAnn (AwaitInt z _ _  ) = z
-getAnn (EmitInt  z _ _  ) = z
+getAnn (AwaitEvt z _ _  ) = z
+getAnn (EmitEvt  z _ _  ) = z
 getAnn (Break    z      ) = z
 getAnn (If       z _ _ _) = z
 getAnn (Seq      z _ _  ) = z
@@ -94,7 +94,7 @@ getAnn (Escape   z _ _  ) = z
 getAnn (Scope    z _    ) = z
 getAnn (Error    z _    ) = z
 getAnn (Var'     z _ _ _) = z
-getAnn (Int'     z _ _ _) = z
+getAnn (Evt'     z _ _ _) = z
 getAnn (Or'      z _ _  ) = z
 getAnn (Par'     z _ _  ) = z
 getAnn (Pause'   z _ _  ) = z
@@ -108,7 +108,7 @@ toGrammar :: (Eq ann, Ann ann) => (Stmt ann) -> (Errors, G.Stmt ann)
 toGrammar (Var' z var Nothing p) = (es, G.Var z var p')
                                  where
                                    (es,p') = toGrammar p
-toGrammar (Int' z int b p)       = (es, G.Int z int p')
+toGrammar (Evt' z int b p)       = (es, G.Evt z int p')
                                  where
                                    (es,p') = toGrammar p
 toGrammar (Out' z ext b p)       = (es, G.Out z ext p')
@@ -117,8 +117,8 @@ toGrammar (Out' z ext b p)       = (es, G.Out z ext p')
 toGrammar (Write z var exp)      = ([], G.Write z var exp)
 toGrammar (AwaitExt z ext var)   = ([], G.AwaitExt z ext)
 toGrammar (EmitExt z ext exp)    = ([], G.EmitExt z ext exp)
-toGrammar (AwaitInt z int var)   = ([], G.AwaitInt z int)
-toGrammar (EmitInt z int val)    = ([], G.EmitInt z int)
+toGrammar (AwaitEvt z int var)   = ([], G.AwaitEvt z int)
+toGrammar (EmitEvt z int val)    = ([], G.EmitEvt z int)
 toGrammar (If z exp p1 p2)       = (es1++es2, G.If z exp p1' p2')
                                  where
                                    (es1,p1') = (toGrammar p1)
@@ -160,15 +160,15 @@ toGrammar p                      = error $ "toGrammar: unexpected statement: " -
 stmt2word :: (Stmt ann) -> String
 stmt2word stmt = case stmt of
   Var _ _ _      -> "declaration"
-  Int _ _ _      -> "declaration"
+  Evt _ _ _      -> "declaration"
   Out _ _ _      -> "declaration"
   Write _ _ _    -> "assignment"
   AwaitExt _ _ _ -> "await"
   AwaitFor _     -> "await"
   AwaitTmr _ _   -> "await"
   EmitExt _ _ _  -> "emit"
-  AwaitInt _ _ _ -> "await"
-  EmitInt _ _ _  -> "emit"
+  AwaitEvt _ _ _ -> "await"
+  EmitEvt _ _ _  -> "emit"
   Break _        -> "break"
   If _ _ _ _     -> "if"
   Seq _ _ _      -> "sequence"
@@ -185,7 +185,7 @@ stmt2word stmt = case stmt of
   Scope _ _      -> "scope"
   Error _ _      -> "error"
   Var' _ _ _ _   -> "declaration"
-  Int' _ _ _ _   -> "declaration"
+  Evt' _ _ _ _   -> "declaration"
   Out' _ _ _ _   -> "declaration"
   Par' _ _ _     -> "parallel"
   Pause' _ _ _   -> "pause/if"

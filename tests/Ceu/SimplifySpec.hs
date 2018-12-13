@@ -41,12 +41,12 @@ spec = do
     it "Var () -> Break" $ do
       simplify' (Var () "" (Seq () (Nop ()) (Escape () 0))) `shouldBe` (Escape () 0)
 
-    it "Int () -> (Nop ())" $ do
-      simplify' (Int () "" (Nop ())) `shouldBe` (Nop ())
-    it "Int () -> Break" $ do
-      simplify' (Int () "" (Escape () 0)) `shouldBe` (Escape () 0)
-    it "Int () -> Break" $ do
-      simplify' (Int () "" (Seq () (Nop ()) (Escape () 0))) `shouldBe` (Escape () 0)
+    it "Evt () -> (Nop ())" $ do
+      simplify' (Evt () "" (Nop ())) `shouldBe` (Nop ())
+    it "Evt () -> Break" $ do
+      simplify' (Evt () "" (Escape () 0)) `shouldBe` (Escape () 0)
+    it "Evt () -> Break" $ do
+      simplify' (Evt () "" (Seq () (Nop ()) (Escape () 0))) `shouldBe` (Escape () 0)
 
     it "If () a a -> a" $ do
       simplify' (If () (Const () 1) (AwaitExt () "") (AwaitExt () "")) `shouldBe` (AwaitExt () "")

@@ -23,8 +23,8 @@ instance NFData (Exp ann) where
 instance NFData (Stmt ann) where
   rnf (Write _ _ expr) = rnf expr
   rnf (AwaitExt _ _)     = ()
-  rnf (AwaitInt _ _)     = ()
-  rnf (EmitInt _ _)      = ()
+  rnf (AwaitEvt _ _)     = ()
+  rnf (EmitEvt _ _)      = ()
   rnf (If _ expr p q)    = rnf expr `deepseq` rnf p `deepseq` rnf q
   rnf (Seq _ p q)        = rnf p `deepseq` rnf q
   rnf (Every _ _ p)      = rnf p
@@ -37,7 +37,7 @@ instance NFData (Stmt ann) where
   rnf (Error _ _)        = ()
   rnf (CanRun _ _)       = ()
   rnf (Var _ _ p)        = rnf p
-  rnf (Int _ _ p)        = rnf p
+  rnf (Evt _ _ p)        = rnf p
   rnf (Loop' _ p q)      = rnf p
   rnf (Par' _ p q)       = rnf p `deepseq` rnf q
 
@@ -157,11 +157,11 @@ spec = do
           `shouldThrow` errorCall "varsRead: uninitialized variable: y"
 
       it "fail: TODO: ok" $
-        (forceEval $ step (EmitInt () "a", 0, [], [], []))
+        (forceEval $ step (EmitEvt () "a", 0, [], [], []))
         `shouldThrow` errorCall "evtsEmit: undeclared event: a"
 
       it "fail: TODO: ok" $
-        (forceEval $ step (Var () ("_ret",Nothing) ((Write () "_ret" (Const () 25)) `sSeq` (EmitInt () "a")), 0, [], [], []))
+        (forceEval $ step (Var () ("_ret",Nothing) ((Write () "_ret" (Const () 25)) `sSeq` (EmitEvt () "a")), 0, [], [], []))
         `shouldThrow` errorCall "evtsEmit: undeclared event: a"
 
       it "pass: nop; x=1" $
@@ -196,26 +196,26 @@ spec = do
         (Var () ("x",(Just (-6))) (Nop ()), 0, [], [], [])
 
     -- emit-int --
-  describe "(EmitInt () e')" $ do
+  describe "(EmitEvt () e')" $ do
       it "fail: {? emit a}" $
-        forceEval (step (EmitInt () "a", 0, [], [], []))
+        forceEval (step (EmitEvt () "a", 0, [], [], []))
         `shouldThrow` errorCall "evtsEmit: undeclared event: a"
 
       it "pass: lvl == 0" $
-        step (Int () "a" (EmitInt () "a"), 0, [], [], [])
-        `shouldBe` (Int () "a" (CanRun () 0), 1, [], [], [])
+        step (Evt () "a" (EmitEvt () "a"), 0, [], [], [])
+        `shouldBe` (Evt () "a" (CanRun () 0), 1, [], [], [])
 
       it "pass: pop" $
-        (step (Int () "a" (CanRun () 0), 1, [], [], []))
-        `shouldBe` (Int () "a" (CanRun () 0), 0, [], [], [])
+        (step (Evt () "a" (CanRun () 0), 1, [], [], []))
+        `shouldBe` (Evt () "a" (CanRun () 0), 0, [], [], [])
 
       it "pass: lvl > 0" $
-        step (Int () "b" (EmitInt () "b"), 3, [], [], [])
-        `shouldBe` (Int () "b" (CanRun () 3), 4, [], [], [])
+        step (Evt () "b" (EmitEvt () "b"), 3, [], [], [])
+        `shouldBe` (Evt () "b" (CanRun () 3), 4, [], [], [])
 
 {-
       it "fail: evt /= nil (cannot advance)" $
-        forceEval (step (EmitInt () "b", 3, Just "b", [], []))
+        forceEval (step (EmitEvt () "b", 3, Just "b", [], []))
         `shouldThrow` errorCall "step: cannot advance"
 -}
 
@@ -266,7 +266,7 @@ spec = do
         `shouldBe` ((Escape () 0), 0, [], [], [])
 
       it "pass: lvl > 0" $
-        step (Seq () (Escape () 0) (EmitInt () "z"), 3, [], [], [])
+        step (Seq () (Escape () 0) (EmitEvt () "z"), 3, [], [], [])
         `shouldBe` ((Escape () 0), 3, [], [], [])
 
 {-
@@ -282,8 +282,8 @@ spec = do
         `shouldBe` (Seq () (Nop ()) (Nop ()), 0, [], [], [])
 
       it "pass: lvl > 0" $
-        step (Seq () (Seq () (Int () "z" (EmitInt () "z")) (Nop ())) (Nop ()), 3, [], [], [])
-        `shouldBe` (Seq () (Seq () (Int () "z" (CanRun () 3)) (Nop ())) (Nop ()), 4, [], [], [])
+        step (Seq () (Seq () (Evt () "z" (EmitEvt () "z")) (Nop ())) (Nop ()), 3, [], [], [])
+        `shouldBe` (Seq () (Seq () (Evt () "z" (CanRun () 3)) (Nop ())) (Nop ()), 4, [], [], [])
 
 {-
       it "fail: evt /= nil (cannot advance)" $
@@ -317,9 +317,9 @@ spec = do
         `shouldBe` (Loop' () (Nop ()) (Nop ()), 0, [], [], [])
 
       it "pass: lvl > 0" $
-        step (Loop () (Seq () (Nop ()) (EmitInt () "z")), 3, [], [], [])
+        step (Loop () (Seq () (Nop ()) (EmitEvt () "z")), 3, [], [], [])
         `shouldBe`
-        (Loop' () (Seq () (Nop ()) (EmitInt () "z")) (Seq () (Nop ()) (EmitInt () "z")), 3, [], [], [])
+        (Loop' () (Seq () (Nop ()) (EmitEvt () "z")) (Seq () (Nop ()) (EmitEvt () "z")), 3, [], [], [])
 
       it "fail: evt /= nil (cannot advance)" $
         forceEval (step (Loop () (Nop ()), 0, Just "b", [], []))
@@ -338,8 +338,8 @@ spec = do
         `shouldBe` (Loop' () (Nop ()) (Nop ()), 0, [], [], [])
 
       it "pass: lvl > 0" $
-        step (Loop' () (Nop ()) (EmitInt () "z"), 3, [], [], [])
-        `shouldBe` (Loop' () (EmitInt () "z") (EmitInt () "z"), 3, [], [], [])
+        step (Loop' () (Nop ()) (EmitEvt () "z"), 3, [], [], [])
+        `shouldBe` (Loop' () (EmitEvt () "z") (EmitEvt () "z"), 3, [], [], [])
 
 {-
       it "fail: evt /= nil (cannot advance)" $
@@ -358,7 +358,7 @@ spec = do
         `shouldBe` (Escape () 0, 0, [], [], [])
 
       it "pass: lvl > 0" $
-        step (Loop' () (Escape () 0) (Seq () (EmitInt () "z") (Nop ())), 3, [], [], [])
+        step (Loop' () (Escape () 0) (Seq () (EmitEvt () "z") (Nop ())), 3, [], [], [])
         `shouldBe` ((Escape () 0), 3, [], [], [])
 
 {-
@@ -378,8 +378,8 @@ spec = do
         `shouldBe` (Loop' () (Nop ()) (Nop ()), 0, [], [], [])
 
       it "pass: lvl > 0" $
-        step (Int () "z" (Loop' () (Seq () (EmitInt () "z") (Nop ())) (Escape () 0)), 3, [], [], [])
-        `shouldBe` (Int () "z" (Loop' () (Seq () (CanRun () 3) (Nop ())) (Escape () 0)), 4, [], [], [])
+        step (Evt () "z" (Loop' () (Seq () (EmitEvt () "z") (Nop ())) (Escape () 0)), 3, [], [], [])
+        `shouldBe` (Evt () "z" (Loop' () (Seq () (CanRun () 3) (Nop ())) (Escape () 0)), 4, [], [], [])
 
 {-
       it "fail: evt /= nil (cannot advance)" $
@@ -402,9 +402,9 @@ spec = do
         `shouldBe` (Par' () (Nop ()) (Seq () (CanRun () 0) (Nop ())), 0, [], [], [])
 
       it "pass: lvl > 0" $
-        step (Par () ((Nop ()) `sSeq` EmitInt () "z")  ((Nop ()) `sSeq` (Nop ())),
+        step (Par () ((Nop ()) `sSeq` EmitEvt () "z")  ((Nop ()) `sSeq` (Nop ())),
                3, [], [], [])
-        `shouldBe` (Par' () ((Nop ()) `sSeq` EmitInt () "z")
+        `shouldBe` (Par' () ((Nop ()) `sSeq` EmitEvt () "z")
                             (CanRun () 3 `sSeq` ((Nop ()) `sSeq` (Nop ()))), 3, [], [], [])
 
 {-
@@ -436,8 +436,8 @@ spec = do
 
 {-
       it "pass: lvl > 0" $
-        step (Par' () (Nop ()) (EmitInt () "z"), 3, [], [], [])
-        `shouldBe` (Par' () (Nop ()) (EmitInt () "z"), 2, [], [], [])
+        step (Par' () (Nop ()) (EmitEvt () "z"), 3, [], [], [])
+        `shouldBe` (Par' () (Nop ()) (EmitEvt () "z"), 2, [], [], [])
 
       it "fail: evt /= nil (cannot advance)" $
         forceEval (step (Par' () (Nop ()) (Nop ()), 0, Just "b", [], []))
@@ -468,7 +468,7 @@ spec = do
             `shouldBe` (Seq () (clear q) (Escape () 0), 0, [], [], []))
 
       it "pass: lvl > 0" $
-        let q = (AwaitInt () "a") in
+        let q = (AwaitEvt () "a") in
           (clear q `shouldBe` (Nop ()))
           >>                    -- clear q == (Nop ())
           (step (Par' () (Escape () 0) q, 3, [], [], [])
@@ -489,11 +489,11 @@ spec = do
 
       it "pass: isBlocked q (nontrivial clear)" $
         let q = Par' () (AwaitExt () "A" `sSeq` Fin () (Nop ()))
-                    (Par' () (Fin () (EmitInt () "b"))
-                          (Par' () (Fin () (EmitInt () "c" `sSeq` EmitInt () "d"))
-                            (AwaitInt () "a" `sSeq` Fin () (EmitInt () "e"))))
-            clear_q = (Nop ()) `sSeq` EmitInt () "b" `sSeq`
-                      (EmitInt () "c" `sSeq` EmitInt () "d") `sSeq` (Nop ()) in
+                    (Par' () (Fin () (EmitEvt () "b"))
+                          (Par' () (Fin () (EmitEvt () "c" `sSeq` EmitEvt () "d"))
+                            (AwaitEvt () "a" `sSeq` Fin () (EmitEvt () "e"))))
+            clear_q = (Nop ()) `sSeq` EmitEvt () "b" `sSeq`
+                      (EmitEvt () "c" `sSeq` EmitEvt () "d") `sSeq` (Nop ()) in
           (clear q `shouldBe` clear_q)
           >>                   -- clear q == (Nop ()); Emit1; (Emit2; Emit3); (Nop ())
           (step (Par' () (Escape () 0) q, 0, [], [], [])
@@ -530,7 +530,7 @@ spec = do
   -- par-brk2 --
   describe "(Par' () p (Escape () 0))" $ do
       it "pass: lvl == 0 && isBlocked p" $
-        let p = (AwaitInt () "b") in
+        let p = (AwaitEvt () "b") in
           (clear p `shouldBe` (Nop ()))
           >>                    -- clear p == (Nop ())
           (step (Par' () p (Escape () 0), 0, [], [], [])
@@ -551,11 +551,11 @@ spec = do
 
       it "pass: isBlocked p (nontrivial clear)" $
         let p = Par' () (AwaitExt () "A" `sSeq` Fin () (Nop ()))
-                    (Par' () (Fin () (EmitInt () "b"))
-                          (Par' () (Fin () (EmitInt () "c" `sSeq` EmitInt () "d"))
-                            (AwaitInt () "a" `sSeq` Fin () (EmitInt () "e"))))
-            clear_p = (Nop ()) `sSeq` EmitInt () "b" `sSeq`
-                      (EmitInt () "c" `sSeq` EmitInt () "d") `sSeq` (Nop ()) in
+                    (Par' () (Fin () (EmitEvt () "b"))
+                          (Par' () (Fin () (EmitEvt () "c" `sSeq` EmitEvt () "d"))
+                            (AwaitEvt () "a" `sSeq` Fin () (EmitEvt () "e"))))
+            clear_p = (Nop ()) `sSeq` EmitEvt () "b" `sSeq`
+                      (EmitEvt () "c" `sSeq` EmitEvt () "d") `sSeq` (Nop ()) in
           (clear p `shouldBe` clear_p)
           >>                   -- clear p == (Nop ()); Emit1; (Emit2; Emit3); (Nop ())
           (step (Par' () p (Escape () 0), 0, [], [], [])
@@ -576,9 +576,9 @@ spec = do
         `shouldBe` (Par' () (Nop ()) (Seq () (Escape () 0) (Escape () 0)), 0, [], [], [])
 
       it "pass: lvl > 0" $
-        step (Int () "y" (Int () "z" (Par' () (Seq () (EmitInt () "z") (Nop ())) (Seq () (EmitInt () "y") (Nop ())))),
+        step (Evt () "y" (Evt () "z" (Par' () (Seq () (EmitEvt () "z") (Nop ())) (Seq () (EmitEvt () "y") (Nop ())))),
                3, [], [], [])
-        `shouldBe` (Int () "y" (Int () "z" (Par' () (Seq () (CanRun () 3) (Nop ())) (Seq () (EmitInt () "y") (Nop ())))),
+        `shouldBe` (Evt () "y" (Evt () "z" (Par' () (Seq () (CanRun () 3) (Nop ())) (Seq () (EmitEvt () "y") (Nop ())))),
                      4, [], [], [])
 
 {-
@@ -589,17 +589,17 @@ spec = do
 -}
 
       it "pass: isBlocked p && not (isBlocked q)" $
-        step (Par' () (Fin () (Nop ())) (Seq () (Int () "z" (EmitInt () "z")) (Nop ())),
+        step (Par' () (Fin () (Nop ())) (Seq () (Evt () "z" (EmitEvt () "z")) (Nop ())),
                3, [], [], [])
-        `shouldBe` (Par' () (Fin () (Nop ())) (Seq () (Int () "z" (CanRun () 3)) (Nop ())),
+        `shouldBe` (Par' () (Fin () (Nop ())) (Seq () (Evt () "z" (CanRun () 3)) (Nop ())),
                      4, [], [], [])
 
       it "pass: not (isBlocked p) && isBlocked q" $
-        step (Int () "z" (Par' () (EmitInt () "z") (AwaitInt () "z")), 3, [], [], [])
-        `shouldBe` (Int () "z" (Par' () (CanRun () 3) (Nop ())), 4, [], [], [])
+        step (Evt () "z" (Par' () (EmitEvt () "z") (AwaitEvt () "z")), 3, [], [], [])
+        `shouldBe` (Evt () "z" (Par' () (CanRun () 3) (Nop ())), 4, [], [], [])
 
       it "fail: isBlocked p && isBlocked q (cannot advance)" $
-        forceEval (step (Par' () (AwaitInt () "d") (AwaitInt () "e"),
+        forceEval (step (Par' () (AwaitEvt () "d") (AwaitEvt () "e"),
                           0, [], [], []))
         `shouldThrow` errorCall "step: cannot advance"
 
@@ -611,8 +611,8 @@ spec = do
                     0,[],[],[])
 
       it "pass: lvl > 0" $
-        step (Par () (Seq () (Nop ()) (EmitInt () "z")) (Seq () (Nop ()) (Nop ())), 3, [], [], [])
-        `shouldBe` (Par' () (Seq () (Nop ()) (EmitInt () "z")) (Seq () (CanRun () 3) (Seq () (Nop ()) (Nop ()))),
+        step (Par () (Seq () (Nop ()) (EmitEvt () "z")) (Seq () (Nop ()) (Nop ())), 3, [], [], [])
+        `shouldBe` (Par' () (Seq () (Nop ()) (EmitEvt () "z")) (Seq () (CanRun () 3) (Seq () (Nop ()) (Nop ()))),
                     3,[],[],[])
 
 {-
@@ -639,14 +639,14 @@ spec = do
   -- or-nop1 --
   describe "(Par' () (Nop ()) q)" $ do
       it "pass: lvl == 0" $
-        let q = (AwaitInt () "a") in
+        let q = (AwaitEvt () "a") in
           (clear q `shouldBe` (Nop ()))
           >>                    -- clear q == (Nop ())
           (step (Par' () (Escape () 0) q, 0, [], [], [])
            `shouldBe` (Seq () (clear q) (Escape () 0), 0, [], [], []))
 
       it "pass: lvl > 0" $
-        let q = (AwaitInt () "z") in
+        let q = (AwaitEvt () "z") in
           (clear q `shouldBe` (Nop ()))
           >>                    -- clear q == (Nop ())
           (step (Par' () (Escape () 1) q, 3, [], [], [])
@@ -667,11 +667,11 @@ spec = do
 
       it "pass: isBlocked q (nontrivial clear)" $
         let q = Par' () (AwaitExt () "A" `sSeq` Fin () (Nop ()))
-                    (Par' () (Fin () (EmitInt () "b"))
-                          (Par' () (Fin () (EmitInt () "c" `sSeq` EmitInt () "d"))
-                            (AwaitInt () "a" `sSeq` Fin () (EmitInt () "e"))))
-            clear_q = (Nop ()) `sSeq` EmitInt () "b" `sSeq`
-                      (EmitInt () "c" `sSeq` EmitInt () "d") `sSeq` (Nop ()) in
+                    (Par' () (Fin () (EmitEvt () "b"))
+                          (Par' () (Fin () (EmitEvt () "c" `sSeq` EmitEvt () "d"))
+                            (AwaitEvt () "a" `sSeq` Fin () (EmitEvt () "e"))))
+            clear_q = (Nop ()) `sSeq` EmitEvt () "b" `sSeq`
+                      (EmitEvt () "c" `sSeq` EmitEvt () "d") `sSeq` (Nop ()) in
           (clear q `shouldBe` clear_q)
           >>                   -- clear q == (Nop ()); Emit1; (Emit2; Emit3); (Nop ())
           (step (Par' () (Escape () 0) q, 0, [], [], [])
@@ -680,14 +680,14 @@ spec = do
   -- or-brk1 --
   describe "(Par' () (Escape () 0) q)" $ do
       it "pass: lvl == 0" $
-        let q = (AwaitInt () "a") in
+        let q = (AwaitEvt () "a") in
           (clear q `shouldBe` (Nop ()))
           >>                    -- clear q == (Nop ())
           (step (Par' () (Escape () 0) q, 0, [], [], [])
            `shouldBe` (Seq () (clear q) (Escape () 0), 0, [], [], []))
 
       it "transit: lvl > 0" $
-        let q = (AwaitInt () "z") in
+        let q = (AwaitEvt () "z") in
           (clear q`shouldBe` (Nop ()))
           >>                    -- clear q == (Nop ())
           (step (Par' () (Escape () 0) q, 3, [], [], [])
@@ -708,11 +708,11 @@ spec = do
 
       it "pass: isBlocked q (nontrivial clear)" $
         let q = Par' () (AwaitExt () "A" `sSeq` Fin () (Nop ()))
-                    (Par' () (Fin () (EmitInt () "b"))
-                          (Par' () (Fin () (EmitInt () "c" `sSeq` EmitInt () "d"))
-                            (AwaitInt () "a" `sSeq` Fin () (EmitInt () "e"))))
-            clear_q = (Nop ()) `sSeq` EmitInt () "b" `sSeq`
-                      (EmitInt () "c" `sSeq` EmitInt () "d") `sSeq` (Nop ()) in
+                    (Par' () (Fin () (EmitEvt () "b"))
+                          (Par' () (Fin () (EmitEvt () "c" `sSeq` EmitEvt () "d"))
+                            (AwaitEvt () "a" `sSeq` Fin () (EmitEvt () "e"))))
+            clear_q = (Nop ()) `sSeq` EmitEvt () "b" `sSeq`
+                      (EmitEvt () "c" `sSeq` EmitEvt () "d") `sSeq` (Nop ()) in
           (clear q `shouldBe` clear_q)
           >>                   -- clear q == (Nop ()); Emit1; (Emit2; Emit3); (Nop ())
           (step (Par' () (Escape () 0) q, 0, [], [], [])
@@ -743,7 +743,7 @@ spec = do
   -- or-brk2 --
   describe "(Par' () p (Escape () 0))" $ do
       it "pass: lvl == 0 && isBlocked p" $
-        let p = (AwaitInt () "b") in
+        let p = (AwaitEvt () "b") in
           (clear p `shouldBe` (Nop ()))
           >>                    -- clear p == (Nop ())
           (step (Par' () p (Escape () 0), 0, [], [], [])
@@ -764,11 +764,11 @@ spec = do
 
       it "pass: isBlocked p (nontrivial clear)" $
         let p = Par' () (AwaitExt () "A" `sSeq` Fin () (Nop ()))
-                    (Par' () (Fin () (EmitInt () "b"))
-                          (Par' () (Fin () (EmitInt () "c" `sSeq` EmitInt () "d"))
-                            (AwaitInt () "a" `sSeq` Fin () (EmitInt () "e"))))
-            clear_p = (Nop ()) `sSeq` EmitInt () "b" `sSeq`
-                      (EmitInt () "c" `sSeq` EmitInt () "d") `sSeq` (Nop ()) in
+                    (Par' () (Fin () (EmitEvt () "b"))
+                          (Par' () (Fin () (EmitEvt () "c" `sSeq` EmitEvt () "d"))
+                            (AwaitEvt () "a" `sSeq` Fin () (EmitEvt () "e"))))
+            clear_p = (Nop ()) `sSeq` EmitEvt () "b" `sSeq`
+                      (EmitEvt () "c" `sSeq` EmitEvt () "d") `sSeq` (Nop ()) in
           (clear p `shouldBe` clear_p)
           >>                   -- clear p == (Nop ()); Emit1; (Emit2; Emit3); (Nop ())
           (step (Par' () p (Escape () 0), 0, [], [], [])
@@ -789,9 +789,9 @@ spec = do
         `shouldBe` (Par' () (Nop ()) (Seq () (Escape () 0) (Escape () 0)), 0, [], [], [])
 
       it "psas: lvl > 0" $
-        step (Par' () (Int () "z" (Seq () (EmitInt () "z") (Nop ()))) (Int () "y" (Seq () (EmitInt () "y") (Nop ()))),
+        step (Par' () (Evt () "z" (Seq () (EmitEvt () "z") (Nop ()))) (Evt () "y" (Seq () (EmitEvt () "y") (Nop ()))),
                3, [], [], [])
-        `shouldBe` (Par' () (Int () "z" (Seq () (CanRun () 3) (Nop ()))) (Int () "y" (Seq () (EmitInt () "y") (Nop ()))),
+        `shouldBe` (Par' () (Evt () "z" (Seq () (CanRun () 3) (Nop ()))) (Evt () "y" (Seq () (EmitEvt () "y") (Nop ()))),
                      4, [], [], [])
 
 {-
@@ -802,15 +802,15 @@ spec = do
 -}
 
       it "pass: isBlocked p && not (isBlocked q)" $
-        step (Par' () (Fin () (Nop ())) (Int () "z" (Seq () (EmitInt () "z") (Nop ()))), 3, [], [], [])
-        `shouldBe` (Par' () (Fin () (Nop ())) (Int () "z" (Seq () (CanRun () 3) (Nop ()))), 4, [], [], [])
+        step (Par' () (Fin () (Nop ())) (Evt () "z" (Seq () (EmitEvt () "z") (Nop ()))), 3, [], [], [])
+        `shouldBe` (Par' () (Fin () (Nop ())) (Evt () "z" (Seq () (CanRun () 3) (Nop ()))), 4, [], [], [])
 
       it "pass: not (isBlocked p) && isBlocked q" $
-        step (Int () "z" (Par' () (EmitInt () "z") (AwaitInt () "z")), 3, [], [], [])
-        `shouldBe` (Int () "z" (Par' () (CanRun () 3) (Nop ())), 4, [], [], [])
+        step (Evt () "z" (Par' () (EmitEvt () "z") (AwaitEvt () "z")), 3, [], [], [])
+        `shouldBe` (Evt () "z" (Par' () (CanRun () 3) (Nop ())), 4, [], [], [])
 
       it "fail: isBlocked p && isBlocked q (cannot advance)" $
-        forceEval (step (Par' () (AwaitInt () "d") (AwaitInt () "e"),
+        forceEval (step (Par' () (AwaitEvt () "d") (AwaitEvt () "e"),
                           0, [], [], []))
         `shouldThrow` errorCall "step: cannot advance"
 
@@ -821,27 +821,27 @@ spec = do
         `shouldBe` (Var () ("x",Nothing) (Nop ()), 0, [], [], [])
 
       it "pass: awake" $
-        step (Var () ("x",(Just 0)) (Pause () "x" (Int () "e" (Par' () (AwaitInt () "e") (EmitInt () "e")))), 0, [], [], [])
-        `shouldBe` (Var () ("x",(Just 0)) (Pause () "x" (Int () "e" (Par' () (Nop ()) (CanRun () 0)))),1,[],[],[])
+        step (Var () ("x",(Just 0)) (Pause () "x" (Evt () "e" (Par' () (AwaitEvt () "e") (EmitEvt () "e")))), 0, [], [], [])
+        `shouldBe` (Var () ("x",(Just 0)) (Pause () "x" (Evt () "e" (Par' () (Nop ()) (CanRun () 0)))),1,[],[],[])
 
       it "pass: awake - nested reaction inside Pause" $
-        step (Var () ("x",(Just 1)) (Pause () "x" (Int () "e" (Par' () (AwaitInt () "e") (EmitInt () "e")))), 0, [], [], [])
-        `shouldBe` (Var () ("x",(Just 1)) (Pause () "x" (Int () "e" (Par' () (Nop ()) (CanRun () 0)))),1,[],[],[])
+        step (Var () ("x",(Just 1)) (Pause () "x" (Evt () "e" (Par' () (AwaitEvt () "e") (EmitEvt () "e")))), 0, [], [], [])
+        `shouldBe` (Var () ("x",(Just 1)) (Pause () "x" (Evt () "e" (Par' () (Nop ()) (CanRun () 0)))),1,[],[],[])
 
       it "pass: don't awake - nested reaction outside Pause" $
-        step (Var () ("x",(Just 1)) (Int () "e" (Pause () "x" (Par' () (AwaitInt () "e") (EmitInt () "e")))), 0, [], [], [])
-        `shouldBe` (Var () ("x",(Just 1)) (Int () "e" (Pause () "x" (Par' () (AwaitInt () "e") (CanRun () 0)))),1,[],[],[])
+        step (Var () ("x",(Just 1)) (Evt () "e" (Pause () "x" (Par' () (AwaitEvt () "e") (EmitEvt () "e")))), 0, [], [], [])
+        `shouldBe` (Var () ("x",(Just 1)) (Evt () "e" (Pause () "x" (Par' () (AwaitEvt () "e") (CanRun () 0)))),1,[],[],[])
 
       it "pass: awake - nested reaction outside Pause" $
-        step (Var () ("x",(Just 0)) (Int () "e" (Pause () "x" (Par' () (AwaitInt () "e") (EmitInt () "e")))), 0, [], [], [])
-        `shouldBe` (Var () ("x",(Just 0)) (Int () "e" (Pause () "x" (Par' () (Nop ()) (CanRun () 0)))),1,[],[],[])
+        step (Var () ("x",(Just 0)) (Evt () "e" (Pause () "x" (Par' () (AwaitEvt () "e") (EmitEvt () "e")))), 0, [], [], [])
+        `shouldBe` (Var () ("x",(Just 0)) (Evt () "e" (Pause () "x" (Par' () (Nop ()) (CanRun () 0)))),1,[],[],[])
 
       it "fail: undeclared var" $
-        forceEval (step (Int () "e" (Pause () "x" (EmitInt () "e")), 0, [], [], []))
+        forceEval (step (Evt () "e" (Pause () "x" (EmitEvt () "e")), 0, [], [], []))
         `shouldThrow` errorCall "varsRead: undeclared variable: x"
 
       it "fail: uninit var" $
-        forceEval (step (Int () "e" (Var () ("x",Nothing) (Pause () "x" (EmitInt () "e"))), 0, [], [], []))
+        forceEval (step (Evt () "e" (Var () ("x",Nothing) (Pause () "x" (EmitEvt () "e"))), 0, [], [], []))
         `shouldThrow` errorCall "varsRead: uninitialized variable: x"
 
   --------------------------------------------------------------------------
@@ -853,12 +853,12 @@ spec = do
         (AwaitExt () "A", 0, [], [], [])
 
       stepsItPass
-        (AwaitInt () "a", 0, [], [], [])
-        (AwaitInt () "a", 0, [], [], [])
+        (AwaitEvt () "a", 0, [], [], [])
+        (AwaitEvt () "a", 0, [], [], [])
 
       stepsItPass
-        (Seq () (AwaitInt () "a") (Nop ()), 0, [], [], [])
-        (Seq () (AwaitInt () "a") (Nop ()), 0, [], [], [])
+        (Seq () (AwaitEvt () "a") (Nop ()), 0, [], [], [])
+        (Seq () (AwaitEvt () "a") (Nop ()), 0, [], [], [])
 
       stepsItPass
         (Every () "A" (Nop ()), 0, [], [], [])
@@ -902,9 +902,9 @@ spec = do
         ((Nop ()), 0, [], [], [])
 
       stepsItPass
-        (Int () "z" (EmitInt () "z"), 3, [], [], [])
+        (Evt () "z" (EmitEvt () "z"), 3, [], [], [])
         ((Nop ()), 0, [], [], [])
-        --(Int () "z" (CanRun () 3), 4, [], [], [])
+        --(Evt () "z" (CanRun () 3), 4, [], [], [])
 
       stepsItPass
         (CanRun () 3, 3, [], [], [])
@@ -915,7 +915,7 @@ spec = do
         ((Escape () 0), 0, [], [], [])
 
       stepsItPass
-        (Loop' () (Escape () 0) (Escape () 0) `sSeq` (Nop ()) `sSeq` (Nop ()) `sSeq` (Int () "z" (EmitInt () "z")) `sSeq` (Escape () 0),
+        (Loop' () (Escape () 0) (Escape () 0) `sSeq` (Nop ()) `sSeq` (Nop ()) `sSeq` (Evt () "z" (EmitEvt () "z")) `sSeq` (Escape () 0),
           3, [], [], [])
         ((Escape () 0), 0, [], [], [])
 
@@ -932,7 +932,7 @@ spec = do
         (Nop (),0,[],[],[])
 
       stepsItPass
-        ((Seq () (Int () "z" (EmitInt () "z")) (Nop ())), 3, [], [], [])
+        ((Seq () (Evt () "z" (EmitEvt () "z")) (Nop ())), 3, [], [], [])
         (Nop (),0,[],[],[])
 
       it "nop par nop" $ do
@@ -947,22 +947,22 @@ spec = do
         (Par' () (Nop ()) (Nop ()),0,[],[],[])
 
       it "blocked/par" $ do
-        isBlocked 3 (Par' () (Nop ()) (Seq () (CanRun () 3) (Seq () (Int () "z" (EmitInt () "z")) (Nop ()))))
+        isBlocked 3 (Par' () (Nop ()) (Seq () (CanRun () 3) (Seq () (Evt () "z" (EmitEvt () "z")) (Nop ()))))
         `shouldBe` False
 
       stepsItPass
-        ((Seq () (Trap () (Loop' () (Escape () 0) (Escape () 0))) (Nop ())) `sPar` (Seq () (Int () "z" (EmitInt () "z")) (Nop ())), 3, [], [], [])
+        ((Seq () (Trap () (Loop' () (Escape () 0) (Escape () 0))) (Nop ())) `sPar` (Seq () (Evt () "z" (EmitEvt () "z")) (Nop ())), 3, [], [], [])
         (Par' () (Nop ()) (Nop ()),0,[],[],[])
 
       stepsItPass
-        (Seq () (Trap () (Trap () (Loop' () (Escape () 1) (Escape () 1)))) (Nop ()) `sPar` Seq () (Int () "z" (EmitInt () "z")) (Nop ()), 3, [], [], [])
+        (Seq () (Trap () (Trap () (Loop' () (Escape () 1) (Escape () 1)))) (Nop ()) `sPar` Seq () (Evt () "z" (EmitEvt () "z")) (Nop ()), 3, [], [], [])
         (Par' () (Nop ()) (Nop ()),0,[],[],[])
 
       stepsItPass
         (Trap () (Loop' ()
-          (((Nop ()) `sSeq` (AwaitInt () "d")) `sPar`
+          (((Nop ()) `sSeq` (AwaitEvt () "d")) `sPar`
             ((AwaitExt () "M") `sPar` ((Nop ()) `sSeq` (Escape () 0))))
-          (((Nop ()) `sSeq` (AwaitInt () "d")) `sPar`
+          (((Nop ()) `sSeq` (AwaitEvt () "d")) `sPar`
             ((AwaitExt () "M") `sPar` ((Nop ()) `sSeq` (Escape () 0))))), 0, [], [], [])
         ((Nop ()), 0, [], [], [])
 
@@ -977,12 +977,12 @@ spec = do
         `shouldBe` ((Nop ()), 1, [], [], [])
 
       it "pass: lvl > 0" $
-        out1 (Seq () (AwaitInt () "b") Break, 3, Just "b", [], [])
+        out1 (Seq () (AwaitEvt () "b") Break, 3, Just "b", [], [])
         `shouldBe` (Seq () (Nop ()) Break, 4, [], [], [])
 
       it "pass: lvl > 0 && bcast fails" $
-        out1 (Seq () (AwaitInt () "c") Break, 3, Just "b", [], [])
-        `shouldBe` (Seq () (AwaitInt () "c") Break, 4, [], [], [])
+        out1 (Seq () (AwaitEvt () "c") Break, 3, Just "b", [], [])
+        `shouldBe` (Seq () (AwaitEvt () "c") Break, 4, [], [], [])
 
     -- pop --
     describe "pop" $ do
@@ -1016,7 +1016,7 @@ spec = do
 
     describe "one+ pops" $ do
       it "pass: lvl > 0" $
-        let d = (Int () "x" (EmitInt () "x"), 0, [], [], [])
+        let d = (Evt () "x" (EmitEvt () "x"), 0, [], [], [])
             d' = ((Nop ()), 0, [], [], []) in
           (steps d `shouldBe` d')
           >> (isReducible d' `shouldBe` False)
@@ -1029,14 +1029,14 @@ spec = do
 
     describe "one push followed by one+ pops" $ do
       it "pass: lvl == 0 (do nothing)" $ -- CHECK THIS! --
-        let d = (bcast "c" [] (AwaitInt () "d"), 0, [], [], [])
-            d' = (AwaitInt () "d", 0, [], [], []) in
+        let d = (bcast "c" [] (AwaitEvt () "d"), 0, [], [], [])
+            d' = (AwaitEvt () "d", 0, [], [], []) in
           (steps d `shouldBe` d')
           >> (isReducible d' `shouldBe` False)
           -- >> (isReducible d' `shouldBe` True)
 
       it "pass: lvl > 0, but `(Nop ())`" $
-        let d = (bcast "d" [] (AwaitInt () "d"), 88, [], [], [])
+        let d = (bcast "d" [] (AwaitEvt () "d"), 88, [], [], [])
             d' = ((Nop ()), 0, [], [], []) in
           (steps d `shouldBe` d')
           >> (isReducible d' `shouldBe` False)
@@ -1046,24 +1046,24 @@ spec = do
   describe "reaction" $ do
 
     reactionItPass
-      (Int () "d"
+      (Evt () "d"
         (Par ()
-          (EmitInt () "d")
-          (((Nop ()) `sSeq` AwaitInt () "d") `sPar` ((Nop ()) `sSeq` Fin () (Nop ()))
+          (EmitEvt () "d")
+          (((Nop ()) `sSeq` AwaitEvt () "d") `sPar` ((Nop ()) `sSeq` Fin () (Nop ()))
       )), "_", [])
-      (Int () "d" (Par' () (Nop ()) (Par' () (AwaitInt () "d") (Fin () (Nop ())))),[],[])
+      (Evt () "d" (Par' () (Nop ()) (Par' () (AwaitEvt () "d") (Fin () (Nop ())))),[],[])
 
     reactionItPass
-      (Int () "d" (((Nop ()) `sSeq` AwaitInt () "d") `sPar` ((Nop ()) `sSeq` EmitInt () "d")), "_", [])
-      (Int () "d" (Par' () (Nop ()) (Nop ())),[],[])
+      (Evt () "d" (((Nop ()) `sSeq` AwaitEvt () "d") `sPar` ((Nop ()) `sSeq` EmitEvt () "d")), "_", [])
+      (Evt () "d" (Par' () (Nop ()) (Nop ())),[],[])
 
     reactionItPass
-      (Var () ("x",(Just 0)) (Int () "e" (Pause () "x" (Trap () (Par () (Seq () (AwaitInt () "e") (Escape () 0)) (EmitInt () "e"))))), "_", [])
+      (Var () ("x",(Just 0)) (Evt () "e" (Pause () "x" (Trap () (Par () (Seq () (AwaitEvt () "e") (Escape () 0)) (EmitEvt () "e"))))), "_", [])
       ((Nop ()), [], [])
 
     reactionItPass
-      (Var () ("x",(Just 1)) (Int () "e" (Pause () "x" (Trap () (Par () (Seq () (AwaitInt () "e") (Escape () 0)) (EmitInt () "e"))))), "_", [])
-      (Var () ("x",Just 1) (Int () "e" (Pause () "x" (Trap () (Par' () (Seq () (AwaitInt () "e") (Escape () 0)) (Nop ()))))),[],[])
+      (Var () ("x",(Just 1)) (Evt () "e" (Pause () "x" (Trap () (Par () (Seq () (AwaitEvt () "e") (Escape () 0)) (EmitEvt () "e"))))), "_", [])
+      (Var () ("x",Just 1) (Evt () "e" (Pause () "x" (Trap () (Par' () (Seq () (AwaitEvt () "e") (Escape () 0)) (Nop ()))))),[],[])
 
   --------------------------------------------------------------------------
   describe "compile_run" $ do
@@ -1157,19 +1157,19 @@ spec = do
 
     evalProgItSuccess (5,[[]]) [] (
       (G.Write () "_ret" (Const () 1)) `G.sSeq`
-      (G.Int () "a"
+      (G.Evt () "a"
         (G.Trap ()
         (G.Par ()
-          ((G.AwaitInt () "a") `G.sSeq` (G.Write () "_ret" (Const () 5)) `G.sSeq` (G.Escape () 0))
-          ((G.EmitInt () "a") `G.sSeq` G.AwaitExt () "FOREVER")))) `G.sSeq`
+          ((G.AwaitEvt () "a") `G.sSeq` (G.Write () "_ret" (Const () 5)) `G.sSeq` (G.Escape () 0))
+          ((G.EmitEvt () "a") `G.sSeq` G.AwaitExt () "FOREVER")))) `G.sSeq`
       (G.Escape () 0))
 
     evalProgItSuccess (5,[[]]) [] (
       (G.Write () "_ret" (Const () 1)) `G.sSeq`
-      (G.Int () "a"
+      (G.Evt () "a"
         (G.Trap () (G.Par ()
-          ((G.AwaitInt () "a") `G.sSeq` (G.Write () "_ret" (Const () 5)) `G.sSeq` (G.Escape () 0))
-          (G.Seq () (G.Trap () (G.Par () (G.Fin () (G.EmitInt () "a")) (G.Escape () 0))) (G.Escape () 0)))
+          ((G.AwaitEvt () "a") `G.sSeq` (G.Write () "_ret" (Const () 5)) `G.sSeq` (G.Escape () 0))
+          (G.Seq () (G.Trap () (G.Par () (G.Fin () (G.EmitEvt () "a")) (G.Escape () 0))) (G.Escape () 0)))
       )) `G.sSeq` (G.Escape () 0))
 
 {-
@@ -1199,10 +1199,10 @@ escape x;
         (G.Var () "x"
           (G.Seq ()
             (G.Write () "x" (Const () 1))
-            (G.Int () "e"
+            (G.Evt () "e"
               (G.Trap () (G.Par ()
-                (G.Seq () (G.AwaitExt () "A") (G.Seq () (G.Write () "x" (Const () 0)) (G.Seq () (G.EmitInt () "e") (G.AwaitExt () "FOREVER"))))
-                (G.Seq () (G.Pause () "x" (G.Trap () (G.Par () (G.Seq () (G.AwaitInt () "e") (G.Escape () 0)) ((G.EmitInt () "e") `G.sSeq` (G.AwaitExt () "FOREVER"))))) (G.Escape () 0)))))))
+                (G.Seq () (G.AwaitExt () "A") (G.Seq () (G.Write () "x" (Const () 0)) (G.Seq () (G.EmitEvt () "e") (G.AwaitExt () "FOREVER"))))
+                (G.Seq () (G.Pause () "x" (G.Trap () (G.Par () (G.Seq () (G.AwaitEvt () "e") (G.Escape () 0)) ((G.EmitEvt () "e") `G.sSeq` (G.AwaitExt () "FOREVER"))))) (G.Escape () 0)))))))
         (G.Write () "_ret" (Const () 99))) (G.Escape () 0))
 
     -- multiple inputs

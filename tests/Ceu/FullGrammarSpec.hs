@@ -69,20 +69,20 @@ spec = do
 
     describe "int:" $ do
       it "int x" $ do
-        Scope.compile (Int () "x" False)
-        `shouldBe` ([], (Int' () "x" False (Nop ())))
+        Scope.compile (Evt () "x" False)
+        `shouldBe` ([], (Evt' () "x" False (Nop ())))
 
       it "int x; (Nop ())" $ do
-        Scope.compile (Seq () (Int () "x" False) (Nop ()))
-        `shouldBe` ([], (Int' () "x" False (Nop ())))
+        Scope.compile (Seq () (Evt () "x" False) (Nop ()))
+        `shouldBe` ([], (Evt' () "x" False (Nop ())))
 
       it "scope int x end ; int y" $ do
-        Scope.compile (Seq () (Scope () (Int () "x" False)) (Int () "y" False))
-        `shouldBe` ([],Seq () (Int' () "x" False (Nop ())) (Int' () "y" False (Nop ())))
+        Scope.compile (Seq () (Scope () (Evt () "x" False)) (Evt () "y" False))
+        `shouldBe` ([],Seq () (Evt' () "x" False (Nop ())) (Evt' () "y" False (Nop ())))
 
       it "scope int x end ; x=1" $ do
-        compile' (False,False) (Seq () (Scope () (Int () "x" False)) (EmitInt () "x" Nothing))
-        `shouldBe` (["emit: identifier 'x' is not declared"], G.Seq () (G.Int () "x" (G.Nop ())) (G.EmitInt () "x"))
+        compile' (False,False) (Seq () (Scope () (Evt () "x" False)) (EmitEvt () "x" Nothing))
+        `shouldBe` (["emit: identifier 'x' is not declared"], G.Seq () (G.Evt () "x" (G.Nop ())) (G.EmitEvt () "x"))
 
     describe "output:" $ do
       it "output X" $ do
@@ -98,8 +98,8 @@ spec = do
         `shouldBe` ([],Seq () (Out' () "X" False (Nop ())) (Out' () "Y" False (Nop ())))
 
       it "scope ext X end ; X=1" $ do
-        compile' (False,False) (Seq () (Scope () (Out () "X" False)) (EmitInt () "X" Nothing))
-        `shouldBe` (["emit: identifier 'X' is not declared"], G.Seq () (G.Out () "X" (G.Nop ())) (G.EmitInt () "X"))
+        compile' (False,False) (Seq () (Scope () (Out () "X" False)) (EmitEvt () "X" Nothing))
+        `shouldBe` (["emit: identifier 'X' is not declared"], G.Seq () (G.Out () "X" (G.Nop ())) (G.EmitEvt () "X"))
 
       it "scope escape 1 end" $ do
         compile' (False,False) (Scope () (Escape () Nothing (Just (Const () 1))))
@@ -381,17 +381,17 @@ with
 end
 -}
     evalFullProgItRight (25,[[]]) [] (
-      (Int' () "a" False (
+      (Evt' () "a" False (
       (Var' () "ret" Nothing (
       (Write () "ret" (Const () 0)) `sSeq`
       (Par ()
-        ((AwaitInt () "a" Nothing) `sSeq` (Escape () Nothing (Just (Add () (Read () "ret") (Const () 5)))))
+        ((AwaitEvt () "a" Nothing) `sSeq` (Escape () Nothing (Just (Add () (Read () "ret") (Const () 5)))))
         (Seq ()
           (Or ()
             (
               (Fin () (
                 (Write () "ret" (Mul () (Read () "ret") (Const () 2))) `sSeq`
-                (EmitInt () "a" Nothing)
+                (EmitEvt () "a" Nothing)
               ) (Nop ()) (Nop ())) `sSeq`
               (AwaitFor ())
             )
@@ -426,45 +426,45 @@ with
 end
 -}
     evalFullProgItRight (10,[[]]) [] (
-      Int' () "a" True (
+      Evt' () "a" True (
         Par ()
-          (Var' () "ret" Nothing (Seq () (AwaitInt () "a" (Just "ret")) (Escape () Nothing (Just (Read () "ret")))))
-          (EmitInt () "a" (Just (Const () 10)) `sSeq` (AwaitFor ()))
+          (Var' () "ret" Nothing (Seq () (AwaitEvt () "a" (Just "ret")) (Escape () Nothing (Just (Read () "ret")))))
+          (EmitEvt () "a" (Just (Const () 10)) `sSeq` (AwaitFor ()))
       ))
 
     evalFullProgItLeft ["read access to '_a': identifier '_a' is not declared","assignment: identifier '_a' is not declared"] []
       (Var' () "ret" Nothing
-        (Int' () "a" False (
+        (Evt' () "a" False (
           Par ()
-            (Seq () (AwaitInt () "a" (Just "ret")) (Escape () Nothing (Just (Const () 0))))
-            (EmitInt () "a" (Just (Const () 10)) `sSeq` (AwaitFor ())))))
+            (Seq () (AwaitEvt () "a" (Just "ret")) (Escape () Nothing (Just (Const () 0))))
+            (EmitEvt () "a" (Just (Const () 10)) `sSeq` (AwaitFor ())))))
 
     evalFullProgItLeft ["assignment: identifier '_a' is not declared"] [] (
-      Int' () "a" False
+      Evt' () "a" False
         (Seq ()
           (And ()
-            (AwaitInt () "a" Nothing)
-            (EmitInt () "a" (Just (Const () 10))))
+            (AwaitEvt () "a" Nothing)
+            (EmitEvt () "a" (Just (Const () 10))))
           (Escape () Nothing (Just (Const () 0)))))
 
     evalFullProgItRight (99,[[]]) [] (
-      Int' () "a" False (
+      Evt' () "a" False (
         Par ()
-          ((AwaitInt () "a" Nothing) `sSeq` (Escape () Nothing (Just (Const () 99))))
-          (EmitInt () "a" Nothing `sSeq` (AwaitFor ()))
+          ((AwaitEvt () "a" Nothing) `sSeq` (Escape () Nothing (Just (Const () 99))))
+          (EmitEvt () "a" Nothing `sSeq` (AwaitFor ()))
       ))
     evalFullProgItRight (99,[[]]) [] (
-      Int' () "a" True (
+      Evt' () "a" True (
         Par ()
-          ((AwaitInt () "a" Nothing) `sSeq` (Escape () Nothing (Just (Const () 99))))
-          (EmitInt () "a" (Just (Const () 10)) `sSeq` (AwaitFor ()))
+          ((AwaitEvt () "a" Nothing) `sSeq` (Escape () Nothing (Just (Const () 99))))
+          (EmitEvt () "a" (Just (Const () 10)) `sSeq` (AwaitFor ()))
       ))
     evalFullProgItLeft ["varsRead: uninitialized variable: _a"] []
       (Var' () "ret" Nothing
-        (Int' () "a" True (
+        (Evt' () "a" True (
           Par ()
-            (Seq () (AwaitInt () "a" (Just "ret")) (Escape () Nothing (Just (Read () "ret"))))
-            (EmitInt () "a" Nothing `sSeq` (AwaitFor ())))))
+            (Seq () (AwaitEvt () "a" (Just "ret")) (Escape () Nothing (Just (Read () "ret"))))
+            (EmitEvt () "a" Nothing `sSeq` (AwaitFor ())))))
 
 {-
 par/or do
@@ -576,15 +576,15 @@ end
   describe "pause" $ do
 
     evalFullProgItRight (99,[[]]) []
-      (Int' () "x" True (Pause () "x" (Escape () Nothing (Just (Const () 99)))))
+      (Evt' () "x" True (Pause () "x" (Escape () Nothing (Just (Const () 99)))))
 
     evalFullProgItRight (99,[[]]) []
       (Par ()
         (Seq () (AwaitExt () "X" Nothing) (Escape () Nothing (Just (Const () 33))))
-        (Int' () "x" True
+        (Evt' () "x" True
           (Pause () "x"
             (Seq ()
-              (EmitInt () "x" (Just (Const () 1)))
+              (EmitEvt () "x" (Just (Const () 1)))
               (Escape () Nothing (Just (Const () 99)))))))
 
     evalFullProgItRight (99,[[],[],[],[],[]]) [("X",(Just 1)),("A",Nothing),("X",(Just 0)),("A",Nothing)]

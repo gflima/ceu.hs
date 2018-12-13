@@ -9,7 +9,7 @@ compile :: (Ann ann) => Stmt ann -> (Errors, Stmt ann)
 compile (Var' z id Nothing p)    = (es, Var' z id Nothing p')
                                    where
                                      (es,p') = compile p
-compile (Int' z id b p)          = (es, Int' z id b p')
+compile (Evt' z id b p)          = (es, Evt' z id b p')
                                    where
                                      (es,p') = compile p
 compile (Out' z id b p)          = (es, Out' z id b p')

@@ -11,7 +11,7 @@ compile :: Stmt ann -> (Errors, Stmt ann)
 compile p = ([], aux p)
 
 aux (Var' z var Nothing p) = Var' z var Nothing (aux p)
-aux (Int' z int b p)       = Int' z int b (aux p)
+aux (Evt' z int b p)       = Evt' z int b (aux p)
 aux (Out' z int b p)       = Out' z int b (aux p)
 aux (If z exp p1 p2)       = If z exp (aux p1) (aux p2)
 aux (Seq z p1 p2)          = Seq z (aux p1) (aux p2)

@@ -13,24 +13,24 @@ type Lvl = Int
 
 -- Environment.
 type Vars = [(ID_Var, Maybe Val)]
-type Ints = [(ID_Int, Bool)]
+type Evts = [(ID_Evt, Bool)]
 type Outs = [(ID_Ext, Maybe Val)]
 
 -- Description (pg 6).
-type Desc ann = (Stmt ann, Lvl, Vars, Ints, Outs)
+type Desc ann = (Stmt ann, Lvl, Vars, Evts, Outs)
 
 -- Program (pg 5).
 data Stmt ann
   = Var      ann (ID_Var,Maybe Val) (Stmt ann)   -- block with environment store
-  | Int      ann ID_Int (Stmt ann)               -- event declaration
+  | Evt      ann ID_Evt (Stmt ann)               -- event declaration
   | Write    ann ID_Var (Exp ann)                -- assignment statement
   | AwaitExt ann ID_Ext                          -- await external event
   | EmitExt  ann ID_Ext (Maybe (Exp ann))        -- emit internal event
-  | AwaitInt ann ID_Int                          -- await internal event
-  | EmitInt  ann ID_Int                          -- emit internal event
+  | AwaitEvt ann ID_Evt                          -- await internal event
+  | EmitEvt  ann ID_Evt                          -- emit internal event
   | If       ann (Exp ann) (Stmt ann) (Stmt ann) -- conditional
   | Seq      ann (Stmt ann) (Stmt ann)           -- sequence
-  | Every    ann ID_Evt (Stmt ann)               -- event iteration
+  | Every    ann ID (Stmt ann)                   -- event iteration
   | Par      ann (Stmt ann) (Stmt ann)           -- par statement
   | Pause    ann ID_Var (Stmt ann)               -- pause/suspend statement
   | Fin      ann (Stmt ann)                      -- finalization statement
@@ -51,12 +51,12 @@ infixr 0 `sPar`
 
 getAnn :: Stmt ann -> ann
 getAnn (Var      z _ _)   = z
-getAnn (Int      z _ _)   = z
+getAnn (Evt      z _ _)   = z
 getAnn (Write    z _ _)   = z
 getAnn (AwaitExt z _)     = z
 getAnn (EmitExt  z _ _)   = z
-getAnn (AwaitInt z _)     = z
-getAnn (EmitInt  z _)     = z
+getAnn (AwaitEvt z _)     = z
+getAnn (EmitEvt  z _)     = z
 getAnn (If       z _ _ _) = z
 getAnn (Seq      z _ _)   = z
 getAnn (Every    z _ _)   = z
@@ -73,13 +73,13 @@ getAnn (Par'     z _ _)   = z
 
 fromGrammar :: (G.Stmt ann) -> (Stmt ann)
 fromGrammar (G.Var z id p)      = Var z (id,Nothing) (fromGrammar p)
-fromGrammar (G.Int z id p)      = Int z id (fromGrammar p)
+fromGrammar (G.Evt z id p)      = Evt z id (fromGrammar p)
 fromGrammar (G.Out z id p)      = (fromGrammar p)
 fromGrammar (G.Write z id exp)  = Write z id exp
 fromGrammar (G.AwaitExt z id)   = AwaitExt z id
 fromGrammar (G.EmitExt z id exp)= EmitExt z id exp
-fromGrammar (G.AwaitInt z id)   = AwaitInt z id
-fromGrammar (G.EmitInt z id)    = EmitInt z id
+fromGrammar (G.AwaitEvt z id)   = AwaitEvt z id
+fromGrammar (G.EmitEvt z id)    = EmitEvt z id
 fromGrammar (G.If z exp p1 p2)  = If z exp (fromGrammar p1) (fromGrammar p2)
 fromGrammar (G.Seq z p1 p2)     = Seq z (fromGrammar p1) (fromGrammar p2)
 fromGrammar (G.Loop z p)        = Loop' z (fromGrammar p) (fromGrammar p)
@@ -98,13 +98,13 @@ showProg stmt = case stmt of
   Var _ (var,val) p
     | isNothing val      -> printf "{%s=_: %s}" var (sP p)
     | otherwise          -> printf "{%s=%d: %s}" var (fromJust val) (sP p)
-  Int _ id stmt          -> printf ":%s %s" id (sP stmt)
+  Evt _ id stmt          -> printf ":%s %s" id (sP stmt)
   Write _ var expr       -> printf "%s=%s" var (sE expr)
   AwaitExt _ ext         -> printf "?%s" ext
   EmitExt _ ext Nothing  -> printf "!%s" ext
   EmitExt _ ext (Just v) -> printf "!%s=%s" ext (sE v)
-  AwaitInt _ int         -> printf "?%s" int
-  EmitInt _ int          -> printf "!%s" int
+  AwaitEvt _ int         -> printf "?%s" int
+  EmitEvt _ int          -> printf "!%s" int
   If _ expr p q          -> printf "(if %s then %s else %s)" (sE expr) (sP p) (sP q)
   Seq _ p q              -> printf "%s; %s" (sP p) (sP q)
   Every _ int p          -> printf "(every %s %s)" int (sP p)
@@ -156,7 +156,7 @@ varsEval vars expr = case expr of
   Lte   _ e1 e2 -> if (varsEval vars e1) <= (varsEval vars e2) then 1 else 0
 
 -- Set event in environment.
-evtsEmit :: Ints -> ID_Int -> Ints
+evtsEmit :: Evts -> ID_Evt -> Evts
 evtsEmit ints int = case ints of
   (int',val'):ints'
     | int == int' -> (int,True):ints'
@@ -171,9 +171,9 @@ evtsEmit ints int = case ints of
 isBlocked :: Lvl -> (Stmt ann) -> Bool
 isBlocked n stmt = case stmt of
   Var _ _ p      -> isBlocked n p
-  Int _ _ p      -> isBlocked n p
+  Evt _ _ p      -> isBlocked n p
   AwaitExt _ _   -> True
-  AwaitInt _ _   -> True
+  AwaitEvt _ _   -> True
   Every _ _ _    -> True
   CanRun _ m     -> n > m
   Pause _ _ p    -> isBlocked n p
@@ -192,9 +192,9 @@ isBlockedNop n p       = isBlocked n p
 clear :: (Stmt ann) -> (Stmt ann)
 clear stmt = case stmt of
   Var _ _ p      -> clear p
-  Int _ _ p      -> clear p
+  Evt _ _ p      -> clear p
   AwaitExt z _   -> Nop z
-  AwaitInt z _   -> Nop z
+  AwaitEvt z _   -> Nop z
   Every z _ _    -> Nop z
   CanRun z _     -> Nop z
   Fin _ p        -> p
@@ -227,14 +227,14 @@ step (Var z vv p, n, vars, ints, outs)             -- var-adv
     where
       (p', n', vv':vars', ints', outs') = stepAdv (p, n, vv:vars, ints, outs) id
 
-step (Int _ id s@(Nop _), n, vars, ints, outs)           -- int-nop
+step (Evt _ id s@(Nop _), n, vars, ints, outs)           -- int-nop
   = (s, n, vars, ints, outs)
 
-step (Int _ id s@(Escape _ _), n, vars, ints, outs)    -- int-escape
+step (Evt _ id s@(Escape _ _), n, vars, ints, outs)    -- int-escape
   = (s, n, vars, ints, outs)
 
-step (Int z int p, n, vars, ints, outs)            -- int-adv
-  = (Int z int p'', n', vars', ints', outs')
+step (Evt z int p, n, vars, ints, outs)            -- int-adv
+  = (Evt z int p'', n', vars', ints', outs')
     where
       (p', n', vars', (_,go):ints', outs') = stepAdv (p, n, vars, (int,False):ints, outs) id
       p'' | go = bcast int vars p'
@@ -248,7 +248,7 @@ step (EmitExt z ext Nothing, n, vars, ints, outs)    -- emit-ext
 step (EmitExt z ext (Just exp), n, vars, ints, outs) -- emit-ext
   = (Nop z, n, vars, ints, outs++[(ext,Just (varsEval vars exp))])
 
-step (EmitInt z int, n, vars, ints, outs)          -- emit-int (pg 6)
+step (EmitEvt z int, n, vars, ints, outs)          -- emit-int (pg 6)
   = (CanRun z n, n+1, vars, evtsEmit ints int, outs)
 
 step (CanRun z m, n, vars, ints, outs)             -- can-run (pg 6)
@@ -322,12 +322,12 @@ isReducible desc = case desc of
 
 -- Awakes all trails waiting for the given event.
 -- (pg 8, fig 4.i)
-bcast :: ID_Evt -> Vars -> (Stmt ann) -> (Stmt ann)
+bcast :: ID -> Vars -> (Stmt ann) -> (Stmt ann)
 bcast e vars stmt = case stmt of
   Var z vv p              -> Var z vv (bcast e (vv:vars) p)
-  Int z id p              -> Int z id (bcast e vars p)
+  Evt z id p              -> Evt z id (bcast e vars p)
   AwaitExt z e' | e == e' -> Nop z
-  AwaitInt z e' | e == e' -> Nop z
+  AwaitEvt z e' | e == e' -> Nop z
   Every z e' p  | e == e' -> Seq z p (Every z e' p)
   Seq z p q               -> Seq z (bcast e vars p) q
   Trap z p                -> Trap z (bcast e vars p)

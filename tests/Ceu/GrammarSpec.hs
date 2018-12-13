@@ -19,8 +19,8 @@ spec = do
     -- atomic statements --
     checkLoopIt (Loop () (Write () "x" (Umn () (Const () 1)))) False
     checkLoopIt (Loop () (AwaitExt () "A"))              True
-    checkLoopIt (Loop () (AwaitInt () "a"))              False
-    checkLoopIt (Loop () (EmitInt () "a"))               False
+    checkLoopIt (Loop () (AwaitEvt () "a"))              False
+    checkLoopIt (Loop () (EmitEvt () "a"))               False
     checkLoopIt (Loop () (Escape () 0))                  True
     checkLoopIt (Loop () (Loop () (Escape () 0)))        True
     checkLoopIt (Loop () ((Nop ())))                     False
@@ -67,8 +67,8 @@ spec = do
     -- atomic statements --
     checkFinIt (Fin () (Write () "x" (Const () 0))) []
     checkFinIt (Fin () (AwaitExt () "A"))        ["await: invalid statement"]
-    checkFinIt (Fin () (AwaitInt () "a"))        ["await: invalid statement"]
-    checkFinIt (Fin () (EmitInt () "a"))         []
+    checkFinIt (Fin () (AwaitEvt () "a"))        ["await: invalid statement"]
+    checkFinIt (Fin () (EmitEvt () "a"))         []
     checkFinIt (Fin () (Escape () 0))            ["escape: invalid statement"]
     checkFinIt (Fin () ((Nop ())))               []
     checkFinIt (Fin () (Error () ""))            []
@@ -79,10 +79,10 @@ spec = do
     checkFinIt (Fin () (If () (Const () 0) (Loop () (Escape () 0)) ((Nop ())))) ["escape: invalid statement"]
     checkFinIt (Fin () (If () (Const () 0) (Write () "x" (Const () 0)) ((Nop ())))) []
     checkFinIt (Fin () ((Nop ()) `sSeq` (Nop ()) `sSeq` (AwaitExt () "A") `sSeq` (Nop ()))) ["await: invalid statement"]
-    checkFinIt (Fin () ((Nop ()) `sSeq` (Nop ()) `sSeq` (EmitInt () "a") `sSeq` (Nop ())))  []
-    checkFinIt (Fin () (Loop () (AwaitInt () "a")))          ["await: invalid statement"]
+    checkFinIt (Fin () ((Nop ()) `sSeq` (Nop ()) `sSeq` (EmitEvt () "a") `sSeq` (Nop ())))  []
+    checkFinIt (Fin () (Loop () (AwaitEvt () "a")))          ["await: invalid statement"]
     checkFinIt (Fin () (Loop () (AwaitExt () "A")))          ["await: invalid statement"]
-    checkFinIt (Fin () ((Nop ()) `sPar` (Nop ()) `sPar` (EmitInt () "a"))) ["parallel: invalid statement","parallel: invalid statement"]
+    checkFinIt (Fin () ((Nop ()) `sPar` (Nop ()) `sPar` (EmitEvt () "a"))) ["parallel: invalid statement","parallel: invalid statement"]
 
   --------------------------------------------------------------------------
   describe "checkEscape:" $ do
@@ -126,9 +126,9 @@ spec = do
     checkIdIt (Var () "a" (Nop ()))                    []
     checkIdIt (Var () "a" (Write () "a" (Const () 1))) []
     checkIdIt (Var () "a" (Var () "a" (Nop ())))       ["declaration: identifier 'a' is already declared"]
-    checkIdIt (Int () "e" (Int () "e" (Nop ())))       ["declaration: identifier 'e' is already declared"]
+    checkIdIt (Evt () "e" (Evt () "e" (Nop ())))       ["declaration: identifier 'e' is already declared"]
     checkIdIt (Write () "a" (Const () 1))              ["assignment: identifier 'a' is not declared"]
-    checkIdIt (AwaitInt () "e")                        ["await: identifier 'e' is not declared"]
+    checkIdIt (AwaitEvt () "e")                        ["await: identifier 'e' is not declared"]
     checkIdIt (Every () "e" (Nop ()))                  ["every: identifier 'e' is not declared"]
     checkIdIt (Pause () "a" (Nop ()))                  ["pause/if: identifier 'a' is not declared"]
     checkIdIt (Var () "a" (Write () "a" (Umn () (Read () "b")))) ["read access to 'b': identifier 'b' is not declared"]
@@ -139,8 +139,8 @@ spec = do
     -- atomic statements --
     checkStmtsIt (Write () "c" (Const () 0)) []
     checkStmtsIt (AwaitExt () "A")        []
-    checkStmtsIt (AwaitInt () "a")        []
-    checkStmtsIt (EmitInt () "a")         []
+    checkStmtsIt (AwaitEvt () "a")        []
+    checkStmtsIt (EmitEvt () "a")         []
     checkStmtsIt (Escape () 0)            []
     checkStmtsIt ((Nop ()))               []
     checkStmtsIt (Error () "")            []
@@ -155,8 +155,8 @@ spec = do
     checkStmtsIt (Every () "A" (Fin () (Nop ())))      ["every: invalid statement in `every`", "finalize: invalid statement"]
     checkStmtsIt (Par () (Escape () 0) (Nop ()))       ["parallel: terminating trail"]
     checkStmtsIt (Par () (Escape () 0) (AwaitExt () "FOREVER")) []
-    checkStmtsIt (Par () (AwaitExt () "FOREVER") (Seq () (EmitInt () "a") (AwaitExt () "FOREVER"))) []
-    checkStmtsIt (Par () (Nop ()) (EmitInt () "a"))    ["parallel: terminating trail"]
+    checkStmtsIt (Par () (AwaitExt () "FOREVER") (Seq () (EmitEvt () "a") (AwaitExt () "FOREVER"))) []
+    checkStmtsIt (Par () (Nop ()) (EmitEvt () "a"))    ["parallel: terminating trail"]
     checkStmtsIt (Pause () "a" (Nop ()))               []
     checkStmtsIt (Fin () (Nop ()))                     []
     checkStmtsIt (Fin () (Fin () (Nop ())))            ["finalize: invalid statement in `finalize`", "finalize: invalid statement"]
@@ -167,8 +167,8 @@ spec = do
     checkStmtsIt (Var () "x" (Fin () (Every () "A" (Nop ())))) ["finalize: invalid statement in `finalize`", "every: invalid statement"]
     checkStmtsIt (Loop () (Trap () (Loop () (Escape () 0))))   ["loop: `loop` never iterates","loop: unbounded `loop` execution"]
     checkStmtsIt (Loop () (Trap () (Loop () (Seq () (Escape () 0) (Escape () 0))))) ["escape: unreachable statement","loop: `loop` never iterates","loop: unbounded `loop` execution"]
-    checkStmtsIt (AwaitInt () "a" `sSeq` (Fin () (Escape () 0)) `sPar` (AwaitExt () "FOREVER")) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
-    checkStmtsIt (AwaitInt () "a" `sSeq` (Every () "A" (Fin () (Nop ()))) `sPar` (AwaitExt () "FOREVER")) ["every: invalid statement in `every`", "finalize: invalid statement"]
+    checkStmtsIt (AwaitEvt () "a" `sSeq` (Fin () (Escape () 0)) `sPar` (AwaitExt () "FOREVER")) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
+    checkStmtsIt (AwaitEvt () "a" `sSeq` (Every () "A" (Fin () (Nop ()))) `sPar` (AwaitExt () "FOREVER")) ["every: invalid statement in `every`", "finalize: invalid statement"]
     checkStmtsIt (Loop () ((AwaitExt () "FOREVER") `sPar` Loop () (Loop () (Loop () (AwaitExt () "A")))))  ["loop: `loop` never iterates","loop: `loop` never iterates","loop: `loop` never iterates"]
     checkStmtsIt (Loop () ((Escape () 0) `sPar` Loop () (Loop () (Loop () (AwaitExt () "A"))))) ["loop: `loop` never iterates","loop: `loop` never iterates","loop: `loop` never iterates"]
     checkStmtsIt (Fin () (Escape () 0)) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]

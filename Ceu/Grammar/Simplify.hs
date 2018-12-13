@@ -11,11 +11,11 @@ simplify (Var z id p) =
     otherwise   -> Var z id p'
   where p' = simplify p
 
-simplify (Int z id p) =
+simplify (Evt z id p) =
   case p' of
     Nop z'      -> Nop z'
     Escape z' n -> Escape z' n
-    otherwise   -> Int z id p'
+    otherwise   -> Evt z id p'
   where p' = simplify p
 
 simplify (Out z id p) =

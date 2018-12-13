@@ -14,7 +14,7 @@ compile p = aux Nothing p where
   aux pse (Var' z var Nothing p)      = (es, Var' z var Nothing p')
                                         where
                                           (es,p') = aux pse p
-  aux pse (Int' z id b p)             = (es, Int' z id b p')
+  aux pse (Evt' z id b p)             = (es, Evt' z id b p')
                                         where
                                           (es,p') = aux pse p
   aux pse (Out' z id b p)             = (es, Out' z id b p')
