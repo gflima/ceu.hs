@@ -38,57 +38,76 @@ spec = do
   --------------------------------------------------------------------------
   describe "Scope.compile" $ do
 
-    it "var x" $ do
-      Scope.compile (Var () "x" Nothing)
-      `shouldBe` ([], (Var' () "x" Nothing (Nop ())))
+    describe "var:" $ do
+      it "var x" $ do
+        Scope.compile (Var () "x" Nothing)
+        `shouldBe` ([], (Var' () "x" Nothing (Nop ())))
 
-    it "var x; (Nop ())" $ do
-      Scope.compile (Seq () (Var () "x" Nothing) (Nop ()))
-      `shouldBe` ([], (Var' () "x" Nothing (Nop ())))
+      it "var x; (Nop ())" $ do
+        Scope.compile (Seq () (Var () "x" Nothing) (Nop ()))
+        `shouldBe` ([], (Var' () "x" Nothing (Nop ())))
 
-    it "var x <- 1 ; (Nop ())" $ do
-      Scope.compile (Seq () (Var () "x" Nothing) (Seq () (Write () "x" (Const () 1)) (Nop ())))
-      `shouldBe` ([], (Var' () "x" Nothing (Seq () (Write () "x" (Const () 1)) (Nop ()))))
+      it "var x <- 1 ; (Nop ())" $ do
+        Scope.compile (Seq () (Var () "x" Nothing) (Seq () (Write () "x" (Const () 1)) (Nop ())))
+        `shouldBe` ([], (Var' () "x" Nothing (Seq () (Write () "x" (Const () 1)) (Nop ()))))
 
-    it "scope var x end ; var y" $ do
-      Scope.compile (Seq () (Scope () (Var () "x" Nothing)) (Var () "y" Nothing))
-      `shouldBe` ([],Seq () (Var' () "x" Nothing (Nop ())) (Var' () "y" Nothing (Nop ())))
+      it "scope var x end ; var y" $ do
+        Scope.compile (Seq () (Scope () (Var () "x" Nothing)) (Var () "y" Nothing))
+        `shouldBe` ([],Seq () (Var' () "x" Nothing (Nop ())) (Var' () "y" Nothing (Nop ())))
 
-    it "scope var x end ; x=1" $ do
-      compile' (False,False) (Seq () (Scope () (Var () "x" Nothing)) (Write () "x" (Const () 1)))
-      `shouldBe` (["assignment: variable 'x' is not declared"], G.Seq () (G.Var () "x" (G.Nop ())) (G.Write () "x" (Const () 1)))
+      it "scope var x end ; x=1" $ do
+        compile' (False,False) (Seq () (Scope () (Var () "x" Nothing)) (Write () "x" (Const () 1)))
+        `shouldBe` (["assignment: variable 'x' is not declared"], G.Seq () (G.Var () "x" (G.Nop ())) (G.Write () "x" (Const () 1)))
 
-    it "var x" $ do
-      compile' (False,True) (Var () "x" Nothing)
-      `shouldBe` (["trap: terminating `trap` body","trap: missing `escape` statement","await: unreachable statement"], G.Var () "_ret" (G.Seq () (G.Trap () (G.Var () "x" (G.Nop ()))) (G.AwaitExt () "FOREVER")))
+      it "var x" $ do
+        compile' (False,True) (Var () "x" Nothing)
+        `shouldBe` (["trap: terminating `trap` body","trap: missing `escape` statement","await: unreachable statement"], G.Var () "_ret" (G.Seq () (G.Trap () (G.Var () "x" (G.Nop ()))) (G.AwaitExt () "FOREVER")))
 
-    it "var x" $ do
-      compile' (True,True) (Var () "x" Nothing)
-      `shouldBe` (["trap: terminating `trap` body","trap: missing `escape` statement","await: unreachable statement"], G.Var () "_ret" (G.AwaitExt () "FOREVER"))
+      it "var x" $ do
+        compile' (True,True) (Var () "x" Nothing)
+        `shouldBe` (["trap: terminating `trap` body","trap: missing `escape` statement","await: unreachable statement"], G.Var () "_ret" (G.AwaitExt () "FOREVER"))
 
-    it "int x" $ do
-      Scope.compile (Int () "x" False)
-      `shouldBe` ([], (Int' () "x" False (Nop ())))
+    describe "int:" $ do
+      it "int x" $ do
+        Scope.compile (Int () "x" False)
+        `shouldBe` ([], (Int' () "x" False (Nop ())))
 
-    it "int x; (Nop ())" $ do
-      Scope.compile (Seq () (Int () "x" False) (Nop ()))
-      `shouldBe` ([], (Int' () "x" False (Nop ())))
+      it "int x; (Nop ())" $ do
+        Scope.compile (Seq () (Int () "x" False) (Nop ()))
+        `shouldBe` ([], (Int' () "x" False (Nop ())))
 
-    it "scope int x end ; int y" $ do
-      Scope.compile (Seq () (Scope () (Int () "x" False)) (Int () "y" False))
-      `shouldBe` ([],Seq () (Int' () "x" False (Nop ())) (Int' () "y" False (Nop ())))
+      it "scope int x end ; int y" $ do
+        Scope.compile (Seq () (Scope () (Int () "x" False)) (Int () "y" False))
+        `shouldBe` ([],Seq () (Int' () "x" False (Nop ())) (Int' () "y" False (Nop ())))
 
-    it "scope int x end ; x=1" $ do
-      compile' (False,False) (Seq () (Scope () (Int () "x" False)) (EmitInt () "x" Nothing))
-      `shouldBe` (["emit: event 'x' is not declared"], G.Seq () (G.Int () "x" (G.Nop ())) (G.EmitInt () "x"))
+      it "scope int x end ; x=1" $ do
+        compile' (False,False) (Seq () (Scope () (Int () "x" False)) (EmitInt () "x" Nothing))
+        `shouldBe` (["emit: event 'x' is not declared"], G.Seq () (G.Int () "x" (G.Nop ())) (G.EmitInt () "x"))
 
-    it "scope escape 1 end" $ do
-      compile' (False,False) (Scope () (Escape () Nothing (Just (Const () 1))))
-      `shouldBe` (["escape: orphan `escape` statement"],G.Escape () (-1))
+    describe "ext:" $ do
+      it "ext X" $ do
+        Scope.compile (Ext () "X" False)
+        `shouldBe` ([], (Ext' () "X" False (Nop ())))
 
-    it "scope escape 1 end" $ do
-      compile' (False,True) (Scope () (Escape () Nothing (Just (Const () 1))))
-      `shouldBe` ([],G.Var () "_ret" (G.Seq () (G.Trap () (G.Seq () (G.Write () "_ret" (Const () 1)) (G.Escape () 0))) (G.AwaitExt () "FOREVER")))
+      it "ext X; (Nop ())" $ do
+        Scope.compile (Seq () (Ext () "X" False) (Nop ()))
+        `shouldBe` ([], (Ext' () "X" False (Nop ())))
+
+      it "scope ext X end ; ext y" $ do
+        Scope.compile (Seq () (Scope () (Ext () "X" False)) (Ext () "Y" False))
+        `shouldBe` ([],Seq () (Ext' () "X" False (Nop ())) (Ext' () "Y" False (Nop ())))
+
+      it "scope ext X end ; X=1" $ do
+        compile' (False,False) (Seq () (Scope () (Ext () "X" False)) (EmitInt () "X" Nothing))
+        `shouldBe` (["emit: event 'X' is not declared"], G.Seq () (G.Ext () "X" (G.Nop ())) (G.EmitInt () "X"))
+
+      it "scope escape 1 end" $ do
+        compile' (False,False) (Scope () (Escape () Nothing (Just (Const () 1))))
+        `shouldBe` (["escape: orphan `escape` statement"],G.Escape () (-1))
+
+      it "scope escape 1 end" $ do
+        compile' (False,True) (Scope () (Escape () Nothing (Just (Const () 1))))
+        `shouldBe` ([],G.Var () "_ret" (G.Seq () (G.Trap () (G.Seq () (G.Write () "_ret" (Const () 1)) (G.Escape () 0))) (G.AwaitExt () "FOREVER")))
 
   --------------------------------------------------------------------------
   describe "Trap.compile" $ do

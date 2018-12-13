@@ -90,7 +90,7 @@ spec = do
     -- atomic statements --
     checkCheckIt (Error () "")               []
     checkCheckIt (Escape () 0)               ["escape: orphan `escape` statement"]
-    checkCheckIt (Write () "x" (Const () 0)) ["assignment: variable 'x' is not declared"]
+    checkCheckIt (Write () "x" (Const () 0)) ["assignment: identifier 'x' is not declared"]
 
     -- compound statements --
     checkCheckIt (Trap () (Escape () 0))     []
@@ -125,13 +125,13 @@ spec = do
     checkVarEvtIt (Nop ())                                 []
     checkVarEvtIt (Var () "a" (Nop ()))                    []
     checkVarEvtIt (Var () "a" (Write () "a" (Const () 1))) []
-    checkVarEvtIt (Var () "a" (Var () "a" (Nop ())))       ["declaration: variable 'a' is already declared"]
-    checkVarEvtIt (Int () "e" (Int () "e" (Nop ())))       ["declaration: event 'e' is already declared"]
-    checkVarEvtIt (Write () "a" (Const () 1))              ["assignment: variable 'a' is not declared"]
-    checkVarEvtIt (AwaitInt () "e")                        ["await: event 'e' is not declared"]
-    checkVarEvtIt (Every () "e" (Nop ()))                  ["every: event 'e' is not declared"]
-    checkVarEvtIt (Pause () "a" (Nop ()))                  ["pause/if: variable 'a' is not declared"]
-    checkVarEvtIt (Var () "a" (Write () "a" (Umn () (Read () "b")))) ["read access to 'b': variable 'b' is not declared"]
+    checkVarEvtIt (Var () "a" (Var () "a" (Nop ())))       ["declaration: identifier 'a' is already declared"]
+    checkVarEvtIt (Int () "e" (Int () "e" (Nop ())))       ["declaration: identifier 'e' is already declared"]
+    checkVarEvtIt (Write () "a" (Const () 1))              ["assignment: identifier 'a' is not declared"]
+    checkVarEvtIt (AwaitInt () "e")                        ["await: identifier 'e' is not declared"]
+    checkVarEvtIt (Every () "e" (Nop ()))                  ["every: identifier 'e' is not declared"]
+    checkVarEvtIt (Pause () "a" (Nop ()))                  ["pause/if: identifier 'a' is not declared"]
+    checkVarEvtIt (Var () "a" (Write () "a" (Umn () (Read () "b")))) ["read access to 'b': identifier 'b' is not declared"]
 
   --------------------------------------------------------------------------
   describe "checkStmts -- program is valid" $ do

@@ -20,6 +20,7 @@ type Fin ann = (Stmt ann, Stmt ann, Stmt ann)
 data Stmt ann
   = Var      ann ID_Var (Maybe (Fin ann))            -- variable declaration
   | Int      ann ID_Int Bool                         -- event declaration
+  | Out      ann ID_Ext Bool                         -- output declaration
   | Write    ann ID_Var (Exp ann)                    -- assignment statement
   | AwaitExt ann ID_Ext (Maybe ID_Var)               -- await external event
   | EmitExt  ann ID_Ext (Maybe (Exp ann))            -- emit external event
@@ -45,6 +46,7 @@ data Stmt ann
   | Error    ann String                              -- generate runtime error (for testing purposes)
   | Var'     ann ID_Var (Maybe (Fin ann)) (Stmt ann) -- variable declaration w/ stmts in scope
   | Int'     ann ID_Int Bool (Stmt ann)              -- event declaration w/ stmts in scope
+  | Out'     ann ID_Ext Bool (Stmt ann)              -- output declaration w/ stmts in scope
   | Or'      ann (Stmt ann) (Stmt ann)               -- used as an Or with possibly non-terminating trails
   | Par'     ann (Stmt ann) (Stmt ann)               -- par as in basic Grammar
   | Pause'   ann ID_Var (Stmt ann)                   -- pause as in basic Grammar
@@ -67,6 +69,7 @@ infixr 0 `sOr`
 getAnn :: Stmt ann -> ann
 getAnn (Var      z _ _  ) = z
 getAnn (Int      z _ _  ) = z
+getAnn (Out      z _ _  ) = z
 getAnn (Write    z _ _  ) = z
 getAnn (AwaitExt z _ _  ) = z
 getAnn (EmitExt  z _ _  ) = z
@@ -106,6 +109,9 @@ toGrammar (Var' z var Nothing p) = (es, G.Var z var p')
                                  where
                                    (es,p') = toGrammar p
 toGrammar (Int' z int b p)       = (es, G.Int z int p')
+                                 where
+                                   (es,p') = toGrammar p
+toGrammar (Out' z ext b p)       = (es, G.Out z ext p')
                                  where
                                    (es,p') = toGrammar p
 toGrammar (Write z var exp)      = ([], G.Write z var exp)
@@ -155,6 +161,7 @@ stmt2word :: (Stmt ann) -> String
 stmt2word stmt = case stmt of
   Var _ _ _      -> "declaration"
   Int _ _ _      -> "declaration"
+  Out _ _ _      -> "declaration"
   Write _ _ _    -> "assignment"
   AwaitExt _ _ _ -> "await"
   AwaitFor _     -> "await"
@@ -179,6 +186,7 @@ stmt2word stmt = case stmt of
   Error _ _      -> "error"
   Var' _ _ _ _   -> "declaration"
   Int' _ _ _ _   -> "declaration"
+  Out' _ _ _ _   -> "declaration"
   Par' _ _ _     -> "parallel"
   Pause' _ _ _   -> "pause/if"
   Fin' _ _       -> "finalize"

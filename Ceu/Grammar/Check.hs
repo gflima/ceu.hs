@@ -25,6 +25,7 @@ stmts :: (Ann ann) => (Stmt ann) -> Errors
 stmts stmt = case stmt of
   Var _ _ p       -> stmts p
   Int _ _ p       -> stmts p
+  Out _ _ p       -> stmts p
   If _ _ p q      -> stmts p ++ stmts q
   Seq _ p q       -> stmts p ++ stmts q ++ es where
                      es = if (maybeTerminates p) then [] else
@@ -67,6 +68,7 @@ getComplexs p = errs_nodes_msg_map (aux' (-1) p) "invalid statement" where
   aux' n s@(Loop _ p)     = aux' n p
   aux' n (Var _ _ p)      = aux' n p
   aux' n (Int _ _ p)      = aux' n p
+  aux' n (Out _ _ p)      = aux' n p
   aux' n (If _ _ p q)     = aux' n p ++ aux' n q
   aux' n (Seq _ p q)      = aux' n p ++ aux' n q
   aux' n s@(Par _ p q)    = [s] ++ aux' n p ++ aux' n q
@@ -88,6 +90,7 @@ boundedLoop (Loop _ body) = aux 0 body where
     Every _ _ _            -> True
     Var _ _ p              -> aux n p
     Int _ _ p              -> aux n p
+    Out _ _ p              -> aux n p
     If _ _ p q             -> aux n p && aux n q
     Seq _ s@(Escape _ _) q -> aux n s   -- q never executes
     Seq _ p q              -> aux n p || aux n q
@@ -109,6 +112,7 @@ getEscapes p = escs 0 p where
   escs :: Int -> (Stmt ann) -> [(Stmt ann,Int)]
   escs n (Var _ _ p)     = (escs n p)
   escs n (Int _ _ p)     = (escs n p)
+  escs n (Out _ _ p)     = (escs n p)
   escs n (If _ _ p1 p2)  = (escs n p1) ++ (escs n p2)
   escs n (Seq _ p1 p2)   = (escs n p1) ++ (escs n p2)
   escs n (Loop _ p)      = (escs n p)
@@ -127,6 +131,7 @@ removeTrap (Trap _ p) = rT 0 p where
   rT :: Int -> (Stmt ann) -> (Stmt ann)
   rT n (Var z var p)      = Var z var (rT n p)
   rT n (Int z int p)      = Int z int (rT n p)
+  rT n (Out z ext p)      = Out z ext (rT n p)
   rT n (If z exp p1 p2)   = If z exp (rT n p1) (rT n p2)
   rT n (Seq z p1 p2)      = Seq z (rT n p1) (rT n p2)
   rT n (Loop z p)         = Loop z (rT n p)
@@ -146,6 +151,7 @@ removeTrap (Trap _ p) = rT 0 p where
 neverTerminates :: (Stmt ann) -> Bool
 neverTerminates (Var _ _ p)            = neverTerminates p
 neverTerminates (Int _ _ p)            = neverTerminates p
+neverTerminates (Out _ _ p)            = neverTerminates p
 neverTerminates (AwaitExt _ "FOREVER") = True
 neverTerminates (If _ _ p1 p2)         = neverTerminates p1 && neverTerminates p2
 neverTerminates (Seq _ p1 p2)          = neverTerminates p1 || neverTerminates p2
@@ -163,6 +169,7 @@ maybeTerminates = not . neverTerminates
 alwaysTerminates :: (Stmt ann) -> Bool
 alwaysTerminates (Var _ _ p)            = alwaysTerminates p
 alwaysTerminates (Int _ _ p)            = alwaysTerminates p
+alwaysTerminates (Out _ _ p)            = alwaysTerminates p
 alwaysTerminates (AwaitExt _ "FOREVER") = False
 alwaysTerminates (If _ _ p1 p2)         = alwaysTerminates p1 && alwaysTerminates p2
 alwaysTerminates (Seq _ p1 p2)          = alwaysTerminates p1 && alwaysTerminates p2
@@ -180,7 +187,7 @@ alwaysTerminates _                      = True
 alwaysInstantaneous :: (Stmt ann) -> Bool
 alwaysInstantaneous p = aux p where
   aux (Var _ _ p)    = aux p
-  aux (Int _ _ p)    = aux p
+  aux (Out _ _ p)    = aux p
   aux (AwaitExt _ _) = False
   aux (AwaitInt _ _) = False
   aux (If _ _ p1 p2) = aux p1 && aux p2
@@ -198,6 +205,7 @@ neverInstantaneous :: (Stmt ann) -> Bool
 neverInstantaneous p = aux p where
   aux (Var _ _ p)    = aux p
   aux (Int _ _ p)    = aux p
+  aux (Out _ _ p)    = aux p
   aux (AwaitExt _ _) = True
   aux (If _ _ p1 p2) = aux p1 && aux p2
   aux (Seq _ p1 p2)  = aux p1 || aux p2

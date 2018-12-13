@@ -223,6 +223,14 @@ spec = do
                 parse stmt_var "var x : int <- await X"
                 `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (AwaitExt ("",1,16) "X" (Just "x")))
 
+        describe "ext:" $ do
+            it "output X: int" $
+                parse stmt_output "output X: int"
+                `shouldBe` Right (Out ("",1,1) "X" True)
+            it "output x: int" $
+                parse stmt_output "output x: int"
+                `shouldBe` Left "(line 1, column 8):\nunexpected \"x\""
+
         describe "write:" $ do
             it "x <- 1" $
                 parse stmt_write "x <- 1"

@@ -55,6 +55,16 @@ stmt_var = do
     s    <- option (Nop $ pos2src pos) (try (attr_exp var) <|> try (attr_awaitext var))
     return $ Seq (pos2src pos) (Var (pos2src pos) var Nothing) s
 
+stmt_output :: Parser (Stmt Source)
+stmt_output = do
+    pos  <- getPosition
+    void <- tk_key "output"
+    ext  <- tk_ext
+    void <- tk_str ":"
+    tp   <- tk_type
+    guard $ tp == "int"         -- TODO
+    return $ Out (pos2src pos) ext True
+
 stmt_write :: Parser (Stmt Source)
 stmt_write = do
     pos  <- getPosition
@@ -155,7 +165,8 @@ stmt_paror = do
 
 stmt1 :: Parser (Stmt Source)
 stmt1 = do
-    s <- try stmt_escape <|> try stmt_var <|> try stmt_write <|>
+    s <- try stmt_escape <|> try stmt_var <|> try stmt_output <|>
+         try stmt_write <|>
          try (stmt_awaitext Nothing) <|> try stmt_emitext <|>
          try stmt_do <|> try stmt_if <|> try stmt_loop <|>
          try stmt_par <|> try stmt_parand <|> try stmt_paror

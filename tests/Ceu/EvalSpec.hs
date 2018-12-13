@@ -1077,14 +1077,14 @@ spec = do
     evalProgItFail ["escape: orphan `escape` statement","trap: missing `escape` statement","await: unreachable statement"]
       [] (G.Escape () 1)
 
-    evalProgItFail ["declaration: variable '_ret' is already declared"]
+    evalProgItFail ["declaration: identifier '_ret' is already declared"]
       [] (G.Var () "a"
            (G.Var () "_ret"
              (G.Write () "a" (Const () 1) `G.sSeq`
               G.Write () "_ret" (Read () "a" `eAdd` Const () 10) `G.sSeq`
               G.Escape () 0)))
 
-    evalProgItFail ["declaration: variable '_ret' is already declared"]
+    evalProgItFail ["declaration: identifier '_ret' is already declared"]
       [] (G.Write () "_ret" (Const () 1) `G.sSeq`
           G.Var () "_ret" (G.Write () "_ret" (Const () 99)) `G.sSeq`
           G.Escape () 0)
@@ -1096,7 +1096,7 @@ spec = do
             G.Write () "_ret" (Read () "a" `eAdd` Const () 10) `G.sSeq`
             G.Escape () 0))
 
-    evalProgItFail ["declaration: variable 'a' is already declared"]
+    evalProgItFail ["declaration: identifier 'a' is already declared"]
       [] (G.Var () "a"
            (G.Write () "a" (Const () 1) `G.sSeq`
             G.Var () "a" (G.Write () "a" (Const () 99)) `G.sSeq`
@@ -1127,7 +1127,7 @@ spec = do
            (G.Var () "x" (G.Write () "_ret" (Const () 1) `G.sSeq` G.AwaitExt () "A" `G.sSeq` G.AwaitExt () "FOREVER"))
            (G.Escape () 0))) (G.Escape () 0))
 
-    evalProgItFail ["loop: `loop` never iterates","declaration: variable 'a' is already declared"]
+    evalProgItFail ["loop: `loop` never iterates","declaration: identifier 'a' is already declared"]
       [] (G.Var () "a"
            (G.Write () "a" (Const () 1) `G.sSeq`
             G.Trap () (G.Loop () (G.Par ()

@@ -1,71 +1,78 @@
 module Ceu.Grammar.VarEvt where
 
 import Data.Char (toUpper)
+import Data.List (find)
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Exp
 import Ceu.Grammar.Stmt
 
 check :: (Ann ann) => (Stmt ann) -> Errors
-check p = aux [] [] p
+check p = stmt [] p
 
-aux vars ints s@(Var _ var p)   = es++es' where
-                                  es' = aux (s:vars) ints p
-                                  es = if (take 2 var == "__") || (not $ contains var vars) then
-                                        []
-                                      else
-                                        [toError s "variable '" ++ var ++ "' is already declared"]
+stmt :: (Ann ann) => [Stmt ann] -> Stmt ann -> Errors
 
-aux vars ints s@(Int _ int p)   = es++es' where
-                                  es' = aux vars (s:ints) p
-                                  es = if not $ contains int ints then [] else
-                                       [toError s "event '" ++ int ++ "' is already declared"]
+stmt ids s@(Var _ var p)   = (errDeclared ids (var,s)) ++ (stmt (s:ids) p)
+stmt ids s@(Int _ int p)   = (errDeclared ids (int,s)) ++ (stmt (s:ids) p)
+stmt ids s@(Out _ ext p)   = (errDeclared ids (ext,s)) ++ (stmt (s:ids) p)
 
-aux vars _ s@(Write _ var exp)  = es1++es2 where
-                                  es1 = if (map toUpper var)==var || contains var vars then [] else
-                                         [toError s "variable '" ++ var ++ "' is not declared"]
-                                  es2 = getErrs vars exp
+stmt ids s@(Write    _ var exp) = (errUndeclaredInvalid ids (var,s) isVar) ++ (expr ids exp)
+stmt ids s@(AwaitInt _ int)     = (errUndeclaredInvalid ids (int,s) isInt)
+stmt ids s@(EmitInt  _ int)     = (errUndeclaredInvalid ids (int,s) isInt)
 
-aux _ ints s@(AwaitInt _ int)   = if contains int ints then [] else
-                                  [toError s "event '" ++ int ++ "' is not declared"]
-
-aux _ ints s@(EmitInt _ int)    = if contains int ints then [] else
-                                  [toError s "event '" ++ int ++ "' is not declared"]
-
-aux vars ints (If _ exp p1 p2)  = es ++ (aux vars ints p1) ++ (aux vars ints p2) where
-                                  es = getErrs vars exp
-
-aux vars ints (Seq _ p1 p2)     = (aux vars ints p1) ++ (aux vars ints p2)
-aux vars ints (Loop _ p)        = (aux vars ints p)
-aux vars ints s@(Every _ evt p) = es ++ (aux vars ints p) where
-                                  es = if (map toUpper evt)==evt || contains evt ints then [] else
-                                      [toError s "event '" ++ evt ++ "' is not declared"]
-            
-aux vars ints (Par _ p1 p2)     = (aux vars ints p1) ++ (aux vars ints p2)
-aux vars ints s@(Pause _ var p) = es ++ (aux vars ints p) where
-                                  es = if contains var vars then [] else
-                                      [toError s "variable '" ++ var ++ "' is not declared"]
-aux vars ints (Fin _ p)         = (aux vars ints p)
-aux vars ints (Trap _ p)        = (aux vars ints p)
-aux vars ints p                 = []
+stmt ids (If  _ exp p1 p2) = (expr ids exp) ++ (stmt ids p1) ++ (stmt ids p2)
+stmt ids (Seq _ p1 p2)     = (stmt ids p1) ++ (stmt ids p2)
+stmt ids (Loop _ p)        = (stmt ids p)
+stmt ids s@(Every _ evt p) = (errUndeclaredInvalid ids (evt,s) isEvt) ++ (stmt ids p)
+stmt ids (Par _ p1 p2)     = (stmt ids p1) ++ (stmt ids p2)
+stmt ids s@(Pause _ var p) = (errUndeclaredInvalid ids (var,s) isVar) ++ (stmt ids p)
+stmt ids (Fin _ p)         = (stmt ids p)
+stmt ids (Trap _ p)        = (stmt ids p)
+stmt ids p                 = []
 
 -------------------------------------------------------------------------------
 
-contains :: String -> [Stmt ann] -> Bool
-contains id dcls = elem id $ map f dcls where
-                    f (Var _ var _) = var
-                    f (Int _ int _) = int
+isVar (Var _ _ _) = True
+isVar _           = False
+
+isInt (Int _ _ _) = True
+isInt _           = False
+
+isEvt (Int _ _ _) = True
+isEvt _           = False
+
+getId :: Stmt ann -> String
+getId (Var      _ var _) = var
+getId (Int      _ int _) = int
+getId (Out      _ ext _) = ext
+
+find' :: String -> [Stmt ann] -> Maybe (Stmt ann)
+find' id ids = find (\s -> getId s == id) ids
+
+errDeclared :: (INode a) => [Stmt ann] -> (String,a) -> Errors
+errDeclared ids (id,dcl) =
+    case find' id ids of
+        Nothing   -> []
+        s         -> [toError dcl "identifier '" ++ id ++ "' is already declared"]
+
+errUndeclaredInvalid :: (INode a) => [Stmt ann] -> (String,a) -> (Stmt ann -> Bool) -> Errors
+errUndeclaredInvalid ids (id,use) pred =
+    case find' id ids of
+        Nothing  -> [toError use "identifier '" ++ id ++ "' is not declared"]
+        (Just s) -> if pred s then [] else
+                        [toError use "identifier '" ++ id ++ "' is invalid"]
+
+    -- if (take 2 var == "__") || (not $ contains var ids) then
 
 -------------------------------------------------------------------------------
 
-getErrs :: (Ann ann) => [Stmt ann] -> Exp ann -> Errors
-getErrs vars e@(Read _ var) = if (map toUpper var)==var || contains var vars then [] else
-                                [toError e "variable '" ++ var ++ "' is not declared"]
-getErrs vars (Umn _ e)      = getErrs vars e
-getErrs vars (Add _ e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
-getErrs vars (Sub _ e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
-getErrs vars (Mul _ e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
-getErrs vars (Div _ e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
-getErrs vars (Equ _ e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
-getErrs vars (Lte _ e1 e2)  = (getErrs vars e1) ++ (getErrs vars e2)
-getErrs vars _              = []
+expr :: (Ann ann) => [Stmt ann] -> Exp ann -> Errors
+expr ids e@(Read _ var) = errUndeclaredInvalid ids (var,e) isVar
+expr ids (Umn _ e)      = expr ids e
+expr ids (Add _ e1 e2)  = (expr ids e1) ++ (expr ids e2)
+expr ids (Sub _ e1 e2)  = (expr ids e1) ++ (expr ids e2)
+expr ids (Mul _ e1 e2)  = (expr ids e1) ++ (expr ids e2)
+expr ids (Div _ e1 e2)  = (expr ids e1) ++ (expr ids e2)
+expr ids (Equ _ e1 e2)  = (expr ids e1) ++ (expr ids e2)
+expr ids (Lte _ e1 e2)  = (expr ids e1) ++ (expr ids e2)
+expr ids _              = []
