@@ -64,34 +64,34 @@ spec = do
 
     describe "vars:" $ do
         it "var int a,b" $
-            run "var int a,b;" []           -- TODO: support a,b,c? (problem w/ assign/finalization)
-            `shouldBe` Left "(line 1, column 10):\nunexpected ','\nexpecting digit, letter, \"_\", \"<-\", \"escape\", \"var\", \"await\", \"emit\", \"do\", \"if\", \"par\", \"par/and\", \"par/or\" or end of input"
+            run "var a,b:int;" []           -- TODO: support a,b,c? (problem w/ assign/finalization)
+            `shouldBe` Left "(line 1, column 6):\nunexpected \",\"\nexpecting digit, letter, \"_\" or \":\""
         it "a <- 1; escape a;" $
             run "a <- 1; escape a" []
             `shouldBe` Left "(line 1, column 1):\nassignment: variable 'a' is not declared\n(line 1, column 16):\nread access to 'a': variable 'a' is not declared\n"
-        it "var int a <- 1; escape a;" $
-            run "var int a <- 1; escape a" []
+        it "var a : int <- 1; escape a;" $
+            run "var a : int <- 1; escape a" []
             `shouldBe` Right (1, [[]])
-        it "var int a" $
-            run "var int a" []
+        it "var a:int" $
+            run "var a:int" []
             `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nawait: unreachable statement\n"
-        it "var int a <- 1" $
-            run "var int a <- 1" []
+        it "var a:int <- 1" $
+            run "var a:int <- 1" []
             `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nawait: unreachable statement\n"
-        it "var int a ; a <- 1" $
-            run "var int a ; a <- 1 ; escape a" []
+        it "var a:int ; a <- 1" $
+            run "var a:int ; a <- 1 ; escape a" []
             `shouldBe` Right (1, [[]])
-        it "var int x; x<-1; escape x" $
-            run "var int x; x <- 1 ;escape x" []
+        it "var x:int; x<-1; escape x" $
+            run "var x:int; x <- 1 ;escape x" []
             `shouldBe` Right (1, [[]])
         it "hide a" $
-            run "var int a ; var int a ; escape 0" []
+            run "var a:int ; var a:int ; escape 0" []
             `shouldBe` Left "(line 1, column 13):\ndeclaration: variable 'a' is already declared\n"
         it "do a=1 end ; a=2" $
-            run "do var int a <- 1; end var int a <- 2 ; escape a" []
+            run "do var a:int <- 1; end var a:int <- 2 ; escape a" []
             `shouldBe` Left "TODO: declared but not used"
-        it "var int x <- await X ; escape x" $
-            run "var int x <- await X ; escape x" [("X",Just 1)]
+        it "var x:int <- await X ; escape x" $
+            run "var x:int <- await X ; escape x" [("X",Just 1)]
             `shouldBe` Right (1, [[],[]])
 
 -------------------------------------------------------------------------------
@@ -103,8 +103,8 @@ spec = do
         it "await X ; escape 1" $
             run "await X ; escape 1" [("X",Nothing)]
             `shouldBe` Right (1,[[],[]])
-        it "var int x <- await X ; await X ; escape x" $
-            run "var int x <- await X ; await X ; escape x" [("X",Just 1),("X",Nothing)]
+        it "var x:int <- await X ; await X ; escape x" $
+            run "var x:int <- await X ; await X ; escape x" [("X",Just 1),("X",Nothing)]
             `shouldBe` Right (1, [[],[],[]])
 
     describe "emitext:" $ do
@@ -117,8 +117,8 @@ spec = do
         it "emit X -> 1" $
             run "emit X -> 1 ; escape 2;" []
             `shouldBe` Right (2,[[("X",Just 1)]])
-        it "var int x <- await X; emit X -> x ; escape x+1" $    -- TODO: X in/out
-            run "var int x <- await X; emit X -> x ; escape x+1" [("X",Just 1)]
+        it "var x:int <- await X; emit X -> x ; escape x+1" $    -- TODO: X in/out
+            run "var x:int <- await X; emit X -> x ; escape x+1" [("X",Just 1)]
             `shouldBe` Right (2,[[],[("X",Just 1)]])
 
 -------------------------------------------------------------------------------
@@ -155,7 +155,7 @@ spec = do
             run "if 0 then ; if 0 then end ; else escape 1 end ; await FOREVER" []
             `shouldBe` Right (1, [[]])
         it "if 1 then a=1; a=2; if 1 then escape a end end" $
-            run "if 1 then var int a<-1 ; a<-2; if 1 then escape a end end ; await FOREVER" []
+            run "if 1 then var a:int <-1 ; a<-2; if 1 then escape a end end ; await FOREVER" []
             `shouldBe` Right (2, [[]])
         it "if 0 then . else/if 1 then escape 1 else ." $
             run "if 0 then escape 0 else/if 1 then escape 1 else escape 0 end" []
