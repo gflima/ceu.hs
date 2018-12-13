@@ -11,11 +11,13 @@ import qualified Ceu.Code.N as N
 
 data State = State { spc   :: String
                    , traps :: [Stmt All]
+                   , vars  :: [Stmt All]
                    , trail :: Int
                    } -- deriving (Show)   
 
 z :: State
 z = State { spc   = ""
+          , vars  = []
           , traps = []
           , trail = 0
           }
@@ -51,16 +53,17 @@ stmt :: Stmt Source -> String
 stmt p = snd $ aux (gind z) (N.add p) --(traceShowId p)
 
 aux :: State -> Stmt All -> (Int,String)
-aux g s@(Nop      _)           = (1, oln s)
-aux g s@(Var      _ var p)     = aux g p
-aux g s@(Write    _ var exp)   = (1, oln s ++ (ocmd g $ "CEU_APP.root." ++ var ++ " = " ++ (expr exp)))
-aux g s@(AwaitExt _ "FOREVER") = (1, oln s ++ ocmd g "return")
+
+aux g s@(Nop   _)         = (1, oln s)
+aux g s@(Var   _ var p)   = aux g{vars=s:(vars g)} p
+aux g s@(Write _ var exp) = (1, oln s ++ (ocmd g $ "CEU_APP.root." ++ var ++ " = " ++ (expr exp)))
 
 aux g (Seq _ p1 p2) = (max t1 t2, p1'++p2')
     where
         (t1,p1') = aux g p1
         (t2,p2') = aux g p2
 
+aux g s@(AwaitExt _ "FOREVER") = (1, oln s ++ ocmd g "return")
 aux g s@(AwaitExt _ ext) = (1, p')
     where
         p' = oln s ++
@@ -89,7 +92,7 @@ aux g s@(If _ exp p1 p2) = (max t1 t2, p')
 
 aux g s@(Loop _ p) = (t, p'')
     where
-        p'' = oln s ++ "for (;;)\n" ++ (oblk g p')
+        p'' = oln s ++ spc g ++ "for (;;)\n" ++ (oblk g p')
         (t, p') = aux (gind g) p
 
 aux g s@(Par _ p1 p2) = (t1+t2, p')
