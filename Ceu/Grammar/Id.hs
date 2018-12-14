@@ -1,6 +1,5 @@
 module Ceu.Grammar.Id where
 
-import Data.Char (toUpper)
 import Data.List (find)
 
 import Ceu.Grammar.Globals
@@ -82,7 +81,7 @@ errUndeclaredInvalid ids (id,use) pred =
 -------------------------------------------------------------------------------
 
 expr :: (Ann ann) => [Stmt ann] -> Exp ann -> Errors
-expr ids e@(Read _ id) = if (map toUpper id) == id then [] else -- payload of input events (eg, _X)
+expr ids e@(Read _ id) = if id == "_INPUT" then [] else
                             errUndeclaredInvalid ids (id,e) isVar
 expr ids (Umn _ e)      = expr ids e
 expr ids (Add _ e1 e2)  = (expr ids e1) ++ (expr ids e2)

@@ -53,7 +53,7 @@ compile' (o_simp,o_encl) p = (es2++es3++es4, p4)
 reaction :: E.Stmt ann -> In -> (E.Stmt ann, E.Outs)
 reaction p (ext,val) = (p''',outs) where
   (p'',_,_,_,outs) = E.steps (E.bcast ext [] p', 0, [], [], [])
-  p' = E.Var (E.getAnn p) (("_"++ext), val) p
+  p' = E.Var (E.getAnn p) ("_INPUT", val) p
   (E.Var _ _ p''') = p''
 
 evalFullProg :: (Eq ann, Ann ann) => Stmt ann -> [In] -> E.Result
