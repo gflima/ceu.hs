@@ -6,7 +6,7 @@
     #define ceu_callback_start(trace)
 #endif
 #ifndef ceu_callback_step
-    #define ceu_callback_step(trace)
+    #define ceu_callback_step(trace) { _CEU_INPUT=10; ceu_input(CEU_INPUT_KEY,NULL); }
 #endif
 #ifndef ceu_callback_stop
     #define ceu_callback_stop(trace)

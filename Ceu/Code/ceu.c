@@ -1,6 +1,6 @@
 #define ceu_callback_output_LED(v) digitalWrite(13, v)
 #define ceu_callback_output_PRINT(v) printf("%d\n", v)
-int _CEU_INPUT_PAYLOAD;
+int _CEU_INPUT;
 
 #include <stddef.h>     /* offsetof */
 #include <stdlib.h>     /* NULL */
@@ -162,6 +162,8 @@ typedef struct tceu_code_mem_ROOT {
     tceu_code_mem _mem;                                                         
     tceu_trl      _trails[7];                                                   
     byte          _params[0];                                                   
+    /* CEU_VARS */
+<<< CEU_VARS >>>
 } tceu_code_mem_ROOT;
 
 typedef struct tceu_app {
@@ -269,7 +271,7 @@ _CEU_LBL_:
         case CEU_LABEL_NONE:
             break;
         case CEU_LABEL_ROOT:;
-        <<< CEU_CODES >>>
+<<< CEU_CODES >>>
     }
     //ceu_assert(0, "unreachable code");
     return 0;

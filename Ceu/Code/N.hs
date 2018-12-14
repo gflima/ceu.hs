@@ -71,8 +71,8 @@ stmt n (Trap src p) =
     where
         (n',p') = stmt (n+1) p
 
-stmt n (Escape src k) =
-    (n, Escape All{source=src,n=n} k)
+stmt n (Escape src k) = (n, Escape All{source=src,n=n} k)
+stmt n (Halt src)     = (n, Halt All{source=src,n=n})
 
 stmt n p = error (show p)
 
