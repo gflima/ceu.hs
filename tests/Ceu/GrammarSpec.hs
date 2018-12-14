@@ -111,8 +111,8 @@ spec = do
     checkStmtsIt (Seq () (Escape () 1) (Escape () 0)) ["escape: unreachable statement"]
     checkStmtsIt (Seq () (Trap () (Trap () (Escape () 1))) (Escape () 0)) ["trap: missing `escape` statement"]
     checkStmtsIt (Seq () (Escape () 0) (Escape () 1)) ["escape: unreachable statement"]
-    checkStmtsIt (Seq () (AwaitInp () "FOREVER") (Escape () 1)) ["escape: unreachable statement"]
-    checkStmtsIt (Seq () (Seq () (AwaitInp () "FOREVER") (Nop ())) (Escape () 1)) ["nop: unreachable statement",("escape: unreachable statement")]
+    checkStmtsIt (Seq () (Halt ()) (Escape () 1)) ["escape: unreachable statement"]
+    checkStmtsIt (Seq () (Seq () (Halt ()) (Nop ())) (Escape () 1)) ["nop: unreachable statement",("escape: unreachable statement")]
     checkStmtsIt (Seq () (Loop () (Nop ())) (Nop ())) ["loop: unbounded `loop` execution","nop: unreachable statement"]
     checkStmtsIt (Seq () (Every () "" (Nop ())) (Nop ())) ["nop: unreachable statement"]
     checkStmtsIt (Seq () (Par () (Nop ()) (Every () "" (Nop ()))) (Nop ())) ["parallel: terminating trail","nop: unreachable statement"]
@@ -154,8 +154,8 @@ spec = do
     checkStmtsIt (Every () "A" (Nop ()))               []
     checkStmtsIt (Every () "A" (Fin () (Nop ())))      ["every: invalid statement in `every`", "finalize: invalid statement"]
     checkStmtsIt (Par () (Escape () 0) (Nop ()))       ["parallel: terminating trail"]
-    checkStmtsIt (Par () (Escape () 0) (AwaitInp () "FOREVER")) []
-    checkStmtsIt (Par () (AwaitInp () "FOREVER") (Seq () (EmitEvt () "a") (AwaitInp () "FOREVER"))) []
+    checkStmtsIt (Par () (Escape () 0) (Halt ())) []
+    checkStmtsIt (Par () (Halt ()) (Seq () (EmitEvt () "a") (Halt ()))) []
     checkStmtsIt (Par () (Nop ()) (EmitEvt () "a"))    ["parallel: terminating trail"]
     checkStmtsIt (Pause () "a" (Nop ()))               []
     checkStmtsIt (Fin () (Nop ()))                     []
@@ -167,20 +167,20 @@ spec = do
     checkStmtsIt (Var () "x" (Fin () (Every () "A" (Nop ())))) ["finalize: invalid statement in `finalize`", "every: invalid statement"]
     checkStmtsIt (Loop () (Trap () (Loop () (Escape () 0))))   ["loop: `loop` never iterates","loop: unbounded `loop` execution"]
     checkStmtsIt (Loop () (Trap () (Loop () (Seq () (Escape () 0) (Escape () 0))))) ["escape: unreachable statement","loop: `loop` never iterates","loop: unbounded `loop` execution"]
-    checkStmtsIt (AwaitEvt () "a" `sSeq` (Fin () (Escape () 0)) `sPar` (AwaitInp () "FOREVER")) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
-    checkStmtsIt (AwaitEvt () "a" `sSeq` (Every () "A" (Fin () (Nop ()))) `sPar` (AwaitInp () "FOREVER")) ["every: invalid statement in `every`", "finalize: invalid statement"]
-    checkStmtsIt (Loop () ((AwaitInp () "FOREVER") `sPar` Loop () (Loop () (Loop () (AwaitInp () "A")))))  ["loop: `loop` never iterates","loop: `loop` never iterates","loop: `loop` never iterates"]
+    checkStmtsIt (AwaitEvt () "a" `sSeq` (Fin () (Escape () 0)) `sPar` (Halt ())) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
+    checkStmtsIt (AwaitEvt () "a" `sSeq` (Every () "A" (Fin () (Nop ()))) `sPar` (Halt ())) ["every: invalid statement in `every`", "finalize: invalid statement"]
+    checkStmtsIt (Loop () ((Halt ()) `sPar` Loop () (Loop () (Loop () (AwaitInp () "A")))))  ["loop: `loop` never iterates","loop: `loop` never iterates","loop: `loop` never iterates"]
     checkStmtsIt (Loop () ((Escape () 0) `sPar` Loop () (Loop () (Loop () (AwaitInp () "A"))))) ["loop: `loop` never iterates","loop: `loop` never iterates","loop: `loop` never iterates"]
     checkStmtsIt (Fin () (Escape () 0)) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
-    checkStmtsIt (Loop () (AwaitInp () "FOREVER")) ["loop: `loop` never iterates"]
+    checkStmtsIt (Loop () (Halt ())) ["loop: `loop` never iterates"]
 
     -- all
     checkCheckIt (Fin () (Escape () 0)) ["escape: orphan `escape` statement", "finalize: invalid statement in `finalize`", "escape: invalid statement"]
     checkCheckIt (Trap () (Fin () (Escape () 0))) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
     checkCheckIt (Seq () (Trap () (Loop () (Trap () (Seq () (Escape () 0) (Nop ()))))) (Nop ())) ["trap: missing `escape` statement", "nop: unreachable statement", "loop: unbounded `loop` execution", "nop: unreachable statement"]
-    checkCheckIt (Inp () "FOREVER" (Trap () (Seq () (Trap () (Par () (AwaitInp () "FOREVER") (Escape () 0))) (Escape () 0))))
+    checkCheckIt (Inp () "FOREVER" (Trap () (Seq () (Trap () (Par () (Halt ()) (Escape () 0))) (Escape () 0))))
       []
-    checkCheckIt (Trap () (Par () (Escape () 0) (Seq () (Par () (Inp () "FOREVER" (AwaitInp () "FOREVER")) (Fin () (Nop ()))) (Escape () 0))))
+    checkCheckIt (Trap () (Par () (Escape () 0) (Seq () (Par () (Inp () "FOREVER" (Halt ())) (Fin () (Nop ()))) (Escape () 0))))
       ["escape: unreachable statement"]
 
     describe "ext:" $ do

@@ -3,7 +3,7 @@ module Ceu.Grammar.Full.Compile.Async where
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Full.Grammar
 
--- compile: Adds AwaitFor in Loops inside Asyncs
+-- compile: Adds AwaitAsync in Loops inside Asyncs
 
 compile :: (Stmt ann) -> (Errors, Stmt ann)
 compile p = ([], aux False p) where

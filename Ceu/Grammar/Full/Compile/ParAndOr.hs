@@ -32,7 +32,7 @@ aux (And z p1 p2)          = Clean' z "And"
                                         (Escape' z 0)
                                         (Seq z
                                           (Write z "__and" (Add z (Read z "__and") (Const z 1)))
-                                          (AwaitFor z)))
+                                          (Halt z)))
 
 aux (Or z p1 p2)           = Clean' z "Or" (Trap' z (Par' z p1' p2')) where
                              p1' = (Seq z (Trap.ins' (aux p1)) (Escape' z 0))

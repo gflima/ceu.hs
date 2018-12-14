@@ -25,6 +25,7 @@ data Stmt ann
   | Trap     ann (Stmt ann)                         -- enclose escape
   | Escape   ann Int                                -- escape N traps
   | Nop      ann                                    -- dummy statement (internal)
+  | Halt     ann                                    -- halt (await FOREVER)
   | Error    ann String                             -- generate runtime error (for testing)
   deriving (Eq, Show)
 
@@ -54,6 +55,7 @@ getAnn (Fin      z _)     = z
 getAnn (Trap     z _)     = z
 getAnn (Escape   z _)     = z
 getAnn (Nop      z)       = z
+getAnn (Halt     z)       = z
 getAnn (Error    z _)     = z
 
 -- Shows program.
@@ -80,6 +82,7 @@ showProg stmt = case stmt of
   Trap     _ p            -> printf "(trap %s)" (sP p)
   Escape   _ n            -> printf "(escape %d)" n
   Nop      _              -> "nop"
+  Halt     _              -> "halt"
   Error    _ _            -> "err"
   where
     sE = showExp
@@ -106,6 +109,7 @@ stmt2word stmt = case stmt of
   Trap _ _      -> "trap"
   Escape _ _    -> "escape"
   Nop _         -> "nop"
+  Halt _        -> "halt"
   Error _ _     -> "error"
 
 instance (Ann ann) => INode (Stmt ann) where

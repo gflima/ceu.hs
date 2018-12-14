@@ -71,8 +71,8 @@ spec = do
     it "Par () x y -> Par () x y" $ do
       simplify' (Par () (Seq () (AwaitInp () "") (Nop ())) (AwaitInp () "")) `shouldBe` (Par () (AwaitInp () "") (AwaitInp () ""))
     it "par for par for par for" $ do
-      simplify' (Par () (AwaitInp () "FOREVER") (Par () (AwaitInp () "FOREVER") (AwaitInp () "FOREVER")))
-      `shouldBe` (AwaitInp () "FOREVER")
+      simplify' (Par () (Halt ()) (Par () (Halt ()) (Halt ())))
+      `shouldBe` (Halt ())
 
     it "Pause () -> (Nop ())" $ do
       simplify' (Pause () "" (Nop ())) `shouldBe` (Nop ())

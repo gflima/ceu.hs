@@ -100,6 +100,13 @@ stmt_awaitext var = do
     ext  <- tk_ext
     return $ AwaitInp (pos2src pos) ext var
 
+stmt_halt :: Parser (Stmt Source)
+stmt_halt = do
+    pos  <- getPosition
+    void <- tk_key "await"
+    void <- tk_key "FOREVER"
+    return $ Halt (pos2src pos)
+
 -------------------------------------------------------------------------------
 
 stmt_do :: Parser (Stmt Source)
@@ -178,7 +185,7 @@ stmt1 = do
     s <- try stmt_escape <|>
          try stmt_var <|> try stmt_input <|> try stmt_output <|>
          try stmt_write <|>
-         try (stmt_awaitext Nothing) <|> try stmt_emitext <|>
+         try (stmt_awaitext Nothing) <|> try stmt_halt <|> try stmt_emitext <|>
          try stmt_do <|> try stmt_if <|> try stmt_loop <|>
          try stmt_par <|> try stmt_parand <|> try stmt_paror
     return s

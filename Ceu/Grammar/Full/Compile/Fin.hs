@@ -36,7 +36,7 @@ compile p = aux Nothing p where
       (esP, p')  = aux pse p
 
       (es',f23) = case (pse,f2,f3) of
-        (Nothing,  Nop _, Nop _) -> ([], AwaitFor z2)
+        (Nothing,  Nop _, Nop _) -> ([], Halt z2)
         (Nothing,  _,   _)   -> (["unexpected `pause`/`resume` statement"], Nop z2)
         (Just evt, _,   _)   -> ([], Par z2
                                       (Every z2 evt Nothing f2')

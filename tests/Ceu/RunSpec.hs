@@ -20,7 +20,7 @@ spec = do
     describe "void:" $ do
         it "void" $
             run "" []
-            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nawait: unreachable statement\n"
+            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nhalt: unreachable statement\n"
 
     describe "escape:" $ do
         it "escape 1" $
@@ -74,10 +74,10 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "var a:int" $
             run "var a:int" []
-            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nawait: unreachable statement\n"
+            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nhalt: unreachable statement\n"
         it "var a:int <- 1" $
             run "var a:int <- 1" []
-            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nawait: unreachable statement\n"
+            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nhalt: unreachable statement\n"
         it "var a:int ; a <- 1" $
             run "var a:int ; a <- 1 ; escape a" []
             `shouldBe` Right (1, [[]])
@@ -166,7 +166,7 @@ spec = do
     describe "par:" $ do
         it "par" $
             run "par do with end" []
-            `shouldBe` Left "(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nparallel: terminating trail\n(line 1, column 1):\nawait: unreachable statement\n"
+            `shouldBe` Left "(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nparallel: terminating trail\n(line 1, column 1):\nhalt: unreachable statement\n"
         it "par" $
             run "par do escape 1 with escape 1 end" []
             `shouldBe` Right (1, [[]])
@@ -177,7 +177,7 @@ spec = do
     describe "par/and:" $ do
         it "par/and" $
             run "par/and do with end" []
-            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nawait: unreachable statement\n"
+            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nhalt: unreachable statement\n"
         it "par/and; escape 1" $
             run "par/and do with end ; escape 1;" []
             `shouldBe` Right (1, [[]])
@@ -192,7 +192,7 @@ spec = do
     describe "par/or:" $ do
         it "par/or" $
             run "par/or do with end" []
-            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nawait: unreachable statement\n"
+            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nhalt: unreachable statement\n"
         it "par/or" $
             run "par/or do with end ; escape 1" []
             `shouldBe` Right (1, [[]])

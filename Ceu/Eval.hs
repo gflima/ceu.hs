@@ -37,6 +37,7 @@ data Stmt ann
   | Trap     ann (Stmt ann)                      -- enclose escape
   | Escape   ann Int                             -- escape N traps
   | Nop      ann                                 -- dummy statement (internal)
+  | Halt     ann                                 -- halt (await FOREVER)
   | Error    ann String                          -- generate runtime error (for testing purposes)
   | CanRun ann Lvl                               -- wait for stack level (internal)
   | Loop' ann (Stmt ann) (Stmt ann)              -- unrolled Loop (internal)
@@ -66,6 +67,7 @@ getAnn (Fin      z _)     = z
 getAnn (Trap     z _)     = z
 getAnn (Escape   z _)     = z
 getAnn (Nop      z)       = z
+getAnn (Halt     z)       = z
 getAnn (Error    z _)     = z
 getAnn (CanRun   z _)     = z
 getAnn (Loop'    z _ _)   = z
@@ -90,6 +92,7 @@ fromGrammar (G.Pause z var p)   = Pause z var (fromGrammar p)
 fromGrammar (G.Fin z p)         = Fin z (fromGrammar p)
 fromGrammar (G.Trap z p)        = Trap z (fromGrammar p)
 fromGrammar (G.Escape z n)      = Escape z n
+fromGrammar (G.Halt z)          = Halt z
 fromGrammar (G.Nop z)           = Nop z
 fromGrammar (G.Error z msg)     = Error z msg
 
@@ -115,6 +118,7 @@ showProg stmt = case stmt of
   Trap _ p               -> printf "(trap %s)" (sP p)
   Escape _ n             -> printf "(escape %d)" n
   Nop _                  -> "nop"
+  Halt _                 -> "halt"
   Error _ _              -> "err"
   CanRun _ n             -> printf "@canrun(%d)" n
   Loop' _ p q            -> printf "(%s @loop %s)" (sP p) (sP q)
@@ -181,6 +185,7 @@ isBlocked n stmt = case stmt of
   Fin _ _        -> True
   Seq _ p _      -> isBlocked n p
   Trap _ p       -> isBlockedNop n p
+  Halt _         -> True
   Loop' _ p _    -> isBlocked n p
   Par' _ p q     -> isBlockedNop n p && isBlockedNop n q
   _              -> False
@@ -205,6 +210,7 @@ clear stmt = case stmt of
   Loop' _ p _    -> clear p
   Par' z p q     -> Seq z (clear p) (clear q)
   Nop z          -> Nop z   -- because of blocked (Par Nop Nop)
+  Halt z         -> Nop z
   _              -> error "clear: invalid clear"
 
 -- Helper function used by step in the *-adv rules.
@@ -360,7 +366,7 @@ run prog ins reaction = eP (fromGrammar prog) ins []
   where
     --eP :: Stmt -> [a] -> [Outs] -> (Val,[Outs])
     eP prog ins outss = case prog of
-      (Var _ ("_ret",val) (AwaitInp _ "FOREVER"))
+      (Var _ ("_ret",val) (Halt _))
         | not (null ins) -> Left ["pending inputs"]
         | isNothing val  -> Left ["no return value"]
         | otherwise      -> Right ((fromJust val), outss)

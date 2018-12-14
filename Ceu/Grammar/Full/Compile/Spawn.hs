@@ -3,7 +3,7 @@ module Ceu.Grammar.Full.Compile.Spawn where
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Full.Grammar
 
--- compile: Converts (spawn p1; ...) into (p1;AwaitFor or ...)
+-- compile: Converts (spawn p1; ...) into (p1;Halt or ...)
 
 compile :: (Ann ann) => Stmt ann -> (Errors, Stmt ann)
 compile (Var' z id Nothing p)    = (es, Var' z id Nothing p')

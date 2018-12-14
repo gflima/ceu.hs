@@ -9,7 +9,6 @@ import Debug.Trace
 
 -- Special events:
 -- "BOOT"
--- "FOREVER"
 -- "ASYNC"
 
 type In = (ID_Inp, Maybe Val)
@@ -25,7 +24,6 @@ data Stmt ann
   | Write    ann ID_Var (Exp ann)                    -- assignment statement
   | AwaitInp ann ID_Inp (Maybe ID_Var)               -- await external event
   | EmitExt  ann ID_Ext (Maybe (Exp ann))            -- emit external event
-  | AwaitFor ann                                     -- await forever
   | AwaitTmr ann (Exp ann)                           -- await timer
   | AwaitEvt ann ID_Evt (Maybe ID_Var)               -- await internal event
   | EmitEvt  ann ID_Evt (Maybe (Exp ann))            -- emit internal event
@@ -57,6 +55,7 @@ data Stmt ann
   | Escape'  ann Int                                 -- escape as in basic Grammar
   | Clean'   ann String (Stmt ann)                   -- temporary statement
   | Nop      ann                                     -- nop as in basic Grammar
+  | Halt     ann                                     -- halt as in basic Grammar
   deriving (Eq, Show)
 
 sSeq a b = Seq () a b
@@ -76,7 +75,6 @@ getAnn (Evt      z _ _  ) = z
 getAnn (Write    z _ _  ) = z
 getAnn (AwaitInp z _ _  ) = z
 getAnn (EmitExt  z _ _  ) = z
-getAnn (AwaitFor z      ) = z
 getAnn (AwaitTmr z _    ) = z
 getAnn (AwaitEvt z _ _  ) = z
 getAnn (EmitEvt  z _ _  ) = z
@@ -106,6 +104,7 @@ getAnn (Trap'    z _    ) = z
 getAnn (Escape'  z _    ) = z
 getAnn (Clean'   z _ _  ) = z
 getAnn (Nop      z      ) = z
+getAnn (Halt     z      ) = z
 
 toGrammar :: (Eq ann, Ann ann) => (Stmt ann) -> (Errors, G.Stmt ann)
 toGrammar (Var' z var Nothing p) = (es, G.Var z var p')
@@ -158,7 +157,8 @@ toGrammar (Clean' _ id p)        = (es'++es, p'')
                                  where
                                    (es, p')  = toGrammar p
                                    (es',p'') = clean id p'
-toGrammar (Nop z)                 = ([], G.Nop z)
+toGrammar (Nop z)                = ([], G.Nop z)
+toGrammar (Halt z)               = ([], G.Halt z)
 toGrammar p                      = error $ "toGrammar: unexpected statement: " -- ++(show p)
 
 -------------------------------------------------------------------------------
@@ -171,7 +171,6 @@ stmt2word stmt = case stmt of
   Evt _ _ _      -> "declaration"
   Write _ _ _    -> "assignment"
   AwaitInp _ _ _ -> "await"
-  AwaitFor _     -> "await"
   AwaitTmr _ _   -> "await"
   EmitExt _ _ _  -> "emit"
   AwaitEvt _ _ _ -> "await"
@@ -202,6 +201,7 @@ stmt2word stmt = case stmt of
   Escape' _ _    -> "escape"
   Clean' _ _ _   -> "clean"
   Nop _          -> "nop"
+  Halt _         -> "halt"
 
 instance (Ann ann) => INode (Stmt ann) where
   toWord   = stmt2word

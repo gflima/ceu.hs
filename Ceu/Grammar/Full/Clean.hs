@@ -36,7 +36,7 @@ clean "Loop" s@(G.Trap _ p) = ([], if escapesAt0 p then s else removeTrap s)
 clean "Spawn" p = (es1++es2,p') where
   (es1,p') =
     if maybeTerminates p then
-      ([toError p "terminating `spawn`"], G.Seq (G.getAnn p) p (G.AwaitInp (G.getAnn p) "FOREVER"))
+      ([toError p "terminating `spawn`"], G.Seq (G.getAnn p) p (G.Halt (G.getAnn p)))
     else
       ([], p)
   es2 =

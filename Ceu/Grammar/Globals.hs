@@ -32,4 +32,3 @@ type Val    = Int               -- value
 
 -- Special events:
 -- "BOOT"
--- "FOREVER"

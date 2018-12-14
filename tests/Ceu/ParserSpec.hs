@@ -319,7 +319,7 @@ spec = do
                 `shouldBe` Right (Loop ("",1,1) (Write ("",1,9) "v" (Const ("",1,12) 1)))
             it "loop do v<-1 ; await FOREVER end" $
                 parse stmt_loop "loop do v<-1 ; await FOREVER end"
-                `shouldBe` Right (Loop ("",1,1) (Seq ("",1,9) (Write ("",1,9) "v" (Const ("",1,12) 1)) (AwaitInp ("",1,16) "FOREVER" Nothing)))
+                `shouldBe` Right (Loop ("",1,1) (Seq ("",1,9) (Write ("",1,9) "v" (Const ("",1,12) 1)) (Halt ("",1,16))))
 
 -------------------------------------------------------------------------------
 

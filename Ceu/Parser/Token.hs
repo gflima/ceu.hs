@@ -20,6 +20,7 @@ keywords = [
     "emit",
     "end",
     "escape",
+    "FOREVER",
     "if",
     "input",
     "loop",
