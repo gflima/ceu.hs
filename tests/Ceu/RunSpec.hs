@@ -28,7 +28,7 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "escape a" $
             run "escape a" []
-            `shouldBe` Left "(line 1, column 8):\nread access to 'a': variable 'a' is not declared\n"
+            `shouldBe` Left "(line 1, column 8):\nread access to 'a': identifier 'a' is not declared\n"
         it "escape" $
             run "escape" []
             `shouldBe` Left "TODO: escape w/o expression"
@@ -68,7 +68,7 @@ spec = do
             `shouldBe` Left "(line 1, column 6):\nunexpected \",\"\nexpecting digit, letter, \"_\" or \":\""
         it "a <- 1; escape a;" $
             run "a <- 1; escape a" []
-            `shouldBe` Left "(line 1, column 1):\nassignment: variable 'a' is not declared\n(line 1, column 16):\nread access to 'a': variable 'a' is not declared\n"
+            `shouldBe` Left "(line 1, column 1):\nassignment: identifier 'a' is not declared\n(line 1, column 16):\nread access to 'a': identifier 'a' is not declared\n"
         it "var a : int <- 1; escape a;" $
             run "var a : int <- 1; escape a" []
             `shouldBe` Right (1, [[]])
@@ -86,39 +86,39 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "hide a" $
             run "var a:int ; var a:int ; escape 0" []
-            `shouldBe` Left "(line 1, column 13):\ndeclaration: variable 'a' is already declared\n"
+            `shouldBe` Left "(line 1, column 13):\ndeclaration: identifier 'a' is already declared\n"
         it "do a=1 end ; a=2" $
             run "do var a:int <- 1; end var a:int <- 2 ; escape a" []
             `shouldBe` Left "TODO: declared but not used"
         it "var x:int <- await X ; escape x" $
-            run "var x:int <- await X ; escape x" [("X",Just 1)]
+            run "input X:int var x:int <- await X ; escape x" [("X",Just 1)]
             `shouldBe` Right (1, [[],[]])
 
 -------------------------------------------------------------------------------
 
     describe "awaitext:" $ do
         it "await X ; escape 1" $
-            run "await X ; escape 1" []
+            run "input X:int await X ; escape 1" []
             `shouldBe` Left "program didn't terminate\n"
         it "await X ; escape 1" $
-            run "await X ; escape 1" [("X",Nothing)]
+            run "input X:int await X ; escape 1" [("X",Nothing)]
             `shouldBe` Right (1,[[],[]])
         it "var x:int <- await X ; await X ; escape x" $
-            run "var x:int <- await X ; await X ; escape x" [("X",Just 1),("X",Nothing)]
+            run "input X:int var x:int <- await X ; await X ; escape x" [("X",Just 1),("X",Nothing)]
             `shouldBe` Right (1, [[],[],[]])
 
     describe "emitext:" $ do
         it "emit X" $
-            run "emit X ; escape 1;" []
+            run "output X:int emit X ; escape 1;" []
             `shouldBe` Right (1,[[("X",Nothing)]])
         it "emit x" $
             run "emit x" []
             `shouldBe` Left "(line 1, column 6):\nunexpected \"x\""
         it "emit X -> 1" $
-            run "emit X -> 1 ; escape 2;" []
+            run "output X:int emit X -> 1 ; escape 2;" []
             `shouldBe` Right (2,[[("X",Just 1)]])
         it "var x:int <- await X; emit X -> x ; escape x+1" $    -- TODO: X in/out
-            run "var x:int <- await X; emit X -> x ; escape x+1" [("X",Just 1)]
+            run "input X:int var x:int <- await X; emit X -> x ; escape x+1" [("X",Just 1)]
             `shouldBe` Right (2,[[],[("X",Just 1)]])
 
 -------------------------------------------------------------------------------
@@ -186,8 +186,8 @@ spec = do
             --`shouldBe` Right (3, [[]])
             `shouldBe` Left "(line 1, column 12):\nsequence: trail must terminate\n(line 1, column 22):\nsequence: trail must terminate\n"
         it "par/and ... with ... with escape 3 end" $
-            run "par/and do await X with await Y with escape 3 end" []
-            `shouldBe` Left "(line 1, column 38):\nsequence: trail must terminate\n(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 20):\nif: unreachable statement\n"
+            run "input X:int input Y:int par/and do await X with await Y with escape 3 end" []
+            `shouldBe` Left "(line 1, column 62):\nsequence: trail must terminate\n(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 44):\nif: unreachable statement\n"
 
     describe "par/or:" $ do
         it "par/or" $

@@ -67,9 +67,10 @@ find' id ids = find (\s -> getId s == id) ids
 
 errDeclared :: (INode a) => [Stmt ann] -> (String,a) -> Errors
 errDeclared ids (id,dcl) =
-    case find' id ids of
-        Nothing   -> []
-        s         -> [toError dcl "identifier '" ++ id ++ "' is already declared"]
+    if (take 2 id == "__") then [] else    -- nested par/and (__and)
+        case find' id ids of
+            Nothing   -> []
+            s         -> [toError dcl "identifier '" ++ id ++ "' is already declared"]
 
 errUndeclaredInvalid :: (INode a) => [Stmt ann] -> (String,a) -> (Stmt ann -> Bool) -> Errors
 errUndeclaredInvalid ids (id,use) pred =
@@ -77,8 +78,6 @@ errUndeclaredInvalid ids (id,use) pred =
         Nothing  -> [toError use "identifier '" ++ id ++ "' is not declared"]
         (Just s) -> if pred s then [] else
                         [toError use "identifier '" ++ id ++ "' is invalid"]
-
-    -- if (take 2 var == "__") || (not $ contains var ids) then
 
 -------------------------------------------------------------------------------
 
