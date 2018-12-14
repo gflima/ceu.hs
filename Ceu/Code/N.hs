@@ -12,8 +12,18 @@ stmt :: Int -> (Stmt Source) -> (Int, Stmt All)
 
 stmt n (Nop src) = (n, Nop All{source=src,n=n})
 
-stmt n (Var src var p) =
-    (n', Var All{source=src,n=n} var p')
+stmt n (Var src id p) =
+    (n', Var All{source=src,n=n} id p')
+    where
+        (n',p') = stmt (n+1) p
+
+stmt n (Inp src id p) =
+    (n', Var All{source=src,n=n} id p')
+    where
+        (n',p') = stmt (n+1) p
+
+stmt n (Out src id p) =
+    (n', Var All{source=src,n=n} id p')
     where
         (n',p') = stmt (n+1) p
 
@@ -22,8 +32,8 @@ stmt n (Write src var exp) =
     where
         (n',exp') = expr (n+1) exp
 
-stmt n (AwaitExt src ext) =
-    (n, AwaitExt All{source=src,n=n} ext)
+stmt n (AwaitInp src ext) =
+    (n, AwaitInp All{source=src,n=n} ext)
 
 stmt n (EmitExt src ext Nothing) =
     (n, EmitExt All{source=src,n=n} ext Nothing)
@@ -63,6 +73,10 @@ stmt n (Trap src p) =
 
 stmt n (Escape src k) =
     (n, Escape All{source=src,n=n} k)
+
+stmt n p = error (show p)
+
+-------------------------------------------------------------------------------
 
 expr :: Int -> (Exp Source) -> (Int, Exp All)
 expr n (Const src v) = (n+1, Const All{source=src,n=n} v)

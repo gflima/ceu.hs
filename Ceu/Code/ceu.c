@@ -1,3 +1,5 @@
+#define ceu_callback_output_LED(v) digitalWrite(13, v)
+
 #include <stddef.h>     /* offsetof */
 #include <stdlib.h>     /* NULL */
 #include <string.h>     /* memset, strlen */
@@ -29,13 +31,13 @@
 
 typedef u16 tceu_nevt;   /* TODO */
 typedef u8  tceu_nstk;   /* TODO */
-//typedef <<< CEU_TCEU_NTRL >>> tceu_ntrl;
-//typedef <<< CEU_TCEU_NLBL >>> tceu_nlbl;
+//typedef <|< CEU_TCEU_NTRL >|> tceu_ntrl;
+//typedef <|< CEU_TCEU_NLBL >|> tceu_nlbl;
 typedef u8 tceu_ntrl;
 typedef u8 tceu_nlbl;
 
 #define CEU_TRAILS_N 10
-//#define CEU_TRAILS_N <<< CEU_TRAILS_N >>>
+//#define CEU_TRAILS_N <|< CEU_TRAILS_N >|>
 #ifndef CEU_STACK_N
 #define CEU_STACK_N 500
 #endif
@@ -101,7 +103,7 @@ typedef struct tceu_code_mem {
 } tceu_code_mem;
 
 /* CEU_NATIVE_PRE */
-//<<< CEU_NATIVE_PRE >>>
+//<|< CEU_NATIVE_PRE >|>
 
 /* EVENTS_ENUM */
 
@@ -118,41 +120,41 @@ CEU_INPUT__PRIM,
     CEU_INPUT__WCLOCK,
 
 //CEU_INPUT__MIN,
-    //<<< CEU_EXTS_ENUM_INPUT >>>
+    //<|< CEU_EXTS_ENUM_INPUT >|>
 //CEU_INPUT__MAX,
 
 CEU_EVENT__MIN,
-    //<<< CEU_EVTS_ENUM >>>
+    //<|< CEU_EVTS_ENUM >|>
 };
 
 enum {
     CEU_OUTPUT__NONE = 0,
-    //<<< CEU_EXTS_ENUM_OUTPUT >>>
+    //<|< CEU_EXTS_ENUM_OUTPUT >|>
 };
 
 /* CEU_MAIN */
-//<<< CEU_MAIN_C >>>
+//<|< CEU_MAIN_C >|>
 
 //#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 
 /* EVENTS_DEFINES */
-//<<< CEU_EXTS_DEFINES_INPUT_OUTPUT >>>
+//<|< CEU_EXTS_DEFINES_INPUT_OUTPUT >|>
 
 /*****************************************************************************/
 
-//<<< CEU_EXTS_TYPES >>>
-//<<< CEU_EVTS_TYPES >>>
-//<<< CEU_CODES_MEMS >>>
+//<|< CEU_EXTS_TYPES >|>
+//<|< CEU_EVTS_TYPES >|>
+//<|< CEU_CODES_MEMS >|>
 
 enum {
     CEU_LABEL_NONE = 0,
     CEU_LABEL_ROOT = 1,
-    //<<< CEU_LABELS >>>
+    //<|< CEU_LABELS >|>
 };
 
 /*****************************************************************************/
 
-//<<< REMOVE >>>
+//<|< REMOVE >|>
 typedef struct tceu_code_mem_ROOT {
     tceu_code_mem _mem;                                                         
     tceu_trl      _trails[7];                                                   
@@ -237,9 +239,9 @@ void ceu_stack_clear (tceu_stk* cur, tceu_code_mem* mem) {
 
 static int ceu_lbl (tceu_nstk _ceu_level, tceu_stk* _ceu_cur, tceu_stk* _ceu_nxt, tceu_code_mem* _ceu_mem, tceu_nlbl _ceu_lbl, tceu_ntrl* _ceu_trlK);
 
-//<<< CEU_NATIVE_POS >>>
+//<|< CEU_NATIVE_POS >|>
 
-//<<< CEU_CALLBACKS_OUTPUTS >>>
+//<|< CEU_CALLBACKS_OUTPUTS >|>
 
 /*****************************************************************************/
 
@@ -264,7 +266,7 @@ _CEU_LBL_:
         CEU_LABEL_NONE:
             break;
         CEU_LABEL_ROOT:;
-        //<<< CEU_CODES >>>
+        <<< CEU_CODES >>>
     }
     //ceu_assert(0, "unreachable code");
     return 0;
@@ -278,7 +280,7 @@ static void ceu_bcast_mark (tceu_nstk level, tceu_stk* cur)
     {
         tceu_trl* trl = &cur->range.mem->_trails[trlK];
 
-        //printf(">>> mark [%d/%p] evt=%d\n", trlK, trl, trl->evt.id);
+        //printf(">|> mark [%d/%p] evt=%d\n", trlK, trl, trl->evt.id);
         switch (trl->evt.id)
         {
 #ifdef CEU_FEATURES_PAUSE
@@ -359,12 +361,12 @@ static int ceu_bcast_exec (tceu_nstk level, tceu_stk* cur, tceu_stk* nxt)
 
     tceu_ntrl trlK = trl0;
 
-    //printf(">>> exec %d -> %d\n", trl0, trlF);
+    //printf(">|> exec %d -> %d\n", trl0, trlF);
     while (1)
     {
         tceu_trl* trl = &cur->range.mem->_trails[trlK];
 
-        //printf(">>> exec [%d/%p] evt=%d\n", trlK, trl, trl->evt.id);
+        //printf(">|> exec [%d/%p] evt=%d\n", trlK, trl, trl->evt.id);
         switch (trl->evt.id)
         {
             case CEU_INPUT__STACKED: {
@@ -418,7 +420,7 @@ void ceu_bcast (tceu_nstk level, tceu_stk* cur)
         }
     }
 
-    //printf(">>> BCAST[%d]: %d\n", cur->evt.id, level);
+    //printf(">|> BCAST[%d]: %d\n", cur->evt.id, level);
     ceu_bcast_mark(level, cur);
     while (1) {
         tceu_stk nxt;

@@ -34,7 +34,7 @@ oblk :: State -> String -> String
 oblk g str = (spc g) ++ "{\n" ++ str ++ (spc g) ++ "}\n"
 
 oln :: Stmt All -> String
-oln p = "#line " ++ file ++ ['"'] ++ (show ln) ++ ['"'] ++ comm ++ "\n"
+oln p = "#line " ++ (show ln) ++ ['"'] ++ file ++ ['"'] ++ comm ++ "\n"
     where
         Just (file,ln,_) = toSource p
         comm             = " // " ++ (toWord p)
@@ -63,8 +63,8 @@ aux g (Seq _ p1 p2) = (max t1 t2, p1'++p2')
         (t1,p1') = aux g p1
         (t2,p2') = aux g p2
 
-aux g s@(AwaitExt _ "FOREVER") = (1, oln s ++ ocmd g "return")
-aux g s@(AwaitExt _ ext) = (1, p')
+aux g s@(AwaitInp _ "FOREVER") = (1, oln s ++ ocmd g "return")
+aux g s@(AwaitInp _ ext) = (1, p')
     where
         p' = oln s ++
              (ocmd g $ "_ceu_mem->_trails[" ++ trl ++ "].evt" ++ " = " ++ evt) ++
@@ -73,11 +73,11 @@ aux g s@(AwaitExt _ ext) = (1, p')
              (ocmd z $ "case " ++ lbl)
         trl = show $ trail g
         evt = "CEU_INPUT_" ++ ext
-        lbl = label s ("AwaitExt_" ++ ext)
+        lbl = label s ("AwaitInp_" ++ ext)
 
 aux g s@(EmitExt _ ext exp) = (1, p')
     where
-        p' = oln s ++ (ocmd g $ "CEU_OUTPUT_" ++ ext ++ "(" ++ exp' ++ ")")
+        p' = oln s ++ (ocmd g $ "ceu_callback_output_" ++ ext ++ "(" ++ exp' ++ ")")
         exp' = case exp of
             Nothing  -> ""
             (Just v) -> expr v

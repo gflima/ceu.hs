@@ -1,3 +1,5 @@
+module Ceu.Code.Template where
+
 import Text.Parsec              (parse)
 import Text.Parsec.Error        (ParseError)
 import Text.Parsec.Prim         (many, try, (<|>))
@@ -31,6 +33,7 @@ render keyvals src =
         aux [] [(txt,_)] = txt                  -- NOTE-1: last key whole is empty
         aux ((key,val):l1) ((txt,key'):l2)
             | key==key' = txt ++ val ++ (aux l1 l2)
+        --aux a b = error $ (show a)++(show b)
 
 main = do
     src     <- return "aaa <<< k1 >>> bbb <<< k2 >>><<< k3 >>> ccc"
