@@ -18,12 +18,12 @@ stmt n (Var src id p) =
         (n',p') = stmt (n+1) p
 
 stmt n (Inp src id p) =
-    (n', Var All{source=src,n=n} id p')
+    (n', Inp All{source=src,n=n} id p')
     where
         (n',p') = stmt (n+1) p
 
 stmt n (Out src id p) =
-    (n', Var All{source=src,n=n} id p')
+    (n', Out All{source=src,n=n} id p')
     where
         (n',p') = stmt (n+1) p
 
@@ -79,4 +79,5 @@ stmt n p = error (show p)
 -------------------------------------------------------------------------------
 
 expr :: Int -> (Exp Source) -> (Int, Exp All)
-expr n (Const src v) = (n+1, Const All{source=src,n=n} v)
+expr n (Const src v)  = (n+1, Const All{source=src,n=n} v)
+expr n (Read  src id) = (n+1, Read  All{source=src,n=n} id)

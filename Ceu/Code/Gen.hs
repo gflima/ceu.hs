@@ -9,28 +9,52 @@ import qualified Ceu.Code.N as N
 
 -------------------------------------------------------------------------------
 
-data State = State { spc   :: String
-                   , traps :: [Stmt All]
-                   , vars  :: [Stmt All]
-                   , trail :: Int
-                   } -- deriving (Show)   
+data Down = Down { spc     :: String
+                 , traps   :: [Stmt All]
+                 , vars    :: [Stmt All]
+                 , trail_0 :: Int
+                 } -- deriving (Show)
 
-z :: State
-z = State { spc   = ""
-          , vars  = []
-          , traps = []
-          , trail = 0
-          }
+dnz :: Down
+dnz = Down { spc     = ""
+           , vars    = []
+           , traps   = []
+           , trail_0 = 0
+           }
 
-gind :: State -> State
-gind g = g{ spc=(spc g)++"  " }
+dn_spc :: Down -> Down
+dn_spc g = g{ spc=(spc g)++"  " }
 
 -------------------------------------------------------------------------------
 
-ocmd :: State -> String -> String
+data Up = Up { labels   :: [String]
+             , trails_n :: Int
+             , code     :: String
+             }
+    deriving Show
+
+upz :: Up
+upz = Up { labels   = []
+         , trails_n = 1
+         , code     = ""
+         }
+
+up_union_max :: Up -> Up -> Up
+up_union_max u1 u2 = upz { labels   = (labels u1) ++ (labels u2)
+                         , trails_n = max (trails_n u1) (trails_n u2)
+                         }
+
+up_union_sum :: Up -> Up -> Up
+up_union_sum u1 u2 = upz { labels   = (labels u1) ++ (labels u2)
+                         , trails_n = (trails_n u1) + (trails_n u2)
+                         }
+
+-------------------------------------------------------------------------------
+
+ocmd :: Down -> String -> String
 ocmd g str = (spc g) ++ str ++ ";\n"
 
-oblk :: State -> String -> String
+oblk :: Down -> String -> String
 oblk g str = (spc g) ++ "{\n" ++ str ++ (spc g) ++ "}\n"
 
 oln :: Stmt All -> String
@@ -42,70 +66,80 @@ oln p = "#line " ++ (show ln) ++ ['"'] ++ file ++ ['"'] ++ comm ++ "\n"
 -------------------------------------------------------------------------------
 
 expr :: Exp ann -> String
-expr (Const _ n) = show n
+expr (Const _ n)  = show n
+expr (Read  _ id) = "CEU_APP.root."++id
 
 -------------------------------------------------------------------------------
 
 label :: Stmt All -> String -> String
 label s lbl = "CEU_LABEL_" ++ (show $ toN s) ++ "_" ++ lbl
 
-stmt :: Stmt Source -> String
-stmt p = snd $ aux (gind z) (N.add p) --(traceShowId p)
+stmt :: Stmt Source -> [(String,String)]
+stmt p = [ ("CEU_LABELS", concat$labels up)
+         , ("CEU_CODES",  code up)
+         ] where
+    up = aux (dn_spc dnz) (N.add p)
 
-aux :: State -> Stmt All -> (Int,String)
+aux :: Down -> Stmt All -> Up
 
-aux g s@(Nop   _)         = (1, oln s)
-aux g s@(Var   _ var p)   = aux g{vars=s:(vars g)} p
-aux g s@(Write _ var exp) = (1, oln s ++ (ocmd g $ "CEU_APP.root." ++ var ++ " = " ++ (expr exp)))
-
-aux g (Seq _ p1 p2) = (max t1 t2, p1'++p2')
+aux g s@(Nop   _)         = upz { code=(oln s) }
+aux g s@(Var   _ var p)   = aux g p
+aux g s@(Inp   _ var p)   = aux g p
+aux g s@(Out   _ var p)   = aux g p
+aux g s@(Write _ var exp) = upz { code=src }
     where
-        (t1,p1') = aux g p1
-        (t2,p2') = aux g p2
+        src = (oln s ++ (ocmd g $ "CEU_APP.root." ++ var ++ " = " ++ (expr exp)))
 
-aux g s@(AwaitInp _ "FOREVER") = (1, oln s ++ ocmd g "return")
-aux g s@(AwaitInp _ ext) = (1, p')
+aux g (Seq _ p1 p2) = (up_union_max p1' p2') { code=(code p1')++(code p2') }
     where
-        p' = oln s ++
+        p1' = aux g p1
+        p2' = aux g p2
+
+aux g s@(AwaitInp _ "FOREVER") = upz { code=(oln s ++ ocmd g "return 0") }
+aux g s@(AwaitInp _ ext) = upz { labels=[lbl], code=src }
+    where
+        src = oln s ++
              (ocmd g $ "_ceu_mem->_trails[" ++ trl ++ "].evt" ++ " = " ++ evt) ++
              (ocmd g $ "_ceu_mem->_trails[" ++ trl ++ "].lbl" ++ " = " ++ lbl) ++
-             (ocmd g $ "return") ++
-             (ocmd z $ "case " ++ lbl)
-        trl = show $ trail g
+             (ocmd g $ "return 0") ++
+             (ocmd dnz $ "case " ++ lbl)
+        trl = show $ trail_0 g
         evt = "CEU_INPUT_" ++ ext
         lbl = label s ("AwaitInp_" ++ ext)
 
-aux g s@(EmitExt _ ext exp) = (1, p')
+aux g s@(EmitExt _ ext exp) = upz { code=src }
     where
-        p' = oln s ++ (ocmd g $ "ceu_callback_output_" ++ ext ++ "(" ++ exp' ++ ")")
+        src = oln s ++ (ocmd g $ "ceu_callback_output_" ++ ext ++ "(" ++ exp' ++ ")")
         exp' = case exp of
             Nothing  -> ""
             (Just v) -> expr v
 
-aux g s@(If _ exp p1 p2) = (max t1 t2, p')
+aux g s@(If _ exp p1 p2) = (up_union_max p1' p2') { code=src }
     where
-        (t1,p1') = aux (gind g) p1
-        (t2,p2') = aux (gind g) p2
-        p' = oln s ++
-             spc g ++ "if (" ++ expr exp ++ ")\n" ++ oblk g p1' ++
-             spc g ++ "else\n" ++ oblk g p2'
+        p1' = aux (dn_spc g) p1
+        p2' = aux (dn_spc g) p2
+        src = oln s ++
+              spc g ++ "if (" ++ expr exp ++ ")\n" ++ oblk g (code p1') ++
+              spc g ++ "else\n" ++ oblk g (code p2')
 
-aux g s@(Loop _ p) = (t, p'')
+aux g s@(Loop _ p) = p' { code=src }
     where
-        p'' = oln s ++ spc g ++ "for (;;)\n" ++ (oblk g p')
-        (t, p') = aux (gind g) p
+        p'  = aux (dn_spc g) p
+        src = oln s ++ spc g ++ "for (;;)\n" ++ (oblk g (code p'))
 
-aux g s@(Par _ p1 p2) = (t1+t2, p')
+aux g s@(Par _ p1 p2) = (up_union_sum p1' p2') { code=src }
     where
-        p' = oln s ++ oblk g p1' ++ oblk g p2'
-        (t1,p1') = aux (gind g) p1
-        (t2,p2') = aux (gind g{trail=(trail g)+t1}) p2
+        p1' = aux (dn_spc g) p1
+        p2' = aux (dn_spc g{trail_0=(trail_0 g)+(trails_n p1')}) p2
+        src = "TODO" --oln s ++ oblk g (code p1') ++ oblk g (code p2')
 
-aux g s@(Trap _ p) = (t, p'')
+aux g s@(Trap _ p) = p' { labels=lbl:(labels p'), code=src }
     where
-        p'' = oln s ++ (ocmd z $ oblk g p' ++ "case " ++ (label s "Trap") ++ ":")
-        (t, p') = aux g' p
-        g' = gind g{ traps = s:(traps g) }
+        p'  = aux g' p
+        src = oln s ++ (ocmd dnz $ oblk g (code p') ++ "case " ++ lbl ++ ":")
+        g'  = dn_spc g{ traps = s:(traps g) }
+        lbl = label s "Trap"
 
-aux g s@(Escape _ k) = (1, oln s ++
-                           (ocmd g $ "CEU_GOTO(" ++ (label ((traps g)!!k) "Trap") ++ ")"))
+aux g s@(Escape _ k) = upz { code=src }
+    where
+        src = oln s ++ (ocmd g $ "CEU_GOTO(" ++ (label ((traps g)!!k) "Trap") ++ ")")

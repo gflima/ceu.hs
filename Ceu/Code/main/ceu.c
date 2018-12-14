@@ -150,7 +150,7 @@ enum {
 enum {
     CEU_LABEL_NONE = 0,
     CEU_LABEL_ROOT = 1,
-    <<< CEU_LABELS >>>
+    CEU_LABEL_4_Trap
 };
 
 /*****************************************************************************/
@@ -267,7 +267,17 @@ _CEU_LBL_:
         case CEU_LABEL_NONE:
             break;
         case CEU_LABEL_ROOT:;
-        <<< CEU_CODES >>>
+        #line 1"" // trap
+  {
+#line 3"" // emit
+    ceu_callback_output_PRINT(10);
+#line 5"" // await
+    return 0;
+  }
+case CEU_LABEL_4_Trap:;
+#line 1"" // await
+  return 0;
+
     }
     //ceu_assert(0, "unreachable code");
     return 0;
