@@ -61,11 +61,11 @@ spec = do
 
       it "var x" $ do
         compile' (False,True) (Var () "x" Nothing)
-        `shouldBe` (["trap: terminating `trap` body","trap: missing `escape` statement","await: unreachable statement"], G.Var () "_ret" (G.Seq () (G.Trap () (G.Var () "x" (G.Nop ()))) (G.AwaitInp () "FOREVER")))
+        `shouldBe` (["trap: terminating `trap` body","trap: missing `escape` statement","await: unreachable statement"], G.Inp () "FOREVER" (G.Inp () "TIMER" (G.Var () "_ret" (G.Seq () (G.Trap () (G.Var () "x" (G.Nop ()))) (G.AwaitInp () "FOREVER")))))
 
       it "var x" $ do
         compile' (True,True) (Var () "x" Nothing)
-        `shouldBe` (["trap: terminating `trap` body","trap: missing `escape` statement","await: unreachable statement"], G.Var () "_ret" (G.AwaitInp () "FOREVER"))
+        `shouldBe` (["trap: terminating `trap` body","trap: missing `escape` statement","await: unreachable statement"], G.Inp () "FOREVER" (G.Inp () "TIMER" (G.Var () "_ret" (G.AwaitInp () "FOREVER"))))
 
     describe "int:" $ do
       it "int x" $ do
@@ -107,7 +107,7 @@ spec = do
 
       it "scope escape 1 end" $ do
         compile' (False,True) (Scope () (Escape () Nothing (Just (Const () 1))))
-        `shouldBe` ([],G.Var () "_ret" (G.Seq () (G.Trap () (G.Seq () (G.Write () "_ret" (Const () 1)) (G.Escape () 0))) (G.AwaitInp () "FOREVER")))
+        `shouldBe` ([],G.Inp () "FOREVER" (G.Inp () "TIMER" (G.Var () "_ret" (G.Seq () (G.Trap () (G.Seq () (G.Write () "_ret" (Const () 1)) (G.Escape () 0))) (G.AwaitInp () "FOREVER")))))
 
   --------------------------------------------------------------------------
   describe "Trap.compile" $ do
@@ -214,7 +214,7 @@ spec = do
 
     it "spawn nop; nop" $ do
       compile' (False,False) (Seq () (Spawn () (Nop ())) (Nop ()))
-      `shouldBe` (["nop: terminating `spawn`"], G.Trap () (G.Par () (G.Seq () (G.Nop ()) (G.AwaitInp () "FOREVER")) (G.Seq () (G.Nop ()) (G.Escape () 0))))
+      `shouldBe` (["nop: terminating `spawn`","await: identifier 'FOREVER' is not declared"], G.Trap () (G.Par () (G.Seq () (G.Nop ()) (G.AwaitInp () "FOREVER")) (G.Seq () (G.Nop ()) (G.Escape () 0))))
 
     it "spawn awaitFor; nop" $ do
       Spawn.compile (Seq () (Spawn () (AwaitFor ())) (Nop ()))
@@ -232,24 +232,24 @@ spec = do
     it "(or nop awaitFor)" $ do
       ParAndOr.compile (Or () (Nop ()) (AwaitFor ())) `shouldBe` ([], (Clean' () "Or" (Trap' () (Par' () (Seq () (Nop ()) (Escape' () 0)) (Seq () (AwaitFor ()) (Escape' () 0))))))
     it "(or nop awaitFor)" $ do
-      (compile' (False,False) (Or () (Nop ()) (AwaitFor ()))) `shouldBe` ([], (G.Trap () (G.Par () (G.Seq () (G.Nop ()) (G.Escape () 0)) (G.AwaitInp () "FOREVER"))))
+      (compile' (False,False) (Or () (Nop ()) (AwaitFor ()))) `shouldBe` (["await: identifier 'FOREVER' is not declared"], (G.Trap () (G.Par () (G.Seq () (G.Nop ()) (G.Escape () 0)) (G.AwaitInp () "FOREVER"))))
     it "(and nop (and nop nop))" $ do
       (compile' (False,False) (And () (Nop ()) (And () (Nop ()) (Nop ())))) `shouldBe` ([], G.Seq () (G.Nop ()) (G.Seq () (G.Nop ()) (G.Nop ())))
     it "par for par for par for" $ do
-      (compile' (True,False) (Par () (AwaitFor ()) (Par () (AwaitFor ()) (AwaitFor ()))))
-      `shouldBe` ([], G.AwaitInp () "FOREVER")
+      (compile' (True,False) (Seq () (Inp () "FOREVER" False) (Par () (AwaitFor ()) (Par () (AwaitFor ()) (AwaitFor ())))))
+      `shouldBe` ([], G.Inp () "FOREVER" (G.AwaitInp () "FOREVER"))
     it "or nop or nop or for" $ do
       (compile' (True,False) (Or () (Nop ()) (Or () (Nop ()) (AwaitFor ()))))
-      `shouldBe` ([], G.Nop ())
+      `shouldBe` (["await: identifier 'FOREVER' is not declared"], G.Nop ())
     it "and nop and nop and nop" $ do
       (compile' (True,False) (And () (Nop ()) (And () (Nop ()) (Nop ()))))
       `shouldBe` ([], G.Nop ())
     it "(loop break) ; await X and nop" $ do
-      (compile' (True,True) (And () (Seq () (Loop () (Break ())) (AwaitInp () "X" Nothing)) (Nop ())))
-      `shouldBe` (["trap: terminating `trap` body","trap: missing `escape` statement","loop: `loop` never iterates","await: unreachable statement"], G.Var () "_ret" (G.Seq () (G.Trap () (G.Trap () (G.Var () "__and" (G.Seq () (G.Write () "__and" (Const () 0)) (G.Par () (G.Seq () (G.AwaitInp () "X") (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.AwaitInp () "FOREVER")))) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.AwaitInp () "FOREVER")))))))) (G.AwaitInp () "FOREVER")))
+      (compile' (True,True) (And () (Seq () (Loop () (Break ())) (Seq () (Inp () "X" False) (AwaitInp () "X" Nothing))) (Nop ())))
+      `shouldBe` (["trap: terminating `trap` body","trap: missing `escape` statement","loop: `loop` never iterates","await: unreachable statement"], G.Inp () "FOREVER" (G.Inp () "TIMER" (G.Var () "_ret" (G.Seq () (G.Trap () (G.Trap () (G.Var () "__and" (G.Seq () (G.Write () "__and" (Const () 0)) (G.Par () (G.Seq () (G.Inp () "X" (G.AwaitInp () "X")) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.AwaitInp () "FOREVER")))) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.AwaitInp () "FOREVER")))))))) (G.AwaitInp () "FOREVER")))))
     it "(loop break) ; await X and nop" $ do
       (compile' (False,True) (Seq () (And () (Seq () (Loop () (Break ())) (AwaitInp () "X" Nothing)) (Nop ())) (Escape () Nothing (Just (Const () 1))) ))
-      `shouldBe` (["loop: `loop` never iterates"], G.Var () "_ret" (G.Seq () (G.Trap () (G.Seq () (G.Trap () (G.Var () "__and" (G.Seq () (G.Write () "__and" (Const () 0)) (G.Par () (G.Seq () (G.Seq () (G.Trap () (G.Loop () (G.Escape () 0))) (G.AwaitInp () "X")) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.AwaitInp () "FOREVER")))) (G.Seq () (G.Nop ()) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.AwaitInp () "FOREVER")))))))) (G.Seq () (G.Write () "_ret" (Const () 1)) (G.Escape () 0)))) (G.AwaitInp () "FOREVER")))
+      `shouldBe` (["loop: `loop` never iterates","await: identifier 'X' is not declared"], G.Inp () "FOREVER" (G.Inp () "TIMER" (G.Var () "_ret" (G.Seq () (G.Trap () (G.Seq () (G.Trap () (G.Var () "__and" (G.Seq () (G.Write () "__and" (Const () 0)) (G.Par () (G.Seq () (G.Seq () (G.Trap () (G.Loop () (G.Escape () 0))) (G.AwaitInp () "X")) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.AwaitInp () "FOREVER")))) (G.Seq () (G.Nop ()) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.AwaitInp () "FOREVER")))))))) (G.Seq () (G.Write () "_ret" (Const () 1)) (G.Escape () 0)))) (G.AwaitInp () "FOREVER")))))
 
   --------------------------------------------------------------------------
   describe "(Break ()).compile" $ do
@@ -260,15 +260,15 @@ spec = do
 
     it "loop (or break FOR)" $ do
       compile' (False,False) (Loop () (Or () (Break ()) (AwaitFor ())))
-      `shouldBe` (["trap: no trails terminate","loop: `loop` never iterates"], (G.Trap () (G.Loop () (G.Par () (G.Escape () 0) (G.AwaitInp () "FOREVER")))))
+      `shouldBe` (["trap: no trails terminate","loop: `loop` never iterates","await: identifier 'FOREVER' is not declared"], (G.Trap () (G.Loop () (G.Par () (G.Escape () 0) (G.AwaitInp () "FOREVER")))))
 
     it "loop (par break FOR)" $ do
       compile' (False,False) (Loop () (Par () (Break ()) (AwaitFor ())))
-      `shouldBe` (["loop: `loop` never iterates"], (G.Trap () (G.Loop () (G.Par () (G.Escape () 0) (G.AwaitInp () "FOREVER")))))
+      `shouldBe` (["loop: `loop` never iterates","await: identifier 'FOREVER' is not declared"], (G.Trap () (G.Loop () (G.Par () (G.Escape () 0) (G.AwaitInp () "FOREVER")))))
 
     it "loop (and break FOR)" $ do
       compile' (False,False) (Loop () (And () (Break ()) (AwaitFor ())))
-      `shouldBe` (["escape: trail must terminate","await: trail must terminate","await: unreachable statement","loop: `loop` never iterates"],G.Trap () (G.Loop () (G.Seq () (G.Escape () 0) (G.AwaitInp () "FOREVER"))))
+      `shouldBe` (["escape: trail must terminate","await: trail must terminate","await: unreachable statement","loop: `loop` never iterates","await: identifier 'FOREVER' is not declared"],G.Trap () (G.Loop () (G.Seq () (G.Escape () 0) (G.AwaitInp () "FOREVER"))))
 
   --------------------------------------------------------------------------
   describe "Forever.compile" $ do
@@ -292,30 +292,30 @@ spec = do
       `shouldBe` ([], (G.Var () "x" (G.Write () "x" (Const () 1))))
 
     it "spawn do await A; end ;; await B; var x; await FOREVER;" $ do
-      compile' (False,False) (Seq () (Spawn () (AwaitInp () "A" Nothing)) (Seq () (AwaitInp () "B" Nothing) (Var' () "x" Nothing (AwaitFor ()))))
-      `shouldBe` (["await: terminating `spawn`"], (G.Par () (G.Seq () (G.AwaitInp () "A") (G.AwaitInp () "FOREVER")) (G.Seq () (G.AwaitInp () "B") (G.Var () "x" (G.AwaitInp () "FOREVER")))))
+      compile' (False,False) (Seq () (Inp () "FOREVER" False) (Seq () (Inp () "A" False) (Seq () (Inp () "B" False) (Seq () (Spawn () (AwaitInp () "A" Nothing)) (Seq () (AwaitInp () "B" Nothing) (Var' () "x" Nothing (AwaitFor ())))))))
+      `shouldBe` (["await: terminating `spawn`"], G.Inp () "FOREVER" (G.Inp () "A" (G.Inp () "B" (G.Par () (G.Seq () (G.AwaitInp () "A") (G.AwaitInp () "FOREVER")) (G.Seq () (G.AwaitInp () "B") (G.Var () "x" (G.AwaitInp () "FOREVER")))))))
 
     it "spawn do async ret++ end ;; await F;" $ do
-      compile' (False,False) (Seq () (Spawn () (Async () (Loop () (Write () "x" (Add () (Read () "x") (Const () 1)))))) (AwaitInp () "A" Nothing))
-      `shouldBe` (["assignment: identifier 'x' is not declared","read access to 'x': identifier 'x' is not declared"], (G.Trap () (G.Par () (G.Loop () (G.Seq () (G.Write () "x" (Add () (Read () "x") (Const () 1))) (G.AwaitInp () "ASYNC"))) (G.Seq () (G.AwaitInp () "A") (G.Escape () 0)))))
+      compile' (False,False) (Seq () (Inp () "FOREVER" False) (Seq () (Inp () "ASYNC" False) (Seq () (Inp () "A" False) (Seq () (Spawn () (Async () (Loop () (Write () "x" (Add () (Read () "x") (Const () 1)))))) (AwaitInp () "A" Nothing)))))
+      `shouldBe` (["assignment: identifier 'x' is not declared","read access to 'x': identifier 'x' is not declared"], (G.Inp () "FOREVER" (G.Inp () "ASYNC" (G.Inp () "A" (G.Trap () (G.Par () (G.Loop () (G.Seq () (G.Write () "x" (Add () (Read () "x") (Const () 1))) (G.AwaitInp () "ASYNC"))) (G.Seq () (G.AwaitInp () "A") (G.Escape () 0))))))))
 
     it "trap terminates" $ do
       compile' (False,False) (Or () (Trap' () (Escape' () 0)) (AwaitFor ()))
-      `shouldBe` ([], (G.Trap () (G.Par () (G.Seq () (G.Trap () (G.Escape () 0)) (G.Escape () 0)) (G.AwaitInp () "FOREVER"))))
+      `shouldBe` (["await: identifier 'FOREVER' is not declared"], (G.Trap () (G.Par () (G.Seq () (G.Trap () (G.Escape () 0)) (G.Escape () 0)) (G.AwaitInp () "FOREVER"))))
 
     it "removes unused trap" $ do
-      compile' (False,False) (Seq () (Fin () (Nop ()) (Nop ()) (Nop ())) (AwaitFor ()))
-      `shouldBe` ([], (G.Par () (G.AwaitInp () "FOREVER") (G.Par () (G.AwaitInp () "FOREVER") (G.Fin () (G.Nop ())))))
+      compile' (False,False) (Seq () (Inp () "FOREVER" False) (Seq () (Fin () (Nop ()) (Nop ()) (Nop ())) (AwaitFor ())))
+      `shouldBe` ([], G.Inp () "FOREVER" (G.Par () (G.AwaitInp () "FOREVER") (G.Par () (G.AwaitInp () "FOREVER") (G.Fin () (G.Nop ())))))
 
     it "nested or/or/fin" $ do
       compile' (False,False)
-        (Or ()
+        (Seq () (Inp () "FOREVER" False) (Or ()
           (AwaitFor ())
           (Or ()
             (Seq () (Fin () (Nop ()) (Nop ()) (Nop ())) (AwaitFor ()))
-            (Nop ())))
+            (Nop ()))))
       `shouldBe`
-        ([], G.Trap ()
+        ([], (G.Inp () "FOREVER" (G.Trap ()
           (G.Par ()
             (G.AwaitInp () "FOREVER")
             (G.Seq ()
@@ -325,7 +325,7 @@ spec = do
                     (G.AwaitInp () "FOREVER")
                     (G.Par () (G.AwaitInp () "FOREVER") (G.Fin () (G.Nop ()))))
                   (G.Seq () (G.Nop ()) (G.Escape () 0))))
-              (G.Escape () 0))))
+              (G.Escape () 0))))))
 
   --------------------------------------------------------------------------
   describe "misc" $ do
@@ -475,18 +475,22 @@ end
 -}
     -- TODO: OK
     evalFullProgItLeft ["varsRead: uninitialized variable: _A"] [("A",Nothing)]
+      (Seq () (Inp () "F" False)
+      (Seq () (Inp () "A" False)
       (Var' () "ret" Nothing
         (Seq ()
           (Or ()
             (Every () "A" (Just "ret") (Nop ()))
             (AwaitInp () "F" Nothing))
-          (Escape () Nothing (Just (Read () "ret")))))
+          (Escape () Nothing (Just (Read () "ret")))))))
 
     evalFullProgItRight (99,[[],[],[],[]]) [("A",Just 1),("A",Just 99),("F",Just 2)]
+      (Seq () (Inp () "A" True)
+      (Seq () (Inp () "F" True)
       (Var' () "ret" Nothing
         (Par ()
           (Every () "A" (Just "ret") (Nop ()))
-          (Seq () (AwaitInp () "F" Nothing) (Escape () Nothing (Just (Read () "ret"))))))
+          (Seq () (AwaitInp () "F" Nothing) (Escape () Nothing (Just (Read () "ret"))))))))
 
   describe "timers" $ do
 
@@ -534,14 +538,14 @@ end
     evalFullProgItRight
       (10,[[],[("B",Just 1),("A",Just 1),("A",Just 2)],[("B",Just 2),("C",Just 1)]])
       [("TIMER",Just 10),("TIMER",Just 11)]
-      (Seq ()
+      (Seq () (Inp () "A" False) (Seq () (Inp () "B" False) (Seq () (Inp () "C" True) (Seq ()
         (And ()
           ((AwaitTmr () (Const () 5)) `sSeq` (EmitExt () "A" (Just (Const () 1))) `sSeq` (AwaitTmr () (Const () 5)) `sSeq` (EmitExt () "A" (Just (Const () 2))))
           ((AwaitTmr () (Const () 4)) `sSeq` (EmitExt () "B" (Just (Const () 1))) `sSeq` (AwaitTmr () (Const () 7) `sSeq` (EmitExt () "B" (Just (Const () 2))))))
         (
           (AwaitTmr () (Const () 10))          `sSeq`
           (EmitExt () "C" (Just (Const () 1))) `sSeq`
-          (Escape () Nothing (Just (Const () 10)))))
+          (Escape () Nothing (Just (Const () 10))))))))
 
     it "xxx" $
         evalFullProg
@@ -568,10 +572,10 @@ end
   describe "outputs" $ do
 
     evalFullProgItRight (1,[[],[("O",Just 1)],[("O",Just 2)],[]]) [("I",Just 1),("I",Just 2),("F",Nothing)]
-      (Var' () "i" Nothing
+      (Seq () ((Inp () "I" True) `sSeq` (Inp () "F" False) `sSeq` (Out () "O" True)) (Var' () "i" Nothing
         (Par ()
           (Seq () (AwaitInp () "F" Nothing) (Escape () Nothing (Just (Const () 1))))
-          (Every () "I" (Just "i") (EmitExt () "O" (Just (Read () "i"))))))
+          (Every () "I" (Just "i") (EmitExt () "O" (Just (Read () "i")))))))
 
   describe "pause" $ do
 
@@ -579,24 +583,24 @@ end
       (Evt' () "x" True (Pause () "x" (Escape () Nothing (Just (Const () 99)))))
 
     evalFullProgItRight (99,[[]]) []
-      (Par ()
+      (Seq () ((Inp () "X" True) `sSeq` (Inp () "A" False)) (Par ()
         (Seq () (AwaitInp () "X" Nothing) (Escape () Nothing (Just (Const () 33))))
         (Evt' () "x" True
           (Pause () "x"
             (Seq ()
               (EmitEvt () "x" (Just (Const () 1)))
-              (Escape () Nothing (Just (Const () 99)))))))
+              (Escape () Nothing (Just (Const () 99))))))))
 
     evalFullProgItRight (99,[[],[],[],[],[]]) [("X",(Just 1)),("A",Nothing),("X",(Just 0)),("A",Nothing)]
-      (Seq ()
+      (Seq () ((Inp () "X" True) `sSeq` (Inp () "A" False)) (Seq ()
         (Pause () "X" (AwaitInp () "A" Nothing))
-        (Escape () Nothing (Just (Const () 99))))
+        (Escape () Nothing (Just (Const () 99)))))
 
     evalFullProgItRight (99,[[],[("P",Nothing)],[]]) [("X",Just 1),("E",Nothing)]
-      (Par ()
+      (Seq () ((Inp () "X" True) `sSeq` (Inp () "E" False) `sSeq` (Out () "P" False)) (Par ()
         (Pause () "X"
           (Seq () (Fin () (Nop ()) (EmitExt () "P" Nothing) (Nop ())) (AwaitFor ())))
-        (Seq () (AwaitInp () "E" Nothing) (Escape () Nothing (Just (Const () 99)))))
+        (Seq () (AwaitInp () "E" Nothing) (Escape () Nothing (Just (Const () 99))))))
 
 {-
 pause/if X with
@@ -612,7 +616,7 @@ end
 -}
     it "pause" $
         evalFullProg
-            (Seq () ((Out () "F" False) `sSeq` (Out () "P" False) `sSeq` (Out () "R" False))
+            (Seq () ((Inp () "X" True) `sSeq` (Inp () "E" False) `sSeq` (Out () "F" False) `sSeq` (Out () "P" False) `sSeq` (Out () "R" False))
             (Seq ()
                 (Pause () "X"
                     (Var' () "x" (Just ((EmitExt () "F" Nothing),(EmitExt () "P" Nothing),(EmitExt () "R" Nothing)))

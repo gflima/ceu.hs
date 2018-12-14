@@ -83,7 +83,8 @@ errUndeclaredInvalid ids (id,use) pred =
 -------------------------------------------------------------------------------
 
 expr :: (Ann ann) => [Stmt ann] -> Exp ann -> Errors
-expr ids e@(Read _ id) = errUndeclaredInvalid ids (id,e) isVar
+expr ids e@(Read _ id) = if (map toUpper id) == id then [] else -- payload of input events (eg, _X)
+                            errUndeclaredInvalid ids (id,e) isVar
 expr ids (Umn _ e)      = expr ids e
 expr ids (Add _ e1 e2)  = (expr ids e1) ++ (expr ids e2)
 expr ids (Sub _ e1 e2)  = (expr ids e1) ++ (expr ids e2)
