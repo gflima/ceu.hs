@@ -1,5 +1,6 @@
 #define ceu_callback_output_LED(v) digitalWrite(13, v)
 #define ceu_callback_output_PRINT(v) printf("%d\n", v)
+int _CEU_INPUT_PAYLOAD;
 
 #include <stddef.h>     /* offsetof */
 #include <stdlib.h>     /* NULL */
@@ -121,7 +122,8 @@ CEU_INPUT__PRIM,
     CEU_INPUT__WCLOCK,
 
 //CEU_INPUT__MIN,
-    //<|< CEU_EXTS_ENUM_INPUT >|>
+    /* CEU_INPS */
+<<< CEU_INPS >>>
 //CEU_INPUT__MAX,
 
 CEU_EVENT__MIN,

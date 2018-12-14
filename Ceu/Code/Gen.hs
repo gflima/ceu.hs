@@ -28,6 +28,7 @@ dn_spc g = g{ spc=(spc g)++"  " }
 -------------------------------------------------------------------------------
 
 data Up = Up { labels   :: [String]
+             , inps     :: [String]
              , trails_n :: Int
              , code     :: String
              }
@@ -35,6 +36,7 @@ data Up = Up { labels   :: [String]
 
 upz :: Up
 upz = Up { labels   = []
+         , inps     = []
          , trails_n = 1
          , code     = ""
          }
@@ -67,7 +69,7 @@ oln p = "#line " ++ (show ln) ++ ['"'] ++ file ++ ['"'] ++ comm ++ "\n"
 
 expr :: Exp ann -> String
 expr (Const _ n)  = show n
-expr (Read  _ id) = "CEU_APP.root."++id
+expr (Read  _ id) = if id == "_CEU_INPUT_PAYLOAD" then id else "CEU_APP.root."++id
 
 -------------------------------------------------------------------------------
 
@@ -75,7 +77,8 @@ label :: Stmt All -> String -> String
 label s lbl = "CEU_LABEL_" ++ (show $ toN s) ++ "_" ++ lbl
 
 stmt :: Stmt Source -> [(String,String)]
-stmt p = [ ("CEU_LABELS", concat$labels up)
+stmt p = [ ("CEU_INPS",   concat $ map (\inp->"    CEU_INPUT_"++inp++",\n") $ inps up)
+         , ("CEU_LABELS", concat$labels up)
          , ("CEU_CODES",  code up)
          ] where
     up = aux (dn_spc dnz) (N.add p)
@@ -83,9 +86,9 @@ stmt p = [ ("CEU_LABELS", concat$labels up)
 aux :: Down -> Stmt All -> Up
 
 aux g s@(Nop   _)         = upz { code=(oln s) }
-aux g s@(Var   _ var p)   = aux g p
-aux g s@(Inp   _ var p)   = aux g p
-aux g s@(Out   _ var p)   = aux g p
+aux g s@(Var   _ id p)   = aux g p
+aux g s@(Inp   _ id p)   = p' { inps=id:(inps p') } where p'=(aux g p)
+aux g s@(Out   _ id p)   = aux g p
 aux g s@(Write _ var exp) = upz { code=src }
     where
         src = (oln s ++ (ocmd g $ "CEU_APP.root." ++ var ++ " = " ++ (expr exp)))
