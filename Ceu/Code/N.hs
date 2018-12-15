@@ -79,5 +79,11 @@ stmt n p = error (show p)
 -------------------------------------------------------------------------------
 
 expr :: Int -> (Exp Source) -> (Int, Exp All)
-expr n (Const src v)  = (n+1, Const All{source=src,n=n} v)
-expr n (Read  src id) = (n+1, Read  All{source=src,n=n} id)
+expr n (Const src v)     = (n+1, Const All{source=src,n=n} v)
+expr n (Read  src id)    = (n+1, Read  All{source=src,n=n} id)
+expr n (Equ   src e1 e2) = (n2', Equ All{source=src,n=n} e1' e2') where
+                            (n1',e1') = expr (n+1) e1
+                            (n2',e2') = expr (n+1) e2
+expr n (Add   src e1 e2) = (n2', Add All{source=src,n=n} e1' e2') where
+                            (n1',e1') = expr (n+1) e1
+                            (n2',e2') = expr (n+1) e2

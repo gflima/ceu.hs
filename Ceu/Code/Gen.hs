@@ -41,15 +41,17 @@ upz = Up { labels   = []
          , code     = ""
          }
 
+up_union :: Up -> Up -> Up
+up_union u1 u2 = upz { labels = (labels u1) ++ (labels u2)
+                     , inps   = (inps   u1) ++ (inps   u2)
+                     , vars   = (vars   u1) ++ (vars   u2)
+                     }
+
 up_union_max :: Up -> Up -> Up
-up_union_max u1 u2 = upz { labels   = (labels u1) ++ (labels u2)
-                         , trails_n = max (trails_n u1) (trails_n u2)
-                         }
+up_union_max u1 u2 = (up_union u1 u2) { trails_n = max (trails_n u1) (trails_n u2) }
 
 up_union_sum :: Up -> Up -> Up
-up_union_sum u1 u2 = upz { labels   = (labels u1) ++ (labels u2)
-                         , trails_n = (trails_n u1) + (trails_n u2)
-                         }
+up_union_sum u1 u2 = (up_union u1 u2) { trails_n = (trails_n u1) + (trails_n u2) }
 
 -------------------------------------------------------------------------------
 
@@ -60,16 +62,18 @@ oblk :: Down -> String -> String
 oblk g str = (spc g) ++ "{\n" ++ str ++ (spc g) ++ "}\n"
 
 oln :: Stmt All -> String
-oln p = "#line " ++ (show ln) ++ ['"'] ++ file ++ ['"'] ++ comm ++ "\n"
+oln p = "#line " ++ (show ln) ++ " \"" ++ file ++ "\" " ++ comm ++ "\n"
     where
         Just (file,ln,_) = toSource p
-        comm             = " // " ++ (toWord p)
+        comm             = "// " ++ (toWord p)
 
 -------------------------------------------------------------------------------
 
 expr :: Exp ann -> String
-expr (Const _ n)  = show n
-expr (Read  _ id) = if id == "_INPUT" then "_CEU_INPUT" else "CEU_APP.root."++id
+expr (Const _ n)     = show n
+expr (Read  _ id)    = if id == "_INPUT" then "_CEU_INPUT" else "CEU_APP.root."++id
+expr (Equ   _ e1 e2) = (expr e1) ++ " == " ++ (expr e2)
+expr (Add   _ e1 e2) = (expr e1) ++ " + "  ++ (expr e2)
 
 -------------------------------------------------------------------------------
 
@@ -77,12 +81,12 @@ label :: Stmt All -> String -> String
 label s lbl = "CEU_LABEL_" ++ (show $ toN s) ++ "_" ++ lbl
 
 stmt :: Stmt Source -> [(String,String)]
-stmt p = [ ("CEU_INPS",   concat $ map (\inp->"    CEU_INPUT_"++inp++",\n") $ inps up)
-         , ("CEU_LABELS", concat$labels up)
-         , ("CEU_VARS",   concat $ map (\var->"    int "++var++";\n") $ vars up)
+stmt p = [ ("CEU_INPS",   concat $ map (\inp->"    CEU_INPUT_"++inp++",\n") $ inps   up)
+         , ("CEU_LABELS", concat $ map (\lbl->"    "++lbl++",\n")           $ labels up)
+         , ("CEU_VARS",   concat $ map (\var->"    int "++var++";\n")       $ vars   up)
          , ("CEU_CODES",  code up)
          ] where
-    up = aux (dn_spc dnz) (N.add p)
+    up = aux (dn_spc dnz) (N.add $ traceShowId p)
 
 aux :: Down -> Stmt All -> Up
 
@@ -95,7 +99,7 @@ aux g s@(Write _ var exp) = upz { code=src }
     where
         src = (oln s ++ (ocmd g $ "CEU_APP.root." ++ var ++ " = " ++ (expr exp)))
 
-aux g (Seq _ p1 p2) = (up_union_max p1' p2') { code=(code p1')++(code p2') }
+aux g (Seq _ p1 p2) = (up_union_max p1' p2') { code=(code p1'++code p2') }
     where
         p1' = aux g p1
         p2' = aux g p2
@@ -126,16 +130,26 @@ aux g s@(If _ exp p1 p2) = (up_union_max p1' p2') { code=src }
               spc g ++ "if (" ++ expr exp ++ ")\n" ++ oblk g (code p1') ++
               spc g ++ "else\n" ++ oblk g (code p2')
 
-aux g s@(Loop _ p) = p' { code=src }
+aux g s@(Loop _ p) = p' { labels=(labels p'), code=src }
     where
         p'  = aux (dn_spc g) p
         src = oln s ++ spc g ++ "for (;;)\n" ++ (oblk g (code p'))
 
-aux g s@(Par _ p1 p2) = (up_union_sum p1' p2') { code=src }
+aux g s@(Par _ p1 p2) = uni { labels=lbl:(labels uni), code=src }
     where
-        p1' = aux (dn_spc g) p1
-        p2' = aux (dn_spc g{trail_0=(trail_0 g)+(trails_n p1')}) p2
-        src = "TODO" --oln s ++ oblk g (code p1') ++ oblk g (code p2')
+        uni  = up_union_sum p1' p2'
+        src  = oln s ++ oblk g (src0 ++ src1 ++ srcM ++ src2)
+        src0 = (ocmd g' $ "_ceu_mem->_trails[" ++ show trl ++ "].evt.id = CEU_INPUT__STACKED") ++
+               (ocmd g' $ "_ceu_mem->_trails[" ++ show trl ++ "].lbl    = " ++ lbl) ++
+               (ocmd g' $ "_ceu_mem->_trails[" ++ show trl ++ "].level  = _ceu_level")
+        src1 = oblk g' (code p1')
+        srcM = spc g ++ "/* with */\n" ++ (ocmd dnz $ "case " ++ lbl ++ ":")
+        src2 = oblk g' (code p2')
+        g'   = dn_spc g
+        p1'  = aux (dn_spc g') p1
+        p2'  = aux (dn_spc g'{trail_0=trl}) p2
+        trl  = (trail_0 g) + (trails_n p1')
+        lbl  = label s "Par"
 
 aux g s@(Trap _ p) = p' { labels=lbl:(labels p'), code=src }
     where
