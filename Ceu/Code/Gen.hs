@@ -167,9 +167,13 @@ aux g s@(Par _ p1 p2) = uni { labels=lbl:(labels uni), code=src }
 aux g s@(Trap _ p) = p' { labels=lbl:(labels p'), code=src }
     where
         p'  = aux g' p
-        src = oln s ++ (ocmd dnz $ oblk g (code p') ++ "case " ++ lbl ++ ":")
+        src = oln s ++ (ocmd dnz $ oblk g (code p') ++ "case " ++ lbl ++ ":") ++ clr
         g'  = dn_spc g{ traps = s:(traps g) }
         lbl = label s "Trap"
+        clr = oblk g $ spc g' ++ "// clear\n" ++
+              (ocmd g' $ "memset(&_ceu_mem->_trails[" ++ t0 ++ "], 0, " ++ n ++ ")")
+        t0  = show $ trail_0 g
+        n   = (show $ trails_n p') ++ "*sizeof(tceu_trl)"
 
 aux g s@(Escape _ k) = upz { code=src }
     where
