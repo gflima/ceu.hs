@@ -12,12 +12,14 @@ import qualified Ceu.Code.N as N
 data Down = Down { spc     :: String
                  , traps   :: [Stmt All]
                  , trail_0 :: Int
+                 , vars_dn :: [(ID_Var,Int)]
                  } -- deriving (Show)
 
 dnz :: Down
 dnz = Down { spc     = ""
            , traps   = []
            , trail_0 = 0
+           , vars_dn = []
            }
 
 dn_spc :: Down -> Down
@@ -27,7 +29,7 @@ dn_spc g = g{ spc=(spc g)++"  " }
 
 data Up = Up { labels   :: [String]
              , inps     :: [String]
-             , vars     :: [String]
+             , vars_up  :: [String]
              , trails_n :: Int
              , code     :: String
              }
@@ -36,15 +38,15 @@ data Up = Up { labels   :: [String]
 upz :: Up
 upz = Up { labels   = []
          , inps     = []
-         , vars     = []
+         , vars_up  = []
          , trails_n = 1
          , code     = ""
          }
 
 up_union :: Up -> Up -> Up
-up_union u1 u2 = upz { labels = (labels u1) ++ (labels u2)
-                     , inps   = (inps   u1) ++ (inps   u2)
-                     , vars   = (vars   u1) ++ (vars   u2)
+up_union u1 u2 = upz { labels  = (labels  u1) ++ (labels  u2)
+                     , inps    = (inps    u1) ++ (inps    u2)
+                     , vars_up = (vars_up u1) ++ (vars_up u2)
                      }
 
 up_union_max :: Up -> Up -> Up
@@ -69,11 +71,16 @@ oln p = "#line " ++ (show ln) ++ " \"" ++ file ++ "\" " ++ comm ++ "\n"
 
 -------------------------------------------------------------------------------
 
-expr :: Exp ann -> String
-expr (Const _ n)     = show n
-expr (Read  _ id)    = if id == "_INPUT" then "_CEU_INPUT" else "CEU_APP.root."++id
-expr (Equ   _ e1 e2) = (expr e1) ++ " == " ++ (expr e2)
-expr (Add   _ e1 e2) = (expr e1) ++ " + "  ++ (expr e2)
+getVar :: [(ID_Var,Int)] -> ID_Var -> ID_Var
+getVar ((v1,n):l) v2 | v1==v2    = v1++"__"++(show n)
+                     | otherwise = getVar l v1
+
+expr :: [(ID_Var,Int)] -> Exp ann -> String
+expr vars (Const _ n)     = show n
+expr vars (Read  _ id)    = if id == "_INPUT" then "_CEU_INPUT" else
+                                "CEU_APP.root."++(getVar vars id)
+expr vars (Equ   _ e1 e2) = (expr vars e1) ++ " == " ++ (expr vars e2)
+expr vars (Add   _ e1 e2) = (expr vars e1) ++ " + "  ++ (expr vars e2)
 
 -------------------------------------------------------------------------------
 
@@ -81,9 +88,9 @@ label :: Stmt All -> String -> String
 label s lbl = "CEU_LABEL_" ++ (show $ toN s) ++ "_" ++ lbl
 
 stmt :: Stmt Source -> [(String,String)]
-stmt p = [ ("CEU_INPS",   concat $ map (\inp->"    CEU_INPUT_"++inp++",\n") $ inps   up)
-         , ("CEU_LABELS", concat $ map (\lbl->"    "++lbl++",\n")           $ labels up)
-         , ("CEU_VARS",   concat $ map (\var->"    int "++var++";\n")       $ vars   up)
+stmt p = [ ("CEU_INPS",   concat $ map (\inp->"    CEU_INPUT_"++inp++",\n") $ inps    up)
+         , ("CEU_LABELS", concat $ map (\lbl->"    "++lbl++",\n")           $ labels  up)
+         , ("CEU_VARS",   concat $ map (\var->"    int "++var++";\n")       $ vars_up up)
          , ("CEU_CODES",  code up)
          ] where
     up = aux (dn_spc dnz) (N.add $ traceShowId p)
@@ -92,12 +99,18 @@ aux :: Down -> Stmt All -> Up
 
 aux g s@(Nop   _)        = upz { code=(oln s) }
 aux g s@(Halt  _)        = upz { code=(oln s ++ ocmd g "return 0") }
-aux g s@(Var   _ id p)   = p' { vars=id:(vars p') } where p'=(aux g p)
 aux g s@(Inp   _ id p)   = p' { inps=id:(inps p') } where p'=(aux g p)
 aux g s@(Out   _ id p)   = aux g p
+
+aux g s@(Var   _ id p) = p' { vars_up=(id++"__"++(show$toN s)):(vars_up p') }
+    where
+        p' = aux g' p
+        g' = g{ vars_dn = (id,toN s):(vars_dn g) }
+
 aux g s@(Write _ var exp) = upz { code=src }
     where
-        src = (oln s ++ (ocmd g $ "CEU_APP.root." ++ var ++ " = " ++ (expr exp)))
+        src = (oln s ++ (ocmd g $ "CEU_APP.root." ++ (getVar vars var) ++ " = " ++ (expr vars exp)))
+        vars = vars_dn g
 
 aux g (Seq _ p1 p2) = (up_union_max p1' p2') { code=(code p1'++code p2') }
     where
@@ -120,14 +133,14 @@ aux g s@(EmitExt _ ext exp) = upz { code=src }
         src = oln s ++ (ocmd g $ "ceu_callback_output_" ++ ext ++ "(" ++ exp' ++ ")")
         exp' = case exp of
             Nothing  -> ""
-            (Just v) -> expr v
+            (Just v) -> expr (vars_dn g) v
 
 aux g s@(If _ exp p1 p2) = (up_union_max p1' p2') { code=src }
     where
         p1' = aux (dn_spc g) p1
         p2' = aux (dn_spc g) p2
         src = oln s ++
-              spc g ++ "if (" ++ expr exp ++ ")\n" ++ oblk g (code p1') ++
+              spc g ++ "if (" ++ expr (vars_dn g) exp ++ ")\n" ++ oblk g (code p1') ++
               spc g ++ "else\n" ++ oblk g (code p2')
 
 aux g s@(Loop _ p) = p' { labels=(labels p'), code=src }
