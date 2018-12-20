@@ -27,6 +27,11 @@ stmt n (Out src id p) =
     where
         (n',p') = stmt (n+1) p
 
+stmt n (Evt src id p) =
+    (n', Evt All{source=src,n=n} id p')
+    where
+        (n',p') = stmt (n+1) p
+
 stmt n (Write src var exp) =
     (n', Write All{source=src,n=n} var exp')
     where
@@ -41,6 +46,12 @@ stmt n (EmitExt src ext (Just exp)) =
     (n', EmitExt All{source=src,n=n} ext (Just exp'))
     where
         (n',exp') = expr (n+1) exp
+
+stmt n (AwaitEvt src evt) =
+    (n, AwaitEvt All{source=src,n=n} evt)
+
+stmt n (EmitEvt src evt) =
+    (n, EmitEvt All{source=src,n=n} evt)
 
 stmt n (If src exp p1 p2) =
     (n2', If All{source=src,n=n} exp' p1' p2')

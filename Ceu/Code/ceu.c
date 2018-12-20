@@ -126,7 +126,7 @@ CEU_INPUT__PRIM,
 //CEU_INPUT__MAX,
 
 CEU_EVENT__MIN,
-    //<|< CEU_EVTS_ENUM >|>
+<<< CEU_EVTS >>>
 };
 
 enum {
@@ -156,7 +156,6 @@ enum {
 
 /*****************************************************************************/
 
-//<|< REMOVE >|>
 typedef struct tceu_code_mem_ROOT {
     tceu_code_mem _mem;                                                         
     tceu_trl      _trails[CEU_TRAILS_N];
