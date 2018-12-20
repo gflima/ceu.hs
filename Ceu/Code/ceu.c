@@ -38,8 +38,7 @@ typedef u8  tceu_nstk;   /* TODO */
 typedef u8 tceu_ntrl;
 typedef u8 tceu_nlbl;
 
-#define CEU_TRAILS_N 10
-//#define CEU_TRAILS_N <|< CEU_TRAILS_N >|>
+#define CEU_TRAILS_N <<< CEU_TRAILS_N >>>
 #ifndef CEU_STACK_N
 #define CEU_STACK_N 500
 #endif
@@ -160,7 +159,7 @@ enum {
 //<|< REMOVE >|>
 typedef struct tceu_code_mem_ROOT {
     tceu_code_mem _mem;                                                         
-    tceu_trl      _trails[7];                                                   
+    tceu_trl      _trails[CEU_TRAILS_N];
     byte          _params[0];                                                   
     /* CEU_VARS */
 <<< CEU_VARS >>>

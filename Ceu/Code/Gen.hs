@@ -64,7 +64,7 @@ oblk :: Down -> String -> String
 oblk g str = (spc g) ++ "{\n" ++ str ++ (spc g) ++ "}\n"
 
 oln :: Stmt All -> String
-oln p = "#line " ++ (show ln) ++ " \"" ++ file ++ "\" " ++ comm ++ "\n"
+oln p = "//#line " ++ (show ln) ++ " \"" ++ file ++ "\" " ++ comm ++ "\n"
     where
         Just (file,ln,_) = toSource p
         comm             = "// " ++ (toWord p)
@@ -88,10 +88,11 @@ label :: Stmt All -> String -> String
 label s lbl = "CEU_LABEL_" ++ (show $ toN s) ++ "_" ++ lbl
 
 stmt :: Stmt Source -> [(String,String)]
-stmt p = [ ("CEU_INPS",   concat $ map (\inp->"    CEU_INPUT_"++inp++",\n") $ inps    up)
-         , ("CEU_LABELS", concat $ map (\lbl->"    "++lbl++",\n")           $ labels  up)
-         , ("CEU_VARS",   concat $ map (\var->"    int "++var++";\n")       $ vars_up up)
-         , ("CEU_CODES",  code up)
+stmt p = [ ("CEU_TRAILS_N", show $ trails_n up)
+         , ("CEU_INPS",     concat $ map (\inp->"    CEU_INPUT_"++inp++",\n") $ inps    up)
+         , ("CEU_LABELS",   concat $ map (\lbl->"    "++lbl++",\n")           $ labels  up)
+         , ("CEU_VARS",     concat $ map (\var->"    int "++var++";\n")       $ vars_up up)
+         , ("CEU_CODES",    code up)
          ] where
     up = aux (dn_spc dnz) (N.add $ traceShowId p)
 
