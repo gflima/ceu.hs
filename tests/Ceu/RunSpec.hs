@@ -113,7 +113,7 @@ spec = do
             `shouldBe` Right (1,[[("X",Nothing)]])
         it "emit x" $
             run "emit x" []
-            `shouldBe` Left "(line 1, column 6):\nunexpected \"x\""
+            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nhalt: unreachable statement\n(line 1, column 1):\nemit: identifier 'x' is not declared\n"
         it "emit X -> 1" $
             run "output X:int emit X -> 1 ; escape 2;" []
             `shouldBe` Right (2,[[("X",Just 1)]])

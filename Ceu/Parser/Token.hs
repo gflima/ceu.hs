@@ -20,6 +20,7 @@ keywords = [
     "emit",
     "end",
     "escape",
+    "event",
     "FOREVER",
     "if",
     "input",
@@ -71,7 +72,7 @@ tk_var = do
     s
     return (first:rest)
 
-tk_int = tk_var
+tk_evt = tk_var
 
 tk_type :: Parser String
 tk_type = do

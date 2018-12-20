@@ -8,7 +8,7 @@ import Text.Parsec.Prim          ((<|>), try, getPosition)
 import Text.Parsec.String        (Parser)
 import Text.Parsec.Combinator    (many1, chainl, chainr1, option, optionMaybe)
 
-import Ceu.Parser.Token          (tk_key, tk_ext, tk_var, tk_type, tk_str)
+import Ceu.Parser.Token
 import Ceu.Parser.Exp            (pos2src, expr)
 
 import Ceu.Grammar.Globals       (Source)
@@ -28,6 +28,12 @@ attr_awaitext :: String -> Parser (Stmt Source)
 attr_awaitext var = do
     void <- tk_str "<-"
     s    <- stmt_awaitext (Just var)
+    return s
+
+attr_awaitevt :: String -> Parser (Stmt Source)
+attr_awaitevt var = do
+    void <- tk_str "<-"
+    s    <- stmt_awaitevt (Just var)
     return s
 
 -------------------------------------------------------------------------------
@@ -52,8 +58,18 @@ stmt_var = do
     void <- tk_str ":"
     tp   <- tk_type
     guard $ tp == "int"         -- TODO
-    s    <- option (Nop $ pos2src pos) (try (attr_exp var) <|> try (attr_awaitext var))
+    s    <- option (Nop $ pos2src pos) (try (attr_exp var) <|> try (attr_awaitext var) <|> try (attr_awaitevt var))
     return $ Seq (pos2src pos) (Var (pos2src pos) var Nothing) s
+
+stmt_evt :: Parser (Stmt Source)
+stmt_evt = do
+    pos  <- getPosition
+    void <- tk_key "event"
+    evt  <- tk_evt
+    void <- tk_str ":"
+    tp   <- tk_type
+    guard $ tp == "int"         -- TODO
+    return $ Evt (pos2src pos) evt True
 
 stmt_input :: Parser (Stmt Source)
 stmt_input = do
@@ -106,6 +122,21 @@ stmt_halt = do
     void <- tk_key "await"
     void <- tk_key "FOREVER"
     return $ Halt (pos2src pos)
+
+stmt_emitevt :: Parser (Stmt Source)
+stmt_emitevt = do
+    pos  <- getPosition
+    void <- tk_key "emit"
+    evt  <- tk_evt
+    exp  <- optionMaybe (tk_str "->" *> expr)
+    return $ EmitEvt (pos2src pos) evt exp
+
+stmt_awaitevt :: (Maybe String) -> Parser (Stmt Source)
+stmt_awaitevt var = do
+    pos  <- getPosition
+    void <- tk_key "await"
+    evt  <- tk_evt
+    return $ AwaitEvt (pos2src pos) evt var
 
 -------------------------------------------------------------------------------
 
@@ -183,9 +214,10 @@ stmt_paror = do
 stmt1 :: Parser (Stmt Source)
 stmt1 = do
     s <- try stmt_escape <|>
-         try stmt_var <|> try stmt_input <|> try stmt_output <|>
+         try stmt_var <|> try stmt_input <|> try stmt_output <|> try stmt_evt <|>
          try stmt_write <|>
-         try (stmt_awaitext Nothing) <|> try stmt_halt <|> try stmt_emitext <|>
+         try (stmt_awaitext Nothing) <|> try stmt_halt <|> try (stmt_awaitevt Nothing) <|>
+         try stmt_emitext <|> try stmt_emitevt <|>
          try stmt_do <|> try stmt_if <|> try stmt_loop <|>
          try stmt_par <|> try stmt_parand <|> try stmt_paror
     return s

@@ -76,21 +76,21 @@ spec = do
             it "var" $
                 parse tk_var "var"
                 `shouldBe` Left "(line 1, column 4):\nunexpected end of input\nexpecting digit, letter or \"_\""
-        describe "tk_int:" $ do
+        describe "tk_evt:" $ do
             it "''" $
-                parse (s>>tk_int) "\n "
+                parse (s>>tk_evt) "\n "
                 `shouldBe` Left "(line 2, column 2):\nunexpected end of input"
             it "''" $
-                parse tk_int ""
+                parse tk_evt ""
                 `shouldBe` Left "(line 1, column 1):\nunexpected end of input"
             it "id" $
-                parse tk_int "id"
+                parse tk_evt "id"
                 `shouldBe` Right "id"
             it "1" $
-                parse tk_int "1"
+                parse tk_evt "1"
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"1\""
             it "var" $
-                parse tk_int "var"
+                parse tk_evt "var"
                 `shouldBe` Left "(line 1, column 4):\nunexpected end of input\nexpecting digit, letter or \"_\""
         describe "tk_ext:" $ do
             it "''" $
@@ -237,6 +237,20 @@ spec = do
                 parse stmt_input "input x: int"
                 `shouldBe` Left "(line 1, column 7):\nunexpected \"x\""
 
+        describe "evt:" $ do
+            it "event x: int" $
+                parse stmt_evt "event x: int;"
+                `shouldBe` Right (Evt ("",1,1) "x" True)
+            it "event event x" $
+                parse stmt_evt "event event x"
+                `shouldBe` Left "(line 1, column 12):\nunexpected \" \"\nexpecting digit, letter or \"_\""
+            it "event a: int <- 1" $
+                parse stmt_evt "event a : int <- 1"
+                `shouldBe` Left "(line 1, column 15):\nunexpected '<'\nexpecting end of input"
+            it "event x : int <- await X" $
+                parse stmt_evt "event x : int <- await X"
+                `shouldBe` Left "(line 1, column 15):\nunexpected '<'\nexpecting end of input"
+
         describe "write:" $ do
             it "x <- 1" $
                 parse stmt_write "x <- 1"
@@ -265,6 +279,25 @@ spec = do
             it "emit X -> 1" $
                 parse stmt_emitext "emit X -> 1"
                 `shouldBe` Right (EmitExt ("",1,1) "X" (Just (Const ("",1,11) 1)))
+
+        describe "awaitevt:" $ do
+            it "await x" $
+                parse (stmt_awaitevt Nothing) "await x"
+                `shouldBe` Right (AwaitEvt ("",1,1) "x" Nothing)
+            it "await X" $
+                parse (stmt_awaitevt Nothing) "await X"
+                `shouldBe` Left "(line 1, column 7):\nunexpected \"X\""
+
+        describe "emitevt:" $ do
+            it "emit e" $
+                parse stmt_emitevt "emit e"
+                `shouldBe` Right (EmitEvt ("",1,1) "e" Nothing)
+            it "emit x" $
+                parse stmt_emitevt "emit X"
+                `shouldBe` Left "(line 1, column 6):\nunexpected \"X\""
+            it "emit e -> 1" $
+                parse stmt_emitevt "emit e -> 1"
+                `shouldBe` Right (EmitEvt ("",1,1) "e" (Just (Const ("",1,11) 1)))
 
 -------------------------------------------------------------------------------
 
