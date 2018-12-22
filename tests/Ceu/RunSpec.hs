@@ -68,7 +68,7 @@ spec = do
             `shouldBe` Left "(line 1, column 6):\nunexpected \",\"\nexpecting digit, letter, \"_\" or \":\""
         it "a <- 1; escape a;" $
             run "a <- 1; escape a" []
-            `shouldBe` Left "(line 1, column 1):\nassignment: identifier 'a' is not declared\n(line 1, column 16):\nread access to 'a': identifier 'a' is not declared\n"
+            `shouldBe` Left "(line 1, column 3):\nassignment: identifier 'a' is not declared\n(line 1, column 16):\nread access to 'a': identifier 'a' is not declared\n"
         it "var a : int <- 1; escape a;" $
             run "var a : int <- 1; escape a" []
             `shouldBe` Right (1, [[]])

@@ -253,10 +253,16 @@ spec = do
 
         describe "write:" $ do
             it "x <- 1" $
-                parse stmt_write "x <- 1"
-                `shouldBe` Right (Write ("",1,1) "x" (Const ("",1,6) 1))
+                parse stmt_attr "x <- 1"
+                `shouldBe` Right (Write ("",1,3) "x" (Const ("",1,6) 1))
+            it "x <- await A" $
+                parse stmt_attr "x <- await A"
+                `shouldBe` Right (AwaitInp ("",1,6) "A" (Just "x"))
+            it "x <- await a" $
+                parse stmt_attr "x <- await a"
+                `shouldBe` Right (AwaitEvt ("",1,6) "a" (Just "x"))
             it "var <- 1" $
-                parse stmt_write "var <- 1"
+                parse stmt_attr "var <- 1"
                 `shouldBe` Left "(line 1, column 4):\nunexpected \" \"\nexpecting digit, letter or \"_\""
 
 -------------------------------------------------------------------------------
@@ -349,10 +355,10 @@ spec = do
                 `shouldBe` Right (Loop ("",1,1) (Nop ("",1,9)))
             it "loop do v<-1 end" $
                 parse stmt_loop "loop do v<-1 end"
-                `shouldBe` Right (Loop ("",1,1) (Write ("",1,9) "v" (Const ("",1,12) 1)))
+                `shouldBe` Right (Loop ("",1,1) (Write ("",1,10) "v" (Const ("",1,12) 1)))
             it "loop do v<-1 ; await FOREVER end" $
                 parse stmt_loop "loop do v<-1 ; await FOREVER end"
-                `shouldBe` Right (Loop ("",1,1) (Seq ("",1,9) (Write ("",1,9) "v" (Const ("",1,12) 1)) (Halt ("",1,16))))
+                `shouldBe` Right (Loop ("",1,1) (Seq ("",1,9) (Write ("",1,10) "v" (Const ("",1,12) 1)) (Halt ("",1,16))))
 
 -------------------------------------------------------------------------------
 
@@ -394,14 +400,22 @@ spec = do
                 parse (stmt_seq ("",1,1)) "do end escape 1"
                 `shouldBe` Right (Seq ("",1,1) (Scope ("",1,1) (Nop ("",1,4))) (Escape ("",1,8) Nothing (Just (Const ("",1,15) 1))))
 
+            it "do end; do end; do end" $
+                parse (stmt_seq ("",1,1)) "do end ; do end ; do end"
+                `shouldBe` Right (Seq ("",1,1) (Scope ("",1,1) (Nop ("",1,4))) (Seq ("",1,1) (Scope ("",1,10) (Nop ("",1,13))) (Scope ("",1,19) (Nop ("",1,22)))))
+
+            it "input KEY:int ; var a:int ; a<-await KEY ; ret<-a" $
+                parse (stmt_seq ("",1,1)) "var a:int ; a<-1"
+                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "a" Nothing) (Seq ("",1,1) (Nop ("",1,1)) (Write ("",1,14) "a" (Const ("",1,16) 1))))
+
         describe "stmt:" $ do
             it "var x:int; escape 1" $
                 parse stmt "var x:int ;escape 1"
-                `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (Nop ("",1,1))) (Escape ("",1,12) Nothing (Just (Const ("",1,19) 1))))
+                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (Seq ("",1,1) (Nop ("",1,1)) (Escape ("",1,12) Nothing (Just (Const ("",1,19) 1)))))
 
             it "var x:int; x<-1; escape x" $
                 parse stmt "var x:int ; x <- 1 ; escape x"
-                `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (Nop ("",1,1))) (Seq ("",1,1) (Write ("",1,13) "x" (Const ("",1,18) 1)) (Escape ("",1,22) Nothing (Just (Read ("",1,29) "x")))))
+                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (Seq ("",1,1) (Nop ("",1,1)) (Seq ("",1,1) (Write ("",1,15) "x" (Const ("",1,18) 1)) (Escape ("",1,22) Nothing (Just (Read ("",1,29) "x"))))))
 
             it "do ... end" $
                 parse stmt "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end"

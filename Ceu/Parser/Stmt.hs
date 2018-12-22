@@ -91,13 +91,12 @@ stmt_output = do
     guard $ tp == "int"         -- TODO
     return $ Out (pos2src pos) ext True
 
-stmt_write :: Parser (Stmt Source)
-stmt_write = do
+stmt_attr :: Parser (Stmt Source)
+stmt_attr = do
     pos  <- getPosition
     var  <- tk_var
-    void <- tk_str "<-"
-    exp  <- expr
-    return $ Write (pos2src pos) var exp
+    s    <- try (attr_exp var) <|> try (attr_awaitext var) <|> try (attr_awaitevt var)
+    return $ s
 
 -------------------------------------------------------------------------------
 
@@ -215,7 +214,7 @@ stmt1 :: Parser (Stmt Source)
 stmt1 = do
     s <- try stmt_escape <|>
          try stmt_var <|> try stmt_input <|> try stmt_output <|> try stmt_evt <|>
-         try stmt_write <|>
+         try stmt_attr <|>
          try (stmt_awaitext Nothing) <|> try stmt_halt <|> try (stmt_awaitevt Nothing) <|>
          try stmt_emitext <|> try stmt_emitevt <|>
          try stmt_do <|> try stmt_if <|> try stmt_loop <|>
@@ -223,7 +222,11 @@ stmt1 = do
     return s
 
 stmt_seq :: Source -> Parser (Stmt Source)
-stmt_seq src = option (Nop src) (chainr1 stmt1 (do return (\a b->Seq src a b)))
+stmt_seq src = option (Nop src) (chainr1 stmt1 (do return f))
+    where
+        f a b = case a of
+            Seq src x y -> Seq src x (Seq src y b)
+            otherwise   -> Seq src a b
 
 stmt :: Parser (Stmt Source)
 stmt = do
