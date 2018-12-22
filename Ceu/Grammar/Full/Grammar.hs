@@ -128,10 +128,12 @@ toGrammar (If z exp p1 p2)       = (es1++es2, G.If z exp p1' p2')
                                  where
                                    (es1,p1') = (toGrammar p1)
                                    (es2,p2') = (toGrammar p2)
-toGrammar (Seq z p1 p2)          = (es1++es2, G.Seq z p1' p2')
+toGrammar (Seq z p1 p2)          = (es1++es2, G.Seq z p1' p2') --seq z p1' p2')
                                  where
-                                   (es1,p1') = (toGrammar p1)
-                                   (es2,p2') = (toGrammar p2)
+                                    (es1,p1') = (toGrammar p1)
+                                    (es2,p2') = (toGrammar p2)
+                                    --seq z1 (G.Seq z2 a b) p2' = G.Seq z1 a (seq z2 b p2')
+                                    --seq z  p1'            p2' = G.Seq z p1' p2'
 toGrammar (Loop z p)             = (es, G.Loop z p')
                                  where
                                    (es,p') = toGrammar p

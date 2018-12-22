@@ -406,16 +406,16 @@ spec = do
 
             it "input KEY:int ; var a:int ; a<-await KEY ; ret<-a" $
                 parse (stmt_seq ("",1,1)) "var a:int ; a<-1"
-                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "a" Nothing) (Seq ("",1,1) (Nop ("",1,1)) (Write ("",1,14) "a" (Const ("",1,16) 1))))
+                `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "a" Nothing) (Nop ("",1,1))) (Write ("",1,14) "a" (Const ("",1,16) 1)))
 
         describe "stmt:" $ do
             it "var x:int; escape 1" $
                 parse stmt "var x:int ;escape 1"
-                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (Seq ("",1,1) (Nop ("",1,1)) (Escape ("",1,12) Nothing (Just (Const ("",1,19) 1)))))
+                `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (Nop ("",1,1))) (Escape ("",1,12) Nothing (Just (Const ("",1,19) 1))))
 
             it "var x:int; x<-1; escape x" $
                 parse stmt "var x:int ; x <- 1 ; escape x"
-                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (Seq ("",1,1) (Nop ("",1,1)) (Seq ("",1,1) (Write ("",1,15) "x" (Const ("",1,18) 1)) (Escape ("",1,22) Nothing (Just (Read ("",1,29) "x"))))))
+                `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (Nop ("",1,1))) (Seq ("",1,1) (Write ("",1,15) "x" (Const ("",1,18) 1)) (Escape ("",1,22) Nothing (Just (Read ("",1,29) "x")))))
 
             it "do ... end" $
                 parse stmt "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end"

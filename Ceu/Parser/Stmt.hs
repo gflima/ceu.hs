@@ -222,11 +222,7 @@ stmt1 = do
     return s
 
 stmt_seq :: Source -> Parser (Stmt Source)
-stmt_seq src = option (Nop src) (chainr1 stmt1 (do return f))
-    where
-        f a b = case a of
-            Seq src x y -> Seq src x (Seq src y b)
-            otherwise   -> Seq src a b
+stmt_seq src = option (Nop src) (chainr1 stmt1 (do return (\a b->Seq src a b)))
 
 stmt :: Parser (Stmt Source)
 stmt = do
