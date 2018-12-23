@@ -86,17 +86,11 @@ oln p = "//#line " ++ (show ln) ++ " \"" ++ file ++ "\" " ++ comm ++ "\n"
         comm             = "// " ++ (toWord p)
 
 odcl :: String -> String
-odcl lbl = "int " ++ lbl ++ " (tceu_trl* _ceu_trl);\n\n"
+odcl lbl = "int " ++ lbl ++ " (void);\n\n"
 
 olbl :: String -> String -> String
-olbl lbl src = "int " ++ lbl ++ " (tceu_trl* _ceu_trl) " ++
+olbl lbl src = "int " ++ lbl ++ " (void) " ++
                  oblk dnz src ++ "\n"
-
-ocallret :: Down -> String -> String
-ocallret dn lbl = oblk dn src
-    where
-        src = (ocmd dn "int __ceu_ret = " ++ lbl ++ "(...)") ++
-              (ocmd dn "if (__ceu_ret != 0)")
 
 -------------------------------------------------------------------------------
 
@@ -160,8 +154,8 @@ aux dn s@(Write _ var exp) = upz { code_bef=src }
 aux dn s@(AwaitInp _ ext) = upz { code_bef=src, code_brk=(Just lbl) }
     where
         src = oln s ++
-              (ocmd dn $ "_ceu_trl->evt = " ++ evt) ++
-              (ocmd dn $ "_ceu_trl->lbl = " ++ lbl) ++
+              (ocmd dn $ "CEU_APP.root.trails[" ++ trl ++ "].evt = " ++ evt) ++
+              (ocmd dn $ "CEU_APP.root.trails[" ++ trl ++ "].lbl = " ++ lbl) ++
               (ocmd dn $ "return 0")
         trl = show $ trail_0 dn
         evt = "CEU_INPUT_" ++ ext
@@ -170,8 +164,8 @@ aux dn s@(AwaitInp _ ext) = upz { code_bef=src, code_brk=(Just lbl) }
 aux dn s@(AwaitEvt _ evt) = upz { code_bef=src, code_brk=(Just lbl) }
     where
         src = oln s ++
-             (ocmd dn $ "_ceu_trl->evt = " ++ id') ++
-             (ocmd dn $ "_ceu_trl->lbl = " ++ lbl)
+             (ocmd dn $ "CEU_APP.root.trails[" ++ trl ++ "].evt = " ++ id') ++
+             (ocmd dn $ "CEU_APP.root.trails[" ++ trl ++ "].lbl = " ++ lbl)
         trl = show $ trail_0 dn
         id' = "CEU_EVENT_" ++ (getID (evts_dn dn) evt)
         lbl = label s ("AwaitEvt_" ++ evt)
@@ -248,7 +242,7 @@ aux dn s@(If _ exp p1 p2) = (up_union_max p1' p2') {
         bef1 = (code_bef p1') ++ if isNothing brk1 then join else ""
         bef2 = (code_bef p2') ++ if isNothing brk2 then join else ""
 
-        join = ocmd dn $ "return " ++ lbl ++ "(_ceu_trl)"
+        join = ocmd dn $ "return " ++ lbl ++ "()"
         lbl  = label s "If_Join"
 
         lbls1 = if isNothing brk1 then [] else
@@ -272,7 +266,7 @@ aux dn s@(Loop _ p) = (up_copy p') {
         lbls2 = [olbl lbl bef]
 
         bef  = code_bef p' ++ if isNothing brk then loop else ""
-        loop = ocmd dn $ "return " ++ lbl ++ "(_ceu_trl)"
+        loop = ocmd dn $ "return " ++ lbl ++ "()"
         lbl  = label s "Loop"
 
 -------------------------------------------------------------------------------
@@ -314,4 +308,4 @@ aux dn s@(Trap _ p) = (up_copy p') {
 
 aux dn s@(Escape _ k) = upz { code_bef=src }
     where
-        src = oln s ++ (ocmd dn $ "return " ++ (label ((traps dn)!!k) "Trap") ++ "(_ceu_trl)")
+        src = oln s ++ (ocmd dn $ "return " ++ (label ((traps dn)!!k) "Trap") ++ "()")
