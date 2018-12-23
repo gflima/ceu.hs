@@ -279,13 +279,12 @@ aux g s@(Loop _ p) = (up_copy p') {
 
 -------------------------------------------------------------------------------
 
-aux g s@(Par _ p1 p2) = uni { code_bef=src }
+aux g s@(Par _ p1 p2) = (up_union_sum p1' p2') { code_bef=src }
     where
-        uni  = up_union_sum p1' p2'
         src  = oln s ++ oblk g (src0 ++ src1 ++ srcM ++ src2)
-        src0 = (ocmd g' $ "_ceu_mem->_trails[" ++ show trl ++ "].evt.id = CEU_INPUT__STACKED") ++
-               (ocmd g' $ "_ceu_mem->_trails[" ++ show trl ++ "].lbl    = " ++ lbl) ++
-               (ocmd g' $ "_ceu_mem->_trails[" ++ show trl ++ "].level  = _ceu_level")
+        src0 = (ocmd g' $ "CEU_APP.root.trails[" ++ show trl ++ "].evt.id = CEU_INPUT__STACKED") ++
+               (ocmd g' $ "CEU_APP.root.trails[" ++ show trl ++ "].lbl    = " ++ lbl) ++
+               (ocmd g' $ "CEU_APP.root.trails[" ++ show trl ++ "].level  = _ceu_level")
         src1 = oblk g' (code_bef p1')
         srcM = spc g ++ "/* with */\n" ++ (ocmd dnz $ "case " ++ lbl ++ ":")
         src2 = oblk g' (code_bef p2')
@@ -295,17 +294,26 @@ aux g s@(Par _ p1 p2) = uni { code_bef=src }
         trl  = (trail_0 g) + (trails_n p1')
         lbl  = label s "Par"
 
-aux g s@(Trap _ p) = p' { code_bef=src }
+aux g s@(Trap _ p) = (up_copy p') {
+                        code_bef = code_bef p',
+                        code_brk = Just lbl,
+                        code_aft = clr,
+                        labels   = [odcl lbl] ++ (labels p') ++ aft
+                     }
     where
         p'  = aux g' p
-        src = oln s ++ (ocmd dnz $ oblk g (code_bef p') ++ "case " ++ lbl ++ ":") ++ clr
         g'  = dn_spc g{ traps = s:(traps g) }
         lbl = label s "Trap"
+
+        aft = if isNothing brk then [] else
+                [ olbl (fromJust brk) (code_aft p') ]
+        brk = code_brk p'
+
         clr = oblk g $ spc g' ++ "// clear\n" ++
-              (ocmd g' $ "memset(&_ceu_mem->_trails[" ++ t0 ++ "], 0, " ++ n ++ ")")
+              (ocmd g' $ "memset(&CEU_APP.root.trails[" ++ t0 ++ "], 0, " ++ n ++ ")")
         t0  = show $ trail_0 g
         n   = (show $ trails_n p') ++ "*sizeof(tceu_trl)"
 
 aux g s@(Escape _ k) = upz { code_bef=src }
     where
-        src = oln s ++ (ocmd g $ "CEU_GOTO(" ++ (label ((traps g)!!k) "Trap") ++ ")")
+        src = oln s ++ (ocmd g $ "return " ++ (label ((traps g)!!k) "Trap") ++ "(_ceu_trl)")

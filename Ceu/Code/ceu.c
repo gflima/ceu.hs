@@ -50,8 +50,6 @@ CEU_API int  ceu_loop  (int argc, char* argv[]);
 struct tceu_trl;
 int CEU_LABEL_ROOT (struct tceu_trl* _ceu_trl);
 
-struct tceu_code_mem;
-
 typedef struct tceu_evt {
     tceu_nevt id;
     union {
@@ -63,9 +61,8 @@ typedef struct tceu_evt {
 } tceu_evt;
 
 typedef struct tceu_range {
-    struct tceu_code_mem* mem;
-    tceu_ntrl             trl0;
-    tceu_ntrl             trlF;
+    tceu_ntrl trl0;
+    tceu_ntrl trlF;
 } tceu_range;
 
 typedef struct tceu_stk {
@@ -95,14 +92,6 @@ typedef struct tceu_trl {
         };
     };
 } tceu_trl;
-
-typedef struct tceu_code_mem {
-    struct tceu_code_mem* up_mem;
-    u8          depth;
-    bool has_term;
-    tceu_ntrl   trails_n;
-    tceu_trl    _trails[0];
-} tceu_code_mem;
 
 /* CEU_NATIVE_PRE */
 //<|< CEU_NATIVE_PRE >|>
@@ -151,13 +140,11 @@ enum {
 
 /*****************************************************************************/
 
-typedef struct tceu_code_mem_ROOT {
-    tceu_code_mem _mem;                                                         
-    tceu_trl      _trails[CEU_TRAILS_N];
-    byte          _params[0];                                                   
+typedef struct tceu_mem_ROOT {
+    tceu_trl trails[CEU_TRAILS_N];
     /* CEU_VARS */
 <<< CEU_VARS >>>
-} tceu_code_mem_ROOT;
+} tceu_mem_ROOT;
 
 typedef struct tceu_app {
     /* ASYNC */
@@ -173,7 +160,7 @@ typedef struct tceu_app {
     byte  stack[CEU_STACK_N];
     usize stack_i;
 
-    tceu_code_mem_ROOT root;
+    tceu_mem_ROOT root;
 } tceu_app;
 
 CEU_API static tceu_app CEU_APP;
@@ -223,7 +210,8 @@ static void ceu_params_cpy (tceu_stk* stk, void* params, usize params_n) {
 
 /*****************************************************************************/
 
-void ceu_stack_clear (tceu_stk* cur, tceu_code_mem* mem) {
+#if 0
+void ceu_stack_clear (tceu_stk* cur, tceu_mem* mem) {
     if (cur == NULL) {
         return;
     }
@@ -232,6 +220,7 @@ void ceu_stack_clear (tceu_stk* cur, tceu_code_mem* mem) {
     }
     ceu_stack_clear(cur->prv, mem);
 }
+#endif
 
 /*****************************************************************************/
 
@@ -259,70 +248,29 @@ static void ceu_bcast_mark (tceu_nstk level, tceu_stk* cur)
 
     for (; trlK<=cur->range.trlF; trlK++)
     {
-        tceu_trl* trl = &cur->range.mem->_trails[trlK];
+        tceu_trl* trl = &CEU_APP.root.trails[trlK];
 
         //printf(">|> mark [%d/%p] evt=%d\n", trlK, trl, trl->evt.id);
-        switch (trl->evt.id)
-        {
-#ifdef CEU_FEATURES_PAUSE
-            case CEU_INPUT__PAUSE_BLOCK: {
-                u8 was_paused = trl->pse_paused;
-                if ( (cur->evt.id == trl->pse_evt.id)                               &&
-                     (cur->evt.id<CEU_EVENT__MIN || cur->evt.mem==trl->pse_evt.mem) &&
-                     (*((u8*)cur->params) != trl->pse_paused) )
-                {
-                    trl->pse_paused = *((u8*)cur->params);
-
-                    tceu_evt evt_;
-                    tceu_range range_ = { cur->range.mem,
-                                          (tceu_ntrl)(trlK+1), (tceu_ntrl)(trlK+trl->pse_skip) };
-                    if (trl->pse_paused) {
-                        evt_.id = CEU_INPUT__PAUSE;
-                    } else {
-                        CEU_APP.wclk_min_set = 0;   /* maybe resuming a timer, let it be the minimum set */
-                        evt_.id = CEU_INPUT__RESUME;
-                    }
-                    tceu_stk cur_ = { evt_, range_, NULL, 0 };
-                    ceu_bcast_mark(level, &cur_);
-                }
-                /* don't skip if pausing now */
-                if (was_paused && cur->evt.id!=CEU_INPUT__CLEAR) {
-                                  /* also don't skip on CLEAR (going reverse) */
-                    trlK += trl->pse_skip;
-                }
-                break;
+        if (cur->evt.id == CEU_INPUT__CLEAR) {
+            if (trl->evt.id == CEU_INPUT__FINALIZE) {
+                goto _CEU_AWAKE_YES_;
             }
-#endif
-
-            default: {
-                if (cur->evt.id == CEU_INPUT__CLEAR) {
-                    if (trl->evt.id == CEU_INPUT__FINALIZE) {
-                        goto _CEU_AWAKE_YES_;
-                    }
-                } else if (trl->evt.id == cur->evt.id) {
-#ifdef CEU_FEATURES_PAUSE
-                    if (cur->evt.id==CEU_INPUT__PAUSE || cur->evt.id==CEU_INPUT__RESUME) {
-                        goto _CEU_AWAKE_YES_;
-                    }
-#endif
-                    if (trl->evt.id>CEU_EVENT__MIN) {
-                        if (trl->evt.mem == cur->evt.mem) {
-                            goto _CEU_AWAKE_YES_;   /* internal event matches "mem" */
-                        }
-                    } else {
-                        if (cur->evt.id != CEU_INPUT__NONE) {
-                            goto _CEU_AWAKE_YES_;       /* external event matches */
-                        }
-                    }
+        } else if (trl->evt.id == cur->evt.id) {
+            if (trl->evt.id>CEU_EVENT__MIN) {
+                //if (trl->evt.mem == cur->evt.mem) {
+                    goto _CEU_AWAKE_YES_;   /* internal event matches "mem" */
+                //}
+            } else {
+                if (cur->evt.id != CEU_INPUT__NONE) {
+                    goto _CEU_AWAKE_YES_;       /* external event matches */
                 }
-
-                continue;
-
-_CEU_AWAKE_YES_:
-                trl->evt.id = CEU_INPUT__STACKED;
-                trl->level  = level;
             }
         }
+        continue;
+
+_CEU_AWAKE_YES_:
+        trl->evt.id = CEU_INPUT__STACKED;
+        trl->level  = level;
     }
 }
 
@@ -345,7 +293,7 @@ static int ceu_bcast_exec (tceu_nstk level, tceu_stk* cur, tceu_stk* nxt)
     //printf(">|> exec %d -> %d\n", trl0, trlF);
     while (1)
     {
-        tceu_trl* trl = &cur->range.mem->_trails[trlK];
+        tceu_trl* trl = &CEU_APP.root.trails[trlK];
 
         //printf(">|> exec [%d/%p] evt=%d\n", trlK, trl, trl->evt.id);
         switch (trl->evt.id)
@@ -429,13 +377,13 @@ CEU_API void ceu_input (tceu_nevt id, void* params)
     s32 dt = ceu_callback_wclock_dt(CEU_TRACE_null);
     if (dt != CEU_WCLOCK_INACTIVE) {
         tceu_evt   evt   = {CEU_INPUT__WCLOCK, {NULL}};
-        tceu_range range = {(tceu_code_mem*)&CEU_APP.root, 0, CEU_TRAILS_N-1};
+        tceu_range range = {0, CEU_TRAILS_N-1};
         tceu_stk   cur   = { evt, range, &dt, 0, 1, NULL };
         ceu_bcast(1, &cur);
     }
     if (id != CEU_INPUT__NONE) {
         tceu_evt   evt   = {id, {NULL}};
-        tceu_range range = {(tceu_code_mem*)&CEU_APP.root, 0, CEU_TRAILS_N-1};
+        tceu_range range = {0, CEU_TRAILS_N-1};
         tceu_stk   cur   = { evt, range, params, 0, 1, NULL };
         ceu_bcast(1, &cur);
     }
@@ -450,21 +398,18 @@ CEU_API void ceu_start (int argc, char* argv[]) {
     CEU_APP.wclk_min_set = CEU_WCLOCK_INACTIVE;
     CEU_APP.wclk_min_cmp = CEU_WCLOCK_INACTIVE;
 
-    CEU_APP.root._mem.up_mem   = NULL;
-    CEU_APP.root._mem.depth    = 0;
-
     CEU_APP.stack_i = 0;
 
-    CEU_APP.root._mem.trails_n = CEU_TRAILS_N;
-    memset(&CEU_APP.root._trails, 0, CEU_TRAILS_N*sizeof(tceu_trl));
-    CEU_APP.root._trails[0].evt.id = CEU_INPUT__STACKED;
-    CEU_APP.root._trails[0].level  = 1;
-    CEU_APP.root._trails[0].lbl    = CEU_LABEL_ROOT;
+    //CEU_APP.root.trails_n = CEU_TRAILS_N;
+    memset(&CEU_APP.root.trails, 0, CEU_TRAILS_N*sizeof(tceu_trl));
+    CEU_APP.root.trails[0].evt.id = CEU_INPUT__STACKED;
+    CEU_APP.root.trails[0].level  = 1;
+    CEU_APP.root.trails[0].lbl    = CEU_LABEL_ROOT;
 
     ceu_callback_start(CEU_TRACE_null);
 
     tceu_evt   evt   = {CEU_INPUT__NONE, {NULL}};
-    tceu_range range = {(tceu_code_mem*)&CEU_APP.root, 0, CEU_TRAILS_N-1};
+    tceu_range range = {0, CEU_TRAILS_N-1};
     tceu_stk   cur   = { evt, range, NULL, 0, 1, NULL };
     ceu_bcast(1, &cur);
 }
