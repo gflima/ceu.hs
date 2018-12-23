@@ -188,11 +188,9 @@ aux dn s@(EmitExt _ ext exp) = upz { code_bef=src }
 aux dn s@(EmitEvt _ evt) = upz { code_bef=emt, code_brk=(Just lbl) }
     where
         emt = oblk dn $
-              (ocmd dn' $ "tceu_evt   __ceu_evt   = {" ++ id' ++ ",{NULL}}") ++
-              (ocmd dn' $ "tceu_range __ceu_range = { &CEU_APP.root._mem, 0, CEU_TRAILS_N-1 }") ++
+              (ocmd dn' $ "tceu_evt __ceu_evt = {" ++ id' ++ ",0, CEU_TRAILS_N-1}") ++
 -- TODO: emit scope
               (ocmd dn' $ "_ceu_nxt->evt      = __ceu_evt") ++
-              (ocmd dn' $ "_ceu_nxt->range    = __ceu_range") ++
               (ocmd dn' $ "_ceu_nxt->params_n = 0") ++
               (ocmd dn' $ "return 1")
         id' = "CEU_EVENT_" ++ (getID (evts_dn dn) evt)
