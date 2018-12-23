@@ -44,7 +44,7 @@ typedef u8 tceu_ntrl;
 #define CEU_API
 CEU_API void ceu_start (int argc, char* argv[]);
 CEU_API void ceu_stop  (void);
-CEU_API void ceu_input (tceu_nevt evt, void* params);
+CEU_API void ceu_input (tceu_nevt evt);
 CEU_API int  ceu_loop  (int argc, char* argv[]);
 
 struct tceu_trl;
@@ -58,8 +58,6 @@ typedef struct tceu_range {
 
 typedef struct tceu_stk {
     tceu_range range;
-    void*      params;
-    usize      params_n;
     bool       is_alive;
     struct tceu_stk* prv;
 } tceu_stk;
@@ -175,14 +173,6 @@ static int ceu_wclock_ (s32 dt, s32* set, s32* sub)
     }
 
     return ret;
-}
-
-static void ceu_params_cpy (tceu_stk* stk, void* params, usize params_n) {
-    ceu_assert_sys(CEU_APP.stack_i+params_n < CEU_STACK_N, "stack overflow");
-    memcpy(&CEU_APP.stack[CEU_APP.stack_i], params, params_n);
-    stk->params   = &CEU_APP.stack[CEU_APP.stack_i];
-    stk->params_n = params_n;
-    CEU_APP.stack_i += stk->params_n;
 }
 
 /*****************************************************************************/
@@ -312,8 +302,8 @@ void ceu_bcast (tceu_nstk level, tceu_stk* cur)
                 CEU_APP.wclk_min_cmp = CEU_APP.wclk_min_set;    /* swap "cmp" to last "set" */
                 CEU_APP.wclk_min_set = CEU_WCLOCK_INACTIVE;     /* new "set" resets to inactive */
                 ceu_callback_wclock_min(CEU_WCLOCK_INACTIVE, CEU_TRACE_null);
-                if (CEU_APP.wclk_min_cmp <= *((s32*)cur->params)) {
-                    CEU_APP.wclk_late = *((s32*)cur->params) - CEU_APP.wclk_min_cmp;
+                if (CEU_APP.wclk_min_cmp <= _CEU_INPUT) {
+                    CEU_APP.wclk_late = _CEU_INPUT - CEU_APP.wclk_min_cmp;
                 }
                 break;
 #ifdef CEU_FEATURES_ASYNC
@@ -345,21 +335,23 @@ void ceu_bcast (tceu_nstk level, tceu_stk* cur)
         }
     }
 
-    CEU_APP.stack_i -= cur->params_n;
     //printf("<< BCAST: %d\n", level);
 }
 
-CEU_API void ceu_input (tceu_nevt evt, void* params)
+CEU_API void ceu_input (tceu_nevt evt)
 {
+    int inp = _CEU_INPUT;
     s32 dt = ceu_callback_wclock_dt(CEU_TRACE_null);
+    _CEU_INPUT = dt;
     if (dt != CEU_WCLOCK_INACTIVE) {
         tceu_range rge = {CEU_INPUT__WCLOCK, 0, CEU_TRAILS_N-1};
-        tceu_stk cur = { rge, &dt, 0, 1, NULL };
+        tceu_stk cur = { rge, 1, NULL };
         ceu_bcast(1, &cur);
     }
+    _CEU_INPUT = inp;
     if (evt != CEU_INPUT__NONE) {
         tceu_range rge = {evt, 0, CEU_TRAILS_N-1};
-        tceu_stk cur = { rge, params, 0, 1, NULL };
+        tceu_stk cur = { rge, 1, NULL };
         ceu_bcast(1, &cur);
     }
 }
@@ -384,7 +376,7 @@ CEU_API void ceu_start (int argc, char* argv[]) {
     ceu_callback_start(CEU_TRACE_null);
 
     tceu_range rge = {CEU_INPUT__NONE, 0, CEU_TRAILS_N-1};
-    tceu_stk   cur = { rge, NULL, 0, 1, NULL };
+    tceu_stk   cur = { rge, 1, NULL };
     ceu_bcast(1, &cur);
 }
 CEU_API void ceu_stop (void) {
@@ -401,7 +393,7 @@ CEU_API int ceu_loop (int argc, char* argv[])
     {
         ceu_callback_step(CEU_TRACE_null);
 #ifdef CEU_FEATURES_ASYNC
-        ceu_input(CEU_INPUT__ASYNC, NULL);
+        ceu_input(CEU_INPUT__ASYNC);
 #endif
     }
 
