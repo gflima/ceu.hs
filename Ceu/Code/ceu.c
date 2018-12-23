@@ -34,9 +34,7 @@ int _CEU_INPUT;
 typedef u16 tceu_nevt;   /* TODO */
 typedef u8  tceu_nstk;   /* TODO */
 //typedef <|< CEU_TCEU_NTRL >|> tceu_ntrl;
-//typedef <|< CEU_TCEU_NLBL >|> tceu_nlbl;
 typedef u8 tceu_ntrl;
-typedef u8 tceu_nlbl;
 
 #define CEU_TRAILS_N <<< CEU_TRAILS_N >>>
 #ifndef CEU_STACK_N
@@ -48,6 +46,9 @@ CEU_API void ceu_start (int argc, char* argv[]);
 CEU_API void ceu_stop  (void);
 CEU_API void ceu_input (tceu_nevt id, void* params);
 CEU_API int  ceu_loop  (int argc, char* argv[]);
+
+struct tceu_trl;
+int CEU_LABEL_ROOT (struct tceu_trl* _ceu_trl);
 
 struct tceu_code_mem;
 
@@ -81,7 +82,7 @@ typedef struct tceu_trl {
         tceu_evt evt;
         union {
             struct {
-                tceu_nlbl lbl;
+                typeof(CEU_LABEL_ROOT)* lbl;
                 tceu_nstk level;       /* CEU_INPUT__STACKED */
             };
 #ifdef CEU_FEATURES_PAUSE
@@ -147,12 +148,6 @@ enum {
 //<|< CEU_EXTS_TYPES >|>
 //<|< CEU_EVTS_TYPES >|>
 //<|< CEU_CODES_MEMS >|>
-
-enum {
-    CEU_LABEL_NONE = 0,
-    CEU_LABEL_ROOT = 1,
-<<< CEU_LABELS >>>
-};
 
 /*****************************************************************************/
 
@@ -240,40 +235,23 @@ void ceu_stack_clear (tceu_stk* cur, tceu_code_mem* mem) {
 
 /*****************************************************************************/
 
-static int ceu_lbl (tceu_nstk _ceu_level, tceu_stk* _ceu_cur, tceu_stk* _ceu_nxt, tceu_code_mem* _ceu_mem, tceu_nlbl _ceu_lbl, tceu_ntrl* _ceu_trlK);
-
 //<|< CEU_NATIVE_POS >|>
 
 //<|< CEU_CALLBACKS_OUTPUTS >|>
 
+#define CEU_LABEL__CALL(lbl,trl)    \
+    {                               \
+        int ret = (lbl)(trl);       \
+        if (ret != 0) {             \
+            return ret;             \
+        }                           \
+    }
+
+/* CEU_LABELS */
+
+<<< CEU_LABELS >>>
+
 /*****************************************************************************/
-
-#define CEU_GOTO(lbl) {_ceu_lbl=lbl; goto _CEU_LBL_;}
-
-static int ceu_lbl (tceu_nstk _ceu_level, tceu_stk* _ceu_cur, tceu_stk* _ceu_nxt, tceu_code_mem* _ceu_mem, tceu_nlbl _ceu_lbl, tceu_ntrl* _ceu_trlK)
-{
-#ifdef CEU_STACK_MAX
-    {
-        static void* base = NULL;
-        if (base == NULL) {
-            base = &_ceu_level;
-        } else {
-            ceu_assert((usize)(((byte*)base)-CEU_STACK_MAX) <= (usize)(&_ceu_level), "stack overflow");
-        }
-    }
-#endif
-
-_CEU_LBL_:
-    //printf("-=-=- %d -=-=-\n", _ceu_lbl);
-    switch (_ceu_lbl) {
-        case CEU_LABEL_NONE:
-            break;
-        case CEU_LABEL_ROOT:;
-<<< CEU_CODES >>>
-    }
-    //ceu_assert(0, "unreachable code");
-    return 0;
-}
 
 static void ceu_bcast_mark (tceu_nstk level, tceu_stk* cur)
 {
@@ -376,9 +354,10 @@ static int ceu_bcast_exec (tceu_nstk level, tceu_stk* cur, tceu_stk* nxt)
                 if (trl->evt.id==CEU_INPUT__STACKED && trl->level==level) {
                     trl->evt.id = CEU_INPUT__NONE;
 //printf("STK = %d\n", trlK);
-                    if (ceu_lbl(level, cur, nxt, cur->range.mem, trl->lbl, &trlK)) {
-                        return 1;
-                    }
+                    CEU_LABEL__CALL(trl->lbl, trl)
+                    //if (ceu_lbl(level, cur, nxt, cur->range.mem, trl->lbl, &trlK)) {
+                        //return 1;
+                    //}
 //printf("<< trlK = %d\n", trlK);
                 }
                 break;
