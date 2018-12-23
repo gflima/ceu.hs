@@ -26,7 +26,7 @@ dnz = Down { spc     = ""
            }
 
 dn_spc :: Down -> Down
-dn_spc g = g{ spc=(spc g)++"  " }
+dn_spc dn = dn{ spc=(spc dn)++"  " }
 
 -------------------------------------------------------------------------------
 
@@ -74,10 +74,10 @@ up_union_sum u1 u2 = (up_union u1 u2) { trails_n = (trails_n u1) + (trails_n u2)
 -------------------------------------------------------------------------------
 
 ocmd :: Down -> String -> String
-ocmd g str = (spc g) ++ str ++ ";\n"
+ocmd dn str = (spc dn) ++ str ++ ";\n"
 
 oblk :: Down -> String -> String
-oblk g str = (spc g) ++ "{\n" ++ str ++ (spc g) ++ "}\n"
+oblk dn str = (spc dn) ++ "{\n" ++ str ++ (spc dn) ++ "}\n"
 
 oln :: Stmt All -> String
 oln p = "//#line " ++ (show ln) ++ " \"" ++ file ++ "\" " ++ comm ++ "\n"
@@ -93,10 +93,10 @@ olbl lbl src = "int " ++ lbl ++ " (tceu_trl* _ceu_trl) " ++
                  oblk dnz src ++ "\n"
 
 ocallret :: Down -> String -> String
-ocallret g lbl = oblk g src
+ocallret dn lbl = oblk dn src
     where
-        src = (ocmd g "int __ceu_ret = " ++ lbl ++ "(...)") ++
-              (ocmd g "if (__ceu_ret != 0)")
+        src = (ocmd dn "int __ceu_ret = " ++ lbl ++ "(...)") ++
+              (ocmd dn "if (__ceu_ret != 0)")
 
 -------------------------------------------------------------------------------
 
@@ -133,75 +133,75 @@ stmt p = [ ("CEU_TRAILS_N", show $ trails_n up)
 
 aux :: Down -> Stmt All -> Up
 
-aux g s@(Nop   _)        = upz { code_bef=(oln s) }
-aux g s@(Halt  _)        = upz { code_bef=(oln s ++ ocmd g "return 0") }
-aux g s@(Inp   _ id p)   = p' { inps=id:(inps p') } where p'=(aux g p)
-aux g s@(Out   _ id p)   = aux g p
+aux dn s@(Nop   _)      = upz { code_bef=(oln s) }
+aux dn s@(Halt  _)      = upz { code_bef=(oln s ++ ocmd dn "return 0") }
+aux dn s@(Inp   _ id p) = p' { inps=id:(inps p') } where p'=(aux dn p)
+aux dn s@(Out   _ id p) = aux dn p
 
 -------------------------------------------------------------------------------
 
-aux g s@(Evt _ id p) = p' { evts_up=(id++"__"++(show$toN s)):(evts_up p') }
+aux dn s@(Evt _ id p) = p' { evts_up=(id++"__"++(show$toN s)):(evts_up p') }
     where
-        p' = aux g' p
-        g' = g{ evts_dn = (id,toN s):(evts_dn g) }
+        p'  = aux dn' p
+        dn' = dn{ evts_dn = (id,toN s):(evts_dn dn) }
 
-aux g s@(Var _ id p) = p' { vars_up=(id++"__"++(show$toN s)):(vars_up p') }
+aux dn s@(Var _ id p) = p' { vars_up=(id++"__"++(show$toN s)):(vars_up p') }
     where
-        p' = aux g' p
-        g' = g{ vars_dn = (id,toN s):(vars_dn g) }
+        p'  = aux dn' p
+        dn' = dn{ vars_dn = (id,toN s):(vars_dn dn) }
 
-aux g s@(Write _ var exp) = upz { code_bef=src }
+aux dn s@(Write _ var exp) = upz { code_bef=src }
     where
-        src = (oln s ++ (ocmd g $ "CEU_APP.root." ++ (getID vars var) ++ " = " ++ (expr vars exp)))
-        vars = vars_dn g
+        src  = (oln s ++ (ocmd dn $ "CEU_APP.root." ++ (getID vars var) ++ " = " ++ (expr vars exp)))
+        vars = vars_dn dn
 
 -------------------------------------------------------------------------------
 
-aux g s@(AwaitInp _ ext) = upz { code_bef=src, code_brk=(Just lbl) }
+aux dn s@(AwaitInp _ ext) = upz { code_bef=src, code_brk=(Just lbl) }
     where
         src = oln s ++
-              (ocmd g $ "_ceu_trl->evt.id = " ++ evt) ++
-              (ocmd g $ "_ceu_trl->lbl    = " ++ lbl) ++
-              (ocmd g $ "return 0")
-        trl = show $ trail_0 g
+              (ocmd dn $ "_ceu_trl->evt.id = " ++ evt) ++
+              (ocmd dn $ "_ceu_trl->lbl    = " ++ lbl) ++
+              (ocmd dn $ "return 0")
+        trl = show $ trail_0 dn
         evt = "CEU_INPUT_" ++ ext
         lbl = label s ("AwaitInp_" ++ ext)
 
-aux g s@(AwaitEvt _ evt) = upz { code_bef=src, code_brk=(Just lbl) }
+aux dn s@(AwaitEvt _ evt) = upz { code_bef=src, code_brk=(Just lbl) }
     where
         src = oln s ++
-             (ocmd g $ "_ceu_trl->evt.id = " ++ id') ++
-             (ocmd g $ "_ceu_trl->lbl    = " ++ lbl)
-        trl = show $ trail_0 g
-        id' = "CEU_EVENT_" ++ (getID (evts_dn g) evt)
+             (ocmd dn $ "_ceu_trl->evt.id = " ++ id') ++
+             (ocmd dn $ "_ceu_trl->lbl    = " ++ lbl)
+        trl = show $ trail_0 dn
+        id' = "CEU_EVENT_" ++ (getID (evts_dn dn) evt)
         lbl = label s ("AwaitEvt_" ++ evt)
 
 -------------------------------------------------------------------------------
 
-aux g s@(EmitExt _ ext exp) = upz { code_bef=src }
+aux dn s@(EmitExt _ ext exp) = upz { code_bef=src }
     where
-        src = oln s ++ (ocmd g $ "ceu_callback_output_" ++ ext ++ "(" ++ exp' ++ ")")
+        src = oln s ++ (ocmd dn $ "ceu_callback_output_" ++ ext ++ "(" ++ exp' ++ ")")
         exp' = case exp of
             Nothing  -> ""
-            (Just v) -> expr (vars_dn g) v
+            (Just v) -> expr (vars_dn dn) v
 
-aux g s@(EmitEvt _ evt) = upz { code_bef=emt, code_brk=(Just lbl) }
+aux dn s@(EmitEvt _ evt) = upz { code_bef=emt, code_brk=(Just lbl) }
     where
-        emt = oblk g $
-              (ocmd g' $ "tceu_evt   __ceu_evt   = {" ++ id' ++ ",{NULL}}") ++
-              (ocmd g' $ "tceu_range __ceu_range = { &CEU_APP.root._mem, 0, CEU_TRAILS_N-1 }") ++
+        emt = oblk dn $
+              (ocmd dn' $ "tceu_evt   __ceu_evt   = {" ++ id' ++ ",{NULL}}") ++
+              (ocmd dn' $ "tceu_range __ceu_range = { &CEU_APP.root._mem, 0, CEU_TRAILS_N-1 }") ++
 -- TODO: emit scope
-              (ocmd g' $ "_ceu_nxt->evt      = __ceu_evt") ++
-              (ocmd g' $ "_ceu_nxt->range    = __ceu_range") ++
-              (ocmd g' $ "_ceu_nxt->params_n = 0") ++
-              (ocmd g' $ "return 1")
-        id' = "CEU_EVENT_" ++ (getID (evts_dn g) evt)
-        g'  = dn_spc g
+              (ocmd dn' $ "_ceu_nxt->evt      = __ceu_evt") ++
+              (ocmd dn' $ "_ceu_nxt->range    = __ceu_range") ++
+              (ocmd dn' $ "_ceu_nxt->params_n = 0") ++
+              (ocmd dn' $ "return 1")
+        id' = "CEU_EVENT_" ++ (getID (evts_dn dn) evt)
+        dn' = dn_spc dn
         lbl = label s ("EmitEvt_" ++ evt)
 
 -------------------------------------------------------------------------------
 
-aux g s@(Seq _ p1 p2) = (up_union_max p1' p2') {
+aux dn s@(Seq _ p1 p2) = (up_union_max p1' p2') {
                         code_bef = oln s ++ bef,
                         --code_bef = bef,
                         code_brk = brk,
@@ -209,8 +209,8 @@ aux g s@(Seq _ p1 p2) = (up_union_max p1' p2') {
                         labels   = lbls ++ labels p2' ++ labels p1'
                       }
     where
-        p1' = aux g p1
-        p2' = aux g p2
+        p1' = aux dn p1
+        p2' = aux dn p2
 
         bef1 = code_bef p1'
         bef2 = code_bef p2'
@@ -232,17 +232,17 @@ aux g s@(Seq _ p1 p2) = (up_union_max p1' p2') {
 
 -------------------------------------------------------------------------------
 
-aux g s@(If _ exp p1 p2) = (up_union_max p1' p2') {
+aux dn s@(If _ exp p1 p2) = (up_union_max p1' p2') {
                             code_bef = bef,
                             code_brk = Just lbl,
                             labels   = lbls1++lbls2 ++ labels p2' ++ labels p1'
                            }
     where
-        p1' = aux (dn_spc g) p1
-        p2' = aux (dn_spc g) p2
+        p1' = aux (dn_spc dn) p1
+        p2' = aux (dn_spc dn) p2
         bef = oln s ++
-              spc g ++ "if (" ++ expr (vars_dn g) exp ++ ")\n" ++ oblk g bef1 ++
-              spc g ++ "else\n" ++ oblk g bef2
+              spc dn ++ "if (" ++ expr (vars_dn dn) exp ++ ")\n" ++ oblk dn bef1 ++
+              spc dn ++ "else\n" ++ oblk dn bef2
 
         brk1 = code_brk p1'
         brk2 = code_brk p2'
@@ -250,7 +250,7 @@ aux g s@(If _ exp p1 p2) = (up_union_max p1' p2') {
         bef1 = (code_bef p1') ++ if isNothing brk1 then join else ""
         bef2 = (code_bef p2') ++ if isNothing brk2 then join else ""
 
-        join = ocmd g $ "return " ++ lbl ++ "(_ceu_trl)"
+        join = ocmd dn $ "return " ++ lbl ++ "(_ceu_trl)"
         lbl  = label s "If_Join"
 
         lbls1 = if isNothing brk1 then [] else
@@ -260,13 +260,13 @@ aux g s@(If _ exp p1 p2) = (up_union_max p1' p2') {
 
 -------------------------------------------------------------------------------
 
-aux g s@(Loop _ p) = (up_copy p') {
+aux dn s@(Loop _ p) = (up_copy p') {
                         code_bef = loop,
                         code_brk = Nothing,
                         labels   = [odcl lbl] ++ lbls1 ++ (labels p') ++ lbls2
                      }
     where
-        p'  = aux (dn_spc g) p
+        p'  = aux (dn_spc dn) p
         brk = code_brk p'
 
         lbls1 = if isNothing brk then [] else
@@ -274,46 +274,46 @@ aux g s@(Loop _ p) = (up_copy p') {
         lbls2 = [olbl lbl bef]
 
         bef  = code_bef p' ++ if isNothing brk then loop else ""
-        loop = ocmd g $ "return " ++ lbl ++ "(_ceu_trl)"
+        loop = ocmd dn $ "return " ++ lbl ++ "(_ceu_trl)"
         lbl  = label s "Loop"
 
 -------------------------------------------------------------------------------
 
-aux g s@(Par _ p1 p2) = (up_union_sum p1' p2') { code_bef=src }
+aux dn s@(Par _ p1 p2) = (up_union_sum p1' p2') { code_bef=src }
     where
-        src  = oln s ++ oblk g (src0 ++ src1 ++ srcM ++ src2)
-        src0 = (ocmd g' $ "CEU_APP.root.trails[" ++ show trl ++ "].evt.id = CEU_INPUT__STACKED") ++
-               (ocmd g' $ "CEU_APP.root.trails[" ++ show trl ++ "].lbl    = " ++ lbl) ++
-               (ocmd g' $ "CEU_APP.root.trails[" ++ show trl ++ "].level  = _ceu_level")
-        src1 = oblk g' (code_bef p1')
-        srcM = spc g ++ "/* with */\n" ++ (ocmd dnz $ "case " ++ lbl ++ ":")
-        src2 = oblk g' (code_bef p2')
-        g'   = dn_spc g
-        p1'  = aux (dn_spc g') p1
-        p2'  = aux (dn_spc g'{trail_0=trl}) p2
-        trl  = (trail_0 g) + (trails_n p1')
+        src  = oln s ++ oblk dn (src0 ++ src1 ++ srcM ++ src2)
+        src0 = (ocmd dn' $ "CEU_APP.root.trails[" ++ show trl ++ "].evt.id = CEU_INPUT__STACKED") ++
+               (ocmd dn' $ "CEU_APP.root.trails[" ++ show trl ++ "].lbl    = " ++ lbl) ++
+               (ocmd dn' $ "CEU_APP.root.trails[" ++ show trl ++ "].level  = _ceu_level")
+        src1 = oblk dn' (code_bef p1')
+        srcM = spc dn ++ "/* with */\n" ++ (ocmd dnz $ "case " ++ lbl ++ ":")
+        src2 = oblk dn' (code_bef p2')
+        dn'  = dn_spc dn
+        p1'  = aux (dn_spc dn') p1
+        p2'  = aux (dn_spc dn'{trail_0=trl}) p2
+        trl  = (trail_0 dn) + (trails_n p1')
         lbl  = label s "Par"
 
-aux g s@(Trap _ p) = (up_copy p') {
+aux dn s@(Trap _ p) = (up_copy p') {
                         code_bef = code_bef p',
                         code_brk = Just lbl,
                         code_aft = clr,
                         labels   = [odcl lbl] ++ (labels p') ++ aft
                      }
     where
-        p'  = aux g' p
-        g'  = dn_spc g{ traps = s:(traps g) }
+        p'  = aux dn' p
+        dn' = dn_spc dn{ traps = s:(traps dn) }
         lbl = label s "Trap"
 
         aft = if isNothing brk then [] else
                 [ olbl (fromJust brk) (code_aft p') ]
         brk = code_brk p'
 
-        clr = oblk g $ spc g' ++ "// clear\n" ++
-              (ocmd g' $ "memset(&CEU_APP.root.trails[" ++ t0 ++ "], 0, " ++ n ++ ")")
-        t0  = show $ trail_0 g
+        clr = oblk dn $ spc dn' ++ "// clear\n" ++
+              (ocmd dn' $ "memset(&CEU_APP.root.trails[" ++ t0 ++ "], 0, " ++ n ++ ")")
+        t0  = show $ trail_0 dn
         n   = (show $ trails_n p') ++ "*sizeof(tceu_trl)"
 
-aux g s@(Escape _ k) = upz { code_bef=src }
+aux dn s@(Escape _ k) = upz { code_bef=src }
     where
-        src = oln s ++ (ocmd g $ "return " ++ (label ((traps g)!!k) "Trap") ++ "(_ceu_trl)")
+        src = oln s ++ (ocmd dn $ "return " ++ (label ((traps dn)!!k) "Trap") ++ "(_ceu_trl)")
