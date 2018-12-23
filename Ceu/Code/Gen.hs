@@ -86,10 +86,10 @@ oln p = "//#line " ++ (show ln) ++ " \"" ++ file ++ "\" " ++ comm ++ "\n"
         comm             = "// " ++ (toWord p)
 
 odcl :: String -> String
-odcl lbl = "int " ++ lbl ++ " (void);\n\n"
+odcl lbl = "void " ++ lbl ++ " (tceu_stk* _ceu_stk);\n\n"
 
 olbl :: String -> String -> String
-olbl lbl src = "int " ++ lbl ++ " (void) " ++
+olbl lbl src = "void " ++ lbl ++ " (tceu_stk* _ceu_stk) " ++
                  oblk dnz src ++ "\n"
 
 -------------------------------------------------------------------------------
@@ -128,7 +128,7 @@ stmt p = [ ("CEU_TRAILS_N", show $ trails_n up)
 aux :: Down -> Stmt All -> Up
 
 aux dn s@(Nop   _)      = upz { code_bef=(oln s) }
-aux dn s@(Halt  _)      = upz { code_bef=(oln s ++ ocmd dn "return 0") }
+aux dn s@(Halt  _)      = upz { code_bef=(oln s) }
 aux dn s@(Inp   _ id p) = p' { inps=id:(inps p') } where p'=(aux dn p)
 aux dn s@(Out   _ id p) = aux dn p
 
@@ -155,8 +155,7 @@ aux dn s@(AwaitInp _ ext) = upz { code_bef=src, code_brk=(Just lbl) }
     where
         src = oln s ++
               (ocmd dn $ "CEU_APP.root.trails[" ++ trl ++ "].evt = " ++ evt) ++
-              (ocmd dn $ "CEU_APP.root.trails[" ++ trl ++ "].lbl = " ++ lbl) ++
-              (ocmd dn $ "return 0")
+              (ocmd dn $ "CEU_APP.root.trails[" ++ trl ++ "].lbl = " ++ lbl)
         trl = show $ trail_0 dn
         evt = "CEU_INPUT_" ++ ext
         lbl = label s ("AwaitInp_" ++ ext)
@@ -242,7 +241,7 @@ aux dn s@(If _ exp p1 p2) = (up_union_max p1' p2') {
         bef1 = (code_bef p1') ++ if isNothing brk1 then join else ""
         bef2 = (code_bef p2') ++ if isNothing brk2 then join else ""
 
-        join = ocmd dn $ "return " ++ lbl ++ "()"
+        join = ocmd dn $ "return " ++ lbl ++ "(_ceu_stk)"
         lbl  = label s "If_Join"
 
         lbls1 = if isNothing brk1 then [] else
@@ -266,25 +265,33 @@ aux dn s@(Loop _ p) = (up_copy p') {
         lbls2 = [olbl lbl bef]
 
         bef  = code_bef p' ++ if isNothing brk then loop else ""
-        loop = ocmd dn $ "return " ++ lbl ++ "()"
+        loop = ocmd dn $ "return " ++ lbl ++ "(_ceu_stk)"
         lbl  = label s "Loop"
 
 -------------------------------------------------------------------------------
 
-aux dn s@(Par _ p1 p2) = (up_union_sum p1' p2') { code_bef=src }
+aux dn s@(Par _ p1 p2) = (up_union_sum p1' p2') {
+                            code_bef = oln s ++ bef,
+                            labels   = lbls1 ++ labels p1' ++ lbls2 ++ labels p2'
+                         }
     where
-        src  = oln s ++ oblk dn (src0 ++ src1 ++ srcM ++ src2)
-        src0 = (ocmd dn' $ "CEU_APP.root.trails[" ++ show trl ++ "].evt = CEU_INPUT__STACKED") ++
-               (ocmd dn' $ "CEU_APP.root.trails[" ++ show trl ++ "].lbl    = " ++ lbl) ++
-               (ocmd dn' $ "CEU_APP.root.trails[" ++ show trl ++ "].level  = _ceu_level")
-        src1 = oblk dn' (code_bef p1')
-        srcM = spc dn ++ "/* with */\n" ++ (ocmd dnz $ "case " ++ lbl ++ ":")
-        src2 = oblk dn' (code_bef p2')
-        dn'  = dn_spc dn
         p1'  = aux (dn_spc dn') p1
         p2'  = aux (dn_spc dn'{trail_0=trl}) p2
+        dn'  = dn_spc dn
         trl  = (trail_0 dn) + (trails_n p1')
-        lbl  = label s "Par"
+
+        brk1 = code_brk p1'
+        brk2 = code_brk p2'
+
+        bef = code_bef p1' ++
+              if isNothing brk1 then
+                ""
+              else
+                (ocmd dn $ "if (!_ceu_stk->is_alive) return")
+              ++ code_bef p2'
+
+        lbls1 = if isNothing brk1 then [] else [ olbl (fromJust brk1) (code_aft p1') ]
+        lbls2 = if isNothing brk2 then [] else [ olbl (fromJust brk2) (code_aft p2') ]
 
 aux dn s@(Trap _ p) = (up_copy p') {
                         code_bef = code_bef p',
@@ -308,4 +315,4 @@ aux dn s@(Trap _ p) = (up_copy p') {
 
 aux dn s@(Escape _ k) = upz { code_bef=src }
     where
-        src = oln s ++ (ocmd dn $ "return " ++ (label ((traps dn)!!k) "Trap") ++ "()")
+        src = oln s ++ (ocmd dn $ "return " ++ (label ((traps dn)!!k) "Trap") ++ "(_ceu_stk)")

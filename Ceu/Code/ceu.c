@@ -47,8 +47,6 @@ CEU_API void ceu_stop  (void);
 CEU_API void ceu_input (tceu_nevt evt);
 CEU_API int  ceu_loop  (int argc, char* argv[]);
 
-int CEU_LABEL_ROOT (void);
-
 typedef struct tceu_range {
     tceu_nevt evt;
     tceu_ntrl trl0;
@@ -57,9 +55,12 @@ typedef struct tceu_range {
 
 typedef struct tceu_stk {
     tceu_range range;
+    //tceu_ntrl  trl;
     bool       is_alive;
     struct tceu_stk* prv;
 } tceu_stk;
+
+void CEU_LABEL_ROOT (tceu_stk* _ceu_stk);
 
 typedef struct tceu_trl {
     tceu_nevt evt;
@@ -260,7 +261,7 @@ static int ceu_bcast_exec (tceu_nstk level, tceu_stk* cur, tceu_stk* nxt)
                 if (trl->evt==CEU_INPUT__STACKED && trl->level==level) {
                     trl->evt = CEU_INPUT__NONE;
 //printf("STK = %d\n", trlK);
-                    trl->lbl();
+                    trl->lbl(cur);
                     //if (ceu_lbl(level, cur, nxt, cur->evt.mem, trl->lbl, &trlK)) {
                         //return 1;
                     //}
