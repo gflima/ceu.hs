@@ -202,6 +202,9 @@ spec = do
                 `shouldBe` Right (Nop ("",1,1))
 
         describe "escape:" $ do
+            it "escape" $
+                parse stmt_escape "escape"
+                `shouldBe` Right (Escape ("",1,1) Nothing Nothing)
             it "escape 0" $
                 parse stmt_escape "escape 0"
                 `shouldBe` Right (Escape ("",1,1) Nothing (Just (Const ("",1,8) 0)))
@@ -322,9 +325,13 @@ spec = do
                 `shouldBe` Right (Scope ("",1,1) (Nop ("",1,4)))
 
         describe "if-then-else/if-else" $ do
-            it "if 0 then escape 0" $
+            it "if 0 then escape" $
                 parse stmt_if "if 0 then escape"
-                `shouldBe` Left "(line 1, column 11):\nunexpected \"s\"\nexpecting \"end\""
+                `shouldBe` Left "(line 1, column 17):\nunexpected end of input\nexpecting letter, \"_\", digit, \"-\", \"(\", \"escape\", \"var\", \"input\", \"output\", \"event\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
+
+            it "if 0 then escape 0" $
+                parse stmt_if "if 0 then escape 0"
+                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"*\", \"/\", \"+\", \"-\", \"escape\", \"var\", \"input\", \"output\", \"event\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 escape 0 end" $
                 parse stmt_if "if 0 escape 0 end"
@@ -359,6 +366,11 @@ spec = do
             it "loop do v<-1 ; await FOREVER end" $
                 parse stmt_loop "loop do v<-1 ; await FOREVER end"
                 `shouldBe` Right (Loop ("",1,1) (Seq ("",1,9) (Write ("",1,10) "v" (Const ("",1,12) 1)) (Halt ("",1,16))))
+
+        describe "trap" $ do
+            it "trap do escape end" $
+                parse stmt_trap "trap do escape end"
+                `shouldBe` Right (Trap ("",1,1) Nothing (Escape ("",1,9) Nothing Nothing))
 
 -------------------------------------------------------------------------------
 

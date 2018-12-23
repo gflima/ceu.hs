@@ -27,6 +27,7 @@ compile p = ([], aux [] p) where
   aux vars p                   = p
 
 escape :: [Maybe ID_Var] -> Stmt ann -> Int -> Stmt ann
+escape (Nothing:_) (Escape z Nothing Nothing) _ = Escape' z 0
 escape ((Just var):_) (Escape z Nothing (Just val)) _ = Seq z (Write z var val) (Escape' z 0)
 escape ((Just var'):l) s@(Escape z (Just var) val) n
   | var == var' = case val of

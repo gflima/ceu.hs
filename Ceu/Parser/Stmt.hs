@@ -47,8 +47,8 @@ stmt_escape :: Parser (Stmt Source)
 stmt_escape = do
     pos  <- getPosition
     void <- tk_key "escape"
-    e    <- expr
-    return $ Escape (pos2src pos) Nothing (Just e)
+    e    <- optionMaybe (try expr)
+    return $ Escape (pos2src pos) Nothing e
 
 stmt_var :: Parser (Stmt Source)
 stmt_var = do
@@ -170,6 +170,15 @@ stmt_loop = do
     void <- tk_key "end"
     return $ Loop (pos2src pos1) s
 
+stmt_trap :: Parser (Stmt Source)
+stmt_trap = do
+    pos  <- getPosition
+    void <- tk_key "trap"
+    void <- tk_key "do"
+    s    <- stmt
+    void <- tk_key "end"
+    return $ Trap (pos2src pos) Nothing s
+
 -------------------------------------------------------------------------------
 
 stmt_par :: Parser (Stmt Source)
@@ -217,7 +226,7 @@ stmt1 = do
          try stmt_attr <|>
          try (stmt_awaitext Nothing) <|> try stmt_halt <|> try (stmt_awaitevt Nothing) <|>
          try stmt_emitext <|> try stmt_emitevt <|>
-         try stmt_do <|> try stmt_if <|> try stmt_loop <|>
+         try stmt_do <|> try stmt_if <|> try stmt_loop <|> try stmt_trap <|>
          try stmt_par <|> try stmt_parand <|> try stmt_paror
     return s
 

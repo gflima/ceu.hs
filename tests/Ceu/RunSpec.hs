@@ -161,6 +161,11 @@ spec = do
             run "if 0 then escape 0 else/if 1 then escape 1 else escape 0 end" []
             `shouldBe` Right (1, [[]])
 
+    describe "trap" $ do
+        it "trap do escape end escape 1" $
+            run "trap do escape end escape 1" []
+            `shouldBe` Right (1, [[]])
+
 -------------------------------------------------------------------------------
 
     describe "par:" $ do

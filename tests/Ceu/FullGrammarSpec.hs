@@ -113,7 +113,7 @@ spec = do
 
     it "trap escape;" $ do
       Trap.compile (Trap () Nothing (Escape () Nothing Nothing))
-      `shouldBe` ([], (Trap' () (Escape' () (-1))))
+      `shouldBe` ([], (Trap' () (Escape' () 0)))
 
     it "trap/a escape/a;" $ do
       Trap.compile (Var' () "a" Nothing (Trap () (Just "a") (Escape () (Just "a") Nothing)))
