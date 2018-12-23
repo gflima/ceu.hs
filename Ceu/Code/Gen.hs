@@ -160,8 +160,8 @@ aux dn s@(Write _ var exp) = upz { code_bef=src }
 aux dn s@(AwaitInp _ ext) = upz { code_bef=src, code_brk=(Just lbl) }
     where
         src = oln s ++
-              (ocmd dn $ "_ceu_trl->evt.id = " ++ evt) ++
-              (ocmd dn $ "_ceu_trl->lbl    = " ++ lbl) ++
+              (ocmd dn $ "_ceu_trl->evt = " ++ evt) ++
+              (ocmd dn $ "_ceu_trl->lbl = " ++ lbl) ++
               (ocmd dn $ "return 0")
         trl = show $ trail_0 dn
         evt = "CEU_INPUT_" ++ ext
@@ -170,8 +170,8 @@ aux dn s@(AwaitInp _ ext) = upz { code_bef=src, code_brk=(Just lbl) }
 aux dn s@(AwaitEvt _ evt) = upz { code_bef=src, code_brk=(Just lbl) }
     where
         src = oln s ++
-             (ocmd dn $ "_ceu_trl->evt.id = " ++ id') ++
-             (ocmd dn $ "_ceu_trl->lbl    = " ++ lbl)
+             (ocmd dn $ "_ceu_trl->evt = " ++ id') ++
+             (ocmd dn $ "_ceu_trl->lbl = " ++ lbl)
         trl = show $ trail_0 dn
         id' = "CEU_EVENT_" ++ (getID (evts_dn dn) evt)
         lbl = label s ("AwaitEvt_" ++ evt)
@@ -188,9 +188,9 @@ aux dn s@(EmitExt _ ext exp) = upz { code_bef=src }
 aux dn s@(EmitEvt _ evt) = upz { code_bef=emt, code_brk=(Just lbl) }
     where
         emt = oblk dn $
-              (ocmd dn' $ "tceu_evt __ceu_evt = {" ++ id' ++ ",0, CEU_TRAILS_N-1}") ++
+              (ocmd dn' $ "tceu_range __ceu_rge = {" ++ id' ++ ",0, CEU_TRAILS_N-1}") ++
 -- TODO: emit scope
-              (ocmd dn' $ "_ceu_nxt->evt      = __ceu_evt") ++
+              (ocmd dn' $ "_ceu_nxt->range    = __ceu_rge") ++
               (ocmd dn' $ "_ceu_nxt->params_n = 0") ++
               (ocmd dn' $ "return 1")
         id' = "CEU_EVENT_" ++ (getID (evts_dn dn) evt)
@@ -280,7 +280,7 @@ aux dn s@(Loop _ p) = (up_copy p') {
 aux dn s@(Par _ p1 p2) = (up_union_sum p1' p2') { code_bef=src }
     where
         src  = oln s ++ oblk dn (src0 ++ src1 ++ srcM ++ src2)
-        src0 = (ocmd dn' $ "CEU_APP.root.trails[" ++ show trl ++ "].evt.id = CEU_INPUT__STACKED") ++
+        src0 = (ocmd dn' $ "CEU_APP.root.trails[" ++ show trl ++ "].evt = CEU_INPUT__STACKED") ++
                (ocmd dn' $ "CEU_APP.root.trails[" ++ show trl ++ "].lbl    = " ++ lbl) ++
                (ocmd dn' $ "CEU_APP.root.trails[" ++ show trl ++ "].level  = _ceu_level")
         src1 = oblk dn' (code_bef p1')
