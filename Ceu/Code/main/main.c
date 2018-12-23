@@ -3,10 +3,10 @@
 #include "types.h"
 
 #ifndef ceu_callback_start
-    #define ceu_callback_start(trace)
+    #define ceu_callback_start(trace) { _CEU_INPUT = 0; }
 #endif
 #ifndef ceu_callback_step
-    #define ceu_callback_step(trace) { _CEU_INPUT=10; ceu_input(CEU_INPUT_KEY,NULL); }
+    #define ceu_callback_step(trace) { _CEU_INPUT=++_CEU_INPUT; ceu_input(CEU_INPUT_KEY,NULL); }
 #endif
 #ifndef ceu_callback_stop
     #define ceu_callback_stop(trace)
