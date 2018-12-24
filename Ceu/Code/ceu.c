@@ -55,8 +55,8 @@ typedef struct tceu_range {
 
 typedef struct tceu_stk {
     tceu_range range;
-    //tceu_ntrl  trl;
     bool       is_alive;
+    tceu_ntrl  trl;
     struct tceu_stk* prv;
 } tceu_stk;
 
@@ -177,17 +177,15 @@ static int ceu_wclock_ (s32 dt, s32* set, s32* sub)
 
 /*****************************************************************************/
 
-#if 0
-void ceu_stack_clear (tceu_stk* cur, tceu_mem* mem) {
-    if (cur == NULL) {
+void ceu_stack_clear (tceu_stk* stk, tceu_ntrl t0, tceu_ntrl n) {
+    if (stk == NULL) {
         return;
     }
-    if (cur->evt.mem == mem) {
-        cur->is_alive = 0;
+    if (stk->trl>=t0 && stk->trl<t0+n) {
+        stk->is_alive = 0;
     }
-    ceu_stack_clear(cur->prv, mem);
+    ceu_stack_clear(stk->prv, t0, n);
 }
-#endif
 
 /*****************************************************************************/
 
@@ -337,13 +335,13 @@ CEU_API void ceu_input (tceu_nevt evt)
     _CEU_INPUT = dt;
     if (dt != CEU_WCLOCK_INACTIVE) {
         tceu_range rge = {CEU_INPUT__WCLOCK, 0, CEU_TRAILS_N-1};
-        tceu_stk cur = { rge, 1, NULL };
+        tceu_stk cur = { rge, 1, 0, NULL };
         ceu_bcast(1, &cur);
     }
     _CEU_INPUT = inp;
     if (evt != CEU_INPUT__NONE) {
         tceu_range rge = {evt, 0, CEU_TRAILS_N-1};
-        tceu_stk cur = { rge, 1, NULL };
+        tceu_stk cur = { rge, 1, 0, NULL };
         ceu_bcast(1, &cur);
     }
 }
@@ -368,7 +366,7 @@ CEU_API void ceu_start (int argc, char* argv[]) {
     ceu_callback_start(CEU_TRACE_null);
 
     tceu_range rge = {CEU_INPUT__NONE, 0, CEU_TRAILS_N-1};
-    tceu_stk   cur = { rge, 1, NULL };
+    tceu_stk   cur = { rge, 1, 0, NULL };
     ceu_bcast(1, &cur);
 }
 CEU_API void ceu_stop (void) {
