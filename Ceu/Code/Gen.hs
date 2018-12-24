@@ -176,7 +176,7 @@ aux dn s@(EmitExt _ ext exp) = upz { code_bef=src }
 aux dn s@(EmitEvt _ evt) = upz { code_bef=emt, code_brk=(Just lbl) }
     where
         emt = oblk $
-              (ocmd $ "tceu_range __ceu_rge = {" ++ id' ++ ",0, CEU_TRAILS_N-1}") ++
+              (ocmd $ "tceu_range __ceu_rge = {" ++ id' ++ ",0, CEU_TRAILS_N}") ++
 -- TODO: emit scope
               (ocmd $ "_ceu_nxt->range    = __ceu_rge") ++
               (ocmd $ "_ceu_nxt->params_n = 0") ++
@@ -277,7 +277,7 @@ aux dn s@(Par _ p1 p2) = (up_union_sum p1' p2') {
         brk2 = code_brk p2'
 
         bef = (oblk $
-                (ocmd $ "tceu_stk __ceu_stk_new = { {}, 1, 0, _ceu_stk }")  ++
+                (ocmd $ "tceu_stk __ceu_stk_new = { {}, _ceu_stk->level+1, 1, 0, _ceu_stk }")  ++
                 (ocmd $ "_ceu_stk->trl = " ++ (show trl))                   ++
                 (ocmd $ bef1 ++ "(&__ceu_stk_new)")                         ++
                 (ocmd $ "if (!_ceu_stk->is_alive) return"))                 ++
