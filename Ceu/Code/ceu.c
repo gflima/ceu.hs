@@ -181,7 +181,7 @@ CEU_API void ceu_start (int argc, char* argv[])
 {
     memset(&CEU_APP.root.trails, 0, CEU_TRAILS_N*sizeof(tceu_trl));
 
-    ceu_callback_start(CEU_TRACE_null);
+    ceu_callback_start();
 
     tceu_stk stk = { 0, 1, 0, NULL };
     CEU_LABEL_ROOT(&stk);
@@ -193,7 +193,7 @@ CEU_API void ceu_start (int argc, char* argv[])
 
 CEU_API void ceu_stop (void)
 {
-    ceu_callback_stop(CEU_TRACE_null);
+    ceu_callback_stop();
 }
 
 /*****************************************************************************/
@@ -204,7 +204,7 @@ CEU_API int ceu_loop (int argc, char* argv[])
 
     while (1)
     {
-        ceu_callback_step(CEU_TRACE_null);
+        ceu_callback_step();
 #ifdef CEU_FEATURES_ASYNC
         ceu_input(CEU_INPUT__ASYNC);
 #endif
