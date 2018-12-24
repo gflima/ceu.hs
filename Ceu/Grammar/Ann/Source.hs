@@ -7,4 +7,5 @@ import Ceu.Grammar.Globals (Source, Ann(..))
 
 instance Ann Source where
     getSource src = Just src
-    getN _ = 0
+    getN      _   = 0
+    getTrails _   = (0,0)

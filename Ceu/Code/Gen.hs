@@ -173,7 +173,7 @@ aux dn s@(EmitExt _ ext exp) = upz { code_bef=src }
             Nothing  -> ""
             (Just v) -> expr (vars_dn dn) v
 
-aux dn s@(EmitEvt _ evt) = upz { code_bef=bef }
+aux dn s@(EmitEvt _ evt) = upz { code_bef=(oln s)++bef }
     where
         bef = oblk $
 -- TODO: emit scope

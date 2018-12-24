@@ -6,95 +6,98 @@ import Ceu.Grammar.Exp  (Exp(..))
 import Ceu.Grammar.Stmt (Stmt(..))
 
 add :: (Stmt Source) -> (Stmt All)
-add p = p' where (_,p') = stmt 0 p
+add p = p' where (_,_,p') = stmt 0 0 p
 
-stmt :: Int -> (Stmt Source) -> (Int, Stmt All)
+stmt :: Int -> Int -> (Stmt Source) -> (Int, Int, Stmt All)
 
-stmt n (Nop src) = (n, Nop All{source=src,n=n})
+stmt n trl0 (Nop src) = (n,1, Nop All{source=src,n=n,trails=(trl0,1)})
 
-stmt n (Var src id p) =
-    (n', Var All{source=src,n=n} id p')
+stmt n trl0 (Var src id p) =
+    (n',ts', Var All{source=src,n=n,trails=(trl0,ts')} id p')
     where
-        (n',p') = stmt (n+1) p
+        (n',ts',p') = stmt (n+1) trl0 p
 
-stmt n (Inp src id p) =
-    (n', Inp All{source=src,n=n} id p')
+stmt n trl0 (Inp src id p) =
+    (n',ts', Inp All{source=src,n=n,trails=(trl0,ts')} id p')
     where
-        (n',p') = stmt (n+1) p
+        (n',ts',p') = stmt (n+1) trl0 p
 
-stmt n (Out src id p) =
-    (n', Out All{source=src,n=n} id p')
+stmt n trl0 (Out src id p) =
+    (n',ts', Out All{source=src,n=n,trails=(trl0,ts')} id p')
     where
-        (n',p') = stmt (n+1) p
+        (n',ts',p') = stmt (n+1) trl0 p
 
-stmt n (Evt src id p) =
-    (n', Evt All{source=src,n=n} id p')
+stmt n trl0 (Evt src id p) =
+    (n',ts', Evt All{source=src,n=n,trails=(trl0,ts')} id p')
     where
-        (n',p') = stmt (n+1) p
+        (n',ts',p') = stmt (n+1) trl0 p
 
-stmt n (Write src var exp) =
-    (n', Write All{source=src,n=n} var exp')
-    where
-        (n',exp') = expr (n+1) exp
-
-stmt n (AwaitInp src ext) =
-    (n, AwaitInp All{source=src,n=n} ext)
-
-stmt n (EmitExt src ext Nothing) =
-    (n, EmitExt All{source=src,n=n} ext Nothing)
-stmt n (EmitExt src ext (Just exp)) =
-    (n', EmitExt All{source=src,n=n} ext (Just exp'))
+stmt n trl0 (Write src var exp) =
+    (n',1, Write All{source=src,n=n,trails=(trl0,1)} var exp')
     where
         (n',exp') = expr (n+1) exp
 
-stmt n (AwaitEvt src evt) =
-    (n, AwaitEvt All{source=src,n=n} evt)
+stmt n trl0 (AwaitInp src ext) =
+    (n,1, AwaitInp All{source=src,n=n,trails=(trl0,1)} ext)
 
-stmt n (EmitEvt src evt) =
-    (n, EmitEvt All{source=src,n=n} evt)
-
-stmt n (If src exp p1 p2) =
-    (n2', If All{source=src,n=n} exp' p1' p2')
+stmt n trl0 (EmitExt src ext Nothing) =
+    (n,1, EmitExt All{source=src,n=n,trails=(trl0,1)} ext Nothing)
+stmt n trl0 (EmitExt src ext (Just exp)) =
+    (n',1, EmitExt All{source=src,n=n,trails=(trl0,1)} ext (Just exp'))
     where
-        (n',exp') = expr (n+1)   exp
-        (n1',p1') = stmt (n'+1)  p1
-        (n2',p2') = stmt (n1'+1) p2
+        (n',exp') = expr (n+1) exp
 
-stmt n (Seq src p1 p2) =
-    (n2', Seq All{source=src,n=n} p1' p2')
+stmt n trl0 (AwaitEvt src evt) =
+    (n,1, AwaitEvt All{source=src,n=n,trails=(trl0,1)} evt)
+
+stmt n trl0 (EmitEvt src evt) =
+    (n,1, EmitEvt All{source=src,n=n,trails=(trl0,1)} evt)
+
+stmt n trl0 (If src exp p1 p2) =
+    (n2',mx, If All{source=src,n=n,trails=(trl0,mx)} exp' p1' p2')
     where
-        (n1',p1') = stmt (n+1)   p1
-        (n2',p2') = stmt (n1'+1) p2
+        (n',exp')      = expr (n+1)   exp
+        (n1',ts1',p1') = stmt (n'+1)  trl0 p1
+        (n2',ts2',p2') = stmt (n1'+1) trl0 p2
+        mx = max ts1' ts2'
 
-stmt n (Loop src p) =
-    (n', Loop All{source=src,n=n} p')
+stmt n trl0 (Seq src p1 p2) =
+    (n2',mx, Seq All{source=src,n=n,trails=(trl0,mx)} p1' p2')
     where
-        (n',p') = stmt (n+1) p
+        (n1',ts2',p1') = stmt (n+1)   trl0 p1
+        (n2',ts1',p2') = stmt (n1'+1) trl0 p2
+        mx = max ts1' ts2'
 
-stmt n (Par src p1 p2) =
-    (n2', Par All{source=src,n=n} p1' p2')
+stmt n trl0 (Loop src p) =
+    (n',ts', Loop All{source=src,n=n,trails=(trl0,ts')} p')
     where
-        (n1',p1') = stmt (n+1)   p1
-        (n2',p2') = stmt (n1'+1) p2
+        (n',ts',p') = stmt (n+1) trl0 p
 
-stmt n (Trap src p) =
-    (n', Trap All{source=src,n=n} p')
+stmt n trl0 (Par src p1 p2) =
+    (n2',sm, Par All{source=src,n=n,trails=(trl0,sm)} p1' p2')
     where
-        (n',p') = stmt (n+1) p
+        (n1',ts1',p1') = stmt (n+1)   trl0        p1
+        (n2',ts2',p2') = stmt (n1'+1) (trl0+ts1') p2
+        sm = ts1' + ts2'
 
-stmt n (Escape src k) = (n, Escape All{source=src,n=n} k)
-stmt n (Halt src)     = (n, Halt All{source=src,n=n})
+stmt n trl0 (Trap src p) =
+    (n',ts', Trap All{source=src,n=n,trails=(trl0,ts')} p')
+    where
+        (n',ts',p') = stmt (n+1) trl0 p
 
-stmt n p = error (show p)
+stmt n trl0 (Escape src k) = (n,1, Escape All{source=src,n=n,trails=(trl0,1)} k)
+stmt n trl0 (Halt src)     = (n,1, Halt All{source=src,n=n,trails=(trl0,1)})
+
+stmt n trl0 p = error (show p)
 
 -------------------------------------------------------------------------------
 
 expr :: Int -> (Exp Source) -> (Int, Exp All)
-expr n (Const src v)     = (n+1, Const All{source=src,n=n} v)
-expr n (Read  src id)    = (n+1, Read  All{source=src,n=n} id)
-expr n (Equ   src e1 e2) = (n2', Equ All{source=src,n=n} e1' e2') where
+expr n (Const src v)     = (n+1, Const All{source=src,n=n,trails=(0,0)} v)
+expr n (Read  src id)    = (n+1, Read  All{source=src,n=n,trails=(0,0)} id)
+expr n (Equ   src e1 e2) = (n2', Equ All{source=src,n=n,trails=(0,0)} e1' e2') where
                             (n1',e1') = expr (n+1) e1
                             (n2',e2') = expr (n+1) e2
-expr n (Add   src e1 e2) = (n2', Add All{source=src,n=n} e1' e2') where
+expr n (Add   src e1 e2) = (n2', Add All{source=src,n=n,trails=(0,0)} e1' e2') where
                             (n1',e1') = expr (n+1) e1
                             (n2',e2') = expr (n+1) e2

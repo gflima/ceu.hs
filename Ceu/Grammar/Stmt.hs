@@ -116,3 +116,4 @@ instance (Ann ann) => INode (Stmt ann) where
   toWord   = stmt2word
   toSource = getSource . getAnn
   toN      = getN . getAnn
+  toTrails = getTrails . getAnn

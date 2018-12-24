@@ -73,3 +73,4 @@ instance (Ann ann) => INode (Exp ann) where
   toWord   = exp2word
   toSource = getSource . getAnn
   toN      = getN . getAnn
+  toTrails = getTrails . getAnn

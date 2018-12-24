@@ -3,12 +3,14 @@
 
 module Ceu.Grammar.Ann.All where
 
-import Ceu.Grammar.Globals (Source, Ann(..))
+import Ceu.Grammar.Globals (Source, Trails, Ann(..))
 
-data All = All { n      :: Int
-               , source :: Source
+data All = All { source :: Source
+               , n      :: Int
+               , trails :: Trails
                }
 
 instance Ann All where
-    getSource (All _ src) = Just src
-    getN v = (n v)
+    getSource v = Just (source v)
+    getN      v = n v
+    getTrails v = trails v
