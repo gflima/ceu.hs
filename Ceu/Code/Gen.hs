@@ -64,8 +64,8 @@ oblk str = "{\n" ++ str ++ "}\n"
 oln :: Stmt All -> String
 oln p = "//#line " ++ (show ln) ++ " \"" ++ file ++ "\" " ++ comm ++ "\n"
     where
-        Just (file,ln,_) = toSource p
-        comm             = "// " ++ (toWord p)
+        (file,ln,_) = toSource p
+        comm        = "// " ++ (toWord p)
 
 odcl :: String -> String
 odcl lbl = "void " ++ lbl ++ " (tceu_stk* _ceu_stk);\n\n"
@@ -85,27 +85,30 @@ expr :: [(ID_Var,Stmt All)] -> Exp ann -> String
 expr vars (Const _ n)     = show n
 expr vars (Read  _ id)    = if id == "_INPUT" then "_CEU_INPUT" else
                                 "CEU_APP.root." ++ (getEnvID vars id)
-expr vars (Equ   _ e1 e2) = (expr vars e1) ++ " == " ++ (expr vars e2)
-expr vars (Add   _ e1 e2) = (expr vars e1) ++ " + "  ++ (expr vars e2)
+expr vars (Equ   _ e1 e2) = "(" ++ (expr vars e1) ++ " == " ++ (expr vars e2) ++ ")"
+expr vars (Add   _ e1 e2) = "(" ++ (expr vars e1) ++ " + "  ++ (expr vars e2) ++ ")"
+expr vars (Mul   _ e1 e2) = "(" ++ (expr vars e1) ++ " * "  ++ (expr vars e2) ++ ")"
 
 -------------------------------------------------------------------------------
 
 label :: Stmt All -> String -> String
 label s lbl = "CEU_LABEL_" ++ (show $ toN s) ++ "_" ++ lbl
 
-stmt :: Stmt Source -> [(String,String)]
-stmt p = [ ("CEU_TRAILS_N", show $ toTrailsN p')
-         , ("CEU_INPS",     concat $ map (\inp->"    CEU_INPUT_"++inp++",\n") $ inps    up)
-         , ("CEU_EVTS",     concat $ map (\evt->"    CEU_EVENT_"++evt++",\n") $ evts_up up)
-         , ("CEU_VARS",     concat $ map (\var->"    int "++var++";\n")       $ vars_up up)
-         , ("CEU_LABELS",   concat $ labels up ++ root2 ++ root1 )
-         ] where
-    p'    = traceShowId $ N.add p
-    up    = aux dnz p'
-    root1 = [ olbl "CEU_LABEL_ROOT" (code_bef up) ]
-    root2 = case code_brk up of
-                Nothing  -> []
-                Just lbl -> [ olbl lbl (code_aft up) ]
+stmt :: Stmt Source -> [(String,Int)] -> [(String,String)]
+stmt p h = [ ("CEU_TRAILS_N", show $ toTrailsN p')
+           , ("CEU_INPS",     concat $ map (\inp->"    CEU_INPUT_"++inp++",\n") $ inps    up)
+           , ("CEU_EVTS",     concat $ map (\evt->"    CEU_EVENT_"++evt++",\n") $ evts_up up)
+           , ("CEU_VARS",     concat $ map (\var->"    int "++var++";\n")       $ vars_up up)
+           , ("CEU_HISTORY",  concat $ map (\(evt,v) -> "    _CEU_INPUT=" ++ (show v) ++ "; ceu_input(CEU_INPUT_" ++ evt ++ ");") h)
+           , ("CEU_LABELS",   concat $ labels up ++ root2 ++ root1 )
+           ]
+    where
+        p'    = N.add p --traceShowId $ N.add p
+        up    = aux dnz p'
+        root1 = [ olbl "CEU_LABEL_ROOT" (code_bef up) ]
+        root2 = case code_brk up of
+                    Nothing  -> []
+                    Just lbl -> [ olbl lbl (code_aft up) ]
 
 -------------------------------------------------------------------------------
 

@@ -101,3 +101,6 @@ expr n (Equ   src e1 e2) = (n2', Equ All{source=src,n=n,trails=(0,0)} e1' e2') w
 expr n (Add   src e1 e2) = (n2', Add All{source=src,n=n,trails=(0,0)} e1' e2') where
                             (n1',e1') = expr (n+1) e1
                             (n2',e2') = expr (n+1) e2
+expr n (Mul   src e1 e2) = (n2', Mul All{source=src,n=n,trails=(0,0)} e1' e2') where
+                            (n1',e1') = expr (n+1) e1
+                            (n2',e2') = expr (n+1) e2

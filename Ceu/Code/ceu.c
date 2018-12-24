@@ -184,7 +184,11 @@ CEU_API void ceu_start (int argc, char* argv[])
     ceu_callback_start(CEU_TRACE_null);
 
     tceu_stk stk = { 0, 1, 0, NULL };
-    return CEU_LABEL_ROOT(&stk);
+    CEU_LABEL_ROOT(&stk);
+
+#ifdef CEU_HISTORY
+<<< CEU_HISTORY >>>
+#endif
 }
 
 CEU_API void ceu_stop (void)

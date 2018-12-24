@@ -33,7 +33,7 @@ render keyvals src =
         aux [] [(txt,_)] = txt                  -- NOTE-1: last key whole is empty
         aux ((key,val):l1) ((txt,key'):l2)
             | key==key' = txt ++ val ++ (aux l1 l2)
-        --aux a b = error $ (show a)++(show b)
+        --aux a b = error $ (show b) -- ++(show b)
 
 main = do
     src     <- return "aaa <<< k1 >>> bbb <<< k2 >>><<< k3 >>> ccc"
