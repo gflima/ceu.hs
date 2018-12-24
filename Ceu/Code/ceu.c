@@ -256,7 +256,7 @@ static int ceu_bcast_exec (tceu_nstk level, tceu_stk* cur, tceu_stk* nxt)
         switch (trl->evt)
         {
             case CEU_INPUT__STACKED: {
-                if (trl->evt==CEU_INPUT__STACKED && trl->level==level) {
+                if (trl->level == level) {
                     trl->evt = CEU_INPUT__NONE;
 //printf("STK = %d\n", trlK);
                     trl->lbl(cur);
@@ -359,15 +359,11 @@ CEU_API void ceu_start (int argc, char* argv[]) {
 
     //CEU_APP.root.trails_n = CEU_TRAILS_N;
     memset(&CEU_APP.root.trails, 0, CEU_TRAILS_N*sizeof(tceu_trl));
-    CEU_APP.root.trails[0].evt   = CEU_INPUT__STACKED;
-    CEU_APP.root.trails[0].level = 1;
-    CEU_APP.root.trails[0].lbl   = CEU_LABEL_ROOT;
 
     ceu_callback_start(CEU_TRACE_null);
 
-    tceu_range rge = {CEU_INPUT__NONE, 0, CEU_TRAILS_N-1};
-    tceu_stk   cur = { rge, 1, 0, NULL };
-    ceu_bcast(1, &cur);
+    tceu_stk stk = { {}, 1, 0, NULL };
+    CEU_LABEL_ROOT(&stk);
 }
 CEU_API void ceu_stop (void) {
     ceu_callback_stop(CEU_TRACE_null);
