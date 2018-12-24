@@ -6,7 +6,7 @@ type Source = (String, Int, Int)    -- filename, line, column
 type Trails = (Int, Int)            -- trail_0, trail_n
 
 class Ann a where
-  getSource :: a -> Maybe Source
+  getSource :: a -> Source
   getN      :: a -> Int
   getTrails :: a -> Trails
 
@@ -15,15 +15,15 @@ class INode a where
   toError  :: a -> String -> String
   toError stmt msg = src ++ (toWord stmt) ++ ": " ++ msg where
     src = case toSource stmt of
-      Nothing        -> ""
-      Just (_,ln,cl) -> "(line " ++ (show ln) ++ ", column " ++ (show cl) ++ "):\n"
+      (_,0, 0)  -> ""
+      (_,ln,cl) -> "(line " ++ (show ln) ++ ", column " ++ (show cl) ++ "):\n"
 
   toTrails0 :: a -> Int
   toTrails0 = fst . toTrails
   toTrailsN :: a -> Int
   toTrailsN = snd . toTrails
 
-  toSource :: a -> Maybe Source
+  toSource :: a -> Source
   toN      :: a -> Int
   toTrails :: a -> (Int,Int)
 

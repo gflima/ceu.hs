@@ -6,6 +6,6 @@ module Ceu.Grammar.Ann.Source where
 import Ceu.Grammar.Globals (Source, Ann(..))
 
 instance Ann Source where
-    getSource src = Just src
+    getSource src = src
     getN      _   = 0
     getTrails _   = (0,0)

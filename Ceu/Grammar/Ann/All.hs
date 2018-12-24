@@ -12,6 +12,6 @@ data All = All { source :: Source
     deriving Show
 
 instance Ann All where
-    getSource v = Just (source v)
+    getSource v = source v
     getN      v = n v
     getTrails v = trails v
