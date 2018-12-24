@@ -35,7 +35,7 @@ go src hst =
 
 main :: IO ()
 main = do
-    src <- readFile "x2.ceu"
+    src <- readFile "x.ceu"
     tpl <- readFile "Ceu/Code/ceu.c"
     let ret = go src [("KEY",1),("KEY",2),("KEY",3),("KEY",4)] in
         case ret of
