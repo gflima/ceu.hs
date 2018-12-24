@@ -35,9 +35,9 @@ go src hst =
 
 main :: IO ()
 main = do
-    src <- readFile "x3.ceu"
+    src <- readFile "x2.ceu"
     tpl <- readFile "Ceu/Code/ceu.c"
-    let ret = go src [("KEY",1)] in
+    let ret = go src [("KEY",1),("KEY",2),("KEY",3),("KEY",4)] in
         case ret of
             Left  err      -> hPutStrLn stderr err
             Right keypairs ->

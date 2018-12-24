@@ -58,7 +58,7 @@ expr_add_sub = chainl1 expr_mul_div op where
         return (\a b -> Sub (pos2src pos) a b)
 
 expr_mul_div :: Parser (Exp Source)
-expr_mul_div = chainl1 expr_prim op where
+expr_mul_div = chainl1 expr_equ op where
     op = do
         pos  <- getPosition
         void <- tk_str "*"
@@ -67,6 +67,13 @@ expr_mul_div = chainl1 expr_prim op where
         pos  <- getPosition
         void <- tk_str "/"
         return (\a b -> Div (pos2src pos) a b)
+
+expr_equ :: Parser (Exp Source)
+expr_equ = chainl1 expr_prim op where
+    op = do
+        pos  <- getPosition
+        void <- tk_str "=="
+        return (\a b -> Equ (pos2src pos) a b)
 
 -------------------------------------------------------------------------------
 

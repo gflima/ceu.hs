@@ -100,7 +100,7 @@ stmt p h = [ ("CEU_TRAILS_N", show $ toTrailsN p')
            , ("CEU_EVTS",     concat $ map (\evt->"    CEU_EVENT_"++evt++",\n") $ evts_up up)
            , ("CEU_VARS",     concat $ map (\var->"    int "++var++";\n")       $ vars_up up)
            , ("CEU_HISTORY",  concat $ map (\(evt,v) -> "    _CEU_INPUT=" ++ (show v) ++ "; ceu_input(CEU_INPUT_" ++ evt ++ ");") h)
-           , ("CEU_LABELS",   concat $ labels up ++ root2 ++ root1 )
+           , ("CEU_LABELS",   concat $ root2 ++ labels up ++ root1 )
            ]
     where
         p'    = N.add p --traceShowId $ N.add p
@@ -168,7 +168,6 @@ aux dn s@(EmitExt _ ext exp) = upz { code_bef=src }
 aux dn s@(EmitEvt _ evt) = upz { code_bef=(oln s)++bef }
     where
         bef = oblk $
--- TODO: emit scope
               (ocmd $ "tceu_bcast __ceu_cst = {" ++ id' ++ "," ++ show trl0 ++ "," ++ show trlN++"}") ++
               (ocmd $ "tceu_stk   __ceu_stk = { _ceu_stk->level+1, 1, 0, _ceu_stk }") ++
               (ocmd $ "_ceu_stk->trail = " ++ (show $ toTrails0 s)) ++
@@ -185,7 +184,7 @@ aux dn s@(Seq _ p1 p2) = (up_union p1' p2') {
                             --code_bef = bef,
                             code_brk = brk,
                             code_aft = aft,
-                            labels   = lbls ++ labels p2' ++ labels p1'
+                            labels   = labels p2' ++ lbls ++ labels p1'
                          }
     where
         p1' = aux dn p1

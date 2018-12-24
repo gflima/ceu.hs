@@ -50,6 +50,12 @@ stmt_escape = do
     e    <- optionMaybe (try expr)
     return $ Escape (pos2src pos) Nothing e
 
+stmt_break :: Parser (Stmt Source)
+stmt_break = do
+    pos  <- getPosition
+    void <- tk_key "break"
+    return $ Break (pos2src pos)
+
 stmt_var :: Parser (Stmt Source)
 stmt_var = do
     pos  <- getPosition
@@ -221,7 +227,7 @@ stmt_paror = do
 
 stmt1 :: Parser (Stmt Source)
 stmt1 = do
-    s <- try stmt_escape <|>
+    s <- try stmt_escape <|> try stmt_break <|>
          try stmt_var <|> try stmt_input <|> try stmt_output <|> try stmt_evt <|>
          try stmt_attr <|>
          try (stmt_awaitext Nothing) <|> try stmt_halt <|> try (stmt_awaitevt Nothing) <|>

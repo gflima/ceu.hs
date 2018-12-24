@@ -14,6 +14,7 @@ types = [
 
 keywords = [
     "await",
+    "break",
     "do",
     "else",
     "else/if",
