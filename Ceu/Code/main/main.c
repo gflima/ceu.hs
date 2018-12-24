@@ -20,6 +20,8 @@
 #define ceu_callback_log_flush() fflush(stdout)
 #define ceu_callback_realloc(ptr,size) realloc(ptr,size)
 
+#define ceu_callback_output_PRINT(v) //printf("%d\n", v)
+
 #define ceu_assert_sys(a,b)
 
 #define CEU_HISTORY

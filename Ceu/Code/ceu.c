@@ -1,5 +1,3 @@
-#define ceu_callback_output_LED(v) digitalWrite(13, v)
-#define ceu_callback_output_PRINT(v) printf("%d\n", v)
 int _CEU_INPUT;
 
 #include <stddef.h>     /* offsetof */
