@@ -17,6 +17,12 @@ class INode a where
     src = case toSource stmt of
       Nothing        -> ""
       Just (_,ln,cl) -> "(line " ++ (show ln) ++ ", column " ++ (show cl) ++ "):\n"
+
+  toTrails0 :: a -> Int
+  toTrails0 = fst . toTrails
+  toTrailsN :: a -> Int
+  toTrailsN = snd . toTrails
+
   toSource :: a -> Maybe Source
   toN      :: a -> Int
   toTrails :: a -> (Int,Int)

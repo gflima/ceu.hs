@@ -11,14 +11,12 @@ import qualified Ceu.Code.N as N
 -------------------------------------------------------------------------------
 
 data Down = Down { traps   :: [Stmt All]
-                 , trail_0 :: Int
                  , vars_dn :: [(ID_Var,Int)]
                  , evts_dn :: [(ID_Evt,Int)]
                  } -- deriving (Show)
 
 dnz :: Down
 dnz = Down { traps   = []
-           , trail_0 = 0
            , vars_dn = []
            , evts_dn = []
            }
@@ -28,7 +26,6 @@ dnz = Down { traps   = []
 data Up = Up { inps     :: [String]
              , vars_up  :: [String]
              , evts_up  :: [String]
-             , trails_n :: Int
              , code_bef :: String
              , code_brk :: Maybe String
              , code_aft :: String
@@ -40,7 +37,6 @@ upz :: Up
 upz = Up { inps     = []
          , vars_up  = []
          , evts_up  = []
-         , trails_n = 1
          , code_bef = ""
          , code_brk = Nothing
          , code_aft = ""
@@ -56,15 +52,6 @@ up_union u1 u2 = upz { inps     = (inps    u1) ++ (inps    u2)
                      , code_aft = ""
                      , labels   = []
                      }
-
-up_copy :: Up -> Up
-up_copy up = up_union_max up upz
-
-up_union_max :: Up -> Up -> Up
-up_union_max u1 u2 = (up_union u1 u2) { trails_n = max (trails_n u1) (trails_n u2) }
-
-up_union_sum :: Up -> Up -> Up
-up_union_sum u1 u2 = (up_union u1 u2) { trails_n = (trails_n u1) + (trails_n u2) }
 
 -------------------------------------------------------------------------------
 
@@ -106,13 +93,14 @@ label :: Stmt All -> String -> String
 label s lbl = "CEU_LABEL_" ++ (show $ toN s) ++ "_" ++ lbl
 
 stmt :: Stmt Source -> [(String,String)]
-stmt p = [ ("CEU_TRAILS_N", show $ trails_n up)
+stmt p = [ ("CEU_TRAILS_N", show $ toTrailsN p')
          , ("CEU_INPS",     concat $ map (\inp->"    CEU_INPUT_"++inp++",\n") $ inps    up)
          , ("CEU_EVTS",     concat $ map (\evt->"    CEU_EVENT_"++evt++",\n") $ evts_up up)
          , ("CEU_VARS",     concat $ map (\var->"    int "++var++";\n")       $ vars_up up)
          , ("CEU_LABELS",   concat $ labels up ++ root2 ++ root1 )
          ] where
-    up    = aux dnz (N.add $ traceShowId p)
+    p'    = N.add $ traceShowId p
+    up    = aux dnz p'
     root1 = [ olbl "CEU_LABEL_ROOT" (code_bef up) ]
     root2 = case code_brk up of
                 Nothing  -> []
@@ -151,7 +139,7 @@ aux dn s@(AwaitInp _ ext) = upz { code_bef=src, code_brk=(Just lbl) }
         src = oln s ++
               (ocmd $ "CEU_APP.root.trails[" ++ trl ++ "].evt = " ++ evt) ++
               (ocmd $ "CEU_APP.root.trails[" ++ trl ++ "].lbl = " ++ lbl)
-        trl = show $ trail_0 dn
+        trl = show $ toTrails0 s
         evt = "CEU_INPUT_" ++ ext
         lbl = label s ("AwaitInp_" ++ ext)
 
@@ -160,7 +148,7 @@ aux dn s@(AwaitEvt _ evt) = upz { code_bef=src, code_brk=(Just lbl) }
         src = oln s ++
              (ocmd $ "CEU_APP.root.trails[" ++ trl ++ "].evt = " ++ id') ++
              (ocmd $ "CEU_APP.root.trails[" ++ trl ++ "].lbl = " ++ lbl)
-        trl = show $ trail_0 dn
+        trl = show $ toTrails0 s
         id' = "CEU_EVENT_" ++ (getID (evts_dn dn) evt)
         lbl = label s ("AwaitEvt_" ++ evt)
 
@@ -179,7 +167,7 @@ aux dn s@(EmitEvt _ evt) = upz { code_bef=(oln s)++bef }
 -- TODO: emit scope
               (ocmd $ "tceu_bcast __ceu_cst = {" ++ id' ++ ",0, CEU_TRAILS_N}")        ++
               (ocmd $ "tceu_stk   __ceu_stk = { _ceu_stk->level+1, 1, 0, _ceu_stk }") ++
-              (ocmd $ "_ceu_stk->trail = " ++ (show $ trail_0 dn)) ++
+              (ocmd $ "_ceu_stk->trail = " ++ (show $ toTrails0 s)) ++
               (ocmd $ "ceu_bcast(&__ceu_cst, &__ceu_stk)")         ++
               (ocmd $ "if (!_ceu_stk->is_alive) return")
 
@@ -187,13 +175,13 @@ aux dn s@(EmitEvt _ evt) = upz { code_bef=(oln s)++bef }
 
 -------------------------------------------------------------------------------
 
-aux dn s@(Seq _ p1 p2) = (up_union_max p1' p2') {
-                        code_bef = oln s ++ bef,
-                        --code_bef = bef,
-                        code_brk = brk,
-                        code_aft = aft,
-                        labels   = lbls ++ labels p2' ++ labels p1'
-                      }
+aux dn s@(Seq _ p1 p2) = (up_union p1' p2') {
+                            code_bef = oln s ++ bef,
+                            --code_bef = bef,
+                            code_brk = brk,
+                            code_aft = aft,
+                            labels   = lbls ++ labels p2' ++ labels p1'
+                         }
     where
         p1' = aux dn p1
         p2' = aux dn p2
@@ -218,11 +206,11 @@ aux dn s@(Seq _ p1 p2) = (up_union_max p1' p2') {
 
 -------------------------------------------------------------------------------
 
-aux dn s@(If _ exp p1 p2) = (up_union_max p1' p2') {
-                            code_bef = bef,
-                            code_brk = Just lbl,
-                            labels   = lbls1++lbls2 ++ labels p2' ++ labels p1'
-                           }
+aux dn s@(If _ exp p1 p2) = (up_union p1' p2') {
+                                code_bef = bef,
+                                code_brk = Just lbl,
+                                labels   = lbls1++lbls2 ++ labels p2' ++ labels p1'
+                            }
     where
         p1' = aux dn p1
         p2' = aux dn p2
@@ -246,9 +234,10 @@ aux dn s@(If _ exp p1 p2) = (up_union_max p1' p2') {
 
 -------------------------------------------------------------------------------
 
-aux dn s@(Loop _ p) = (up_copy p') {
+aux dn s@(Loop _ p) = p' {
                         code_bef = loop,
                         code_brk = Nothing,
+                        code_aft = "",
                         labels   = [odcl lbl] ++ lbls1 ++ (labels p') ++ lbls2
                      }
     where
@@ -265,21 +254,20 @@ aux dn s@(Loop _ p) = (up_copy p') {
 
 -------------------------------------------------------------------------------
 
-aux dn s@(Par _ p1 p2) = (up_union_sum p1' p2') {
+aux dn s@(Par _ p1 p2) = (up_union p1' p2') {
                             code_bef = oln s ++ bef,
                             labels   = lbl11 ++ labels p1' ++ lbl10 ++ lbls2 ++ labels p2'
                          }
     where
         p1'  = aux dn p1
-        p2'  = aux dn{trail_0=trl} p2
-        trl  = (trail_0 dn) + (trails_n p1')
+        p2'  = aux dn p2
 
         brk1 = code_brk p1'
         brk2 = code_brk p2'
 
         bef = (oblk $
                 (ocmd $ "tceu_stk __ceu_stk = { _ceu_stk->level+1, 1, 0, _ceu_stk }") ++
-                (ocmd $ "_ceu_stk->trail = " ++ (show trl)) ++
+                (ocmd $ "_ceu_stk->trail = " ++ (show $ toTrails0 p2)) ++
                 (ocmd $ bef1 ++ "(&__ceu_stk)")             ++
                 (ocmd $ "if (!_ceu_stk->is_alive) return")) ++
               (code_bef p2')
@@ -291,12 +279,12 @@ aux dn s@(Par _ p1 p2) = (up_union_sum p1' p2') {
 
 -------------------------------------------------------------------------------
 
-aux dn s@(Trap _ p) = (up_copy p') {
+aux dn s@(Trap _ p) = p' {
                         code_bef = code_bef p',
                         code_brk = Just lbl,
                         code_aft = clr,
                         labels   = [odcl lbl] ++ (labels p') ++ aft
-                     }
+                      }
     where
         p'  = aux dn' p
         dn' = dn{ traps = s:(traps dn) }
@@ -309,8 +297,8 @@ aux dn s@(Trap _ p) = (up_copy p') {
         clr = oblk $ "// clear\n" ++
               (ocmd $ "memset(&CEU_APP.root.trails[" ++ t0 ++ "], 0, " ++ sz ++ ")") ++
               (ocmd $ "ceu_stack_clear(_ceu_stk, " ++ t0 ++ "," ++ n ++ ")")
-        t0  = show $ trail_0 dn
-        n   = show $ trails_n p'
+        t0  = show $ toTrails0 s
+        n   = show $ toTrailsN s
         sz  = n ++ "*sizeof(tceu_trl)"
 
 aux dn s@(Escape _ k) = upz { code_bef=src, code_brk=Just(label s "Escape") }
