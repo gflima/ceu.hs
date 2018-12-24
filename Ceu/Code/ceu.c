@@ -139,16 +139,6 @@ void ceu_stack_clear (tceu_stk* stk, tceu_ntrl t0, tceu_ntrl n) {
 
 /*****************************************************************************/
 
-//<|< CEU_NATIVE_POS >|>
-
-//<|< CEU_CALLBACKS_OUTPUTS >|>
-
-/* CEU_LABELS */
-
-<<< CEU_LABELS >>>
-
-/*****************************************************************************/
-
 static void ceu_bcast_mark (tceu_stk* cur)
 {
     tceu_ntrl i = cur->range.trl0;
@@ -219,3 +209,13 @@ CEU_API int ceu_loop (int argc, char* argv[])
 
     return 0;
 }
+
+/*****************************************************************************/
+
+//<|< CEU_NATIVE_POS >|>
+
+//<|< CEU_CALLBACKS_OUTPUTS >|>
+
+/* CEU_LABELS */
+
+<<< CEU_LABELS >>>

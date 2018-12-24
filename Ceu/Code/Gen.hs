@@ -173,16 +173,17 @@ aux dn s@(EmitExt _ ext exp) = upz { code_bef=src }
             Nothing  -> ""
             (Just v) -> expr (vars_dn dn) v
 
-aux dn s@(EmitEvt _ evt) = upz { code_bef=emt, code_brk=(Just lbl) }
+aux dn s@(EmitEvt _ evt) = upz { code_bef=bef }
     where
-        emt = oblk $
-              (ocmd $ "tceu_range __ceu_rge = {" ++ id' ++ ",0, CEU_TRAILS_N}") ++
+        bef = oblk $
 -- TODO: emit scope
-              (ocmd $ "_ceu_nxt->range    = __ceu_rge") ++
-              (ocmd $ "_ceu_nxt->params_n = 0") ++
-              (ocmd $ "return 1")
+              (ocmd $ "tceu_range __ceu_rge = {" ++ id' ++ ",0, CEU_TRAILS_N}") ++
+              (ocmd $ "tceu_stk __ceu_stk_new = { __ceu_rge, _ceu_stk->level+1, 1, 0, _ceu_stk }")  ++
+              (ocmd $ "_ceu_stk->trl = " ++ (show $ trail_0 dn)) ++
+              (ocmd $ "ceu_bcast(&__ceu_stk_new)")               ++
+              (ocmd $ "if (!_ceu_stk->is_alive) return")
+
         id' = "CEU_EVENT_" ++ (getID (evts_dn dn) evt)
-        lbl = label s ("EmitEvt_" ++ evt)
 
 -------------------------------------------------------------------------------
 
