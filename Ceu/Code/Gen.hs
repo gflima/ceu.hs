@@ -11,8 +11,8 @@ import qualified Ceu.Code.N as N
 -------------------------------------------------------------------------------
 
 data Down = Down { traps   :: [Stmt All]
-                 , vars_dn :: [(ID_Var,Int)]
-                 , evts_dn :: [(ID_Evt,Int)]
+                 , vars_dn :: [(ID_Var,Stmt All)]
+                 , evts_dn :: [(ID_Evt,Stmt All)]
                  } -- deriving (Show)
 
 dnz :: Down
@@ -76,14 +76,15 @@ olbl lbl src = "void " ++ lbl ++ " (tceu_stk* _ceu_stk) " ++
 
 -------------------------------------------------------------------------------
 
-getID :: [(String,Int)] -> String -> String
-getID ((v1,n):l) v2 | v1==v2    = v1++"__"++(show n)
-                    | otherwise = getID l v2
+getEnv :: [(String,Stmt All)] -> String -> Stmt All
+getEnv ((v1,s):l) v2 | v1==v2    = s
+                     | otherwise = getEnv l v2
+getEnvID env var = var ++ "__" ++ (show $ toN $ getEnv env var)
 
-expr :: [(ID_Var,Int)] -> Exp ann -> String
+expr :: [(ID_Var,Stmt All)] -> Exp ann -> String
 expr vars (Const _ n)     = show n
 expr vars (Read  _ id)    = if id == "_INPUT" then "_CEU_INPUT" else
-                                "CEU_APP.root."++(getID vars id)
+                                "CEU_APP.root." ++ (getEnvID vars id)
 expr vars (Equ   _ e1 e2) = (expr vars e1) ++ " == " ++ (expr vars e2)
 expr vars (Add   _ e1 e2) = (expr vars e1) ++ " + "  ++ (expr vars e2)
 
@@ -99,7 +100,7 @@ stmt p = [ ("CEU_TRAILS_N", show $ toTrailsN p')
          , ("CEU_VARS",     concat $ map (\var->"    int "++var++";\n")       $ vars_up up)
          , ("CEU_LABELS",   concat $ labels up ++ root2 ++ root1 )
          ] where
-    p'    = N.add $ traceShowId p
+    p'    = traceShowId $ N.add p
     up    = aux dnz p'
     root1 = [ olbl "CEU_LABEL_ROOT" (code_bef up) ]
     root2 = case code_brk up of
@@ -120,16 +121,16 @@ aux dn s@(Out   _ id p) = aux dn p
 aux dn s@(Evt _ id p) = p' { evts_up=(id++"__"++(show$toN s)):(evts_up p') }
     where
         p'  = aux dn' p
-        dn' = dn{ evts_dn = (id,toN s):(evts_dn dn) }
+        dn' = dn{ evts_dn = (id,s):(evts_dn dn) }
 
 aux dn s@(Var _ id p) = p' { vars_up=(id++"__"++(show$toN s)):(vars_up p') }
     where
         p'  = aux dn' p
-        dn' = dn{ vars_dn = (id,toN s):(vars_dn dn) }
+        dn' = dn{ vars_dn = (id,s):(vars_dn dn) }
 
 aux dn s@(Write _ var exp) = upz { code_bef=src }
     where
-        src  = (oln s ++ (ocmd $ "CEU_APP.root." ++ (getID vars var) ++ " = " ++ (expr vars exp)))
+        src  = (oln s ++ (ocmd $ "CEU_APP.root." ++ (getEnvID vars var) ++ " = " ++ (expr vars exp)))
         vars = vars_dn dn
 
 -------------------------------------------------------------------------------
@@ -149,7 +150,7 @@ aux dn s@(AwaitEvt _ evt) = upz { code_bef=src, code_brk=(Just lbl) }
              (ocmd $ "CEU_APP.root.trails[" ++ trl ++ "].evt = " ++ id') ++
              (ocmd $ "CEU_APP.root.trails[" ++ trl ++ "].lbl = " ++ lbl)
         trl = show $ toTrails0 s
-        id' = "CEU_EVENT_" ++ (getID (evts_dn dn) evt)
+        id' = "CEU_EVENT_" ++ (getEnvID (evts_dn dn) evt)
         lbl = label s ("AwaitEvt_" ++ evt)
 
 -------------------------------------------------------------------------------
@@ -165,13 +166,14 @@ aux dn s@(EmitEvt _ evt) = upz { code_bef=(oln s)++bef }
     where
         bef = oblk $
 -- TODO: emit scope
-              (ocmd $ "tceu_bcast __ceu_cst = {" ++ id' ++ ",0, CEU_TRAILS_N}")        ++
+              (ocmd $ "tceu_bcast __ceu_cst = {" ++ id' ++ "," ++ show trl0 ++ "," ++ show trlN++"}") ++
               (ocmd $ "tceu_stk   __ceu_stk = { _ceu_stk->level+1, 1, 0, _ceu_stk }") ++
               (ocmd $ "_ceu_stk->trail = " ++ (show $ toTrails0 s)) ++
               (ocmd $ "ceu_bcast(&__ceu_cst, &__ceu_stk)")         ++
               (ocmd $ "if (!_ceu_stk->is_alive) return")
 
-        id' = "CEU_EVENT_" ++ (getID (evts_dn dn) evt)
+        id' = "CEU_EVENT_" ++ (getEnvID (evts_dn dn) evt)
+        (trl0,trlN) = toTrails $ getEnv (evts_dn dn) evt
 
 -------------------------------------------------------------------------------
 
