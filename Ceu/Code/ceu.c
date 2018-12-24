@@ -37,9 +37,6 @@ typedef u8  tceu_nstk;   /* TODO */
 typedef u8 tceu_ntrl;
 
 #define CEU_TRAILS_N <<< CEU_TRAILS_N >>>
-#ifndef CEU_STACK_N
-#define CEU_STACK_N 500
-#endif
 
 #define CEU_API
 CEU_API void ceu_start (int argc, char* argv[]);
@@ -78,13 +75,13 @@ enum {
     /* non-emitable */
     CEU_INPUT__NONE = 0,
     CEU_INPUT__STACKED,
-    CEU_INPUT__FINALIZE,
+    //CEU_INPUT__FINALIZE,
 
     /* emitable */
-    CEU_INPUT__CLEAR,
+    //CEU_INPUT__CLEAR,
 CEU_INPUT__PRIM,
-    CEU_INPUT__ASYNC,
-    CEU_INPUT__WCLOCK,
+    //CEU_INPUT__ASYNC,
+    //CEU_INPUT__WCLOCK,
 
 //CEU_INPUT__MIN,
     /* CEU_INPS */
@@ -123,58 +120,10 @@ typedef struct tceu_mem_ROOT {
 } tceu_mem_ROOT;
 
 typedef struct tceu_app {
-    /* ASYNC */
-#ifdef CEU_FEATURES_ASYNC
-    bool async_pending;
-#endif
-
-    /* WCLOCK */
-    s32 wclk_late;
-    s32 wclk_min_set;
-    s32 wclk_min_cmp;
-
-    byte  stack[CEU_STACK_N];
-    usize stack_i;
-
     tceu_mem_ROOT root;
 } tceu_app;
 
 CEU_API static tceu_app CEU_APP;
-
-/*****************************************************************************/
-
-#define CEU_WCLOCK_INACTIVE INT32_MAX
-#define ceu_wclock(a,b,c,d) ceu_wclock_(a,b,c)
-
-static int ceu_wclock_ (s32 dt, s32* set, s32* sub)
-{
-    s32 t;          /* expiring time of track to calculate */
-    int ret = 0;    /* if track expired (only for "sub") */
-
-    /* SET */
-    if (set != NULL) {
-        t = dt - CEU_APP.wclk_late;
-        *set = t;
-
-    /* SUB */
-    } else {
-        t = *sub;
-        if ((t > CEU_APP.wclk_min_cmp) || (t > dt)) {
-            *sub -= dt;    /* don't expire yet */
-            t = *sub;
-        } else {
-            ret = 1;    /* single "true" return */
-        }
-    }
-
-    /* didn't awake, but can be the smallest wclk */
-    if ( (!ret) && (CEU_APP.wclk_min_set > t) ) {
-        CEU_APP.wclk_min_set = t;
-        ceu_callback_wclock_min(t, CEU_TRACE_null);
-    }
-
-    return ret;
-}
 
 /*****************************************************************************/
 
@@ -239,18 +188,8 @@ CEU_API void ceu_input (tceu_nevt evt)
     ceu_bcast(&cur);
 }
 
-CEU_API void ceu_start (int argc, char* argv[]) {
-#ifdef CEU_FEATURES_ASYNC
-    CEU_APP.async_pending = 0;
-#endif
-
-    CEU_APP.wclk_late = 0;
-    CEU_APP.wclk_min_set = CEU_WCLOCK_INACTIVE;
-    CEU_APP.wclk_min_cmp = CEU_WCLOCK_INACTIVE;
-
-    CEU_APP.stack_i = 0;
-
-    //CEU_APP.root.trails_n = CEU_TRAILS_N;
+CEU_API void ceu_start (int argc, char* argv[])
+{
     memset(&CEU_APP.root.trails, 0, CEU_TRAILS_N*sizeof(tceu_trl));
 
     ceu_callback_start(CEU_TRACE_null);
@@ -259,7 +198,8 @@ CEU_API void ceu_start (int argc, char* argv[]) {
     return CEU_LABEL_ROOT(&stk);
 }
 
-CEU_API void ceu_stop (void) {
+CEU_API void ceu_stop (void)
+{
     ceu_callback_stop(CEU_TRACE_null);
 }
 
