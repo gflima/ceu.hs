@@ -177,10 +177,10 @@ aux dn s@(EmitEvt _ evt) = upz { code_bef=bef }
     where
         bef = oblk $
 -- TODO: emit scope
-              (ocmd $ "tceu_range __ceu_rge = {" ++ id' ++ ",0, CEU_TRAILS_N}") ++
-              (ocmd $ "tceu_stk __ceu_stk_new = { __ceu_rge, _ceu_stk->level+1, 1, 0, _ceu_stk }")  ++
-              (ocmd $ "_ceu_stk->trl = " ++ (show $ trail_0 dn)) ++
-              (ocmd $ "ceu_bcast(&__ceu_stk_new)")               ++
+              (ocmd $ "tceu_bcast __ceu_cst = {" ++ id' ++ ",0, CEU_TRAILS_N}")        ++
+              (ocmd $ "tceu_stk   __ceu_stk = { _ceu_stk->level+1, 1, 0, _ceu_stk }") ++
+              (ocmd $ "_ceu_stk->trail = " ++ (show $ trail_0 dn)) ++
+              (ocmd $ "ceu_bcast(&__ceu_cst, &__ceu_stk)")         ++
               (ocmd $ "if (!_ceu_stk->is_alive) return")
 
         id' = "CEU_EVENT_" ++ (getID (evts_dn dn) evt)
@@ -278,10 +278,10 @@ aux dn s@(Par _ p1 p2) = (up_union_sum p1' p2') {
         brk2 = code_brk p2'
 
         bef = (oblk $
-                (ocmd $ "tceu_stk __ceu_stk_new = { {}, _ceu_stk->level+1, 1, 0, _ceu_stk }")  ++
-                (ocmd $ "_ceu_stk->trl = " ++ (show trl))                   ++
-                (ocmd $ bef1 ++ "(&__ceu_stk_new)")                         ++
-                (ocmd $ "if (!_ceu_stk->is_alive) return"))                 ++
+                (ocmd $ "tceu_stk __ceu_stk = { _ceu_stk->level+1, 1, 0, _ceu_stk }") ++
+                (ocmd $ "_ceu_stk->trail = " ++ (show trl)) ++
+                (ocmd $ bef1 ++ "(&__ceu_stk)")             ++
+                (ocmd $ "if (!_ceu_stk->is_alive) return")) ++
               (code_bef p2')
 
         lbl10 = [ olbl bef1 (code_bef p1') ]

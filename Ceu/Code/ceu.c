@@ -44,17 +44,16 @@ CEU_API void ceu_stop  (void);
 CEU_API void ceu_input (tceu_nevt evt);
 CEU_API int  ceu_loop  (int argc, char* argv[]);
 
-typedef struct tceu_range {
+typedef struct tceu_bcast {
     tceu_nevt evt;
-    tceu_ntrl trl0;
-    tceu_ntrl n;
-} tceu_range;
+    tceu_ntrl trail_0;
+    tceu_ntrl trail_n;
+} tceu_bcast;
 
 typedef struct tceu_stk {
-    tceu_range range;
     tceu_nstk  level;
     bool       is_alive;
-    tceu_ntrl  trl;
+    tceu_ntrl  trail;
     struct tceu_stk* prv;
 } tceu_stk;
 
@@ -131,7 +130,7 @@ void ceu_stack_clear (tceu_stk* stk, tceu_ntrl t0, tceu_ntrl n) {
     if (stk == NULL) {
         return;
     }
-    if (stk->trl>=t0 && stk->trl<t0+n) {
+    if (stk->trail>=t0 && stk->trail<t0+n) {
         stk->is_alive = 0;
     }
     ceu_stack_clear(stk->prv, t0, n);
@@ -139,23 +138,23 @@ void ceu_stack_clear (tceu_stk* stk, tceu_ntrl t0, tceu_ntrl n) {
 
 /*****************************************************************************/
 
-static void ceu_bcast_mark (tceu_stk* cur)
+static void ceu_bcast_mark (tceu_bcast* cst, tceu_stk* cur)
 {
-    tceu_ntrl i = cur->range.trl0;
-    tceu_ntrl n = i + cur->range.n;
+    tceu_ntrl i = cst->trail_0;
+    tceu_ntrl n = i + cst->trail_n;
     for (; i<n; i++) {
         tceu_trl* trl = &CEU_APP.root.trails[i];
-        if (trl->evt == cur->range.evt) {
+        if (trl->evt == cst->evt) {
             trl->evt   = CEU_INPUT__STACKED;
             trl->level = cur->level;
         }
     }
 }
 
-static void ceu_bcast_exec (tceu_stk* cur)
+static void ceu_bcast_exec (tceu_bcast* cst, tceu_stk* cur)
 {
-    tceu_ntrl i = cur->range.trl0;
-    tceu_ntrl n = i + cur->range.n;
+    tceu_ntrl i = cst->trail_0;
+    tceu_ntrl n = i + cst->trail_n;
     for (; i<n; i++) {
         tceu_trl* trl = &CEU_APP.root.trails[i];
         if (trl->evt==CEU_INPUT__STACKED && trl->level==cur->level) {
@@ -165,17 +164,17 @@ static void ceu_bcast_exec (tceu_stk* cur)
     }
 }
 
-void ceu_bcast (tceu_stk* cur)
+void ceu_bcast (tceu_bcast* cst, tceu_stk* cur)
 {
-    ceu_bcast_mark(cur);
-    ceu_bcast_exec(cur);
+    ceu_bcast_mark(cst, cur);
+    ceu_bcast_exec(cst, cur);
 }
 
 CEU_API void ceu_input (tceu_nevt evt)
 {
-    tceu_range rge = {evt, 0, CEU_TRAILS_N};
-    tceu_stk cur = { rge, 0, 1, 0, NULL };
-    ceu_bcast(&cur);
+    tceu_bcast cst = {evt, 0, CEU_TRAILS_N};
+    tceu_stk cur = { 0, 1, 0, NULL };
+    ceu_bcast(&cst, &cur);
 }
 
 CEU_API void ceu_start (int argc, char* argv[])
@@ -184,7 +183,7 @@ CEU_API void ceu_start (int argc, char* argv[])
 
     ceu_callback_start(CEU_TRACE_null);
 
-    tceu_stk stk = { {}, 0, 1, 0, NULL };
+    tceu_stk stk = { 0, 1, 0, NULL };
     return CEU_LABEL_ROOT(&stk);
 }
 
