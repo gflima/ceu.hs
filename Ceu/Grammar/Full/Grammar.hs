@@ -1,7 +1,7 @@
 module Ceu.Grammar.Full.Grammar where
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Exp (Exp(..))
+import Ceu.Grammar.Exp (Exp(..), RawAt)
 import qualified Ceu.Grammar.Stmt as G
 import qualified Ceu.Eval as E
 import Ceu.Grammar.Full.Clean
@@ -56,6 +56,7 @@ data Stmt ann
   | Clean'   ann String (Stmt ann)                   -- temporary statement
   | Nop      ann                                     -- nop as in basic Grammar
   | Halt     ann                                     -- halt as in basic Grammar
+  | RawS     ann [RawAt ann]                         -- raw as in basic Grammar
   deriving (Eq, Show)
 
 sSeq a b = Seq () a b
@@ -105,6 +106,7 @@ getAnn (Escape'  z _    ) = z
 getAnn (Clean'   z _ _  ) = z
 getAnn (Nop      z      ) = z
 getAnn (Halt     z      ) = z
+getAnn (RawS     z _    ) = z
 
 toGrammar :: (Eq ann, Ann ann) => (Stmt ann) -> (Errors, G.Stmt ann)
 toGrammar (Var' z var Nothing p) = (es, G.Var z var p')
@@ -161,6 +163,7 @@ toGrammar (Clean' _ id p)        = (es'++es, p'')
                                    (es',p'') = clean id p'
 toGrammar (Nop z)                = ([], G.Nop z)
 toGrammar (Halt z)               = ([], G.Halt z)
+toGrammar (RawS z vs)            = ([], G.RawS z vs)
 toGrammar p                      = error $ "toGrammar: unexpected statement: " -- ++(show p)
 
 -------------------------------------------------------------------------------
@@ -204,6 +207,7 @@ stmt2word stmt = case stmt of
   Clean' _ _ _   -> "clean"
   Nop _          -> "nop"
   Halt _         -> "halt"
+  RawS _ _       -> "raw"
 
 instance (Ann ann) => INode (Stmt ann) where
   toWord   = stmt2word

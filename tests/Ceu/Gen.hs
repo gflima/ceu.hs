@@ -60,7 +60,18 @@ main = do
 tests = [
     (10,  [], "escape 10"),
     (100, [], "escape 100"),
+    (100, [], "escape {100}"),
     (1,   [], "loop do break end ; escape 1"),
+    (100, [],
+        unlines [
+            "{int x = 100};",
+            "escape {x}"
+        ]),
+    (100, [],
+        unlines [
+            "var x:int <- 100",
+            "escape {@x}"
+        ]),
     (4, [("KEY",1)],
         unlines [
             "input  KEY   : int",

@@ -4,9 +4,13 @@ import Text.Printf
 
 import Ceu.Grammar.Globals
 
+data RawAt ann = RawAtE (Exp ann) | RawAtS String
+  deriving (Eq, Show)
+
 -- Expession.
 data Exp ann
-  = Const ann Val                 -- constant
+  = RawE  ann [RawAt ann]         -- raw/native
+  | Const ann Val                 -- constant
   | Read  ann ID_Var              -- variable read
   | Umn   ann (Exp ann)           -- unary minus
   | Add   ann (Exp ann) (Exp ann) -- addition

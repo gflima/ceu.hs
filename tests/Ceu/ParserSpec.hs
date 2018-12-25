@@ -10,7 +10,7 @@ import Ceu.Parser.Token
 import Ceu.Parser.Exp
 import Ceu.Parser.Stmt
 import Ceu.Grammar.Ann.Source
-import Ceu.Grammar.Exp          (Exp(..))
+import Ceu.Grammar.Exp          (Exp(..), RawAt(..))
 import Ceu.Grammar.Full.Grammar (Stmt(..))
 
 main :: IO ()
@@ -129,6 +129,35 @@ spec = do
                 parse (tk_key "par/or") "par/or\n"
                 `shouldBe` Right ()
 
+        describe "tk_raw:" $ do
+            it "{oi}" $
+                parse tk_raw "{oi}"
+                `shouldBe` Right [RawAtS "{",RawAtS "oi",RawAtS "}"]
+            it "{@oi}" $
+                parse tk_raw "{@oi}"
+                `shouldBe` Right [RawAtS "{",RawAtE (Read ("",1,3) "oi"),RawAtS "}"]
+            it "{@a@b}" $
+                parse tk_raw "{@a @b}"
+                `shouldBe` Right [RawAtS "{",RawAtE (Read ("",1,3) "a"),RawAtE (Read ("",1,6) "b"),RawAtS "}"]
+            it "{@escape}" $
+                parse tk_raw "{@escape}"
+                `shouldBe` Left "(line 1, column 9):\nunexpected \"}\"\nexpecting digit, letter or \"_\""
+            it "{...}" $
+                parse tk_raw "{int x = 100}"
+                `shouldBe` Right [RawAtS "{",RawAtS "int x = 100",RawAtS "}"]
+            it "{o}i} " $
+                parse tk_raw "{o}i} "
+                `shouldBe` Left "(line 1, column 4):\nunexpected 'i'\nexpecting end of input"
+            it "{o}{i} " $
+                parse tk_raw "{o}{i} "
+                `shouldBe` Left "(line 1, column 4):\nunexpected '{'\nexpecting end of input"
+            it "{oi" $
+                parse tk_raw "{oi"
+                `shouldBe` Left "(line 1, column 4):\nunexpected end of input\nexpecting \"{\", \"@\" or \"}\""
+            it "{{oi}}" $
+                parse tk_raw "{{oi}}"
+                `shouldBe` Right [RawAtS "{",RawAtS "{",RawAtS "oi",RawAtS "}",RawAtS "}"]
+
     describe "expr:" $ do
         describe "const:" $ do
             it "0" $
@@ -170,6 +199,9 @@ spec = do
                 parse expr_mul_div "1 * 2*3"
                 `shouldBe` Right (Mul ("",1,6) (Mul ("",1,3) (Const ("",1,1) 1) (Const ("",1,5) 2)) (Const ("",1,7) 3))
         describe "expr:" $ do
+            it "{0}" $
+                parse expr "{0}"
+                `shouldBe` Right (RawE ("",1,1) [RawAtS "{",RawAtS "0",RawAtS "}"])
             it "0" $
                 parse expr "0"
                 `shouldBe` Right (Const ("",1,1) 0)
@@ -200,6 +232,20 @@ spec = do
             it "-" $
                 parse stmt_nop ""
                 `shouldBe` Right (Nop ("",1,1))
+
+        describe "raw:" $ do
+            it "{a}" $
+                parse stmt_raw "{a}"
+                `shouldBe` Right (RawS ("",1,1) [RawAtS "{",RawAtS "a",RawAtS "}"])
+            it "{{a}}" $
+                parse stmt_raw "{{a}}"
+                `shouldBe` Right (RawS ("",1,1) [RawAtS "{",RawAtS "{",RawAtS "a",RawAtS "}",RawAtS "}"])
+            it "{...}" $
+                parse stmt_raw "{int x = 100}"
+                `shouldBe` Right (RawS ("",1,1) [RawAtS "{",RawAtS "int x = 100",RawAtS "}"])
+            it "{...};escape 0" $
+                parse stmt "{int x = 100} escape 0"
+                `shouldBe` Right (Seq ("",1,1) (RawS ("",1,1) [RawAtS "{",RawAtS "int x = 100",RawAtS "}"]) (Escape ("",1,15) Nothing (Just (Const ("",1,22) 0))))
 
         describe "escape:" $ do
             it "escape" $
@@ -327,15 +373,15 @@ spec = do
         describe "if-then-else/if-else" $ do
             it "if 0 then escape" $
                 parse stmt_if "if 0 then escape"
-                `shouldBe` Left "(line 1, column 17):\nunexpected end of input\nexpecting letter, \"_\", digit, \"-\", \"(\", \"escape\", \"var\", \"input\", \"output\", \"event\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 17):\nunexpected end of input\nexpecting letter, \"_\", digit, \"{\", \"-\", \"(\", \"escape\", \"break\", \"var\", \"input\", \"output\", \"event\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 then escape 0" $
                 parse stmt_if "if 0 then escape 0"
-                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"*\", \"/\", \"+\", \"-\", \"escape\", \"var\", \"input\", \"output\", \"event\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"==\", \"*\", \"/\", \"+\", \"-\", \"{\", \"escape\", \"break\", \"var\", \"input\", \"output\", \"event\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 escape 0 end" $
                 parse stmt_if "if 0 escape 0 end"
-                `shouldBe` Left "(line 1, column 6):\nunexpected \"e\"\nexpecting \"*\", \"/\", \"+\", \"-\" or \"then\""
+                `shouldBe` Left "(line 1, column 6):\nunexpected \"e\"\nexpecting \"==\", \"*\", \"/\", \"+\", \"-\" or \"then\""
 
             it "if 0 then escape 0 else escape 1 end" $
                 parse stmt_if "if 0 then escape 0 else escape 1 end"

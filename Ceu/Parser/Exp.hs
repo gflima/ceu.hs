@@ -1,19 +1,51 @@
 module Ceu.Parser.Exp where
 
-import Text.Parsec.Prim          ((<|>), getPosition)
-import Text.Parsec.Pos           (SourcePos, sourceName, sourceLine, sourceColumn)
-import Text.Parsec.String        (Parser)
-import Text.Parsec.Combinator    (chainl1)
+import Text.Parsec.Prim         ((<|>), getPosition, try, many)
+import Text.Parsec.Pos          (SourcePos, sourceName, sourceLine, sourceColumn)
+import Text.Parsec.String       (Parser)
+import Text.Parsec.Char         (char, anyChar)
+import Text.Parsec.Combinator   (chainl1, option, optionMaybe, notFollowedBy)
 
-import Ceu.Parser.Token (tk_num, tk_var, tk_str)
+import Ceu.Parser.Token         (tk_num, tk_var, tk_str, s)
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Exp (Exp(..))
+import Ceu.Grammar.Exp          (Exp(..), RawAt(..))
 
 pos2src :: SourcePos -> Source
 pos2src pos = (sourceName pos, sourceLine pos, sourceColumn pos)
 
 -------------------------------------------------------------------------------
+
+tk_raw :: Parser [RawAt Source]
+tk_raw = do
+    void <- char '{'
+    vs   <- many $ (try tk_raw <|> try rawe <|> try raws)
+    void <- char '}'
+    s
+    return $ concat $ [[RawAtS "{"]] ++ vs ++ [[RawAtS "}"]]
+    where
+        rawe :: Parser [RawAt Source]
+        rawe = do
+            e <- char '@' *> expr
+            return [RawAtE e]
+
+        raws :: Parser [RawAt Source]
+        raws = do
+            str <- raws'
+            return [RawAtS str]
+        raws' = do
+            notFollowedBy (char '}' <|> char '@')
+            c  <- anyChar
+            cs <- option [] raws'
+            return (c:cs)
+
+-------------------------------------------------------------------------------
+
+expr_raw :: Parser (Exp Source)
+expr_raw = do
+    pos <- getPosition
+    vs  <- tk_raw
+    return $ RawE (pos2src pos) vs
 
 expr_const :: Parser (Exp Source)
 expr_const = do
@@ -42,7 +74,7 @@ expr_parens = do
     return exp
 
 expr_prim :: Parser (Exp Source)
-expr_prim = (expr_const <|> expr_read <|> expr_umn <|> expr_parens)
+expr_prim = (expr_raw <|> expr_const <|> expr_read <|> expr_umn <|> expr_parens)
 
 -------------------------------------------------------------------------------
 

@@ -9,7 +9,7 @@ import Text.Parsec.String        (Parser)
 import Text.Parsec.Combinator    (many1, chainl, chainr1, option, optionMaybe)
 
 import Ceu.Parser.Token
-import Ceu.Parser.Exp            (pos2src, expr)
+import Ceu.Parser.Exp            (pos2src, expr, tk_raw)
 
 import Ceu.Grammar.Globals       (Source)
 import Ceu.Grammar.Exp           (Exp(..))
@@ -42,6 +42,12 @@ stmt_nop :: Parser (Stmt Source)
 stmt_nop = do
     pos  <- getPosition
     return $ Nop (pos2src pos)
+
+stmt_raw :: Parser (Stmt Source)
+stmt_raw = do
+    pos <- getPosition
+    vs  <- tk_raw
+    return $ RawS (pos2src pos) vs
 
 stmt_escape :: Parser (Stmt Source)
 stmt_escape = do
@@ -227,7 +233,7 @@ stmt_paror = do
 
 stmt1 :: Parser (Stmt Source)
 stmt1 = do
-    s <- try stmt_escape <|> try stmt_break <|>
+    s <- try stmt_raw <|> try stmt_escape <|> try stmt_break <|>
          try stmt_var <|> try stmt_input <|> try stmt_output <|> try stmt_evt <|>
          try stmt_attr <|>
          try (stmt_awaitext Nothing) <|> try stmt_halt <|> try (stmt_awaitevt Nothing) <|>

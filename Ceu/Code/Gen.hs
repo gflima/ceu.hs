@@ -4,7 +4,7 @@ import Debug.Trace
 import Data.Maybe
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann.All
-import Ceu.Grammar.Exp  (Exp(..))
+import Ceu.Grammar.Exp  (Exp(..), RawAt(..))
 import Ceu.Grammar.Stmt (Stmt(..))
 import qualified Ceu.Code.N as N
 
@@ -81,13 +81,21 @@ getEnv ((v1,s):l) v2 | v1==v2    = s
                      | otherwise = getEnv l v2
 getEnvID env var = var ++ "__" ++ (show $ toN $ getEnv env var)
 
-expr :: [(ID_Var,Stmt All)] -> Exp ann -> String
+expr :: [(ID_Var,Stmt All)] -> Exp All -> String
+expr vars (RawE  _ raw)   = fold_raw vars raw
 expr vars (Const _ n)     = show n
 expr vars (Read  _ id)    = if id == "_INPUT" then "_CEU_INPUT" else
                                 "CEU_APP.root." ++ (getEnvID vars id)
 expr vars (Equ   _ e1 e2) = "(" ++ (expr vars e1) ++ " == " ++ (expr vars e2) ++ ")"
 expr vars (Add   _ e1 e2) = "(" ++ (expr vars e1) ++ " + "  ++ (expr vars e2) ++ ")"
 expr vars (Mul   _ e1 e2) = "(" ++ (expr vars e1) ++ " * "  ++ (expr vars e2) ++ ")"
+
+fold_raw :: [(ID_Var,Stmt All)] -> [RawAt All] -> String
+fold_raw vars raw = take ((length raw')-2) (drop 1 raw') where
+    raw' = aux vars raw
+    aux vars [] = ""
+    aux vars ((RawAtE e):l) = (expr vars e) ++ (aux vars l)
+    aux vars ((RawAtS s):l) = s ++ (aux vars l)
 
 -------------------------------------------------------------------------------
 
@@ -121,6 +129,7 @@ aux :: Down -> Stmt All -> Up
 
 aux dn s@(Nop   _)      = upz { code_bef=(oln s) }
 aux dn s@(Halt  _)      = upz { code_bef=(oln s), code_brk=Just(label s "Halt") }
+aux dn s@(RawS  _ raw)  = upz { code_bef=(oln s)++(fold_raw (vars_dn dn) raw)++";\n" }
 aux dn s@(Inp   _ id p) = p' { inps=id:(inps p') } where p'=(aux dn p)
 aux dn s@(Out   _ id p) = aux dn p
 

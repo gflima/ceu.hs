@@ -1,7 +1,7 @@
 module Ceu.Grammar.Stmt where
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Exp (Exp(..), showExp)
+import Ceu.Grammar.Exp (Exp(..), RawAt, showExp)
 import Text.Printf
 
 -- Program (pg 5).
@@ -26,6 +26,7 @@ data Stmt ann
   | Escape   ann Int                                -- escape N traps
   | Nop      ann                                    -- dummy statement (internal)
   | Halt     ann                                    -- halt (await FOREVER)
+  | RawS     ann [RawAt ann]                        -- raw/native statement
   | Error    ann String                             -- generate runtime error (for testing)
   deriving (Eq, Show)
 
@@ -56,6 +57,7 @@ getAnn (Trap     z _)     = z
 getAnn (Escape   z _)     = z
 getAnn (Nop      z)       = z
 getAnn (Halt     z)       = z
+getAnn (RawS     z _)     = z
 getAnn (Error    z _)     = z
 
 -- Shows program.
@@ -83,6 +85,7 @@ showProg stmt = case stmt of
   Escape   _ n            -> printf "(escape %d)" n
   Nop      _              -> "nop"
   Halt     _              -> "halt"
+  RawS     _ _            -> "raw"
   Error    _ _            -> "err"
   where
     sE = showExp
@@ -110,6 +113,7 @@ stmt2word stmt = case stmt of
   Escape _ _    -> "escape"
   Nop _         -> "nop"
   Halt _        -> "halt"
+  RawS _ _      -> "raw"
   Error _ _     -> "error"
 
 instance (Ann ann) => INode (Stmt ann) where
