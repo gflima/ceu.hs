@@ -14,12 +14,12 @@ import qualified Ceu.Code.Gen             as Gen
 import qualified Ceu.Code.Template        as Template
 import Ceu.Grammar.Ann.Source
 
-go :: String -> [(String,Int)] -> Either String [(String,String)]
-go src hst =
+go :: Bool -> String -> [(String,Int)] -> Either String [(String,String)]
+go o_encl src hst =
     let ret = Parsec.parse (Token.s *> Parser.stmt <* Parsec.eof) "" src in
         case ret of
             (Left  e)  -> Left (show e)
-            (Right p1) -> let (es,p2) = FullE.compile' (True,True) p1
+            (Right p1) -> let (es,p2) = FullE.compile' (True,o_encl) p1
 {-
             (Right p1) -> let (es,p2) = FullE.compile' (True,False)
                                             (FullG.Seq ann
@@ -37,7 +37,8 @@ main :: IO ()
 main = do
     src <- readFile "x.ceu"
     tpl <- readFile "Ceu/Code/ceu.c"
-    let ret = go src [("KEY",1),("KEY",2),("KEY",3),("KEY",4)] in
+    -- o_encl: False
+    let ret = go False src [("KEY",1),("KEY",2),("KEY",3),("KEY",4)] in
         case ret of
             Left  err      -> hPutStrLn stderr err
             Right keypairs ->

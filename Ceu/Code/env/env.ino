@@ -8,8 +8,6 @@
     #define ceu_arduino_assert(cnd,err) // no assert
 #endif
 
-#define CEU_STACK_N 0
-
 ///////////////////////////////////////////////////////////////////////////////
 // DO NOT EDIT
 ///////////////////////////////////////////////////////////////////////////////
@@ -19,16 +17,16 @@
 #define ceu_callback_stop(trace)
 #define ceu_callback_step(trace)
 #define ceu_callback_async_pending(trace)
-#define ceu_callback_wclock_dt(trace) ceu_arduino_callback_wclock_dt()
+#define ceu_callback_wclock_dt(trace) //ceu_arduino_callback_wclock_dt()
 s32 ceu_arduino_callback_wclock_dt (void);
-#define ceu_callback_wclock_min(dt,trace) ceu_arduino_callback_wclock_min(dt)
+#define ceu_callback_wclock_min(dt,trace) //ceu_arduino_callback_wclock_min(dt)
 void ceu_arduino_callback_wclock_min (s32);
 #define ceu_callback_abort(err,trace) ceu_arduino_callback_abort(err)
 void ceu_arduino_callback_abort (int err);
 #define ceu_callback_start(trace)
-#define ceu_callback_isr_enable(on,trace) ceu_arduino_callback_isr_enable(on)
+#define ceu_callback_isr_enable(on,trace) //ceu_arduino_callback_isr_enable(on)
 void ceu_arduino_callback_isr_enable (int on);
-#define ceu_callback_isr_emit(n,evt,trace) ceu_arduino_callback_isr_emit(n,evt)
+#define ceu_callback_isr_emit(n,evt,trace) //ceu_arduino_callback_isr_emit(n,evt)
 void ceu_arduino_callback_isr_emit (int n, void* evt);
 
 #define ceu_callback_output_LED(v) digitalWrite(13, v)
@@ -37,6 +35,7 @@ void ceu_arduino_callback_isr_emit (int n, void* evt);
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#if 0
 u32 ceu_arduino_micros_old;
 void ceu_arduino_callback_wclock_min (s32) {}
 s32 ceu_arduino_callback_wclock_dt (void) {
@@ -45,10 +44,11 @@ s32 ceu_arduino_callback_wclock_dt (void) {
     ceu_arduino_micros_old = now;
     return dt;
 }
+#endif
 
 void setup ()
 {
-    ceu_arduino_micros_old = micros();
+    //ceu_arduino_micros_old = micros();
     pinMode(2, INPUT_PULLUP);
     pinMode(13, OUTPUT);
     ceu_start(0, NULL);

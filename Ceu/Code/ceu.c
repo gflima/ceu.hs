@@ -1,36 +1,9 @@
 int _CEU_INPUT;
 
-#include <stddef.h>     /* offsetof */
-#include <stdlib.h>     /* NULL */
-#include <string.h>     /* memset, strlen */
-#ifdef CEU_TESTS
-#include <stdio.h>
-#endif
+#include <string.h>     /* memset */
 
-#ifdef CEU_FEATURES_LUA
-#include <lua5.3/lua.h>
-#include <lua5.3/lauxlib.h>
-#include <lua5.3/lualib.h>
-#endif
-
-#define S8_MIN   -127
-#define S8_MAX    127
-#define U8_MAX    255
-
-#define S16_MIN  -32767
-#define S16_MAX   32767
-#define U16_MAX   65535
-
-#define S32_MIN  -2147483647
-#define S32_MAX   2147483647
-#define U32_MAX   4294967295
-
-#define S64_MIN  -9223372036854775807
-#define S64_MAX   9223372036854775807
-#define U64_MAX   18446744073709551615
-
-typedef u16 tceu_nevt;   /* TODO */
-typedef u8  tceu_nstk;   /* TODO */
+typedef u16 tceu_nevt;  /* TODO */
+typedef u8  tceu_nstk;  /* TODO */
 //typedef <|< CEU_TCEU_NTRL >|> tceu_ntrl;
 typedef u8 tceu_ntrl;
 
@@ -59,8 +32,8 @@ void CEU_LABEL_ROOT (tceu_stk* _ceu_stk);
 
 typedef struct tceu_trl {
     tceu_nevt evt;
-    typeof(CEU_LABEL_ROOT)* lbl;
     tceu_nstk level;
+    typeof(CEU_LABEL_ROOT)* lbl;
 } tceu_trl;
 
 /* CEU_NATIVE_PRE */
