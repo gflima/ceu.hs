@@ -95,13 +95,15 @@ label :: Stmt All -> String -> String
 label s lbl = "CEU_LABEL_" ++ (show $ toN s) ++ "_" ++ lbl
 
 stmt :: Stmt Source -> [(String,Int)] -> [(String,String)]
-stmt p h = [ ("CEU_TRAILS_N", show $ toTrailsN p')
-           , ("CEU_INPS",     concat $ map (\inp->"    CEU_INPUT_"++inp++",\n") $ inps    up)
-           , ("CEU_EVTS",     concat $ map (\evt->"    CEU_EVENT_"++evt++",\n") $ evts_up up)
-           , ("CEU_VARS",     concat $ map (\var->"    int "++var++";\n")       $ vars_up up)
-           , ("CEU_HISTORY",  concat $ map (\(evt,v) -> "    _CEU_INPUT=" ++ (show v) ++ "; ceu_input(CEU_INPUT_" ++ evt ++ ");") h)
-           , ("CEU_LABELS",   concat $ root2 ++ labels up ++ root1 )
-           ]
+stmt p h = [
+      ("CEU_TCEU_NTRL", n2tp $ toTrailsN p')
+    , ("CEU_TRAILS_N",  show $ toTrailsN p')
+    , ("CEU_INPS",      concat $ map (\inp->"    CEU_INPUT_"++inp++",\n") $ inps    up)
+    , ("CEU_EVTS",      concat $ map (\evt->"    CEU_EVENT_"++evt++",\n") $ evts_up up)
+    , ("CEU_VARS",      concat $ map (\var->"    int "++var++";\n")       $ vars_up up)
+    , ("CEU_HISTORY",   concat $ map (\(evt,v) -> "    _CEU_INPUT=" ++ (show v) ++ "; ceu_input(CEU_INPUT_" ++ evt ++ ");") h)
+    , ("CEU_LABELS",    concat $ root2 ++ labels up ++ root1 )
+    ]
     where
         p'    = N.add p --traceShowId $ N.add p
         up    = aux dnz p'
@@ -109,6 +111,9 @@ stmt p h = [ ("CEU_TRAILS_N", show $ toTrailsN p')
         root2 = case code_brk up of
                     Nothing  -> []
                     Just lbl -> [ olbl lbl (code_aft up) ]
+
+        n2tp :: Int -> String
+        n2tp v = if v>2^32 then "u64" else if v>2^16 then "u32" else if v>2^8 then "u16" else "u8"
 
 -------------------------------------------------------------------------------
 

@@ -2,10 +2,9 @@ int _CEU_INPUT;
 
 #include <string.h>     /* memset */
 
-typedef u16 tceu_nevt;  /* TODO */
-typedef u8  tceu_nstk;  /* TODO */
-//typedef <|< CEU_TCEU_NTRL >|> tceu_ntrl;
-typedef u8 tceu_ntrl;
+typedef u8 tceu_nevt;  /* TODO */
+typedef u8 tceu_nstk;  /* TODO */
+typedef <<< CEU_TCEU_NTRL >>> tceu_ntrl;
 
 #define CEU_TRAILS_N <<< CEU_TRAILS_N >>>
 
