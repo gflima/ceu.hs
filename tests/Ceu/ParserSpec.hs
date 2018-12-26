@@ -157,6 +157,15 @@ spec = do
             it "{{oi}}" $
                 parse tk_raw "{{oi}}"
                 `shouldBe` Right [RawAtS "{",RawAtS "{",RawAtS "oi",RawAtS "}",RawAtS "}"]
+            it "{@x+@y}" $
+                parse tk_raw "{@x+@y}"
+                `shouldBe` Left "(line 1, column 5):\nunexpected \"@\"\nexpecting \"{\", digit, \"-\" or \"(\""
+            it "{@x+y}" $
+                parse tk_raw "{@x+y}"
+                `shouldBe` Right [RawAtS "{",RawAtE (Add ("",1,4) (Read ("",1,3) "x") (Read ("",1,5) "y")),RawAtS "}"]
+            it "{@(x)+y}" $
+                parse tk_raw "{@(x)+y}"
+                `shouldBe` Right [RawAtS "{",RawAtE (Read ("",1,4) "x"),RawAtS "+y",RawAtS "}"]
 
     describe "expr:" $ do
         describe "const:" $ do

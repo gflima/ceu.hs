@@ -26,7 +26,7 @@ tk_raw = do
     where
         rawe :: Parser [RawAt Source]
         rawe = do
-            e <- char '@' *> expr
+            e <- char '@' *> ((try (char '(') *> (expr <* char ')')) <|> expr)
             return [RawAtE e]
 
         raws :: Parser [RawAt Source]
