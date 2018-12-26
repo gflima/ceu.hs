@@ -9,7 +9,7 @@ import Text.Parsec.Char       (char, oneOf, digit, satisfy, string, letter, anyC
 import Text.Parsec.Combinator (many1, notFollowedBy, manyTill, eof)
 
 types = [
-    "int"
+    "Int"
   ]
 
 keywords = [
@@ -61,26 +61,26 @@ tk_ext = do
     --void  <- notFollowedBy tk_reserved
     first <- satisfy isUpper
     rest  <- many $ (digit <|> satisfy isUpper <|> char '_')
-    guard $ not $ elem (first:rest) (keywords++types)
+    guard $ (first:rest) /= "FOREVER"
     s
     return (first:rest)
 
-tk_var :: Parser String
+tk_var :: Parser String     -- x, x_0       // Xx
 tk_var = do
     --void  <- notFollowedBy tk_reserved
     first <- satisfy isLower
     rest  <- many $ (digit <|> letter <|> char '_')
-    guard $ not $ elem (first:rest) (keywords++types)
+    guard $ not $ elem (first:rest) keywords
     s
     return (first:rest)
 
 tk_evt = tk_var
 
-tk_type :: Parser String
+tk_type :: Parser String    -- Int, Int_0   // I, II, int, _Int
 tk_type = do
-    first <- satisfy isLower
-    rest  <- many $ (digit <|> letter <|> char '_')
-    guard $ elem (first:rest) types
+    first <- satisfy isUpper
+    rest  <- many1 $ (digit <|> letter <|> char '_')
+    guard $ not $ null $ filter (\c -> isLower c) rest
     s
     return (first:rest)
 

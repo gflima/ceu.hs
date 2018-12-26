@@ -51,7 +51,7 @@ main = do
     setCurrentDirectory "Ceu/Code/main/"
     mapM_ (\(ret1,hst,src) -> do
             ret2 <- go tpl src hst
-            assertEqual "xxx" ret1 ret2
+            assertEqual src ret1 ret2
             )
           tests
 
@@ -61,17 +61,17 @@ tests = [
     (10,  [], "escape 10"),
     (100, [], "escape 100"),
     (100, [], "escape {100}"),
+    (1,   [], "escape {CEU_TRAILS_N}"),
+    (16,  [], "escape {sizeof(tceu_trl)}"),
+    (24,  [], "escape {sizeof(tceu_mem_ROOT)}"),
+    (100, [], "{int x = 100}; escape {x}"),
+    (100, [], "var x:int <- 100 escape {@x}"),
+    (3,   [], "var x:int<-1 ; var y:int<-2 ; escape {@x+y}"),
+    -- TODO: unused vars
+    (32,  [], "var x:int ; var y:int ; escape {sizeof(tceu_mem_ROOT)}"),
+    -- TODO: tmp vars
+    (32,  [], "var x:int<-1 ; var y:int<-2 ; escape {@(x+y)+sizeof(tceu_mem_ROOT)}"),
     (1,   [], "loop do break end ; escape 1"),
-    (100, [],
-        unlines [
-            "{int x = 100};",
-            "escape {x}"
-        ]),
-    (100, [],
-        unlines [
-            "var x:int <- 100",
-            "escape {@x}"
-        ]),
     (4, [("KEY",1)],
         unlines [
             "input  KEY   : int",

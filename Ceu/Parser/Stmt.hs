@@ -69,7 +69,7 @@ stmt_var = do
     var  <- tk_var
     void <- tk_str ":"
     tp   <- tk_type
-    guard $ tp == "int"         -- TODO
+    guard $ tp == "Int"         -- TODO
     s    <- option (Nop $ pos2src pos) (try (attr_exp var) <|> try (attr_awaitext var) <|> try (attr_awaitevt var))
     return $ Seq (pos2src pos) (Var (pos2src pos) var Nothing) s
 
@@ -80,7 +80,7 @@ stmt_evt = do
     evt  <- tk_evt
     void <- tk_str ":"
     tp   <- tk_type
-    guard $ tp == "int"         -- TODO
+    guard $ tp == "Int"         -- TODO
     return $ Evt (pos2src pos) evt True
 
 stmt_input :: Parser (Stmt Source)
@@ -90,7 +90,7 @@ stmt_input = do
     ext  <- tk_ext
     void <- tk_str ":"
     tp   <- tk_type
-    guard $ tp == "int"         -- TODO
+    guard $ tp == "Int"         -- TODO
     return $ Inp (pos2src pos) ext True
 
 stmt_output :: Parser (Stmt Source)
@@ -100,7 +100,7 @@ stmt_output = do
     ext  <- tk_ext
     void <- tk_str ":"
     tp   <- tk_type
-    guard $ tp == "int"         -- TODO
+    guard $ tp == "Int"         -- TODO
     return $ Out (pos2src pos) ext True
 
 stmt_attr :: Parser (Stmt Source)

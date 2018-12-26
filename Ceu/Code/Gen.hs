@@ -79,16 +79,22 @@ olbl lbl src = "void " ++ lbl ++ " (tceu_stk* _ceu_stk) " ++
 getEnv :: [(String,Stmt All)] -> String -> Stmt All
 getEnv ((v1,s):l) v2 | v1==v2    = s
                      | otherwise = getEnv l v2
-getEnvID env var = var ++ "__" ++ (show $ toN $ getEnv env var)
+
+getEnvVar env var = if var == "_INPUT" then "_CEU_INPUT" else "CEU_APP.root."++id'
+                    where
+                        id' = var ++ "__" ++ (show $ toN $ getEnv env var)
+
+getEnvEvt env evt = "CEU_EVENT_" ++ (show $ toN $ getEnv env evt)
+
+-------------------------------------------------------------------------------
 
 expr :: [(ID_Var,Stmt All)] -> Exp All -> String
 expr vars (RawE  _ raw)   = fold_raw vars raw
 expr vars (Const _ n)     = show n
-expr vars (Read  _ id)    = if id == "_INPUT" then "_CEU_INPUT" else
-                                "CEU_APP.root." ++ (getEnvID vars id)
 expr vars (Equ   _ e1 e2) = "(" ++ (expr vars e1) ++ " == " ++ (expr vars e2) ++ ")"
 expr vars (Add   _ e1 e2) = "(" ++ (expr vars e1) ++ " + "  ++ (expr vars e2) ++ ")"
 expr vars (Mul   _ e1 e2) = "(" ++ (expr vars e1) ++ " * "  ++ (expr vars e2) ++ ")"
+expr vars (Read  _ id)    = getEnvVar vars id
 
 fold_raw :: [(ID_Var,Stmt All)] -> [RawAt All] -> String
 fold_raw vars raw = take ((length raw')-2) (drop 1 raw') where
@@ -113,7 +119,8 @@ stmt p h = [
     , ("CEU_LABELS",    concat $ root2 ++ labels up ++ root1 )
     ]
     where
-        p'    = N.add p --traceShowId $ N.add p
+        --p'    = N.add p
+        p'    = traceShowId $ N.add p
         up    = aux dnz p'
         root1 = [ olbl "CEU_LABEL_ROOT" (code_bef up) ]
         root2 = case code_brk up of
@@ -140,14 +147,15 @@ aux dn s@(Evt _ id p) = p' { evts_up=(id++"__"++(show$toN s)):(evts_up p') }
         p'  = aux dn' p
         dn' = dn{ evts_dn = (id,s):(evts_dn dn) }
 
-aux dn s@(Var _ id p) = p' { vars_up=(id++"__"++(show$toN s)):(vars_up p') }
+aux dn s@(Var _ id p) = p' { vars_up=id':(vars_up p') }
     where
         p'  = aux dn' p
         dn' = dn{ vars_dn = (id,s):(vars_dn dn) }
+        id' = id ++ "__" ++ (show $ toN s)
 
 aux dn s@(Write _ var exp) = upz { code_bef=src }
     where
-        src  = (oln s ++ (ocmd $ "CEU_APP.root." ++ (getEnvID vars var) ++ " = " ++ (expr vars exp)))
+        src  = (oln s ++ (ocmd $ (getEnvVar vars var) ++ " = " ++ (expr vars exp)))
         vars = vars_dn dn
 
 -------------------------------------------------------------------------------
@@ -167,7 +175,7 @@ aux dn s@(AwaitEvt _ evt) = upz { code_bef=src, code_brk=(Just lbl) }
              (ocmd $ "CEU_APP.root.trails[" ++ trl ++ "].evt = " ++ id') ++
              (ocmd $ "CEU_APP.root.trails[" ++ trl ++ "].lbl = " ++ lbl)
         trl = show $ toTrails0 s
-        id' = "CEU_EVENT_" ++ (getEnvID (evts_dn dn) evt)
+        id' = getEnvEvt (evts_dn dn) evt
         lbl = label s ("AwaitEvt_" ++ evt)
 
 -------------------------------------------------------------------------------
@@ -188,7 +196,7 @@ aux dn s@(EmitEvt _ evt) = upz { code_bef=(oln s)++bef }
               (ocmd $ "ceu_bcast(&__ceu_cst, &__ceu_stk)")         ++
               (ocmd $ "if (!_ceu_stk->is_alive) return")
 
-        id' = "CEU_EVENT_" ++ (getEnvID (evts_dn dn) evt)
+        id' = getEnvEvt (evts_dn dn) evt
         (trl0,trlN) = toTrails $ getEnv (evts_dn dn) evt
 
 -------------------------------------------------------------------------------
