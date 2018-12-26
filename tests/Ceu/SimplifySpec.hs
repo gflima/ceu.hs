@@ -35,11 +35,11 @@ spec = do
       simplify' (Seq () (Escape () 0) (AwaitInp () "")) `shouldBe` (Escape () 0)
 
     it "Var () -> (Nop ())" $ do
-      simplify' (Var () "" (Nop ())) `shouldBe` (Nop ())
+      simplify' (Var () "" [] (Nop ())) `shouldBe` (Nop ())
     it "Var () -> Break" $ do
-      simplify' (Var () "" (Escape () 0)) `shouldBe` (Escape () 0)
+      simplify' (Var () "" [] (Escape () 0)) `shouldBe` (Escape () 0)
     it "Var () -> Break" $ do
-      simplify' (Var () "" (Seq () (Nop ()) (Escape () 0))) `shouldBe` (Escape () 0)
+      simplify' (Var () "" [] (Seq () (Nop ()) (Escape () 0))) `shouldBe` (Escape () 0)
 
     it "Evt () -> (Nop ())" $ do
       simplify' (Evt () "" (Nop ())) `shouldBe` (Nop ())
@@ -82,9 +82,9 @@ spec = do
       simplify' (Pause () "" (Seq () (Nop ()) (Escape () 0))) `shouldBe` (Escape () 0)
 
     it "Fin () -> (Nop ())" $ do
-      simplify' (Fin () (Var () "" (Trap () (Escape () 0)))) `shouldBe` (Nop ())
+      simplify' (Fin () (Var () "" [] (Trap () (Escape () 0)))) `shouldBe` (Nop ())
     it "Fin () -> (Nop ())" $ do
-      simplify' (Fin () (Var () "" (If () (Const () 1) (Nop ()) (Escape () 0)))) `shouldBe` (Fin () (Var () "" (If () (Const () 1) (Nop ()) (Escape () 0))))
+      simplify' (Fin () (Var () "" [] (If () (Const () 1) (Nop ()) (Escape () 0)))) `shouldBe` (Fin () (Var () "" [] (If () (Const () 1) (Nop ()) (Escape () 0))))
 
     it "Trap () (Nop ()) -> (Nop ())" $ do
       simplify' (Trap () (Nop ())) `shouldBe` (Nop ())

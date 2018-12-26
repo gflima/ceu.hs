@@ -1069,7 +1069,7 @@ spec = do
   describe "compile_run" $ do
 
     evalProgItSuccess (11,[[]])
-      [] (G.Var () "a"
+      [] (G.Var () "a" ["Int"]
            (G.Write () "a" (Const () 1) `G.sSeq`
             G.Write () "_ret" (Read () "a" `eAdd` Const () 10) `G.sSeq`
             G.Escape () 0))
@@ -1078,81 +1078,81 @@ spec = do
       [] (G.Escape () 1)
 
     evalProgItFail ["declaration: identifier '_ret' is already declared"]
-      [] (G.Var () "a"
-           (G.Var () "_ret"
+      [] (G.Var () "a" ["Int"]
+           (G.Var () "_ret" ["Int"]
              (G.Write () "a" (Const () 1) `G.sSeq`
               G.Write () "_ret" (Read () "a" `eAdd` Const () 10) `G.sSeq`
               G.Escape () 0)))
 
     evalProgItFail ["declaration: identifier '_ret' is already declared"]
       [] (G.Write () "_ret" (Const () 1) `G.sSeq`
-          G.Var () "_ret" (G.Write () "_ret" (Const () 99)) `G.sSeq`
+          G.Var () "_ret" ["Int"] (G.Write () "_ret" (Const () 99)) `G.sSeq`
           G.Escape () 0)
 
     evalProgItSuccess (11,[[]])
-      [] (G.Var () "a"
+      [] (G.Var () "a" ["Int"]
            (G.Write () "a" (Const () 1) `G.sSeq`
-            G.Var () "b" (G.Write () "b" (Const () 99)) `G.sSeq`
+            G.Var () "b" ["Int"] (G.Write () "b" (Const () 99)) `G.sSeq`
             G.Write () "_ret" (Read () "a" `eAdd` Const () 10) `G.sSeq`
             G.Escape () 0))
 
     evalProgItFail ["declaration: identifier 'a' is already declared"]
-      [] (G.Var () "a"
+      [] (G.Var () "a" ["Int"]
            (G.Write () "a" (Const () 1) `G.sSeq`
-            G.Var () "a" (G.Write () "a" (Const () 99)) `G.sSeq`
+            G.Var () "a" ["Int"] (G.Write () "a" (Const () 99)) `G.sSeq`
             G.Write () "_ret" (Read () "a" `eAdd` Const () 10) `G.sSeq`
             G.Escape () 0))
 
     evalProgItSuccess (2,[[]])
       [] (G.Write () "_ret" (Const () 1) `G.sSeq`
-          G.Var () "_" (G.Write () "_ret" (Const () 2)) `G.sSeq`
+          G.Var () "_" ["Int"] (G.Write () "_ret" (Const () 2)) `G.sSeq`
           G.Escape () 0)
 
     evalProgItSuccess (11,[[]])
-      [] (G.Var () "a"
+      [] (G.Var () "a" ["Int"]
            (G.Write () "a" (Const () 1) `G.sSeq`
             G.Trap () (G.Par ()
-             (G.Var () "b" (G.Write () "b" (Const () 99) `G.sSeq` G.Inp () "A" (G.AwaitInp () "A")) `G.sSeq` (G.Halt ()))
+             (G.Var () "b" ["Int"] (G.Write () "b" (Const () 99) `G.sSeq` G.Inp () "A" (G.AwaitInp () "A")) `G.sSeq` (G.Halt ()))
              (G.Escape () 0)) `G.sSeq`
            G.Write () "_ret" (Read () "a" `eAdd` Const () 10) `G.sSeq`
            G.Escape () 0))
 
     evalProgItFail ["trap: missing `escape` statement"]
       [] (G.Trap () (G.Par ()
-           (G.Inp () "A" (G.Var () "x" (G.Write () "_ret" (Const () 1) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ())))
+           (G.Inp () "A" (G.Var () "x" ["Int"] (G.Write () "_ret" (Const () 1) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ())))
            (G.Escape () 1)))
 
     evalProgItSuccess (1,[[]])
       [] (G.Seq () (G.Trap () (G.Inp () "A" (G.Par ()
-           (G.Var () "x" (G.Write () "_ret" (Const () 1) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ()))
+           (G.Var () "x" ["Int"] (G.Write () "_ret" (Const () 1) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ()))
            (G.Escape () 0)))) (G.Escape () 0))
 
     evalProgItFail ["loop: `loop` never iterates","declaration: identifier 'a' is already declared"]
-      [] (G.Var () "a"
+      [] (G.Var () "a" ["Int"]
            (G.Write () "a" (Const () 1) `G.sSeq`
             G.Trap () (G.Inp () "A" (G.Loop () (G.Par ()
-                  (G.Var () "a" (G.Write () "a" (Const () 99) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ()))
+                  (G.Var () "a" ["Int"] (G.Write () "a" (Const () 99) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ()))
                   (G.Escape () 0)))) `G.sSeq`
              G.Write () "_ret" (Read () "a" `eAdd` Const () 10) `G.sSeq`
             G.Escape () 0))
 
     evalProgItSuccess (11,[[]])
-      [] (G.Var () "a"
+      [] (G.Var () "a" ["Int"]
            (G.Write () "a" (Const () 1) `G.sSeq`
             G.Inp () "A" (G.Trap () (G.Par ()
-                  (G.Var () "b" (G.Write () "b" (Const () 99) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ()))
+                  (G.Var () "b" ["Int"] (G.Write () "b" (Const () 99) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ()))
                   (G.Escape () 0)) `G.sSeq`
             G.Write () "_ret" (Read () "a" `eAdd` Const () 10) `G.sSeq`
             G.Escape () 0)))
 
     evalProgItFail ["loop: `loop` never iterates"]
       [] (G.Seq () (G.Trap () (G.Loop () (G.Par ()
-                 (G.Inp () "A" (G.Var () "x" (G.Write () "_ret" (Const () 1) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ())))
+                 (G.Inp () "A" (G.Var () "x" ["Int"] (G.Write () "_ret" (Const () 1) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ())))
                  (G.Escape () 0)))) (G.Escape () 0))
 
     evalProgItSuccess (1,[[]])
       [] (G.Seq () (G.Trap () (G.Par ()
-                 (G.Inp () "A" (G.Var () "x" (G.Write () "_ret" (Const () 1) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ())))
+                 (G.Inp () "A" (G.Var () "x" ["Int"] (G.Write () "_ret" (Const () 1) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ())))
                  (G.Escape () 0))) (G.Escape () 0))
 
     evalProgItSuccess (5,[[]]) [] (
@@ -1184,10 +1184,10 @@ end
 escape x;
 -}
     evalProgItSuccess (99,[[]]) [] (
-      (G.Var () "x" (
+      (G.Var () "x" ["Int"] (
         (G.Write () "x" (Const () 10)) `G.sSeq`
         (G.Trap () (G.Par ()
-          (G.Var () "y" (G.Halt ()))
+          (G.Var () "y" ["Int"] (G.Halt ()))
           (G.Seq () (G.Write () "x" (Const () 99)) (G.Escape () 0))
         )) `G.sSeq`
         (G.Write () "_ret" (Read () "x")) `G.sSeq`
@@ -1196,7 +1196,7 @@ escape x;
 
     evalProgItSuccess (99,[[],[]]) ["A"]
       (G.Seq () (G.Seq ()
-        (G.Var () "x"
+        (G.Var () "x" ["Int"]
           (G.Seq ()
             (G.Write () "x" (Const () 1))
             (G.Evt () "e"

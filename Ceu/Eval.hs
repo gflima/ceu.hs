@@ -74,7 +74,7 @@ getAnn (Loop'    z _ _)   = z
 getAnn (Par'     z _ _)   = z
 
 fromGrammar :: (G.Stmt ann) -> (Stmt ann)
-fromGrammar (G.Var z id p)      = Var z (id,Nothing) (fromGrammar p)
+fromGrammar (G.Var z id _ p)    = Var z (id,Nothing) (fromGrammar p)
 fromGrammar (G.Inp z id p)      = (fromGrammar p)
 fromGrammar (G.Out z id p)      = (fromGrammar p)
 fromGrammar (G.Evt z id p)      = Evt z id (fromGrammar p)
