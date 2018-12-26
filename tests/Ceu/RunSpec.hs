@@ -63,62 +63,62 @@ spec = do
             `shouldBe` Right (2, [[]])
 
     describe "vars:" $ do
-        it "var int a,b" $
-            run "var a,b:int;" []           -- TODO: support a,b,c? (problem w/ assign/finalization)
+        it "var Int a,b" $
+            run "var a,b:Int;" []           -- TODO: support a,b,c? (problem w/ assign/finalization)
             `shouldBe` Left "(line 1, column 6):\nunexpected \",\"\nexpecting digit, letter, \"_\" or \":\""
         it "a <- 1; escape a;" $
             run "a <- 1; escape a" []
             `shouldBe` Left "(line 1, column 3):\nassignment: identifier 'a' is not declared\n(line 1, column 16):\nread access to 'a': identifier 'a' is not declared\n"
-        it "var a : int <- 1; escape a;" $
-            run "var a : int <- 1; escape a" []
+        it "var a : Int <- 1; escape a;" $
+            run "var a : Int <- 1; escape a" []
             `shouldBe` Right (1, [[]])
-        it "var a:int" $
-            run "var a:int" []
+        it "var a:Int" $
+            run "var a:Int" []
             `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nhalt: unreachable statement\n"
-        it "var a:int <- 1" $
-            run "var a:int <- 1" []
+        it "var a:Int <- 1" $
+            run "var a:Int <- 1" []
             `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nhalt: unreachable statement\n"
-        it "var a:int ; a <- 1" $
-            run "var a:int ; a <- 1 ; escape a" []
+        it "var a:Int ; a <- 1" $
+            run "var a:Int ; a <- 1 ; escape a" []
             `shouldBe` Right (1, [[]])
-        it "var x:int; x<-1; escape x" $
-            run "var x:int; x <- 1 ;escape x" []
+        it "var x:Int; x<-1; escape x" $
+            run "var x:Int; x <- 1 ;escape x" []
             `shouldBe` Right (1, [[]])
         it "hide a" $
-            run "var a:int ; var a:int ; escape 0" []
+            run "var a:Int ; var a:Int ; escape 0" []
             `shouldBe` Left "(line 1, column 13):\ndeclaration: identifier 'a' is already declared\n"
         it "do a=1 end ; a=2" $
-            run "do var a:int <- 1; end var a:int <- 2 ; escape a" []
+            run "do var a:Int <- 1; end var a:Int <- 2 ; escape a" []
             `shouldBe` Left "TODO: declared but not used"
-        it "var x:int <- await X ; escape x" $
-            run "input X:int var x:int <- await X ; escape x" [("X",Just 1)]
+        it "var x:Int <- await X ; escape x" $
+            run "input X:Int var x:Int <- await X ; escape x" [("X",Just 1)]
             `shouldBe` Right (1, [[],[]])
 
 -------------------------------------------------------------------------------
 
     describe "awaitext:" $ do
         it "await X ; escape 1" $
-            run "input X:int await X ; escape 1" []
+            run "input X:Int await X ; escape 1" []
             `shouldBe` Left "program didn't terminate\n"
         it "await X ; escape 1" $
-            run "input X:int await X ; escape 1" [("X",Nothing)]
+            run "input X:Int await X ; escape 1" [("X",Nothing)]
             `shouldBe` Right (1,[[],[]])
-        it "var x:int <- await X ; await X ; escape x" $
-            run "input X:int var x:int <- await X ; await X ; escape x" [("X",Just 1),("X",Nothing)]
+        it "var x:Int <- await X ; await X ; escape x" $
+            run "input X:Int var x:Int <- await X ; await X ; escape x" [("X",Just 1),("X",Nothing)]
             `shouldBe` Right (1, [[],[],[]])
 
     describe "emitext:" $ do
         it "emit X" $
-            run "output X:int emit X ; escape 1;" []
+            run "output X:Int emit X ; escape 1;" []
             `shouldBe` Right (1,[[("X",Nothing)]])
         it "emit x" $
             run "emit x" []
             `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nhalt: unreachable statement\n(line 1, column 1):\nemit: identifier 'x' is not declared\n"
         it "emit X -> 1" $
-            run "output X:int emit X -> 1 ; escape 2;" []
+            run "output X:Int emit X -> 1 ; escape 2;" []
             `shouldBe` Right (2,[[("X",Just 1)]])
-        it "var x:int <- await X; emit X -> x ; escape x+1" $    -- TODO: X in/out
-            run "input X:int var x:int <- await X; emit X -> x ; escape x+1" [("X",Just 1)]
+        it "var x:Int <- await X; emit X -> x ; escape x+1" $    -- TODO: X in/out
+            run "input X:Int var x:Int <- await X; emit X -> x ; escape x+1" [("X",Just 1)]
             `shouldBe` Right (2,[[],[("X",Just 1)]])
 
 -------------------------------------------------------------------------------
@@ -155,7 +155,7 @@ spec = do
             run "if 0 then ; if 0 then end ; else escape 1 end ; await FOREVER" []
             `shouldBe` Right (1, [[]])
         it "if 1 then a=1; a=2; if 1 then escape a end end" $
-            run "if 1 then var a:int <-1 ; a<-2; if 1 then escape a end end ; await FOREVER" []
+            run "if 1 then var a:Int <-1 ; a<-2; if 1 then escape a end end ; await FOREVER" []
             `shouldBe` Right (2, [[]])
         it "if 0 then . else/if 1 then escape 1 else ." $
             run "if 0 then escape 0 else/if 1 then escape 1 else escape 0 end" []
@@ -191,7 +191,7 @@ spec = do
             --`shouldBe` Right (3, [[]])
             `shouldBe` Left "(line 1, column 12):\nsequence: trail must terminate\n(line 1, column 22):\nsequence: trail must terminate\n"
         it "par/and ... with ... with escape 3 end" $
-            run "input X:int input Y:int par/and do await X with await Y with escape 3 end" []
+            run "input X:Int input Y:Int par/and do await X with await Y with escape 3 end" []
             `shouldBe` Left "(line 1, column 62):\nsequence: trail must terminate\n(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 44):\nif: unreachable statement\n"
 
     describe "par/or:" $ do

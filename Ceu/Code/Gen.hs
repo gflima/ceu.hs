@@ -147,7 +147,7 @@ aux dn s@(Evt _ id p) = p' { evts_up=(id++"__"++(show$toN s)):(evts_up p') }
         p'  = aux dn' p
         dn' = dn{ evts_dn = (id,s):(evts_dn dn) }
 
-aux dn s@(Var _ id p) = p' { vars_up=id':(vars_up p') }
+aux dn s@(Var _ id _ p) = p' { vars_up=id':(vars_up p') }
     where
         p'  = aux dn' p
         dn' = dn{ vars_dn = (id,s):(vars_dn dn) }

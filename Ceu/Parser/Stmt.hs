@@ -69,9 +69,8 @@ stmt_var = do
     var  <- tk_var
     void <- tk_str ":"
     tp   <- tk_type
-    guard $ tp == "Int"         -- TODO
     s    <- option (Nop $ pos2src pos) (try (attr_exp var) <|> try (attr_awaitext var) <|> try (attr_awaitevt var))
-    return $ Seq (pos2src pos) (Var (pos2src pos) var Nothing) s
+    return $ Seq (pos2src pos) (Var (pos2src pos) var [tp] Nothing) s
 
 stmt_evt :: Parser (Stmt Source)
 stmt_evt = do

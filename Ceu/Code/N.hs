@@ -12,8 +12,8 @@ stmt :: Int -> Int -> (Stmt Source) -> (Int, Int, Stmt All)
 
 stmt n trl0 (Nop src) = (n+1,1, Nop All{source=src,n=n,trails=(trl0,1)})
 
-stmt n trl0 (Var src id p) =
-    (n',ts', Var All{source=src,n=n,trails=(trl0,ts')} id p')
+stmt n trl0 (Var src id tp p) =
+    (n',ts', Var All{source=src,n=n,trails=(trl0,ts')} id tp p')
     where
         (n',ts',p') = stmt (n+1) trl0 p
 

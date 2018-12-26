@@ -281,16 +281,16 @@ spec = do
         describe "var:" $ do
             it "var x: Int" $
                 parse stmt_var "var x: Int;"
-                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (Nop ("",1,1)))
+                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" ["Int"] Nothing) (Nop ("",1,1)))
             it "var var x" $
                 parse stmt_var "var var x"
                 `shouldBe` Left "(line 1, column 8):\nunexpected \" \"\nexpecting digit, letter or \"_\""
             it "var a: Int <- 1" $
                 parse stmt_var "var a : Int <- 1"
-                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "a" Nothing) (Write ("",1,13) "a" (Const ("",1,16) 1)))
+                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "a" ["Int"] Nothing) (Write ("",1,13) "a" (Const ("",1,16) 1)))
             it "var x : Int <- await X" $
                 parse stmt_var "var x : Int <- await X"
-                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (AwaitInp ("",1,16) "X" (Just "x")))
+                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" ["Int"] Nothing) (AwaitInp ("",1,16) "X" (Just "x")))
 
         describe "ext:" $ do
             it "output X: Int" $
@@ -484,16 +484,16 @@ spec = do
 
             it "input KEY:Int ; var a:Int ; a<-await KEY ; ret<-a" $
                 parse (stmt_seq ("",1,1)) "var a:Int ; a<-1"
-                `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "a" Nothing) (Nop ("",1,1))) (Write ("",1,14) "a" (Const ("",1,16) 1)))
+                `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "a" ["Int"] Nothing) (Nop ("",1,1))) (Write ("",1,14) "a" (Const ("",1,16) 1)))
 
         describe "stmt:" $ do
             it "var x:Int; escape 1" $
                 parse stmt "var x:Int ;escape 1"
-                `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (Nop ("",1,1))) (Escape ("",1,12) Nothing (Just (Const ("",1,19) 1))))
+                `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "x" ["Int"] Nothing) (Nop ("",1,1))) (Escape ("",1,12) Nothing (Just (Const ("",1,19) 1))))
 
             it "var x:Int; x<-1; escape x" $
                 parse stmt "var x:Int ; x <- 1 ; escape x"
-                `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "x" Nothing) (Nop ("",1,1))) (Seq ("",1,1) (Write ("",1,15) "x" (Const ("",1,18) 1)) (Escape ("",1,22) Nothing (Just (Read ("",1,29) "x")))))
+                `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "x" ["Int"] Nothing) (Nop ("",1,1))) (Seq ("",1,1) (Write ("",1,15) "x" (Const ("",1,18) 1)) (Escape ("",1,22) Nothing (Just (Read ("",1,29) "x")))))
 
             it "do ... end" $
                 parse stmt "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end"
