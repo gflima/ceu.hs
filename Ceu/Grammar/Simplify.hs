@@ -4,11 +4,11 @@ import Ceu.Grammar.Stmt
 
 simplify :: (Eq ann) => (Stmt ann) -> (Stmt ann)
 
-simplify (Var z id p) =
+simplify (Var z id tp p) =
   case p' of
     Nop z'      -> Nop z'
     Escape z' n -> Escape z' n
-    otherwise   -> Var z id p'
+    otherwise   -> Var z id tp p'
   where p' = simplify p
 
 simplify (Inp z id p) =

@@ -18,48 +18,48 @@ spec = do
 
     -- atomic statements --
     checkLoopIt (Loop () (Write () "x" (Umn () (Const () 1)))) False
-    checkLoopIt (Loop () (AwaitInp () "A"))              True
-    checkLoopIt (Loop () (AwaitEvt () "a"))              False
-    checkLoopIt (Loop () (EmitEvt () "a"))               False
-    checkLoopIt (Loop () (Escape () 0))                  True
-    checkLoopIt (Loop () (Loop () (Escape () 0)))        True
-    checkLoopIt (Loop () ((Nop ())))                     False
-    checkLoopIt (Loop () (Error () ""))                  False
+    checkLoopIt (Loop () (AwaitInp () "A"))       True
+    checkLoopIt (Loop () (AwaitEvt () "a"))       False
+    checkLoopIt (Loop () (EmitEvt () "a"))        False
+    checkLoopIt (Loop () (Escape () 0))           True
+    checkLoopIt (Loop () (Loop () (Escape () 0))) True
+    checkLoopIt (Loop () ((Nop ())))              False
+    checkLoopIt (Loop () (Error () ""))           False
 
     -- compound statements --
-    checkLoopIt (Loop () (Var () "x" (Var () "y" (Escape () 0))))         True
-    checkLoopIt (Loop () (Var () "x" (Var () "y" (Nop ()))))              False
+    checkLoopIt (Loop () (Var () "x" [] (Var () "y" [] (Escape () 0)))) True
+    checkLoopIt (Loop () (Var () "x" [] (Var () "y" [] (Nop ()))))      False
 
     checkLoopIt (Loop () (If () (Const () 0) (Escape () 0) (Nop ())))     False
     checkLoopIt (Loop () (If () (Const () 0) (Fin () (Nop ())) (Nop ()))) False
     checkLoopIt (Loop () (If () (Const () 0) (Every () "A" (Nop ())) (AwaitInp () "A"))) True
 
     checkLoopIt (Loop () ((Nop ()) `sSeq` (Nop ()) `sSeq` (Escape () 0) `sSeq` (Nop ()))) True
-    checkLoopIt (Loop () (Trap () (Loop () (Escape () 0))))               False
-    checkLoopIt (Loop () ((Nop ()) `sSeq` (Nop ()) `sSeq` (Loop () (Escape () 0))))   True
-    checkLoopIt (Loop () ((Escape () 0) `sSeq` Loop () (Nop ())))         True
-    checkLoopIt (Loop () ((Nop ()) `sSeq` Loop () (Nop ())))              False
+    checkLoopIt (Loop () (Trap () (Loop () (Escape () 0)))) False
+    checkLoopIt (Loop () ((Nop ()) `sSeq` (Nop ()) `sSeq` (Loop () (Escape () 0)))) True
+    checkLoopIt (Loop () ((Escape () 0) `sSeq` Loop () (Nop ()))) True
+    checkLoopIt (Loop () ((Nop ()) `sSeq` Loop () (Nop ())))      False
 
-    checkLoopIt (Loop () (Loop () (Loop () (AwaitInp () "A"))))           True
-    checkLoopIt (Loop () (Loop () (Escape () 0)))                         True
-    checkLoopIt (Loop () (Trap () (Loop () (Escape () 0))))               False
-    checkLoopIt (Loop () (Loop () (Trap () (Loop () (Escape () 0)))))     False
+    checkLoopIt (Loop () (Loop () (Loop () (AwaitInp () "A"))))   True
+    checkLoopIt (Loop () (Loop () (Escape () 0)))                 True
+    checkLoopIt (Loop () (Trap () (Loop () (Escape () 0))))       False
+    checkLoopIt (Loop () (Loop () (Trap () (Loop () (Escape () 0))))) False
     checkLoopIt (Loop () (Trap () (Loop () (Escape () 0)) `sSeq` (Trap () (Loop () (Escape () 0))))) False
     checkLoopIt (Loop () (Loop () (AwaitInp () "A") `sSeq` Loop () (Nop ()))) True
     checkLoopIt (Loop () (Loop () (Seq () (Escape () 0) (Escape () 0))))  True
     checkLoopIt (Loop () (Trap () (Loop () (Seq () (Escape () 0) (Escape () 0))))) False
     checkLoopIt (Loop () (Trap () (Loop () (Seq () (Escape () 0) (Escape () 1))))) False
 
-    checkLoopIt (Loop () ((Nop ()) `sPar` (Nop ()) `sPar` (Nop ())))      False
-    checkLoopIt (Loop () (Pause () "a" (Nop ())))                         False
+    checkLoopIt (Loop () ((Nop ()) `sPar` (Nop ()) `sPar` (Nop ()))) False
+    checkLoopIt (Loop () (Pause () "a" (Nop ())))                    False
     checkLoopIt (Loop () (Every () "A" (Nop ()) `sPar` AwaitInp () "A" `sPar` (Escape () 0))) True
-    checkLoopIt (Loop () (Pause () "a" (AwaitInp () "A")))                True
+    checkLoopIt (Loop () (Pause () "a" (AwaitInp () "A")))           True
 
     -- Fin () always run in zero time.
-    checkLoopIt (Loop () (Fin () (Nop ())))                               False
-    checkLoopIt (Loop () (Fin () (Escape () 0)))                          False
-    checkLoopIt (Loop () (Fin () (AwaitInp () "A")))                      False
-    checkLoopIt (Loop () (Fin () (Every () "A" (Nop ()))))                False
+    checkLoopIt (Loop () (Fin () (Nop ())))                          False
+    checkLoopIt (Loop () (Fin () (Escape () 0)))                     False
+    checkLoopIt (Loop () (Fin () (AwaitInp () "A")))                 False
+    checkLoopIt (Loop () (Fin () (Every () "A" (Nop ()))))           False
 
   --------------------------------------------------------------------------
   describe "checkFin/Every () -- no Loop/Escape/Await*/Every/Fin:" $ do
@@ -74,8 +74,8 @@ spec = do
     checkFinIt (Fin () (Error () ""))            []
 
     -- compound statements --
-    checkFinIt (Fin () (Var () "x" (Nop ())))                []
-    checkFinIt (Fin () (Var () "x" (Every () "A" (Nop ())))) ["every: invalid statement"]
+    checkFinIt (Fin () (Var () "x" [] (Nop ())))                []
+    checkFinIt (Fin () (Var () "x" [] (Every () "A" (Nop ())))) ["every: invalid statement"]
     checkFinIt (Fin () (If () (Const () 0) (Loop () (Escape () 0)) ((Nop ())))) ["escape: invalid statement"]
     checkFinIt (Fin () (If () (Const () 0) (Write () "x" (Const () 0)) ((Nop ())))) []
     checkFinIt (Fin () ((Nop ()) `sSeq` (Nop ()) `sSeq` (AwaitInp () "A") `sSeq` (Nop ()))) ["await: invalid statement"]
@@ -122,16 +122,16 @@ spec = do
   --------------------------------------------------------------------------
   describe "checkId -- declarations" $ do
 
-    checkIdIt (Nop ())                                 []
-    checkIdIt (Var () "a" (Nop ()))                    []
-    checkIdIt (Var () "a" (Write () "a" (Const () 1))) []
-    checkIdIt (Var () "a" (Var () "a" (Nop ())))       ["declaration: identifier 'a' is already declared"]
+    checkIdIt (Nop ())                                    []
+    checkIdIt (Var () "a" [] (Nop ()))                    []
+    checkIdIt (Var () "a" [] (Write () "a" (Const () 1))) []
+    checkIdIt (Var () "a" [] (Var () "a" [] (Nop ())))    ["declaration: identifier 'a' is already declared"]
     checkIdIt (Evt () "e" (Evt () "e" (Nop ())))       ["declaration: identifier 'e' is already declared"]
     checkIdIt (Write () "a" (Const () 1))              ["assignment: identifier 'a' is not declared"]
     checkIdIt (AwaitEvt () "e")                        ["await: identifier 'e' is not declared"]
     checkIdIt (Every () "e" (Nop ()))                  ["every: identifier 'e' is not declared"]
     checkIdIt (Pause () "a" (Nop ()))                  ["pause/if: identifier 'a' is not declared"]
-    checkIdIt (Var () "a" (Write () "a" (Umn () (Read () "b")))) ["read access to 'b': identifier 'b' is not declared"]
+    checkIdIt (Var () "a" [] (Write () "a" (Umn () (Read () "b")))) ["read access to 'b': identifier 'b' is not declared"]
 
   --------------------------------------------------------------------------
   describe "checkStmts -- program is valid" $ do
@@ -146,7 +146,7 @@ spec = do
     checkStmtsIt (Error () "")            []
 
     -- compound statements --
-    checkStmtsIt (Var () "x" (Nop ()))                 []
+    checkStmtsIt (Var () "x" [] (Nop ()))              []
     checkStmtsIt (If () (Const () 0) (Nop ()) (Escape () 0)) []
     checkStmtsIt (Seq () (Escape () 0) (Nop ()))       ["nop: unreachable statement"]
     checkStmtsIt (Loop () (Escape () 0))               ["loop: `loop` never iterates"]
@@ -164,7 +164,7 @@ spec = do
     -- misc --
     checkStmtsIt ((Nop ()) `sSeq` (Fin () (Loop () (Escape () 0)))) ["loop: `loop` never iterates","finalize: invalid statement in `finalize`", "escape: invalid statement"]
     checkStmtsIt ((Nop ()) `sSeq` (Fin () (Loop () (Nop ())))) ["loop: unbounded `loop` execution"]
-    checkStmtsIt (Var () "x" (Fin () (Every () "A" (Nop ())))) ["finalize: invalid statement in `finalize`", "every: invalid statement"]
+    checkStmtsIt (Var () "x" [] (Fin () (Every () "A" (Nop ())))) ["finalize: invalid statement in `finalize`", "every: invalid statement"]
     checkStmtsIt (Loop () (Trap () (Loop () (Escape () 0))))   ["loop: `loop` never iterates","loop: unbounded `loop` execution"]
     checkStmtsIt (Loop () (Trap () (Loop () (Seq () (Escape () 0) (Escape () 0))))) ["escape: unreachable statement","loop: `loop` never iterates","loop: unbounded `loop` execution"]
     checkStmtsIt (AwaitEvt () "a" `sSeq` (Fin () (Escape () 0)) `sPar` (Halt ())) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]

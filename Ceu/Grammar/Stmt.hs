@@ -6,7 +6,7 @@ import Text.Printf
 
 -- Program (pg 5).
 data Stmt ann
-  = Var      ann ID_Var (Stmt ann)                  -- variable declaration
+  = Var      ann ID_Var Type (Stmt ann)             -- variable declaration
   | Inp      ann ID_Inp (Stmt ann)                  -- input declaration
   | Out      ann ID_Out (Stmt ann)                  -- output declaration
   | Evt      ann ID_Evt (Stmt ann)                  -- event declaration
@@ -37,7 +37,7 @@ infixr 1 `sSeq` -- `Seq` associates to the right
 infixr 0 `sPar` -- `Par` associates to the right
 
 getAnn :: Stmt ann -> ann
-getAnn (Var      z _ _)   = z
+getAnn (Var      z _ _ _) = z
 getAnn (Inp      z _ _)   = z
 getAnn (Out      z _ _)   = z
 getAnn (Evt      z _ _)   = z
@@ -63,7 +63,7 @@ getAnn (Error    z _)     = z
 -- Shows program.
 showProg :: (Stmt ann) -> String
 showProg stmt = case stmt of
-  Var      _ id p         -> printf "{%s: %s}" id (sP p)
+  Var      _ id tp p      -> printf "{%s: %s}" id (sP p)
   Inp      _ id p         -> printf "{%s: %s}" id (sP p)
   Out      _ id p         -> printf "{%s: %s}" id (sP p)
   Evt      _ id p         -> printf "{%s: %s}" id (sP p)
@@ -93,7 +93,7 @@ showProg stmt = case stmt of
 
 stmt2word :: (Stmt ann) -> String
 stmt2word stmt = case stmt of
-  Var _ _ _     -> "declaration"
+  Var _ _ _ _   -> "declaration"
   Inp _ _ _     -> "declaration"
   Out _ _ _     -> "declaration"
   Evt _ _ _     -> "declaration"
