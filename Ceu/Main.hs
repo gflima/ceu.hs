@@ -16,36 +16,33 @@ import Ceu.Grammar.Ann.Source
 
 go :: Bool -> String -> [(String,Int)] -> Either String [(String,String)]
 go o_encl src hst =
-    let ret = Parsec.parse (Token.s *> Parser.stmt <* Parsec.eof) "" src in
-        case ret of
-            (Left  e)  -> Left (show e)
-            (Right p1) -> let (es,p2) = FullE.compile' (True,o_encl) p1
+    case Parsec.parse (Token.s *> Parser.stmt <* Parsec.eof) "" src of
+        (Left  e)  -> Left (show e)
+        (Right p1) -> let (es,p2) = FullE.compile' (True,o_encl) p1
 {-
-            (Right p1) -> let (es,p2) = FullE.compile' (True,False)
-                                            (FullG.Seq ann
-                                                (FullG.Inp ann "FOREVER" False)
-                                                p1)
+        (Right p1) -> let (es,p2) = FullE.compile' (True,False)
+                                        (FullG.Seq ann
+                                            (FullG.Inp ann "FOREVER" False)
+                                            p1)
 -}
-              in
-                case p2 of
-                    (G.Nop _) -> Left  (show es)
-                    otherwise -> Right (Gen.stmt p2 hst)
-              where
-                ann = FullG.getAnn p1
+          in
+            case p2 of
+                (G.Nop _) -> Left  (show es)
+                otherwise -> Right (Gen.stmt p2 hst)
+          where
+            ann = FullG.getAnn p1
 
 main :: IO ()
 main = do
     src <- readFile "x.ceu"
     tpl <- readFile "Ceu/Code/ceu.c"
     -- o_encl: False
-    let ret = go False src [("KEY",1),("KEY",2),("KEY",3),("KEY",4)] in
-        case ret of
-            Left  err      -> hPutStrLn stderr err
-            Right keypairs ->
-                let ret = Template.render keypairs tpl in
-                    case ret of
-                        Left  err -> hPutStrLn stderr err
-                        Right out -> writeFile "Ceu/Code/main/_ceu.c" out
+    --let ret = go True src [("KEY",1),("KEY",2),("KEY",3),("KEY",4)] in
+    case go True src [] of
+        Left  err      -> hPutStrLn stderr err
+        Right keypairs -> case Template.render keypairs tpl of
+                            Left  err -> hPutStrLn stderr err
+                            Right out -> writeFile "Ceu/Code/main/_ceu.c" out
     setCurrentDirectory "Ceu/Code/main/"
     ExitSuccess   <- system "gcc main.c"
     ExitFailure v <- system "./a.out"

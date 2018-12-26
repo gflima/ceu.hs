@@ -1,5 +1,6 @@
 module Ceu.Grammar.Id where
 
+import Debug.Trace
 import Data.List (find)
 
 import Ceu.Grammar.Globals
@@ -40,7 +41,7 @@ stmt ids s@(If  _ exp p1 p2) = es1 ++ es2 ++ (stmt ids p1) ++ (stmt ids p2)
                                where
                                 (tp,es1) = (expr ids exp)
                                 es2 = case tp of
-                                    Just tp'  -> checkType ["Int"] tp' s
+                                    Just tp'  -> checkType ["Bool"] tp' s
                                     otherwise -> []
 stmt ids (Seq _ p1 p2)     = (stmt ids p1) ++ (stmt ids p2)
 stmt ids (Loop _ p)        = (stmt ids p)
@@ -62,7 +63,7 @@ checkType [] l  s = [toError s "types do not match"]
 checkType l  [] s = [toError s "types do not match"]
 checkType (tp1:l1) (tp2:l2) s
     | tp1 == tp2 = checkType l1 l2 s
-    | otherwise  = ["types do not match"]
+    | otherwise  = [toError s "types do not match"]
 
 -------------------------------------------------------------------------------
 
@@ -117,10 +118,10 @@ expr ids e@(Read _ id) = if id == "_INPUT" then (Just ["Int"],[]) else
                                     Nothing -> Nothing
                                     Just s  -> Just (getType s)
 expr ids (Umn _ e)      = expr ids e
-expr ids (Add _ e1 e2)  = (Just ["Int"], (snd $ expr ids e1) ++ (snd $ expr ids e2))
-expr ids (Sub _ e1 e2)  = (Just ["Int"], (snd $ expr ids e1) ++ (snd $ expr ids e2))
-expr ids (Mul _ e1 e2)  = (Just ["Int"], (snd $ expr ids e1) ++ (snd $ expr ids e2))
-expr ids (Div _ e1 e2)  = (Just ["Int"], (snd $ expr ids e1) ++ (snd $ expr ids e2))
-expr ids (Equ _ e1 e2)  = (Just ["Int"], (snd $ expr ids e1) ++ (snd $ expr ids e2))
-expr ids (Lte _ e1 e2)  = (Just ["Int"], (snd $ expr ids e1) ++ (snd $ expr ids e2))
-expr ids _              = (Just ["Int"], [])
+expr ids (Add _ e1 e2)  = (Just ["Int"],  (snd $ expr ids e1) ++ (snd $ expr ids e2))
+expr ids (Sub _ e1 e2)  = (Just ["Int"],  (snd $ expr ids e1) ++ (snd $ expr ids e2))
+expr ids (Mul _ e1 e2)  = (Just ["Int"],  (snd $ expr ids e1) ++ (snd $ expr ids e2))
+expr ids (Div _ e1 e2)  = (Just ["Int"],  (snd $ expr ids e1) ++ (snd $ expr ids e2))
+expr ids (Equ _ e1 e2)  = (Just ["Bool"], (snd $ expr ids e1) ++ (snd $ expr ids e2))
+expr ids (Lte _ e1 e2)  = (Just ["Bool"], (snd $ expr ids e1) ++ (snd $ expr ids e2))
+expr ids _              = (Just ["Int"],  [])

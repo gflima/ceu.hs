@@ -84,7 +84,7 @@ getEnvVar env var = if var == "_INPUT" then "_CEU_INPUT" else "CEU_APP.root."++i
                     where
                         id' = var ++ "__" ++ (show $ toN $ getEnv env var)
 
-getEnvEvt env evt = "CEU_EVENT_" ++ (show $ toN $ getEnv env evt)
+getEnvEvt env evt = "CEU_EVENT_" ++ evt ++ "__" ++ (show $ toN $ getEnv env evt)
 
 -------------------------------------------------------------------------------
 
@@ -119,8 +119,8 @@ stmt p h = [
     , ("CEU_LABELS",    concat $ root2 ++ labels up ++ root1 )
     ]
     where
-        --p'    = N.add p
-        p'    = traceShowId $ N.add p
+        p'    = N.add p
+        --p'    = traceShowId $ N.add p
         up    = aux dnz p'
         root1 = [ olbl "CEU_LABEL_ROOT" (code_bef up) ]
         root2 = case code_brk up of

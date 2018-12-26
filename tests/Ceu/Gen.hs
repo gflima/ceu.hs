@@ -2,7 +2,6 @@ module Test.GenSpec (main) where
 
 import Test.HUnit
 import Debug.Trace
-import System.IO (hPutStrLn, stderr)
 import System.Directory
 import System.Process
 import System.Exit
@@ -17,62 +16,65 @@ import qualified Ceu.Grammar.Full.Grammar as FullG
 import qualified Ceu.Code.Gen             as Gen
 import qualified Ceu.Code.Template        as Template
 import Ceu.Grammar.Ann.Source
+import Ceu.Grammar.Globals (Errors)
 
-ceuc :: String -> [(String,Int)] -> Either String [(String,String)]
+ceuc :: String -> [(String,Int)] -> (Errors, Maybe [(String,String)])
 ceuc src hst =
-    let ret = Parsec.parse (Token.s *> Parser.stmt <* Parsec.eof) "" src in
-        case ret of
-            (Left  e)  -> Left (show e)
-            (Right p1) -> let (es,p2) = FullE.compile' (True,True) p1
-              in
-                case p2 of
-                    (G.Nop _) -> Left  (show es)
-                    otherwise -> Right (Gen.stmt p2 hst)
-              where
-                ann = FullG.getAnn p1
+    case Parsec.parse (Token.s *> Parser.stmt <* Parsec.eof) "" src of
+        (Left  e)    -> ([show e], Nothing)
+        (Right full) -> (es, Just out) where
+                            (es,basic) = FullE.compile' (True,True) full
+                            out = Gen.stmt basic hst
 
-go :: String -> String -> [(String,Int)] -> IO Int
-go tpl src hst = do
-    let ret = ceuc src hst in
-        case ret of
-            Left  err      -> hPutStrLn stderr err
-            Right keypairs ->
-                let ret = Template.render keypairs tpl in
-                    case ret of
-                        Left  err -> hPutStrLn stderr err
-                        Right out -> writeFile "_ceu.c" out
-    ExitSuccess   <- system "gcc main.c"
-    ExitFailure v <- system "./a.out"
-    return v
+go :: String -> String -> [(String,Int)] -> IO (Int,Errors)
+go tpl src hst =
+    case keypairs of
+        Just kps ->
+            case Template.render kps tpl of
+                Left  err -> return (0,[err])
+                Right out -> do
+                    writeFile "_ceu.c" out
+                    ExitSuccess   <- system "gcc main.c"
+                    ExitFailure v <- system "./a.out"
+                    return (v,es)
+        Nothing -> do
+            return (0,es)
+    where
+        (es,keypairs) = ceuc src hst
+
 
 main :: IO ()
 main = do
     tpl <- readFile "Ceu/Code/ceu.c"
     setCurrentDirectory "Ceu/Code/main/"
-    mapM_ (\(ret1,hst,src) -> do
-            ret2 <- go tpl src hst
+    mapM_ (\(ret1,es1,hst,src) -> do
+            (ret2,es2) <- go tpl src hst
             assertEqual src ret1 ret2
+            assertEqual src es1  es2
             )
           tests
 
 -------------------------------------------------------------------------------
 
+tests :: [(Int, Errors, [(String,Int)], String)]
 tests = [
-    (10,  [], "escape 10"),
-    (100, [], "escape 100"),
-    (100, [], "escape {100}"),
-    (1,   [], "escape {CEU_TRAILS_N}"),
-    (16,  [], "escape {sizeof(tceu_trl)}"),
-    (24,  [], "escape {sizeof(tceu_mem_ROOT)}"),
-    (100, [], "{int x = 100}; escape {x}"),
-    (100, [], "var x:Int <- 100 escape {@x}"),
-    (3,   [], "var x:Int<-1 ; var y:Int<-2 ; escape {@x+y}"),
+    (10,  [], [], "escape 10"),
+    (100, [], [], "escape 100"),
+    (100, [], [], "escape {100}"),
+    (1,   [], [], "escape {CEU_TRAILS_N}"),
+    (16,  [], [], "escape {sizeof(tceu_trl)}"),
+    (24,  [], [], "escape {sizeof(tceu_mem_ROOT)}"),
+    (100, [], [], "{int x = 100}; escape {x}"),
+    (100, [], [], "var x:Int <- 100 escape {@x}"),
+    (3,   [], [], "var x:Int<-1 ; var y:Int<-2 ; escape {@x+y}"),
     -- TODO: unused vars
-    (32,  [], "var x:Int ; var y:Int ; escape {sizeof(tceu_mem_ROOT)}"),
+    (32,  [], [], "var x:Int ; var y:Int ; escape {sizeof(tceu_mem_ROOT)}"),
     -- TODO: tmp vars
-    (32,  [], "var x:Int<-1 ; var y:Int<-2 ; escape {@(x+y)+sizeof(tceu_mem_ROOT)}"),
-    (1,   [], "loop do break end ; escape 1"),
-    (4, [("KEY",1)],
+    (35,  [], [], "var x:Int<-1 ; var y:Int<-2 ; escape {@(x+y)+sizeof(tceu_mem_ROOT)}"),
+    (1,   ["(line 1, column 1):\nloop: `loop` never iterates"],
+        [],
+        "loop do break end ; escape 1"),
+    (4, [], [("KEY",1)],
         unlines [
             "input  KEY   : Int",
             "output PRINT : Int",
@@ -93,7 +95,7 @@ tests = [
             "emit PRINT -> 3",
             "escape ret"
         ]),
-    (6, [("KEY",1)],
+    (6, [], [("KEY",1)],
         unlines [
             "output PRINT : Int",
             "input  KEY   : Int",
@@ -120,7 +122,8 @@ tests = [
             "",
             "escape ret  // 6"
         ]),
-    (10, [("KEY",1),("KEY",2),("KEY",3),("KEY",4)],
+    (10, ["(line 8, column 1):\nloop: unbounded `loop` execution","(line 9, column 5):\nif: types do not match"],
+        [("KEY",1),("KEY",2),("KEY",3),("KEY",4)],
         unlines [
             "input  KEY   : Int",
             "output PRINT : Int",
@@ -131,9 +134,9 @@ tests = [
             "",
             "loop do",
             "    if 1 then",
-            "        var a:Int <- await KEY",
-            "        ret <- ret + a",
-            "        emit PRINT -> a",
+            "        var a1:Int <- await KEY",
+            "        ret <- ret + a1",
+            "        emit PRINT -> a1",
             "    else",
             "        emit PRINT -> 0",
             "    end",
@@ -146,7 +149,7 @@ tests = [
             "",
             "escape ret"
         ]),
-    (4, [("KEY",0)],
+    (4, [], [("KEY",0)],
         unlines [
             "input  KEY   : Int",
             "output PRINT : Int",
@@ -167,7 +170,7 @@ tests = [
             "emit PRINT -> 3",
             "escape ret"
         ]),
-    (1, [("KEY",0)],
+    (1, [], [("KEY",0)],
         unlines [
             "input  KEY   : Int",
             "output PRINT : Int",
@@ -181,7 +184,7 @@ tests = [
             "emit PRINT -> 1",
             "escape 1"
         ]),
-    (4, [("KEY",0)],
+    (4, [], [("KEY",0)],
         unlines [
             "input  KEY   : Int",
             "output PRINT : Int",

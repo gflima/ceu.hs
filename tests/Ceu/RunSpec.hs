@@ -143,22 +143,25 @@ spec = do
     describe "if-then-else/if-else" $ do
         it "if 0 then escape 0 else escape 1 end" $
             run "if 0 then escape 0 else escape 1 end" []
+            `shouldBe` Left "(line 1, column 1):\nif: types do not match\n"
+        it "if 0==1 then escape 0 else escape 1 end" $
+            run "if 0==1 then escape 0 else escape 1 end" []
             `shouldBe` Right (1, [[]])
         it "if 1 then escape 1 end" $
-            run "if 1 then escape 1 end" []
+            run "if 1==1 then escape 1 end" []
             --`shouldBe` Right (1, [[]])
             `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n"
         it "if then (if then else end) end" $
-            run "if 1 then if 0 then await FOREVER else escape 1 end ; end ; await FOREVER; " []
+            run "if 1==1 then if 0==1 then await FOREVER else escape 1 end ; end ; await FOREVER; " []
             `shouldBe` Right (1, [[]])
         it "if then (if then end) else end" $
-            run "if 0 then ; if 0 then end ; else escape 1 end ; await FOREVER" []
+            run "if 0==1 then ; if 0==1 then end ; else escape 1 end ; await FOREVER" []
             `shouldBe` Right (1, [[]])
-        it "if 1 then a=1; a=2; if 1 then escape a end end" $
-            run "if 1 then var a:Int <-1 ; a<-2; if 1 then escape a end end ; await FOREVER" []
+        it "if 1==1 then a=1; a=2; if 1==1 then escape a end end" $
+            run "if 1==1 then var a:Int <-1 ; a<-2; if 1==1 then escape a end end ; await FOREVER" []
             `shouldBe` Right (2, [[]])
-        it "if 0 then . else/if 1 then escape 1 else ." $
-            run "if 0 then escape 0 else/if 1 then escape 1 else escape 0 end" []
+        it "if 0==1 then . else/if 1==1 then escape 1 else ." $
+            run "if 0==1 then escape 0 else/if 1==1 then escape 1 else escape 0 end" []
             `shouldBe` Right (1, [[]])
 
     describe "trap" $ do
