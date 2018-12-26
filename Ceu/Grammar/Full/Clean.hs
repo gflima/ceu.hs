@@ -12,7 +12,7 @@ clean :: (Eq ann, Ann ann) => String -> (G.Stmt ann) -> (Errors, G.Stmt ann)
 
 clean "And"
   s@(G.Trap z
-    (G.Var _ "__and"
+    (G.Var _ "__and" _
       (G.Seq _
         (G.Write _ "__and" (Const _ 0))
         (G.Par _

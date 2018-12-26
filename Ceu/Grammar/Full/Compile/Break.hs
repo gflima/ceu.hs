@@ -12,7 +12,7 @@ compile :: Stmt ann -> (Errors, Stmt ann)
 compile p = ([], aux (-1) p)
 
 aux :: Int -> Stmt ann -> Stmt ann
-aux n (Var' z var Nothing p) = Var' z var Nothing (aux n p)
+aux n (Var' z var tp Nothing p) = Var' z var tp Nothing (aux n p)
 aux n (Inp' z int b p)       = Inp' z int b (aux n p)
 aux n (Out' z int b p)       = Out' z int b (aux n p)
 aux n (Evt' z int b p)       = Evt' z int b (aux n p)

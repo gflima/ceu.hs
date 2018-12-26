@@ -42,7 +42,7 @@ compile' :: (Eq ann, Ann ann) => Check.Options -> Stmt ann -> (Errors, G.Stmt an
 compile' (o_simp,o_encl) p = (es2++es3++es4, p4)
   where
     p1       = if not o_encl then p else
-                (Seq z (Inp z "TIMER" False) (Seq z (Var z "_ret" Nothing) (Seq z (Trap z (Just "_ret") p) (Halt z))))
+                (Seq z (Inp z "TIMER" False) (Seq z (Var z "_ret" ["Int"] Nothing) (Seq z (Trap z (Just "_ret") p) (Halt z))))
     (es2,p2) = compile p1
     (es3,p3) = toGrammar p2
     (es4,p4) = Check.compile (o_simp,False) p3

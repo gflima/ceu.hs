@@ -21,7 +21,10 @@ stmt ids s@(Write    _ id exp) = (errUndeclaredInvalid dcl (id,s) isVar) ++ es1 
                                     dcl      = find' id ids
                                     (tp,es1) = expr ids exp
                                     es2 = case dcl of
-                                        Just s'   -> checkType (getType s') tp s
+                                        Just s' ->
+                                            case tp of
+                                                Just tp'  -> checkType (getType s') tp' s
+                                                otherwise -> []
                                         otherwise -> []
 
 stmt ids s@(AwaitInp _ id)     = (errUndeclaredInvalid (find' id ids) (id,s) isInp)
@@ -36,7 +39,9 @@ stmt ids s@(EmitEvt  _ id)     = (errUndeclaredInvalid (find' id ids) (id,s) isE
 stmt ids s@(If  _ exp p1 p2) = es1 ++ es2 ++ (stmt ids p1) ++ (stmt ids p2)
                                where
                                 (tp,es1) = (expr ids exp)
-                                es2 = checkType ["Int"] tp s
+                                es2 = case tp of
+                                    Just tp'  -> checkType ["Int"] tp' s
+                                    otherwise -> []
 stmt ids (Seq _ p1 p2)     = (stmt ids p1) ++ (stmt ids p2)
 stmt ids (Loop _ p)        = (stmt ids p)
 stmt ids s@(Every _ evt p) = (errUndeclaredInvalid (find' evt ids) (evt,s) isInpEvt) ++ (stmt ids p)
@@ -103,19 +108,19 @@ errUndeclaredInvalid dcl (id,use) pred =
 
 -------------------------------------------------------------------------------
 
-expr :: (Ann ann) => [Stmt ann] -> Exp ann -> (Type,Errors)
-expr ids e@(Read _ id) = if id == "_INPUT" then (["Int"],[]) else
+expr :: (Ann ann) => [Stmt ann] -> Exp ann -> (Maybe Type,Errors)
+expr ids e@(Read _ id) = if id == "_INPUT" then (Just ["Int"],[]) else
                             (tp, errUndeclaredInvalid dcl (id,e) isVar)
                          where
                             dcl = find' id ids
                             tp  = case dcl of
-                                    Nothing -> []
-                                    Just s  -> getType s
+                                    Nothing -> Nothing
+                                    Just s  -> Just (getType s)
 expr ids (Umn _ e)      = expr ids e
-expr ids (Add _ e1 e2)  = (["Int"], (snd $ expr ids e1) ++ (snd $ expr ids e2))
-expr ids (Sub _ e1 e2)  = (["Int"], (snd $ expr ids e1) ++ (snd $ expr ids e2))
-expr ids (Mul _ e1 e2)  = (["Int"], (snd $ expr ids e1) ++ (snd $ expr ids e2))
-expr ids (Div _ e1 e2)  = (["Int"], (snd $ expr ids e1) ++ (snd $ expr ids e2))
-expr ids (Equ _ e1 e2)  = (["Int"], (snd $ expr ids e1) ++ (snd $ expr ids e2))
-expr ids (Lte _ e1 e2)  = (["Int"], (snd $ expr ids e1) ++ (snd $ expr ids e2))
-expr ids _              = (["Int"], [])
+expr ids (Add _ e1 e2)  = (Just ["Int"], (snd $ expr ids e1) ++ (snd $ expr ids e2))
+expr ids (Sub _ e1 e2)  = (Just ["Int"], (snd $ expr ids e1) ++ (snd $ expr ids e2))
+expr ids (Mul _ e1 e2)  = (Just ["Int"], (snd $ expr ids e1) ++ (snd $ expr ids e2))
+expr ids (Div _ e1 e2)  = (Just ["Int"], (snd $ expr ids e1) ++ (snd $ expr ids e2))
+expr ids (Equ _ e1 e2)  = (Just ["Int"], (snd $ expr ids e1) ++ (snd $ expr ids e2))
+expr ids (Lte _ e1 e2)  = (Just ["Int"], (snd $ expr ids e1) ++ (snd $ expr ids e2))
+expr ids _              = (Just ["Int"], [])

@@ -17,7 +17,7 @@ type Fin ann = (Stmt ann, Stmt ann, Stmt ann)
 
 -- Program (pg 5).
 data Stmt ann
-  = Var      ann ID_Var (Maybe (Fin ann))            -- variable declaration
+  = Var      ann ID_Var Type (Maybe (Fin ann))  -- variable declaration
   | Inp      ann ID_Inp Bool                         -- output declaration
   | Out      ann ID_Out Bool                         -- output declaration
   | Evt      ann ID_Evt Bool                         -- event declaration
@@ -43,7 +43,7 @@ data Stmt ann
   | Escape   ann (Maybe ID_Var) (Maybe (Exp ann))    -- escape enclosing trap
   | Scope    ann (Stmt ann)                          -- scope for local variables
   | Error    ann String                              -- generate runtime error (for testing purposes)
-  | Var'     ann ID_Var (Maybe (Fin ann)) (Stmt ann) -- variable declaration w/ stmts in scope
+  | Var'     ann ID_Var Type (Maybe (Fin ann)) (Stmt ann) -- variable declaration w/ stmts in scope
   | Inp'     ann ID_Inp Bool (Stmt ann)              -- output declaration w/ stmts in scope
   | Out'     ann ID_Out Bool (Stmt ann)              -- output declaration w/ stmts in scope
   | Evt'     ann ID_Evt Bool (Stmt ann)              -- event declaration w/ stmts in scope
@@ -69,7 +69,7 @@ infixr 0 `sAnd`
 infixr 0 `sOr`
 
 getAnn :: Stmt ann -> ann
-getAnn (Var      z _ _  ) = z
+getAnn (Var      z _ _ _) = z
 getAnn (Inp      z _ _  ) = z
 getAnn (Out      z _ _  ) = z
 getAnn (Evt      z _ _  ) = z
@@ -95,7 +95,7 @@ getAnn (Trap     z _ _  ) = z
 getAnn (Escape   z _ _  ) = z
 getAnn (Scope    z _    ) = z
 getAnn (Error    z _    ) = z
-getAnn (Var'     z _ _ _) = z
+getAnn (Var'     z _ _ _ _) = z
 getAnn (Evt'     z _ _ _) = z
 getAnn (Or'      z _ _  ) = z
 getAnn (Par'     z _ _  ) = z
@@ -109,7 +109,7 @@ getAnn (Halt     z      ) = z
 getAnn (RawS     z _    ) = z
 
 toGrammar :: (Eq ann, Ann ann) => (Stmt ann) -> (Errors, G.Stmt ann)
-toGrammar (Var' z var Nothing p) = (es, G.Var z var p')
+toGrammar (Var' z var tp Nothing p) = (es, G.Var z var tp p')
                                  where
                                    (es,p') = toGrammar p
 toGrammar (Inp' z inp b p)       = (es, G.Inp z inp p')
@@ -170,7 +170,7 @@ toGrammar p                      = error $ "toGrammar: unexpected statement: " -
 
 stmt2word :: (Stmt ann) -> String
 stmt2word stmt = case stmt of
-  Var _ _ _      -> "declaration"
+  Var _ _ _ _    -> "declaration"
   Inp _ _ _      -> "declaration"
   Out _ _ _      -> "declaration"
   Evt _ _ _      -> "declaration"
@@ -195,7 +195,7 @@ stmt2word stmt = case stmt of
   Escape _ _ _   -> "escape"
   Scope _ _      -> "scope"
   Error _ _      -> "error"
-  Var' _ _ _ _   -> "declaration"
+  Var' _ _ _ _ _ -> "declaration"
   Inp' _ _ _ _   -> "declaration"
   Out' _ _ _ _   -> "declaration"
   Evt' _ _ _ _   -> "declaration"

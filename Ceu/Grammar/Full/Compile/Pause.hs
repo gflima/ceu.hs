@@ -21,7 +21,7 @@ import Ceu.Grammar.Full.Grammar
 compile :: (Stmt ann) -> (Errors, Stmt ann)
 compile p = ([], aux p)
 
-aux (Var' z id Nothing p) = Var' z id Nothing (aux p)
+aux (Var' z id tp Nothing p) = Var' z id tp Nothing (aux p)
 aux (Inp' z id b p)       = Inp' z id b (aux p)
 aux (Out' z id b p)       = Out' z id b (aux p)
 aux (Evt' z id b p)       = Evt' z id b (aux p)
@@ -35,12 +35,12 @@ aux (Or' z p1 p2)         = Or' z (aux p1) (aux p2)
 aux (Spawn z p)           = Spawn z (aux p)
 aux (Trap' z p)           = Trap' z (aux p)
 aux (Pause z evt p)       =
-  Var' z ("__pause_var_"++evt) Nothing
+  Var' z ("__pause_var_"++evt) ["Int"] Nothing
     (Evt' z ("__pause_int_"++evt) False
       (Seq z
         (Write z ("__pause_var_"++evt) (Const z 0))
         (Or' z
-          (Var' z "__tmp" Nothing
+          (Var' z "__tmp" ["Int"] Nothing
             (Every z evt (Just "__tmp")
               (If z (Equ z (Read z "__tmp") (Const z 0))
                   (Seq z (Write z ("__pause_var_"++evt) (Const z 0))
@@ -48,7 +48,7 @@ aux (Pause z evt p)       =
                   (Nop z))))
         (Or' z
           (Pause' z ("__pause_var_"++evt) p)
-          (Var' z "__tmp" Nothing
+          (Var' z "__tmp" ["Int"] Nothing
             (Every z evt (Just "__tmp")
               (If z (Equ z (Read z "__tmp") (Const z 1))
                   (Write z ("__pause_var_"++evt) (Const z 1))

@@ -10,8 +10,8 @@ import Ceu.Grammar.Full.Grammar
 compile :: (Ann ann) => (Stmt ann) -> (Errors, Stmt ann)
 compile p = aux Nothing p where
   aux :: (Ann ann) => (Maybe ID_Evt) -> (Stmt ann) -> (Errors, Stmt ann)
-  aux pse (Var' z var (Just (f1,f2,f3)) p) = aux pse (Var' z var Nothing (Seq z (Fin z f1 f2 f3) p))
-  aux pse (Var' z var Nothing p)      = (es, Var' z var Nothing p')
+  aux pse (Var' z var tp (Just (f1,f2,f3)) p) = aux pse (Var' z var tp Nothing (Seq z (Fin z f1 f2 f3) p))
+  aux pse (Var' z var tp Nothing p)   = (es, Var' z var tp Nothing p')
                                         where
                                           (es,p') = aux pse p
   aux pse (Inp' z id b p)             = (es, Inp' z id b p')

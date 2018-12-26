@@ -39,32 +39,32 @@ spec = do
 
     describe "var:" $ do
       it "var x" $ do
-        Scope.compile (Var () "x" Nothing)
-        `shouldBe` ([], (Var' () "x" Nothing (Nop ())))
+        Scope.compile (Var () "x" [] Nothing)
+        `shouldBe` ([], (Var' () "x" [] Nothing (Nop ())))
 
       it "var x; (Nop ())" $ do
-        Scope.compile (Seq () (Var () "x" Nothing) (Nop ()))
-        `shouldBe` ([], (Var' () "x" Nothing (Nop ())))
+        Scope.compile (Seq () (Var () "x" [] Nothing) (Nop ()))
+        `shouldBe` ([], (Var' () "x" [] Nothing (Nop ())))
 
       it "var x <- 1 ; (Nop ())" $ do
-        Scope.compile (Seq () (Var () "x" Nothing) (Seq () (Write () "x" (Const () 1)) (Nop ())))
-        `shouldBe` ([], (Var' () "x" Nothing (Seq () (Write () "x" (Const () 1)) (Nop ()))))
+        Scope.compile (Seq () (Var () "x" ["Int"] Nothing) (Seq () (Write () "x" (Const () 1)) (Nop ())))
+        `shouldBe` ([], (Var' () "x" ["Int"] Nothing (Seq () (Write () "x" (Const () 1)) (Nop ()))))
 
       it "scope var x end ; var y" $ do
-        Scope.compile (Seq () (Scope () (Var () "x" Nothing)) (Var () "y" Nothing))
-        `shouldBe` ([],Seq () (Var' () "x" Nothing (Nop ())) (Var' () "y" Nothing (Nop ())))
+        Scope.compile (Seq () (Scope () (Var () "x" [] Nothing)) (Var () "y" [] Nothing))
+        `shouldBe` ([],Seq () (Var' () "x" [] Nothing (Nop ())) (Var' () "y" [] Nothing (Nop ())))
 
       it "scope var x end ; x=1" $ do
-        compile' (False,False) (Seq () (Scope () (Var () "x" Nothing)) (Write () "x" (Const () 1)))
-        `shouldBe` (["assignment: identifier 'x' is not declared"], G.Seq () (G.Var () "x" (G.Nop ())) (G.Write () "x" (Const () 1)))
+        compile' (False,False) (Seq () (Scope () (Var () "x" ["Int"] Nothing)) (Write () "x" (Const () 1)))
+        `shouldBe` (["assignment: identifier 'x' is not declared"], G.Seq () (G.Var () "x" ["Int"] (G.Nop ())) (G.Write () "x" (Const () 1)))
 
       it "var x" $ do
-        compile' (False,True) (Var () "x" Nothing)
-        `shouldBe` (["trap: terminating `trap` body","trap: missing `escape` statement","halt: unreachable statement"], G.Inp () "TIMER" (G.Var () "_ret" (G.Seq () (G.Trap () (G.Var () "x" (G.Nop ()))) (G.Halt ()))))
+        compile' (False,True) (Var () "x" [] Nothing)
+        `shouldBe` (["trap: terminating `trap` body","trap: missing `escape` statement","halt: unreachable statement"], G.Inp () "TIMER" (G.Var () "_ret" ["Int"] (G.Seq () (G.Trap () (G.Var () "x" [] (G.Nop ()))) (G.Halt ()))))
 
       it "var x" $ do
-        compile' (True,True) (Var () "x" Nothing)
-        `shouldBe` (["trap: terminating `trap` body","trap: missing `escape` statement","halt: unreachable statement"], G.Inp () "TIMER" (G.Var () "_ret" (G.Halt ())))
+        compile' (True,True) (Var () "x" [] Nothing)
+        `shouldBe` (["trap: terminating `trap` body","trap: missing `escape` statement","halt: unreachable statement"], G.Inp () "TIMER" (G.Var () "_ret" ["Int"] (G.Halt ())))
 
     describe "int:" $ do
       it "int x" $ do
@@ -106,7 +106,7 @@ spec = do
 
       it "scope escape 1 end" $ do
         compile' (False,True) (Scope () (Escape () Nothing (Just (Const () 1))))
-        `shouldBe` ([],G.Inp () "TIMER" (G.Var () "_ret" (G.Seq () (G.Trap () (G.Seq () (G.Write () "_ret" (Const () 1)) (G.Escape () 0))) (G.Halt ()))))
+        `shouldBe` ([],G.Inp () "TIMER" (G.Var () "_ret" ["Int"] (G.Seq () (G.Trap () (G.Seq () (G.Write () "_ret" (Const () 1)) (G.Escape () 0))) (G.Halt ()))))
 
   --------------------------------------------------------------------------
   describe "Trap.compile" $ do
@@ -116,24 +116,24 @@ spec = do
       `shouldBe` ([], (Trap' () (Escape' () 0)))
 
     it "trap/a escape/a;" $ do
-      Trap.compile (Var' () "a" Nothing (Trap () (Just "a") (Escape () (Just "a") Nothing)))
-      `shouldBe` ([], (Var' () "a" Nothing (Trap' () (Escape' () 0))))
+      Trap.compile (Var' () "a" [] Nothing (Trap () (Just "a") (Escape () (Just "a") Nothing)))
+      `shouldBe` ([], (Var' () "a" [] Nothing (Trap' () (Escape' () 0))))
 
     it "trap/a escape/a;" $ do
-      Trap.compile (Var' () "ret" Nothing (Trap () (Just "ret") (Escape () (Just "ret") (Just (Const () 1)))))
-      `shouldBe` ([], (Var' () "ret" Nothing (Trap' () (Seq () (Write () "ret" (Const () 1)) (Escape' () 0)))))
+      Trap.compile (Var' () "ret" [] Nothing (Trap () (Just "ret") (Escape () (Just "ret") (Just (Const () 1)))))
+      `shouldBe` ([], (Var' () "ret" [] Nothing (Trap' () (Seq () (Write () "ret" (Const () 1)) (Escape' () 0)))))
 
     it "trap/a escape;" $ do
-      Trap.compile (Var' () "ret" Nothing (Trap () (Just "ret") (Escape () Nothing Nothing)))
-      `shouldBe` ([], (Var' () "ret" Nothing (Trap' () (Escape' () (-1)))))
+      Trap.compile (Var' () "ret" [] Nothing (Trap () (Just "ret") (Escape () Nothing Nothing)))
+      `shouldBe` ([], (Var' () "ret" [] Nothing (Trap' () (Escape' () (-1)))))
 
     it "trap/a escape/a;" $ do
-      Trap.compile (Var' () "ret" Nothing (Trap () (Just "ret") (Escape () (Just "xxx") (Just (Const () 1)))))
-      `shouldBe` ([], (Var' () "ret" Nothing (Trap' () (Escape' () (-1)))))
+      Trap.compile (Var' () "ret" [] Nothing (Trap () (Just "ret") (Escape () (Just "xxx") (Just (Const () 1)))))
+      `shouldBe` ([], (Var' () "ret" [] Nothing (Trap' () (Escape' () (-1)))))
 
     it "trap/a escape/a;" $ do
-      compile' (False,False) (Var' () "ret" Nothing (Trap () (Just "ret") (Escape () (Just "xxx") (Just (Const () 1)))))
-      `shouldBe` (["escape: orphan `escape` statement","trap: missing `escape` statement"], (G.Var () "ret" (G.Trap () (G.Escape () (-1)))))
+      compile' (False,False) (Var' () "ret" [] Nothing (Trap () (Just "ret") (Escape () (Just "xxx") (Just (Const () 1)))))
+      `shouldBe` (["escape: orphan `escape` statement","trap: missing `escape` statement"], (G.Var () "ret" [] (G.Trap () (G.Escape () (-1)))))
 
   --------------------------------------------------------------------------
   describe "Fin.compile" $ do
@@ -146,39 +146,39 @@ spec = do
       `shouldBe` (["finalize: unexpected `finalize`","finalize: unexpected `finalize`"],Or' () (Nop ()) (Par () (Halt ()) (Fin' () (Or' () (Nop ()) (Par () (Halt ()) (Fin' () (Nop ())))))))
 
     it "var x; fin x with nop; nop" $ do
-      Fin.compile (Var' () "x" (Just ((Nop ()),(Nop ()),(Nop ()))) (Nop ()))
-      `shouldBe` ([], (Var' () "x" Nothing (Or' () (Nop ()) (Par () (Halt ()) (Fin' () (Nop ()))))))
+      Fin.compile (Var' () "x" [] (Just ((Nop ()),(Nop ()),(Nop ()))) (Nop ()))
+      `shouldBe` ([], (Var' () "x" [] Nothing (Or' () (Nop ()) (Par () (Halt ()) (Fin' () (Nop ()))))))
 
     it "var x; { fin x with nop; nop }" $ do
-      Fin.compile (Var' () "x" (Just ((Nop ()),(Nop ()),(Nop ()))) (Var' () "y" Nothing (Nop ())))
-      `shouldBe` ([], (Var' () "x" Nothing (Or' () (Var' () "y" Nothing (Nop ())) (Par () (Halt ()) (Fin' () (Nop ()))))))
+      Fin.compile (Var' () "x" [] (Just ((Nop ()),(Nop ()),(Nop ()))) (Var' () "y" [] Nothing (Nop ())))
+      `shouldBe` ([], (Var' () "x" [] Nothing (Or' () (Var' () "y" [] Nothing (Nop ())) (Par () (Halt ()) (Fin' () (Nop ()))))))
 
     it "var x; { fin x with x=1; fin with x=2; x=3 }" $ do
-      Fin.compile (Var' () "x" (Just ((Write () "x" (Const () 1)),(Nop ()),(Nop ()))) (Var' () "y" Nothing (Seq () (Fin () (Write () "x" (Const () 2)) (Nop ()) (Nop ())) (Write () "x" (Const () 3)))))
-      `shouldBe` ([], (Var' () "x" Nothing (Or' () (Var' () "y" Nothing (Or' () (Write () "x" (Const () 3)) (Par () (Halt ()) (Fin' () (Write () "x" (Const () 2)))))) (Par () (Halt ()) (Fin' () (Write () "x" (Const () 1)))))))
+      Fin.compile (Var' () "x" [] (Just ((Write () "x" (Const () 1)),(Nop ()),(Nop ()))) (Var' () "y" [] Nothing (Seq () (Fin () (Write () "x" (Const () 2)) (Nop ()) (Nop ())) (Write () "x" (Const () 3)))))
+      `shouldBe` ([], (Var' () "x" [] Nothing (Or' () (Var' () "y" [] Nothing (Or' () (Write () "x" (Const () 3)) (Par () (Halt ()) (Fin' () (Write () "x" (Const () 2)))))) (Par () (Halt ()) (Fin' () (Write () "x" (Const () 1)))))))
 
     it "var x; { fin x with x=1; fin x with y=1; y=3 }" $ do
-      Fin.compile (Var' () "x" (Just (((Write () "x" (Const () 1)) `sSeq` (Write () "y" (Const () 1))),(Nop ()),(Nop ()))) (Var' () "_" Nothing (Write () "y" (Const () 3))))
-      `shouldBe` ([], (Var' () "x" Nothing (Or' () (Var' () "_" Nothing (Write () "y" (Const () 3))) (Par () (Halt ()) (Fin' () (Seq () (Write () "x" (Const () 1)) (Write () "y" (Const () 1))))))))
+      Fin.compile (Var' () "x" [] (Just (((Write () "x" (Const () 1)) `sSeq` (Write () "y" (Const () 1))),(Nop ()),(Nop ()))) (Var' () "_" [] Nothing (Write () "y" (Const () 3))))
+      `shouldBe` ([], (Var' () "x" [] Nothing (Or' () (Var' () "_" [] Nothing (Write () "y" (Const () 3))) (Par () (Halt ()) (Fin' () (Seq () (Write () "x" (Const () 1)) (Write () "y" (Const () 1))))))))
 
     it "var x; nop; { fin x with x=1; fin with x=2; x=3; fin x with y=1; fin with y=2; y=3 }; nop" $ do
       Fin.compile
-        (Var' () "x" (Just ((Write () "x" (Const () 1) `sSeq` (Write () "y" (Const () 1)) `sSeq` (Nop ())),(Nop ()),(Nop ())))
+        (Var' () "x" [] (Just ((Write () "x" (Const () 1) `sSeq` (Write () "y" (Const () 1)) `sSeq` (Nop ())),(Nop ()),(Nop ())))
                  (Seq () (Nop ())
                    (Seq ()
-                     (Var' () "_" Nothing (
+                     (Var' () "_" [] Nothing (
                        (Fin () (Write () "x" (Const () 2)) (Nop ()) (Nop ())) `sSeq`
                        (Write () "x" (Const () 3))               `sSeq`
                        (Fin () (Write () "y" (Const () 2)) (Nop ()) (Nop ())) `sSeq`
                        (Write () "y" (Const () 3))))
                      (Nop ()))))
       `shouldBe`
-        ([], (Var' () "x" Nothing
+        ([], (Var' () "x" [] Nothing
                  (Or' ()
                    (Seq ()
                      (Nop ())
                      (Seq ()
-                       (Var' () "_" Nothing
+                       (Var' () "_" [] Nothing
                          (Or' ()
                            (Seq ()
                              (Write () "x" (Const () 3))
@@ -227,7 +227,7 @@ spec = do
   describe "ParAndOr.compile" $ do
 
     it "(and nop nop)" $ do
-      ParAndOr.compile (And () (Nop ()) (Nop ())) `shouldBe` ([], (Clean' () "And" (Trap' () (Var' () "__and" Nothing (Seq () (Write () "__and" (Const () 0)) (Par' () (Seq () (Nop ()) (If () (Equ () (Read () "__and") (Const () 1)) (Escape' () 0) (Seq () (Write () "__and" (Add () (Read () "__and") (Const () 1))) (Halt ())))) (Seq () (Nop ()) (If () (Equ () (Read () "__and") (Const () 1)) (Escape' () 0) (Seq () (Write () "__and" (Add () (Read () "__and") (Const () 1))) (Halt ()))))))))))
+      ParAndOr.compile (And () (Nop ()) (Nop ())) `shouldBe` ([], (Clean' () "And" (Trap' () (Var' () "__and" ["Int"] Nothing (Seq () (Write () "__and" (Const () 0)) (Par' () (Seq () (Nop ()) (If () (Equ () (Read () "__and") (Const () 1)) (Escape' () 0) (Seq () (Write () "__and" (Add () (Read () "__and") (Const () 1))) (Halt ())))) (Seq () (Nop ()) (If () (Equ () (Read () "__and") (Const () 1)) (Escape' () 0) (Seq () (Write () "__and" (Add () (Read () "__and") (Const () 1))) (Halt ()))))))))))
     it "(or nop awaitFor)" $ do
       ParAndOr.compile (Or () (Nop ()) (Halt ())) `shouldBe` ([], (Clean' () "Or" (Trap' () (Par' () (Seq () (Nop ()) (Escape' () 0)) (Seq () (Halt ()) (Escape' () 0))))))
     it "(or nop awaitFor)" $ do
@@ -245,10 +245,10 @@ spec = do
       `shouldBe` ([], G.Nop ())
     it "(loop break) ; await X and nop" $ do
       (compile' (True,True) (And () (Seq () (Loop () (Break ())) (Seq () (Inp () "X" False) (AwaitInp () "X" Nothing))) (Nop ())))
-      `shouldBe` (["trap: terminating `trap` body","trap: missing `escape` statement","loop: `loop` never iterates","halt: unreachable statement"], G.Inp () "TIMER" (G.Var () "_ret" (G.Seq () (G.Trap () (G.Trap () (G.Var () "__and" (G.Seq () (G.Write () "__and" (Const () 0)) (G.Par () (G.Seq () (G.Inp () "X" (G.AwaitInp () "X")) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.Halt ())))) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.Halt ())))))))) (G.Halt ()))))
+      `shouldBe` (["trap: terminating `trap` body","trap: missing `escape` statement","loop: `loop` never iterates","halt: unreachable statement"], G.Inp () "TIMER" (G.Var () "_ret" ["Int"] (G.Seq () (G.Trap () (G.Trap () (G.Var () "__and" ["Int"] (G.Seq () (G.Write () "__and" (Const () 0)) (G.Par () (G.Seq () (G.Inp () "X" (G.AwaitInp () "X")) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.Halt ())))) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.Halt ())))))))) (G.Halt ()))))
     it "(loop break) ; await X and nop" $ do
       (compile' (False,True) (Seq () (And () (Seq () (Loop () (Break ())) (AwaitInp () "X" Nothing)) (Nop ())) (Escape () Nothing (Just (Const () 1))) ))
-      `shouldBe` (["loop: `loop` never iterates","await: identifier 'X' is not declared"], G.Inp () "TIMER" (G.Var () "_ret" (G.Seq () (G.Trap () (G.Seq () (G.Trap () (G.Var () "__and" (G.Seq () (G.Write () "__and" (Const () 0)) (G.Par () (G.Seq () (G.Seq () (G.Trap () (G.Loop () (G.Escape () 0))) (G.AwaitInp () "X")) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.Halt ())))) (G.Seq () (G.Nop ()) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.Halt ())))))))) (G.Seq () (G.Write () "_ret" (Const () 1)) (G.Escape () 0)))) (G.Halt ()))))
+      `shouldBe` (["loop: `loop` never iterates","await: identifier 'X' is not declared"], G.Inp () "TIMER" (G.Var () "_ret" ["Int"] (G.Seq () (G.Trap () (G.Seq () (G.Trap () (G.Var () "__and" ["Int"] (G.Seq () (G.Write () "__and" (Const () 0)) (G.Par () (G.Seq () (G.Seq () (G.Trap () (G.Loop () (G.Escape () 0))) (G.AwaitInp () "X")) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.Halt ())))) (G.Seq () (G.Nop ()) (G.If () (Equ () (Read () "__and") (Const () 1)) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Add () (Read () "__and") (Const () 1))) (G.Halt ())))))))) (G.Seq () (G.Write () "_ret" (Const () 1)) (G.Escape () 0)))) (G.Halt ()))))
 
   --------------------------------------------------------------------------
   describe "(Break ()).compile" $ do
@@ -282,19 +282,19 @@ spec = do
   describe "compile'" $ do
 
     it "var x;" $ do
-      compile' (False,False) (Var' () "x" Nothing (Nop ()))
-      `shouldBe` ([], (G.Var () "x" (G.Nop ())))
+      compile' (False,False) (Var' () "x" [] Nothing (Nop ()))
+      `shouldBe` ([], (G.Var () "x" [] (G.Nop ())))
     it "var x;" $ do
-      compile' (True,False) (Var' () "x" Nothing (Nop ()))
+      compile' (True,False) (Var' () "x" [] Nothing (Nop ()))
       `shouldBe` ([], ((G.Nop ())))
 
     it "do var x; x = 1 end" $ do
-      compile' (False,False) (Var' () "x" Nothing (Write () "x" (Const () 1)))
-      `shouldBe` ([], (G.Var () "x" (G.Write () "x" (Const () 1))))
+      compile' (False,False) (Var' () "x" ["Int"] Nothing (Write () "x" (Const () 1)))
+      `shouldBe` ([], (G.Var () "x" ["Int"] (G.Write () "x" (Const () 1))))
 
     it "spawn do await A; end ;; await B; var x; await FOREVER;" $ do
-      compile' (False,False) (Seq () (Inp () "A" False) (Seq () (Inp () "B" False) (Seq () (Spawn () (AwaitInp () "A" Nothing)) (Seq () (AwaitInp () "B" Nothing) (Var' () "x" Nothing (Halt ()))))))
-      `shouldBe` (["await: terminating `spawn`"], G.Inp () "A" (G.Inp () "B" (G.Par () (G.Seq () (G.AwaitInp () "A") (G.Halt ())) (G.Seq () (G.AwaitInp () "B") (G.Var () "x" (G.Halt ()))))))
+      compile' (False,False) (Seq () (Inp () "A" False) (Seq () (Inp () "B" False) (Seq () (Spawn () (AwaitInp () "A" Nothing)) (Seq () (AwaitInp () "B" Nothing) (Var' () "x" [] Nothing (Halt ()))))))
+      `shouldBe` (["await: terminating `spawn`"], G.Inp () "A" (G.Inp () "B" (G.Par () (G.Seq () (G.AwaitInp () "A") (G.Halt ())) (G.Seq () (G.AwaitInp () "B") (G.Var () "x" [] (G.Halt ()))))))
 
     it "spawn do async ret++ end ;; await F;" $ do
       compile' (False,False) (Seq () (Inp () "ASYNC" False) (Seq () (Inp () "A" False) (Seq () (Spawn () (Async () (Loop () (Write () "x" (Add () (Read () "x") (Const () 1)))))) (AwaitInp () "A" Nothing))))
@@ -348,15 +348,15 @@ nop;
 
     -- TODO: OK
     evalFullProgItRight (10,[[]]) [] (
-      (Var' () "a" (Just ((Nop ()),(Nop ()),(Nop ())))
+      (Var' () "a" ["Int"] (Just ((Nop ()),(Nop ()),(Nop ())))
         (Escape () Nothing (Just (Const () 10)))
       ))
 
     -- TODO: OK
     evalFullProgItLeft ["read access to 'b': identifier 'b' is not declared"] [] (
-      (Var' () "ret" Nothing (
-      (Var' () "a" (Just ((Write () "ret" (Read () "b")),(Nop ()),(Nop ())))
-        (Var' () "b" Nothing
+      (Var' () "ret" ["Int"] Nothing (
+      (Var' () "a" ["Int"] (Just ((Write () "ret" (Read () "b")),(Nop ()),(Nop ())))
+        (Var' () "b" ["Int"] Nothing
           (Seq ()
             (Write () "b" (Const () 99))
             (Escape () Nothing (Just (Const () 0)))
@@ -383,7 +383,7 @@ end
 -}
     evalFullProgItRight (25,[[]]) [] (
       (Evt' () "a" False (
-      (Var' () "ret" Nothing (
+      (Var' () "ret" ["Int"] Nothing (
       (Write () "ret" (Const () 0)) `sSeq`
       (Par ()
         ((AwaitEvt () "a" Nothing) `sSeq` (Escape () Nothing (Just (Add () (Read () "ret") (Const () 5)))))
@@ -429,12 +429,12 @@ end
     evalFullProgItRight (10,[[]]) [] (
       Evt' () "a" True (
         Par ()
-          (Var' () "ret" Nothing (Seq () (AwaitEvt () "a" (Just "ret")) (Escape () Nothing (Just (Read () "ret")))))
+          (Var' () "ret" ["Int"] Nothing (Seq () (AwaitEvt () "a" (Just "ret")) (Escape () Nothing (Just (Read () "ret")))))
           (EmitEvt () "a" (Just (Const () 10)) `sSeq` (Halt ()))
       ))
 
     evalFullProgItLeft ["read access to '_a': identifier '_a' is not declared","assignment: identifier '_a' is not declared"] []
-      (Var' () "ret" Nothing
+      (Var' () "ret" ["Int"] Nothing
         (Evt' () "a" False (
           Par ()
             (Seq () (AwaitEvt () "a" (Just "ret")) (Escape () Nothing (Just (Const () 0))))
@@ -461,7 +461,7 @@ end
           (EmitEvt () "a" (Just (Const () 10)) `sSeq` (Halt ()))
       ))
     evalFullProgItLeft ["varsRead: uninitialized variable: _a"] []
-      (Var' () "ret" Nothing
+      (Var' () "ret" ["Int"] Nothing
         (Evt' () "a" True (
           Par ()
             (Seq () (AwaitEvt () "a" (Just "ret")) (Escape () Nothing (Just (Read () "ret"))))
@@ -478,7 +478,7 @@ end
     evalFullProgItLeft ["varsRead: uninitialized variable: _A"] [("A",Nothing)]
       (Seq () (Inp () "F" False)
       (Seq () (Inp () "A" False)
-      (Var' () "ret" Nothing
+      (Var' () "ret" ["Int"] Nothing
         (Seq ()
           (Or ()
             (Every () "A" (Just "ret") (Nop ()))
@@ -488,7 +488,7 @@ end
     evalFullProgItRight (99,[[],[],[],[]]) [("A",Just 1),("A",Just 99),("F",Just 2)]
       (Seq () (Inp () "A" True)
       (Seq () (Inp () "F" True)
-      (Var' () "ret" Nothing
+      (Var' () "ret" ["Int"] Nothing
         (Par ()
           (Every () "A" (Just "ret") (Nop ()))
           (Seq () (AwaitInp () "F" Nothing) (Escape () Nothing (Just (Read () "ret"))))))))
@@ -573,7 +573,7 @@ end
   describe "outputs" $ do
 
     evalFullProgItRight (1,[[],[("O",Just 1)],[("O",Just 2)],[]]) [("I",Just 1),("I",Just 2),("F",Nothing)]
-      (Seq () ((Inp () "I" True) `sSeq` (Inp () "F" False) `sSeq` (Out () "O" True)) (Var' () "i" Nothing
+      (Seq () ((Inp () "I" True) `sSeq` (Inp () "F" False) `sSeq` (Out () "O" True)) (Var' () "i" ["Int"] Nothing
         (Par ()
           (Seq () (AwaitInp () "F" Nothing) (Escape () Nothing (Just (Const () 1))))
           (Every () "I" (Just "i") (EmitExt () "O" (Just (Read () "i")))))))
@@ -620,7 +620,7 @@ end
             (Seq () ((Inp () "X" True) `sSeq` (Inp () "E" False) `sSeq` (Out () "F" False) `sSeq` (Out () "P" False) `sSeq` (Out () "R" False))
             (Seq ()
                 (Pause () "X"
-                    (Var' () "x" (Just ((EmitExt () "F" Nothing),(EmitExt () "P" Nothing),(EmitExt () "R" Nothing)))
+                    (Var' () "x" [] (Just ((EmitExt () "F" Nothing),(EmitExt () "P" Nothing),(EmitExt () "R" Nothing)))
                         (AwaitInp () "E" Nothing)))
                 (Escape () Nothing (Just (Const () 99)))))
             [("X",Just 1),("E",Nothing),("X",Just 0),("E",Nothing)]

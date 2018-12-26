@@ -8,7 +8,7 @@ import Ceu.Grammar.Full.Grammar
 compile :: (Stmt ann) -> (Errors, Stmt ann)
 compile p = ([], aux False p) where
   aux :: Bool -> (Stmt ann) -> (Stmt ann)
-  aux inA   (Var' z id Nothing p) = Var' z id Nothing (aux inA p)
+  aux inA   (Var' z id tp Nothing p) = Var' z id tp Nothing (aux inA p)
   aux inA   (Inp' z id b p)       = Inp' z id b (aux inA p)
   aux inA   (Out' z id b p)       = Out' z id b (aux inA p)
   aux inA   (Evt' z id b p)       = Evt' z id b (aux inA p)

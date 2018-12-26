@@ -10,7 +10,7 @@ import qualified Ceu.Grammar.Full.Compile.Trap as Trap
 compile :: Stmt ann -> (Errors, Stmt ann)
 compile p = ([], aux p)
 
-aux (Var' z var Nothing p) = Var' z var Nothing (aux p)
+aux (Var' z var tp Nothing p) = Var' z var tp Nothing (aux p)
 aux (Inp' z int b p)       = Inp' z int b (aux p)
 aux (Out' z int b p)       = Out' z int b (aux p)
 aux (Evt' z int b p)       = Evt' z int b (aux p)
@@ -21,7 +21,7 @@ aux (Par z p1 p2)          = Par' z (aux p1) (aux p2)
 
 aux (And z p1 p2)          = Clean' z "And"
                               (Trap' z
-                                (Var' z "__and" Nothing
+                                (Var' z "__and" ["Int"] Nothing
                                   (Seq z
                                     (Write z "__and" (Const z 0))
                                     (Par' z p1' p2'))))
