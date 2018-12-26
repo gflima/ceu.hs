@@ -124,7 +124,8 @@ spec = do
 
     checkIdIt (Nop ())                                    []
     checkIdIt (Var () "a" [] (Nop ()))                    []
-    checkIdIt (Var () "a" [] (Write () "a" (Const () 1))) []
+    checkIdIt (Var () "a" [] (Write () "a" (Const () 1))) ["assignment: types do not match"]
+    checkIdIt (Var () "a" [] (If () (Read () "a") (Nop ()) (Nop ()))) ["if: types do not match"]
     checkIdIt (Var () "a" [] (Var () "a" [] (Nop ())))    ["declaration: identifier 'a' is already declared"]
     checkIdIt (Evt () "e" (Evt () "e" (Nop ())))       ["declaration: identifier 'e' is already declared"]
     checkIdIt (Write () "a" (Const () 1))              ["assignment: identifier 'a' is not declared"]
