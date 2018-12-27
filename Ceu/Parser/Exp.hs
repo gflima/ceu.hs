@@ -4,7 +4,7 @@ import Text.Parsec.Prim         ((<|>), getPosition, try, many)
 import Text.Parsec.Pos          (SourcePos, sourceName, sourceLine, sourceColumn)
 import Text.Parsec.String       (Parser)
 import Text.Parsec.Char         (char, anyChar)
-import Text.Parsec.Combinator   (chainl1, option, optionMaybe, notFollowedBy)
+import Text.Parsec.Combinator   (many1, chainl1, option, notFollowedBy)
 
 import Ceu.Parser.Token         (tk_num, tk_var, tk_str, s)
 
@@ -60,6 +60,15 @@ expr_unit = do
     void <- tk_str ")"
     return $ Unit pos
 
+expr_tuple :: Parser (Exp Source)
+expr_tuple = do
+    pos  <- pos2src <$> getPosition
+    void <- tk_str "("
+    exp1 <- expr
+    exps <- many1 expr
+    void <- tk_str ")"
+    return $ Tuple pos (exp1:exps)
+
 expr_read :: Parser (Exp Source)
 expr_read = do
     pos <- pos2src <$> getPosition
@@ -81,7 +90,7 @@ expr_parens = do
     return exp
 
 expr_prim :: Parser (Exp Source)
-expr_prim = (try expr_raw <|> try expr_const <|> try expr_unit <|> try expr_read <|> try expr_umn <|> try expr_parens)
+expr_prim = (try expr_raw <|> try expr_const <|> try expr_unit <|> try expr_tuple <|> try expr_read <|> try expr_umn <|> try expr_parens)
 
 -------------------------------------------------------------------------------
 

@@ -341,6 +341,9 @@ spec = do
             it "var x:() <- ()" $
                 parse stmt_var "var x:() <- ()"
                 `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" Type0 Nothing) (Write ("",1,10) "x" (Unit ("",1,13))))
+            it "var x:(Int,()) <- (1 ())" $
+                parse stmt_var "var x:(Int,()) <- (1 ())"
+                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" (TypeN [Type1 "Int",Type0]) Nothing) (Write ("",1,16) "x" (Tuple ("",1,19) [Const ("",1,20) 1,Unit ("",1,22)])))
 
         describe "ext:" $ do
             it "output X: Int" $
