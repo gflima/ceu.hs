@@ -49,7 +49,7 @@ data Stmt ann
   | Inp'     ann ID_Inp Bool (Stmt ann)              -- output declaration w/ stmts in scope
   | Out'     ann ID_Out Bool (Stmt ann)              -- output declaration w/ stmts in scope
   | Evt'     ann ID_Evt Bool (Stmt ann)              -- event declaration w/ stmts in scope
-  | Func'    ann ID_Cod Type Type (Stmt ann)         -- event declaration w/ stmts in scope
+  | Func'    ann ID_Func Type Type (Stmt ann)        -- functions declaration w/ stmts in scope
   | Or'      ann (Stmt ann) (Stmt ann)               -- used as an Or with possibly non-terminating trails
   | Par'     ann (Stmt ann) (Stmt ann)               -- par as in basic Grammar
   | Pause'   ann ID_Var (Stmt ann)                   -- pause as in basic Grammar

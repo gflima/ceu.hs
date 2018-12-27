@@ -11,7 +11,7 @@ data Stmt ann
   | Inp      ann ID_Inp (Stmt ann)                  -- input declaration
   | Out      ann ID_Out (Stmt ann)                  -- output declaration
   | Evt      ann ID_Evt (Stmt ann)                  -- event declaration
-  | Func     ann ID_Cod Type Type (Stmt ann)        -- function declaration
+  | Func     ann ID_Func Type Type (Stmt ann)       -- function declaration
   | Write    ann ID_Var (Exp ann)                   -- assignment statement
   | AwaitInp ann ID_Inp                             -- await external event
   | EmitExt  ann ID_Ext (Maybe (Exp ann))           -- emit external event

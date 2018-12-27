@@ -38,7 +38,7 @@ type ID_Ext  = String   -- external event identifier
 type ID_Inp  = String   -- external event identifier
 type ID_Out  = String   -- external event identifier
 type ID_Evt  = String   -- event identifier
-type ID_Cod  = String   -- function identifier
+type ID_Func = String   -- function identifier
 type Val     = Int      -- value
 
 -- Special events:
