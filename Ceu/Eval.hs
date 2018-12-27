@@ -122,13 +122,13 @@ varsEval :: Vars -> (Exp ann) -> Val
 varsEval vars expr = case expr of
   Const _ val     -> val
   Read  _ var     -> varsRead vars var
-  Call  _ "umn" e -> negate $ varsEval vars e
-  Call  _ "add" (Tuple _ [e1,e2]) -> (varsEval vars e1) + (varsEval vars e2)
-  Call  _ "sub" (Tuple _ [e1,e2]) -> (varsEval vars e1) - (varsEval vars e2)
-  Call  _ "mul" (Tuple _ [e1,e2]) -> (varsEval vars e1) * (varsEval vars e2)
-  Call  _ "div" (Tuple _ [e1,e2]) -> (varsEval vars e1) `div` (varsEval vars e2)
-  Call  _ "equ" (Tuple _ [e1,e2]) -> if (varsEval vars e1) == (varsEval vars e2) then 1 else 0
-  Call  _ "lte" (Tuple _ [e1,e2]) -> if (varsEval vars e1) <= (varsEval vars e2) then 1 else 0
+  Call  _ "(-1)" e -> negate $ varsEval vars e
+  Call  _ "(+)"  (Tuple _ [e1,e2]) -> (varsEval vars e1) + (varsEval vars e2)
+  Call  _ "(-)"  (Tuple _ [e1,e2]) -> (varsEval vars e1) - (varsEval vars e2)
+  Call  _ "(*)"  (Tuple _ [e1,e2]) -> (varsEval vars e1) * (varsEval vars e2)
+  Call  _ "(/)"  (Tuple _ [e1,e2]) -> (varsEval vars e1) `div` (varsEval vars e2)
+  Call  _ "(==)" (Tuple _ [e1,e2]) -> if (varsEval vars e1) == (varsEval vars e2) then 1 else 0
+  Call  _ "(<=)" (Tuple _ [e1,e2]) -> if (varsEval vars e1) <= (varsEval vars e2) then 1 else 0
 
 -- Set event in environment.
 evtsEmit :: Evts -> ID_Evt -> Evts
@@ -349,7 +349,7 @@ run prog ins reaction = eP (fromGrammar prog) ins []
 -- Returns the last value of global "_ret" set by the program.
 compile_run :: (Eq ann, Ann ann) => (G.Stmt ann) -> [ID_Inp] -> Result
 compile_run prog ins =
-  let (es,p) = Check.compile (True,True) prog in
+  let (es,p) = Check.compile (True,True,False) prog in
     if es == [] then
       run p ("BOOT":ins) reaction
     else

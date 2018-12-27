@@ -39,14 +39,24 @@ compile p = --traceShowId $
     comb f (es,p) = (es++es',p') where (es',p') = f p
 
 compile' :: (Eq ann, Ann ann) => Check.Options -> Stmt ann -> (Errors, G.Stmt ann)
-compile' (o_simp,o_encl) p = (es2++es3++es4, p4)
+compile' (o_simp,o_encl,o_prel) p = (es2++es3++es4, p4)
   where
-    p1       = if not o_encl then p else
-                (Seq z (Inp z "TIMER" False) (Seq z (Var z "_ret" (Type1 "Int") Nothing) (Seq z (Trap z (Just "_ret") p) (Halt z))))
+    p0       = if not o_prel then p else
+                (Seq z defs p)
+    p1       = if not o_encl then p0 else
+                (Seq z (Inp z "TIMER" False) (Seq z (Var z "_ret" (Type1 "Int") Nothing) (Seq z (Trap z (Just "_ret") p0) (Halt z))))
     (es2,p2) = compile p1
     (es3,p3) = toGrammar p2
-    (es4,p4) = Check.compile (o_simp,False) p3
+    (es4,p4) = Check.compile (o_simp,False,False) p3
     z        = getAnn p
+
+    defs = (Seq z
+            (CodI z "(==)" (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Bool"))
+            (Seq z
+                (CodI z "(+)" (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int"))
+                (Seq z
+                    (CodI z "(-)" (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int"))
+                    (CodI z "(*)" (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))))
 
 reaction :: E.Stmt ann -> In -> (E.Stmt ann, E.Outs)
 reaction p (ext,val) = (p''',outs) where
@@ -56,7 +66,7 @@ reaction p (ext,val) = (p''',outs) where
 
 evalFullProg :: (Eq ann, Ann ann) => Stmt ann -> [In] -> E.Result
 evalFullProg prog ins =
-  let (es,s) = compile' (True,True) prog in
+  let (es,s) = compile' (True,True,True) prog in
     if es == [] then
       let res = E.run s ins'' reaction in
         case res of

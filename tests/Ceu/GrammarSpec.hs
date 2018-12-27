@@ -192,17 +192,17 @@ spec = do
 
     describe "ext:" $ do
         it "emit O" $
-            (fst $ Check.compile (False,False) (EmitExt () "O" Nothing))
+            (fst $ Check.compile (False,False,False) (EmitExt () "O" Nothing))
             `shouldBe` ["emit: identifier 'O' is not declared"]
         it "out O; emit O" $
-            Check.compile (False,False) (Out () "O" (EmitExt () "O" Nothing))
+            Check.compile (False,False,False) (Out () "O" (EmitExt () "O" Nothing))
             `shouldBe` ([],Out () "O" (EmitExt () "O" Nothing))
 
         it "await I" $
-            (fst $ Check.compile (False,False) (AwaitInp () "I"))
+            (fst $ Check.compile (False,False,False) (AwaitInp () "I"))
             `shouldBe` ["await: identifier 'I' is not declared"]
         it "inp I; await I" $
-            Check.compile (False,False) (Inp () "I" (AwaitInp () "I"))
+            Check.compile (False,False,False) (Inp () "I" (AwaitInp () "I"))
             `shouldBe` ([], (Inp () "I" (AwaitInp () "I")))
 
       where
@@ -218,4 +218,4 @@ spec = do
         checkIdIt p b    = checkIt' Id.check p b
         checkStmtsIt p b     = checkIt' Check.stmts p b
         checkCheckIt :: Stmt () -> Errors -> Spec
-        checkCheckIt p b     = checkIt' (fst . (Check.compile (False,False))) p b
+        checkCheckIt p b     = checkIt' (fst . (Check.compile (False,False,False))) p b

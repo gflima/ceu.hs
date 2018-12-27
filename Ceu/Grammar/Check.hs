@@ -9,10 +9,11 @@ import qualified Ceu.Grammar.Id as Id
 
 -------------------------------------------------------------------------------
 
-type Options = (Bool,Bool)
+type Options = (Bool,Bool,Bool)
 
 compile :: (Eq ann, Ann ann) => Options -> (Stmt ann) -> (Errors, Stmt ann)
-compile (o_simp,o_encl) p = (es3,p2) where
+compile (o_simp,o_encl,o_prel) p = (es3,p2) where
+    -- TODO: o_prel
   p1   = if not o_encl then p else
           (Var z "_ret" (Type1 "Int") (Seq z (Trap z p) (Halt z)))
   p2   = if not o_simp then p1 else simplify p1

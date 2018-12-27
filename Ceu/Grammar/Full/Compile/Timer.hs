@@ -38,8 +38,8 @@ aux (AwaitTmr z exp)      = Var' z "__timer_await" (Type1 "Int") Nothing
                                     (AwaitInp z "TIMER" Nothing)
                                     (Seq z
                                       (Write z "__timer_await"
-                                        (Call z "sub" (Tuple z [(Read z "__timer_await"),(Const z 1)])))
-                                      (If z (Call z "equ" (Tuple z [(Read z "__timer_await"),(Const z 0)]))
+                                        (Call z "(-)" (Tuple z [(Read z "__timer_await"),(Const z 1)])))
+                                      (If z (Call z "(==)" (Tuple z [(Read z "__timer_await"),(Const z 0)]))
                                         (Escape' z 0)
                                         (Nop z)))))))
 aux p                     = p

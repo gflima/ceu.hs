@@ -43,7 +43,7 @@ aux (Pause z evt p)       =
         (Or' z
           (Var' z "__tmp" (Type1 "Int") Nothing
             (Every z evt (Just "__tmp")
-              (If z (Call z "equ" (Tuple z [(Read z "__tmp"),(Const z 0)]))
+              (If z (Call z "(==)" (Tuple z [(Read z "__tmp"),(Const z 0)]))
                   (Seq z (Write z ("__pause_var_"++evt) (Const z 0))
                        (EmitEvt z ("__pause_int_"++evt) Nothing))
                   (Nop z))))
@@ -51,7 +51,7 @@ aux (Pause z evt p)       =
           (Pause' z ("__pause_var_"++evt) p)
           (Var' z "__tmp" (Type1 "Int") Nothing
             (Every z evt (Just "__tmp")
-              (If z (Call z "equ" (Tuple z [(Read z "__tmp"),(Const z 1)]))
+              (If z (Call z "(==)" (Tuple z [(Read z "__tmp"),(Const z 1)]))
                   (Write z ("__pause_var_"++evt) (Const z 1))
                   (Nop z))))))))
 aux p                     = p

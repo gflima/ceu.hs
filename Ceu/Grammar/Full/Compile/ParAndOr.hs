@@ -29,10 +29,10 @@ aux (And z p1 p2)          = Clean' z "And"
                              where
                               p1' = Seq z (Trap.ins' (aux p1)) check
                               p2' = Seq z (Trap.ins' (aux p2)) check
-                              check = (If z (Call z "equ" (Tuple z [(Read z "__and"),(Const z 1)]))
+                              check = (If z (Call z "(==)" (Tuple z [(Read z "__and"),(Const z 1)]))
                                         (Escape' z 0)
                                         (Seq z
-                                          (Write z "__and" (Call z "add" (Tuple z [(Read z "__and"),(Const z 1)])))
+                                          (Write z "__and" (Call z "(+)" (Tuple z [(Read z "__and"),(Const z 1)])))
                                           (Halt z)))
 
 aux (Or z p1 p2)           = Clean' z "Or" (Trap' z (Par' z p1' p2')) where
