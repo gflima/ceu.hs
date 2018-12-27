@@ -43,28 +43,28 @@ tk_raw = do
 
 expr_raw :: Parser (Exp Source)
 expr_raw = do
-    pos <- getPosition
+    pos <- pos2src <$> getPosition
     vs  <- tk_raw
-    return $ RawE (pos2src pos) vs
+    return $ RawE pos vs
 
 expr_const :: Parser (Exp Source)
 expr_const = do
-    pos <- getPosition
+    pos <- pos2src <$> getPosition
     num <- tk_num
-    return $ Const (pos2src pos) num
+    return $ Const pos num
 
 expr_read :: Parser (Exp Source)
 expr_read = do
-    pos <- getPosition
+    pos <- pos2src <$> getPosition
     str <- tk_var
-    return $ Read (pos2src pos) str
+    return $ Read pos str
 
 expr_umn :: Parser (Exp Source)
 expr_umn = do
-    pos  <- getPosition
+    pos  <- pos2src <$> getPosition
     void <- tk_str "-"
     exp  <- expr
-    return $ Umn (pos2src pos) exp
+    return $ Call pos "(-1)" exp
 
 expr_parens :: Parser (Exp Source)
 expr_parens = do
@@ -81,31 +81,31 @@ expr_prim = (expr_raw <|> expr_const <|> expr_read <|> expr_umn <|> expr_parens)
 expr_add_sub :: Parser (Exp Source)
 expr_add_sub = chainl1 expr_mul_div op where
     op = do
-        pos  <- getPosition
+        pos  <- pos2src <$> getPosition
         void <- tk_str "+"
-        return (\a b -> Add (pos2src pos) a b)
+        return (\a b -> Call pos "(+)" (Tuple pos [a,b]))
      <|> do
-        pos  <- getPosition
+        pos  <- pos2src <$> getPosition
         void <- tk_str "-"
-        return (\a b -> Sub (pos2src pos) a b)
+        return (\a b -> Call pos "(-)" (Tuple pos [a,b]))
 
 expr_mul_div :: Parser (Exp Source)
 expr_mul_div = chainl1 expr_equ op where
     op = do
-        pos  <- getPosition
+        pos  <- pos2src <$> getPosition
         void <- tk_str "*"
-        return (\a b -> Mul (pos2src pos) a b)
+        return (\a b -> Call pos "(*)" (Tuple pos [a,b]))
      <|> do
-        pos  <- getPosition
+        pos  <- pos2src <$> getPosition
         void <- tk_str "/"
-        return (\a b -> Div (pos2src pos) a b)
+        return (\a b -> Call pos "(/)" (Tuple pos [a,b]))
 
 expr_equ :: Parser (Exp Source)
 expr_equ = chainl1 expr_prim op where
     op = do
-        pos  <- getPosition
+        pos  <- pos2src <$> getPosition
         void <- tk_str "=="
-        return (\a b -> Equ (pos2src pos) a b)
+        return (\a b -> Call pos "(==)" (Tuple pos [a,b]))
 
 -------------------------------------------------------------------------------
 

@@ -28,7 +28,7 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "escape a" $
             run "escape a" []
-            `shouldBe` Left "(line 1, column 8):\nread access to 'a': identifier 'a' is not declared\n"
+            `shouldBe` Left "(line 1, column 8):\nread: identifier 'a' is not declared\n"
         it "escape" $
             run "escape" []
             `shouldBe` Left "TODO: escape w/o expression"
@@ -68,7 +68,7 @@ spec = do
             `shouldBe` Left "(line 1, column 6):\nunexpected \",\"\nexpecting digit, letter, \"_\" or \":\""
         it "a <- 1; escape a;" $
             run "a <- 1; escape a" []
-            `shouldBe` Left "(line 1, column 3):\nassignment: identifier 'a' is not declared\n(line 1, column 16):\nread access to 'a': identifier 'a' is not declared\n"
+            `shouldBe` Left "(line 1, column 3):\nassignment: identifier 'a' is not declared\n(line 1, column 16):\nread: identifier 'a' is not declared\n"
         it "var a : Int <- 1; escape a;" $
             run "var a : Int <- 1; escape a" []
             `shouldBe` Right (1, [[]])

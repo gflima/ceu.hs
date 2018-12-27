@@ -9,6 +9,7 @@ import Text.Parsec.String (Parser)
 import Ceu.Parser.Token
 import Ceu.Parser.Exp
 import Ceu.Parser.Stmt
+import Ceu.Grammar.Globals      (Type(..))
 import Ceu.Grammar.Ann.Source
 import Ceu.Grammar.Exp          (Exp(..), RawAt(..))
 import Ceu.Grammar.Full.Grammar (Stmt(..))
@@ -173,7 +174,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 5):\nunexpected \"@\"\nexpecting \"{\", digit, \"-\" or \"(\""
             it "{@x+y}" $
                 parse tk_raw "{@x+y}"
-                `shouldBe` Right [RawAtS "{",RawAtE (Add ("",1,4) (Read ("",1,3) "x") (Read ("",1,5) "y")),RawAtS "}"]
+                `shouldBe` Right [RawAtS "{",RawAtE (Call ("",1,4) "(+)" (Tuple ("",1,4) [(Read ("",1,3) "x"),(Read ("",1,5) "y")])),RawAtS "}"]
             it "{@(x)+y}" $
                 parse tk_raw "{@(x)+y}"
                 `shouldBe` Right [RawAtS "{",RawAtE (Read ("",1,4) "x"),RawAtS "+y",RawAtS "}"]
@@ -193,31 +194,31 @@ spec = do
         describe "umn:" $ do
             it "-1" $
                 parse expr_umn "-1"
-                `shouldBe` Right (Umn ("",1,1) (Const ("",1,2) 1))
+                `shouldBe` Right (Call ("",1,1) "(-1)" (Const ("",1,2) 1))
             it "--1" $
                 parse expr_umn "--1"
-                `shouldBe` Right (Umn ("",1,1) (Umn ("",1,2) (Const ("",1,3) 1)))
+                `shouldBe` Right (Call ("",1,1) "(-1)" (Call ("",1,2) "(-1)" (Const ("",1,3) 1)))
         describe "parens:" $ do
             it "(1)" $
                 parse expr_parens "(1)"
                 `shouldBe` Right (Const ("",1,2) 1)
             it "((--1))" $
                 parse expr_parens "((--1))"
-                `shouldBe` Right (Umn ("",1,3) (Umn ("",1,4) (Const ("",1,5) 1)))
+                `shouldBe` Right (Call ("",1,3) "(-1)" (Call ("",1,4) "(-1)" (Const ("",1,5) 1)))
         describe "add_sub:" $ do
             it "1+1" $
                 parse expr_add_sub "1+1"
-                `shouldBe` Right (Add ("",1,2) (Const ("",1,1) 1) (Const ("",1,3) 1))
+                `shouldBe` Right (Call ("",1,2) "(+)" (Tuple ("",1,2) [(Const ("",1,1) 1),(Const ("",1,3) 1)]))
             it "1+2+3" $
                 parse expr_add_sub "1 + 2+3"
-                `shouldBe` Right (Add ("",1,6) (Add ("",1,3) (Const ("",1,1) 1) (Const ("",1,5) 2)) (Const ("",1,7) 3))
+                `shouldBe` Right (Call ("",1,6) "(+)" (Tuple ("",1,6) [(Call ("",1,3) "(+)" (Tuple ("",1,3) [(Const ("",1,1) 1),(Const ("",1,5) 2)])),(Const ("",1,7) 3)]))
         describe "mul_div:" $ do
             it "1*1" $
                 parse expr_mul_div "1*1"
-                `shouldBe` Right (Mul ("",1,2) (Const ("",1,1) 1) (Const ("",1,3) 1))
+                `shouldBe` Right (Call ("",1,2) "(*)" (Tuple ("",1,2) [(Const ("",1,1) 1),(Const ("",1,3) 1)]))
             it "1*2*3" $
                 parse expr_mul_div "1 * 2*3"
-                `shouldBe` Right (Mul ("",1,6) (Mul ("",1,3) (Const ("",1,1) 1) (Const ("",1,5) 2)) (Const ("",1,7) 3))
+                `shouldBe` Right (Call ("",1,6) "(*)" (Tuple ("",1,6) [(Call ("",1,3) "(*)" (Tuple ("",1,3) [(Const ("",1,1) 1),(Const ("",1,5) 2)])),(Const ("",1,7) 3)]))
         describe "expr:" $ do
             it "{0}" $
                 parse expr "{0}"
@@ -230,22 +231,22 @@ spec = do
                 `shouldBe` Right (Read ("",1,1) "aaa")
             it "-1" $
                 parse expr "- 1 "
-                `shouldBe` Right (Umn ("",1,1) (Const ("",1,3) 1))
+                `shouldBe` Right (Call ("",1,1) "(-1)" (Const ("",1,3) 1))
             it "(aaa)" $
                 parse expr "( aaa  ) "
                 `shouldBe` Right (Read ("",1,3) "aaa")
             it "1+2-3" $
                 parse expr "1+2-3"
-                `shouldBe` Right (Sub ("",1,4) (Add ("",1,2) (Const ("",1,1) 1) (Const ("",1,3) 2)) (Const ("",1,5) 3))
+                `shouldBe` Right (Call ("",1,4) "(-)" (Tuple ("",1,4) [(Call ("",1,2) "(+)" (Tuple ("",1,2) [(Const ("",1,1) 1),(Const ("",1,3) 2)])),(Const ("",1,5) 3)]))
             it "1+2*3" $
                 parse expr "1+2*3"
-                `shouldBe` Right (Add ("",1,2) (Const ("",1,1) 1) (Mul ("",1,4) (Const ("",1,3) 2) (Const ("",1,5) 3)))
+                `shouldBe` Right (Call ("",1,2) "(+)" (Tuple ("",1,2) [(Const ("",1,1) 1),(Call ("",1,4) "(*)" (Tuple ("",1,4) [(Const ("",1,3) 2),(Const ("",1,5) 3)]))]))
             it "1+2*3/4" $
                 parse expr "1+2*3/4"
-                `shouldBe` Right (Add ("",1,2) (Const ("",1,1) 1) (Div ("",1,6) (Mul ("",1,4) (Const ("",1,3) 2) (Const ("",1,5) 3)) (Const ("",1,7) 4)))
+                `shouldBe` Right (Call ("",1,2) "(+)" (Tuple ("",1,2) [(Const ("",1,1) 1),(Call ("",1,6) "(/)" (Tuple ("",1,6) [(Call ("",1,4) "(*)" (Tuple ("",1,4) [(Const ("",1,3) 2),(Const ("",1,5) 3)])),(Const ("",1,7) 4)]))]))
             it "(1+2)*3" $
                 parse expr "(1+2)*3"
-                `shouldBe` Right (Mul ("",1,6) (Add ("",1,3) (Const ("",1,2) 1) (Const ("",1,4) 2)) (Const ("",1,7) 3))
+                `shouldBe` Right (Call ("",1,6) "(*)" (Tuple ("",1,6) [(Call ("",1,3) "(+)" (Tuple ("",1,3) [(Const ("",1,2) 1),(Const ("",1,4) 2)])),(Const ("",1,7) 3)]))
 
     describe "stmt:" $ do
         describe "nop:" $ do
@@ -281,16 +282,16 @@ spec = do
         describe "var:" $ do
             it "var x: Int" $
                 parse stmt_var "var x: Int;"
-                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" ["Int"] Nothing) (Nop ("",1,1)))
+                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" (Type1 "Int") Nothing) (Nop ("",1,1)))
             it "var var x" $
                 parse stmt_var "var var x"
                 `shouldBe` Left "(line 1, column 8):\nunexpected \" \"\nexpecting digit, letter or \"_\""
             it "var a: Int <- 1" $
                 parse stmt_var "var a : Int <- 1"
-                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "a" ["Int"] Nothing) (Write ("",1,13) "a" (Const ("",1,16) 1)))
+                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "a" (Type1 "Int") Nothing) (Write ("",1,13) "a" (Const ("",1,16) 1)))
             it "var x : Int <- await X" $
                 parse stmt_var "var x : Int <- await X"
-                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" ["Int"] Nothing) (AwaitInp ("",1,16) "X" (Just "x")))
+                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" (Type1 "Int") Nothing) (AwaitInp ("",1,16) "X" (Just "x")))
 
         describe "ext:" $ do
             it "output X: Int" $
@@ -484,16 +485,16 @@ spec = do
 
             it "input KEY:Int ; var a:Int ; a<-await KEY ; ret<-a" $
                 parse (stmt_seq ("",1,1)) "var a:Int ; a<-1"
-                `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "a" ["Int"] Nothing) (Nop ("",1,1))) (Write ("",1,14) "a" (Const ("",1,16) 1)))
+                `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "a" (Type1 "Int") Nothing) (Nop ("",1,1))) (Write ("",1,14) "a" (Const ("",1,16) 1)))
 
         describe "stmt:" $ do
             it "var x:Int; escape 1" $
                 parse stmt "var x:Int ;escape 1"
-                `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "x" ["Int"] Nothing) (Nop ("",1,1))) (Escape ("",1,12) Nothing (Just (Const ("",1,19) 1))))
+                `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "x" (Type1 "Int") Nothing) (Nop ("",1,1))) (Escape ("",1,12) Nothing (Just (Const ("",1,19) 1))))
 
             it "var x:Int; x<-1; escape x" $
                 parse stmt "var x:Int ; x <- 1 ; escape x"
-                `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "x" ["Int"] Nothing) (Nop ("",1,1))) (Seq ("",1,1) (Write ("",1,15) "x" (Const ("",1,18) 1)) (Escape ("",1,22) Nothing (Just (Read ("",1,29) "x")))))
+                `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "x" (Type1 "Int") Nothing) (Nop ("",1,1))) (Seq ("",1,1) (Write ("",1,15) "x" (Const ("",1,18) 1)) (Escape ("",1,22) Nothing (Just (Read ("",1,29) "x")))))
 
             it "do ... end" $
                 parse stmt "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end"
