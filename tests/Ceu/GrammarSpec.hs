@@ -1,6 +1,6 @@
 module Ceu.GrammarSpec (main, spec) where
 
-import Ceu.Grammar.Globals (Errors, Ann(..))
+import Ceu.Grammar.Globals (Errors, Ann(..), Type(..))
 import Ceu.Grammar.Ann.Unit
 import Ceu.Grammar.Exp
 import Ceu.Grammar.Stmt
@@ -17,7 +17,7 @@ spec = do
   describe "checkLoop () -- matching-Break/AwaitInp/Every () in all paths" $ do
 
     -- atomic statements --
-    checkLoopIt (Loop () (Write () "x" (Umn () (Const () 1)))) False
+    checkLoopIt (Loop () (Write () "x" (Call () "umn" (Const () 1)))) False
     checkLoopIt (Loop () (AwaitInp () "A"))       True
     checkLoopIt (Loop () (AwaitEvt () "a"))       False
     checkLoopIt (Loop () (EmitEvt () "a"))        False
@@ -27,8 +27,8 @@ spec = do
     checkLoopIt (Loop () (Error () ""))           False
 
     -- compound statements --
-    checkLoopIt (Loop () (Var () "x" [] (Var () "y" [] (Escape () 0)))) True
-    checkLoopIt (Loop () (Var () "x" [] (Var () "y" [] (Nop ()))))      False
+    checkLoopIt (Loop () (Var () "x" Type0 (Var () "y" Type0 (Escape () 0)))) True
+    checkLoopIt (Loop () (Var () "x" Type0 (Var () "y" Type0 (Nop ()))))      False
 
     checkLoopIt (Loop () (If () (Const () 0) (Escape () 0) (Nop ())))     False
     checkLoopIt (Loop () (If () (Const () 0) (Fin () (Nop ())) (Nop ()))) False
@@ -74,8 +74,8 @@ spec = do
     checkFinIt (Fin () (Error () ""))            []
 
     -- compound statements --
-    checkFinIt (Fin () (Var () "x" [] (Nop ())))                []
-    checkFinIt (Fin () (Var () "x" [] (Every () "A" (Nop ())))) ["every: invalid statement"]
+    checkFinIt (Fin () (Var () "x" Type0 (Nop ())))                []
+    checkFinIt (Fin () (Var () "x" Type0 (Every () "A" (Nop ())))) ["every: invalid statement"]
     checkFinIt (Fin () (If () (Const () 0) (Loop () (Escape () 0)) ((Nop ())))) ["escape: invalid statement"]
     checkFinIt (Fin () (If () (Const () 0) (Write () "x" (Const () 0)) ((Nop ())))) []
     checkFinIt (Fin () ((Nop ()) `sSeq` (Nop ()) `sSeq` (AwaitInp () "A") `sSeq` (Nop ()))) ["await: invalid statement"]
@@ -123,18 +123,22 @@ spec = do
   describe "checkId -- declarations" $ do
 
     checkIdIt (Nop ())                                    []
-    checkIdIt (Var () "a" [] (Nop ()))                    []
-    checkIdIt (Var () "a" [] (Write () "a" (Const () 1))) ["assignment: types do not match"]
-    checkIdIt (Var () "a" [] (If () (Read () "a") (Nop ()) (Nop ()))) ["if: types do not match"]
-    checkIdIt (Var () "a" ["Int"] (If () (Read () "a") (Nop ()) (Nop ()))) ["if: types do not match"]
-    checkIdIt (Var () "a" ["Bool"] (If () (Read () "a") (Nop ()) (Nop ()))) []
-    checkIdIt (Var () "a" [] (Var () "a" [] (Nop ())))    ["declaration: identifier 'a' is already declared"]
+    checkIdIt (Var () "a" Type0 (Nop ()))                    []
+    checkIdIt (Var () "a" (Type1 "Int") (Write () "a" (Const () 1))) []
+    checkIdIt (Var () "a" (TypeN [Type1 "Int",Type1 "Int"]) (Write () "a" (Const () 1))) ["assignment: types do not match"]
+    --checkIdIt (Var () "a" Type0 (Write () "a" (Const () 1))) ["assignment: types do not match"]
+    checkIdIt (Var () "a" Type0 (Write () "a" (Const () 1))) ["assignment: types do not match"]
+    checkIdIt (Var () "a" Type0 (If () (Read () "a") (Nop ()) (Nop ()))) ["if: types do not match"]
+    checkIdIt (Var () "a" (Type1 "Int") (If () (Read () "a") (Nop ()) (Nop ()))) ["if: types do not match"]
+    checkIdIt (Var () "a" (Type1 "Bool") (If () (Read () "a") (Nop ()) (Nop ()))) []
+    checkIdIt (Var () "a" Type0 (Var () "a" Type0 (Nop ())))    ["declaration: identifier 'a' is already declared"]
     checkIdIt (Evt () "e" (Evt () "e" (Nop ())))       ["declaration: identifier 'e' is already declared"]
     checkIdIt (Write () "a" (Const () 1))              ["assignment: identifier 'a' is not declared"]
     checkIdIt (AwaitEvt () "e")                        ["await: identifier 'e' is not declared"]
     checkIdIt (Every () "e" (Nop ()))                  ["every: identifier 'e' is not declared"]
     checkIdIt (Pause () "a" (Nop ()))                  ["pause/if: identifier 'a' is not declared"]
-    checkIdIt (Var () "a" [] (Write () "a" (Umn () (Read () "b")))) ["read access to 'b': identifier 'b' is not declared"]
+    checkIdIt (CodI () "umn" (Type1 "Int") (Type1 "Int") (Var () "a" (Type1 "Int") (Write () "a" (Call () "umn" (Read () "b"))))) ["read: identifier 'b' is not declared"]
+    checkIdIt (CodI () "umn" (Type1 "Int") (Type1 "Int") (Var () "a" Type0 (Write () "a" (Call () "umn" (Read () "b"))))) ["read: identifier 'b' is not declared","assignment: types do not match"]
 
   --------------------------------------------------------------------------
   describe "checkStmts -- program is valid" $ do
@@ -149,7 +153,7 @@ spec = do
     checkStmtsIt (Error () "")            []
 
     -- compound statements --
-    checkStmtsIt (Var () "x" [] (Nop ()))              []
+    checkStmtsIt (Var () "x" Type0 (Nop ()))              []
     checkStmtsIt (If () (Const () 0) (Nop ()) (Escape () 0)) []
     checkStmtsIt (Seq () (Escape () 0) (Nop ()))       ["nop: unreachable statement"]
     checkStmtsIt (Loop () (Escape () 0))               ["loop: `loop` never iterates"]
@@ -167,7 +171,7 @@ spec = do
     -- misc --
     checkStmtsIt ((Nop ()) `sSeq` (Fin () (Loop () (Escape () 0)))) ["loop: `loop` never iterates","finalize: invalid statement in `finalize`", "escape: invalid statement"]
     checkStmtsIt ((Nop ()) `sSeq` (Fin () (Loop () (Nop ())))) ["loop: unbounded `loop` execution"]
-    checkStmtsIt (Var () "x" [] (Fin () (Every () "A" (Nop ())))) ["finalize: invalid statement in `finalize`", "every: invalid statement"]
+    checkStmtsIt (Var () "x" Type0 (Fin () (Every () "A" (Nop ())))) ["finalize: invalid statement in `finalize`", "every: invalid statement"]
     checkStmtsIt (Loop () (Trap () (Loop () (Escape () 0))))   ["loop: `loop` never iterates","loop: unbounded `loop` execution"]
     checkStmtsIt (Loop () (Trap () (Loop () (Seq () (Escape () 0) (Escape () 0))))) ["escape: unreachable statement","loop: `loop` never iterates","loop: unbounded `loop` execution"]
     checkStmtsIt (AwaitEvt () "a" `sSeq` (Fin () (Escape () 0)) `sPar` (Halt ())) ["finalize: invalid statement in `finalize`", "escape: invalid statement"]
@@ -203,10 +207,10 @@ spec = do
 
       where
         checkIt ck p b   =
-          (it ((if b then "pass" else "fail") ++ ": " ++ showProg p) $
+          (it ((if b then "pass" else "fail") ++ ": " ++ show p) $
             (ck p) `shouldBe` b)
         checkIt' ck p b   =
-          (it ((if b==[] then "pass" else "fail") ++ ": " ++ showProg p) $
+          (it ((if b==[] then "pass" else "fail") ++ ": " ++ show p) $
             (ck p) `shouldBe` b)
         checkLoopIt p b      = checkIt  Check.boundedLoop p b
         checkFinIt (Fin () p) b = checkIt' Check.getComplexs p b

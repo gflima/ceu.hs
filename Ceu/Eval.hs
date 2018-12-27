@@ -75,9 +75,10 @@ getAnn (Par'     z _ _)   = z
 
 fromGrammar :: (G.Stmt ann) -> (Stmt ann)
 fromGrammar (G.Var z id _ p)    = Var z (id,Nothing) (fromGrammar p)
-fromGrammar (G.Inp z id p)      = (fromGrammar p)
-fromGrammar (G.Out z id p)      = (fromGrammar p)
+fromGrammar (G.Inp _ _ p)       = (fromGrammar p)
+fromGrammar (G.Out _ _ p)       = (fromGrammar p)
 fromGrammar (G.Evt z id p)      = Evt z id (fromGrammar p)
+fromGrammar (G.CodI _ _ _ _ p)  = (fromGrammar p)
 fromGrammar (G.Write z id exp)  = Write z id exp
 fromGrammar (G.AwaitInp z id)   = AwaitInp z id
 fromGrammar (G.EmitExt z id exp)= EmitExt z id exp
@@ -95,37 +96,6 @@ fromGrammar (G.Escape z n)      = Escape z n
 fromGrammar (G.Halt z)          = Halt z
 fromGrammar (G.Nop z)           = Nop z
 fromGrammar (G.Error z msg)     = Error z msg
-
--- Shows program.
-showProg :: (Stmt ann) -> String
-showProg stmt = case stmt of
-  Var _ (var,val) p
-    | isNothing val      -> printf "{%s=_: %s}" var (sP p)
-    | otherwise          -> printf "{%s=%d: %s}" var (fromJust val) (sP p)
-  Evt _ id stmt          -> printf ":%s %s" id (sP stmt)
-  Write _ var expr       -> printf "%s=%s" var (sE expr)
-  AwaitInp _ ext         -> printf "?%s" ext
-  EmitExt _ ext Nothing  -> printf "!%s" ext
-  EmitExt _ ext (Just v) -> printf "!%s=%s" ext (sE v)
-  AwaitEvt _ int         -> printf "?%s" int
-  EmitEvt _ int          -> printf "!%s" int
-  If _ expr p q          -> printf "(if %s then %s else %s)" (sE expr) (sP p) (sP q)
-  Seq _ p q              -> printf "%s; %s" (sP p) (sP q)
-  Every _ int p          -> printf "(every %s %s)" int (sP p)
-  Par _ p q              -> printf "(%s || %s)" (sP p) (sP q)
-  Pause _ var p          -> printf "(pause %s %s)" var (sP p)
-  Fin _ p                -> printf "(fin %s)" (sP p)
-  Trap _ p               -> printf "(trap %s)" (sP p)
-  Escape _ n             -> printf "(escape %d)" n
-  Nop _                  -> "nop"
-  Halt _                 -> "halt"
-  Error _ _              -> "err"
-  CanRun _ n             -> printf "@canrun(%d)" n
-  Loop' _ p q            -> printf "(%s @loop %s)" (sP p) (sP q)
-  Par' _ p q             -> printf "(%s @|| %s)" (sP p) (sP q)
-  where
-    sE = showExp
-    sP = showProg
 
 ----------------------------------------------------------------------------
 -- Environment
@@ -150,15 +120,15 @@ varsRead vars var = case vars of
 -- Evaluates expression in environment.
 varsEval :: Vars -> (Exp ann) -> Val
 varsEval vars expr = case expr of
-  Const _ val   -> val
-  Read  _ var   -> varsRead vars var
-  Umn   _ e     -> negate $ varsEval vars e
-  Add   _ e1 e2 -> (varsEval vars e1) + (varsEval vars e2)
-  Sub   _ e1 e2 -> (varsEval vars e1) - (varsEval vars e2)
-  Mul   _ e1 e2 -> (varsEval vars e1) * (varsEval vars e2)
-  Div   _ e1 e2 -> (varsEval vars e1) `div` (varsEval vars e2)
-  Equ   _ e1 e2 -> if (varsEval vars e1) == (varsEval vars e2) then 1 else 0
-  Lte   _ e1 e2 -> if (varsEval vars e1) <= (varsEval vars e2) then 1 else 0
+  Const _ val     -> val
+  Read  _ var     -> varsRead vars var
+  Call  _ "umn" e -> negate $ varsEval vars e
+  Call  _ "add" (Tuple _ [e1,e2]) -> (varsEval vars e1) + (varsEval vars e2)
+  Call  _ "sub" (Tuple _ [e1,e2]) -> (varsEval vars e1) - (varsEval vars e2)
+  --Mul   _ e1 e2 -> (varsEval vars e1) * (varsEval vars e2)
+  --Div   _ e1 e2 -> (varsEval vars e1) `div` (varsEval vars e2)
+  --Equ   _ e1 e2 -> if (varsEval vars e1) == (varsEval vars e2) then 1 else 0
+  --Lte   _ e1 e2 -> if (varsEval vars e1) <= (varsEval vars e2) then 1 else 0
 
 -- Set event in environment.
 evtsEmit :: Evts -> ID_Evt -> Evts

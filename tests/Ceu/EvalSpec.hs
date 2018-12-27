@@ -1,6 +1,6 @@
 module Ceu.EvalSpec (main, spec) where
 
-import Ceu.Grammar.Globals (Ann(..))
+import Ceu.Grammar.Globals (Ann(..), Type(..))
 import Ceu.Grammar.Ann.Unit
 import Ceu.Grammar.Exp
 import qualified Ceu.Grammar.Stmt as G
@@ -12,34 +12,33 @@ import Text.Printf
 
 -- Declare Exp, Stmt, and Desc as datatypes that can be fully evaluated.
 instance NFData (Exp ann) where
-  rnf (Const _ _)     = ()
-  rnf (Read  _ _)     = ()
-  rnf (Umn   _ e)     = rnf e
-  rnf (Add   _ e1 e2) = rnf e1 `deepseq` rnf e2
-  rnf (Sub   _ e1 e2) = rnf e1 `deepseq` rnf e2
-  rnf (Mul   _ e1 e2) = rnf e1 `deepseq` rnf e2
-  rnf (Div   _ e1 e2) = rnf e1 `deepseq` rnf e2
+  rnf (RawE  _ _)   = ()
+  rnf (Const _ _)   = ()
+  rnf (Read  _ _)   = ()
+  rnf (Unit  _)     = ()
+  rnf (Tuple _ _)   = ()
+  rnf (Call  _ _ _) = ()
 
 instance NFData (Stmt ann) where
   rnf (Write _ _ expr) = rnf expr
-  rnf (AwaitInp _ _)     = ()
-  rnf (AwaitEvt _ _)     = ()
-  rnf (EmitEvt _ _)      = ()
-  rnf (If _ expr p q)    = rnf expr `deepseq` rnf p `deepseq` rnf q
-  rnf (Seq _ p q)        = rnf p `deepseq` rnf q
-  rnf (Every _ _ p)      = rnf p
-  rnf (Par _ p q)        = rnf p `deepseq` rnf q
-  rnf (Pause _ _ p)      = rnf p
-  rnf (Fin _ p)          = rnf p
-  rnf (Trap _ p)         = rnf p
-  rnf (Escape _ _)       = ()
-  rnf (Nop _)            = ()
-  rnf (Error _ _)        = ()
-  rnf (CanRun _ _)       = ()
-  rnf (Var _ _ p)        = rnf p
-  rnf (Evt _ _ p)        = rnf p
-  rnf (Loop' _ p q)      = rnf p
-  rnf (Par' _ p q)       = rnf p `deepseq` rnf q
+  rnf (AwaitInp _ _)   = ()
+  rnf (AwaitEvt _ _)   = ()
+  rnf (EmitEvt _ _)    = ()
+  rnf (If _ expr p q)  = rnf expr `deepseq` rnf p `deepseq` rnf q
+  rnf (Seq _ p q)      = rnf p `deepseq` rnf q
+  rnf (Every _ _ p)    = rnf p
+  rnf (Par _ p q)      = rnf p `deepseq` rnf q
+  rnf (Pause _ _ p)    = rnf p
+  rnf (Fin _ p)        = rnf p
+  rnf (Trap _ p)       = rnf p
+  rnf (Escape _ _)     = ()
+  rnf (Nop _)          = ()
+  rnf (Error _ _)      = ()
+  rnf (CanRun _ _)     = ()
+  rnf (Var _ _ p)      = rnf p
+  rnf (Evt _ _ p)      = rnf p
+  rnf (Loop' _ p q)    = rnf p
+  rnf (Par' _ p q)     = rnf p `deepseq` rnf q
 
 -- Force full evaluation of a given NFData.
 forceEval :: NFData a => a -> IO a
@@ -101,12 +100,12 @@ spec = do
 
       it "pass: eval in simple env" $
         let vars = [("x",Just 1),("y",Just 2)] in
-          varsEval vars (((Read () "x") `eSub` Const () 3) `eAdd` Umn () (Read () "y"))
+          varsEval vars (Call () "add" (Tuple () [(Call () "sub" (Tuple () [(Read () "x"),(Const () 3)])),(Call () "umn" (Read () "y"))]))
           `shouldBe` (-4)
 
       it "pass: eval in complex env" $
         let vars = [("y",Just 2),("x",Just 1),("y",Just 99),("x",Just 99)] in
-          varsEval vars (((Read () "x") `eSub` Const () 3) `eAdd` Umn () (Read () "y"))
+          varsEval vars (Call () "add" (Tuple () [(Call () "sub" (Tuple () [(Read () "x"),(Const () 3)])),(Call () "umn" (Read () "y"))]))
           `shouldBe` (-4)
 
   --------------------------------------------------------------------------
@@ -176,14 +175,14 @@ spec = do
         step (
           (Var () ("x",(Just 1))
           (Var () ("y",Nothing)
-            (Write () "y" (Read () "x" `eAdd` Const () 2))), 0, [], [], []))
+            (Write () "y" (Call () "add" (Tuple () [(Read () "x"),(Const () 2)])))), 0, [], [], []))
         `shouldBe` (Var () ("x",(Just 1)) (Var () ("y",(Just 3)) (Nop ())),0,[],[], [])
 
       it "pass: [x=1,y=?] y=x+2" $
         step
         (Var () ("x",(Just 1))
         (Var () ("y",Nothing)
-          (Write () "y" (Read () "x" `eAdd` Const () 2))), 0, [], [], [])
+          (Write () "y" (Call () "add" (Tuple () [(Read () "x"),(Const () 2)])))), 0, [], [], [])
         `shouldBe`
         (Var () ("x",(Just 1))
         (Var () ("y",(Just 3)) (Nop ())), 0, [], [], [])
@@ -191,7 +190,7 @@ spec = do
       it "pass: [x=?] x=-(5+1)" $
         step
         (Var () ("x",(Just 0))
-          (Write () "x" (Umn () (Const () 5 `eAdd` Const () 1))), 0, [], [], [])
+          (Write () "x" (Call () "umn" (Call () "add" (Tuple () [(Const () 5),(Const () 1)])))), 0, [], [], [])
         `shouldBe`
         (Var () ("x",(Just (-6))) (Nop ()), 0, [], [], [])
 
@@ -1069,90 +1068,90 @@ spec = do
   describe "compile_run" $ do
 
     evalProgItSuccess (11,[[]])
-      [] (G.Var () "a" ["Int"]
+      [] (G.CodI () "add" (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int") (G.Var () "a" (Type1 "Int")
            (G.Write () "a" (Const () 1) `G.sSeq`
-            G.Write () "_ret" (Read () "a" `eAdd` Const () 10) `G.sSeq`
-            G.Escape () 0))
+            G.Write () "_ret" (Call () "add" (Tuple () [(Read () "a"),(Const () 10)])) `G.sSeq`
+            G.Escape () 0)))
 
     evalProgItFail ["escape: orphan `escape` statement","trap: missing `escape` statement","halt: unreachable statement"]
       [] (G.Escape () 1)
 
     evalProgItFail ["declaration: identifier '_ret' is already declared"]
-      [] (G.Var () "a" ["Int"]
-           (G.Var () "_ret" ["Int"]
+      [] (G.CodI () "add" (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int") (G.Var () "a" (Type1 "Int")
+           (G.Var () "_ret" (Type1 "Int")
              (G.Write () "a" (Const () 1) `G.sSeq`
-              G.Write () "_ret" (Read () "a" `eAdd` Const () 10) `G.sSeq`
-              G.Escape () 0)))
+              G.Write () "_ret" (Call () "add" (Tuple () [(Read () "a"), (Const () 10)])) `G.sSeq`
+              G.Escape () 0))))
 
     evalProgItFail ["declaration: identifier '_ret' is already declared"]
       [] (G.Write () "_ret" (Const () 1) `G.sSeq`
-          G.Var () "_ret" ["Int"] (G.Write () "_ret" (Const () 99)) `G.sSeq`
+          G.Var () "_ret" (Type1 "Int") (G.Write () "_ret" (Const () 99)) `G.sSeq`
           G.Escape () 0)
 
     evalProgItSuccess (11,[[]])
-      [] (G.Var () "a" ["Int"]
+      [] (G.CodI () "add" (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int") (G.Var () "a" (Type1 "Int")
            (G.Write () "a" (Const () 1) `G.sSeq`
-            G.Var () "b" ["Int"] (G.Write () "b" (Const () 99)) `G.sSeq`
-            G.Write () "_ret" (Read () "a" `eAdd` Const () 10) `G.sSeq`
-            G.Escape () 0))
+            G.Var () "b" (Type1 "Int") (G.Write () "b" (Const () 99)) `G.sSeq`
+            G.Write () "_ret" (Call () "add" (Tuple () [(Read () "a"),(Const () 10)])) `G.sSeq`
+            G.Escape () 0)))
 
     evalProgItFail ["declaration: identifier 'a' is already declared"]
-      [] (G.Var () "a" ["Int"]
+      [] (G.CodI () "add" (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int") (G.Var () "a" (Type1 "Int")
            (G.Write () "a" (Const () 1) `G.sSeq`
-            G.Var () "a" ["Int"] (G.Write () "a" (Const () 99)) `G.sSeq`
-            G.Write () "_ret" (Read () "a" `eAdd` Const () 10) `G.sSeq`
-            G.Escape () 0))
+            G.Var () "a" (Type1 "Int") (G.Write () "a" (Const () 99)) `G.sSeq`
+            G.Write () "_ret" (Call () "add" (Tuple () [(Read () "a"),(Const () 10)])) `G.sSeq`
+            G.Escape () 0)))
 
     evalProgItSuccess (2,[[]])
       [] (G.Write () "_ret" (Const () 1) `G.sSeq`
-          G.Var () "_" ["Int"] (G.Write () "_ret" (Const () 2)) `G.sSeq`
+          G.Var () "_" (Type1 "Int") (G.Write () "_ret" (Const () 2)) `G.sSeq`
           G.Escape () 0)
 
-    evalProgItSuccess (11,[[]])
-      [] (G.Var () "a" ["Int"]
+    evalProgItSuccess (12,[[]])
+      [] (G.CodI () "add" (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int") (G.Var () "a" (Type1 "Int")
            (G.Write () "a" (Const () 1) `G.sSeq`
             G.Trap () (G.Par ()
-             (G.Var () "b" ["Int"] (G.Write () "b" (Const () 99) `G.sSeq` G.Inp () "A" (G.AwaitInp () "A")) `G.sSeq` (G.Halt ()))
+             (G.Var () "b" (Type1 "Int") (G.Write () "b" (Const () 99) `G.sSeq` G.Inp () "A" (G.AwaitInp () "A")) `G.sSeq` (G.Halt ()))
              (G.Escape () 0)) `G.sSeq`
-           G.Write () "_ret" (Read () "a" `eAdd` Const () 10) `G.sSeq`
-           G.Escape () 0))
+           G.Write () "_ret" (Call () "add" (Tuple () [(Read () "a"),(Const () 11)])) `G.sSeq`
+           G.Escape () 0)))
 
     evalProgItFail ["trap: missing `escape` statement"]
       [] (G.Trap () (G.Par ()
-           (G.Inp () "A" (G.Var () "x" ["Int"] (G.Write () "_ret" (Const () 1) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ())))
+           (G.Inp () "A" (G.Var () "x" (Type1 "Int") (G.Write () "_ret" (Const () 1) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ())))
            (G.Escape () 1)))
 
     evalProgItSuccess (1,[[]])
       [] (G.Seq () (G.Trap () (G.Inp () "A" (G.Par ()
-           (G.Var () "x" ["Int"] (G.Write () "_ret" (Const () 1) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ()))
+           (G.Var () "x" (Type1 "Int") (G.Write () "_ret" (Const () 1) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ()))
            (G.Escape () 0)))) (G.Escape () 0))
 
     evalProgItFail ["loop: `loop` never iterates","declaration: identifier 'a' is already declared"]
-      [] (G.Var () "a" ["Int"]
+      [] (G.CodI () "add" (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int") (G.Var () "a" (Type1 "Int")
            (G.Write () "a" (Const () 1) `G.sSeq`
             G.Trap () (G.Inp () "A" (G.Loop () (G.Par ()
-                  (G.Var () "a" ["Int"] (G.Write () "a" (Const () 99) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ()))
+                  (G.Var () "a" (Type1 "Int") (G.Write () "a" (Const () 99) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ()))
                   (G.Escape () 0)))) `G.sSeq`
-             G.Write () "_ret" (Read () "a" `eAdd` Const () 10) `G.sSeq`
-            G.Escape () 0))
+             G.Write () "_ret" (Call () "add" (Tuple () [(Read () "a"),(Const () 10)])) `G.sSeq`
+            G.Escape () 0)))
 
-    evalProgItSuccess (11,[[]])
-      [] (G.Var () "a" ["Int"]
+    evalProgItSuccess (101,[[]])
+      [] (G.CodI () "add" (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int") (G.Var () "a" (Type1 "Int")
            (G.Write () "a" (Const () 1) `G.sSeq`
             G.Inp () "A" (G.Trap () (G.Par ()
-                  (G.Var () "b" ["Int"] (G.Write () "b" (Const () 99) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ()))
+                  (G.Var () "b" (Type1 "Int") (G.Write () "b" (Const () 99) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ()))
                   (G.Escape () 0)) `G.sSeq`
-            G.Write () "_ret" (Read () "a" `eAdd` Const () 10) `G.sSeq`
-            G.Escape () 0)))
+            G.Write () "_ret" (Call () "add" (Tuple () [(Read () "a"),(Const () 100)])) `G.sSeq`
+            G.Escape () 0))))
 
     evalProgItFail ["loop: `loop` never iterates"]
       [] (G.Seq () (G.Trap () (G.Loop () (G.Par ()
-                 (G.Inp () "A" (G.Var () "x" ["Int"] (G.Write () "_ret" (Const () 1) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ())))
+                 (G.Inp () "A" (G.Var () "x" (Type1 "Int") (G.Write () "_ret" (Const () 1) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ())))
                  (G.Escape () 0)))) (G.Escape () 0))
 
     evalProgItSuccess (1,[[]])
       [] (G.Seq () (G.Trap () (G.Par ()
-                 (G.Inp () "A" (G.Var () "x" ["Int"] (G.Write () "_ret" (Const () 1) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ())))
+                 (G.Inp () "A" (G.Var () "x" (Type1 "Int") (G.Write () "_ret" (Const () 1) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ())))
                  (G.Escape () 0))) (G.Escape () 0))
 
     evalProgItSuccess (5,[[]]) [] (
@@ -1184,10 +1183,10 @@ end
 escape x;
 -}
     evalProgItSuccess (99,[[]]) [] (
-      (G.Var () "x" ["Int"] (
+      (G.Var () "x" (Type1 "Int") (
         (G.Write () "x" (Const () 10)) `G.sSeq`
         (G.Trap () (G.Par ()
-          (G.Var () "y" ["Int"] (G.Halt ()))
+          (G.Var () "y" (Type1 "Int") (G.Halt ()))
           (G.Seq () (G.Write () "x" (Const () 99)) (G.Escape () 0))
         )) `G.sSeq`
         (G.Write () "_ret" (Read () "x")) `G.sSeq`
@@ -1196,7 +1195,7 @@ escape x;
 
     evalProgItSuccess (99,[[],[]]) ["A"]
       (G.Seq () (G.Seq ()
-        (G.Var () "x" ["Int"]
+        (G.Var () "x" (Type1 "Int")
           (G.Seq ()
             (G.Write () "x" (Const () 1))
             (G.Evt () "e"
@@ -1239,22 +1238,22 @@ escape x;
 
       where
         stepsItPass (p,n,e,vars,outs) (p',n',e',vars',outs') =
-          (it (printf "pass: %s -> %s#" (showProg p) (showProg p'))
+          (it (printf "pass: %s -> %s#" (show p) (show p'))
            ((steps (p,n,e,vars,outs) `shouldBe` (p',n',e',vars',outs'))
              >> ((isReducible (p',n',e',vars',outs')) `shouldBe` False)))
 
         stepsItFail err (p,n,e,vars,outs) =
-          (it (printf "fail: %s ***%s" (showProg p) err)
+          (it (printf "fail: %s ***%s" (show p) err)
            (forceEval (steps (p,n,e,vars,outs)) `shouldThrow` errorCall err))
 
         reactionItPass (p,e,vars) (p',vars',outs') =
-          (it (printf "pass: %s | %s -> %s" e (showProg p) (showProg p'))
+          (it (printf "pass: %s | %s -> %s" e (show p) (show p'))
             (reaction p e `shouldBe` (p',outs')))
 
         evalProgItSuccess (res,outss) hist prog =
-          (it (printf "pass: %s | %s ~> %d %s" (show hist) (G.showProg prog) res (show outss)) $
+          (it (printf "pass: %s | %s ~> %d %s" (show hist) (show prog) res (show outss)) $
             (compile_run prog hist `shouldBe` Right (res,outss)))
 
         evalProgItFail err hist prog =
-          (it (printf "pass: %s | %s ***%s" (show hist) (G.showProg prog) (show err)) $
+          (it (printf "pass: %s | %s ***%s" (show hist) (show prog) (show err)) $
             (compile_run prog hist `shouldBe` Left err))
