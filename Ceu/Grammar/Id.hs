@@ -16,7 +16,7 @@ stmt ids s@(Var _ id _ p)    = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
 stmt ids s@(Inp _ id p)      = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
 stmt ids s@(Out _ id p)      = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
 stmt ids s@(Evt _ id p)      = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
-stmt ids s@(CodI _ id _ _ p) = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
+stmt ids s@(Func _ id _ _ p) = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
 
 stmt ids s@(Write _ id exp) = es1 ++ es2 ++ es3
                               where
@@ -54,7 +54,7 @@ stmt ids p                 = []
 getType :: Maybe (Stmt ann) -> Type
 getType Nothing                  = TypeB
 getType (Just (Var _ _ tp _))    = tp
-getType (Just (CodI _ _ tp _ _)) = tp        -- input type (params)
+getType (Just (Func _ _ tp _ _)) = tp        -- input type (params)
 
 -------------------------------------------------------------------------------
 
@@ -75,15 +75,15 @@ isInpEvt (Inp _ _ _) = True
 isInpEvt (Evt _ _ _) = True
 isInpEvt _           = False
 
-isCodI (CodI _ _ _ _ _) = True
-isCodI _                = False
+isFunc (Func _ _ _ _ _) = True
+isFunc _                = False
 
 getId :: Stmt ann -> String
 getId (Var _ id _ _)    = id
 getId (Inp _ id _)      = id
 getId (Out _ id _)      = id
 getId (Evt _ id _)      = id
-getId (CodI _ id _ _ _) = id
+getId (Func _ id _ _ _) = id
 
 find' :: String -> [Stmt ann] -> Maybe (Stmt ann)
 find' id ids = find (\s -> getId s == id) ids
@@ -113,25 +113,9 @@ isTypeB _     = False
 
 expr :: (Ann ann) => [Stmt ann] -> Exp ann -> (Type,Errors)
 
+expr _ (RawE  _ _)  = (TypeT, [])
 expr _ (Const _ _)  = ((Type1 "Int"), [])
 expr _ (Unit _)     = (Type0, [])
-
-expr ids e@(Read _ id) = if id == "_INPUT" then
-                            ((Type1 "Int"),[])
-                         else
-                            fff id ids e isVar
-
-expr ids e@(Call _ id exp) = (tp, es1++es2++es3)
-                             where
-                                (tp1,es1) = fff id ids e isCodI
-                                (tp2,es2) = expr ids exp
-                                es3       = if isTypeB tp1 || isTypeB tp2 then
-                                                []
-                                            else
-                                                checkTypesErrs e tp1 tp2
-                                tp = case find' id ids of
-                                        Just (CodI _ _ _ tp' _) -> tp'
-                                        otherwise               -> TypeB
 
 expr ids e@(Tuple _ exps) = (tps, es)
                             where
@@ -141,4 +125,19 @@ expr ids e@(Tuple _ exps) = (tps, es)
                                 tps' = map (\(tp,_) -> tp) rets
                                 es   = concat $ map (\(_,es) -> es) rets
 
-expr _ _ = error "TODO"
+expr ids e@(Read _ id) = if id == "_INPUT" then
+                            ((Type1 "Int"),[])
+                         else
+                            fff id ids e isVar
+
+expr ids e@(Call _ id exp) = (tp, es1++es2++es3)
+                             where
+                                (tp1,es1) = fff id ids e isFunc
+                                (tp2,es2) = expr ids exp
+                                es3       = if isTypeB tp1 || isTypeB tp2 then
+                                                []
+                                            else
+                                                checkTypesErrs e tp1 tp2
+                                tp = case find' id ids of
+                                        Just (Func _ _ _ tp' _) -> tp'
+                                        otherwise               -> TypeB

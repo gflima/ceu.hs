@@ -157,7 +157,7 @@ aux dn s@(Var _ id _ p) = p' { vars_up=id':(vars_up p') }
         dn' = dn{ vars_dn = (id,s):(vars_dn dn) }
         id' = id ++ "__" ++ (show $ toN s)
 
-aux dn s@(CodI _ id _ _ p) = aux dn p --{ vars_up=id':(vars_up p') }
+aux dn s@(Func _ id _ _ p) = aux dn p --{ vars_up=id':(vars_up p') }
     where
         --p'  = aux dn' p
         --dn' = dn{ vars_dn = (id,s):(vars_dn dn) }

@@ -10,7 +10,7 @@ data Stmt ann
   | Inp      ann ID_Inp (Stmt ann)                  -- input declaration
   | Out      ann ID_Out (Stmt ann)                  -- output declaration
   | Evt      ann ID_Evt (Stmt ann)                  -- event declaration
-  | CodI     ann ID_Cod Type Type (Stmt ann)        -- function declaration
+  | Func     ann ID_Cod Type Type (Stmt ann)        -- function declaration
   | Write    ann ID_Var (Exp ann)                   -- assignment statement
   | AwaitInp ann ID_Inp                             -- await external event
   | EmitExt  ann ID_Ext (Maybe (Exp ann))           -- emit external event
@@ -42,7 +42,7 @@ getAnn (Var      z _ _ _)   = z
 getAnn (Inp      z _ _)     = z
 getAnn (Out      z _ _)     = z
 getAnn (Evt      z _ _)     = z
-getAnn (CodI     z _ _ _ _) = z
+getAnn (Func     z _ _ _ _) = z
 getAnn (Write    z _ _)     = z
 getAnn (AwaitInp z _)       = z
 getAnn (EmitExt  z _ _)     = z
@@ -68,7 +68,7 @@ stmt2word stmt = case stmt of
   Inp _ _ _      -> "declaration"
   Out _ _ _      -> "declaration"
   Evt _ _ _      -> "declaration"
-  CodI _ _ _ _ _ -> "declaration"
+  Func _ _ _ _ _ -> "declaration"
   Write _ _ _    -> "assignment"
   AwaitInp _ _   -> "await"
   EmitExt _ _ _  -> "emit"

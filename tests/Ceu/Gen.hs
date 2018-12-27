@@ -23,7 +23,7 @@ ceuc src hst =
     case Parsec.parse (Token.s *> Parser.stmt <* Parsec.eof) "" src of
         (Left  e)    -> ([show e], Nothing)
         (Right full) -> (es, Just out) where
-                            (es,basic) = FullE.compile' (True,True) full
+                            (es,basic) = FullE.compile' (True,True,True) full
                             out = Gen.stmt basic hst
 
 go :: String -> String -> [(String,Int)] -> IO (Int,Errors)

@@ -32,11 +32,11 @@ simplify (Evt z id p) =
     otherwise   -> Evt z id p'
   where p' = simplify p
 
-simplify (CodI z id inp out p) =
+simplify (Func z id inp out p) =
   case p' of
     Nop z'      -> Nop z'
     Escape z' n -> Escape z' n
-    otherwise   -> CodI z id inp out p'
+    otherwise   -> Func z id inp out p'
   where p' = simplify p
 
 simplify (If z exp p q) =
