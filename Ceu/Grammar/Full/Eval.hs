@@ -60,7 +60,7 @@ compile' (o_simp,o_encl,o_prel) p = (es2++es3++es4, p4)
                     (Seq z
                         (Func z "(/)" (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int"))
                         (Seq z
-                            (Func z "(-1)" (Type1 "Int") (Type1 "Int"))
+                            (Func z "negate" (Type1 "Int") (Type1 "Int"))
                             (Func z "(*)" (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))))))
 
 reaction :: E.Stmt ann -> In -> (E.Stmt ann, E.Outs)

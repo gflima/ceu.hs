@@ -31,6 +31,7 @@ spec = do
             it "/ xxx " $
                 parse comm "/ xxx "
                 `shouldBe` Left "(line 1, column 1):\nunexpected \" \"\nexpecting \"//\""
+
         describe "tk_str:" $ do
             it "(" $
                 parse (tk_str "(") "( "
@@ -41,6 +42,14 @@ spec = do
             it "-" $
                 parse (tk_str "-") "- "
                 `shouldBe` Right ()
+
+        describe "tk_op:" $ do
+            it "$$" $
+                parse tk_op "$$"
+                `shouldBe` Right "($$)"
+            it "($$)" $
+                parse tk_op "($$)"
+                `shouldBe` Left "(line 1, column 1):\nunexpected \"(\""
 
         describe "tk_num:" $ do
             it "''" $
@@ -146,15 +155,15 @@ spec = do
             it "{oi}" $
                 parse tk_raw "{oi}"
                 `shouldBe` Right [RawAtS "{",RawAtS "oi",RawAtS "}"]
-            it "{@oi}" $
-                parse tk_raw "{@oi}"
+            it "{`oi`}" $
+                parse tk_raw "{`oi`}"
                 `shouldBe` Right [RawAtS "{",RawAtE (Read ("",1,3) "oi"),RawAtS "}"]
-            it "{@a@b}" $
-                parse tk_raw "{@a @b}"
-                `shouldBe` Right [RawAtS "{",RawAtE (Read ("",1,3) "a"),RawAtE (Read ("",1,6) "b"),RawAtS "}"]
-            it "{@escape}" $
-                parse tk_raw "{@escape}"
-                `shouldBe` Left "(line 1, column 9):\nunexpected \"}\"\nexpecting digit, letter or \"_\""
+            it "{`a` `b`}" $
+                parse tk_raw "{`a` `b`}"
+                `shouldBe` Right [RawAtS "{",RawAtE (Read ("",1,3) "a"),RawAtS " ",RawAtE (Read ("",1,7) "b"),RawAtS "}"]
+            it "{`escape`}" $
+                parse tk_raw "{`escape`}"
+                `shouldBe` Left "(line 1, column 9):\nunexpected \"`\"\nexpecting digit, letter or \"_\""
             it "{...}" $
                 parse tk_raw "{int x = 100}"
                 `shouldBe` Right [RawAtS "{",RawAtS "int x = 100",RawAtS "}"]
@@ -166,18 +175,18 @@ spec = do
                 `shouldBe` Left "(line 1, column 4):\nunexpected '{'\nexpecting end of input"
             it "{oi" $
                 parse tk_raw "{oi"
-                `shouldBe` Left "(line 1, column 4):\nunexpected end of input\nexpecting \"{\", \"@\" or \"}\""
+                `shouldBe` Left "(line 1, column 4):\nunexpected end of input\nexpecting \"{\", \"`\" or \"}\""
             it "{{oi}}" $
                 parse tk_raw "{{oi}}"
                 `shouldBe` Right [RawAtS "{",RawAtS "{",RawAtS "oi",RawAtS "}",RawAtS "}"]
-            it "{@x+@y}" $
-                parse tk_raw "{@x+@y}"
-                `shouldBe` Left "(line 1, column 5):\nunexpected \"@\"\nexpecting \"{\", digit, \"(\" or \"-\""
-            it "{@x+y}" $
-                parse tk_raw "{@x+y}"
+            it "{`x`+`y`}" $
+                parse tk_raw "{`x`+`y`}"
+                `shouldBe` Right [RawAtS "{",RawAtE (Read ("",1,3) "x"),RawAtS "+",RawAtE (Read ("",1,7) "y"),RawAtS "}"]
+            it "{`x+y`}" $
+                parse tk_raw "{`x+y`}"
                 `shouldBe` Right [RawAtS "{",RawAtE (Call ("",1,4) "(+)" (Tuple ("",1,4) [(Read ("",1,3) "x"),(Read ("",1,5) "y")])),RawAtS "}"]
-            it "{@(x)+y}" $
-                parse tk_raw "{@(x)+y}"
+            it "{`(x)`+y}" $
+                parse tk_raw "{`(x)`+y}"
                 `shouldBe` Right [RawAtS "{",RawAtE (Read ("",1,4) "x"),RawAtS "+y",RawAtS "}"]
 
     describe "type:" $ do
@@ -239,32 +248,41 @@ spec = do
                 `shouldBe` Right (Read ("",1,1) "aaa")
         describe "umn:" $ do
             it "-1" $
-                parse expr_umn "-1"
-                `shouldBe` Right (Call ("",1,1) "(-1)" (Const ("",1,2) 1))
+                parse expr_call_pre "-1"
+                `shouldBe` Right (Call ("",1,1) "negate" (Const ("",1,2) 1))
             it "--1" $
-                parse expr_umn "--1"
-                `shouldBe` Right (Call ("",1,1) "(-1)" (Call ("",1,2) "(-1)" (Const ("",1,3) 1)))
+                parse expr_call_pre "--1"
+                `shouldBe` Right (Call ("",1,1) "(--)" (Const ("",1,3) 1))
         describe "parens:" $ do
             it "(1)" $
                 parse expr_parens "(1)"
                 `shouldBe` Right (Const ("",1,2) 1)
             it "((--1))" $
                 parse expr_parens "((--1))"
-                `shouldBe` Right (Call ("",1,3) "(-1)" (Call ("",1,4) "(-1)" (Const ("",1,5) 1)))
+                `shouldBe` Right (Call ("",1,3) "(--)" (Const ("",1,5) 1))
+            it "((- -1))" $
+                parse expr_parens "((- -1))"
+                `shouldBe` Right (Call ("",1,3) "negate" (Call ("",1,5) "negate" (Const ("",1,6) 1)))
         describe "add_sub:" $ do
             it "1+1" $
-                parse expr_add_sub "1+1"
+                parse expr_call_inf "1+1"
                 `shouldBe` Right (Call ("",1,2) "(+)" (Tuple ("",1,2) [(Const ("",1,1) 1),(Const ("",1,3) 1)]))
             it "1+2+3" $
-                parse expr_add_sub "1 + 2+3"
+                parse expr_call_inf "1 + 2+3"
                 `shouldBe` Right (Call ("",1,6) "(+)" (Tuple ("",1,6) [(Call ("",1,3) "(+)" (Tuple ("",1,3) [(Const ("",1,1) 1),(Const ("",1,5) 2)])),(Const ("",1,7) 3)]))
         describe "mul_div:" $ do
             it "1*1" $
-                parse expr_mul_div "1*1"
+                parse expr_call_inf "1*1"
                 `shouldBe` Right (Call ("",1,2) "(*)" (Tuple ("",1,2) [(Const ("",1,1) 1),(Const ("",1,3) 1)]))
             it "1*2*3" $
-                parse expr_mul_div "1 * 2*3"
+                parse expr_call_inf "1 * 2*3"
                 `shouldBe` Right (Call ("",1,6) "(*)" (Tuple ("",1,6) [(Call ("",1,3) "(*)" (Tuple ("",1,3) [(Const ("",1,1) 1),(Const ("",1,5) 2)])),(Const ("",1,7) 3)]))
+{-
+        describe "call:" $ do
+            it "f 1" $
+                parse expr_call "f 1"
+                `shouldBe` Right (Nop ("",1,1))
+-}
         describe "expr:" $ do
             it "{0}" $
                 parse expr "{0}"
@@ -275,9 +293,12 @@ spec = do
             it "aaa" $
                 parse expr "aaa"
                 `shouldBe` Right (Read ("",1,1) "aaa")
+            it "$1" $
+                parse expr "$1"
+                `shouldBe` Right (Call ("",1,1) "($)" (Const ("",1,2) 1))
             it "-1" $
                 parse expr "- 1 "
-                `shouldBe` Right (Call ("",1,1) "(-1)" (Const ("",1,3) 1))
+                `shouldBe` Right (Call ("",1,1) "negate" (Const ("",1,3) 1))
             it "(aaa)" $
                 parse expr "( aaa  ) "
                 `shouldBe` Right (Read ("",1,3) "aaa")
@@ -286,10 +307,10 @@ spec = do
                 `shouldBe` Right (Call ("",1,4) "(-)" (Tuple ("",1,4) [(Call ("",1,2) "(+)" (Tuple ("",1,2) [(Const ("",1,1) 1),(Const ("",1,3) 2)])),(Const ("",1,5) 3)]))
             it "1+2*3" $
                 parse expr "1+2*3"
-                `shouldBe` Right (Call ("",1,2) "(+)" (Tuple ("",1,2) [(Const ("",1,1) 1),(Call ("",1,4) "(*)" (Tuple ("",1,4) [(Const ("",1,3) 2),(Const ("",1,5) 3)]))]))
+                `shouldBe` Right (Call ("",1,4) "(*)" (Tuple ("",1,4) [Call ("",1,2) "(+)" (Tuple ("",1,2) [Const ("",1,1) 1,Const ("",1,3) 2]),Const ("",1,5) 3]))
             it "1+2*3/4" $
                 parse expr "1+2*3/4"
-                `shouldBe` Right (Call ("",1,2) "(+)" (Tuple ("",1,2) [(Const ("",1,1) 1),(Call ("",1,6) "(/)" (Tuple ("",1,6) [(Call ("",1,4) "(*)" (Tuple ("",1,4) [(Const ("",1,3) 2),(Const ("",1,5) 3)])),(Const ("",1,7) 4)]))]))
+                `shouldBe` Right (Call ("",1,6) "(/)" (Tuple ("",1,6) [Call ("",1,4) "(*)" (Tuple ("",1,4) [Call ("",1,2) "(+)" (Tuple ("",1,2) [Const ("",1,1) 1,Const ("",1,3) 2]),Const ("",1,5) 3]),Const ("",1,7) 4]))
             it "(1+2)*3" $
                 parse expr "(1+2)*3"
                 `shouldBe` Right (Call ("",1,6) "(*)" (Tuple ("",1,6) [(Call ("",1,3) "(+)" (Tuple ("",1,3) [(Const ("",1,2) 1),(Const ("",1,4) 2)])),(Const ("",1,7) 3)]))
@@ -446,15 +467,15 @@ spec = do
         describe "if-then-else/if-else" $ do
             it "if 0 then escape" $
                 parse stmt_if "if 0 then escape"
-                `shouldBe` Left "(line 1, column 17):\nunexpected end of input\nexpecting letter, \"_\", digit, \"{\", \"(\", \"-\", \"escape\", \"break\", \"var\", \"input\", \"output\", \"event\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 17):\nunexpected end of input\nexpecting letter, \"_\", digit, \"{\", \"(\", \"escape\", \"break\", \"var\", \"input\", \"output\", \"event\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 then escape 0" $
                 parse stmt_if "if 0 then escape 0"
-                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"==\", \"*\", \"/\", \"+\", \"-\", \"{\", \"escape\", \"break\", \"var\", \"input\", \"output\", \"event\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"`\", \"{\", \"escape\", \"break\", \"var\", \"input\", \"output\", \"event\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 escape 0 end" $
                 parse stmt_if "if 0 escape 0 end"
-                `shouldBe` Left "(line 1, column 6):\nunexpected \"e\"\nexpecting \"==\", \"*\", \"/\", \"+\", \"-\" or \"then\""
+                `shouldBe` Left "(line 1, column 6):\nunexpected \"e\"\nexpecting \"`\" or \"then\""
 
             it "if 0 then escape 0 else escape 1 end" $
                 parse stmt_if "if 0 then escape 0 else escape 1 end"

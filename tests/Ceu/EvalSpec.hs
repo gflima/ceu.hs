@@ -101,12 +101,12 @@ spec = do
 
       it "pass: eval in simple env" $
         let vars = [("x",Just 1),("y",Just 2)] in
-          varsEval vars (Call () "(+)" (Tuple () [(Call () "(-)" (Tuple () [(Read () "x"),(Const () 3)])),(Call () "(-1)" (Read () "y"))]))
+          varsEval vars (Call () "(+)" (Tuple () [(Call () "(-)" (Tuple () [(Read () "x"),(Const () 3)])),(Call () "negate" (Read () "y"))]))
           `shouldBe` (-4)
 
       it "pass: eval in complex env" $
         let vars = [("y",Just 2),("x",Just 1),("y",Just 99),("x",Just 99)] in
-          varsEval vars (Call () "(+)" (Tuple () [(Call () "(-)" (Tuple () [(Read () "x"),(Const () 3)])),(Call () "(-1)" (Read () "y"))]))
+          varsEval vars (Call () "(+)" (Tuple () [(Call () "(-)" (Tuple () [(Read () "x"),(Const () 3)])),(Call () "negate" (Read () "y"))]))
           `shouldBe` (-4)
 
   --------------------------------------------------------------------------
@@ -191,7 +191,7 @@ spec = do
       it "pass: [x=?] x=-(5+1)" $
         step
         (Var () ("x",(Just 0))
-          (Write () "x" (Call () "(-1)" (Call () "(+)" (Tuple () [(Const () 5),(Const () 1)])))), 0, [], [], [])
+          (Write () "x" (Call () "negate" (Call () "(+)" (Tuple () [(Const () 5),(Const () 1)])))), 0, [], [], [])
         `shouldBe`
         (Var () ("x",(Just (-6))) (Nop ()), 0, [], [], [])
 

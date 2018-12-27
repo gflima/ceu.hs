@@ -59,18 +59,21 @@ main = do
 tests :: [(Int, Errors, [(String,Int)], String)]
 tests = [
     (10,  [], [], "escape 10"),
+    (10,  [], [], "escape 5+5"),
+    --(1,   [], [], "var void:() = trap do trap do escape/void end ; escape 1"),
+    --(10,  [], [], "var vs:(Int,Int) <- (5 5) ; escape (+) vs"),
     (100, [], [], "escape 100"),
     (100, [], [], "escape {100}"),
     (1,   [], [], "escape {CEU_TRAILS_N}"),
     (16,  [], [], "escape {sizeof(tceu_trl)}"),
     (24,  [], [], "escape {sizeof(tceu_mem_ROOT)}"),
     (100, [], [], "{int x = 100}; escape {x}"),
-    (100, [], [], "var x:Int <- 100 escape {@x}"),
-    (3,   [], [], "var x:Int<-1 ; var y:Int<-2 ; escape {@x+y}"),
+    (100, [], [], "var x:Int <- 100 escape {`x`}"),
+    (3,   [], [], "var x:Int<-1 ; var y:Int<-2 ; escape {`x+y`}"),
     -- TODO: unused vars
     (32,  [], [], "var x:Int ; var y:Int ; escape {sizeof(tceu_mem_ROOT)}"),
     -- TODO: tmp vars
-    (35,  [], [], "var x:Int<-1 ; var y:Int<-2 ; escape {@(x+y)+sizeof(tceu_mem_ROOT)}"),
+    (35,  [], [], "var x:Int<-1 ; var y:Int<-2 ; escape {`(x+y)`+sizeof(tceu_mem_ROOT)}"),
     (1,   ["(line 1, column 1):\nloop: `loop` never iterates"],
         [],
         "loop do break end ; escape 1"),

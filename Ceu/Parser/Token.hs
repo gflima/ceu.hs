@@ -50,6 +50,12 @@ tk_str str = do
     s
     return ()
 
+tk_op :: Parser String
+tk_op = do
+    op <- many1 $ oneOf "!@#$%&*-+=/?^~\\|<>"
+    s
+    return $ "(" ++ op ++ ")"
+
 tk_num :: Parser Int
 tk_num = do
     n <- many1 digit
@@ -74,7 +80,8 @@ tk_var = do
     s
     return (first:rest)
 
-tk_evt = tk_var
+tk_evt  = tk_var
+tk_func = tk_var
 
 tk_type :: Parser String    -- Int, Int_0   // I, II, int, _Int
 tk_type = do

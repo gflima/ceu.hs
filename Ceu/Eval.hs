@@ -122,7 +122,7 @@ varsEval :: Vars -> (Exp ann) -> Val
 varsEval vars expr = case expr of
   Const _ val     -> val
   Read  _ var     -> varsRead vars var
-  Call  _ "(-1)" e -> negate $ varsEval vars e
+  Call  _ "negate" e -> negate $ varsEval vars e
   Call  _ "(+)"  (Tuple _ [e1,e2]) -> (varsEval vars e1) + (varsEval vars e2)
   Call  _ "(-)"  (Tuple _ [e1,e2]) -> (varsEval vars e1) - (varsEval vars e2)
   Call  _ "(*)"  (Tuple _ [e1,e2]) -> (varsEval vars e1) * (varsEval vars e2)

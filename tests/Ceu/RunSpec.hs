@@ -37,8 +37,8 @@ spec = do
         it "escape -1" $
             run "escape -1" []
             `shouldBe` Right (-1, [[]])
-        it "escape --1" $
-            run "escape --1" []
+        it "escape - -1" $
+            run "escape - -1" []
             `shouldBe` Right (1, [[]])
         it "escape - - 1" $
             run "escape - - 1" []
@@ -51,7 +51,7 @@ spec = do
             `shouldBe` Right (-9999, [[]])
         it "1+2*3" $
             run "escape 1+2*3" []
-            `shouldBe` Right (7, [[]])
+            `shouldBe` Right (9, [[]])
         it "(1+2)*3" $
             run "escape (1+2)*3" []
             `shouldBe` Right (9, [[]])
@@ -61,6 +61,9 @@ spec = do
         it "1+2*3/4" $
             run "escape 1+2*3/4" []
             `shouldBe` Right (2, [[]])
+        it "+ (1 2)" $
+            run "escape + (1 2)" []
+            `shouldBe` Right (3, [[]])
 
     describe "vars:" $ do
         it "var Int a,b" $
@@ -93,6 +96,12 @@ spec = do
         it "var x:Int <- await X ; escape x" $
             run "input X:Int var x:Int <- await X ; escape x" [("X",Just 1)]
             `shouldBe` Right (1, [[],[]])
+        it "TODO-index-tuples" $
+            run "var x:(Int,()) <- (1 ()) ; var y:(Int,()) <- x ; escape 1" []
+            `shouldBe` Right (1, [[]])
+        it "var x:(Int,Int) <- (1 2) ; escape (+) x" $
+            run "var x:(Int,Int) <- (1 2) ; escape (+) x" []
+            `shouldBe` Right (3, [[]])
 
 -------------------------------------------------------------------------------
 

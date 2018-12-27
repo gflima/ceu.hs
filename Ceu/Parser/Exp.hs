@@ -6,7 +6,7 @@ import Text.Parsec.String       (Parser)
 import Text.Parsec.Char         (char, anyChar)
 import Text.Parsec.Combinator   (many1, chainl1, option, notFollowedBy)
 
-import Ceu.Parser.Token         (tk_num, tk_var, tk_str, s)
+import Ceu.Parser.Token         (tk_num, tk_var, tk_func, tk_str, tk_op, s)
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Exp          (Exp(..), RawAt(..))
@@ -26,7 +26,7 @@ tk_raw = do
     where
         rawe :: Parser [RawAt Source]
         rawe = do
-            e <- char '@' *> ((try (char '(') *> (expr <* char ')')) <|> expr)
+            e <- char '`' *> (expr <* char '`')
             return [RawAtE e]
 
         raws :: Parser [RawAt Source]
@@ -34,7 +34,7 @@ tk_raw = do
             str <- raws'
             return [RawAtS str]
         raws' = do
-            notFollowedBy (char '}' <|> char '@')
+            notFollowedBy (char '}' <|> char '`')
             c  <- anyChar
             cs <- option [] raws'
             return (c:cs)
@@ -53,12 +53,25 @@ expr_const = do
     num <- tk_num
     return $ Const pos num
 
+expr_read :: Parser (Exp Source)
+expr_read = do
+    pos <- pos2src <$> getPosition
+    str <- tk_var
+    return $ Read pos str
+
 expr_unit :: Parser (Exp Source)
 expr_unit = do
     pos <- pos2src <$> getPosition
     void <- tk_str "("
     void <- tk_str ")"
     return $ Unit pos
+
+expr_parens :: Parser (Exp Source)
+expr_parens = do
+    void <- tk_str "("
+    exp  <- expr
+    void <- tk_str ")"
+    return exp
 
 expr_tuple :: Parser (Exp Source)
 expr_tuple = do
@@ -69,63 +82,42 @@ expr_tuple = do
     void <- tk_str ")"
     return $ Tuple pos (exp1:exps)
 
-expr_read :: Parser (Exp Source)
-expr_read = do
-    pos <- pos2src <$> getPosition
-    str <- tk_var
-    return $ Read pos str
-
-expr_umn :: Parser (Exp Source)
-expr_umn = do
+expr_call_pre :: Parser (Exp Source)
+expr_call_pre = do
     pos  <- pos2src <$> getPosition
-    void <- tk_str "-"
+    f    <- try tk_op <|> try tk_func
     exp  <- expr
-    return $ Call pos "(-1)" exp
-
-expr_parens :: Parser (Exp Source)
-expr_parens = do
-    void <- tk_str "("
-    exp  <- expr
-    void <- tk_str ")"
-    return exp
+    return $ Call pos (if f == "(-)" then "negate" else f) exp
+                        -- TODO: unary minus exception
 
 expr_prim :: Parser (Exp Source)
-expr_prim = (try expr_raw <|> try expr_const <|> try expr_unit <|> try expr_tuple <|> try expr_read <|> try expr_umn <|> try expr_parens)
+expr_prim = try expr_raw        <|>
+            try expr_const      <|>
+            try expr_read       <|>
+            try expr_unit       <|>
+            try expr_parens     <|>
+            try expr_tuple      <|>
+            try expr_call_pre
 
 -------------------------------------------------------------------------------
 
-expr_add_sub :: Parser (Exp Source)
-expr_add_sub = chainl1 expr_mul_div op where
-    op = do
-        pos  <- pos2src <$> getPosition
-        void <- tk_str "+"
-        return (\a b -> Call pos "(+)" (Tuple pos [a,b]))
-     <|> do
-        pos  <- pos2src <$> getPosition
-        void <- tk_str "-"
-        return (\a b -> Call pos "(-)" (Tuple pos [a,b]))
+expr_call_pos :: Parser (Exp Source)
+expr_call_pos = do
+    pos <- pos2src <$> getPosition
+    e1  <- expr_call_inf
+    ops <- many tk_op
+    return $ foldl (\e op -> Call pos op e) e1 ops
 
-expr_mul_div :: Parser (Exp Source)
-expr_mul_div = chainl1 expr_equ op where
-    op = do
-        pos  <- pos2src <$> getPosition
-        void <- tk_str "*"
-        return (\a b -> Call pos "(*)" (Tuple pos [a,b]))
-     <|> do
-        pos  <- pos2src <$> getPosition
-        void <- tk_str "/"
-        return (\a b -> Call pos "(/)" (Tuple pos [a,b]))
-
-expr_equ :: Parser (Exp Source)
-expr_equ = chainl1 expr_prim op where
-    op = do
-        pos  <- pos2src <$> getPosition
-        void <- tk_str "=="
-        return (\a b -> Call pos "(==)" (Tuple pos [a,b]))
+expr_call_inf :: Parser (Exp Source)
+expr_call_inf = chainl1 expr_prim f where
+    f = do
+        pos <- pos2src <$> getPosition
+        op  <- try tk_op <|> try (char '`' *> (tk_func <* char '`'))
+        return (\a b -> Call pos op (Tuple pos [a,b]))
 
 -------------------------------------------------------------------------------
 
 expr :: Parser (Exp Source)
 expr = do
-    e <- expr_add_sub
+    e <- expr_call_pos
     return e
