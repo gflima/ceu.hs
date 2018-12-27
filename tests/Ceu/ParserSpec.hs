@@ -172,7 +172,7 @@ spec = do
                 `shouldBe` Right [RawAtS "{",RawAtS "{",RawAtS "oi",RawAtS "}",RawAtS "}"]
             it "{@x+@y}" $
                 parse tk_raw "{@x+@y}"
-                `shouldBe` Left "(line 1, column 5):\nunexpected \"@\"\nexpecting \"{\", digit, \"-\" or \"(\""
+                `shouldBe` Left "(line 1, column 5):\nunexpected \"@\"\nexpecting \"{\", digit, \"(\" or \"-\""
             it "{@x+y}" $
                 parse tk_raw "{@x+y}"
                 `shouldBe` Right [RawAtS "{",RawAtE (Call ("",1,4) "(+)" (Tuple ("",1,4) [(Read ("",1,3) "x"),(Read ("",1,5) "y")])),RawAtS "}"]
@@ -338,6 +338,9 @@ spec = do
             it "var x : Int <- await X" $
                 parse stmt_var "var x : Int <- await X"
                 `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" (Type1 "Int") Nothing) (AwaitInp ("",1,16) "X" (Just "x")))
+            it "var x:() <- ()" $
+                parse stmt_var "var x:() <- ()"
+                `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" Type0 Nothing) (Write ("",1,10) "x" (Unit ("",1,13))))
 
         describe "ext:" $ do
             it "output X: Int" $
@@ -440,7 +443,7 @@ spec = do
         describe "if-then-else/if-else" $ do
             it "if 0 then escape" $
                 parse stmt_if "if 0 then escape"
-                `shouldBe` Left "(line 1, column 17):\nunexpected end of input\nexpecting letter, \"_\", digit, \"{\", \"-\", \"(\", \"escape\", \"break\", \"var\", \"input\", \"output\", \"event\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 17):\nunexpected end of input\nexpecting letter, \"_\", digit, \"{\", \"(\", \"-\", \"escape\", \"break\", \"var\", \"input\", \"output\", \"event\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 then escape 0" $
                 parse stmt_if "if 0 then escape 0"

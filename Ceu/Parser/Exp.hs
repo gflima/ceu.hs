@@ -53,6 +53,13 @@ expr_const = do
     num <- tk_num
     return $ Const pos num
 
+expr_unit :: Parser (Exp Source)
+expr_unit = do
+    pos <- pos2src <$> getPosition
+    void <- tk_str "("
+    void <- tk_str ")"
+    return $ Unit pos
+
 expr_read :: Parser (Exp Source)
 expr_read = do
     pos <- pos2src <$> getPosition
@@ -74,7 +81,7 @@ expr_parens = do
     return exp
 
 expr_prim :: Parser (Exp Source)
-expr_prim = (expr_raw <|> expr_const <|> expr_read <|> expr_umn <|> expr_parens)
+expr_prim = (try expr_raw <|> try expr_const <|> try expr_unit <|> try expr_read <|> try expr_umn <|> try expr_parens)
 
 -------------------------------------------------------------------------------
 

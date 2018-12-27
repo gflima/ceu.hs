@@ -65,7 +65,7 @@ spec = do
     describe "vars:" $ do
         it "var Int a,b" $
             run "var a,b:Int;" []           -- TODO: support a,b,c? (problem w/ assign/finalization)
-            `shouldBe` Left "(line 1, column 6):\nunexpected \",\"\nexpecting digit, letter, \"_\" or \":\""
+            `shouldBe` Left "(line 1, column 7):\nunexpected \"b\"\nexpecting \":\""
         it "a <- 1; escape a;" $
             run "a <- 1; escape a" []
             `shouldBe` Left "(line 1, column 3):\nassignment: identifier 'a' is not declared\n(line 1, column 16):\nread: identifier 'a' is not declared\n"
