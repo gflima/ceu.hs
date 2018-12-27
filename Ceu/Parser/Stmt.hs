@@ -9,6 +9,7 @@ import Text.Parsec.String        (Parser)
 import Text.Parsec.Combinator    (many1, chainl, chainr1, option, optionMaybe)
 
 import Ceu.Parser.Token
+import Ceu.Parser.Type           (type_)
 import Ceu.Parser.Exp            (pos2src, expr, tk_raw)
 
 import Ceu.Grammar.Globals       (Source)
@@ -69,9 +70,9 @@ stmt_var = do
     void <- tk_key "var"
     var  <- tk_var
     void <- tk_str ":"
-    tp   <- tk_type
+    tp   <- type_
     s    <- option (Nop $ pos) (try (attr_exp var) <|> try (attr_awaitext var) <|> try (attr_awaitevt var))
-    return $ Seq pos (Var pos var (Type1 tp) Nothing) s
+    return $ Seq pos (Var pos var tp Nothing) s
 
 stmt_evt :: Parser (Stmt Source)
 stmt_evt = do

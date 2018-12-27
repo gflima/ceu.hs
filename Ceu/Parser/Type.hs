@@ -8,19 +8,6 @@ import Ceu.Parser.Token         (tk_str, tk_type)
 
 import Ceu.Grammar.Type         (Type(..))
 
-{-
---import Text.Parsec.Prim         ((<|>), getPosition, try, many)
-import Text.Parsec.Pos          (SourcePos, sourceName, sourceLine, sourceColumn)
---import Text.Parsec.String       (Parser)
-import Text.Parsec.Char         (char, anyChar)
---import Text.Parsec.Combinator   (chainl1, option, optionMaybe, notFollowedBy)
-
---import Ceu.Parser.Token         (tk_num, tk_var, tk_str, s)
-
-import Ceu.Grammar.Globals
-import Ceu.Grammar.Exp          (Exp(..), RawAt(..))
--}
-
 type_0 :: Parser Type
 type_0 = do
     void <- tk_str "("
