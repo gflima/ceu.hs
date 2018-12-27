@@ -32,6 +32,11 @@ stmt n trl0 (Evt src id p) =
     where
         (n',ts',p') = stmt (n+1) trl0 p
 
+stmt n trl0 (CodI src id inp out p) =
+    (n',ts', CodI All{source=src,n=n,trails=(trl0,ts')} id inp out p')
+    where
+        (n',ts',p') = stmt (n+1) trl0 p
+
 stmt n trl0 (Write src var exp) =
     (n',1, Write All{source=src,n=n,trails=(trl0,1)} var exp')
     where
@@ -96,19 +101,20 @@ stmt n trl0 p = error (show p)
 -------------------------------------------------------------------------------
 
 expr :: Int -> (Exp Source) -> (Int, Exp All)
-expr n (RawE  src raw)   = (n', RawE All{source=src,n=n,trails=(0,0)} raw') where
+expr n (RawE  src raw) = (n', RawE All{source=src,n=n,trails=(0,0)} raw') where
                             (n',raw') = fold_raw n raw
-expr n (Const src v)     = (n+1, Const All{source=src,n=n,trails=(0,0)} v)
-expr n (Read  src id)    = (n+1, Read  All{source=src,n=n,trails=(0,0)} id)
-expr n (Equ   src e1 e2) = (n2', Equ All{source=src,n=n,trails=(0,0)} e1' e2') where
-                            (n1',e1') = expr (n+1) e1
-                            (n2',e2') = expr n1'   e2
-expr n (Add   src e1 e2) = (n2', Add All{source=src,n=n,trails=(0,0)} e1' e2') where
-                            (n1',e1') = expr (n+1) e1
-                            (n2',e2') = expr n1'   e2
-expr n (Mul   src e1 e2) = (n2', Mul All{source=src,n=n,trails=(0,0)} e1' e2') where
-                            (n1',e1') = expr (n+1) e1
-                            (n2',e2') = expr n1'   e2
+expr n (Const src v)   = (n+1, Const All{source=src,n=n,trails=(0,0)} v)
+expr n (Read  src id)  = (n+1, Read  All{source=src,n=n,trails=(0,0)} id)
+
+expr n (Call src1 id (Tuple src2 [e1,e2])) =
+    (n2', Call All{source=src1,n=n,trails=(0,0)} id
+            (Tuple All{source=src2,n=n+1,trails=(0,0)} [e1',e2']))
+    where
+        (n1',e1') = expr (n+2) e1
+        (n2',e2') = expr n1'   e2
+expr n (Call src id e) = (n', Call All{source=src,n=n,trails=(0,0)} id e')
+    where
+        (n',e') = expr (n+1) e
 
 fold_raw :: Int -> [RawAt Source] -> (Int, [RawAt All])
 fold_raw n raw =

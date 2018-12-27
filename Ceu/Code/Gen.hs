@@ -89,12 +89,16 @@ getEnvEvt env evt = "CEU_EVENT_" ++ evt ++ "__" ++ (show $ toN $ getEnv env evt)
 -------------------------------------------------------------------------------
 
 expr :: [(ID_Var,Stmt All)] -> Exp All -> String
-expr vars (RawE  _ raw)   = fold_raw vars raw
-expr vars (Const _ n)     = show n
-expr vars (Equ   _ e1 e2) = "(" ++ (expr vars e1) ++ " == " ++ (expr vars e2) ++ ")"
-expr vars (Add   _ e1 e2) = "(" ++ (expr vars e1) ++ " + "  ++ (expr vars e2) ++ ")"
-expr vars (Mul   _ e1 e2) = "(" ++ (expr vars e1) ++ " * "  ++ (expr vars e2) ++ ")"
-expr vars (Read  _ id)    = getEnvVar vars id
+expr vars (RawE  _ raw) = fold_raw vars raw
+expr vars (Const _ n)   = show n
+expr vars (Read  _ id)  = getEnvVar vars id
+expr vars (Call  _ "(-1)" e) = "(-" ++ (expr vars e) ++ ")"
+expr vars (Call  _ "(+)"  (Tuple _ [e1,e2])) = "(" ++ (expr vars e1) ++ " + " ++ (expr vars e2) ++ ")"
+expr vars (Call  _ "(-)"  (Tuple _ [e1,e2])) = "(" ++ (expr vars e1) ++ " - " ++ (expr vars e2) ++ ")"
+expr vars (Call  _ "(*)"  (Tuple _ [e1,e2])) = "(" ++ (expr vars e1) ++ " * " ++ (expr vars e2) ++ ")"
+expr vars (Call  _ "(/)"  (Tuple _ [e1,e2])) = "(" ++ (expr vars e1) ++ " / " ++ (expr vars e2) ++ ")"
+expr vars (Call  _ "(==)" (Tuple _ [e1,e2])) = "(" ++ (expr vars e1) ++ " / " ++ (expr vars e2) ++ ")"
+expr vars (Call  _ "(<=)" (Tuple _ [e1,e2])) = "(" ++ (expr vars e1) ++ " / " ++ (expr vars e2) ++ ")"
 
 fold_raw :: [(ID_Var,Stmt All)] -> [RawAt All] -> String
 fold_raw vars raw = take ((length raw')-2) (drop 1 raw') where
@@ -152,6 +156,12 @@ aux dn s@(Var _ id _ p) = p' { vars_up=id':(vars_up p') }
         p'  = aux dn' p
         dn' = dn{ vars_dn = (id,s):(vars_dn dn) }
         id' = id ++ "__" ++ (show $ toN s)
+
+aux dn s@(CodI _ id _ _ p) = aux dn p --{ vars_up=id':(vars_up p') }
+    where
+        --p'  = aux dn' p
+        --dn' = dn{ vars_dn = (id,s):(vars_dn dn) }
+        --id' = id ++ "__" ++ (show $ toN s)
 
 aux dn s@(Write _ var exp) = upz { code_bef=src }
     where
