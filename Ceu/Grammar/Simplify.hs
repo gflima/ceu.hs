@@ -1,6 +1,6 @@
 module Ceu.Grammar.Simplify where
 
-import Ceu.Grammar.Stmt
+import Ceu.Grammar.Stmt (Stmt(..))
 
 simplify :: (Eq ann) => (Stmt ann) -> (Stmt ann)
 

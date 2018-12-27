@@ -1,7 +1,8 @@
 module Ceu.Grammar.Full.Compile.ParAndOr where
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Exp
+import Ceu.Grammar.Type     (Type(..))
+import Ceu.Grammar.Exp      (Exp(..))
 import Ceu.Grammar.Full.Grammar
 import qualified Ceu.Grammar.Full.Compile.Trap as Trap
 

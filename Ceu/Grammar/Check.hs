@@ -3,6 +3,7 @@ module Ceu.Grammar.Check where
 import Debug.Trace
 
 import Ceu.Grammar.Globals
+import Ceu.Grammar.Type     (Type(..))
 import Ceu.Grammar.Stmt     (Stmt(..), getAnn)
 import Ceu.Grammar.Simplify (simplify)
 import qualified Ceu.Grammar.Id as Id

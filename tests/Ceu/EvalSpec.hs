@@ -1,8 +1,9 @@
 module Ceu.EvalSpec (main, spec) where
 
-import Ceu.Grammar.Globals (Ann(..), Type(..))
+import Ceu.Grammar.Globals  (Ann(..))
 import Ceu.Grammar.Ann.Unit
-import Ceu.Grammar.Exp
+import Ceu.Grammar.Type     (Type(..))
+import Ceu.Grammar.Exp      (Exp(..))
 import qualified Ceu.Grammar.Stmt as G
 import Ceu.Eval
 import Control.DeepSeq

@@ -1,8 +1,8 @@
 module Ceu.FullGrammarSpec (main, spec) where
 
 import Ceu.Grammar.Ann.Unit
+import Ceu.Grammar.Type (Type(..))
 import Ceu.Grammar.Exp
-import Ceu.Grammar.Globals (Type(..))
 import qualified Ceu.Grammar.Stmt as G
 import qualified Ceu.Eval         as E
 import Ceu.Grammar.Full.Grammar

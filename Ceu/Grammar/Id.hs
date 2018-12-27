@@ -4,6 +4,7 @@ import Debug.Trace
 import Data.List (find)
 
 import Ceu.Grammar.Globals
+import Ceu.Grammar.Type
 import Ceu.Grammar.Exp
 import Ceu.Grammar.Stmt
 

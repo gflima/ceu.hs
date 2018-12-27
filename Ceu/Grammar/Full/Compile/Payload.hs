@@ -3,7 +3,8 @@ module Ceu.Grammar.Full.Compile.Payload where
 import Data.Char (toUpper)
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Exp
+import Ceu.Grammar.Type     (Type(..))
+import Ceu.Grammar.Exp      (Exp(..))
 import Ceu.Grammar.Full.Grammar
 
 -- compile:
