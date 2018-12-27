@@ -1,8 +1,9 @@
 module Ceu.SimplifySpec (main, spec) where
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Exp
-import Ceu.Grammar.Stmt
+import Ceu.Grammar.Type     (Type(..))
+import Ceu.Grammar.Exp      (Exp(..))
+import Ceu.Grammar.Stmt     (Stmt(..))
 import Ceu.Grammar.Simplify
 import Test.Hspec
 

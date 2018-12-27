@@ -39,7 +39,7 @@ tk_reserved :: Parser ()
 tk_reserved = foldr1 (<|>) (map tk_key keywords)
 
 s :: Parser ()
-s = void $ many $ (void $ oneOf " ;\n\t") <|> comm
+s = void $ many $ (void $ oneOf " ,;\n\t") <|> comm
 
 comm :: Parser ()
 comm = void $ try $ (string "//" >> (manyTill anyChar (void newline<|>eof)) <?> "")

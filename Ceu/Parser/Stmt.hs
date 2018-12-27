@@ -11,7 +11,8 @@ import Text.Parsec.Combinator    (many1, chainl, chainr1, option, optionMaybe)
 import Ceu.Parser.Token
 import Ceu.Parser.Exp            (pos2src, expr, tk_raw)
 
-import Ceu.Grammar.Globals       (Source, Type(..))
+import Ceu.Grammar.Globals       (Source)
+import Ceu.Grammar.Type          (Type(..))
 import Ceu.Grammar.Exp           (Exp(..))
 import Ceu.Grammar.Full.Grammar  (Stmt(..))
 

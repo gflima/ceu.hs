@@ -7,10 +7,11 @@ import Text.Parsec.Prim
 import Text.Parsec.String (Parser)
 
 import Ceu.Parser.Token
+import Ceu.Parser.Type
 import Ceu.Parser.Exp
 import Ceu.Parser.Stmt
-import Ceu.Grammar.Globals      (Type(..))
 import Ceu.Grammar.Ann.Source
+import Ceu.Grammar.Type         (Type(..))
 import Ceu.Grammar.Exp          (Exp(..), RawAt(..))
 import Ceu.Grammar.Full.Grammar (Stmt(..))
 
@@ -178,6 +179,51 @@ spec = do
             it "{@(x)+y}" $
                 parse tk_raw "{@(x)+y}"
                 `shouldBe` Right [RawAtS "{",RawAtE (Read ("",1,4) "x"),RawAtS "+y",RawAtS "}"]
+
+    describe "type:" $ do
+        describe "type0" $ do
+            it "()" $
+                parse type_0 "()"
+                `shouldBe` Right Type0
+            it "( )" $
+                parse type_0 "( )"
+                `shouldBe` Right Type0
+            it "(())" $
+                parse type_0 "(())"
+                `shouldBe` Left "(line 1, column 2):\nunexpected \"(\"\nexpecting \")\""
+        describe "type1" $ do
+            it "Int" $
+                parse type_1 "Int"
+                `shouldBe` Right (Type1 "Int")
+            it "III" $
+                parse type_1 "III"
+                `shouldBe` Left "(line 1, column 4):\nunexpected end of input\nexpecting digit, letter or \"_\""
+            it "int" $
+                parse type_1 "int"
+                `shouldBe` Left "(line 1, column 1):\nunexpected \"i\""
+        describe "typeN" $ do
+            it "()" $
+                parse type_N "()"
+                `shouldBe` Left "(line 1, column 2):\nunexpected \")\"\nexpecting \"(\""
+            it "(Int)" $
+                parse type_N "(Int)"
+                `shouldBe` Left "(line 1, column 5):\nunexpected \")\"\nexpecting digit, letter, \"_\" or \"(\""
+            it "(Int,Int)" $
+                parse type_N "(Int,Int)"
+                `shouldBe` Right (TypeN [Type1 "Int", Type1 "Int"])
+            it "(Int ())" $
+                parse type_N "(Int ())"
+                `shouldBe` Right (TypeN [Type1 "Int", Type0])
+        describe "type_" $ do
+            it "()" $
+                parse type_ "()"
+                `shouldBe` Right Type0
+            it "Int" $
+                parse type_ "Int"
+                `shouldBe` Right (Type1 "Int")
+            it "(Int (() ()))" $
+                parse type_ "(Int (() ()))"
+                `shouldBe` Right (TypeN [Type1 "Int", TypeN [Type0,Type0]])
 
     describe "expr:" $ do
         describe "const:" $ do
