@@ -133,11 +133,12 @@ expr ids e@(Call _ id exp) = (tp, es1++es2++es3)
                                         Just (CodI _ _ _ tp' _) -> tp'
                                         otherwise               -> TypeB
 
-expr ids e@(Tuple _ exps) = (TypeN tps, es)
+expr ids e@(Tuple _ exps) = (tps, es)
                             where
                                 rets :: [(Type,Errors)]
                                 rets = map (\e -> expr ids e) exps
-                                tps  = map (\(tp,_) -> tp) rets
+                                tps  = if elem TypeB tps' then TypeB else TypeN tps'
+                                tps' = map (\(tp,_) -> tp) rets
                                 es   = concat $ map (\(_,es) -> es) rets
 
 expr _ _ = error "TODO"

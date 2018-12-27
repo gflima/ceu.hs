@@ -12,6 +12,7 @@ compile p = ([], aux False p) where
   aux inA   (Inp' z id b p)       = Inp' z id b (aux inA p)
   aux inA   (Out' z id b p)       = Out' z id b (aux inA p)
   aux inA   (Evt' z id b p)       = Evt' z id b (aux inA p)
+  aux inA   (CodI' z id inp out p) = CodI' z id inp out (aux inA p)
   aux inA   (If z exp p1 p2)      = If z exp (aux inA p1) (aux inA p2)
   aux inA   (Seq z p1 p2)         = Seq z (aux inA p1) (aux inA p2)
   aux True  (Loop z p)            = Loop z (aux True (Seq z p (AwaitInp z "ASYNC" Nothing)))

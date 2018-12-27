@@ -25,6 +25,7 @@ aux (Var' z id tp Nothing p) = Var' z id tp Nothing (aux p)
 aux (Inp' z id b p)       = Inp' z id b (aux p)
 aux (Out' z id b p)       = Out' z id b (aux p)
 aux (Evt' z id b p)       = Evt' z id b (aux p)
+aux (CodI' z id inp out p) = CodI' z id inp out (aux p)
 aux (If z exp p1 p2)      = If z exp (aux p1) (aux p2)
 aux (Seq z p1 p2)         = Seq z (aux p1) (aux p2)
 aux (Loop z p)            = Loop z (aux p)
@@ -35,22 +36,22 @@ aux (Or' z p1 p2)         = Or' z (aux p1) (aux p2)
 aux (Spawn z p)           = Spawn z (aux p)
 aux (Trap' z p)           = Trap' z (aux p)
 aux (Pause z evt p)       =
-  Var' z ("__pause_var_"++evt) ["Int"] Nothing
+  Var' z ("__pause_var_"++evt) (Type1 "Int") Nothing
     (Evt' z ("__pause_int_"++evt) False
       (Seq z
         (Write z ("__pause_var_"++evt) (Const z 0))
         (Or' z
-          (Var' z "__tmp" ["Int"] Nothing
+          (Var' z "__tmp" (Type1 "Int") Nothing
             (Every z evt (Just "__tmp")
-              (If z (Equ z (Read z "__tmp") (Const z 0))
+              (If z (Call z "equ" (Tuple z [(Read z "__tmp"),(Const z 0)]))
                   (Seq z (Write z ("__pause_var_"++evt) (Const z 0))
                        (EmitEvt z ("__pause_int_"++evt) Nothing))
                   (Nop z))))
         (Or' z
           (Pause' z ("__pause_var_"++evt) p)
-          (Var' z "__tmp" ["Int"] Nothing
+          (Var' z "__tmp" (Type1 "Int") Nothing
             (Every z evt (Just "__tmp")
-              (If z (Equ z (Read z "__tmp") (Const z 1))
+              (If z (Call z "equ" (Tuple z [(Read z "__tmp"),(Const z 1)]))
                   (Write z ("__pause_var_"++evt) (Const z 1))
                   (Nop z))))))))
 aux p                     = p

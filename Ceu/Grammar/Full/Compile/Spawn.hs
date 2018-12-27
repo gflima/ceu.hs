@@ -18,6 +18,9 @@ compile (Out' z id b p)          = (es, Out' z id b p')
 compile (Evt' z id b p)          = (es, Evt' z id b p')
                                    where
                                      (es,p') = compile p
+compile (CodI' z id inp out p)   = (es, CodI' z id inp out p')
+                                   where
+                                     (es,p') = compile p
 compile (If z exp p1 p2)         = (es1++es2, If z exp p1' p2')
                                    where
                                      (es1,p1') = compile p1

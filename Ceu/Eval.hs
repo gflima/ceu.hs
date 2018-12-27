@@ -125,10 +125,10 @@ varsEval vars expr = case expr of
   Call  _ "umn" e -> negate $ varsEval vars e
   Call  _ "add" (Tuple _ [e1,e2]) -> (varsEval vars e1) + (varsEval vars e2)
   Call  _ "sub" (Tuple _ [e1,e2]) -> (varsEval vars e1) - (varsEval vars e2)
-  --Mul   _ e1 e2 -> (varsEval vars e1) * (varsEval vars e2)
-  --Div   _ e1 e2 -> (varsEval vars e1) `div` (varsEval vars e2)
-  --Equ   _ e1 e2 -> if (varsEval vars e1) == (varsEval vars e2) then 1 else 0
-  --Lte   _ e1 e2 -> if (varsEval vars e1) <= (varsEval vars e2) then 1 else 0
+  Call  _ "mul" (Tuple _ [e1,e2]) -> (varsEval vars e1) * (varsEval vars e2)
+  Call  _ "div" (Tuple _ [e1,e2]) -> (varsEval vars e1) `div` (varsEval vars e2)
+  Call  _ "equ" (Tuple _ [e1,e2]) -> if (varsEval vars e1) == (varsEval vars e2) then 1 else 0
+  Call  _ "lte" (Tuple _ [e1,e2]) -> if (varsEval vars e1) <= (varsEval vars e2) then 1 else 0
 
 -- Set event in environment.
 evtsEmit :: Evts -> ID_Evt -> Evts

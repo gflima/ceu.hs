@@ -8,7 +8,7 @@ import Ceu.Grammar.Full.Grammar
 compile :: Stmt ann -> (Errors, Stmt ann)
 compile p = ([], aux p)
 aux :: Stmt ann -> Stmt ann
-aux (Var z var tp fin)         = Var z var tp (aux_fin fin)
+aux (Var z id tp fin)          = Var z id tp (aux_fin fin)
 aux (If z exp p1 p2)           = If z exp (aux p1) (aux p2)
 aux (Seq z1 (Seq z2 p1 p2) p3) = aux $ Seq z1 p1 (Seq z2 p2 p3)
 aux (Seq z p1 p2)              = Seq z (aux p1) (aux p2)

@@ -21,6 +21,7 @@ aux (Var' z id tp Nothing p) = Var' z id tp Nothing (aux p)
 aux (Inp' z id b p)       = Inp' z id b (aux p)
 aux (Out' z id b p)       = Out' z id b (aux p)
 aux (Evt' z id b p)       = Evt' z id b (aux p)
+aux (CodI' z id inp out p) = CodI' z id inp out (aux p)
 aux (If z exp p1 p2)      = If z exp (aux p1) (aux p2)
 aux (Seq z p1 p2)         = Seq z (aux p1) (aux p2)
 aux (Loop z p)            = Loop z (aux p)
@@ -28,7 +29,7 @@ aux (Par' z p1 p2)        = Par' z (aux p1) (aux p2)
 aux (Pause' z var p)      = Pause' z var (aux p)
 aux (Trap' z p)           = Trap' z (aux p)
 aux (Clean' z id p)       = Clean' z id (aux p)
-aux (AwaitTmr z exp)      = Var' z "__timer_await" ["Int"] Nothing
+aux (AwaitTmr z exp)      = Var' z "__timer_await" (Type1 "Int") Nothing
                             (Seq z
                               (Write z "__timer_await" exp)
                               (Trap' z
@@ -37,8 +38,8 @@ aux (AwaitTmr z exp)      = Var' z "__timer_await" ["Int"] Nothing
                                     (AwaitInp z "TIMER" Nothing)
                                     (Seq z
                                       (Write z "__timer_await"
-                                        (Sub z (Read z "__timer_await") (Const z 1)))
-                                      (If z (Equ z (Read z "__timer_await") (Const z 0))
+                                        (Call z "sub" (Tuple z [(Read z "__timer_await"),(Const z 1)])))
+                                      (If z (Call z "equ" (Tuple z [(Read z "__timer_await"),(Const z 0)]))
                                         (Escape' z 0)
                                         (Nop z)))))))
 aux p                     = p
