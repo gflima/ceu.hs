@@ -99,10 +99,12 @@ expr vars (RawE  _ raw)    = fold_raw vars raw
 expr vars (Const _ n)      = show n
 expr vars (Read  _ id)     = getEnvVar vars id
 --expr vars e@(Tuple _ exps) = "({ tceu__int__int __ceu_" ++ n ++ " = {" ++ vs ++ "}; __ceu_" ++ n ++ ";})"
-expr vars e@(Tuple _ exps) = "((tceu__int__int){" ++ vs ++ "})"
+expr vars e@(Tuple _ exps) = "{" ++ vs ++ "}"
     where
         n  = show $ toN e
-        vs = intercalate "," (map (\e -> expr vars e) exps)
+        vs = intercalate "," (map (\e -> expr vars e) (filter (not.isUnit) exps))
+        isUnit (Unit _) = True
+        isUnit _        = False
 
 expr vars (Call  _ "negate" e) = "(negate(" ++ (expr vars e) ++ "))"
 expr vars (Call  _ "(+)"    e) = "(plus(&" ++ e' ++ "))"
@@ -140,7 +142,7 @@ stmt p h = [
     , ("CEU_INPS",      concat $ map (\inp->s++"CEU_INPUT_"++inp++",\n") $ inps    up)
     , ("CEU_EVTS",      concat $ map (\evt->s++"CEU_EVENT_"++evt++",\n") $ evts_up up)
     , ("CEU_TYPES",     concat $ rmdups $ map (\tp->tp2dcl tp++"\n") $ tps_up up)
-    , ("CEU_VARS",      concat $ map (\(var,tp)->s++tp++" "++var++";\n") $ vars_up up)
+    , ("CEU_VARS",      concat $ map (\(var,tp)->s++tp++" "++var++";\n") $ filter (\(_,tp)->tp/="void") $ vars_up up)
     , ("CEU_HISTORY",   concat $ map (\(evt,v) ->s++"_CEU_INPUT="++show v++"; ceu_input(CEU_INPUT_"++evt++")"++";\n" ) h)
     , ("CEU_LABELS",    concat $ root2 ++ labels up ++ root1 )
     ]
@@ -176,10 +178,13 @@ tp2dcl :: Type -> String
 tp2dcl tp@(TypeN tps) =
     "typedef struct " ++ use ++ " {\n"  ++
     (snd $ foldr (\tp (n,s) -> (n-1, "    " ++ tp2use tp ++ " _" ++ show n ++ ";\n" ++ s))
-                 (length tps,"") tps)   ++
+                 (length tps,"")
+                 (filter (not.isType0) tps))   ++
     "} " ++ use ++ ";\n"
     where
         use = tp2use tp
+        isType0 Type0 = True
+        isType0 _     = False
 tp2dcl _ = ""
 
 
@@ -215,8 +220,11 @@ aux dn s@(Func _ id (TypeF inp out) p) = p' { tps_up=inp:out:(tps_up p') }
 
 aux dn s@(Write _ var exp) = upz { code_bef=src }
     where
-        src  = (oln s ++ (ocmd $ (getEnvVar vars var) ++ " = " ++ (expr vars exp)))
+        src  = case tp of
+                Type0     -> ""
+                otherwise -> (oln s ++ (ocmd $ (getEnvVar vars var) ++ " = " ++ (expr vars exp)))
         vars = vars_dn dn
+        (Var _ _ tp _) = getEnv vars var
 
 -------------------------------------------------------------------------------
 

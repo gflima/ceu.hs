@@ -140,6 +140,8 @@ spec = do
     checkIdIt (Pause () "a" (Nop ()))                  ["pause/if: identifier 'a' is not declared"]
     checkIdIt (Func () "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var () "a" (Type1 "Int") (Write () "a" (Call () "umn" (Read () "b"))))) ["read: identifier 'b' is not declared"]
     checkIdIt (Func () "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var () "a" Type0 (Write () "a" (Call () "umn" (Read () "b"))))) ["read: identifier 'b' is not declared","assignment: types do not match"]
+    checkIdIt (Var () "x" (TypeN [Type0,Type0]) (Write () "x" (Unit ())))  ["assignment: types do not match"]
+    checkIdIt (Var () "x" (Type1 "Int") (Write () "x" (Unit ()))) ["assignment: types do not match"]
 
   --------------------------------------------------------------------------
   describe "checkStmts -- program is valid" $ do

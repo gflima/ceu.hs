@@ -1,5 +1,7 @@
 module Ceu.Code.N where
 
+import Debug.Trace
+
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann.All
 import Ceu.Grammar.Exp  (Exp(..), RawAt(..))
@@ -105,6 +107,7 @@ expr n (RawE  src raw)  = (n', RawE All{source=src,n=n,trails=(0,0)} raw') where
                             (n',raw') = fold_raw (n+1) raw
 expr n (Const src v)    = (n+1, Const All{source=src,n=n,trails=(0,0)} v)
 expr n (Read  src id)   = (n+1, Read  All{source=src,n=n,trails=(0,0)} id)
+expr n (Unit  src)      = (n+1, Unit  All{source=src,n=n,trails=(0,0)})
 expr n (Tuple src exps) = (n',  Tuple All{source=src,n=n,trails=(0,0)} exps') where
                             (n',exps') = foldr (\e (n,l) ->
                                                 let (n',e') = expr n e in

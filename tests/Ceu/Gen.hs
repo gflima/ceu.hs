@@ -22,9 +22,12 @@ ceuc :: String -> [(String,Int)] -> (Errors, Maybe [(String,String)])
 ceuc src hst =
     case Parsec.parse (Token.s *> Parser.stmt <* Parsec.eof) "" src of
         (Left  e)    -> ([show e], Nothing)
-        (Right full) -> (es, Just out) where
+        (Right full) -> (es, out) where
                             (es,basic) = FullE.compile' (True,True,True) full
-                            out = Gen.stmt basic hst
+                            out = if null es then
+                                    Just $ Gen.stmt basic hst
+                                  else
+                                    Nothing
 
 go :: String -> String -> [(String,Int)] -> IO (Int,Errors)
 go tpl src hst =
@@ -49,8 +52,8 @@ main = do
     setCurrentDirectory "Ceu/Code/main/"
     mapM_ (\(ret1,es1,hst,src) -> do
             (ret2,es2) <- go tpl src hst
-            assertEqual src ret1 ret2
             assertEqual src es1  es2
+            assertEqual src ret1 ret2
             )
           tests
 
@@ -58,6 +61,7 @@ main = do
 
 tests :: [(Int, Errors, [(String,Int)], String)]
 tests = [
+    --(0,   [], [], "escape 1"),    -- (to force error)
     (10,  [], [], "escape 10"),
     (10,  [], [], "escape 5+5"),
     -- TODO: trap/escape()
@@ -69,16 +73,24 @@ tests = [
     (1,   [], [], "escape {CEU_TRAILS_N}"),
     (16,  [], [], "escape {sizeof(tceu_trl)}"),
     (24,  [], [], "escape {sizeof(tceu_mem_ROOT)}"),
+    (0,   ["(line 1, column 13):\nassignment: types do not match"], [],
+                  "val x:Int x <: () escape 100"),
+    (0,   ["(line 1, column 11):\nassignment: types do not match"], [],
+                  "val x:Int :: () escape 100"),
+    (100, [], [], "val x:()  x <: () escape 100"),
+    (100, [], [], "val x:Int :: 100 escape x"),
     (100, [], [], "{int x = 100}; escape {x}"),
     (100, [], [], "val x:Int :: 100 escape {`x`}"),
     (3,   [], [], "val x:Int::1 ; val y:Int::2 ; escape {`x+y`}"),
+    (1,   [], [], "val x:((),()) :: () val y:Int :: 1 escape y"),
+    (1,   [], [], "val x:((),()) :: ((),()) val y:Int :: 1 escape y"),
     (3,   [], [], "val x:(Int,Int)::(1;2) ; escape +x"),
-    --(0,   [], [], "escape 1"),
     (10,  [], [], "val vs:(Int,Int) :: (5 5) ; escape + vs"),
     -- TODO: unused vars
     (32,  [], [], "val x:Int ; val y:Int ; escape {sizeof(tceu_mem_ROOT)}"),
     -- TODO: tmp vars
     (35,  [], [], "val x:Int::1 ; val y:Int::2 ; escape {`(x+y)`+sizeof(tceu_mem_ROOT)}"),
+    (100, [], [], "val x:() :: () if x==() then escape 100 else escape 0 end"),
     (1,   ["(line 1, column 1):\nloop: `loop` never iterates"],
         [],
         "loop do break end ; escape 1"),

@@ -39,7 +39,7 @@ compile p = --traceShowId $
     comb :: (Stmt ann -> (Errors,Stmt ann)) -> (Errors,Stmt ann) -> (Errors,Stmt ann)
     comb f (es,p) = (es++es',p') where (es',p') = f p
 
-compile' :: (Eq ann, Ann ann) => Check.Options -> Stmt ann -> (Errors, G.Stmt ann)
+compile' :: (Show ann, Eq ann, Ann ann) => Check.Options -> Stmt ann -> (Errors, G.Stmt ann)
 compile' (o_simp,o_encl,o_prel) p = (es2++es3++es4, p4)
   where
     p0       = if not o_prel then p else
@@ -69,7 +69,7 @@ reaction p (ext,val) = (p''',outs) where
   p' = E.Var (E.getAnn p) ("_INPUT", val) p
   (E.Var _ _ p''') = p''
 
-evalFullProg :: (Eq ann, Ann ann) => Stmt ann -> [In] -> E.Result
+evalFullProg :: (Show ann, Eq ann, Ann ann) => Stmt ann -> [In] -> E.Result
 evalFullProg prog ins =
   let (es,s) = compile' (True,True,True) prog in
     if es == [] then

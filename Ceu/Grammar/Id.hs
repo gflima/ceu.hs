@@ -8,7 +8,7 @@ import Ceu.Grammar.Type
 import Ceu.Grammar.Exp
 import Ceu.Grammar.Stmt
 
-check :: (Ann ann) => (Stmt ann) -> Errors
+check :: (Show ann, Ann ann) => (Stmt ann) -> Errors
 check p = stmt [] p
 
 stmt :: (Ann ann) => [Stmt ann] -> Stmt ann -> Errors

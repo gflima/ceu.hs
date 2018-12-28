@@ -347,7 +347,7 @@ run prog ins reaction = eP (fromGrammar prog) ins []
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "_ret" set by the program.
-compile_run :: (Eq ann, Ann ann) => (G.Stmt ann) -> [ID_Inp] -> Result
+compile_run :: (Show ann, Eq ann, Ann ann) => (G.Stmt ann) -> [ID_Inp] -> Result
 compile_run prog ins =
   let (es,p) = Check.compile (True,True,False) prog in
     if es == [] then

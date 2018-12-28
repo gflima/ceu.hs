@@ -12,7 +12,7 @@ import qualified Ceu.Grammar.Id as Id
 
 type Options = (Bool,Bool,Bool)
 
-compile :: (Eq ann, Ann ann) => Options -> (Stmt ann) -> (Errors, Stmt ann)
+compile :: (Show ann, Eq ann, Ann ann) => Options -> (Stmt ann) -> (Errors, Stmt ann)
 compile (o_simp,o_encl,o_prel) p = (es3,p2) where
     -- TODO: o_prel
   p1   = if not o_encl then p else
