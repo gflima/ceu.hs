@@ -99,8 +99,8 @@ spec = do
         it "TODO-index-tuples" $
             run "var x:(Int,()) <- (1 ()) ; var y:(Int,()) <- x ; escape 1" []
             `shouldBe` Right (1, [[]])
-        it "var x:(Int,Int) <- (1 2) ; escape (+) x" $
-            run "var x:(Int,Int) <- (1 2) ; escape (+) x" []
+        it "var x:(Int,Int) <- (1 2) ; escape + x | (TODO: no RT support for tuples)" $
+            run "var x:(Int,Int) <- (1 2) ; escape + x" []
             `shouldBe` Right (3, [[]])
 
 -------------------------------------------------------------------------------

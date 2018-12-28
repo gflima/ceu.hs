@@ -1,9 +1,12 @@
 module Ceu.Code.Gen where
 
 import Debug.Trace
+import Data.List        (intercalate)
+import qualified Data.Set as Set
 import Data.Maybe
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann.All
+import Ceu.Grammar.Type (Type(..))
 import Ceu.Grammar.Exp  (Exp(..), RawAt(..))
 import Ceu.Grammar.Stmt (Stmt(..))
 import qualified Ceu.Code.N as N
@@ -24,7 +27,8 @@ dnz = Down { traps   = []
 -------------------------------------------------------------------------------
 
 data Up = Up { inps     :: [String]
-             , vars_up  :: [String]
+             , tps_up   :: [Type]
+             , vars_up  :: [(String,String)]
              , evts_up  :: [String]
              , code_bef :: String
              , code_brk :: Maybe String
@@ -35,6 +39,7 @@ data Up = Up { inps     :: [String]
 
 upz :: Up
 upz = Up { inps     = []
+         , tps_up   = []
          , vars_up  = []
          , evts_up  = []
          , code_bef = ""
@@ -45,6 +50,7 @@ upz = Up { inps     = []
 
 up_union :: Up -> Up -> Up
 up_union u1 u2 = upz { inps     = (inps    u1) ++ (inps    u2)
+                     , tps_up   = (tps_up  u1) ++ (tps_up  u2)
                      , vars_up  = (vars_up u1) ++ (vars_up u2)
                      , evts_up  = (evts_up u1) ++ (evts_up u2)
                      , code_bef = ""
@@ -89,16 +95,30 @@ getEnvEvt env evt = "CEU_EVENT_" ++ evt ++ "__" ++ (show $ toN $ getEnv env evt)
 -------------------------------------------------------------------------------
 
 expr :: [(ID_Var,Stmt All)] -> Exp All -> String
-expr vars (RawE  _ raw) = fold_raw vars raw
-expr vars (Const _ n)   = show n
-expr vars (Read  _ id)  = getEnvVar vars id
-expr vars (Call  _ "(-1)" e) = "(-" ++ (expr vars e) ++ ")"
-expr vars (Call  _ "(+)"  (Tuple _ [e1,e2])) = "(" ++ (expr vars e1) ++ " + " ++ (expr vars e2) ++ ")"
-expr vars (Call  _ "(-)"  (Tuple _ [e1,e2])) = "(" ++ (expr vars e1) ++ " - " ++ (expr vars e2) ++ ")"
-expr vars (Call  _ "(*)"  (Tuple _ [e1,e2])) = "(" ++ (expr vars e1) ++ " * " ++ (expr vars e2) ++ ")"
-expr vars (Call  _ "(/)"  (Tuple _ [e1,e2])) = "(" ++ (expr vars e1) ++ " / " ++ (expr vars e2) ++ ")"
-expr vars (Call  _ "(==)" (Tuple _ [e1,e2])) = "(" ++ (expr vars e1) ++ " / " ++ (expr vars e2) ++ ")"
-expr vars (Call  _ "(<=)" (Tuple _ [e1,e2])) = "(" ++ (expr vars e1) ++ " / " ++ (expr vars e2) ++ ")"
+expr vars (RawE  _ raw)    = fold_raw vars raw
+expr vars (Const _ n)      = show n
+expr vars (Read  _ id)     = getEnvVar vars id
+--expr vars e@(Tuple _ exps) = "({ tceu__int__int __ceu_" ++ n ++ " = {" ++ vs ++ "}; __ceu_" ++ n ++ ";})"
+expr vars e@(Tuple _ exps) = "((tceu__int__int){" ++ vs ++ "})"
+    where
+        n  = show $ toN e
+        vs = intercalate "," (map (\e -> expr vars e) exps)
+
+expr vars (Call  _ "negate" e) = "(negate(" ++ (expr vars e) ++ "))"
+expr vars (Call  _ "(+)"    e) = "(plus(&" ++ e' ++ "))"
+                                    where e' = expr vars e
+expr vars (Call  _ "(-)"    e) = "(minus(&" ++ e' ++ "))"
+                                    where e' = expr vars e
+expr vars (Call  _ "(*)"    e) = "(times(&" ++ e' ++ "))"
+                                    where e' = expr vars e
+expr vars (Call  _ "(/)"    e) = "(div(&" ++ e' ++ "))"
+                                    where e' = expr vars e
+expr vars (Call  _ "(==)"   e) = "(equal(&" ++ e' ++ "))"
+                                    where e' = expr vars e
+expr vars (Call  _ "(<=)"   e) = "(lte(&" ++ e' ++ "))"
+                                    where e' = expr vars e
+
+expr _ e = error (show e)
 
 fold_raw :: [(ID_Var,Stmt All)] -> [RawAt All] -> String
 fold_raw vars raw = take ((length raw')-2) (drop 1 raw') where
@@ -116,10 +136,12 @@ stmt :: Stmt Source -> [(String,Int)] -> [(String,String)]
 stmt p h = [
       ("CEU_TCEU_NTRL", n2tp $ toTrailsN p')
     , ("CEU_TRAILS_N",  show $ toTrailsN p')
-    , ("CEU_INPS",      concat $ map (\inp->"    CEU_INPUT_"++inp++",\n") $ inps    up)
-    , ("CEU_EVTS",      concat $ map (\evt->"    CEU_EVENT_"++evt++",\n") $ evts_up up)
-    , ("CEU_VARS",      concat $ map (\var->"    int "++var++";\n")       $ vars_up up)
-    , ("CEU_HISTORY",   concat $ map (\(evt,v) -> "    _CEU_INPUT=" ++ (show v) ++ "; ceu_input(CEU_INPUT_" ++ evt ++ ");") h)
+    -- TODO: unify all dcls/types outputs
+    , ("CEU_INPS",      concat $ map (\inp->s++"CEU_INPUT_"++inp++",\n") $ inps    up)
+    , ("CEU_EVTS",      concat $ map (\evt->s++"CEU_EVENT_"++evt++",\n") $ evts_up up)
+    , ("CEU_TYPES",     concat $ rmdups $ map (\tp->tp2dcl tp++"\n") $ tps_up up)
+    , ("CEU_VARS",      concat $ map (\(var,tp)->s++tp++" "++var++";\n") $ vars_up up)
+    , ("CEU_HISTORY",   concat $ map (\(evt,v) ->s++"_CEU_INPUT="++show v++"; ceu_input(CEU_INPUT_"++evt++")"++";\n" ) h)
     , ("CEU_LABELS",    concat $ root2 ++ labels up ++ root1 )
     ]
     where
@@ -131,8 +153,35 @@ stmt p h = [
                     Nothing  -> []
                     Just lbl -> [ olbl lbl (code_aft up) ]
 
+        s = "    "
+
         n2tp :: Int -> String
         n2tp v = if v>2^32 then "u64" else if v>2^16 then "u32" else if v>2^8 then "u16" else "u8"
+
+        rmdups :: Ord a => [a] -> [a]
+        rmdups = rmdups' Set.empty where
+          rmdups' _ [] = []
+          rmdups' a (b : c) = if Set.member b a
+            then rmdups' a c
+            else b : rmdups' (Set.insert b a) c
+
+-------------------------------------------------------------------------------
+
+tp2use :: Type -> String
+tp2use Type0         = "void"
+tp2use (Type1 "Int") = "int"
+tp2use (TypeN tps)   = "tceu__" ++ intercalate "__" (map (\tp -> tp2use tp) tps)
+
+tp2dcl :: Type -> String
+tp2dcl tp@(TypeN tps) =
+    "typedef struct " ++ use ++ " {\n"  ++
+    (snd $ foldr (\tp (n,s) -> (n-1, "    " ++ tp2use tp ++ " _" ++ show n ++ ";\n" ++ s))
+                 (length tps,"") tps)   ++
+    "} " ++ use ++ ";\n"
+    where
+        use = tp2use tp
+tp2dcl _ = ""
+
 
 -------------------------------------------------------------------------------
 
@@ -151,16 +200,17 @@ aux dn s@(Evt _ id p) = p' { evts_up=(id++"__"++(show$toN s)):(evts_up p') }
         p'  = aux dn' p
         dn' = dn{ evts_dn = (id,s):(evts_dn dn) }
 
-aux dn s@(Var _ id _ p) = p' { vars_up=id':(vars_up p') }
+aux dn s@(Var _ id tp p) = p' { tps_up=tp:(tps_up p'), vars_up=(id',tp'):(vars_up p') }
     where
         p'  = aux dn' p
         dn' = dn{ vars_dn = (id,s):(vars_dn dn) }
         id' = id ++ "__" ++ (show $ toN s)
+        tp' = tp2use tp
 
-aux dn s@(Func _ id _ _ p) = aux dn p --{ vars_up=id':(vars_up p') }
+aux dn s@(Func _ id inp out p) = p' { tps_up=inp:out:(tps_up p') }
     where
-        --p'  = aux dn' p
-        --dn' = dn{ vars_dn = (id,s):(vars_dn dn) }
+        p'  = aux dn' p
+        dn' = dn --{ vars_dn = (id,s):(vars_dn dn) }
         --id' = id ++ "__" ++ (show $ toN s)
 
 aux dn s@(Write _ var exp) = upz { code_bef=src }

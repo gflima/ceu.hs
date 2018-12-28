@@ -10,10 +10,10 @@ data RawAt ann = RawAtE (Exp ann) | RawAtS String
 data Exp ann
     = RawE   ann [RawAt ann]        -- {@(ceu)+c}
     | Const  ann Val                -- 1
+    | Read   ann ID_Var             -- a ; xs
     | Unit   ann                    -- ()
     -- | Parens ann (Exp ann)          -- (1) ; (f 1) ; (f (1,2)) ; (())
     | Tuple  ann [Exp ann]          -- (1,2) ; ((1),2) ; ((1,2),3) ; ((),()) // (len >= 2)
-    | Read   ann ID_Var             -- a ; xs
     | Call   ann ID_Func (Exp ann)  -- f a ; f(a) ; f(1,2)
     deriving (Eq, Show)
 

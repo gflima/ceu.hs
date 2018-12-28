@@ -76,9 +76,8 @@ enum {
 
 /*****************************************************************************/
 
-//<|< CEU_EXTS_TYPES >|>
-//<|< CEU_EVTS_TYPES >|>
-//<|< CEU_CODES_MEMS >|>
+/* CEU_TYPES */
+<<< CEU_TYPES >>>
 
 /*****************************************************************************/
 
@@ -181,6 +180,26 @@ CEU_API int ceu_loop (int argc, char* argv[])
     }
 
     return 0;
+}
+
+/*****************************************************************************/
+
+// PRELUDE
+
+static int negate (int v) {
+    return -v;
+}
+
+static int plus (tceu__int__int* v) {
+    return v->_1 + v->_2;
+}
+
+static int times (tceu__int__int* v) {
+    return v->_1 * v->_2;
+}
+
+static int equal (tceu__int__int* v) {
+    return v->_1 == v->_2;
 }
 
 /*****************************************************************************/

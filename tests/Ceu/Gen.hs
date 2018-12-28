@@ -60,8 +60,10 @@ tests :: [(Int, Errors, [(String,Int)], String)]
 tests = [
     (10,  [], [], "escape 10"),
     (10,  [], [], "escape 5+5"),
+    -- TODO: trap/escape()
     --(1,   [], [], "var void:() = trap do trap do escape/void end ; escape 1"),
-    --(10,  [], [], "var vs:(Int,Int) <- (5 5) ; escape (+) vs"),
+    -- TODO: pattern matching
+    --(3,   [], [], "var x:(Int,())<-(1;()) ; escape +x"),
     (100, [], [], "escape 100"),
     (100, [], [], "escape {100}"),
     (1,   [], [], "escape {CEU_TRAILS_N}"),
@@ -70,6 +72,9 @@ tests = [
     (100, [], [], "{int x = 100}; escape {x}"),
     (100, [], [], "var x:Int <- 100 escape {`x`}"),
     (3,   [], [], "var x:Int<-1 ; var y:Int<-2 ; escape {`x+y`}"),
+    (3,   [], [], "var x:(Int,Int)<-(1;2) ; escape +x"),
+    --(0,   [], [], "escape 1"),
+    (10,  [], [], "var vs:(Int,Int) <- (5 5) ; escape + vs"),
     -- TODO: unused vars
     (32,  [], [], "var x:Int ; var y:Int ; escape {sizeof(tceu_mem_ROOT)}"),
     -- TODO: tmp vars

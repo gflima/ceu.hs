@@ -9,7 +9,7 @@ data All = All { source :: Source
                , n      :: Int
                , trails :: Trails
                }
-    deriving Show
+    deriving (Eq, Show)
 
 instance Ann All where
     getSource v = source v

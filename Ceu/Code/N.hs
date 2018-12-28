@@ -94,17 +94,22 @@ stmt n trl0 (Escape src k) = (n+1, 1, Escape All{source=src,n=n,trails=(trl0,1)}
 stmt n trl0 (Halt src)     = (n+1, 1, Halt   All{source=src,n=n,trails=(trl0,1)})
 stmt n trl0 (RawS src raw) = (n',  1, RawS   All{source=src,n=n,trails=(trl0,1)} raw')
     where
-        (n',raw') = fold_raw n raw
+        (n',raw') = fold_raw (n+1) raw
 
 stmt n trl0 p = error (show p)
 
 -------------------------------------------------------------------------------
 
 expr :: Int -> (Exp Source) -> (Int, Exp All)
-expr n (RawE  src raw) = (n', RawE All{source=src,n=n,trails=(0,0)} raw') where
-                            (n',raw') = fold_raw n raw
-expr n (Const src v)   = (n+1, Const All{source=src,n=n,trails=(0,0)} v)
-expr n (Read  src id)  = (n+1, Read  All{source=src,n=n,trails=(0,0)} id)
+expr n (RawE  src raw)  = (n', RawE All{source=src,n=n,trails=(0,0)} raw') where
+                            (n',raw') = fold_raw (n+1) raw
+expr n (Const src v)    = (n+1, Const All{source=src,n=n,trails=(0,0)} v)
+expr n (Read  src id)   = (n+1, Read  All{source=src,n=n,trails=(0,0)} id)
+expr n (Tuple src exps) = (n',  Tuple All{source=src,n=n,trails=(0,0)} exps') where
+                            (n',exps') = foldr (\e (n,l) ->
+                                                let (n',e') = expr n e in
+                                                    (n',e':l))
+                                               (n+1,[]) exps
 
 expr n (Call src1 id (Tuple src2 [e1,e2])) =
     (n2', Call All{source=src1,n=n,trails=(0,0)} id
@@ -115,6 +120,8 @@ expr n (Call src1 id (Tuple src2 [e1,e2])) =
 expr n (Call src id e) = (n', Call All{source=src,n=n,trails=(0,0)} id e')
     where
         (n',e') = expr (n+1) e
+
+-------------------------------------------------------------------------------
 
 fold_raw :: Int -> [RawAt Source] -> (Int, [RawAt All])
 fold_raw n raw =
