@@ -74,10 +74,10 @@ oln p = "//#line " ++ (show ln) ++ " \"" ++ file ++ "\" " ++ comm ++ "\n"
         comm        = "// " ++ (toWord p)
 
 odcl :: String -> String
-odcl lbl = "void " ++ lbl ++ " (tceu_stk* _ceu_stk);\n\n"
+odcl lbl = "static void " ++ lbl ++ " (tceu_stk* _ceu_stk);\n\n"
 
 olbl :: String -> String -> String
-olbl lbl src = "void " ++ lbl ++ " (tceu_stk* _ceu_stk) " ++
+olbl lbl src = "static void " ++ lbl ++ " (tceu_stk* _ceu_stk) " ++
                  oblk src ++ "\n"
 
 -------------------------------------------------------------------------------

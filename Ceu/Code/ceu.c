@@ -8,7 +8,7 @@ typedef <<< CEU_TCEU_NTRL >>> tceu_ntrl;
 
 #define CEU_TRAILS_N <<< CEU_TRAILS_N >>>
 
-#define CEU_API
+#define CEU_API static
 CEU_API void ceu_start (int argc, char* argv[]);
 CEU_API void ceu_stop  (void);
 CEU_API void ceu_input (tceu_nevt evt);
@@ -27,7 +27,7 @@ typedef struct tceu_stk {
     struct tceu_stk* prv;
 } tceu_stk;
 
-void CEU_LABEL_ROOT (tceu_stk* _ceu_stk);
+static void CEU_LABEL_ROOT (tceu_stk* _ceu_stk);
 
 typedef struct tceu_trl {
     tceu_nevt evt;
@@ -91,11 +91,11 @@ typedef struct tceu_app {
     tceu_mem_ROOT root;
 } tceu_app;
 
-CEU_API static tceu_app CEU_APP;
+CEU_API tceu_app CEU_APP;
 
 /*****************************************************************************/
 
-void ceu_stack_clear (tceu_stk* stk, tceu_ntrl t0, tceu_ntrl n) {
+static void ceu_stack_clear (tceu_stk* stk, tceu_ntrl t0, tceu_ntrl n) {
     if (stk == NULL) {
         return;
     }
@@ -133,7 +133,7 @@ static void ceu_bcast_exec (tceu_bcast* cst, tceu_stk* cur)
     }
 }
 
-void ceu_bcast (tceu_bcast* cst, tceu_stk* cur)
+static void ceu_bcast (tceu_bcast* cst, tceu_stk* cur)
 {
     ceu_bcast_mark(cst, cur);
     ceu_bcast_exec(cst, cur);
