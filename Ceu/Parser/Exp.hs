@@ -105,7 +105,7 @@ expr_call_pos :: Parser (Exp Source)
 expr_call_pos = do
     pos <- pos2src <$> getPosition
     e1  <- expr_call_inf
-    ops <- many tk_op
+    ops <- many (try tk_op <|> try (char '`' *> (tk_func <* char '`')))
     return $ foldl (\e op -> Call pos op e) e1 ops
 
 expr_call_inf :: Parser (Exp Source)
