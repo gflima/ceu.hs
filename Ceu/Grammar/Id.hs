@@ -17,7 +17,7 @@ stmt ids s@(Var _ id _ p)    = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
 stmt ids s@(Inp _ id p)      = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
 stmt ids s@(Out _ id p)      = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
 stmt ids s@(Evt _ id p)      = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
-stmt ids s@(Func _ id _ _ p) = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
+stmt ids s@(Func _ id _ p)   = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
 
 stmt ids s@(Write _ id exp) = es1 ++ es2 ++ es3
                               where
@@ -52,13 +52,6 @@ stmt ids p                 = []
 
 -------------------------------------------------------------------------------
 
-getType :: Maybe (Stmt ann) -> Type
-getType Nothing                  = TypeB
-getType (Just (Var _ _ tp _))    = tp
-getType (Just (Func _ _ tp _ _)) = tp        -- input type (params)
-
--------------------------------------------------------------------------------
-
 isVar (Var _ _ _ _) = True
 isVar _             = False
 
@@ -76,15 +69,15 @@ isInpEvt (Inp _ _ _) = True
 isInpEvt (Evt _ _ _) = True
 isInpEvt _           = False
 
-isFunc (Func _ _ _ _ _) = True
-isFunc _                = False
+isFunc (Func _ _ _ _) = True
+isFunc _              = False
 
 getId :: Stmt ann -> String
 getId (Var _ id _ _)    = id
 getId (Inp _ id _)      = id
 getId (Out _ id _)      = id
 getId (Evt _ id _)      = id
-getId (Func _ id _ _ _) = id
+getId (Func _ id _ _)   = id
 
 find' :: String -> [Stmt ann] -> Maybe (Stmt ann)
 find' id ids = find (\s -> getId s == id) ids
@@ -101,11 +94,19 @@ fff id ids use pred =
     case dcl of
         Nothing -> (TypeB, [toError use "identifier '" ++ id ++ "' is not declared"])
         Just s  -> if pred s then
-                    (getType dcl, [])
+                    (retType dcl, [])
                    else
                     (TypeB, [toError use "identifier '" ++ id ++ "' is invalid"])
     where
         dcl = find' id ids
+
+        retType :: Maybe (Stmt ann) -> Type
+        retType Nothing                           = TypeB
+        retType (Just (Var _ _ tp _))             = tp
+        retType (Just (Func _ _ (TypeF inp _) _)) = inp       -- input type (params)
+
+-------------------------------------------------------------------------------
+
 
 isTypeB TypeB = True
 isTypeB _     = False
@@ -140,5 +141,5 @@ expr ids e@(Call _ id exp) = (tp, es1++es2++es3)
                                             else
                                                 checkTypesErrs e tp1 tp2
                                 tp = case find' id ids of
-                                        Just (Func _ _ _ tp' _) -> tp'
-                                        otherwise               -> TypeB
+                                        Just (Func _ _ (TypeF _ tp') _) -> tp'
+                                        otherwise                       -> TypeB

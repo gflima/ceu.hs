@@ -32,8 +32,8 @@ stmt n trl0 (Evt src id p) =
     where
         (n',ts',p') = stmt (n+1) trl0 p
 
-stmt n trl0 (Func src id inp out p) =
-    (n',ts', Func All{source=src,n=n,trails=(trl0,ts')} id inp out p')
+stmt n trl0 (Func src id tp p) =
+    (n',ts', Func All{source=src,n=n,trails=(trl0,ts')} id tp p')
     where
         (n',ts',p') = stmt (n+1) trl0 p
 

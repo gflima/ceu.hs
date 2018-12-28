@@ -207,7 +207,7 @@ aux dn s@(Var _ id tp p) = p' { tps_up=tp:(tps_up p'), vars_up=(id',tp'):(vars_u
         id' = id ++ "__" ++ (show $ toN s)
         tp' = tp2use tp
 
-aux dn s@(Func _ id inp out p) = p' { tps_up=inp:out:(tps_up p') }
+aux dn s@(Func _ id (TypeF inp out) p) = p' { tps_up=inp:out:(tps_up p') }
     where
         p'  = aux dn' p
         dn' = dn --{ vars_dn = (id,s):(vars_dn dn) }

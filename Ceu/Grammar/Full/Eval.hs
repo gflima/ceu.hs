@@ -52,16 +52,16 @@ compile' (o_simp,o_encl,o_prel) p = (es2++es3++es4, p4)
     z        = getAnn p
 
     defs = (Seq z
-            (Func z "(==)" (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Bool"))
+            (Func z "(==)" (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Bool")))
             (Seq z
-                (Func z "(+)" (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int"))
+                (Func z "(+)" (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
                 (Seq z
-                    (Func z "(-)" (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int"))
+                    (Func z "(-)" (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
                     (Seq z
-                        (Func z "(/)" (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int"))
+                        (Func z "(/)" (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
                         (Seq z
-                            (Func z "negate" (Type1 "Int") (Type1 "Int"))
-                            (Func z "(*)" (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))))))
+                            (Func z "negate" (TypeF (Type1 "Int") (Type1 "Int")))
+                            (Func z "(*)" (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int"))))))))
 
 reaction :: E.Stmt ann -> In -> (E.Stmt ann, E.Outs)
 reaction p (ext,val) = (p''',outs) where

@@ -138,8 +138,8 @@ spec = do
     checkIdIt (AwaitEvt () "e")                        ["await: identifier 'e' is not declared"]
     checkIdIt (Every () "e" (Nop ()))                  ["every: identifier 'e' is not declared"]
     checkIdIt (Pause () "a" (Nop ()))                  ["pause/if: identifier 'a' is not declared"]
-    checkIdIt (Func () "umn" (Type1 "Int") (Type1 "Int") (Var () "a" (Type1 "Int") (Write () "a" (Call () "umn" (Read () "b"))))) ["read: identifier 'b' is not declared"]
-    checkIdIt (Func () "umn" (Type1 "Int") (Type1 "Int") (Var () "a" Type0 (Write () "a" (Call () "umn" (Read () "b"))))) ["read: identifier 'b' is not declared","assignment: types do not match"]
+    checkIdIt (Func () "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var () "a" (Type1 "Int") (Write () "a" (Call () "umn" (Read () "b"))))) ["read: identifier 'b' is not declared"]
+    checkIdIt (Func () "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var () "a" Type0 (Write () "a" (Call () "umn" (Read () "b"))))) ["read: identifier 'b' is not declared","assignment: types do not match"]
 
   --------------------------------------------------------------------------
   describe "checkStmts -- program is valid" $ do
