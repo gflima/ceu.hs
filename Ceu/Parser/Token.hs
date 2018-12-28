@@ -26,13 +26,14 @@ keywords = [
     "if",
     "input",
     "loop",
+    "mut",
     "output",
     "par",
     "par/and",
     "par/or",
     "then",
     "trap",
-    "var",
+    "val",
     "with"
   ]
 tk_reserved :: Parser ()

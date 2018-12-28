@@ -67,7 +67,7 @@ stmt_break = do
 stmt_var :: Parser (Stmt Source)
 stmt_var = do
     pos  <- pos2src <$> getPosition
-    void <- tk_key "var"
+    void <- (tk_key "val" <|> tk_key "mut")
     var  <- tk_var
     void <- tk_str ":"
     tp   <- type_
