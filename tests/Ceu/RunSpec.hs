@@ -69,38 +69,38 @@ spec = do
         it "var Int a,b" $
             run "var a,b:Int;" []           -- TODO: support a,b,c? (problem w/ assign/finalization)
             `shouldBe` Left "(line 1, column 7):\nunexpected \"b\"\nexpecting \":\""
-        it "a <- 1; escape a;" $
-            run "a <- 1; escape a" []
+        it "a <: 1; escape a;" $
+            run "a <: 1; escape a" []
             `shouldBe` Left "(line 1, column 3):\nassignment: identifier 'a' is not declared\n(line 1, column 16):\nread: identifier 'a' is not declared\n"
-        it "var a : Int <- 1; escape a;" $
-            run "var a : Int <- 1; escape a" []
+        it "var a : Int :: 1; escape a;" $
+            run "var a : Int :: 1; escape a" []
             `shouldBe` Right (1, [[]])
         it "var a:Int" $
             run "var a:Int" []
             `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nhalt: unreachable statement\n"
-        it "var a:Int <- 1" $
-            run "var a:Int <- 1" []
+        it "var a:Int :: 1" $
+            run "var a:Int :: 1" []
             `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nhalt: unreachable statement\n"
-        it "var a:Int ; a <- 1" $
-            run "var a:Int ; a <- 1 ; escape a" []
+        it "var a:Int ; a <: 1" $
+            run "var a:Int ; a <: 1 ; escape a" []
             `shouldBe` Right (1, [[]])
-        it "var x:Int; x<-1; escape x" $
-            run "var x:Int; x <- 1 ;escape x" []
+        it "var x:Int; x::1; escape x" $
+            run "var x:Int; x <: 1 ;escape x" []
             `shouldBe` Right (1, [[]])
         it "hide a" $
             run "var a:Int ; var a:Int ; escape 0" []
             `shouldBe` Left "(line 1, column 13):\ndeclaration: identifier 'a' is already declared\n"
         it "do a=1 end ; a=2" $
-            run "do var a:Int <- 1; end var a:Int <- 2 ; escape a" []
+            run "do var a:Int :: 1; end var a:Int :: 2 ; escape a" []
             `shouldBe` Left "TODO: declared but not used"
-        it "var x:Int <- await X ; escape x" $
-            run "input X:Int var x:Int <- await X ; escape x" [("X",Just 1)]
+        it "var x:Int :: await X ; escape x" $
+            run "input X:Int var x:Int :: await X ; escape x" [("X",Just 1)]
             `shouldBe` Right (1, [[],[]])
         it "TODO-index-tuples" $
-            run "var x:(Int,()) <- (1 ()) ; var y:(Int,()) <- x ; escape 1" []
+            run "var x:(Int,()) :: (1 ()) ; var y:(Int,()) :: x ; escape 1" []
             `shouldBe` Right (1, [[]])
-        it "var x:(Int,Int) <- (1 2) ; escape + x | (TODO: no RT support for tuples)" $
-            run "var x:(Int,Int) <- (1 2) ; escape + x" []
+        it "var x:(Int,Int) :: (1 2) ; escape + x | (TODO: no RT support for tuples)" $
+            run "var x:(Int,Int) :: (1 2) ; escape + x" []
             `shouldBe` Right (3, [[]])
 
 -------------------------------------------------------------------------------
@@ -112,8 +112,8 @@ spec = do
         it "await X ; escape 1" $
             run "input X:Int await X ; escape 1" [("X",Nothing)]
             `shouldBe` Right (1,[[],[]])
-        it "var x:Int <- await X ; await X ; escape x" $
-            run "input X:Int var x:Int <- await X ; await X ; escape x" [("X",Just 1),("X",Nothing)]
+        it "var x:Int :: await X ; await X ; escape x" $
+            run "input X:Int var x:Int :: await X ; await X ; escape x" [("X",Just 1),("X",Nothing)]
             `shouldBe` Right (1, [[],[],[]])
 
     describe "emitext:" $ do
@@ -126,8 +126,8 @@ spec = do
         it "emit X -> 1" $
             run "output X:Int emit X -> 1 ; escape 2;" []
             `shouldBe` Right (2,[[("X",Just 1)]])
-        it "var x:Int <- await X; emit X -> x ; escape x+1" $    -- TODO: X in/out
-            run "input X:Int var x:Int <- await X; emit X -> x ; escape x+1" [("X",Just 1)]
+        it "var x:Int :: await X; emit X -> x ; escape x+1" $    -- TODO: X in/out
+            run "input X:Int var x:Int :: await X; emit X -> x ; escape x+1" [("X",Just 1)]
             `shouldBe` Right (2,[[],[("X",Just 1)]])
 
 -------------------------------------------------------------------------------
@@ -167,7 +167,7 @@ spec = do
             run "if 0==1 then ; if 0==1 then end ; else escape 1 end ; await FOREVER" []
             `shouldBe` Right (1, [[]])
         it "if 1==1 then a=1; a=2; if 1==1 then escape a end end" $
-            run "if 1==1 then var a:Int <-1 ; a<-2; if 1==1 then escape a end end ; await FOREVER" []
+            run "if 1==1 then var a:Int ::1 ; a<:2; if 1==1 then escape a end end ; await FOREVER" []
             `shouldBe` Right (2, [[]])
         it "if 0==1 then . else/if 1==1 then escape 1 else ." $
             run "if 0==1 then escape 0 else/if 1==1 then escape 1 else escape 0 end" []

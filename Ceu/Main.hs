@@ -18,7 +18,7 @@ go :: Bool -> String -> [(String,Int)] -> Either String [(String,String)]
 go o_encl src hst =
     case Parsec.parse (Token.s *> Parser.stmt <* Parsec.eof) "" src of
         (Left  e)  -> Left (show e)
-        (Right p1) -> let (es,p2) = FullE.compile' (True,o_encl) p1
+        (Right p1) -> let (es,p2) = FullE.compile' (True,o_encl,True) p1
 {-
         (Right p1) -> let (es,p2) = FullE.compile' (True,False)
                                         (FullG.Seq ann

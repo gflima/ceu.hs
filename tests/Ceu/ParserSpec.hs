@@ -353,17 +353,17 @@ spec = do
             it "var var x" $
                 parse stmt_var "var var x"
                 `shouldBe` Left "(line 1, column 8):\nunexpected \" \"\nexpecting digit, letter or \"_\""
-            it "var a: Int <- 1" $
-                parse stmt_var "var a : Int <- 1"
+            it "var a: Int :: 1" $
+                parse stmt_var "var a : Int :: 1"
                 `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "a" (Type1 "Int") Nothing) (Write ("",1,13) "a" (Const ("",1,16) 1)))
-            it "var x : Int <- await X" $
-                parse stmt_var "var x : Int <- await X"
+            it "var x : Int :: await X" $
+                parse stmt_var "var x : Int :: await X"
                 `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" (Type1 "Int") Nothing) (AwaitInp ("",1,16) "X" (Just "x")))
-            it "var x:() <- ()" $
-                parse stmt_var "var x:() <- ()"
+            it "var x:() :: ()" $
+                parse stmt_var "var x:() :: ()"
                 `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" Type0 Nothing) (Write ("",1,10) "x" (Unit ("",1,13))))
-            it "var x:(Int,()) <- (1 ())" $
-                parse stmt_var "var x:(Int,()) <- (1 ())"
+            it "var x:(Int,()) :: (1 ())" $
+                parse stmt_var "var x:(Int,()) :: (1 ())"
                 `shouldBe` Right (Seq ("",1,1) (Var ("",1,1) "x" (TypeN [Type1 "Int",Type0]) Nothing) (Write ("",1,16) "x" (Tuple ("",1,19) [Const ("",1,20) 1,Unit ("",1,22)])))
 
         describe "ext:" $ do
@@ -387,25 +387,25 @@ spec = do
             it "event event x" $
                 parse stmt_evt "event event x"
                 `shouldBe` Left "(line 1, column 12):\nunexpected \" \"\nexpecting digit, letter or \"_\""
-            it "event a: Int <- 1" $
-                parse stmt_evt "event a : Int <- 1"
-                `shouldBe` Left "(line 1, column 15):\nunexpected '<'\nexpecting end of input"
-            it "event x : Int <- await X" $
-                parse stmt_evt "event x : Int <- await X"
-                `shouldBe` Left "(line 1, column 15):\nunexpected '<'\nexpecting end of input"
+            it "event a: Int :: 1" $
+                parse stmt_evt "event a : Int :: 1"
+                `shouldBe` Left "(line 1, column 15):\nunexpected ':'\nexpecting end of input"
+            it "event x : Int :: await X" $
+                parse stmt_evt "event x : Int :: await X"
+                `shouldBe` Left "(line 1, column 15):\nunexpected ':'\nexpecting end of input"
 
         describe "write:" $ do
-            it "x <- 1" $
-                parse stmt_attr "x <- 1"
+            it "x <: 1" $
+                parse stmt_attr "x <: 1"
                 `shouldBe` Right (Write ("",1,3) "x" (Const ("",1,6) 1))
-            it "x <- await A" $
-                parse stmt_attr "x <- await A"
+            it "x <: await A" $
+                parse stmt_attr "x <: await A"
                 `shouldBe` Right (AwaitInp ("",1,6) "A" (Just "x"))
-            it "x <- await a" $
-                parse stmt_attr "x <- await a"
+            it "x <: await a" $
+                parse stmt_attr "x <: await a"
                 `shouldBe` Right (AwaitEvt ("",1,6) "a" (Just "x"))
-            it "var <- 1" $
-                parse stmt_attr "var <- 1"
+            it "var <: 1" $
+                parse stmt_attr "var <: 1"
                 `shouldBe` Left "(line 1, column 4):\nunexpected \" \"\nexpecting digit, letter or \"_\""
 
 -------------------------------------------------------------------------------
@@ -500,11 +500,11 @@ spec = do
             it "loop do end" $
                 parse stmt_loop "loop do end"
                 `shouldBe` Right (Loop ("",1,1) (Nop ("",1,9)))
-            it "loop do v<-1 end" $
-                parse stmt_loop "loop do v<-1 end"
+            it "loop do v<:1 end" $
+                parse stmt_loop "loop do v<:1 end"
                 `shouldBe` Right (Loop ("",1,1) (Write ("",1,10) "v" (Const ("",1,12) 1)))
-            it "loop do v<-1 ; await FOREVER end" $
-                parse stmt_loop "loop do v<-1 ; await FOREVER end"
+            it "loop do v<:1 ; await FOREVER end" $
+                parse stmt_loop "loop do v<:1 ; await FOREVER end"
                 `shouldBe` Right (Loop ("",1,1) (Seq ("",1,9) (Write ("",1,10) "v" (Const ("",1,12) 1)) (Halt ("",1,16))))
 
         describe "trap" $ do
@@ -556,8 +556,8 @@ spec = do
                 parse (stmt_seq ("",1,1)) "do end ; do end ; do end"
                 `shouldBe` Right (Seq ("",1,1) (Scope ("",1,1) (Nop ("",1,4))) (Seq ("",1,1) (Scope ("",1,10) (Nop ("",1,13))) (Scope ("",1,19) (Nop ("",1,22)))))
 
-            it "input KEY:Int ; var a:Int ; a<-await KEY ; ret<-a" $
-                parse (stmt_seq ("",1,1)) "var a:Int ; a<-1"
+            it "input KEY:Int ; var a:Int ; a<:await KEY ; ret<:a" $
+                parse (stmt_seq ("",1,1)) "var a:Int ; a<:1"
                 `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "a" (Type1 "Int") Nothing) (Nop ("",1,1))) (Write ("",1,14) "a" (Const ("",1,16) 1)))
 
         describe "stmt:" $ do
@@ -565,12 +565,12 @@ spec = do
                 parse stmt "var x:Int ;escape 1"
                 `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "x" (Type1 "Int") Nothing) (Nop ("",1,1))) (Escape ("",1,12) Nothing (Just (Const ("",1,19) 1))))
 
-            it "var x:Int; x<-1; escape x" $
-                parse stmt "var x:Int ; x <- 1 ; escape x"
+            it "var x:Int; x<:1; escape x" $
+                parse stmt "var x:Int ; x <: 1 ; escape x"
                 `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "x" (Type1 "Int") Nothing) (Nop ("",1,1))) (Seq ("",1,1) (Write ("",1,15) "x" (Const ("",1,18) 1)) (Escape ("",1,22) Nothing (Just (Read ("",1,29) "x")))))
 
-            it "var x:(Int,Int)<-(1;2) ; escape +x" $
-                parse stmt "var x:(Int,Int)<-(1;2) ; escape +x"
+            it "var x:(Int,Int)::(1;2) ; escape +x" $
+                parse stmt "var x:(Int,Int)::(1;2) ; escape +x"
                 `shouldBe` Right (Seq ("",1,1) (Seq ("",1,1) (Var ("",1,1) "x" (TypeN [Type1 "Int",Type1 "Int"]) Nothing) (Write ("",1,16) "x" (Tuple ("",1,18) [Const ("",1,19) 1,Const ("",1,21) 2]))) (Escape ("",1,26) Nothing (Just (Call ("",1,33) "(+)" (Read ("",1,34) "x")))))
 
             it "do ... end" $

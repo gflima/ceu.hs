@@ -19,22 +19,22 @@ import Ceu.Grammar.Full.Grammar  (Stmt(..))
 
 -------------------------------------------------------------------------------
 
-attr_exp :: String -> Parser (Stmt Source)
-attr_exp var = do
+attr_exp :: String -> Parser a -> Parser (Stmt Source)
+attr_exp var op = do
     pos  <- pos2src <$> getPosition
-    void <- tk_str "<-"
+    void <- op
     exp  <- expr
     return $ Write pos var exp
 
-attr_awaitext :: String -> Parser (Stmt Source)
-attr_awaitext var = do
-    void <- tk_str "<-"
+attr_awaitext :: String -> Parser a -> Parser (Stmt Source)
+attr_awaitext var op = do
+    void <- op
     s    <- stmt_awaitext (Just var)
     return s
 
-attr_awaitevt :: String -> Parser (Stmt Source)
-attr_awaitevt var = do
-    void <- tk_str "<-"
+attr_awaitevt :: String -> Parser a -> Parser (Stmt Source)
+attr_awaitevt var op = do
+    void <- op
     s    <- stmt_awaitevt (Just var)
     return s
 
@@ -71,7 +71,7 @@ stmt_var = do
     var  <- tk_var
     void <- tk_str ":"
     tp   <- type_
-    s    <- option (Nop $ pos) (try (attr_exp var) <|> try (attr_awaitext var) <|> try (attr_awaitevt var))
+    s    <- option (Nop $ pos) (try (attr_exp var (tk_str "::")) <|> try (attr_awaitext var (tk_str "::")) <|> try (attr_awaitevt var (tk_str "::")))
     return $ Seq pos (Var pos var tp Nothing) s
 
 stmt_evt :: Parser (Stmt Source)
@@ -108,7 +108,7 @@ stmt_attr :: Parser (Stmt Source)
 stmt_attr = do
     --pos  <- pos2src <$> getPosition
     var  <- tk_var
-    s    <- try (attr_exp var) <|> try (attr_awaitext var) <|> try (attr_awaitevt var)
+    s    <- try (attr_exp var (tk_str "<:")) <|> try (attr_awaitext var (tk_str "<:")) <|> try (attr_awaitevt var (tk_str "<:"))
     return $ s
 
 -------------------------------------------------------------------------------
