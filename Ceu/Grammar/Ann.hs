@@ -6,7 +6,7 @@ import Ceu.Grammar.Type    (Type(TypeB), checkTypes)
 data Ann = Ann { type_  :: Type
                , name   :: String
                , source :: Source
-               , n      :: Int
+               , nn     :: Int
                , trails :: Trails
                }
     deriving (Eq, Show)
@@ -15,7 +15,7 @@ annz :: Ann
 annz = Ann { type_  = TypeB
            , name   = ""
            , source = ("",0,0)
-           , n      = (-1)
+           , nn     = (-1)
            , trails = (0,0)
            }
 

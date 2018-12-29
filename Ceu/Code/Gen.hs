@@ -5,8 +5,7 @@ import Data.List        (intercalate)
 import qualified Data.Set as Set
 import Data.Maybe
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Ann  (Ann(..))
-import Ceu.Grammar.Ann.All
+import Ceu.Grammar.Ann  (Ann(..), toTrails0, toTrailsN)
 import Ceu.Grammar.Type (Type(..))
 import Ceu.Grammar.Exp  (Exp(..), RawAt(..))
 import Ceu.Grammar.Stmt (Stmt(..), getAnn)
@@ -14,9 +13,9 @@ import qualified Ceu.Code.N as N
 
 -------------------------------------------------------------------------------
 
-data Down = Down { traps   :: [Stmt All]
-                 , vars_dn :: [(ID_Var,Stmt All)]
-                 , evts_dn :: [(ID_Evt,Stmt All)]
+data Down = Down { traps   :: [Stmt]
+                 , vars_dn :: [(ID_Var,Stmt)]
+                 , evts_dn :: [(ID_Evt,Stmt)]
                  } -- deriving (Show)
 
 dnz :: Down
@@ -68,11 +67,11 @@ ocmd str = str ++ ";\n"
 oblk :: String -> String
 oblk str = "{\n" ++ str ++ "}\n"
 
-oln :: Ann a => a -> String
-oln ann = "//#line " ++ (show ln) ++ " \"" ++ file ++ "\" " ++ comm ++ "\n"
+oln :: Ann -> String
+oln z = "//#line " ++ (show ln) ++ " \"" ++ file ++ "\" " ++ comm ++ "\n"
     where
-        (file,ln,_) = getSource ann
-        comm        = "// " ++ (getName ann)
+        (file,ln,_) = source z
+        comm        = "// " ++ (name z)
 
 odcl :: String -> String
 odcl lbl = "static void " ++ lbl ++ " (tceu_stk* _ceu_stk);\n\n"
@@ -83,26 +82,26 @@ olbl lbl src = "static void " ++ lbl ++ " (tceu_stk* _ceu_stk) " ++
 
 -------------------------------------------------------------------------------
 
-getEnv :: [(String,Stmt All)] -> String -> Stmt All
+getEnv :: [(String,Stmt)] -> String -> Stmt
 getEnv ((v1,s):l) v2 | v1==v2    = s
                      | otherwise = getEnv l v2
 
 getEnvVar env var = if var == "_INPUT" then "_CEU_INPUT" else "CEU_APP.root."++id'
                     where
-                        id' = var ++ "__" ++ (show $ getN $ getAnn $ getEnv env var)
+                        id' = var ++ "__" ++ (show $ nn $ getAnn $ getEnv env var)
 
-getEnvEvt env evt = "CEU_EVENT_" ++ evt ++ "__" ++ (show $ getN $ getAnn $ getEnv env evt)
+getEnvEvt env evt = "CEU_EVENT_" ++ evt ++ "__" ++ (show $ nn $ getAnn $ getEnv env evt)
 
 -------------------------------------------------------------------------------
 
-expr :: [(ID_Var,Stmt All)] -> Exp All -> String
+expr :: [(ID_Var,Stmt)] -> Exp -> String
 expr vars (RawE  _ raw)    = fold_raw vars raw
 expr vars (Const _ n)      = show n
 expr vars (Read  _ id)     = getEnvVar vars id
 --expr vars e@(Tuple _ exps) = "({ tceu__int__int __ceu_" ++ n ++ " = {" ++ vs ++ "}; __ceu_" ++ n ++ ";})"
 expr vars e@(Tuple z exps) = "{" ++ vs ++ "}"
     where
-        n  = show $ getN z
+        n  = show $ nn z
         vs = intercalate "," (map (\e -> expr vars e) (filter (not.isUnit) exps))
         isUnit (Unit _) = True
         isUnit _        = False
@@ -123,7 +122,7 @@ expr vars (Call  _ "(<=)"   e) = "(lte(&" ++ e' ++ "))"
 
 expr _ e = error (show e)
 
-fold_raw :: [(ID_Var,Stmt All)] -> [RawAt All] -> String
+fold_raw :: [(ID_Var,Stmt)] -> [RawAt] -> String
 fold_raw vars raw = take ((length raw')-2) (drop 1 raw') where
     raw' = aux vars raw
     aux vars [] = ""
@@ -132,10 +131,10 @@ fold_raw vars raw = take ((length raw')-2) (drop 1 raw') where
 
 -------------------------------------------------------------------------------
 
-label :: Ann a => a -> String -> String
-label ann lbl = "CEU_LABEL_" ++ (show $ getN ann) ++ "_" ++ lbl
+label :: Ann -> String -> String
+label z lbl = "CEU_LABEL_" ++ (show $ nn z) ++ "_" ++ lbl
 
-stmt :: Stmt Source -> [(String,Int)] -> [(String,String)]
+stmt :: Stmt -> [(String,Int)] -> [(String,String)]
 stmt p h = [
       ("CEU_TCEU_NTRL", n2tp $ toTrailsN (getAnn p'))
     , ("CEU_TRAILS_N",  show $ toTrailsN (getAnn p'))
@@ -191,7 +190,7 @@ tp2dcl _ = ""
 
 -------------------------------------------------------------------------------
 
-aux :: Down -> Stmt All -> Up
+aux :: Down -> Stmt -> Up
 
 aux dn (Nop   z)      = upz { code_bef=(oln z) }
 aux dn (Halt  z)      = upz { code_bef=(oln z), code_brk=Just(label z "Halt") }
@@ -201,7 +200,7 @@ aux dn (Out   _ id p) = aux dn p
 
 -------------------------------------------------------------------------------
 
-aux dn s@(Evt z id p) = p' { evts_up=(id++"__"++(show$getN z)):(evts_up p') }
+aux dn s@(Evt z id p) = p' { evts_up=(id++"__"++(show$nn z)):(evts_up p') }
     where
         p'  = aux dn' p
         dn' = dn{ evts_dn = (id,s):(evts_dn dn) }
@@ -210,14 +209,14 @@ aux dn s@(Var z id tp p) = p' { tps_up=tp:(tps_up p'), vars_up=(id',tp'):(vars_u
     where
         p'  = aux dn' p
         dn' = dn{ vars_dn = (id,s):(vars_dn dn) }
-        id' = id ++ "__" ++ (show $ getN z)
+        id' = id ++ "__" ++ (show $ nn z)
         tp' = tp2use tp
 
 aux dn s@(Func z id (TypeF inp out) p) = p' { tps_up=inp:out:(tps_up p') }
     where
         p'  = aux dn' p
         dn' = dn --{ vars_dn = (id,s):(vars_dn dn) }
-        --id' = id ++ "__" ++ (show $ getN z)
+        --id' = id ++ "__" ++ (show $ nn z)
 
 aux dn (Write z var exp) = upz { code_bef=src }
     where
@@ -266,7 +265,7 @@ aux dn (EmitEvt z evt) = upz { code_bef=(oln z)++bef }
               (ocmd $ "if (!_ceu_stk->is_alive) return")
 
         id' = getEnvEvt (evts_dn dn) evt
-        (trl0,trlN) = getTrails $ getAnn $ getEnv (evts_dn dn) evt
+        (trl0,trlN) = trails $ getAnn $ getEnv (evts_dn dn) evt
 
 -------------------------------------------------------------------------------
 
