@@ -124,11 +124,11 @@ errDeclared ids (id,z) =
 fff :: (Ann b) => String -> [Stmt a] -> b -> (Stmt a -> Bool) -> (Errors, Type)
 fff id ids z pred =
     case dcl of
-        Nothing -> ([toError z "identifier '" ++ id ++ "' is not declared"], TypeB)
+        Nothing -> ([toError z "identifier '" ++ id ++ "' is not declared"], TypeT) -- TypeT will prevent extra errors
         Just s  -> if pred s then
                     ([], retType dcl)
                    else
-                    ([toError z "identifier '" ++ id ++ "' is invalid"], TypeB)
+                    ([toError z "identifier '" ++ id ++ "' is invalid"], TypeT) -- TypeT will prevent extra errors
     where
         dcl = find' id ids
 
