@@ -8,7 +8,7 @@ import qualified Ceu.Grammar.Full.Compile.Trap as Trap
 
 -- compile
 
-compile :: Stmt ann -> (Errors, Stmt ann)
+compile :: Stmt -> (Errors, Stmt)
 compile p = ([], aux p)
 
 aux (Var' z var tp Nothing p) = Var' z var tp Nothing (aux p)

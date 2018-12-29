@@ -2,6 +2,7 @@ module Ceu.SimplifySpec (main, spec) where
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Type     (Type(..))
+import Ceu.Grammar.Ann      (annz)
 import Ceu.Grammar.Exp      (Exp(..))
 import Ceu.Grammar.Stmt     (Stmt(..))
 import Ceu.Grammar.Simplify
@@ -10,89 +11,89 @@ import Test.Hspec
 main :: IO ()
 main = hspec spec
 
-simplify' :: Stmt () -> Stmt ()
+simplify' :: Stmt -> Stmt
 simplify' p = simplify p
 
 spec :: Spec
 spec = do
 
   describe "simplify" $ do
-    it "(Nop ()) -> (Nop ())" $ do
-      simplify' (Nop ()) `shouldBe` (Nop ())
-    it "Seq () -> (Nop ())" $ do
-      simplify' (Seq () (Nop ()) (Nop ()))   `shouldBe` (Nop ())
-    it "Seq () -> (Nop ())" $ do
-      simplify' (Seq () (Nop ()) (Escape () 0)) `shouldBe` (Escape () 0)
-    it "Seq () -> (Nop ())" $ do
-      simplify' (Seq () (Escape () 0) (Nop ())) `shouldBe` (Escape () 0)
-    it "Loop-Escape () -> (Nop ())" $ do
-      simplify' (Loop () (Escape () 0))    `shouldBe` (Escape () 0)
-    it "Seq () -> (Nop ())" $ do
-      simplify' (Seq () (Seq () (Nop ()) (Escape () 0)) (Nop ())) `shouldBe` (Escape () 0)
-    it "Seq () -> (Nop ())" $ do
-      simplify' (Seq () (Nop ()) (Seq () (Nop ()) (Escape () 0))) `shouldBe` (Escape () 0)
-    it "Seq () -> (Nop ())" $ do
-      simplify' (Seq () (Nop ()) (Seq () (Nop ()) (Trap () (Escape () 0)))) `shouldBe` (Nop ())
+    it "(Nop annz) -> (Nop annz)" $ do
+      simplify' (Nop annz) `shouldBe` (Nop annz)
+    it "Seq annz -> (Nop annz)" $ do
+      simplify' (Seq annz (Nop annz) (Nop annz))   `shouldBe` (Nop annz)
+    it "Seq annz -> (Nop annz)" $ do
+      simplify' (Seq annz (Nop annz) (Escape annz 0)) `shouldBe` (Escape annz 0)
+    it "Seq annz -> (Nop annz)" $ do
+      simplify' (Seq annz (Escape annz 0) (Nop annz)) `shouldBe` (Escape annz 0)
+    it "Loop-Escape annz -> (Nop annz)" $ do
+      simplify' (Loop annz (Escape annz 0))    `shouldBe` (Escape annz 0)
+    it "Seq annz -> (Nop annz)" $ do
+      simplify' (Seq annz (Seq annz (Nop annz) (Escape annz 0)) (Nop annz)) `shouldBe` (Escape annz 0)
+    it "Seq annz -> (Nop annz)" $ do
+      simplify' (Seq annz (Nop annz) (Seq annz (Nop annz) (Escape annz 0))) `shouldBe` (Escape annz 0)
+    it "Seq annz -> (Nop annz)" $ do
+      simplify' (Seq annz (Nop annz) (Seq annz (Nop annz) (Trap annz (Escape annz 0)))) `shouldBe` (Nop annz)
     it "Break;* -> Break" $ do
-      simplify' (Seq () (Escape () 0) (AwaitInp () "")) `shouldBe` (Escape () 0)
+      simplify' (Seq annz (Escape annz 0) (AwaitInp annz "")) `shouldBe` (Escape annz 0)
 
-    it "Var () -> (Nop ())" $ do
-      simplify' (Var () "" Type0 (Nop ())) `shouldBe` (Nop ())
-    it "Var () -> Break" $ do
-      simplify' (Var () "" Type0 (Escape () 0)) `shouldBe` (Escape () 0)
-    it "Var () -> Break" $ do
-      simplify' (Var () "" Type0 (Seq () (Nop ()) (Escape () 0))) `shouldBe` (Escape () 0)
+    it "Var annz -> (Nop annz)" $ do
+      simplify' (Var annz "" Type0 (Nop annz)) `shouldBe` (Nop annz)
+    it "Var annz -> Break" $ do
+      simplify' (Var annz "" Type0 (Escape annz 0)) `shouldBe` (Escape annz 0)
+    it "Var annz -> Break" $ do
+      simplify' (Var annz "" Type0 (Seq annz (Nop annz) (Escape annz 0))) `shouldBe` (Escape annz 0)
 
-    it "Evt () -> (Nop ())" $ do
-      simplify' (Evt () "" (Nop ())) `shouldBe` (Nop ())
-    it "Evt () -> Break" $ do
-      simplify' (Evt () "" (Escape () 0)) `shouldBe` (Escape () 0)
-    it "Evt () -> Break" $ do
-      simplify' (Evt () "" (Seq () (Nop ()) (Escape () 0))) `shouldBe` (Escape () 0)
+    it "Evt annz -> (Nop annz)" $ do
+      simplify' (Evt annz "" (Nop annz)) `shouldBe` (Nop annz)
+    it "Evt annz -> Break" $ do
+      simplify' (Evt annz "" (Escape annz 0)) `shouldBe` (Escape annz 0)
+    it "Evt annz -> Break" $ do
+      simplify' (Evt annz "" (Seq annz (Nop annz) (Escape annz 0))) `shouldBe` (Escape annz 0)
 
-    it "If () a a -> a" $ do
-      simplify' (If () (Const () 1) (AwaitInp () "") (AwaitInp () "")) `shouldBe` (AwaitInp () "")
-    it "If () x y -> If () x y" $ do
-      simplify' (If () (Const () 1) (Escape () 0) (Nop ())) `shouldBe` (If () (Const () 1) (Escape () 0) (Nop ()))
+    it "If annz a a -> a" $ do
+      simplify' (If annz (Const annz 1) (AwaitInp annz "") (AwaitInp annz "")) `shouldBe` (AwaitInp annz "")
+    it "If annz x y -> If annz x y" $ do
+      simplify' (If annz (Const annz 1) (Escape annz 0) (Nop annz)) `shouldBe` (If annz (Const annz 1) (Escape annz 0) (Nop annz))
 
-    it "Every () x y -> Every () x y" $ do
-      simplify' (Every () "a" (Escape () 0)) `shouldBe` (Every () "a" (Escape () 0))
+    it "Every annz x y -> Every annz x y" $ do
+      simplify' (Every annz "a" (Escape annz 0)) `shouldBe` (Every annz "a" (Escape annz 0))
 
   describe "pars:" $ do
-    --it "Par () (Nop ()) y -> y" $ do
-      --simplify' (Par () (Nop ()) (Seq () (Escape () 0) (Nop ()))) `shouldBe` (Escape () 0)
-    it "Par () x Break -> Break" $ do
-      simplify' (Par () (Seq () (Escape () 0) (Nop ())) (AwaitInp () "")) `shouldBe` (Escape () 0)
-    it "Par () x Break -> Break" $ do
-      simplify' (Par () (Seq () (AwaitInp () "") (Nop ())) (AwaitInp () "")) `shouldBe` (Par () (AwaitInp () "") (AwaitInp () ""))
+    --it "Par annz (Nop annz) y -> y" $ do
+      --simplify' (Par annz (Nop annz) (Seq annz (Escape annz 0) (Nop annz))) `shouldBe` (Escape annz 0)
+    it "Par annz x Break -> Break" $ do
+      simplify' (Par annz (Seq annz (Escape annz 0) (Nop annz)) (AwaitInp annz "")) `shouldBe` (Escape annz 0)
+    it "Par annz x Break -> Break" $ do
+      simplify' (Par annz (Seq annz (AwaitInp annz "") (Nop annz)) (AwaitInp annz "")) `shouldBe` (Par annz (AwaitInp annz "") (AwaitInp annz ""))
 
-    --it "Par () (Nop ()) y -> y" $ do
-      --simplify' (Par () (Nop ()) (Seq () (Escape () 0) (Nop ()))) `shouldBe` (Escape () 0)
-    it "Par () Break x -> Break" $ do
-      simplify' (Par () (Seq () (Escape () 0) (Nop ())) (AwaitInp () "")) `shouldBe` (Escape () 0)
-    it "Par () x y -> Par () x y" $ do
-      simplify' (Par () (Seq () (AwaitInp () "") (Nop ())) (AwaitInp () "")) `shouldBe` (Par () (AwaitInp () "") (AwaitInp () ""))
+    --it "Par annz (Nop annz) y -> y" $ do
+      --simplify' (Par annz (Nop annz) (Seq annz (Escape annz 0) (Nop annz))) `shouldBe` (Escape annz 0)
+    it "Par annz Break x -> Break" $ do
+      simplify' (Par annz (Seq annz (Escape annz 0) (Nop annz)) (AwaitInp annz "")) `shouldBe` (Escape annz 0)
+    it "Par annz x y -> Par annz x y" $ do
+      simplify' (Par annz (Seq annz (AwaitInp annz "") (Nop annz)) (AwaitInp annz "")) `shouldBe` (Par annz (AwaitInp annz "") (AwaitInp annz ""))
     it "par for par for par for" $ do
-      simplify' (Par () (Halt ()) (Par () (Halt ()) (Halt ())))
-      `shouldBe` (Halt ())
+      simplify' (Par annz (Halt annz) (Par annz (Halt annz) (Halt annz)))
+      `shouldBe` (Halt annz)
 
-    it "Pause () -> (Nop ())" $ do
-      simplify' (Pause () "" (Nop ())) `shouldBe` (Nop ())
-    it "Pause () -> Break" $ do
-      simplify' (Pause () "" (Escape () 0)) `shouldBe` (Escape () 0)
-    it "Pause () -> Break" $ do
-      simplify' (Pause () "" (Seq () (Nop ()) (Escape () 0))) `shouldBe` (Escape () 0)
+    it "Pause annz -> (Nop annz)" $ do
+      simplify' (Pause annz "" (Nop annz)) `shouldBe` (Nop annz)
+    it "Pause annz -> Break" $ do
+      simplify' (Pause annz "" (Escape annz 0)) `shouldBe` (Escape annz 0)
+    it "Pause annz -> Break" $ do
+      simplify' (Pause annz "" (Seq annz (Nop annz) (Escape annz 0))) `shouldBe` (Escape annz 0)
 
-    it "Fin () -> (Nop ())" $ do
-      simplify' (Fin () (Var () "" Type0 (Trap () (Escape () 0)))) `shouldBe` (Nop ())
-    it "Fin () -> (Nop ())" $ do
-      simplify' (Fin () (Var () "" Type0 (If () (Const () 1) (Nop ()) (Escape () 0)))) `shouldBe` (Fin () (Var () "" Type0 (If () (Const () 1) (Nop ()) (Escape () 0))))
+    it "Fin annz -> (Nop annz)" $ do
+      simplify' (Fin annz (Var annz "" Type0 (Trap annz (Escape annz 0)))) `shouldBe` (Nop annz)
+    it "Fin annz -> (Nop annz)" $ do
+      simplify' (Fin annz (Var annz "" Type0 (If annz (Const annz 1) (Nop annz) (Escape annz 0)))) `shouldBe` (Fin annz (Var annz "" Type0 (If annz (Const annz 1) (Nop annz) (Escape annz 0))))
 
-    it "Trap () (Nop ()) -> (Nop ())" $ do
-      simplify' (Trap () (Nop ())) `shouldBe` (Nop ())
-    it "Trap () (Escape () 0) -> (Nop ())" $ do
-      simplify' (Trap () (Escape () 0)) `shouldBe` (Nop ())
-    it "Trap () (Escape () n) -> Escape () n" $ do
-      simplify' (Trap () (Escape () 1)) `shouldBe` (Escape () 1)
-    it "Trap () p -> Trap () p" $ do
-      simplify' (Trap () (AwaitInp () "")) `shouldBe` (Trap () (AwaitInp () ""))
+    it "Trap annz (Nop annz) -> (Nop annz)" $ do
+      simplify' (Trap annz (Nop annz)) `shouldBe` (Nop annz)
+    it "Trap annz (Escape annz 0) -> (Nop annz)" $ do
+      simplify' (Trap annz (Escape annz 0)) `shouldBe` (Nop annz)
+    it "Trap annz (Escape annz n) -> Escape annz n" $ do
+      simplify' (Trap annz (Escape annz 1)) `shouldBe` (Escape annz 1)
+    it "Trap annz p -> Trap annz p" $ do
+      simplify' (Trap annz (AwaitInp annz "")) `shouldBe` (Trap annz (AwaitInp annz ""))

@@ -1,31 +1,40 @@
 module Ceu.Grammar.Ann where
 
 import Ceu.Grammar.Globals (Source, Trails, Errors)
-import Ceu.Grammar.Type    (Type, checkTypes)
+import Ceu.Grammar.Type    (Type(TypeB), checkTypes)
 
-class (Show a, Eq a) => Ann a where
-  getName   :: a -> String
-  getType   :: a -> Type
-  getSource :: a -> Source
-  getN      :: a -> Int
-  getTrails :: a -> Trails
+data Ann = Ann { type_  :: Type
+               , name   :: String
+               , source :: Source
+               , n      :: Int
+               , trails :: Trails
+               }
+    deriving (Eq, Show)
 
-  toError  :: a -> String -> String
-  toError node msg = src ++ pre ++ msg where
-    pre = let nm=getName node in if nm=="" then "" else ": "
-    src = case getSource node of
-      (_,0, 0)  -> ""
-      (_,ln,cl) -> "(line " ++ (show ln) ++ ", column " ++ (show cl) ++ "):\n"
+annz :: Ann
+annz = Ann { type_  = TypeB
+           , name   = ""
+           , source = ("",0,0)
+           , n      = (-1)
+           , trails = (0,0)
+           }
 
-  toErrorTypes :: a -> Type -> Type -> Errors
-  toErrorTypes s t1 t2 = if checkTypes t1 t2 then [] else
-                            [toError s "types do not match"]
+toError  :: Ann -> String -> String
+toError z msg = src ++ pre ++ msg where
+    pre = let nm=name z in if nm=="" then "" else ": "
+    src = case source z of
+        (_,0, 0)  -> ""
+        (_,ln,cl) -> "(line " ++ (show ln) ++ ", column " ++ (show cl) ++ "):\n"
 
-  toTrails0 :: a -> Int
-  toTrails0 = fst . getTrails
-  toTrailsN :: a -> Int
-  toTrailsN = snd . getTrails
+toErrorTypes :: Ann -> Type -> Type -> Errors
+toErrorTypes z t1 t2 = if checkTypes t1 t2 then [] else
+                          [toError z "types do not match"]
 
-errs_anns_msg_map :: (Ann a) => [a] -> String -> Errors
-errs_anns_msg_map anns msg = map (\ann -> (let nm=getName ann in if nm=="" then "" else nm++": ")
-                                           ++ msg) anns
+toTrails0 :: Ann -> Int
+toTrails0 = fst . trails
+toTrailsN :: Ann -> Int
+toTrailsN = snd . trails
+
+errs_anns_msg_map :: [Ann] -> String -> Errors
+errs_anns_msg_map zs msg = map (\z -> (let nm=name z in if nm=="" then "" else nm++": ")
+                                      ++ msg) zs

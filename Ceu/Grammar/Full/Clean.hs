@@ -2,14 +2,14 @@ module Ceu.Grammar.Full.Clean where
 
 import Debug.Trace
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Ann      (Ann(..), errs_anns_msg_map)
+import Ceu.Grammar.Ann      (toError, errs_anns_msg_map)
 import Ceu.Grammar.Exp
 import qualified Ceu.Grammar.Stmt as G
 
 import Ceu.Grammar.Check (maybeTerminates, alwaysInstantaneous, getEscapes,
                           escapesAt0, removeTrap)
 
-clean :: (Ann a) => String -> (G.Stmt a) -> (Errors, G.Stmt a)
+clean :: String -> G.Stmt -> (Errors, G.Stmt)
 
 clean "And"
   s@(G.Trap z

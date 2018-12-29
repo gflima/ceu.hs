@@ -1,7 +1,7 @@
 module Ceu.Grammar.Full.Grammar where
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Ann      (Ann)
+import Ceu.Grammar.Ann      (Ann, annz)
 import Ceu.Grammar.Type     (Type(..))
 import Ceu.Grammar.Exp      (Exp(..), RawAt)
 import qualified Ceu.Grammar.Stmt as G
@@ -15,64 +15,63 @@ import Debug.Trace
 
 type In = (ID_Inp, Maybe Val)
 
-type Fin ann = (Stmt ann, Stmt ann, Stmt ann)
+type Fin = (Stmt, Stmt, Stmt)
 
 -- Program (pg 5).
-data Stmt ann
-  = Var      ann ID_Var Type (Maybe (Fin ann))       -- variable declaration
-  | Inp      ann ID_Inp Bool                         -- output declaration
-  | Out      ann ID_Out Bool                         -- output declaration
-  | Evt      ann ID_Evt Bool                         -- event declaration
-  | Func     ann ID_Var Type                         -- code/inst declaration
-  | Write    ann ID_Var (Exp ann)                    -- assignment statement
-  | AwaitInp ann ID_Inp (Maybe ID_Var)               -- await external event
-  | EmitExt  ann ID_Ext (Maybe (Exp ann))            -- emit external event
-  | AwaitTmr ann (Exp ann)                           -- await timer
-  | AwaitEvt ann ID_Evt (Maybe ID_Var)               -- await internal event
-  | EmitEvt  ann ID_Evt (Maybe (Exp ann))            -- emit internal event
-  | Break    ann                                     -- loop escape
-  | If       ann (Exp ann) (Stmt ann) (Stmt ann)     -- conditional
-  | Seq      ann (Stmt ann) (Stmt ann)               -- sequence
-  | Loop     ann (Stmt ann)                          -- infinite loop
-  | Every    ann ID (Maybe ID_Var) (Stmt ann)        -- event iteration
-  | And      ann (Stmt ann) (Stmt ann)               -- par/and statement
-  | Or       ann (Stmt ann) (Stmt ann)               -- par/or statement
-  | Par      ann (Stmt ann) (Stmt ann)               -- par statement
-  | Spawn    ann (Stmt ann)                          -- spawn statement
-  | Pause    ann ID (Stmt ann)                       -- pause/suspend statement
-  | Fin      ann (Stmt ann) (Stmt ann) (Stmt ann)    -- finalize/pause/resume statement
-  | Async    ann (Stmt ann)                          -- async statement
-  | Trap     ann (Maybe ID_Var) (Stmt ann)           -- trap with optional assignment
-  | Escape   ann (Maybe ID_Var) (Maybe (Exp ann))    -- escape enclosing trap
-  | Scope    ann (Stmt ann)                          -- scope for local variables
-  | Error    ann String                              -- generate runtime error (for testing purposes)
-  | Var'     ann ID_Var Type (Maybe (Fin ann)) (Stmt ann) -- variable declaration w/ stmts in scope
-  | Inp'     ann ID_Inp Bool (Stmt ann)              -- output declaration w/ stmts in scope
-  | Out'     ann ID_Out Bool (Stmt ann)              -- output declaration w/ stmts in scope
-  | Evt'     ann ID_Evt Bool (Stmt ann)              -- event declaration w/ stmts in scope
-  | Func'    ann ID_Func Type (Stmt ann)             -- functions declaration w/ stmts in scope
-  | Or'      ann (Stmt ann) (Stmt ann)               -- used as an Or with possibly non-terminating trails
-  | Par'     ann (Stmt ann) (Stmt ann)               -- par as in basic Grammar
-  | Pause'   ann ID_Var (Stmt ann)                   -- pause as in basic Grammar
-  | Fin'     ann (Stmt ann)                          -- fin as in basic Grammar
-  | Trap'    ann (Stmt ann)                          -- trap as in basic Grammar
-  | Escape'  ann Int                                 -- escape as in basic Grammar
-  | Clean'   ann String (Stmt ann)                   -- temporary statement
-  | Nop      ann                                     -- nop as in basic Grammar
-  | Halt     ann                                     -- halt as in basic Grammar
-  | RawS     ann [RawAt ann]                         -- raw as in basic Grammar
+data Stmt
+  = Var      Ann ID_Var Type (Maybe Fin)        -- variable declaration
+  | Inp      Ann ID_Inp Bool                    -- output declaration
+  | Out      Ann ID_Out Bool                    -- output declaration
+  | Evt      Ann ID_Evt Bool                    -- event declaration
+  | Func     Ann ID_Var Type                    -- code/inst declaration
+  | Write    Ann ID_Var Exp                     -- assignment statement
+  | AwaitInp Ann ID_Inp (Maybe ID_Var)          -- await external event
+  | EmitExt  Ann ID_Ext (Maybe Exp)             -- emit external event
+  | AwaitTmr Ann Exp                            -- await timer
+  | AwaitEvt Ann ID_Evt (Maybe ID_Var)          -- await internal event
+  | EmitEvt  Ann ID_Evt (Maybe Exp)             -- emit internal event
+  | Break    Ann                                -- loop escape
+  | If       Ann Exp Stmt Stmt                  -- conditional
+  | Seq      Ann Stmt Stmt                      -- sequence
+  | Loop     Ann Stmt                           -- infinite loop
+  | Every    Ann ID (Maybe ID_Var) Stmt         -- event iteration
+  | And      Ann Stmt Stmt                      -- par/and statement
+  | Or       Ann Stmt Stmt                      -- par/or statement
+  | Par      Ann Stmt Stmt                      -- par statement
+  | Spawn    Ann Stmt                           -- spawn statement
+  | Pause    Ann ID Stmt                        -- pause/suspend statement
+  | Fin      Ann Stmt Stmt Stmt                 -- finalize/pause/resume statement
+  | Async    Ann Stmt                           -- async statement
+  | Trap     Ann (Maybe ID_Var) Stmt            -- trap with optional assignment
+  | Escape   Ann (Maybe ID_Var) (Maybe Exp)     -- escape enclosing trap
+  | Scope    Ann Stmt                           -- scope for local variables
+  | Error    Ann String                         -- generate runtime error (for testing purposes)
+  | Var'     Ann ID_Var Type (Maybe Fin) Stmt   -- variable declaration w/ stmts in scope
+  | Inp'     Ann ID_Inp Bool Stmt               -- output declaration w/ stmts in scope
+  | Out'     Ann ID_Out Bool Stmt               -- output declaration w/ stmts in scope
+  | Evt'     Ann ID_Evt Bool Stmt               -- event declaration w/ stmts in scope
+  | Func'    Ann ID_Func Type Stmt              -- functions declaration w/ stmts in scope
+  | Or'      Ann Stmt Stmt                      -- used as an Or with possibly non-terminating trails
+  | Par'     Ann Stmt Stmt                      -- par as in basic Grammar
+  | Pause'   Ann ID_Var Stmt                    -- pause as in basic Grammar
+  | Fin'     Ann Stmt                           -- fin as in basic Grammar
+  | Trap'    Ann Stmt                           -- trap as in basic Grammar
+  | Escape'  Ann Int                            -- escape as in basic Grammar
+  | Clean'   Ann String Stmt                    -- temporary statement
+  | Nop      Ann                                -- nop as in basic Grammar
+  | Halt     Ann                                -- halt as in basic Grammar
+  | RawS     Ann [RawAt]                        -- raw as in basic Grammar
   deriving (Eq, Show)
 
-sSeq a b = Seq () a b
-sPar a b = Par () a b
-sAnd a b = And () a b
-sOr  a b = Or  () a b
-
+sSeq a b = Seq annz a b
+sPar a b = Par annz a b
+sAnd a b = And annz a b
+sOr  a b = Or  annz a b
 infixr 1 `sSeq`
 infixr 0 `sAnd`
 infixr 0 `sOr`
 
-getAnn :: Stmt ann -> ann
+getAnn :: Stmt -> Ann
 getAnn (Var      z _ _ _) = z
 getAnn (Inp      z _ _  ) = z
 getAnn (Out      z _ _  ) = z
@@ -116,7 +115,7 @@ getAnn (Nop      z      ) = z
 getAnn (Halt     z      ) = z
 getAnn (RawS     z _    ) = z
 
-toGrammar :: (Ann a) => (Stmt a) -> (Errors, G.Stmt a)
+toGrammar :: Stmt -> (Errors, G.Stmt)
 toGrammar (Var' z var tp Nothing p) = (es, G.Var z var tp p')
                                  where
                                    (es,p') = toGrammar p
@@ -180,7 +179,7 @@ toGrammar p                      = error $ "toGrammar: unexpected statement: " -
 -------------------------------------------------------------------------------
 
 {-
-stmt2word :: (Stmt a) -> String
+stmt2word :: Stmt -> String
 stmt2word stmt = case stmt of
   Var _ _ _ _    -> "declaration"
   Inp _ _ _      -> "declaration"

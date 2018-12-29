@@ -5,9 +5,9 @@ import Debug.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Full.Grammar
 
-compile :: Stmt ann -> (Errors, Stmt ann)
+compile :: Stmt -> (Errors, Stmt)
 compile p = ([], aux p)
-aux :: Stmt ann -> Stmt ann
+aux :: Stmt -> Stmt
 aux (Var z var tp fin)              = Var' z var tp (aux_fin fin) (Nop z)
 aux (Inp z inp b)                   = Inp' z inp b (Nop z)
 aux (Out z out b)                   = Out' z out b (Nop z)

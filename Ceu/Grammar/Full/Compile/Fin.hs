@@ -8,9 +8,9 @@ import Ceu.Grammar.Full.Grammar
 -- (Fin f1 f2 f3);A -> (or (Fin' p) A)
 -- (Fin id p);A -> A ||| (Var' (Or [(Fin p)] X)
 
-compile :: (Ann a) => (Stmt a) -> (Errors, Stmt a)
+compile :: Stmt -> (Errors, Stmt)
 compile p = aux Nothing p where
-  aux :: (Ann a) => (Maybe ID_Evt) -> (Stmt a) -> (Errors, Stmt a)
+  aux :: (Maybe ID_Evt) -> Stmt -> (Errors, Stmt)
   aux pse (Var' z var tp (Just (f1,f2,f3)) p) = aux pse (Var' z var tp Nothing (Seq z (Fin z f1 f2 f3) p))
   aux pse (Var' z var tp Nothing p)   = (es, Var' z var tp Nothing p')
                                         where

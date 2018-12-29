@@ -5,20 +5,20 @@ import Text.Printf
 import Ceu.Grammar.Globals  (Val, ID_Func, ID_Var)
 import Ceu.Grammar.Ann      (Ann)
 
-data RawAt ann = RawAtE (Exp ann) | RawAtS String
+data RawAt = RawAtE Exp | RawAtS String
   deriving (Eq, Show)
 
-data Exp ann
-    = RawE   ann [RawAt ann]        -- {@(ceu)+c}
-    | Const  ann Val                -- 1
-    | Read   ann ID_Var             -- a ; xs
-    | Unit   ann                    -- ()
-    -- | Parens ann (Exp ann)          -- (1) ; (f 1) ; (f (1,2)) ; (())
-    | Tuple  ann [Exp ann]          -- (1,2) ; ((1),2) ; ((1,2),3) ; ((),()) // (len >= 2)
-    | Call   ann ID_Func (Exp ann)  -- f a ; f(a) ; f(1,2)
+data Exp
+    = RawE   Ann [RawAt]        -- {@(ceu)+c}
+    | Const  Ann Val            -- 1
+    | Read   Ann ID_Var         -- a ; xs
+    | Unit   Ann                -- ()
+    -- | Parens Ann Exp         -- (1) ; (f 1) ; (f (1,2)) ; (())
+    | Tuple  Ann [Exp]          -- (1,2) ; ((1),2) ; ((1,2),3) ; ((),()) // (len >= 2)
+    | Call   Ann ID_Func Exp    -- f a ; f(a) ; f(1,2)
     deriving (Eq, Show)
 
-getAnn :: (Ann a) => Exp a -> a
+getAnn :: Exp -> Ann
 getAnn (RawE  z _)   = z
 getAnn (Const z _)   = z
 getAnn (Read  z _)   = z

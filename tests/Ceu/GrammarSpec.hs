@@ -4,8 +4,7 @@ import Debug.Trace
 import Test.Hspec
 
 import Ceu.Grammar.Globals  (Errors)
-import Ceu.Grammar.Ann      (Ann(..))
-import Ceu.Grammar.Ann.Unit
+import Ceu.Grammar.Ann      (annz)
 import Ceu.Grammar.Type     (Type(..))
 import Ceu.Grammar.Exp
 import Ceu.Grammar.Stmt
@@ -18,198 +17,198 @@ main = hspec spec
 spec :: Spec
 spec = do
   --------------------------------------------------------------------------
-  describe "checkLoop () -- matching-Break/AwaitInp/Every () in all paths" $ do
+  describe "checkLoop -- matching-Break/AwaitInp/Every in all paths" $ do
 
     -- atomic statements --
-    checkLoopIt (Loop () (Write () "x" (Call () "umn" (Const () 1)))) False
-    checkLoopIt (Loop () (AwaitInp () "A"))       True
-    checkLoopIt (Loop () (AwaitEvt () "a"))       False
-    checkLoopIt (Loop () (EmitEvt () "a"))        False
-    checkLoopIt (Loop () (Escape () 0))           True
-    checkLoopIt (Loop () (Loop () (Escape () 0))) True
-    checkLoopIt (Loop () ((Nop ())))              False
-    checkLoopIt (Loop () (Error () ""))           False
+    checkLoopIt (Loop annz (Write annz "x" (Call annz "umn" (Const annz 1)))) False
+    checkLoopIt (Loop annz (AwaitInp annz "A"))       True
+    checkLoopIt (Loop annz (AwaitEvt annz "a"))       False
+    checkLoopIt (Loop annz (EmitEvt annz "a"))        False
+    checkLoopIt (Loop annz (Escape annz 0))           True
+    checkLoopIt (Loop annz (Loop annz (Escape annz 0))) True
+    checkLoopIt (Loop annz ((Nop annz)))              False
+    checkLoopIt (Loop annz (Error annz ""))           False
 
     -- compound statements --
-    checkLoopIt (Loop () (Var () "x" Type0 (Var () "y" Type0 (Escape () 0)))) True
-    checkLoopIt (Loop () (Var () "x" Type0 (Var () "y" Type0 (Nop ()))))      False
+    checkLoopIt (Loop annz (Var annz "x" Type0 (Var annz "y" Type0 (Escape annz 0)))) True
+    checkLoopIt (Loop annz (Var annz "x" Type0 (Var annz "y" Type0 (Nop annz))))      False
 
-    checkLoopIt (Loop () (If () (Const () 0) (Escape () 0) (Nop ())))     False
-    checkLoopIt (Loop () (If () (Const () 0) (Fin () (Nop ())) (Nop ()))) False
-    checkLoopIt (Loop () (If () (Const () 0) (Every () "A" (Nop ())) (AwaitInp () "A"))) True
+    checkLoopIt (Loop annz (If annz (Const annz 0) (Escape annz 0) (Nop annz)))     False
+    checkLoopIt (Loop annz (If annz (Const annz 0) (Fin annz (Nop annz)) (Nop annz))) False
+    checkLoopIt (Loop annz (If annz (Const annz 0) (Every annz "A" (Nop annz)) (AwaitInp annz "A"))) True
 
-    checkLoopIt (Loop () ((Nop ()) `sSeq` (Nop ()) `sSeq` (Escape () 0) `sSeq` (Nop ()))) True
-    checkLoopIt (Loop () (Trap () (Loop () (Escape () 0)))) False
-    checkLoopIt (Loop () ((Nop ()) `sSeq` (Nop ()) `sSeq` (Loop () (Escape () 0)))) True
-    checkLoopIt (Loop () ((Escape () 0) `sSeq` Loop () (Nop ()))) True
-    checkLoopIt (Loop () ((Nop ()) `sSeq` Loop () (Nop ())))      False
+    checkLoopIt (Loop annz ((Nop annz) `sSeq` (Nop annz) `sSeq` (Escape annz 0) `sSeq` (Nop annz))) True
+    checkLoopIt (Loop annz (Trap annz (Loop annz (Escape annz 0)))) False
+    checkLoopIt (Loop annz ((Nop annz) `sSeq` (Nop annz) `sSeq` (Loop annz (Escape annz 0)))) True
+    checkLoopIt (Loop annz ((Escape annz 0) `sSeq` Loop annz (Nop annz))) True
+    checkLoopIt (Loop annz ((Nop annz) `sSeq` Loop annz (Nop annz)))      False
 
-    checkLoopIt (Loop () (Loop () (Loop () (AwaitInp () "A"))))   True
-    checkLoopIt (Loop () (Loop () (Escape () 0)))                 True
-    checkLoopIt (Loop () (Trap () (Loop () (Escape () 0))))       False
-    checkLoopIt (Loop () (Loop () (Trap () (Loop () (Escape () 0))))) False
-    checkLoopIt (Loop () (Trap () (Loop () (Escape () 0)) `sSeq` (Trap () (Loop () (Escape () 0))))) False
-    checkLoopIt (Loop () (Loop () (AwaitInp () "A") `sSeq` Loop () (Nop ()))) True
-    checkLoopIt (Loop () (Loop () (Seq () (Escape () 0) (Escape () 0))))  True
-    checkLoopIt (Loop () (Trap () (Loop () (Seq () (Escape () 0) (Escape () 0))))) False
-    checkLoopIt (Loop () (Trap () (Loop () (Seq () (Escape () 0) (Escape () 1))))) False
+    checkLoopIt (Loop annz (Loop annz (Loop annz (AwaitInp annz "A"))))   True
+    checkLoopIt (Loop annz (Loop annz (Escape annz 0)))                 True
+    checkLoopIt (Loop annz (Trap annz (Loop annz (Escape annz 0))))       False
+    checkLoopIt (Loop annz (Loop annz (Trap annz (Loop annz (Escape annz 0))))) False
+    checkLoopIt (Loop annz (Trap annz (Loop annz (Escape annz 0)) `sSeq` (Trap annz (Loop annz (Escape annz 0))))) False
+    checkLoopIt (Loop annz (Loop annz (AwaitInp annz "A") `sSeq` Loop annz (Nop annz))) True
+    checkLoopIt (Loop annz (Loop annz (Seq annz (Escape annz 0) (Escape annz 0))))  True
+    checkLoopIt (Loop annz (Trap annz (Loop annz (Seq annz (Escape annz 0) (Escape annz 0))))) False
+    checkLoopIt (Loop annz (Trap annz (Loop annz (Seq annz (Escape annz 0) (Escape annz 1))))) False
 
-    checkLoopIt (Loop () ((Nop ()) `sPar` (Nop ()) `sPar` (Nop ()))) False
-    checkLoopIt (Loop () (Pause () "a" (Nop ())))                    False
-    checkLoopIt (Loop () (Every () "A" (Nop ()) `sPar` AwaitInp () "A" `sPar` (Escape () 0))) True
-    checkLoopIt (Loop () (Pause () "a" (AwaitInp () "A")))           True
+    checkLoopIt (Loop annz ((Nop annz) `sPar` (Nop annz) `sPar` (Nop annz))) False
+    checkLoopIt (Loop annz (Pause annz "a" (Nop annz)))                    False
+    checkLoopIt (Loop annz (Every annz "A" (Nop annz) `sPar` AwaitInp annz "A" `sPar` (Escape annz 0))) True
+    checkLoopIt (Loop annz (Pause annz "a" (AwaitInp annz "A")))           True
 
-    -- Fin () always run in zero time.
-    checkLoopIt (Loop () (Fin () (Nop ())))                          False
-    checkLoopIt (Loop () (Fin () (Escape () 0)))                     False
-    checkLoopIt (Loop () (Fin () (AwaitInp () "A")))                 False
-    checkLoopIt (Loop () (Fin () (Every () "A" (Nop ()))))           False
+    -- Fin annz always run in zero time.
+    checkLoopIt (Loop annz (Fin annz (Nop annz)))                          False
+    checkLoopIt (Loop annz (Fin annz (Escape annz 0)))                     False
+    checkLoopIt (Loop annz (Fin annz (AwaitInp annz "A")))                 False
+    checkLoopIt (Loop annz (Fin annz (Every annz "A" (Nop annz))))           False
 
   --------------------------------------------------------------------------
-  describe "checkFin/Every () -- no Loop/Escape/Await*/Every/Fin:" $ do
+  describe "checkFin/Every -- no Loop/Escape/Await*/Every/Fin:" $ do
 
     -- atomic statements --
-    checkFinIt (Fin () (Write () "x" (Const () 0))) []
-    checkFinIt (Fin () (AwaitInp () "A"))        ["invalid statement"]
-    checkFinIt (Fin () (AwaitEvt () "a"))        ["invalid statement"]
-    checkFinIt (Fin () (EmitEvt () "a"))         []
-    checkFinIt (Fin () (Escape () 0))            ["invalid statement"]
-    checkFinIt (Fin () ((Nop ())))               []
-    checkFinIt (Fin () (Error () ""))            []
+    checkFinIt (Fin annz (Write annz "x" (Const annz 0))) []
+    checkFinIt (Fin annz (AwaitInp annz "A"))        ["invalid statement"]
+    checkFinIt (Fin annz (AwaitEvt annz "a"))        ["invalid statement"]
+    checkFinIt (Fin annz (EmitEvt annz "a"))         []
+    checkFinIt (Fin annz (Escape annz 0))            ["invalid statement"]
+    checkFinIt (Fin annz ((Nop annz)))               []
+    checkFinIt (Fin annz (Error annz ""))            []
 
     -- compound statements --
-    checkFinIt (Fin () (Var () "x" Type0 (Nop ())))                []
-    checkFinIt (Fin () (Var () "x" Type0 (Every () "A" (Nop ())))) ["invalid statement"]
-    checkFinIt (Fin () (If () (Const () 0) (Loop () (Escape () 0)) ((Nop ())))) ["invalid statement"]
-    checkFinIt (Fin () (If () (Const () 0) (Write () "x" (Const () 0)) ((Nop ())))) []
-    checkFinIt (Fin () ((Nop ()) `sSeq` (Nop ()) `sSeq` (AwaitInp () "A") `sSeq` (Nop ()))) ["invalid statement"]
-    checkFinIt (Fin () ((Nop ()) `sSeq` (Nop ()) `sSeq` (EmitEvt () "a") `sSeq` (Nop ())))  []
-    checkFinIt (Fin () (Loop () (AwaitEvt () "a")))          ["invalid statement"]
-    checkFinIt (Fin () (Loop () (AwaitInp () "A")))          ["invalid statement"]
-    checkFinIt (Fin () ((Nop ()) `sPar` (Nop ()) `sPar` (EmitEvt () "a"))) ["invalid statement","invalid statement"]
+    checkFinIt (Fin annz (Var annz "x" Type0 (Nop annz)))                []
+    checkFinIt (Fin annz (Var annz "x" Type0 (Every annz "A" (Nop annz)))) ["invalid statement"]
+    checkFinIt (Fin annz (If annz (Const annz 0) (Loop annz (Escape annz 0)) ((Nop annz)))) ["invalid statement"]
+    checkFinIt (Fin annz (If annz (Const annz 0) (Write annz "x" (Const annz 0)) ((Nop annz)))) []
+    checkFinIt (Fin annz ((Nop annz) `sSeq` (Nop annz) `sSeq` (AwaitInp annz "A") `sSeq` (Nop annz))) ["invalid statement"]
+    checkFinIt (Fin annz ((Nop annz) `sSeq` (Nop annz) `sSeq` (EmitEvt annz "a") `sSeq` (Nop annz)))  []
+    checkFinIt (Fin annz (Loop annz (AwaitEvt annz "a")))          ["invalid statement"]
+    checkFinIt (Fin annz (Loop annz (AwaitInp annz "A")))          ["invalid statement"]
+    checkFinIt (Fin annz ((Nop annz) `sPar` (Nop annz) `sPar` (EmitEvt annz "a"))) ["invalid statement","invalid statement"]
 
   --------------------------------------------------------------------------
   describe "checkEscape:" $ do
 
     -- atomic statements --
-    checkCheckIt (Error () "")               []
-    checkCheckIt (Escape () 0)               ["orphan `escape` statement"]
-    checkCheckIt (Write () "x" (Const () 0)) ["identifier 'x' is not declared"]
+    checkCheckIt (Error annz "")               []
+    checkCheckIt (Escape annz 0)               ["orphan `escape` statement"]
+    checkCheckIt (Write annz "x" (Const annz 0)) ["identifier 'x' is not declared"]
 
     -- compound statements --
-    checkCheckIt (Trap () (Escape () 0))     []
-    checkCheckIt (Trap () (Escape () 1))     ["orphan `escape` statement", "missing `escape` statement"]
-    checkCheckIt (Trap () (Trap () (Escape () 0))) ["terminating `trap` body","missing `escape` statement"]
-    checkCheckIt (Trap () (Trap () (Escape () 1))) ["missing `escape` statement"]
-    checkCheckIt (Trap () (Seq () (Escape () 0) (Escape () 1))) ["orphan `escape` statement","unreachable statement"]
-    checkCheckIt (Trap () (Seq () (Escape () 1) (Escape () 1))) ["orphan `escape` statement","orphan `escape` statement", "missing `escape` statement","unreachable statement"]
+    checkCheckIt (Trap annz (Escape annz 0))     []
+    checkCheckIt (Trap annz (Escape annz 1))     ["orphan `escape` statement", "missing `escape` statement"]
+    checkCheckIt (Trap annz (Trap annz (Escape annz 0))) ["terminating `trap` body","missing `escape` statement"]
+    checkCheckIt (Trap annz (Trap annz (Escape annz 1))) ["missing `escape` statement"]
+    checkCheckIt (Trap annz (Seq annz (Escape annz 0) (Escape annz 1))) ["orphan `escape` statement","unreachable statement"]
+    checkCheckIt (Trap annz (Seq annz (Escape annz 1) (Escape annz 1))) ["orphan `escape` statement","orphan `escape` statement", "missing `escape` statement","unreachable statement"]
 
   --------------------------------------------------------------------------
   describe "checkReachable:" $ do
 
     -- atomic statements --
-    checkStmtsIt (Error () "")               []
-    checkStmtsIt (Write () "x" (Const () 0)) []
+    checkStmtsIt (Error annz "")               []
+    checkStmtsIt (Write annz "x" (Const annz 0)) []
 
     -- compound statements --
-    checkStmtsIt (Seq () (Escape () 1) (Escape () 0)) ["unreachable statement"]
-    checkStmtsIt (Seq () (Trap () (Trap () (Escape () 1))) (Escape () 0)) ["missing `escape` statement"]
-    checkStmtsIt (Seq () (Escape () 0) (Escape () 1)) ["unreachable statement"]
-    checkStmtsIt (Seq () (Halt ()) (Escape () 1)) ["unreachable statement"]
-    checkStmtsIt (Seq () (Seq () (Halt ()) (Nop ())) (Escape () 1)) ["unreachable statement",("unreachable statement")]
-    checkStmtsIt (Seq () (Loop () (Nop ())) (Nop ())) ["unbounded `loop` execution","unreachable statement"]
-    checkStmtsIt (Seq () (Every () "" (Nop ())) (Nop ())) ["unreachable statement"]
-    checkStmtsIt (Seq () (Par () (Nop ()) (Every () "" (Nop ()))) (Nop ())) ["terminating trail","unreachable statement"]
-    checkStmtsIt (Seq () (Trap () (Loop () (Trap () (Seq () (Escape () 0) (Escape () 1))))) (Nop ())) ["unreachable statement","unbounded `loop` execution"]
-    checkStmtsIt (Seq () (Trap () (Loop () (Trap () (Seq () (Escape () 0) (Nop ()))))) (Nop ())) ["missing `escape` statement","unreachable statement", "unbounded `loop` execution","unreachable statement"]
+    checkStmtsIt (Seq annz (Escape annz 1) (Escape annz 0)) ["unreachable statement"]
+    checkStmtsIt (Seq annz (Trap annz (Trap annz (Escape annz 1))) (Escape annz 0)) ["missing `escape` statement"]
+    checkStmtsIt (Seq annz (Escape annz 0) (Escape annz 1)) ["unreachable statement"]
+    checkStmtsIt (Seq annz (Halt annz) (Escape annz 1)) ["unreachable statement"]
+    checkStmtsIt (Seq annz (Seq annz (Halt annz) (Nop annz)) (Escape annz 1)) ["unreachable statement",("unreachable statement")]
+    checkStmtsIt (Seq annz (Loop annz (Nop annz)) (Nop annz)) ["unbounded `loop` execution","unreachable statement"]
+    checkStmtsIt (Seq annz (Every annz "" (Nop annz)) (Nop annz)) ["unreachable statement"]
+    checkStmtsIt (Seq annz (Par annz (Nop annz) (Every annz "" (Nop annz))) (Nop annz)) ["terminating trail","unreachable statement"]
+    checkStmtsIt (Seq annz (Trap annz (Loop annz (Trap annz (Seq annz (Escape annz 0) (Escape annz 1))))) (Nop annz)) ["unreachable statement","unbounded `loop` execution"]
+    checkStmtsIt (Seq annz (Trap annz (Loop annz (Trap annz (Seq annz (Escape annz 0) (Nop annz))))) (Nop annz)) ["missing `escape` statement","unreachable statement", "unbounded `loop` execution","unreachable statement"]
 
   --------------------------------------------------------------------------
   describe "checkTypeSys -- declarations" $ do
 
-    checkTypeSysIt (Nop ())                                    []
-    checkTypeSysIt (Var () "a" Type0 (Nop ()))                    []
-    checkTypeSysIt (Var () "a" (Type1 "Int") (Write () "a" (Const () 1))) []
-    checkTypeSysIt (Var () "a" (TypeN [Type1 "Int",Type1 "Int"]) (Write () "a" (Const () 1))) ["types do not match"]
-    --checkTypeSysIt (Var () "a" Type0 (Write () "a" (Const () 1))) ["types do not match"]
-    checkTypeSysIt (Var () "a" Type0 (Write () "a" (Const () 1))) ["types do not match"]
-    checkTypeSysIt (Var () "a" Type0 (If () (Read () "a") (Nop ()) (Nop ()))) ["types do not match"]
-    checkTypeSysIt (Var () "a" (Type1 "Int") (If () (Read () "a") (Nop ()) (Nop ()))) ["types do not match"]
-    checkTypeSysIt (Var () "a" (Type1 "Bool") (If () (Read () "a") (Nop ()) (Nop ()))) []
-    checkTypeSysIt (Var () "a" Type0 (Var () "a" Type0 (Nop ())))    ["identifier 'a' is already declared"]
-    checkTypeSysIt (Evt () "e" (Evt () "e" (Nop ())))       ["identifier 'e' is already declared"]
-    checkTypeSysIt (Write () "a" (Const () 1))              ["identifier 'a' is not declared"]
-    checkTypeSysIt (AwaitEvt () "e")                        ["identifier 'e' is not declared"]
-    checkTypeSysIt (Every () "e" (Nop ()))                  ["identifier 'e' is not declared"]
-    checkTypeSysIt (Pause () "a" (Nop ()))                  ["identifier 'a' is not declared"]
-    checkTypeSysIt (Func () "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var () "a" (Type1 "Int") (Write () "a" (Call () "umn" (Read () "b"))))) ["identifier 'b' is not declared"]
-    checkTypeSysIt (Func () "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var () "a" Type0 (Write () "a" (Call () "umn" (Read () "b"))))) ["identifier 'b' is not declared","types do not match"]
-    checkTypeSysIt (Var () "x" (TypeN [Type0,Type0]) (Write () "x" (Unit ())))  ["types do not match"]
-    checkTypeSysIt (Var () "x" (Type1 "Int") (Write () "x" (Unit ()))) ["types do not match"]
+    checkTypeSysIt (Nop annz)                                    []
+    checkTypeSysIt (Var annz "a" Type0 (Nop annz))                    []
+    checkTypeSysIt (Var annz "a" (Type1 "Int") (Write annz "a" (Const annz 1))) []
+    checkTypeSysIt (Var annz "a" (TypeN [Type1 "Int",Type1 "Int"]) (Write annz "a" (Const annz 1))) ["types do not match"]
+    --checkTypeSysIt (Var annz "a" Type0 (Write annz "a" (Const annz 1))) ["types do not match"]
+    checkTypeSysIt (Var annz "a" Type0 (Write annz "a" (Const annz 1))) ["types do not match"]
+    checkTypeSysIt (Var annz "a" Type0 (If annz (Read annz "a") (Nop annz) (Nop annz))) ["types do not match"]
+    checkTypeSysIt (Var annz "a" (Type1 "Int") (If annz (Read annz "a") (Nop annz) (Nop annz))) ["types do not match"]
+    checkTypeSysIt (Var annz "a" (Type1 "Bool") (If annz (Read annz "a") (Nop annz) (Nop annz))) []
+    checkTypeSysIt (Var annz "a" Type0 (Var annz "a" Type0 (Nop annz)))    ["identifier 'a' is already declared"]
+    checkTypeSysIt (Evt annz "e" (Evt annz "e" (Nop annz)))       ["identifier 'e' is already declared"]
+    checkTypeSysIt (Write annz "a" (Const annz 1))              ["identifier 'a' is not declared"]
+    checkTypeSysIt (AwaitEvt annz "e")                        ["identifier 'e' is not declared"]
+    checkTypeSysIt (Every annz "e" (Nop annz))                  ["identifier 'e' is not declared"]
+    checkTypeSysIt (Pause annz "a" (Nop annz))                  ["identifier 'a' is not declared"]
+    checkTypeSysIt (Func annz "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var annz "a" (Type1 "Int") (Write annz "a" (Call annz "umn" (Read annz "b"))))) ["identifier 'b' is not declared"]
+    checkTypeSysIt (Func annz "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var annz "a" Type0 (Write annz "a" (Call annz "umn" (Read annz "b"))))) ["identifier 'b' is not declared","types do not match"]
+    checkTypeSysIt (Var annz "x" (TypeN [Type0,Type0]) (Write annz "x" (Unit annz)))  ["types do not match"]
+    checkTypeSysIt (Var annz "x" (Type1 "Int") (Write annz "x" (Unit annz))) ["types do not match"]
 
   --------------------------------------------------------------------------
   describe "checkStmts -- program is valid" $ do
 
     -- atomic statements --
-    checkStmtsIt (Write () "c" (Const () 0)) []
-    checkStmtsIt (AwaitInp () "A")        []
-    checkStmtsIt (AwaitEvt () "a")        []
-    checkStmtsIt (EmitEvt () "a")         []
-    checkStmtsIt (Escape () 0)            []
-    checkStmtsIt ((Nop ()))               []
-    checkStmtsIt (Error () "")            []
+    checkStmtsIt (Write annz "c" (Const annz 0)) []
+    checkStmtsIt (AwaitInp annz "A")        []
+    checkStmtsIt (AwaitEvt annz "a")        []
+    checkStmtsIt (EmitEvt annz "a")         []
+    checkStmtsIt (Escape annz 0)            []
+    checkStmtsIt ((Nop annz))               []
+    checkStmtsIt (Error annz "")            []
 
     -- compound statements --
-    checkStmtsIt (Var () "x" Type0 (Nop ()))              []
-    checkStmtsIt (If () (Const () 0) (Nop ()) (Escape () 0)) []
-    checkStmtsIt (Seq () (Escape () 0) (Nop ()))       ["unreachable statement"]
-    checkStmtsIt (Loop () (Escape () 0))               ["`loop` never iterates"]
-    checkStmtsIt (Loop () (Nop ()))                    ["unbounded `loop` execution"]
-    checkStmtsIt (Every () "A" (Nop ()))               []
-    checkStmtsIt (Every () "A" (Fin () (Nop ())))      ["invalid statement in `every`", "invalid statement"]
-    checkStmtsIt (Par () (Escape () 0) (Nop ()))       ["terminating trail"]
-    checkStmtsIt (Par () (Escape () 0) (Halt ())) []
-    checkStmtsIt (Par () (Halt ()) (Seq () (EmitEvt () "a") (Halt ()))) []
-    checkStmtsIt (Par () (Nop ()) (EmitEvt () "a"))    ["terminating trail"]
-    checkStmtsIt (Pause () "a" (Nop ()))               []
-    checkStmtsIt (Fin () (Nop ()))                     []
-    checkStmtsIt (Fin () (Fin () (Nop ())))            ["invalid statement in `finalize`", "invalid statement"]
+    checkStmtsIt (Var annz "x" Type0 (Nop annz))              []
+    checkStmtsIt (If annz (Const annz 0) (Nop annz) (Escape annz 0)) []
+    checkStmtsIt (Seq annz (Escape annz 0) (Nop annz))       ["unreachable statement"]
+    checkStmtsIt (Loop annz (Escape annz 0))               ["`loop` never iterates"]
+    checkStmtsIt (Loop annz (Nop annz))                    ["unbounded `loop` execution"]
+    checkStmtsIt (Every annz "A" (Nop annz))               []
+    checkStmtsIt (Every annz "A" (Fin annz (Nop annz)))      ["invalid statement in `every`", "invalid statement"]
+    checkStmtsIt (Par annz (Escape annz 0) (Nop annz))       ["terminating trail"]
+    checkStmtsIt (Par annz (Escape annz 0) (Halt annz)) []
+    checkStmtsIt (Par annz (Halt annz) (Seq annz (EmitEvt annz "a") (Halt annz))) []
+    checkStmtsIt (Par annz (Nop annz) (EmitEvt annz "a"))    ["terminating trail"]
+    checkStmtsIt (Pause annz "a" (Nop annz))               []
+    checkStmtsIt (Fin annz (Nop annz))                     []
+    checkStmtsIt (Fin annz (Fin annz (Nop annz)))            ["invalid statement in `finalize`", "invalid statement"]
 
     -- misc --
-    checkStmtsIt ((Nop ()) `sSeq` (Fin () (Loop () (Escape () 0)))) ["`loop` never iterates","invalid statement in `finalize`", "invalid statement"]
-    checkStmtsIt ((Nop ()) `sSeq` (Fin () (Loop () (Nop ())))) ["unbounded `loop` execution"]
-    checkStmtsIt (Var () "x" Type0 (Fin () (Every () "A" (Nop ())))) ["invalid statement in `finalize`", "invalid statement"]
-    checkStmtsIt (Loop () (Trap () (Loop () (Escape () 0))))   ["`loop` never iterates","unbounded `loop` execution"]
-    checkStmtsIt (Loop () (Trap () (Loop () (Seq () (Escape () 0) (Escape () 0))))) ["unreachable statement","`loop` never iterates","unbounded `loop` execution"]
-    checkStmtsIt (AwaitEvt () "a" `sSeq` (Fin () (Escape () 0)) `sPar` (Halt ())) ["invalid statement in `finalize`", "invalid statement"]
-    checkStmtsIt (AwaitEvt () "a" `sSeq` (Every () "A" (Fin () (Nop ()))) `sPar` (Halt ())) ["invalid statement in `every`", "invalid statement"]
-    checkStmtsIt (Loop () ((Halt ()) `sPar` Loop () (Loop () (Loop () (AwaitInp () "A")))))  ["`loop` never iterates","`loop` never iterates","`loop` never iterates"]
-    checkStmtsIt (Loop () ((Escape () 0) `sPar` Loop () (Loop () (Loop () (AwaitInp () "A"))))) ["`loop` never iterates","`loop` never iterates","`loop` never iterates"]
-    checkStmtsIt (Fin () (Escape () 0)) ["invalid statement in `finalize`", "invalid statement"]
-    checkStmtsIt (Loop () (Halt ())) ["`loop` never iterates"]
+    checkStmtsIt ((Nop annz) `sSeq` (Fin annz (Loop annz (Escape annz 0)))) ["`loop` never iterates","invalid statement in `finalize`", "invalid statement"]
+    checkStmtsIt ((Nop annz) `sSeq` (Fin annz (Loop annz (Nop annz)))) ["unbounded `loop` execution"]
+    checkStmtsIt (Var annz "x" Type0 (Fin annz (Every annz "A" (Nop annz)))) ["invalid statement in `finalize`", "invalid statement"]
+    checkStmtsIt (Loop annz (Trap annz (Loop annz (Escape annz 0))))   ["`loop` never iterates","unbounded `loop` execution"]
+    checkStmtsIt (Loop annz (Trap annz (Loop annz (Seq annz (Escape annz 0) (Escape annz 0))))) ["unreachable statement","`loop` never iterates","unbounded `loop` execution"]
+    checkStmtsIt (AwaitEvt annz "a" `sSeq` (Fin annz (Escape annz 0)) `sPar` (Halt annz)) ["invalid statement in `finalize`", "invalid statement"]
+    checkStmtsIt (AwaitEvt annz "a" `sSeq` (Every annz "A" (Fin annz (Nop annz))) `sPar` (Halt annz)) ["invalid statement in `every`", "invalid statement"]
+    checkStmtsIt (Loop annz ((Halt annz) `sPar` Loop annz (Loop annz (Loop annz (AwaitInp annz "A")))))  ["`loop` never iterates","`loop` never iterates","`loop` never iterates"]
+    checkStmtsIt (Loop annz ((Escape annz 0) `sPar` Loop annz (Loop annz (Loop annz (AwaitInp annz "A"))))) ["`loop` never iterates","`loop` never iterates","`loop` never iterates"]
+    checkStmtsIt (Fin annz (Escape annz 0)) ["invalid statement in `finalize`", "invalid statement"]
+    checkStmtsIt (Loop annz (Halt annz)) ["`loop` never iterates"]
 
     -- all
-    checkCheckIt (Fin () (Escape () 0)) ["orphan `escape` statement", "invalid statement in `finalize`", "invalid statement"]
-    checkCheckIt (Trap () (Fin () (Escape () 0))) ["invalid statement in `finalize`", "invalid statement"]
-    checkCheckIt (Seq () (Trap () (Loop () (Trap () (Seq () (Escape () 0) (Nop ()))))) (Nop ())) ["missing `escape` statement", "unreachable statement", "unbounded `loop` execution", "unreachable statement"]
-    checkCheckIt (Inp () "FOREVER" (Trap () (Seq () (Trap () (Par () (Halt ()) (Escape () 0))) (Escape () 0))))
+    checkCheckIt (Fin annz (Escape annz 0)) ["orphan `escape` statement", "invalid statement in `finalize`", "invalid statement"]
+    checkCheckIt (Trap annz (Fin annz (Escape annz 0))) ["invalid statement in `finalize`", "invalid statement"]
+    checkCheckIt (Seq annz (Trap annz (Loop annz (Trap annz (Seq annz (Escape annz 0) (Nop annz))))) (Nop annz)) ["missing `escape` statement", "unreachable statement", "unbounded `loop` execution", "unreachable statement"]
+    checkCheckIt (Inp annz "FOREVER" (Trap annz (Seq annz (Trap annz (Par annz (Halt annz) (Escape annz 0))) (Escape annz 0))))
       []
-    checkCheckIt (Trap () (Par () (Escape () 0) (Seq () (Par () (Inp () "FOREVER" (Halt ())) (Fin () (Nop ()))) (Escape () 0))))
+    checkCheckIt (Trap annz (Par annz (Escape annz 0) (Seq annz (Par annz (Inp annz "FOREVER" (Halt annz)) (Fin annz (Nop annz))) (Escape annz 0))))
       ["unreachable statement"]
 
     describe "ext:" $ do
         it "emit O" $
-            (fst $ Check.compile (False,False,False) (EmitExt () "O" Nothing))
+            (fst $ Check.compile (False,False,False) (EmitExt annz "O" Nothing))
             `shouldBe` ["identifier 'O' is not declared"]
         it "out O; emit O" $
-            Check.compile (False,False,False) (Out () "O" (EmitExt () "O" Nothing))
-            `shouldBe` ([],Out TypeB "O" (EmitExt TypeB "O" Nothing))
+            Check.compile (False,False,False) (Out annz "O" (EmitExt annz "O" Nothing))
+            `shouldBe` ([],Out annz "O" (EmitExt annz "O" Nothing))
 
         it "await I" $
-            (fst $ Check.compile (False,False,False) (AwaitInp () "I"))
+            (fst $ Check.compile (False,False,False) (AwaitInp annz "I"))
             `shouldBe` ["identifier 'I' is not declared"]
         it "inp I; await I" $
-            Check.compile (False,False,False) (Inp () "I" (AwaitInp () "I"))
-            `shouldBe` ([], (Inp TypeB "I" (AwaitInp TypeB "I")))
+            Check.compile (False,False,False) (Inp annz "I" (AwaitInp annz "I"))
+            `shouldBe` ([], (Inp annz "I" (AwaitInp annz "I")))
 
       where
         checkIt ck p b   =
@@ -219,9 +218,9 @@ spec = do
           (it ((if b==[] then "pass" else "fail") ++ ": " ++ show p) $
             (ck p) `shouldBe` b)
         checkLoopIt p b      = checkIt  Check.boundedLoop p b
-        checkFinIt (Fin () p) b = checkIt' Check.getComplexs (traceShowId p) b
+        checkFinIt (Fin _ p) b = checkIt' Check.getComplexs (traceShowId p) b
         checkEveryIt p b     = checkIt' Check.getComplexs p b
         checkTypeSysIt p b   = checkIt' (fst.TypeSys.go) p b
         checkStmtsIt p b     = checkIt' Check.stmts p b
-        checkCheckIt :: Stmt () -> Errors -> Spec
+        checkCheckIt :: Stmt -> Errors -> Spec
         checkCheckIt p b     = checkIt' (fst . (Check.compile (False,False,False))) p b

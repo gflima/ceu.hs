@@ -6,7 +6,7 @@ import Ceu.Grammar.Full.Grammar
 
 -- compile: Converts (spawn p1; ...) into (p1;Halt or ...)
 
-compile :: (Ann ann) => Stmt ann -> (Errors, Stmt ann)
+compile :: Stmt -> (Errors, Stmt)
 compile (Var' z id tp Nothing p) = (es, Var' z id tp Nothing p')
                                    where
                                      (es,p') = compile p

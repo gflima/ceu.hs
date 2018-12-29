@@ -3,7 +3,7 @@ module Ceu.Grammar.Check where
 import Debug.Trace
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Ann      (Ann(..), errs_anns_msg_map)
+import Ceu.Grammar.Ann      (Ann(..), errs_anns_msg_map, toError)
 import Ceu.Grammar.Type     (Type(..))
 import Ceu.Grammar.Stmt     (Stmt(..), getAnn)
 import Ceu.Grammar.Simplify (simplify)
@@ -13,7 +13,7 @@ import qualified Ceu.Grammar.TypeSys as TypeSys
 
 type Options = (Bool,Bool,Bool)
 
-compile :: (Ann a) => Options -> (Stmt a) -> (Errors, Stmt Type)
+compile :: Options -> Stmt -> (Errors, Stmt)
 compile (o_simp,o_encl,o_prel) p = (es3,p3) where
     -- TODO: o_prel
   p1   = if not o_encl then p else
@@ -25,7 +25,7 @@ compile (o_simp,o_encl,o_prel) p = (es3,p3) where
   escs = errs_anns_msg_map (map (\(s,n)->getAnn s) (getEscapes p1)) "orphan `escape` statement"
 
 
-stmts :: (Ann a) => (Stmt a) -> Errors
+stmts :: Stmt -> Errors
 stmts stmt = case stmt of
   Var _ _ _ p     -> stmts p
   Inp _ _ p       -> stmts p
@@ -65,7 +65,7 @@ stmts stmt = case stmt of
 
 -------------------------------------------------------------------------------
 
-getComplexs :: (Ann a) => (Stmt a) -> [String]
+getComplexs :: Stmt -> [String]
 getComplexs p = errs_anns_msg_map (aux' (-1) p) "invalid statement" where
   aux' _ (AwaitEvt z _) = [z]
   aux' _ (AwaitInp z _) = [z]
@@ -92,7 +92,7 @@ getComplexs p = errs_anns_msg_map (aux' (-1) p) "invalid statement" where
 -- in its body lead to an occurrence of a matching-Escape/AwaitInp/Every.
 -- returns all `loop` that fail
 
-boundedLoop :: (Stmt a) -> Bool
+boundedLoop :: Stmt -> Bool
 boundedLoop (Loop _ body) = aux 0 body where
   aux n stmt = case stmt of
     AwaitInp _ _           -> True
@@ -119,9 +119,9 @@ neverEscapes p = (getEscapes p == [])
 
 escapesAt0 p = (length $ filter (\(_,n) -> n==0) (getEscapes p)) >= 1
 
-getEscapes :: (Stmt a) -> [(Stmt a,Int)]
+getEscapes :: Stmt -> [(Stmt,Int)]
 getEscapes p = escs 0 p where
-  escs :: Int -> (Stmt a) -> [(Stmt a,Int)]
+  escs :: Int -> Stmt -> [(Stmt,Int)]
   escs n (Var _ _ _ p)    = (escs n p)
   escs n (Inp _ _ p)      = (escs n p)
   escs n (Out _ _ p)      = (escs n p)
@@ -140,9 +140,9 @@ getEscapes p = escs 0 p where
     | otherwise           = [(s, k-n)]
   escs _ _                = []
 
-removeTrap :: (Stmt a) -> (Stmt a)
+removeTrap :: Stmt -> Stmt
 removeTrap (Trap _ p) = rT 0 p where
-  rT :: Int -> (Stmt a) -> (Stmt a)
+  rT :: Int -> Stmt -> Stmt
   rT n (Var z id tp p)       = Var z id tp (rT n p)
   rT n (Inp z id p)          = Inp z id (rT n p)
   rT n (Out z id p)          = Out z id (rT n p)
@@ -164,7 +164,7 @@ removeTrap (Trap _ p) = rT 0 p where
 
 -------------------------------------------------------------------------------
 
-neverTerminates :: (Stmt a) -> Bool
+neverTerminates :: Stmt -> Bool
 neverTerminates (Var _ _ _ p)    = neverTerminates p
 neverTerminates (Inp _ _ p)      = neverTerminates p
 neverTerminates (Out _ _ p)      = neverTerminates p
@@ -184,7 +184,7 @@ neverTerminates _                = False
 
 maybeTerminates = not . neverTerminates
 
-alwaysTerminates :: (Stmt a) -> Bool
+alwaysTerminates :: Stmt -> Bool
 alwaysTerminates (Var _ _ _ p)    = alwaysTerminates p
 alwaysTerminates (Inp _ _ p)      = alwaysTerminates p
 alwaysTerminates (Out _ _ p)      = alwaysTerminates p
@@ -204,7 +204,7 @@ alwaysTerminates _                = True
 
 -------------------------------------------------------------------------------
 
-alwaysInstantaneous :: (Stmt a) -> Bool
+alwaysInstantaneous :: Stmt -> Bool
 alwaysInstantaneous p = aux p where
   aux (Var _ _ _ p)    = aux p
   aux (Inp _ _ p)      = aux p
@@ -225,7 +225,7 @@ alwaysInstantaneous p = aux p where
   aux _                = True
 
 {-
-neverInstantaneous :: (Stmt a) -> Bool
+neverInstantaneous :: Stmt -> Bool
 neverInstantaneous p = aux p where
   aux (Var _ _ _ p)  = aux p
   aux (Inp _ _ p)    = aux p

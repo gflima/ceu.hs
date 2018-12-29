@@ -2,7 +2,7 @@ module Ceu.Grammar.Simplify where
 
 import Ceu.Grammar.Stmt (Stmt(..))
 
-simplify :: (Eq ann) => (Stmt ann) -> (Stmt ann)
+simplify :: Stmt -> Stmt
 
 simplify (Var z id tp p) =
   case p' of

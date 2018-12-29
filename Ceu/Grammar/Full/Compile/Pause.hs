@@ -19,7 +19,7 @@ import Ceu.Grammar.Full.Grammar
 --          <...>
 --      end
 --  end
-compile :: (Stmt ann) -> (Errors, Stmt ann)
+compile :: Stmt -> (Errors, Stmt)
 compile p = ([], aux p)
 
 aux (Var' z id tp Nothing p) = Var' z id tp Nothing (aux p)

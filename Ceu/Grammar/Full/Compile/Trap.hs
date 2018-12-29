@@ -4,9 +4,9 @@ import Debug.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Full.Grammar
 
-compile :: Stmt ann -> (Errors, Stmt ann)
+compile :: Stmt -> (Errors, Stmt)
 compile p = ([], aux [] p) where
-  aux :: [Maybe ID_Var] -> Stmt ann -> Stmt ann
+  aux :: [Maybe ID_Var] -> Stmt -> Stmt
   aux vars (Var' z var tp fin p) = Var' z var tp fin (aux vars p)
   aux vars (Inp' z id b p)     = Inp' z id b (aux vars p)
   aux vars (Out' z id b p)     = Out' z id b (aux vars p)
@@ -27,7 +27,7 @@ compile p = ([], aux [] p) where
   aux vars s@(Escape _ _ _)    = escape vars s 0
   aux vars p                   = p
 
-escape :: [Maybe ID_Var] -> Stmt ann -> Int -> Stmt ann
+escape :: [Maybe ID_Var] -> Stmt -> Int -> Stmt
 escape (Nothing:_) (Escape z Nothing Nothing) _ = Escape' z 0
 escape ((Just var):_) (Escape z Nothing (Just val)) _ = Seq z (Write z var val) (Escape' z 0)
 escape ((Just var'):l) s@(Escape z (Just var) val) n
@@ -37,7 +37,7 @@ escape ((Just var'):l) s@(Escape z (Just var) val) n
   | otherwise   = escape l s (n+1)
 escape _ (Escape z _ _) _ = Escape' z (-1)
 
-ins' :: Stmt ann -> Stmt ann
+ins' :: Stmt -> Stmt
 ins' p = (aux 0 p) where
   aux n (Var' z var tp Nothing p) = Var' z var tp Nothing (aux n p)
   aux n (Inp' z inp b p)       = Inp' z inp b (aux n p)

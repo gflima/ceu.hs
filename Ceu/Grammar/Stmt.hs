@@ -1,45 +1,44 @@
 module Ceu.Grammar.Stmt where
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Ann      (Ann)
+import Ceu.Grammar.Ann      (Ann, annz)
 import Ceu.Grammar.Type     (Type(..))
 import Ceu.Grammar.Exp      (Exp(..), RawAt)
 import Text.Printf
 
 -- Program (pg 5).
-data Stmt ann
-  = Var      ann ID_Var Type (Stmt ann)             -- variable declaration
-  | Inp      ann ID_Inp (Stmt ann)                  -- input declaration
-  | Out      ann ID_Out (Stmt ann)                  -- output declaration
-  | Evt      ann ID_Evt (Stmt ann)                  -- event declaration
-  | Func     ann ID_Func Type (Stmt ann)            -- function declaration
-  | Write    ann ID_Var (Exp ann)                   -- assignment statement
-  | AwaitInp ann ID_Inp                             -- await external event
-  | EmitExt  ann ID_Ext (Maybe (Exp ann))           -- emit external event
-  | AwaitEvt ann ID_Evt                             -- await internal event
-  | EmitEvt  ann ID_Evt                             -- emit internal event
-  | If       ann (Exp ann) (Stmt ann) (Stmt ann)    -- conditional
-  | Seq      ann (Stmt ann) (Stmt ann)              -- sequence
-  | Loop     ann (Stmt ann)                         -- infinite loop
-  | Every    ann ID (Stmt ann)                      -- event iteration
-  | Par      ann (Stmt ann) (Stmt ann)              -- par statement
-  | Pause    ann ID_Var (Stmt ann)                  -- pause/suspend statement
-  | Fin      ann (Stmt ann)                         -- finalization statement
-  | Trap     ann (Stmt ann)                         -- enclose escape
-  | Escape   ann Int                                -- escape N traps
-  | Nop      ann                                    -- dummy statement (internal)
-  | Halt     ann                                    -- halt (await FOREVER)
-  | RawS     ann [RawAt ann]                        -- raw/native statement
-  | Error    ann String                             -- generate runtime error (for testing)
+data Stmt
+  = Var      Ann ID_Var Type Stmt           -- variable declaration
+  | Inp      Ann ID_Inp Stmt                -- input declaration
+  | Out      Ann ID_Out Stmt                -- output declaration
+  | Evt      Ann ID_Evt Stmt                -- event declaration
+  | Func     Ann ID_Func Type Stmt          -- function declaration
+  | Write    Ann ID_Var Exp                 -- assignment statement
+  | AwaitInp Ann ID_Inp                     -- await external event
+  | EmitExt  Ann ID_Ext (Maybe Exp)         -- emit external event
+  | AwaitEvt Ann ID_Evt                     -- await internal event
+  | EmitEvt  Ann ID_Evt                     -- emit internal event
+  | If       Ann Exp Stmt Stmt              -- conditional
+  | Seq      Ann Stmt Stmt                  -- sequence
+  | Loop     Ann Stmt                       -- infinite loop
+  | Every    Ann ID Stmt                    -- event iteration
+  | Par      Ann Stmt Stmt                  -- par statement
+  | Pause    Ann ID_Var Stmt                -- pause/suspend statement
+  | Fin      Ann Stmt                       -- finalization statement
+  | Trap     Ann Stmt                       -- enclose escape
+  | Escape   Ann Int                        -- escape N traps
+  | Nop      Ann                            -- dummy statement (internal)
+  | Halt     Ann                            -- halt (await FOREVER)
+  | RawS     Ann [RawAt]                    -- raw/native statement
+  | Error    Ann String                     -- generate runtime error (for testing)
   deriving (Eq, Show)
 
-sSeq a b = Seq () a b
-sPar a b = Par () a b
+sSeq a b = Seq annz a b
+sPar a b = Par annz a b
+infixr 1 `sSeq`
+infixr 0 `sPar`
 
-infixr 1 `sSeq` -- `Seq` associates to the right
-infixr 0 `sPar` -- `Par` associates to the right
-
-getAnn :: Stmt a -> a
+getAnn :: Stmt -> Ann
 getAnn (Var      z _ _ _)   = z
 getAnn (Inp      z _ _)     = z
 getAnn (Out      z _ _)     = z
@@ -65,7 +64,7 @@ getAnn (RawS     z _)       = z
 getAnn (Error    z _)       = z
 
 {-
-stmt2word :: (Stmt ann) -> String
+stmt2word :: Stmt -> String
 stmt2word stmt = case stmt of
   Var _ _ _ _    -> "declaration"
   Inp _ _ _      -> "declaration"
