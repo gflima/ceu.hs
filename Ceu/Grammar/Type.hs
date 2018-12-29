@@ -37,8 +37,3 @@ checkTypes (TypeF inp1 out1) (TypeF inp2 out2) = (checkTypes inp1 inp2) && (chec
 -- redundant patterns:
 --checkTypes (TypeF _    _)    _                 = False
 --checkTypes _                 (TypeF _    _)    = False
-
-checkTypesErrs :: (INode a) => a -> Type -> Type -> Errors
-checkTypesErrs s t1 t2 = if checkTypes t1 t2 then [] else
-                            [toError s "types do not match"]
-

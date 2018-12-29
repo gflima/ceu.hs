@@ -1,15 +1,16 @@
 module Ceu.Grammar.Full.Compile.Fin where
 
 import Ceu.Grammar.Globals
+import Ceu.Grammar.Ann      (Ann, toError)
 import Ceu.Grammar.Full.Grammar
 
 -- compile:
 -- (Fin f1 f2 f3);A -> (or (Fin' p) A)
 -- (Fin id p);A -> A ||| (Var' (Or [(Fin p)] X)
 
-compile :: (Ann ann) => (Stmt ann) -> (Errors, Stmt ann)
+compile :: (Ann a) => (Stmt a) -> (Errors, Stmt a)
 compile p = aux Nothing p where
-  aux :: (Ann ann) => (Maybe ID_Evt) -> (Stmt ann) -> (Errors, Stmt ann)
+  aux :: (Ann a) => (Maybe ID_Evt) -> (Stmt a) -> (Errors, Stmt a)
   aux pse (Var' z var tp (Just (f1,f2,f3)) p) = aux pse (Var' z var tp Nothing (Seq z (Fin z f1 f2 f3) p))
   aux pse (Var' z var tp Nothing p)   = (es, Var' z var tp Nothing p')
                                         where
@@ -73,7 +74,7 @@ compile p = aux Nothing p where
   aux pse (Pause z evt p)             = (es, Pause z evt p')
                                         where
                                           (es,p') = (aux (Just evt) p)
-  aux pse s@(Fin z _ _ _)             = ([toError s "unexpected `finalize`"]++es, p')
+  aux pse s@(Fin z _ _ _)             = ([toError z "unexpected `finalize`"]++es, p')
                                         where
                                           (es,p') = aux pse (Seq z s (Nop z))
   aux pse (Async z p)                 = (es, Async z p')

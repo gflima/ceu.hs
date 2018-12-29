@@ -1,6 +1,7 @@
 module Ceu.Grammar.Full.Grammar where
 
 import Ceu.Grammar.Globals
+import Ceu.Grammar.Ann      (Ann)
 import Ceu.Grammar.Type     (Type(..))
 import Ceu.Grammar.Exp      (Exp(..), RawAt)
 import qualified Ceu.Grammar.Stmt as G
@@ -115,7 +116,7 @@ getAnn (Nop      z      ) = z
 getAnn (Halt     z      ) = z
 getAnn (RawS     z _    ) = z
 
-toGrammar :: (Eq ann, Ann ann) => (Stmt ann) -> (Errors, G.Stmt ann)
+toGrammar :: (Ann a) => (Stmt a) -> (Errors, G.Stmt a)
 toGrammar (Var' z var tp Nothing p) = (es, G.Var z var tp p')
                                  where
                                    (es,p') = toGrammar p
@@ -178,7 +179,8 @@ toGrammar p                      = error $ "toGrammar: unexpected statement: " -
 
 -------------------------------------------------------------------------------
 
-stmt2word :: (Stmt ann) -> String
+{-
+stmt2word :: (Stmt a) -> String
 stmt2word stmt = case stmt of
   Var _ _ _ _    -> "declaration"
   Inp _ _ _      -> "declaration"
@@ -220,9 +222,4 @@ stmt2word stmt = case stmt of
   Nop _          -> "nop"
   Halt _         -> "halt"
   RawS _ _       -> "raw"
-
-instance (Ann ann) => INode (Stmt ann) where
-  toWord   = stmt2word
-  toSource = getSource . getAnn
-  toN      = getN . getAnn
-  toTrails = getTrails . getAnn
+-}

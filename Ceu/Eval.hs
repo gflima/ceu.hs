@@ -1,6 +1,7 @@
 module Ceu.Eval where
 
 import Ceu.Grammar.Globals
+import Ceu.Grammar.Ann      (Ann)
 import Ceu.Grammar.Exp
 import qualified Ceu.Grammar.Stmt     as G
 import qualified Ceu.Grammar.Simplify as S
@@ -50,7 +51,7 @@ sPar a b = Par () a b
 infixr 1 `sSeq`
 infixr 0 `sPar`
 
-getAnn :: Stmt ann -> ann
+getAnn :: Stmt a -> a
 getAnn (Var      z _ _)   = z
 getAnn (Evt      z _ _)   = z
 getAnn (Write    z _ _)   = z
@@ -73,7 +74,7 @@ getAnn (CanRun   z _)     = z
 getAnn (Loop'    z _ _)   = z
 getAnn (Par'     z _ _)   = z
 
-fromGrammar :: (G.Stmt ann) -> (Stmt ann)
+fromGrammar :: (G.Stmt a) -> (Stmt a)
 fromGrammar (G.Var z id _ p)    = Var z (id,Nothing) (fromGrammar p)
 fromGrammar (G.Inp _ _ p)       = (fromGrammar p)
 fromGrammar (G.Out _ _ p)       = (fromGrammar p)
@@ -118,7 +119,7 @@ varsRead vars var = case vars of
   []              -> error ("varsRead: undeclared variable: " ++ var)
 
 -- Evaluates expression in environment.
-varsEval :: Vars -> (Exp ann) -> Val
+varsEval :: Vars -> (Exp a) -> Val
 varsEval vars expr = case expr of
   Const _ val     -> val
   Read  _ var     -> varsRead vars var
@@ -143,7 +144,7 @@ evtsEmit ints int = case ints of
 
 -- Tests whether program is blocked at the given stack level.
 -- (pg 8, fig 4.ii)
-isBlocked :: Lvl -> (Stmt ann) -> Bool
+isBlocked :: Lvl -> (Stmt a) -> Bool
 isBlocked n stmt = case stmt of
   Var _ _ p      -> isBlocked n p
   Evt _ _ p      -> isBlocked n p
@@ -165,7 +166,7 @@ isBlockedNop n p       = isBlocked n p
 
 -- Obtains the body of all active Fin statements in program.
 -- (pg 8, fig 4.iii)
-clear :: (Stmt ann) -> (Stmt ann)
+clear :: (Stmt a) -> (Stmt a)
 clear stmt = case stmt of
   Var _ _ p      -> clear p
   Evt _ _ p      -> clear p
@@ -184,14 +185,14 @@ clear stmt = case stmt of
   _              -> error "clear: invalid clear"
 
 -- Helper function used by step in the *-adv rules.
-stepAdv :: Desc ann -> (Stmt ann -> Stmt ann) -> Desc ann
+stepAdv :: Desc a -> (Stmt a -> Stmt a) -> Desc a
 stepAdv d f = (f p, n, vars, ints, outs)
   where
     (p, n, vars, ints, outs) = step d
 
 -- Single nested transition.
 -- (pg 6)
-step :: Desc ann -> Desc ann
+step :: Desc a -> Desc a
 
 step (Var _ _ s@(Nop _), n, vars, ints, outs)            -- var-nop
   = (s, n, vars, ints, outs)
@@ -290,7 +291,7 @@ step _ = error "step: cannot advance"
 
 -- Tests whether the description is nst-irreducible.
 -- CHECK: nst should only produce nst-irreducible descriptions.
-isReducible :: Desc ann -> Bool
+isReducible :: Desc a -> Bool
 isReducible desc = case desc of
   (_,       n, _, _, _) | n>0 -> True
   (Nop _,   _, _, _, _)       -> False
@@ -299,7 +300,7 @@ isReducible desc = case desc of
 
 -- Awakes all trails waiting for the given event.
 -- (pg 8, fig 4.i)
-bcast :: ID -> Vars -> (Stmt ann) -> (Stmt ann)
+bcast :: ID -> Vars -> (Stmt a) -> (Stmt a)
 bcast e vars stmt = case stmt of
   Var z vv p              -> Var z vv (bcast e (vv:vars) p)
   Evt z id p              -> Evt z id (bcast e vars p)
@@ -318,10 +319,10 @@ bcast e vars stmt = case stmt of
 
 -- Computes a reaction of program plus environment to a single external event.
 -- (pg 6)
-reaction :: (Stmt ann) -> ID_Inp -> (Stmt ann, Outs)
+reaction :: (Stmt a) -> ID_Inp -> (Stmt a, Outs)
 reaction p ext = (p',outs') where (p',_,_,_,outs') = steps (bcast ext [] p, 0, [], [], [])
 
-steps :: Desc ann -> Desc ann
+steps :: Desc a -> Desc a
 steps d
   | not $ isReducible d = d
   | otherwise = steps $ step d
@@ -331,7 +332,7 @@ type Result = Either Errors (Val,[Outs])
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "_ret" set by the program.
-run :: (G.Stmt ann) -> [a] -> (Stmt ann -> a -> (Stmt ann, Outs)) -> Result
+run :: (G.Stmt a) -> [b] -> (Stmt a -> b -> (Stmt a, Outs)) -> Result
 run prog ins reaction = eP (fromGrammar prog) ins []
   where
     --eP :: Stmt -> [a] -> [Outs] -> (Val,[Outs])
@@ -347,7 +348,7 @@ run prog ins reaction = eP (fromGrammar prog) ins []
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "_ret" set by the program.
-compile_run :: (Show ann, Eq ann, Ann ann) => (G.Stmt ann) -> [ID_Inp] -> Result
+compile_run :: (Ann a) => (G.Stmt a) -> [ID_Inp] -> Result
 compile_run prog ins =
   let (es,p) = Check.compile (True,True,False) prog in
     if es == [] then

@@ -3,6 +3,7 @@ module Ceu.Grammar.Check where
 import Debug.Trace
 
 import Ceu.Grammar.Globals
+import Ceu.Grammar.Ann      (Ann(..), errs_anns_msg_map)
 import Ceu.Grammar.Type     (Type(..))
 import Ceu.Grammar.Stmt     (Stmt(..), getAnn)
 import Ceu.Grammar.Simplify (simplify)
@@ -12,7 +13,7 @@ import qualified Ceu.Grammar.Id as Id
 
 type Options = (Bool,Bool,Bool)
 
-compile :: (Show ann, Eq ann, Ann ann) => Options -> (Stmt ann) -> (Errors, Stmt ann)
+compile :: (Ann a) => Options -> (Stmt a) -> (Errors, Stmt a)
 compile (o_simp,o_encl,o_prel) p = (es3,p2) where
     -- TODO: o_prel
   p1   = if not o_encl then p else
@@ -20,10 +21,10 @@ compile (o_simp,o_encl,o_prel) p = (es3,p2) where
   p2   = if not o_simp then p1 else simplify p1
   es3  = escs ++ (stmts p1) ++ (Id.check p1)
   z    = getAnn p
-  escs = errs_nodes_msg_map (map (\(s,n)->s) (getEscapes p1)) "orphan `escape` statement"
+  escs = errs_anns_msg_map (map (\(s,n)->getAnn s) (getEscapes p1)) "orphan `escape` statement"
 
 
-stmts :: (Ann ann) => (Stmt ann) -> Errors
+stmts :: (Ann a) => (Stmt a) -> Errors
 stmts stmt = case stmt of
   Var _ _ _ p     -> stmts p
   Inp _ _ p       -> stmts p
@@ -33,64 +34,64 @@ stmts stmt = case stmt of
   If _ _ p q      -> stmts p ++ stmts q
   Seq _ p q       -> stmts p ++ stmts q ++ es where
                      es = if (maybeTerminates p) then [] else
-                            [toError q "unreachable statement"]
-  s@(Loop _ p)    -> stmts p ++ es1 ++ es2 where
+                            [toError (getAnn q) "unreachable statement"]
+  s@(Loop z p)    -> stmts p ++ es1 ++ es2 where
                      es1 = if boundedLoop s then [] else
-                            [toError s "unbounded `loop` execution"]
+                            [toError z "unbounded `loop` execution"]
                      es2 = if maybeTerminates p then [] else
-                            [toError s "`loop` never iterates"]
-  s@(Every _ e p) -> stmts p ++ (aux "invalid statement in `every`" s p)
-  s@(Par _ p q)   -> es ++ stmts p ++ stmts q where
+                            [toError z "`loop` never iterates"]
+  Every z e p     -> stmts p ++ (aux "invalid statement in `every`" z p)
+  Par z p q       -> es ++ stmts p ++ stmts q where
                      es = if (neverTerminates p) && (neverTerminates q) then
                              []
                           else
-                             [toError s "terminating trail"]
+                             [toError z "terminating trail"]
   Pause _ _ p     -> stmts p
-  s@(Fin _ p)     -> stmts p ++ (aux "invalid statement in `finalize`" s p)
-  s@(Trap _ p)    -> es1 ++ es2 ++ stmts p where
+  Fin z p         -> stmts p ++ (aux "invalid statement in `finalize`" z p)
+  Trap z p        -> es1 ++ es2 ++ stmts p where
                      es1 = if neverTerminates p then [] else
-                             [toError s "terminating `trap` body"]
+                             [toError z "terminating `trap` body"]
                      es2 = if escapesAt0 p then [] else
-                             [toError s "missing `escape` statement"]
+                             [toError z "missing `escape` statement"]
   _               -> []
   where
-    aux msg s p =
+    aux msg z p =
       let ret = getComplexs p in
         if (ret == []) then
           []
         else
-          [toError s msg] ++ ret
+          [toError z msg] ++ ret
 
 -------------------------------------------------------------------------------
 
-getComplexs :: (Ann ann) => (Stmt ann) -> [String]
-getComplexs p = errs_nodes_msg_map (aux' (-1) p) "invalid statement" where
-  aux' _ s@(AwaitEvt _ _) = [s]
-  aux' _ s@(AwaitInp _ _) = [s]
-  aux' n s@(Every _ _ p)  = [s] ++ aux' n p
-  aux' n s@(Fin _ p)      = [s] ++ aux' n p
-  aux' n s@(Loop _ p)     = aux' n p
-  aux' n (Var _ _ _ p)    = aux' n p
-  aux' n (Inp _ _ p)      = aux' n p
-  aux' n (Out _ _ p)      = aux' n p
-  aux' n (Evt _ _ p)      = aux' n p
-  aux' n (Func _ _ _ p)   = aux' n p
-  aux' n (If _ _ p q)     = aux' n p ++ aux' n q
-  aux' n (Seq _ p q)      = aux' n p ++ aux' n q
-  aux' n s@(Par _ p q)    = [s] ++ aux' n p ++ aux' n q
-  aux' n s@(Pause _ _ p)  = [s] ++ aux' n p
-  aux' n (Trap _ p)       = aux' (n+1) p
-  aux' n s@(Escape _ k)
-    | (n >= k)            = [s]
-    | otherwise           = [s]
-  aux' _ s@(Halt _)       = [s]
-  aux' _ _                = []
+getComplexs :: (Ann a) => (Stmt a) -> [String]
+getComplexs p = errs_anns_msg_map (aux' (-1) p) "invalid statement" where
+  aux' _ (AwaitEvt z _) = [z]
+  aux' _ (AwaitInp z _) = [z]
+  aux' n (Every z _ p)  = [z] ++ aux' n p
+  aux' n (Fin z p)      = [z] ++ aux' n p
+  aux' n (Loop _ p)     = aux' n p
+  aux' n (Var _ _ _ p)  = aux' n p
+  aux' n (Inp _ _ p)    = aux' n p
+  aux' n (Out _ _ p)    = aux' n p
+  aux' n (Evt _ _ p)    = aux' n p
+  aux' n (Func _ _ _ p) = aux' n p
+  aux' n (If _ _ p q)   = aux' n p ++ aux' n q
+  aux' n (Seq _ p q)    = aux' n p ++ aux' n q
+  aux' n (Par z p q)    = [z] ++ aux' n p ++ aux' n q
+  aux' n (Pause z _ p)  = [z] ++ aux' n p
+  aux' n (Trap _ p)     = aux' (n+1) p
+  aux' n (Escape z k)
+    | (n >= k)          = [z]
+    | otherwise         = [z]
+  aux' _ (Halt z)       = [z]
+  aux' _ _              = []
 
 -- Receives a Loop statement and checks whether all execution paths
 -- in its body lead to an occurrence of a matching-Escape/AwaitInp/Every.
 -- returns all `loop` that fail
 
-boundedLoop :: (Stmt ann) -> Bool
+boundedLoop :: (Stmt a) -> Bool
 boundedLoop (Loop _ body) = aux 0 body where
   aux n stmt = case stmt of
     AwaitInp _ _           -> True
@@ -117,9 +118,9 @@ neverEscapes p = (getEscapes p == [])
 
 escapesAt0 p = (length $ filter (\(_,n) -> n==0) (getEscapes p)) >= 1
 
-getEscapes :: (Stmt ann) -> [(Stmt ann,Int)]
+getEscapes :: (Stmt a) -> [(Stmt a,Int)]
 getEscapes p = escs 0 p where
-  escs :: Int -> (Stmt ann) -> [(Stmt ann,Int)]
+  escs :: Int -> (Stmt a) -> [(Stmt a,Int)]
   escs n (Var _ _ _ p)    = (escs n p)
   escs n (Inp _ _ p)      = (escs n p)
   escs n (Out _ _ p)      = (escs n p)
@@ -138,9 +139,9 @@ getEscapes p = escs 0 p where
     | otherwise           = [(s, k-n)]
   escs _ _                = []
 
-removeTrap :: (Stmt ann) -> (Stmt ann)
+removeTrap :: (Stmt a) -> (Stmt a)
 removeTrap (Trap _ p) = rT 0 p where
-  rT :: Int -> (Stmt ann) -> (Stmt ann)
+  rT :: Int -> (Stmt a) -> (Stmt a)
   rT n (Var z id tp p)       = Var z id tp (rT n p)
   rT n (Inp z id p)          = Inp z id (rT n p)
   rT n (Out z id p)          = Out z id (rT n p)
@@ -162,7 +163,7 @@ removeTrap (Trap _ p) = rT 0 p where
 
 -------------------------------------------------------------------------------
 
-neverTerminates :: (Stmt ann) -> Bool
+neverTerminates :: (Stmt a) -> Bool
 neverTerminates (Var _ _ _ p)    = neverTerminates p
 neverTerminates (Inp _ _ p)      = neverTerminates p
 neverTerminates (Out _ _ p)      = neverTerminates p
@@ -182,7 +183,7 @@ neverTerminates _                = False
 
 maybeTerminates = not . neverTerminates
 
-alwaysTerminates :: (Stmt ann) -> Bool
+alwaysTerminates :: (Stmt a) -> Bool
 alwaysTerminates (Var _ _ _ p)    = alwaysTerminates p
 alwaysTerminates (Inp _ _ p)      = alwaysTerminates p
 alwaysTerminates (Out _ _ p)      = alwaysTerminates p
@@ -202,7 +203,7 @@ alwaysTerminates _                = True
 
 -------------------------------------------------------------------------------
 
-alwaysInstantaneous :: (Stmt ann) -> Bool
+alwaysInstantaneous :: (Stmt a) -> Bool
 alwaysInstantaneous p = aux p where
   aux (Var _ _ _ p)    = aux p
   aux (Inp _ _ p)      = aux p
@@ -223,7 +224,7 @@ alwaysInstantaneous p = aux p where
   aux _                = True
 
 {-
-neverInstantaneous :: (Stmt ann) -> Bool
+neverInstantaneous :: (Stmt a) -> Bool
 neverInstantaneous p = aux p where
   aux (Var _ _ _ p)  = aux p
   aux (Inp _ _ p)    = aux p

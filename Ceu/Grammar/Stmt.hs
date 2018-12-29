@@ -1,8 +1,9 @@
 module Ceu.Grammar.Stmt where
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Type (Type(..))
-import Ceu.Grammar.Exp  (Exp(..), RawAt)
+import Ceu.Grammar.Ann      (Ann)
+import Ceu.Grammar.Type     (Type(..))
+import Ceu.Grammar.Exp      (Exp(..), RawAt)
 import Text.Printf
 
 -- Program (pg 5).
@@ -38,7 +39,7 @@ sPar a b = Par () a b
 infixr 1 `sSeq` -- `Seq` associates to the right
 infixr 0 `sPar` -- `Par` associates to the right
 
-getAnn :: Stmt ann -> ann
+getAnn :: Stmt a -> a
 getAnn (Var      z _ _ _)   = z
 getAnn (Inp      z _ _)     = z
 getAnn (Out      z _ _)     = z
@@ -63,6 +64,7 @@ getAnn (Halt     z)         = z
 getAnn (RawS     z _)       = z
 getAnn (Error    z _)       = z
 
+{-
 stmt2word :: (Stmt ann) -> String
 stmt2word stmt = case stmt of
   Var _ _ _ _    -> "declaration"
@@ -88,9 +90,4 @@ stmt2word stmt = case stmt of
   Halt _         -> "halt"
   RawS _ _       -> "raw"
   Error _ _      -> "error"
-
-instance (Ann ann) => INode (Stmt ann) where
-  toWord   = stmt2word
-  toSource = getSource . getAnn
-  toN      = getN . getAnn
-  toTrails = getTrails . getAnn
+-}

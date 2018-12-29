@@ -4,48 +4,49 @@ import Debug.Trace
 import Data.List (find)
 
 import Ceu.Grammar.Globals
+import Ceu.Grammar.Ann      (Ann(toError, toErrorTypes))
 import Ceu.Grammar.Type
 import Ceu.Grammar.Exp
 import Ceu.Grammar.Stmt
 
-check :: (Show ann, Ann ann) => (Stmt ann) -> Errors
+check :: (Ann a) => (Stmt a) -> Errors
 check p = stmt [] p
 
-stmt :: (Ann ann) => [Stmt ann] -> Stmt ann -> Errors
+stmt :: (Ann a) => [Stmt a] -> Stmt a -> Errors
 
-stmt ids s@(Var _ id _ p)    = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
-stmt ids s@(Inp _ id p)      = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
-stmt ids s@(Out _ id p)      = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
-stmt ids s@(Evt _ id p)      = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
-stmt ids s@(Func _ id _ p)   = (errDeclared ids (id,s)) ++ (stmt (s:ids) p)
+stmt ids s@(Var z id _ p)    = (errDeclared ids (id,z)) ++ (stmt (s:ids) p)
+stmt ids s@(Inp z id p)      = (errDeclared ids (id,z)) ++ (stmt (s:ids) p)
+stmt ids s@(Out z id p)      = (errDeclared ids (id,z)) ++ (stmt (s:ids) p)
+stmt ids s@(Evt z id p)      = (errDeclared ids (id,z)) ++ (stmt (s:ids) p)
+stmt ids s@(Func z id _ p)   = (errDeclared ids (id,z)) ++ (stmt (s:ids) p)
 
-stmt ids s@(Write _ id exp) = es1 ++ es2 ++ es3
+stmt ids (Write z id exp)    = es1 ++ es2 ++ es3
                               where
-                                (tp1,es1) = fff id ids s isVar
+                                (tp1,es1) = fff id ids z isVar
                                 (tp2,es2) = expr ids exp
                                 es3       = if isTypeB tp1 || isTypeB tp2 then
                                                 []
                                             else
-                                                checkTypesErrs s tp1 tp2
+                                                toErrorTypes z tp1 tp2
 
-stmt ids s@(AwaitInp _ id)     = snd $ fff id ids s isInp
-stmt ids s@(EmitExt  _ id exp) = (snd $ fff id ids s isExt) ++ es
+stmt ids (AwaitInp z id)     = snd  $ fff id ids z isInp
+stmt ids (EmitExt  z id exp) = (snd $ fff id ids z isExt) ++ es
                                  where
                                     es = case exp of
                                         Nothing -> []
                                         Just e  -> es where (_,es) = expr ids e
-stmt ids s@(AwaitEvt _ id)     = snd $ fff id ids s isEvt
-stmt ids s@(EmitEvt  _ id)     = snd $ fff id ids s isEvt
+stmt ids (AwaitEvt z id)     = snd $ fff id ids z isEvt
+stmt ids (EmitEvt  z id)     = snd $ fff id ids z isEvt
 
-stmt ids s@(If  _ exp p1 p2) = es1 ++ es2 ++ (stmt ids p1) ++ (stmt ids p2)
+stmt ids (If  z exp p1 p2) = es1 ++ es2 ++ (stmt ids p1) ++ (stmt ids p2)
                                where
                                 (tp,es1) = (expr ids exp)
-                                es2 = checkTypesErrs s (Type1 "Bool") tp
+                                es2 = toErrorTypes z (Type1 "Bool") tp
 stmt ids (Seq _ p1 p2)     = (stmt ids p1) ++ (stmt ids p2)
 stmt ids (Loop _ p)        = (stmt ids p)
-stmt ids s@(Every _ evt p) = (snd $ fff evt ids s isInpEvt) ++ (stmt ids p)
+stmt ids (Every z evt p)   = (snd $ fff evt ids z isInpEvt) ++ (stmt ids p)
 stmt ids (Par _ p1 p2)     = (stmt ids p1) ++ (stmt ids p2)
-stmt ids s@(Pause _ id p)  = (snd $ fff id ids s isVar) ++ (stmt ids p)
+stmt ids (Pause z id p)    = (snd $ fff id ids z isVar) ++ (stmt ids p)
 stmt ids (Fin _ p)         = (stmt ids p)
 stmt ids (Trap _ p)        = (stmt ids p)
 stmt ids p                 = []
@@ -72,35 +73,35 @@ isInpEvt _           = False
 isFunc (Func _ _ _ _) = True
 isFunc _              = False
 
-getId :: Stmt ann -> String
+getId :: Stmt a -> String
 getId (Var _ id _ _)    = id
 getId (Inp _ id _)      = id
 getId (Out _ id _)      = id
 getId (Evt _ id _)      = id
 getId (Func _ id _ _)   = id
 
-find' :: String -> [Stmt ann] -> Maybe (Stmt ann)
+find' :: String -> [Stmt a] -> Maybe (Stmt a)
 find' id ids = find (\s -> getId s == id) ids
 
-errDeclared :: (INode a) => [Stmt ann] -> (String,a) -> Errors
-errDeclared ids (id,dcl) =
+errDeclared :: (Ann b) => [Stmt a] -> (String, b) -> Errors
+errDeclared ids (id,z) =
     if (take 2 id == "__") then [] else    -- nested par/and (__and)
         case find' id ids of
             Nothing   -> []
-            s         -> [toError dcl "identifier '" ++ id ++ "' is already declared"]
+            s         -> [toError z "identifier '" ++ id ++ "' is already declared"]
 
-fff :: (INode a) => String -> [Stmt ann] -> a -> (Stmt ann -> Bool) -> (Type, Errors)
-fff id ids use pred =
+fff :: (Ann b) => String -> [Stmt a] -> b -> (Stmt a -> Bool) -> (Type, Errors)
+fff id ids z pred =
     case dcl of
-        Nothing -> (TypeB, [toError use "identifier '" ++ id ++ "' is not declared"])
+        Nothing -> (TypeB, [toError z "identifier '" ++ id ++ "' is not declared"])
         Just s  -> if pred s then
                     (retType dcl, [])
                    else
-                    (TypeB, [toError use "identifier '" ++ id ++ "' is invalid"])
+                    (TypeB, [toError z "identifier '" ++ id ++ "' is invalid"])
     where
         dcl = find' id ids
 
-        retType :: Maybe (Stmt ann) -> Type
+        retType :: Maybe (Stmt a) -> Type
         retType Nothing                           = TypeB
         retType (Just (Var _ _ tp _))             = tp
         retType (Just (Func _ _ (TypeF inp _) _)) = inp       -- input type (params)
@@ -113,7 +114,7 @@ isTypeB _     = False
 
 -------------------------------------------------------------------------------
 
-expr :: (Ann ann) => [Stmt ann] -> Exp ann -> (Type,Errors)
+expr :: (Ann a) => [Stmt a] -> Exp a -> (Type,Errors)
 
 expr _ (RawE  _ _)  = (TypeT, [])
 expr _ (Const _ _)  = ((Type1 "Int"), [])
@@ -127,19 +128,19 @@ expr ids e@(Tuple _ exps) = (tps, es)
                                 tps' = map (\(tp,_) -> tp) rets
                                 es   = concat $ map (\(_,es) -> es) rets
 
-expr ids e@(Read _ id) = if id == "_INPUT" then
-                            ((Type1 "Int"),[])
-                         else
-                            fff id ids e isVar
+expr ids (Read z id) = if id == "_INPUT" then
+                        ((Type1 "Int"),[])
+                       else
+                        fff id ids z isVar
 
-expr ids e@(Call _ id exp) = (tp, es1++es2++es3)
-                             where
-                                (tp1,es1) = fff id ids e isFunc
+expr ids (Call z id exp) = (tp, es1++es2++es3)
+                            where
+                                (tp1,es1) = fff id ids z isFunc
                                 (tp2,es2) = expr ids exp
                                 es3       = if isTypeB tp1 || isTypeB tp2 then
                                                 []
                                             else
-                                                checkTypesErrs e tp1 tp2
+                                                toErrorTypes z tp1 tp2
                                 tp = case find' id ids of
                                         Just (Func _ _ (TypeF _ tp') _) -> tp'
                                         otherwise                       -> TypeB

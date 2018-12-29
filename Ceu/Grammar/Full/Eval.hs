@@ -1,6 +1,7 @@
 module Ceu.Grammar.Full.Eval where
 
 import Ceu.Grammar.Globals
+import Ceu.Grammar.Ann      (Ann)
 import Ceu.Grammar.Type     (Type(..))
 import qualified Ceu.Grammar.Stmt as G
 import qualified Ceu.Eval as E
@@ -21,7 +22,7 @@ import qualified Ceu.Grammar.Full.Compile.Seq      as Seq
 
 import qualified Ceu.Grammar.Check as Check
 
-compile :: (Ann ann) => Stmt ann -> (Errors, Stmt ann)
+compile :: (Ann a) => Stmt a -> (Errors, Stmt a)
 compile p = --traceShowId $ 
     comb Timer.compile    $
     comb Payload.compile  $
@@ -36,10 +37,10 @@ compile p = --traceShowId $
     comb Seq.compile      $
       ([], p)
   where
-    comb :: (Stmt ann -> (Errors,Stmt ann)) -> (Errors,Stmt ann) -> (Errors,Stmt ann)
+    comb :: (Stmt a -> (Errors,Stmt a)) -> (Errors,Stmt a) -> (Errors,Stmt a)
     comb f (es,p) = (es++es',p') where (es',p') = f p
 
-compile' :: (Show ann, Eq ann, Ann ann) => Check.Options -> Stmt ann -> (Errors, G.Stmt ann)
+compile' :: (Ann a) => Check.Options -> Stmt a -> (Errors, G.Stmt a)
 compile' (o_simp,o_encl,o_prel) p = (es2++es3++es4, p4)
   where
     p0       = if not o_prel then p else
@@ -63,13 +64,13 @@ compile' (o_simp,o_encl,o_prel) p = (es2++es3++es4, p4)
                             (Func z "negate" (TypeF (Type1 "Int") (Type1 "Int")))
                             (Func z "(*)" (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int"))))))))
 
-reaction :: E.Stmt ann -> In -> (E.Stmt ann, E.Outs)
+reaction :: E.Stmt a -> In -> (E.Stmt a, E.Outs)
 reaction p (ext,val) = (p''',outs) where
   (p'',_,_,_,outs) = E.steps (E.bcast ext [] p', 0, [], [], [])
   p' = E.Var (E.getAnn p) ("_INPUT", val) p
   (E.Var _ _ p''') = p''
 
-evalFullProg :: (Show ann, Eq ann, Ann ann) => Stmt ann -> [In] -> E.Result
+evalFullProg :: (Ann a) => Stmt a -> [In] -> E.Result
 evalFullProg prog ins =
   let (es,s) = compile' (True,True,True) prog in
     if es == [] then

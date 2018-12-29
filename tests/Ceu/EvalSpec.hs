@@ -1,6 +1,7 @@
 module Ceu.EvalSpec (main, spec) where
 
-import Ceu.Grammar.Globals  (Ann(..))
+import Ceu.Grammar.Globals
+import Ceu.Grammar.Ann      (Ann(..))
 import Ceu.Grammar.Ann.Unit
 import Ceu.Grammar.Type     (Type(..))
 import Ceu.Grammar.Exp      (Exp(..))
@@ -1074,17 +1075,17 @@ spec = do
             G.Write () "_ret" (Call () "(+)" (Tuple () [(Read () "a"),(Const () 10)])) `G.sSeq`
             G.Escape () 0)))
 
-    evalProgItFail ["escape: orphan `escape` statement","trap: missing `escape` statement","halt: unreachable statement"]
+    evalProgItFail ["orphan `escape` statement","missing `escape` statement","unreachable statement"]
       [] (G.Escape () 1)
 
-    evalProgItFail ["declaration: identifier '_ret' is already declared"]
+    evalProgItFail ["identifier '_ret' is already declared"]
       [] (G.Func () "(+)" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (G.Var () "a" (Type1 "Int")
            (G.Var () "_ret" (Type1 "Int")
              (G.Write () "a" (Const () 1) `G.sSeq`
               G.Write () "_ret" (Call () "(+)" (Tuple () [(Read () "a"), (Const () 10)])) `G.sSeq`
               G.Escape () 0))))
 
-    evalProgItFail ["declaration: identifier '_ret' is already declared"]
+    evalProgItFail ["identifier '_ret' is already declared"]
       [] (G.Write () "_ret" (Const () 1) `G.sSeq`
           G.Var () "_ret" (Type1 "Int") (G.Write () "_ret" (Const () 99)) `G.sSeq`
           G.Escape () 0)
@@ -1096,7 +1097,7 @@ spec = do
             G.Write () "_ret" (Call () "(+)" (Tuple () [(Read () "a"),(Const () 10)])) `G.sSeq`
             G.Escape () 0)))
 
-    evalProgItFail ["declaration: identifier 'a' is already declared"]
+    evalProgItFail ["identifier 'a' is already declared"]
       [] (G.Func () "(+)" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (G.Var () "a" (Type1 "Int")
            (G.Write () "a" (Const () 1) `G.sSeq`
             G.Var () "a" (Type1 "Int") (G.Write () "a" (Const () 99)) `G.sSeq`
@@ -1117,7 +1118,7 @@ spec = do
            G.Write () "_ret" (Call () "(+)" (Tuple () [(Read () "a"),(Const () 11)])) `G.sSeq`
            G.Escape () 0)))
 
-    evalProgItFail ["trap: missing `escape` statement"]
+    evalProgItFail ["missing `escape` statement"]
       [] (G.Trap () (G.Par ()
            (G.Inp () "A" (G.Var () "x" (Type1 "Int") (G.Write () "_ret" (Const () 1) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ())))
            (G.Escape () 1)))
@@ -1127,7 +1128,7 @@ spec = do
            (G.Var () "x" (Type1 "Int") (G.Write () "_ret" (Const () 1) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ()))
            (G.Escape () 0)))) (G.Escape () 0))
 
-    evalProgItFail ["loop: `loop` never iterates","declaration: identifier 'a' is already declared"]
+    evalProgItFail ["`loop` never iterates","identifier 'a' is already declared"]
       [] (G.Func () "(+)" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (G.Var () "a" (Type1 "Int")
            (G.Write () "a" (Const () 1) `G.sSeq`
             G.Trap () (G.Inp () "A" (G.Loop () (G.Par ()
@@ -1145,7 +1146,7 @@ spec = do
             G.Write () "_ret" (Call () "(+)" (Tuple () [(Read () "a"),(Const () 100)])) `G.sSeq`
             G.Escape () 0))))
 
-    evalProgItFail ["loop: `loop` never iterates"]
+    evalProgItFail ["`loop` never iterates"]
       [] (G.Seq () (G.Trap () (G.Loop () (G.Par ()
                  (G.Inp () "A" (G.Var () "x" (Type1 "Int") (G.Write () "_ret" (Const () 1) `G.sSeq` G.AwaitInp () "A" `G.sSeq` G.Halt ())))
                  (G.Escape () 0)))) (G.Escape () 0))

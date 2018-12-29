@@ -1,6 +1,7 @@
 module Ceu.Grammar.Full.Compile.Spawn where
 
 import Ceu.Grammar.Globals
+import Ceu.Grammar.Ann      (Ann, toError)
 import Ceu.Grammar.Full.Grammar
 
 -- compile: Converts (spawn p1; ...) into (p1;Halt or ...)
@@ -45,7 +46,7 @@ compile (Or' z p1 p2)            = (es1++es2, Or' z p1' p2')
                                    where
                                      (es1,p1') = compile p1
                                      (es2,p2') = compile p2
-compile s@(Spawn z p)            = ([toError s "unexpected `spawn`"]++es, p')
+compile s@(Spawn z p)            = ([toError z "unexpected `spawn`"]++es, p')
                                    where
                                      (es,p') = compile (Seq z s (Nop z))
 compile (Pause' z var p)         = (es, Pause' z var p')
