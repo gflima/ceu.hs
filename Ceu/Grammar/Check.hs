@@ -13,7 +13,7 @@ import qualified Ceu.Grammar.TypeSys as TypeSys
 
 type Options = (Bool,Bool,Bool)
 
-compile :: (Ann a) => Options -> (Stmt a) -> (Errors, Stmt a)
+compile :: (Ann a) => Options -> (Stmt a) -> (Errors, Stmt Type)
 compile (o_simp,o_encl,o_prel) p = (es3,p3) where
     -- TODO: o_prel
   p1   = if not o_encl then p else

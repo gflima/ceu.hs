@@ -1195,21 +1195,27 @@ escape x;
         (G.Escape () 0)
       )))
 
-    evalProgItSuccess (99,[[],[]]) ["A"]
-      (G.Seq () (G.Seq ()
-        (G.Var () "x" (Type1 "Int")
-          (G.Seq ()
-            (G.Write () "x" (Const () 1))
-            (G.Evt () "e"
-              (G.Trap () (G.Par ()
-                (G.Inp () "A" (G.Seq () (G.AwaitInp () "A") (G.Seq () (G.Write () "x" (Const () 0)) (G.Seq () (G.EmitEvt () "e") (G.Halt ())))))
-                (G.Seq () (G.Pause () "x" (G.Trap () (G.Par () (G.Seq () (G.AwaitEvt () "e") (G.Escape () 0)) ((G.EmitEvt () "e") `G.sSeq` (G.Halt ()))))) (G.Escape () 0)))))))
-        (G.Write () "_ret" (Const () 99))) (G.Escape () 0))
+    it "input A ; event e ; pause " $
+        compile_run
+            (G.Seq () (G.Seq ()
+                (G.Var () "x" (Type1 "Int")
+                  (G.Seq ()
+                    (G.Write () "x" (Const () 1))
+                    (G.Evt () "e"
+                      (G.Trap () (G.Par ()
+                        (G.Inp () "A" (G.Seq () (G.AwaitInp () "A") (G.Seq () (G.Write () "x" (Const () 0)) (G.Seq () (G.EmitEvt () "e") (G.Halt ())))))
+                        (G.Seq () (G.Pause () "x" (G.Trap () (G.Par () (G.Seq () (G.AwaitEvt () "e") (G.Escape () 0)) ((G.EmitEvt () "e") `G.sSeq` (G.Halt ()))))) (G.Escape () 0)))))))
+                (G.Write () "_ret" (Const () 99))) (G.Escape () 0))
+            ["A"]
+        `shouldBe` Right (99,[[],[]])
 
     -- multiple inputs
 
-    evalProgItSuccess (1,[[],[]])
-      ["A"] (G.Inp () "A" (G.AwaitInp () "A" `G.sSeq` G.Write () "_ret" (Const () 1) `G.sSeq` (G.Escape () 0)))
+    it "await A ; escape 1" $
+        compile_run
+            (G.Inp () "A" (G.AwaitInp () "A" `G.sSeq` G.Write () "_ret" (Const () 1) `G.sSeq` (G.Escape () 0)))
+            ["A"]
+        `shouldBe` Right (1,[[],[]])
 
     evalProgItFail ["program didn't terminate"]
       [] (G.Inp () "A" (G.AwaitInp () "A" `G.sSeq` G.Write () "_ret" (Const () 1) `G.sSeq` G.Escape () 0))

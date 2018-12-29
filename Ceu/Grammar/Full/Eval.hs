@@ -40,7 +40,7 @@ compile p = --traceShowId $
     comb :: (Stmt a -> (Errors,Stmt a)) -> (Errors,Stmt a) -> (Errors,Stmt a)
     comb f (es,p) = (es++es',p') where (es',p') = f p
 
-compile' :: (Ann a) => Check.Options -> Stmt a -> (Errors, G.Stmt a)
+compile' :: (Ann a) => Check.Options -> Stmt a -> (Errors, G.Stmt Type)
 compile' (o_simp,o_encl,o_prel) p = (es2++es3++es4, p4)
   where
     p0       = if not o_prel then p else

@@ -202,14 +202,14 @@ spec = do
             `shouldBe` ["identifier 'O' is not declared"]
         it "out O; emit O" $
             Check.compile (False,False,False) (Out () "O" (EmitExt () "O" Nothing))
-            `shouldBe` ([],Out () "O" (EmitExt () "O" Nothing))
+            `shouldBe` ([],Out TypeB "O" (EmitExt TypeB "O" Nothing))
 
         it "await I" $
             (fst $ Check.compile (False,False,False) (AwaitInp () "I"))
             `shouldBe` ["identifier 'I' is not declared"]
         it "inp I; await I" $
             Check.compile (False,False,False) (Inp () "I" (AwaitInp () "I"))
-            `shouldBe` ([], (Inp () "I" (AwaitInp () "I")))
+            `shouldBe` ([], (Inp TypeB "I" (AwaitInp TypeB "I")))
 
       where
         checkIt ck p b   =

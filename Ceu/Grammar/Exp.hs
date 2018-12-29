@@ -18,6 +18,14 @@ data Exp ann
     | Call   ann ID_Func (Exp ann)  -- f a ; f(a) ; f(1,2)
     deriving (Eq, Show)
 
+getAnn :: (Ann a) => Exp a -> a
+getAnn (RawE  z _)   = z
+getAnn (Const z _)   = z
+getAnn (Read  z _)   = z
+getAnn (Unit  z)     = z
+getAnn (Tuple z _)   = z
+getAnn (Call  z _ _) = z
+
 {-
 exp2word :: Exp ann -> String
 exp2word (RawE   _ _)  = "raw"

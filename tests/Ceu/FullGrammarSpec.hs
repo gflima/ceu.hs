@@ -65,15 +65,15 @@ spec = do
 
       it "scope var x end ; x=1" $ do
         compile' (False,False,False) (Seq () (Scope () (Var () "x" (Type1 "Int") Nothing)) (Write () "x" (Const () 1)))
-        `shouldBe` (["identifier 'x' is not declared"], G.Seq () (G.Var () "x" (Type1 "Int") (G.Nop ())) (G.Write () "x" (Const () 1)))
+        `shouldBe` (["identifier 'x' is not declared"], G.Seq TypeB (G.Var TypeB "x" (Type1 "Int") (G.Nop TypeB)) (G.Write TypeB "x" (Const (Type1 "Int") 1)))
 
       it "var x" $ do
         compile' (False,True,False) (Var () "x" Type0 Nothing)
-        `shouldBe` (["terminating `trap` body","missing `escape` statement","unreachable statement"], G.Inp () "TIMER" (G.Var () "_ret" (Type1 "Int") (G.Seq () (G.Trap () (G.Var () "x" Type0 (G.Nop ()))) (G.Halt ()))))
+        `shouldBe` (["terminating `trap` body","missing `escape` statement","unreachable statement"], G.Inp TypeB "TIMER" (G.Var TypeB "_ret" (Type1 "Int") (G.Seq TypeB (G.Trap TypeB (G.Var TypeB "x" Type0 (G.Nop TypeB))) (G.Halt TypeB))))
 
       it "var x" $ do
         compile' (True,True,False) (Var () "x" Type0 Nothing)
-        `shouldBe` (["terminating `trap` body","missing `escape` statement","unreachable statement"], G.Inp () "TIMER" (G.Var () "_ret" (Type1 "Int") (G.Halt ())))
+        `shouldBe` (["terminating `trap` body","missing `escape` statement","unreachable statement"], G.Inp TypeB "TIMER" (G.Var TypeB "_ret" (Type1 "Int") (G.Halt TypeB)))
 
     describe "int:" $ do
       it "int x" $ do
@@ -90,7 +90,7 @@ spec = do
 
       it "scope int x end ; x=1" $ do
         compile' (False,False,False) (Seq () (Scope () (Evt () "x" False)) (EmitEvt () "x" Nothing))
-        `shouldBe` (["identifier 'x' is not declared"], G.Seq () (G.Evt () "x" (G.Nop ())) (G.EmitEvt () "x"))
+        `shouldBe` (["identifier 'x' is not declared"], G.Seq TypeB (G.Evt TypeB "x" (G.Nop TypeB)) (G.EmitEvt TypeB "x"))
 
     describe "output:" $ do
       it "output X" $ do
@@ -107,15 +107,15 @@ spec = do
 
       it "scope ext X end ; X=1" $ do
         compile' (False,False,False) (Seq () (Scope () (Out () "X" False)) (EmitEvt () "X" Nothing))
-        `shouldBe` (["identifier 'X' is not declared"], G.Seq () (G.Out () "X" (G.Nop ())) (G.EmitEvt () "X"))
+        `shouldBe` (["identifier 'X' is not declared"], G.Seq TypeB (G.Out TypeB "X" (G.Nop TypeB)) (G.EmitEvt TypeB "X"))
 
       it "scope escape 1 end" $ do
         compile' (False,False,False) (Scope () (Escape () Nothing (Just (Const () 1))))
-        `shouldBe` (["orphan `escape` statement"],G.Escape () (-1))
+        `shouldBe` (["orphan `escape` statement"],G.Escape TypeB (-1))
 
       it "scope escape 1 end" $ do
         compile' (False,True,False) (Scope () (Escape () Nothing (Just (Const () 1))))
-        `shouldBe` ([],G.Inp () "TIMER" (G.Var () "_ret" (Type1 "Int") (G.Seq () (G.Trap () (G.Seq () (G.Write () "_ret" (Const () 1)) (G.Escape () 0))) (G.Halt ()))))
+        `shouldBe` ([],G.Inp TypeB "TIMER" (G.Var TypeB "_ret" (Type1 "Int") (G.Seq TypeB (G.Trap TypeB (G.Seq TypeB (G.Write TypeB "_ret" (Const (Type1 "Int") 1)) (G.Escape TypeB 0))) (G.Halt TypeB))))
 
   --------------------------------------------------------------------------
   describe "Trap.compile" $ do
@@ -142,7 +142,7 @@ spec = do
 
     it "trap/a escape/a;" $ do
       compile' (False,False,False) (Var' () "ret" Type0 Nothing (Trap () (Just "ret") (Escape () (Just "xxx") (Just (Const () 1)))))
-      `shouldBe` (["orphan `escape` statement","missing `escape` statement"], (G.Var () "ret" Type0 (G.Trap () (G.Escape () (-1)))))
+      `shouldBe` (["orphan `escape` statement","missing `escape` statement"], (G.Var TypeB "ret" Type0 (G.Trap TypeB (G.Escape TypeB (-1)))))
 
   --------------------------------------------------------------------------
   describe "Fin.compile" $ do
@@ -222,7 +222,7 @@ spec = do
 
     it "spawn nop; nop" $ do
       compile' (False,False,False) (Seq () (Spawn () (Nop ())) (Nop ()))
-      `shouldBe` (["terminating `spawn`"], G.Trap () (G.Par () (G.Seq () (G.Nop ()) (G.Halt ())) (G.Seq () (G.Nop ()) (G.Escape () 0))))
+      `shouldBe` (["terminating `spawn`"], G.Trap TypeB (G.Par TypeB (G.Seq TypeB (G.Nop TypeB) (G.Halt TypeB)) (G.Seq TypeB (G.Nop TypeB) (G.Escape TypeB 0))))
 
     it "spawn awaitFor; nop" $ do
       Spawn.compile (Seq () (Spawn () (Halt ())) (Nop ()))
@@ -230,7 +230,7 @@ spec = do
 
     it "spawn escape || escape" $ do
       compile' (False,False,False) (Trap () (Just "a") (Seq () (Spawn () (Par () (Escape () Nothing (Just (Const () 1))) (Escape () (Just "a") Nothing))) (Nop ())))
-      `shouldBe` (["escaping `spawn`","escaping statement","escaping statement","terminating `trap` body","identifier 'a' is not declared"],G.Trap () (G.Trap () (G.Par () (G.Par () (G.Seq () (G.Write () "a" (Const () 1)) (G.Escape () 1)) (G.Escape () 1)) (G.Seq () (G.Nop ()) (G.Escape () 0)))))
+      `shouldBe` (["escaping `spawn`","escaping statement","escaping statement","terminating `trap` body","identifier 'a' is not declared"],G.Trap TypeB (G.Trap TypeB (G.Par TypeB (G.Par TypeB (G.Seq TypeB (G.Write TypeB "a" (Const (Type1 "Int") 1)) (G.Escape TypeB 1)) (G.Escape TypeB 1)) (G.Seq TypeB (G.Nop TypeB) (G.Escape TypeB 0)))))
 
   --------------------------------------------------------------------------
   describe "ParAndOr.compile" $ do
@@ -239,24 +239,24 @@ spec = do
     it "(or nop awaitFor)" $ do
       ParAndOr.compile (Or () (Nop ()) (Halt ())) `shouldBe` ([], (Clean' () "Or" (Trap' () (Par' () (Seq () (Nop ()) (Escape' () 0)) (Seq () (Halt ()) (Escape' () 0))))))
     it "(or nop awaitFor)" $ do
-      (compile' (False,False,False) (Or () (Nop ()) (Halt ()))) `shouldBe` ([], (G.Trap () (G.Par () (G.Seq () (G.Nop ()) (G.Escape () 0)) (G.Halt ()))))
+      (compile' (False,False,False) (Or () (Nop ()) (Halt ()))) `shouldBe` ([], (G.Trap TypeB (G.Par TypeB (G.Seq TypeB (G.Nop TypeB) (G.Escape TypeB 0)) (G.Halt TypeB))))
     it "(and nop (and nop nop))" $ do
-      (compile' (False,False,False) (And () (Nop ()) (And () (Nop ()) (Nop ())))) `shouldBe` ([], G.Seq () (G.Nop ()) (G.Seq () (G.Nop ()) (G.Nop ())))
+      (compile' (False,False,False) (And () (Nop ()) (And () (Nop ()) (Nop ())))) `shouldBe` ([], G.Seq TypeB (G.Nop TypeB) (G.Seq TypeB (G.Nop TypeB) (G.Nop TypeB)))
     it "par for par for par for" $ do
       (compile' (True,False,False) (Par () (Halt ()) (Par () (Halt ()) (Halt ()))))
-      `shouldBe` ([], G.Halt ())
+      `shouldBe` ([], G.Halt TypeB)
     it "or nop or nop or for" $ do
       (compile' (True,False,False) (Or () (Nop ()) (Or () (Nop ()) (Halt ()))))
-      `shouldBe` ([], G.Nop ())
+      `shouldBe` ([], G.Nop TypeB)
     it "and nop and nop and nop" $ do
       (compile' (True,False,False) (And () (Nop ()) (And () (Nop ()) (Nop ()))))
-      `shouldBe` ([], G.Nop ())
+      `shouldBe` ([], G.Nop TypeB)
     it "(loop break) ; await X and nop" $ do
       (compile' (True,True,False) (Seq () defs (And () (Seq () (Loop () (Break ())) (Seq () (Inp () "X" False) (AwaitInp () "X" Nothing))) (Nop ()))))
-      `shouldBe` (["terminating `trap` body","missing `escape` statement","`loop` never iterates","unreachable statement"], G.Inp () "TIMER" (G.Var () "_ret" (Type1 "Int") (G.Seq () (G.Trap () (G.Func () "(==)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Bool")) (G.Func () "(+)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func () "(-)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func () "(*)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Trap () (G.Var () "__and" (Type1 "Int") (G.Seq () (G.Write () "__and" (Const () 0)) (G.Par () (G.Seq () (G.Inp () "X" (G.AwaitInp () "X")) (G.If () (Call () "(==)" (Tuple () [(Read () "__and"),(Const () 1)])) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Call () "(+)" (Tuple () [(Read () "__and"),(Const () 1)]))) (G.Halt ())))) (G.If () (Call () "(==)" (Tuple () [(Read () "__and"),(Const () 1)])) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Call () "(+)" (Tuple () [(Read () "__and"),(Const () 1)]))) (G.Halt ())))))))))))) (G.Halt ()))))
+      `shouldBe` (["terminating `trap` body","missing `escape` statement","`loop` never iterates","unreachable statement"], G.Inp TypeB "TIMER" (G.Var TypeB "_ret" (Type1 "Int") (G.Seq TypeB (G.Trap TypeB (G.Func TypeB "(==)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Bool")) (G.Func TypeB "(+)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func TypeB "(-)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func TypeB "(*)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Trap TypeB (G.Var TypeB "__and" (Type1 "Int") (G.Seq TypeB (G.Write TypeB "__and" (Const (Type1 "Int") 0)) (G.Par TypeB (G.Seq TypeB (G.Inp TypeB "X" (G.AwaitInp TypeB "X")) (G.If TypeB (Call (Type1 "Int") "(==)" (Tuple (TypeN [Type1 "Int",Type1 "Int"]) [(Read TypeB "__and"),(Const (Type1 "Int") 1)])) (G.Escape TypeB 0) (G.Seq TypeB (G.Write TypeB "__and" (Call (Type1 "Int") "(+)" (Tuple (TypeN [Type1 "Int",Type1 "Int"]) [(Read TypeB "__and"),(Const (Type1 "Int") 1)]))) (G.Halt TypeB)))) (G.If TypeB (Call (Type1 "Int") "(==)" (Tuple (TypeN [Type1 "Int",Type1 "Int"]) [(Read TypeB "__and"),(Const (Type1 "Int") 1)])) (G.Escape TypeB 0) (G.Seq TypeB (G.Write TypeB "__and" (Call (Type1 "Int") "(+)" (Tuple (TypeN [Type1 "Int",Type1 "Int"]) [(Read TypeB "__and"),(Const (Type1 "Int") 1)]))) (G.Halt TypeB)))))))))))) (G.Halt TypeB))))
     it "(loop break) ; await X and nop" $ do
       (compile' (False,True,False) (Seq () defs (Seq () (And () (Seq () (Loop () (Break ())) (AwaitInp () "X" Nothing)) (Nop ())) (Escape () Nothing (Just (Const () 1))) )))
-      `shouldBe` (["`loop` never iterates","identifier 'X' is not declared"], G.Inp () "TIMER" (G.Var () "_ret" (Type1 "Int") (G.Seq () (G.Trap () (G.Func () "(==)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Bool")) (G.Func () "(+)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func () "(-)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func () "(*)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Seq () (G.Trap () (G.Var () "__and" (Type1 "Int") (G.Seq () (G.Write () "__and" (Const () 0)) (G.Par () (G.Seq () (G.Seq () (G.Trap () (G.Loop () (G.Escape () 0))) (G.AwaitInp () "X")) (G.If () (Call () "(==)" (Tuple () [(Read () "__and"),(Const () 1)])) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Call () "(+)" (Tuple () [(Read () "__and"),(Const () 1)]))) (G.Halt ())))) (G.Seq () (G.Nop ()) (G.If () (Call () "(==)" (Tuple () [(Read () "__and"),(Const () 1)])) (G.Escape () 0) (G.Seq () (G.Write () "__and" (Call () "(+)" (Tuple () [(Read () "__and"),(Const () 1)]))) (G.Halt ())))))))) (G.Seq () (G.Write () "_ret" (Const () 1)) (G.Escape () 0)))))))) (G.Halt ()))))
+      `shouldBe` (["`loop` never iterates","identifier 'X' is not declared"], G.Inp TypeB "TIMER" (G.Var TypeB "_ret" (Type1 "Int") (G.Seq TypeB (G.Trap TypeB (G.Func TypeB "(==)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Bool")) (G.Func TypeB "(+)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func TypeB "(-)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func TypeB "(*)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Seq TypeB (G.Trap TypeB (G.Var TypeB "__and" (Type1 "Int") (G.Seq TypeB (G.Write TypeB "__and" (Const (Type1 "Int") 0)) (G.Par TypeB (G.Seq TypeB (G.Seq TypeB (G.Trap TypeB (G.Loop TypeB (G.Escape TypeB 0))) (G.AwaitInp TypeB "X")) (G.If TypeB (Call (Type1 "Int") "(==)" (Tuple (TypeN [Type1 "Int",Type1 "Int"]) [(Read TypeB "__and"),(Const (Type1 "Int") 1)])) (G.Escape TypeB 0) (G.Seq TypeB (G.Write TypeB "__and" (Call (Type1 "Int") "(+)" (Tuple (TypeN [Type1 "Int",Type1 "Int"]) [(Read TypeB "__and"),(Const (Type1 "Int") 1)]))) (G.Halt TypeB)))) (G.Seq TypeB (G.Nop TypeB) (G.If TypeB (Call (Type1 "Int") "(==)" (Tuple (TypeN [Type1 "Int",Type1 "Int"]) [(Read TypeB "__and"),(Const (Type1 "Int") 1)])) (G.Escape TypeB 0) (G.Seq TypeB (G.Write TypeB "__and" (Call (Type1 "Int") "(+)" (Tuple (TypeN [Type1 "Int",Type1 "Int"]) [(Read TypeB "__and"),(Const (Type1 "Int") 1)]))) (G.Halt TypeB)))))))) (G.Seq TypeB (G.Write TypeB "_ret" (Const (Type1 "Int") 1)) (G.Escape TypeB 0)))))))) (G.Halt TypeB))))
 
   --------------------------------------------------------------------------
   describe "(Break ()).compile" $ do
@@ -267,15 +267,15 @@ spec = do
 
     it "loop (or break FOR)" $ do
       compile' (False,False,False) (Loop () (Or () (Break ()) (Halt ())))
-      `shouldBe` (["no trails terminate","`loop` never iterates"], (G.Trap () (G.Loop () (G.Par () (G.Escape () 0) (G.Halt ())))))
+      `shouldBe` (["no trails terminate","`loop` never iterates"], (G.Trap TypeB (G.Loop TypeB (G.Par TypeB (G.Escape TypeB 0) (G.Halt TypeB)))))
 
     it "loop (par break FOR)" $ do
       compile' (False,False,False) (Loop () (Par () (Break ()) (Halt ())))
-      `shouldBe` (["`loop` never iterates"], (G.Trap () (G.Loop () (G.Par () (G.Escape () 0) (G.Halt ())))))
+      `shouldBe` (["`loop` never iterates"], (G.Trap TypeB (G.Loop TypeB (G.Par TypeB (G.Escape TypeB 0) (G.Halt TypeB)))))
 
     it "loop (and break FOR)" $ do
       compile' (False,False,False) (Loop () (And () (Break ()) (Halt ())))
-      `shouldBe` (["trail must terminate","trail must terminate","unreachable statement","`loop` never iterates"],G.Trap () (G.Loop () (G.Seq () (G.Escape () 0) (G.Halt ()))))
+      `shouldBe` (["trail must terminate","trail must terminate","unreachable statement","`loop` never iterates"],G.Trap TypeB (G.Loop TypeB (G.Seq TypeB (G.Escape TypeB 0) (G.Halt TypeB))))
 
   --------------------------------------------------------------------------
 {-
@@ -291,30 +291,30 @@ spec = do
 
     it "var x;" $ do
       compile' (False,False,False) (Var' () "x" Type0 Nothing (Nop ()))
-      `shouldBe` ([], (G.Var () "x" Type0 (G.Nop ())))
+      `shouldBe` ([], (G.Var TypeB "x" Type0 (G.Nop TypeB)))
     it "var x;" $ do
       compile' (True,False,False) (Var' () "x" Type0 Nothing (Nop ()))
-      `shouldBe` ([], ((G.Nop ())))
+      `shouldBe` ([], ((G.Nop TypeB)))
 
     it "do var x; x = 1 end" $ do
       compile' (False,False,False) (Var' () "x" (Type1 "Int") Nothing (Write () "x" (Const () 1)))
-      `shouldBe` ([], (G.Var () "x" (Type1 "Int") (G.Write () "x" (Const () 1))))
+      `shouldBe` ([], (G.Var TypeB "x" (Type1 "Int") (G.Write TypeB "x" (Const (Type1 "Int") 1))))
 
     it "spawn do await A; end ;; await B; var x; await FOREVER;" $ do
       compile' (False,False,False) (Seq () (Inp () "A" False) (Seq () (Inp () "B" False) (Seq () (Spawn () (AwaitInp () "A" Nothing)) (Seq () (AwaitInp () "B" Nothing) (Var' () "x" Type0 Nothing (Halt ()))))))
-      `shouldBe` (["terminating `spawn`"], G.Inp () "A" (G.Inp () "B" (G.Par () (G.Seq () (G.AwaitInp () "A") (G.Halt ())) (G.Seq () (G.AwaitInp () "B") (G.Var () "x" Type0 (G.Halt ()))))))
+      `shouldBe` (["terminating `spawn`"], G.Inp TypeB "A" (G.Inp TypeB "B" (G.Par TypeB (G.Seq TypeB (G.AwaitInp TypeB "A") (G.Halt TypeB)) (G.Seq TypeB (G.AwaitInp TypeB "B") (G.Var TypeB "x" Type0 (G.Halt TypeB))))))
 
     it "spawn do async ret++ end ;; await F;" $ do
       compile' (False,False,False) (Seq () defs (Seq () (Inp () "ASYNC" False) (Seq () (Inp () "A" False) (Seq () (Spawn () (Async () (Loop () (Write () "x" (Call () "(+)" (Tuple () [(Read () "x"),(Const () 1)])))))) (AwaitInp () "A" Nothing)))))
-      `shouldBe` (["identifier 'x' is not declared","identifier 'x' is not declared"], G.Func () "(==)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Bool")) (G.Func () "(+)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func () "(-)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func () "(*)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Inp () "ASYNC" (G.Inp () "A" (G.Trap () (G.Par () (G.Loop () (G.Seq () (G.Write () "x" (Call () "(+)" (Tuple () [(Read () "x"),(Const () 1)]))) (G.AwaitInp () "ASYNC"))) (G.Seq () (G.AwaitInp () "A") (G.Escape () 0))))))))))
+      `shouldBe` (["identifier 'x' is not declared","identifier 'x' is not declared"], G.Func TypeB "(==)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Bool")) (G.Func TypeB "(+)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func TypeB "(-)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func TypeB "(*)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Inp TypeB "ASYNC" (G.Inp TypeB "A" (G.Trap TypeB (G.Par TypeB (G.Loop TypeB (G.Seq TypeB (G.Write TypeB "x" (Call (Type1 "Int") "(+)" (Tuple (TypeN [Type1 "Int",Type1 "Int"]) [(Read TypeB "x"),(Const (Type1 "Int") 1)]))) (G.AwaitInp TypeB "ASYNC"))) (G.Seq TypeB (G.AwaitInp TypeB "A") (G.Escape TypeB 0))))))))))
 
     it "trap terminates" $ do
       compile' (False,False,False) (Or () (Trap' () (Escape' () 0)) (Halt ()))
-      `shouldBe` ([], (G.Trap () (G.Par () (G.Seq () (G.Trap () (G.Escape () 0)) (G.Escape () 0)) (G.Halt ()))))
+      `shouldBe` ([], (G.Trap TypeB (G.Par TypeB (G.Seq TypeB (G.Trap TypeB (G.Escape TypeB 0)) (G.Escape TypeB 0)) (G.Halt TypeB))))
 
     it "removes unused trap" $ do
       compile' (False,False,False) (Seq () (Fin () (Nop ()) (Nop ()) (Nop ())) (Halt ()))
-      `shouldBe` ([], G.Par () (G.Halt ()) (G.Par () (G.Halt ()) (G.Fin () (G.Nop ()))))
+      `shouldBe` ([], G.Par TypeB (G.Halt TypeB) (G.Par TypeB (G.Halt TypeB) (G.Fin TypeB (G.Nop TypeB))))
 
     it "nested or/or/fin" $ do
       compile' (False,False,False)
@@ -324,17 +324,17 @@ spec = do
             (Seq () (Fin () (Nop ()) (Nop ()) (Nop ())) (Halt ()))
             (Nop ())))
       `shouldBe`
-        ([], G.Trap ()
-          (G.Par ()
-            (G.Halt ())
-            (G.Seq ()
-              (G.Trap ()
-                (G.Par ()
-                  (G.Par ()
-                    (G.Halt ())
-                    (G.Par () (G.Halt ()) (G.Fin () (G.Nop ()))))
-                  (G.Seq () (G.Nop ()) (G.Escape () 0))))
-              (G.Escape () 0))))
+        ([], G.Trap TypeB
+          (G.Par TypeB
+            (G.Halt TypeB)
+            (G.Seq TypeB
+              (G.Trap TypeB
+                (G.Par TypeB
+                  (G.Par TypeB
+                    (G.Halt TypeB)
+                    (G.Par TypeB (G.Halt TypeB) (G.Fin TypeB (G.Nop TypeB))))
+                  (G.Seq TypeB (G.Nop TypeB) (G.Escape TypeB 0))))
+              (G.Escape TypeB 0))))
 
   --------------------------------------------------------------------------
   describe "misc" $ do
