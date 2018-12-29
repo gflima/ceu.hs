@@ -9,8 +9,8 @@ import Ceu.Grammar.Ann.Unit
 import Ceu.Grammar.Type     (Type(..))
 import Ceu.Grammar.Exp
 import Ceu.Grammar.Stmt
-import qualified Ceu.Grammar.Check  as Check
-import qualified Ceu.Grammar.Id as Id
+import qualified Ceu.Grammar.Check   as Check
+import qualified Ceu.Grammar.TypeSys as TypeSys
 
 main :: IO ()
 main = hspec spec
@@ -124,27 +124,27 @@ spec = do
     checkStmtsIt (Seq () (Trap () (Loop () (Trap () (Seq () (Escape () 0) (Nop ()))))) (Nop ())) ["missing `escape` statement","unreachable statement", "unbounded `loop` execution","unreachable statement"]
 
   --------------------------------------------------------------------------
-  describe "checkId -- declarations" $ do
+  describe "checkTypeSys -- declarations" $ do
 
-    checkIdIt (Nop ())                                    []
-    checkIdIt (Var () "a" Type0 (Nop ()))                    []
-    checkIdIt (Var () "a" (Type1 "Int") (Write () "a" (Const () 1))) []
-    checkIdIt (Var () "a" (TypeN [Type1 "Int",Type1 "Int"]) (Write () "a" (Const () 1))) ["types do not match"]
-    --checkIdIt (Var () "a" Type0 (Write () "a" (Const () 1))) ["types do not match"]
-    checkIdIt (Var () "a" Type0 (Write () "a" (Const () 1))) ["types do not match"]
-    checkIdIt (Var () "a" Type0 (If () (Read () "a") (Nop ()) (Nop ()))) ["types do not match"]
-    checkIdIt (Var () "a" (Type1 "Int") (If () (Read () "a") (Nop ()) (Nop ()))) ["types do not match"]
-    checkIdIt (Var () "a" (Type1 "Bool") (If () (Read () "a") (Nop ()) (Nop ()))) []
-    checkIdIt (Var () "a" Type0 (Var () "a" Type0 (Nop ())))    ["identifier 'a' is already declared"]
-    checkIdIt (Evt () "e" (Evt () "e" (Nop ())))       ["identifier 'e' is already declared"]
-    checkIdIt (Write () "a" (Const () 1))              ["identifier 'a' is not declared"]
-    checkIdIt (AwaitEvt () "e")                        ["identifier 'e' is not declared"]
-    checkIdIt (Every () "e" (Nop ()))                  ["identifier 'e' is not declared"]
-    checkIdIt (Pause () "a" (Nop ()))                  ["identifier 'a' is not declared"]
-    checkIdIt (Func () "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var () "a" (Type1 "Int") (Write () "a" (Call () "umn" (Read () "b"))))) ["identifier 'b' is not declared"]
-    checkIdIt (Func () "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var () "a" Type0 (Write () "a" (Call () "umn" (Read () "b"))))) ["identifier 'b' is not declared","types do not match"]
-    checkIdIt (Var () "x" (TypeN [Type0,Type0]) (Write () "x" (Unit ())))  ["types do not match"]
-    checkIdIt (Var () "x" (Type1 "Int") (Write () "x" (Unit ()))) ["types do not match"]
+    checkTypeSysIt (Nop ())                                    []
+    checkTypeSysIt (Var () "a" Type0 (Nop ()))                    []
+    checkTypeSysIt (Var () "a" (Type1 "Int") (Write () "a" (Const () 1))) []
+    checkTypeSysIt (Var () "a" (TypeN [Type1 "Int",Type1 "Int"]) (Write () "a" (Const () 1))) ["types do not match"]
+    --checkTypeSysIt (Var () "a" Type0 (Write () "a" (Const () 1))) ["types do not match"]
+    checkTypeSysIt (Var () "a" Type0 (Write () "a" (Const () 1))) ["types do not match"]
+    checkTypeSysIt (Var () "a" Type0 (If () (Read () "a") (Nop ()) (Nop ()))) ["types do not match"]
+    checkTypeSysIt (Var () "a" (Type1 "Int") (If () (Read () "a") (Nop ()) (Nop ()))) ["types do not match"]
+    checkTypeSysIt (Var () "a" (Type1 "Bool") (If () (Read () "a") (Nop ()) (Nop ()))) []
+    checkTypeSysIt (Var () "a" Type0 (Var () "a" Type0 (Nop ())))    ["identifier 'a' is already declared"]
+    checkTypeSysIt (Evt () "e" (Evt () "e" (Nop ())))       ["identifier 'e' is already declared"]
+    checkTypeSysIt (Write () "a" (Const () 1))              ["identifier 'a' is not declared"]
+    checkTypeSysIt (AwaitEvt () "e")                        ["identifier 'e' is not declared"]
+    checkTypeSysIt (Every () "e" (Nop ()))                  ["identifier 'e' is not declared"]
+    checkTypeSysIt (Pause () "a" (Nop ()))                  ["identifier 'a' is not declared"]
+    checkTypeSysIt (Func () "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var () "a" (Type1 "Int") (Write () "a" (Call () "umn" (Read () "b"))))) ["identifier 'b' is not declared"]
+    checkTypeSysIt (Func () "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var () "a" Type0 (Write () "a" (Call () "umn" (Read () "b"))))) ["identifier 'b' is not declared","types do not match"]
+    checkTypeSysIt (Var () "x" (TypeN [Type0,Type0]) (Write () "x" (Unit ())))  ["types do not match"]
+    checkTypeSysIt (Var () "x" (Type1 "Int") (Write () "x" (Unit ()))) ["types do not match"]
 
   --------------------------------------------------------------------------
   describe "checkStmts -- program is valid" $ do
@@ -221,7 +221,7 @@ spec = do
         checkLoopIt p b      = checkIt  Check.boundedLoop p b
         checkFinIt (Fin () p) b = checkIt' Check.getComplexs (traceShowId p) b
         checkEveryIt p b     = checkIt' Check.getComplexs p b
-        checkIdIt p b    = checkIt' Id.check p b
+        checkTypeSysIt p b   = checkIt' (fst.TypeSys.go) p b
         checkStmtsIt p b     = checkIt' Check.stmts p b
         checkCheckIt :: Stmt () -> Errors -> Spec
         checkCheckIt p b     = checkIt' (fst . (Check.compile (False,False,False))) p b

@@ -1,4 +1,4 @@
-module Ceu.Grammar.Id where
+module Ceu.Grammar.TypeSys where
 
 import Debug.Trace
 import Data.List (find)
@@ -9,8 +9,8 @@ import Ceu.Grammar.Type
 import Ceu.Grammar.Exp
 import Ceu.Grammar.Stmt
 
-check :: (Ann a) => (Stmt a) -> Errors
-check p = stmt [] p
+go :: (Ann a) => (Stmt a) -> (Errors, Stmt a)
+go p = (stmt [] p, p)
 
 stmt :: (Ann a) => [Stmt a] -> Stmt a -> Errors
 

@@ -7,19 +7,20 @@ import Ceu.Grammar.Ann      (Ann(..), errs_anns_msg_map)
 import Ceu.Grammar.Type     (Type(..))
 import Ceu.Grammar.Stmt     (Stmt(..), getAnn)
 import Ceu.Grammar.Simplify (simplify)
-import qualified Ceu.Grammar.Id as Id
+import qualified Ceu.Grammar.TypeSys as TypeSys
 
 -------------------------------------------------------------------------------
 
 type Options = (Bool,Bool,Bool)
 
 compile :: (Ann a) => Options -> (Stmt a) -> (Errors, Stmt a)
-compile (o_simp,o_encl,o_prel) p = (es3,p2) where
+compile (o_simp,o_encl,o_prel) p = (es3,p3) where
     -- TODO: o_prel
   p1   = if not o_encl then p else
           (Var z "_ret" (Type1 "Int") (Seq z (Trap z p) (Halt z)))
-  p2   = if not o_simp then p1 else simplify p1
-  es3  = escs ++ (stmts p1) ++ (Id.check p1)
+  (es2,p2) = TypeSys.go p1
+  p3   = if not o_simp then p2 else simplify p2
+  es3  = escs ++ (stmts p1) ++ es2
   z    = getAnn p
   escs = errs_anns_msg_map (map (\(s,n)->getAnn s) (getEscapes p1)) "orphan `escape` statement"
 
