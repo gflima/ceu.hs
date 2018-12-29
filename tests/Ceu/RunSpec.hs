@@ -20,7 +20,7 @@ spec = do
     describe "void:" $ do
         it "void" $
             run "" []
-            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nhalt: unreachable statement\n"
+            `shouldBe` Left "(line 1, column 1):\nterminating `trap` body\n(line 1, column 1):\nmissing `escape` statement\n(line 1, column 1):\nunreachable statement\n"
 
     describe "escape:" $ do
         it "escape 1" $
@@ -28,7 +28,7 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "escape a" $
             run "escape a" []
-            `shouldBe` Left "(line 1, column 8):\nread: identifier 'a' is not declared\n"
+            `shouldBe` Left "(line 1, column 8):\nidentifier 'a' is not declared\n"
         it "escape" $
             run "escape" []
             `shouldBe` Left "TODO: escape w/o expression"
@@ -71,16 +71,16 @@ spec = do
             `shouldBe` Left "(line 1, column 7):\nunexpected \"b\"\nexpecting \":\""
         it "a <: 1; escape a;" $
             run "a <: 1; escape a" []
-            `shouldBe` Left "(line 1, column 3):\nassignment: identifier 'a' is not declared\n(line 1, column 16):\nread: identifier 'a' is not declared\n"
+            `shouldBe` Left "(line 1, column 3):\nidentifier 'a' is not declared\n(line 1, column 16):\nidentifier 'a' is not declared\n"
         it "mut a : Int :: 1; escape a;" $
             run "mut a : Int :: 1; escape a" []
             `shouldBe` Right (1, [[]])
         it "val a:Int" $
             run "val a:Int" []
-            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nhalt: unreachable statement\n"
+            `shouldBe` Left "(line 1, column 1):\nterminating `trap` body\n(line 1, column 1):\nmissing `escape` statement\n(line 1, column 1):\nunreachable statement\n"
         it "mut a:Int :: 1" $
             run "mut a:Int :: 1" []
-            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nhalt: unreachable statement\n"
+            `shouldBe` Left "(line 1, column 1):\nterminating `trap` body\n(line 1, column 1):\nmissing `escape` statement\n(line 1, column 1):\nunreachable statement\n"
         it "val a:Int ; a <: 1" $
             run "val a:Int ; a <: 1 ; escape a" []
             `shouldBe` Left "TODO: val cannot be reassigned"
@@ -92,7 +92,7 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "hide a" $
             run "val a:Int ; val a:Int ; escape 0" []
-            `shouldBe` Left "(line 1, column 13):\ndeclaration: identifier 'a' is already declared\n"
+            `shouldBe` Left "(line 1, column 13):\nidentifier 'a' is already declared\n"
         it "do a=1 end ; a=2" $
             run "do val a:Int :: 1; end val a:Int :: 2 ; escape a" []
             `shouldBe` Left "TODO: declared but not used"
@@ -125,7 +125,7 @@ spec = do
             `shouldBe` Right (1,[[("X",Nothing)]])
         it "emit x" $
             run "emit x" []
-            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nhalt: unreachable statement\n(line 1, column 1):\nemit: identifier 'x' is not declared\n"
+            `shouldBe` Left "(line 1, column 1):\nterminating `trap` body\n(line 1, column 1):\nmissing `escape` statement\n(line 1, column 1):\nunreachable statement\n(line 1, column 1):\nidentifier 'x' is not declared\n"
         it "emit X -> 1" $
             run "output X:Int emit X -> 1 ; escape 2;" []
             `shouldBe` Right (2,[[("X",Just 1)]])
@@ -155,14 +155,14 @@ spec = do
     describe "if-then-else/if-else" $ do
         it "if 0 then escape 0 else escape 1 end" $
             run "if 0 then escape 0 else escape 1 end" []
-            `shouldBe` Left "(line 1, column 1):\nif: types do not match\n"
+            `shouldBe` Left "(line 1, column 1):\ntypes do not match\n"
         it "if 0==1 then escape 0 else escape 1 end" $
             run "if 0==1 then escape 0 else escape 1 end" []
             `shouldBe` Right (1, [[]])
         it "if 1 then escape 1 end" $
             run "if 1==1 then escape 1 end" []
             --`shouldBe` Right (1, [[]])
-            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n"
+            `shouldBe` Left "(line 1, column 1):\nterminating `trap` body\n"
         it "if then (if then else end) end" $
             run "if 1==1 then if 0==1 then await FOREVER else escape 1 end ; end ; await FOREVER; " []
             `shouldBe` Right (1, [[]])
@@ -186,7 +186,7 @@ spec = do
     describe "par:" $ do
         it "par" $
             run "par do with end" []
-            `shouldBe` Left "(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nparallel: terminating trail\n(line 1, column 1):\nhalt: unreachable statement\n"
+            `shouldBe` Left "(line 1, column 1):\nmissing `escape` statement\n(line 1, column 1):\nterminating trail\n(line 1, column 1):\nunreachable statement\n"
         it "par" $
             run "par do escape 1 with escape 1 end" []
             `shouldBe` Right (1, [[]])
@@ -197,28 +197,28 @@ spec = do
     describe "par/and:" $ do
         it "par/and" $
             run "par/and do with end" []
-            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nhalt: unreachable statement\n"
+            `shouldBe` Left "(line 1, column 1):\nterminating `trap` body\n(line 1, column 1):\nmissing `escape` statement\n(line 1, column 1):\nunreachable statement\n"
         it "par/and; escape 1" $
             run "par/and do with end ; escape 1;" []
             `shouldBe` Right (1, [[]])
         it "par/and ... with ... with escape 3 end" $
             run "par/and do with with escape 3 end" []
             --`shouldBe` Right (3, [[]])
-            `shouldBe` Left "(line 1, column 12):\nsequence: trail must terminate\n(line 1, column 22):\nsequence: trail must terminate\n"
+            `shouldBe` Left "(line 1, column 12):\ntrail must terminate\n(line 1, column 22):\ntrail must terminate\n"
         it "par/and ... with ... with escape 3 end" $
             run "input X:Int input Y:Int par/and do await X with await Y with escape 3 end" []
-            `shouldBe` Left "(line 1, column 62):\nsequence: trail must terminate\n(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 44):\nif: unreachable statement\n"
+            `shouldBe` Left "(line 1, column 62):\ntrail must terminate\n(line 1, column 1):\nterminating `trap` body\n(line 1, column 44):\nunreachable statement\n"
 
     describe "par/or:" $ do
         it "par/or" $
             run "par/or do with end" []
-            `shouldBe` Left "(line 1, column 1):\ntrap: terminating `trap` body\n(line 1, column 1):\ntrap: missing `escape` statement\n(line 1, column 1):\nhalt: unreachable statement\n"
+            `shouldBe` Left "(line 1, column 1):\nterminating `trap` body\n(line 1, column 1):\nmissing `escape` statement\n(line 1, column 1):\nunreachable statement\n"
         it "par/or" $
             run "par/or do with end ; escape 1" []
             `shouldBe` Right (1, [[]])
         it "par/or" $
             run "par/or do with escape 2 with escape 3 end ; escape 1" []
-            `shouldBe` Left "(line 1, column 11):\ntrap: no trails terminate\n"
+            `shouldBe` Left "(line 1, column 11):\nno trails terminate\n"
 
     where
         run :: String -> [In] -> Either String (Val,[Outs])
