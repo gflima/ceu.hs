@@ -144,6 +144,9 @@ spec = do
     checkTypeSysIt (Func annz "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var annz "a" Type0 (Write annz "a" (Call annz "umn" (Read annz "b"))))) ["identifier 'b' is not declared","types do not match"]
     checkTypeSysIt (Var annz "x" (TypeN [Type0,Type0]) (Write annz "x" (Unit annz)))  ["types do not match"]
     checkTypeSysIt (Var annz "x" (Type1 "Int") (Write annz "x" (Unit annz))) ["types do not match"]
+    checkTypeSysIt (Func annz "identity" (TypeF (TypeV "a") (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz "a" (Call annz "identity" (Const annz 1))))) []
+    checkTypeSysIt (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz "a" (Call annz "first" (Tuple annz [(Unit annz),(Const annz 1)]))))) ["types do not match"]
+    checkTypeSysIt (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz "a" (Call annz "first" (Tuple annz [(Const annz 1),(Const annz 1)]))))) []
 
   --------------------------------------------------------------------------
   describe "checkStmts -- program is valid" $ do
@@ -218,7 +221,7 @@ spec = do
           (it ((if b==[] then "pass" else "fail") ++ ": " ++ show p) $
             (ck p) `shouldBe` b)
         checkLoopIt p b      = checkIt  Check.boundedLoop p b
-        checkFinIt (Fin _ p) b = checkIt' Check.getComplexs (traceShowId p) b
+        checkFinIt (Fin _ p) b = checkIt' Check.getComplexs p b
         checkEveryIt p b     = checkIt' Check.getComplexs p b
         checkTypeSysIt p b   = checkIt' (fst.TypeSys.go) p b
         checkStmtsIt p b     = checkIt' Check.stmts p b

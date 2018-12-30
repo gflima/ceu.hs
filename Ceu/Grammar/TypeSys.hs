@@ -132,9 +132,9 @@ fff id ids z pred =
         dcl = find' id ids
 
         retType :: Maybe Stmt -> Type
-        retType Nothing                           = TypeB
-        retType (Just (Var _ _ tp _))             = tp
-        retType (Just (Func _ _ (TypeF inp _) _)) = inp       -- input type (params)
+        retType Nothing                = TypeB
+        retType (Just (Var  _ _ tp _)) = tp
+        retType (Just (Func _ _ tp _)) = tp
 
 -------------------------------------------------------------------------------
 
@@ -174,15 +174,15 @@ expr ids (Read z id)     = if id == "_INPUT" then
                            where
                             (es,tp') = fff id ids z isVar
 
-expr ids (Call z id exp) = (es1++es2++es3, Call z{type_=tp} id exp')
+expr ids (Call z id exp) = (es++es_exp, Call z{type_=tp_out} id exp')
                            where
-                            (es1,tp1)  = fff id ids z isFunc
-                            (es2,exp') = expr ids exp
-                            es3        = if isTypeB tp1 || isTypeB tp then
-                                            []
-                                         else
-                                            toErrorTypes z tp1 tp
-                                         where tp = type_ $ getAnn exp'
-                            tp = case find' id ids of
-                                    Just (Func _ _ (TypeF _ tp') _) -> tp'
-                                    otherwise                       -> TypeB
+                            (es_exp, exp') = expr ids exp
+                            tp_exp' = type_ $ getAnn exp'
+
+                            (es,tp_out) =
+                                let (es',tp_func) = fff id ids z isFunc in
+                                    case tp_func of
+                                        TypeB -> (es', TypeB)    -- func not found
+                                        TypeF inp out ->
+                                            (toErrorTypes z inp tp_exp',
+                                            instType out (inp,tp_exp'))

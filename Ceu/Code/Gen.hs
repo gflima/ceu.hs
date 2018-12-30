@@ -99,7 +99,7 @@ expr vars (RawE  _ raw)    = fold_raw vars raw
 expr vars (Const _ n)      = show n
 expr vars (Read  _ id)     = getEnvVar vars id
 --expr vars e@(Tuple _ exps) = "({ tceu__int__int __ceu_" ++ n ++ " = {" ++ vs ++ "}; __ceu_" ++ n ++ ";})"
-expr vars e@(Tuple z exps) = "{" ++ vs ++ "}"
+expr vars e@(Tuple z exps) = "((" ++ (tp2use $ type_ z) ++ "){" ++ vs ++ "})"
     where
         n  = show $ nn z
         vs = intercalate "," (map (\e -> expr vars e) (filter (not.isUnit) exps))
