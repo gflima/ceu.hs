@@ -182,7 +182,8 @@ expr ids (Call z id exp) = (es++es_exp, Call z{type_=tp_out} id exp')
                             (es,tp_out) =
                                 let (es',tp_func) = fff id ids z isFunc in
                                     case tp_func of
-                                        TypeB -> (es', TypeB)    -- func not found
+                                        TypeT -> (es', TypeT)    -- func not found
                                         TypeF inp out ->
                                             (toErrorTypes z inp tp_exp',
                                             instType out (inp,tp_exp'))
+                                        tp -> error (show tp)

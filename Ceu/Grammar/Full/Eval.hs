@@ -53,7 +53,7 @@ compile' (o_simp,o_encl,o_prel) p = (es2++es3++es4, p4)
     z        = getAnn p
 
     defs = (Seq z
-            (Func z "(==)" (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Bool")))
+            (Func z "(==)" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (Type1 "Bool")))
             (Seq z
                 (Func z "(+)" (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
                 (Seq z
@@ -61,7 +61,7 @@ compile' (o_simp,o_encl,o_prel) p = (es2++es3++es4, p4)
                     (Seq z
                         (Func z "(/)" (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
                         (Seq z
-                            (Func z "negate" (TypeF (Type1 "Int") (Type1 "Int")))
+                            (Func z "negate" (TypeF (TypeV "a") (TypeV "a")))
                             (Func z "(*)" (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int"))))))))
 
 reaction :: E.Stmt -> In -> (E.Stmt, E.Outs)
