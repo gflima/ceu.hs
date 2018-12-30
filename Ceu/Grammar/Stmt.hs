@@ -39,31 +39,31 @@ sPar a b = Par annz a b
 infixr 1 `sSeq`
 infixr 0 `sPar`
 
-getAnn :: Stmt -> Ann
-getAnn (Var      z _ _ _)   = z
-getAnn (Inp      z _ _)     = z
-getAnn (Out      z _ _)     = z
-getAnn (Evt      z _ _)     = z
-getAnn (Func     z _ _ _)   = z
-getAnn (FuncI    z _ _ _ _) = z
-getAnn (Write    z _ _)     = z
-getAnn (AwaitInp z _)       = z
-getAnn (EmitExt  z _ _)     = z
-getAnn (AwaitEvt z _)       = z
-getAnn (EmitEvt  z _)       = z
-getAnn (If       z _ _ _)   = z
-getAnn (Seq      z _ _)     = z
-getAnn (Loop     z _)       = z
-getAnn (Every    z _ _)     = z
-getAnn (Par      z _ _)     = z
-getAnn (Pause    z _ _)     = z
-getAnn (Fin      z _)       = z
-getAnn (Trap     z _)       = z
-getAnn (Escape   z _)       = z
-getAnn (Nop      z)         = z
-getAnn (Halt     z)         = z
-getAnn (RawS     z _)       = z
-getAnn (Error    z _)       = z
+getAnnS :: Stmt -> Ann
+getAnnS (Var      z _ _ _)   = z
+getAnnS (Inp      z _ _)     = z
+getAnnS (Out      z _ _)     = z
+getAnnS (Evt      z _ _)     = z
+getAnnS (Func     z _ _ _)   = z
+getAnnS (FuncI    z _ _ _ _) = z
+getAnnS (Write    z _ _)     = z
+getAnnS (AwaitInp z _)       = z
+getAnnS (EmitExt  z _ _)     = z
+getAnnS (AwaitEvt z _)       = z
+getAnnS (EmitEvt  z _)       = z
+getAnnS (If       z _ _ _)   = z
+getAnnS (Seq      z _ _)     = z
+getAnnS (Loop     z _)       = z
+getAnnS (Every    z _ _)     = z
+getAnnS (Par      z _ _)     = z
+getAnnS (Pause    z _ _)     = z
+getAnnS (Fin      z _)       = z
+getAnnS (Trap     z _)       = z
+getAnnS (Escape   z _)       = z
+getAnnS (Nop      z)         = z
+getAnnS (Halt     z)         = z
+getAnnS (RawS     z _)       = z
+getAnnS (Error    z _)       = z
 
 {-
 stmt2word :: Stmt -> String

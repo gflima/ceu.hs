@@ -8,7 +8,7 @@ import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann  (Ann(..), toTrails0, toTrailsN)
 import Ceu.Grammar.Type (Type(..)) --, reducesToType0)
 import Ceu.Grammar.Exp  (Exp(..), RawAt(..), getAnnE)
-import Ceu.Grammar.Stmt (Stmt(..), getAnn)
+import Ceu.Grammar.Stmt (Stmt(..), getAnnS)
 import qualified Ceu.Code.N as N
 
 -------------------------------------------------------------------------------
@@ -88,47 +88,55 @@ getEnv ((v1,s):l) v2 | v1==v2    = s
 
 getEnvVar env var = if var == "_INPUT" then "_CEU_INPUT" else "CEU_APP.root."++id'
                     where
-                        id' = var ++ "__" ++ (show $ nn $ getAnn $ getEnv env var)
+                        id' = var ++ "__" ++ (show $ nn $ getAnnS $ getEnv env var)
 
-getEnvEvt env evt = "CEU_EVENT_" ++ evt ++ "__" ++ (show $ nn $ getAnn $ getEnv env evt)
+getEnvEvt env evt = "CEU_EVENT_" ++ evt ++ "__" ++ (show $ nn $ getAnnS $ getEnv env evt)
 
 -------------------------------------------------------------------------------
 
-expr :: [(ID_Var,Stmt)] -> Exp -> String
-expr vars (RawE  _ raw)    = fold_raw vars raw
-expr vars (Const _ n)      = show n
-expr vars (Read  _ id)     = getEnvVar vars id
-expr vars (Unit  _)        = "CEU_UNIT"
+expr :: [(ID_Var,Stmt)] -> Exp -> ([Type],String)
+expr vars (RawE  _ raws)   = fold_raws vars raws
+expr vars (Const _ n)      = ([], show n)
+expr vars (Read  _ id)     = ([], getEnvVar vars id)
+expr vars (Unit  _)        = ([], "CEU_UNIT")
 --expr vars e@(Tuple _ exps) = "({ tceu__int__int __ceu_" ++ n ++ " = {" ++ vs ++ "}; __ceu_" ++ n ++ ";})"
-expr vars e@(Tuple z exps) = "((" ++ (tp2use $ type_ z) ++ "){" ++ vs ++ "})"
+expr vars e@(Tuple z exps) = ([type_ z]++tps', "((" ++ (tp2use $ type_ z) ++ "){" ++ srcs' ++ "})")
     where
-        n  = show $ nn z
-        --vs = intercalate "," (map (\e -> expr vars e) (filter (not.reducesToType0.type_.getAnnE) exps))
-        vs = intercalate "," (map (\e -> expr vars e) exps)
+        exps' :: [([Type],String)]
+        exps' = map (expr vars) exps
+
+        tps' :: [Type]
+        tps' = concat $ map fst exps'
+
+        srcs' :: String
+        srcs'= intercalate "," $ map snd exps'
 
 -- TODO-01: check if function dcl exists
-expr vars (Call  _ "negate" e) = "(negate(" ++ (expr vars e) ++ "))"
-expr vars (Call  _ "(+)"    e) = "(plus(&" ++ e' ++ "))"
-                                    where e' = expr vars e
-expr vars (Call  _ "(-)"    e) = "(minus(&" ++ e' ++ "))"
-                                    where e' = expr vars e
-expr vars (Call  _ "(*)"    e) = "(times(&" ++ e' ++ "))"
-                                    where e' = expr vars e
-expr vars (Call  _ "(/)"    e) = "(div(&" ++ e' ++ "))"
-                                    where e' = expr vars e
-expr vars (Call  _ "(==)"   e) = "(equal(&" ++ e' ++ "))"
-                                    where e' = expr vars e
-expr vars (Call  _ "(<=)"   e) = "(lte(&" ++ e' ++ "))"
-                                    where e' = expr vars e
+expr vars (Call  _ "negate" e) = (tps, "(negate(" ++ src ++ "))")
+                                    where (tps,src) = expr vars e
+expr vars (Call  _ "(+)"    e) = (tps, "(plus(&" ++ src ++ "))")
+                                    where (tps,src) = expr vars e
+expr vars (Call  _ "(-)"    e) = (tps, "(minus(&" ++ src ++ "))")
+                                    where (tps,src) = expr vars e
+expr vars (Call  _ "(*)"    e) = (tps, "(times(&" ++ src ++ "))")
+                                    where (tps,src) = expr vars e
+expr vars (Call  _ "(/)"    e) = (tps, "(div(&" ++ src ++ "))")
+                                    where (tps,src) = expr vars e
+expr vars (Call  _ "(==)"   e) = (tps, "(equal(&" ++ src ++ "))")
+                                    where (tps,src) = expr vars e
+expr vars (Call  _ "(<=)"   e) = (tps, "(lte(&" ++ src ++ "))")
+                                    where (tps,src) = expr vars e
 
 expr _ e = error (show e)
 
-fold_raw :: [(ID_Var,Stmt)] -> [RawAt] -> String
-fold_raw vars raw = take ((length raw')-2) (drop 1 raw') where
-    raw' = aux vars raw
-    aux vars [] = ""
-    aux vars ((RawAtE e):l) = (expr vars e) ++ (aux vars l)
-    aux vars ((RawAtS s):l) = s ++ (aux vars l)
+fold_raws :: [(ID_Var,Stmt)] -> [RawAt] -> ([Type],String)
+fold_raws vars raws = (tps, take ((length src)-2) (drop 1 src)) where
+    (tps,src) = aux vars raws
+    aux vars [] = ([], "")
+    aux vars ((RawAtE e):l) = cat (expr vars e) (aux vars l)
+    aux vars ((RawAtS s):l) = cat ([],s)        (aux vars l)
+
+    cat (l1,l2) (l1',l2') = (l1++l1',l2++l2')
 
 -------------------------------------------------------------------------------
 
@@ -137,8 +145,8 @@ label z lbl = "CEU_LABEL_" ++ (show $ nn z) ++ "_" ++ lbl
 
 stmt :: Stmt -> [(String,Int)] -> [(String,String)]
 stmt p h = [
-      ("CEU_TCEU_NTRL", n2tp $ toTrailsN (getAnn p'))
-    , ("CEU_TRAILS_N",  show $ toTrailsN (getAnn p'))
+      ("CEU_TCEU_NTRL", n2tp $ toTrailsN (getAnnS p'))
+    , ("CEU_TRAILS_N",  show $ toTrailsN (getAnnS p'))
     -- TODO: unify all dcls/types outputs
     , ("CEU_INPS",      concat $ map (\inp->s++"CEU_INPUT_"++inp++",\n") $ inps    up)
     , ("CEU_EVTS",      concat $ map (\evt->s++"CEU_EVENT_"++evt++",\n") $ evts_up up)
@@ -201,7 +209,8 @@ aux :: Down -> Stmt -> Up
 
 aux dn (Nop   z)      = upz { code_bef=(oln z) }
 aux dn (Halt  z)      = upz { code_bef=(oln z), code_brk=Just(label z "Halt") }
-aux dn (RawS  z raw)  = upz { code_bef=(oln z)++(fold_raw (vars_dn dn) raw)++";\n" }
+aux dn (RawS  z raws) = upz { code_bef=(oln z)++src++";\n", tps_up=tps }
+                            where (tps,src) = fold_raws (vars_dn dn) raws
 aux dn (Inp   _ id p) = p' { inps=id:(inps p') } where p'=(aux dn p)
 aux dn (Out   _ id p) = aux dn p
 
@@ -229,13 +238,11 @@ aux dn s@(Func z id (TypeF inp out) p) = p'
 aux dn s@(FuncI z id (TypeF inp out) Nothing p) = p' { tps_up=inp:out:(tps_up p') }
     where p' = aux dn p
 
-aux dn (Write z var exp) = upz { code_bef=src }
+aux dn (Write z var exp) = upz { code_bef=src', tps_up=tps }
     where
-        src  = case tp of
-                --Type0     -> ""
-                otherwise -> (oln z ++ (ocmd $ (getEnvVar vars var) ++ " = " ++ (expr vars exp)))
         vars = vars_dn dn
-        (Var _ _ tp _) = getEnv vars var
+        (tps,src) = expr vars exp
+        src' = (oln z ++ (ocmd $ (getEnvVar vars var) ++ " = " ++ src))
 
 -------------------------------------------------------------------------------
 
@@ -259,12 +266,10 @@ aux dn (AwaitEvt z evt) = upz { code_bef=src, code_brk=(Just lbl) }
 
 -------------------------------------------------------------------------------
 
-aux dn (EmitExt z ext exp) = upz { code_bef=src }
+aux dn (EmitExt z ext exp) = upz { code_bef=src, tps_up=etps }
     where
-        src = oln z ++ (ocmd $ "ceu_callback_output_" ++ ext ++ "(" ++ exp' ++ ")")
-        exp' = case exp of
-            Nothing  -> ""
-            (Just v) -> expr (vars_dn dn) v
+        src = oln z ++ (ocmd $ "ceu_callback_output_" ++ ext ++ "(" ++ esrc ++ ")")
+        (etps,esrc) = maybe ([],"") (expr $ vars_dn dn) exp
 
 aux dn (EmitEvt z evt) = upz { code_bef=(oln z)++bef }
     where
@@ -276,7 +281,7 @@ aux dn (EmitEvt z evt) = upz { code_bef=(oln z)++bef }
               (ocmd $ "if (!_ceu_stk->is_alive) return")
 
         id' = getEnvEvt (evts_dn dn) evt
-        (trl0,trlN) = trails $ getAnn $ getEnv (evts_dn dn) evt
+        (trl0,trlN) = trails $ getAnnS $ getEnv (evts_dn dn) evt
 
 -------------------------------------------------------------------------------
 
@@ -301,7 +306,9 @@ aux dn (Seq z p1 p2) = (up_union p1' p2') {
         bef  = bef1 ++ bef'
         bef' = if isNothing brk1 then bef2 else ""
 
-        brk  = if isJust brk2 then brk2 else if isJust brk1 then brk1 else Nothing
+        brk  = if isJust brk2 then brk2
+                              else if isJust brk1 then brk1
+                                                  else Nothing
 
         aft  = aft' ++ aft2
         aft' = if isJust brk2 || isNothing brk1 then "" else aft1++bef2
@@ -314,14 +321,17 @@ aux dn (Seq z p1 p2) = (up_union p1' p2') {
 aux dn (If z exp p1 p2) = (up_union p1' p2') {
                                 code_bef = bef,
                                 code_brk = Just lbl,
-                                labels   = lbls1++lbls2 ++ labels p2' ++ labels p1'
+                                labels   = lbls1++lbls2 ++ labels p2' ++ labels p1',
+                                tps_up   = etps
                             }
     where
         p1' = aux dn p1
         p2' = aux dn p2
         bef = oln z ++
-              "if (" ++ expr (vars_dn dn) exp ++ ")\n" ++ oblk bef1 ++
+              "if (" ++ esrc ++ ")\n" ++ oblk bef1 ++
               "else\n" ++ oblk bef2
+
+        (etps,esrc) = expr (vars_dn dn) exp
 
         brk1 = code_brk p1'
         brk2 = code_brk p2'
@@ -372,7 +382,7 @@ aux dn (Par z p1 p2) = (up_union p1' p2') {
 
         bef = (oblk $
                 (ocmd $ "tceu_stk __ceu_stk = { _ceu_stk->level+1, 1, 0, _ceu_stk }") ++
-                (ocmd $ "_ceu_stk->trail = " ++ (show $ toTrails0 $ getAnn p2)) ++
+                (ocmd $ "_ceu_stk->trail = " ++ (show $ toTrails0 $ getAnnS p2)) ++
                 (ocmd $ bef1 ++ "(&__ceu_stk)")             ++
                 (ocmd $ "if (!_ceu_stk->is_alive) return")) ++
               (code_bef p2')
@@ -380,7 +390,7 @@ aux dn (Par z p1 p2) = (up_union p1' p2') {
         lbl10 = [ olbl bef1 (code_bef p1') ]
         lbl11 = if isNothing brk1 then [] else [ olbl (fromJust brk1) (code_aft p1') ]
         lbls2 = if isNothing brk2 then [] else [ olbl (fromJust brk2) (code_aft p2') ]
-        bef1  = label (getAnn p1) "Trail1"
+        bef1  = label (getAnnS p1) "Trail1"
 
 -------------------------------------------------------------------------------
 
@@ -388,7 +398,7 @@ aux dn s@(Trap z p) = p' {
                         code_bef = code_bef p',
                         code_brk = Just lbl,
                         code_aft = clr,
-                        labels   = [odcl lbl] ++ (labels p') ++ aft
+                        labels   = [odcl lbl] ++ aft ++ (labels p')
                       }
     where
         p'  = aux dn' p
@@ -408,4 +418,4 @@ aux dn s@(Trap z p) = p' {
 
 aux dn (Escape z k) = upz { code_bef=src, code_brk=Just(label z "Escape") }
     where
-        src = oln z ++ (ocmd $ "return " ++ (label (getAnn $ (traps dn)!!k) "Trap") ++ "(_ceu_stk)")
+        src = oln z ++ (ocmd $ "return " ++ (label (getAnnS $ (traps dn)!!k) "Trap") ++ "(_ceu_stk)")

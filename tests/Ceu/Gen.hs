@@ -90,10 +90,15 @@ tests = [
     (32,  [], [], "val x:Int ; val y:Int ; escape {sizeof(tceu_mem_ROOT)}"),
     -- TODO: tmp vars
     (35,  [], [], "val x:Int::1 ; val y:Int::2 ; escape {`(x+y)`+sizeof(tceu_mem_ROOT)}"),
-    (100, [], [], "val x:((),()) :: ((),()) if x==() then escape 100 else escape 0 end"),
-    (0,   [], [], "escape 1"),    -- (to force error)
-    (100, [], [], "val x:() :: () if x==() then escape 100 else escape 0 end"),
-    (1,   ["(line 1, column 1):\n`loop` never iterates"],
+    (1,   [], [], "if 1==1 then escape 1 else escape 0 end"),
+    --(0,   [], [], "escape 1"),    -- (to force error)
+    -- TODO: == is not poly
+    --(100, [], [], "val x:((),()) :: ((),()) if x==() then escape 100 else escape 0 end"),
+    --(100, [], [], "val x:() :: () if x==() then escape 100 else escape 0 end"),
+    (0,   ["(line 1, column 1):\n`loop` never iterates"],
+        [],
+        "loop do if 1==1 then break else await FOREVER end end ; escape 1"),
+    (0,   ["(line 1, column 1):\n`loop` never iterates"],
         [],
         "loop do break end ; escape 1"),
     (4, [], [("KEY",1)],
@@ -144,8 +149,8 @@ tests = [
             "",
             "escape ret  // 6"
         ]),
-    (10, ["(line 8, column 1):\nunbounded `loop` execution","(line 9, column 5):\ntypes do not match"],
-        [("KEY",1),("KEY",2),("KEY",3),("KEY",4)],
+    (10, [],
+        [("KEY",0),("KEY",1),("KEY",0),("KEY",2),("KEY",0),("KEY",3),("KEY",0),("KEY",4),("KEY",0)],
         unlines [
             "input  KEY   : Int",
             "output PRINT : Int",
@@ -155,10 +160,11 @@ tests = [
             "mut ret:Int :: a",
             "",
             "loop do",
-            "    if 1 then",
+            "    if 1==1 then",
             "        val a1:Int :: await KEY",
             "        ret <: ret + a1",
             "        emit PRINT -> a1",
+            "        emit PRINT -> ret",
             "    else",
             "        emit PRINT -> 0",
             "    end",
@@ -167,6 +173,7 @@ tests = [
             "    if ret == 10 then",
             "        break",
             "    end",
+            "    await KEY",
             "end",
             "",
             "escape ret"

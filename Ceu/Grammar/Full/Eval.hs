@@ -50,7 +50,7 @@ compile' (o_simp,o_encl,o_prel) p = (es2++es3++es4, p4)
     (es2,p2) = compile p1
     (es3,p3) = toGrammar p2
     (es4,p4) = Check.compile (o_simp,False,False) p3
-    z        = getAnn p
+    z        = getAnnS p
 
     defs = (Seq z (Func  z "(==)" (TypeF (TypeN [(TypeV "a"),  (TypeV "a")])   (Type1 "Bool")))
            (Seq z (Func  z "(+)"  (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
