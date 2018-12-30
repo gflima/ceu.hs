@@ -52,17 +52,19 @@ compile' (o_simp,o_encl,o_prel) p = (es2++es3++es4, p4)
     (es4,p4) = Check.compile (o_simp,False,False) p3
     z        = getAnn p
 
-    defs = (Seq z
-            (Func z "(==)" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (Type1 "Bool")))
-            (Seq z
-                (Func z "(+)" (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
-                (Seq z
-                    (Func z "(-)" (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
-                    (Seq z
-                        (Func z "(/)" (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
-                        (Seq z
-                            (Func z "negate" (TypeF (TypeV "a") (TypeV "a")))
-                            (Func z "(*)" (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int"))))))))
+    defs = (Seq z (Func  z "(==)" (TypeF (TypeN [(TypeV "a"),  (TypeV "a")])   (Type1 "Bool")))
+           (Seq z (Func  z "(+)"  (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
+           (Seq z (Func  z "(-)"  (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
+           (Seq z (Func  z "(/)"  (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
+           (Seq z (Func  z "(*)"  (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
+           (Seq z (Func  z "negate" (TypeF (TypeV "a") (TypeV "a")))
+           (Seq z (FuncI z "(==)" (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Bool")) Nothing)
+           (Seq z (FuncI z "(+)"  (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")) Nothing)
+           (Seq z (FuncI z "(-)"  (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")) Nothing)
+           (Seq z (FuncI z "(/)"  (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")) Nothing)
+           (Seq z (FuncI z "(*)"  (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")) Nothing)
+                  (FuncI z "negate" (TypeF (Type1 "Int") (Type1 "Int")) Nothing)
+           )))))))))))
 
 reaction :: E.Stmt -> In -> (E.Stmt, E.Outs)
 reaction p (ext,val) = (p''',outs) where

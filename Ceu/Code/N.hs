@@ -39,6 +39,11 @@ stmt n trl0 (Func z id tp p) =
     where
         (n',ts',p') = stmt (n+1) trl0 p
 
+stmt n trl0 (FuncI z id tp Nothing p) =
+    (n',ts', FuncI z{nn=n,trails=(trl0,ts')} id tp Nothing p')
+    where
+        (n',ts',p') = stmt (n+1) trl0 p
+
 stmt n trl0 (Write z var exp) =
     (n',1, Write z{nn=n,trails=(trl0,1)} var exp')
     where

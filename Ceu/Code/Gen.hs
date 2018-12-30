@@ -6,8 +6,8 @@ import qualified Data.Set as Set
 import Data.Maybe
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann  (Ann(..), toTrails0, toTrailsN)
-import Ceu.Grammar.Type (Type(..))
-import Ceu.Grammar.Exp  (Exp(..), RawAt(..))
+import Ceu.Grammar.Type (Type(..)) --, reducesToType0)
+import Ceu.Grammar.Exp  (Exp(..), RawAt(..), getAnnE)
 import Ceu.Grammar.Stmt (Stmt(..), getAnn)
 import qualified Ceu.Code.N as N
 
@@ -28,7 +28,7 @@ dnz = Down { traps   = []
 
 data Up = Up { inps     :: [String]
              , tps_up   :: [Type]
-             , vars_up  :: [(String,String)]
+             , vars_up  :: [(String,Type)]
              , evts_up  :: [String]
              , code_bef :: String
              , code_brk :: Maybe String
@@ -98,14 +98,15 @@ expr :: [(ID_Var,Stmt)] -> Exp -> String
 expr vars (RawE  _ raw)    = fold_raw vars raw
 expr vars (Const _ n)      = show n
 expr vars (Read  _ id)     = getEnvVar vars id
+expr vars (Unit  _)        = "CEU_UNIT"
 --expr vars e@(Tuple _ exps) = "({ tceu__int__int __ceu_" ++ n ++ " = {" ++ vs ++ "}; __ceu_" ++ n ++ ";})"
 expr vars e@(Tuple z exps) = "((" ++ (tp2use $ type_ z) ++ "){" ++ vs ++ "})"
     where
         n  = show $ nn z
-        vs = intercalate "," (map (\e -> expr vars e) (filter (not.isUnit) exps))
-        isUnit (Unit _) = True
-        isUnit _        = False
+        --vs = intercalate "," (map (\e -> expr vars e) (filter (not.reducesToType0.type_.getAnnE) exps))
+        vs = intercalate "," (map (\e -> expr vars e) exps)
 
+-- TODO-01: check if function dcl exists
 expr vars (Call  _ "negate" e) = "(negate(" ++ (expr vars e) ++ "))"
 expr vars (Call  _ "(+)"    e) = "(plus(&" ++ e' ++ "))"
                                     where e' = expr vars e
@@ -141,8 +142,12 @@ stmt p h = [
     -- TODO: unify all dcls/types outputs
     , ("CEU_INPS",      concat $ map (\inp->s++"CEU_INPUT_"++inp++",\n") $ inps    up)
     , ("CEU_EVTS",      concat $ map (\evt->s++"CEU_EVENT_"++evt++",\n") $ evts_up up)
-    , ("CEU_TYPES",     concat $ rmdups $ map (\tp->tp2dcl tp++"\n") $ tps_up up)
-    , ("CEU_VARS",      concat $ map (\(var,tp)->s++tp++" "++var++";\n") $ filter (\(_,tp)->tp/="void") $ vars_up up)
+    , ("CEU_TYPES",     concat $ rmdups $ map (\tp->tp2dcl tp++"\n")
+                                        -- $ filter (not.reducesToType0)
+                                        $ tps_up up)
+    , ("CEU_VARS",      concat $ map (\(var,tp)->s++tp2use tp++" "++var++";\n")
+                               -- $ filter (not.reducesToType0.snd)
+                               $ vars_up up)
     , ("CEU_HISTORY",   concat $ map (\(evt,v) ->s++"_CEU_INPUT="++show v++"; ceu_input(CEU_INPUT_"++evt++")"++";\n" ) h)
     , ("CEU_LABELS",    concat $ root2 ++ labels up ++ root1 )
     ]
@@ -170,21 +175,23 @@ stmt p h = [
 -------------------------------------------------------------------------------
 
 tp2use :: Type -> String
-tp2use Type0         = "void"
+tp2use Type0         = "tceu_unit"
 tp2use (Type1 "Int") = "int"
 tp2use (TypeN tps)   = "tceu__" ++ intercalate "__" (map (\tp -> tp2use tp) tps)
+tp2use tp            = error $ show tp
 
 tp2dcl :: Type -> String
 tp2dcl tp@(TypeN tps) =
     "typedef struct " ++ use ++ " {\n"  ++
     (snd $ foldr (\tp (n,s) -> (n-1, "    " ++ tp2use tp ++ " _" ++ show n ++ ";\n" ++ s))
                  (length tps,"")
-                 (filter (not.isType0) tps))   ++
+                 tps)   ++
+                 --(filter (not.isType0) tps))   ++
     "} " ++ use ++ ";\n"
     where
         use = tp2use tp
-        isType0 Type0 = True
-        isType0 _     = False
+        --isType0 Type0 = True
+        --isType0 _     = False
 tp2dcl _ = ""
 
 
@@ -205,23 +212,27 @@ aux dn s@(Evt z id p) = p' { evts_up=(id++"__"++(show$nn z)):(evts_up p') }
         p'  = aux dn' p
         dn' = dn{ evts_dn = (id,s):(evts_dn dn) }
 
-aux dn s@(Var z id tp p) = p' { tps_up=tp:(tps_up p'), vars_up=(id',tp'):(vars_up p') }
+aux dn s@(Var z id tp p) = p' { tps_up=tp:(tps_up p'), vars_up=(id',tp):(vars_up p') }
     where
         p'  = aux dn' p
         dn' = dn{ vars_dn = (id,s):(vars_dn dn) }
         id' = id ++ "__" ++ (show $ nn z)
-        tp' = tp2use tp
 
-aux dn s@(Func z id (TypeF inp out) p) = p' { tps_up=inp:out:(tps_up p') }
+--aux dn s@(Func z id (TypeF inp out) p) = p' { tps_up=inp:out:(tps_up p') }
+aux dn s@(Func z id (TypeF inp out) p) = p'
     where
+        -- TODO-01: check if function dcl exists
         p'  = aux dn' p
         dn' = dn --{ vars_dn = (id,s):(vars_dn dn) }
         --id' = id ++ "__" ++ (show $ nn z)
 
+aux dn s@(FuncI z id (TypeF inp out) Nothing p) = p' { tps_up=inp:out:(tps_up p') }
+    where p' = aux dn p
+
 aux dn (Write z var exp) = upz { code_bef=src }
     where
         src  = case tp of
-                Type0     -> ""
+                --Type0     -> ""
                 otherwise -> (oln z ++ (ocmd $ (getEnvVar vars var) ++ " = " ++ (expr vars exp)))
         vars = vars_dn dn
         (Var _ _ tp _) = getEnv vars var

@@ -27,6 +27,12 @@ compile p = aux Nothing p where
   aux pse (Func' z id tp p)           = (es, Func' z id tp p')
                                         where
                                           (es,p') = aux pse p
+  aux pse (FuncI' z id tp imp p)      = (esi++es, FuncI' z id tp imp' p')
+                                        where
+                                          (es,p') = aux pse p
+                                          (esi,imp') = case fmap (aux pse) imp of
+                                                Nothing    -> ([],Nothing)
+                                                Just (x,y) -> (x, Just y)
   aux pse (If z exp p1 p2)            = (es1++es2, If z exp p1' p2')
                                         where
                                           (es1,p1') = aux pse p1

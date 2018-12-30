@@ -90,6 +90,8 @@ tests = [
     (32,  [], [], "val x:Int ; val y:Int ; escape {sizeof(tceu_mem_ROOT)}"),
     -- TODO: tmp vars
     (35,  [], [], "val x:Int::1 ; val y:Int::2 ; escape {`(x+y)`+sizeof(tceu_mem_ROOT)}"),
+    (100, [], [], "val x:((),()) :: ((),()) if x==() then escape 100 else escape 0 end"),
+    (0,   [], [], "escape 1"),    -- (to force error)
     (100, [], [], "val x:() :: () if x==() then escape 100 else escape 0 end"),
     (1,   ["(line 1, column 1):\n`loop` never iterates"],
         [],

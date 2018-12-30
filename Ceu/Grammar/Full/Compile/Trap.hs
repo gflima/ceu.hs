@@ -12,6 +12,7 @@ compile p = ([], aux [] p) where
   aux vars (Out' z id b p)     = Out' z id b (aux vars p)
   aux vars (Evt' z id b p)     = Evt' z id b (aux vars p)
   aux vars (Func' z id tp p)   = Func' z id tp (aux vars p)
+  aux vars (FuncI' z id tp imp p) = FuncI' z id tp (fmap (aux vars) imp) (aux vars p)
   aux vars (If z exp p1 p2)    = If z exp (aux vars p1) (aux vars p2)
   aux vars (Seq z p1 p2)       = Seq z (aux vars p1) (aux vars p2)
   aux vars (Loop z p)          = Loop z (aux vars p)

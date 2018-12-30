@@ -23,7 +23,8 @@ data Stmt
   | Inp      Ann ID_Inp Bool                    -- output declaration
   | Out      Ann ID_Out Bool                    -- output declaration
   | Evt      Ann ID_Evt Bool                    -- event declaration
-  | Func     Ann ID_Var Type                    -- code/inst declaration
+  | Func     Ann ID_Var Type                    -- function declaration
+  | FuncI    Ann ID_Var Type (Maybe Stmt)       -- function implementation
   | Write    Ann ID_Var Exp                     -- assignment statement
   | AwaitInp Ann ID_Inp (Maybe ID_Var)          -- await external event
   | EmitExt  Ann ID_Ext (Maybe Exp)             -- emit external event
@@ -51,6 +52,7 @@ data Stmt
   | Out'     Ann ID_Out Bool Stmt               -- output declaration w/ stmts in scope
   | Evt'     Ann ID_Evt Bool Stmt               -- event declaration w/ stmts in scope
   | Func'    Ann ID_Func Type Stmt              -- functions declaration w/ stmts in scope
+  | FuncI'   Ann ID_Func Type (Maybe Stmt) Stmt -- functions implementation w/ stmts in scope
   | Or'      Ann Stmt Stmt                      -- used as an Or with possibly non-terminating trails
   | Par'     Ann Stmt Stmt                      -- par as in basic Grammar
   | Pause'   Ann ID_Var Stmt                    -- pause as in basic Grammar
@@ -77,6 +79,7 @@ getAnn (Inp      z _ _  ) = z
 getAnn (Out      z _ _  ) = z
 getAnn (Evt      z _ _  ) = z
 getAnn (Func     z _ _  ) = z
+getAnn (FuncI    z _ _ _) = z
 getAnn (Write    z _ _  ) = z
 getAnn (AwaitInp z _ _  ) = z
 getAnn (EmitExt  z _ _  ) = z
@@ -104,6 +107,7 @@ getAnn (Inp'     z _ _ _) = z
 getAnn (Out'     z _ _ _) = z
 getAnn (Evt'     z _ _ _) = z
 getAnn (Func'    z _ _ _) = z
+getAnn (FuncI'   z _ _ _ _) = z
 getAnn (Or'      z _ _  ) = z
 getAnn (Par'     z _ _  ) = z
 getAnn (Pause'   z _ _  ) = z
@@ -131,6 +135,12 @@ toGrammar (Evt' z int b p)       = (es, G.Evt z int p')
 toGrammar (Func' z cod tp p)     = (es, G.Func z cod tp p')
                                  where
                                    (es,p') = toGrammar p
+toGrammar (FuncI' z cod tp imp p) = (esi++es, G.FuncI z cod tp imp' p')
+                                 where
+                                   (es,p')    = toGrammar p
+                                   (esi,imp') = case fmap toGrammar imp of
+                                                Nothing    -> ([],Nothing)
+                                                Just (x,y) -> (x, Just y)
 toGrammar (Write z var exp)      = ([], G.Write z var exp)
 toGrammar (AwaitInp z inp var)   = ([], G.AwaitInp z inp)
 toGrammar (EmitExt z ext exp)    = ([], G.EmitExt z ext exp)
@@ -174,7 +184,7 @@ toGrammar (Clean' _ id p)        = (es'++es, p'')
 toGrammar (Nop z)                = ([], G.Nop z)
 toGrammar (Halt z)               = ([], G.Halt z)
 toGrammar (RawS z vs)            = ([], G.RawS z vs)
-toGrammar p                      = error $ "toGrammar: unexpected statement: " -- ++(show p)
+toGrammar p                      = error $ "toGrammar: unexpected statement: " ++ (show p)
 
 -------------------------------------------------------------------------------
 
@@ -186,6 +196,7 @@ stmt2word stmt = case stmt of
   Out _ _ _      -> "declaration"
   Evt _ _ _      -> "declaration"
   Func _ _ _     -> "declaration"
+  FuncI _ _ _ _  -> "implementation"
   Write _ _ _    -> "assignment"
   AwaitInp _ _ _ -> "await"
   AwaitTmr _ _   -> "await"
@@ -212,6 +223,7 @@ stmt2word stmt = case stmt of
   Out' _ _ _ _   -> "declaration"
   Evt' _ _ _ _   -> "declaration"
   Func' _ _ _ _  -> "declaration"
+  FuncI' _ _ _ _ _-> "implementation"
   Par' _ _ _     -> "parallel"
   Pause' _ _ _   -> "pause/if"
   Fin' _ _       -> "finalize"

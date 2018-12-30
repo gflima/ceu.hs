@@ -89,3 +89,18 @@ instType' (TypeV var) (vars,tps) = tp
         tp'     = find (\(TypeV var',_) -> var==var') singles -- ("b",B)
         tp      = snd $ fromJust tp'
 instType' tp _ = tp
+
+-------------------------------------------------------------------------------
+
+{-
+reducesToType0 :: Type -> Bool
+reducesToType0 Type0     = True
+reducesToType0 (TypeN l) = foldr (\tp acc -> reducesToType0 tp && acc) True l
+reducesToType0 _         = False
+
+toTypeN :: Type -> Type
+toTypeN (TypeN tps) = TypeN tps
+toTypeN Type0       = TypeN []
+toTypeN (Type1 tp)  = TypeN [Type1 tp]
+toTypeN tp          = error $ show tp
+-}

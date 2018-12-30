@@ -54,6 +54,7 @@ fromGrammar (G.Inp _ _ p)       = (fromGrammar p)
 fromGrammar (G.Out _ _ p)       = (fromGrammar p)
 fromGrammar (G.Evt _ id p)      = Evt id (fromGrammar p)
 fromGrammar (G.Func _ _ _ p)    = (fromGrammar p)
+fromGrammar (G.FuncI _ _ _ _ p) = (fromGrammar p)
 fromGrammar (G.Write _ id exp)  = Write id exp
 fromGrammar (G.AwaitInp _ id)   = AwaitInp id
 fromGrammar (G.EmitExt _ id exp)= EmitExt id exp

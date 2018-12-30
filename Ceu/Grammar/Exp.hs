@@ -26,6 +26,8 @@ getAnn (Unit  z)     = z
 getAnn (Tuple z _)   = z
 getAnn (Call  z _ _) = z
 
+getAnnE = getAnn
+
 {-
 exp2word :: Exp ann -> String
 exp2word (RawE   _ _)  = "raw"

@@ -22,6 +22,12 @@ compile (Evt' z id b p)          = (es, Evt' z id b p')
 compile (Func' z id tp p)        = (es, Func' z id tp p')
                                    where
                                      (es,p') = compile p
+compile (FuncI' z id tp imp p)   = (esi++es, FuncI' z id tp imp' p')
+                                   where
+                                     (es,p') = compile p
+                                     (esi,imp') = case fmap compile imp of
+                                                    Nothing    -> ([],Nothing)
+                                                    Just (x,y) -> (x, Just y)
 compile (If z exp p1 p2)         = (es1++es2, If z exp p1' p2')
                                    where
                                      (es1,p1') = compile p1
