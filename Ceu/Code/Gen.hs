@@ -5,10 +5,10 @@ import Data.List        (intercalate)
 import qualified Data.Set as Set
 import Data.Maybe
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Ann  (Ann(..), toTrails0, toTrailsN)
+import Ceu.Grammar.Ann  (Ann(..), toTrails0, toTrailsN, getAnn)
 import Ceu.Grammar.Type (Type(..)) --, reducesToType0)
-import Ceu.Grammar.Exp  (Exp(..), RawAt(..), getAnnE)
-import Ceu.Grammar.Stmt (Stmt(..), getAnnS)
+import Ceu.Grammar.Exp  (Exp(..), RawAt(..))
+import Ceu.Grammar.Stmt (Stmt(..))
 import qualified Ceu.Code.N as N
 
 -------------------------------------------------------------------------------
@@ -88,9 +88,9 @@ getEnv ((v1,s):l) v2 | v1==v2    = s
 
 getEnvVar env var = if var == "_INPUT" then "_CEU_INPUT" else "CEU_APP.root."++id'
                     where
-                        id' = var ++ "__" ++ (show $ nn $ getAnnS $ getEnv env var)
+                        id' = var ++ "__" ++ (show $ nn $ getAnn $ getEnv env var)
 
-getEnvEvt env evt = "CEU_EVENT_" ++ evt ++ "__" ++ (show $ nn $ getAnnS $ getEnv env evt)
+getEnvEvt env evt = "CEU_EVENT_" ++ evt ++ "__" ++ (show $ nn $ getAnn $ getEnv env evt)
 
 -------------------------------------------------------------------------------
 
@@ -145,8 +145,8 @@ label z lbl = "CEU_LABEL_" ++ (show $ nn z) ++ "_" ++ lbl
 
 stmt :: Stmt -> [(String,Int)] -> [(String,String)]
 stmt p h = [
-      ("CEU_TCEU_NTRL", n2tp $ toTrailsN (getAnnS p'))
-    , ("CEU_TRAILS_N",  show $ toTrailsN (getAnnS p'))
+      ("CEU_TCEU_NTRL", n2tp $ toTrailsN (getAnn p'))
+    , ("CEU_TRAILS_N",  show $ toTrailsN (getAnn p'))
     -- TODO: unify all dcls/types outputs
     , ("CEU_INPS",      concat $ map (\inp->s++"CEU_INPUT_"++inp++",\n") $ inps    up)
     , ("CEU_EVTS",      concat $ map (\evt->s++"CEU_EVENT_"++evt++",\n") $ evts_up up)
@@ -281,7 +281,7 @@ aux dn (EmitEvt z evt) = upz { code_bef=(oln z)++bef }
               (ocmd $ "if (!_ceu_stk->is_alive) return")
 
         id' = getEnvEvt (evts_dn dn) evt
-        (trl0,trlN) = trails $ getAnnS $ getEnv (evts_dn dn) evt
+        (trl0,trlN) = trails $ getAnn $ getEnv (evts_dn dn) evt
 
 -------------------------------------------------------------------------------
 
@@ -382,7 +382,7 @@ aux dn (Par z p1 p2) = (up_union p1' p2') {
 
         bef = (oblk $
                 (ocmd $ "tceu_stk __ceu_stk = { _ceu_stk->level+1, 1, 0, _ceu_stk }") ++
-                (ocmd $ "_ceu_stk->trail = " ++ (show $ toTrails0 $ getAnnS p2)) ++
+                (ocmd $ "_ceu_stk->trail = " ++ (show $ toTrails0 $ getAnn p2)) ++
                 (ocmd $ bef1 ++ "(&__ceu_stk)")             ++
                 (ocmd $ "if (!_ceu_stk->is_alive) return")) ++
               (code_bef p2')
@@ -390,7 +390,7 @@ aux dn (Par z p1 p2) = (up_union p1' p2') {
         lbl10 = [ olbl bef1 (code_bef p1') ]
         lbl11 = if isNothing brk1 then [] else [ olbl (fromJust brk1) (code_aft p1') ]
         lbls2 = if isNothing brk2 then [] else [ olbl (fromJust brk2) (code_aft p2') ]
-        bef1  = label (getAnnS p1) "Trail1"
+        bef1  = label (getAnn p1) "Trail1"
 
 -------------------------------------------------------------------------------
 
@@ -418,4 +418,4 @@ aux dn s@(Trap z p) = p' {
 
 aux dn (Escape z k) = upz { code_bef=src, code_brk=Just(label z "Escape") }
     where
-        src = oln z ++ (ocmd $ "return " ++ (label (getAnnS $ (traps dn)!!k) "Trap") ++ "(_ceu_stk)")
+        src = oln z ++ (ocmd $ "return " ++ (label (getAnn $ (traps dn)!!k) "Trap") ++ "(_ceu_stk)")

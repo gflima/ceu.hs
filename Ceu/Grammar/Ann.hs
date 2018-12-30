@@ -11,6 +11,9 @@ data Ann = Ann { type_  :: Type
                }
     deriving (Eq, Show)
 
+class HasAnn a where
+    getAnn :: a -> Ann
+
 annz :: Ann
 annz = Ann { type_  = TypeB
            , name   = ""

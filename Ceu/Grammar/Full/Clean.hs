@@ -2,7 +2,7 @@ module Ceu.Grammar.Full.Clean where
 
 import Debug.Trace
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Ann      (toError, errs_anns_msg_map)
+import Ceu.Grammar.Ann      (toError, errs_anns_msg_map, getAnn)
 import Ceu.Grammar.Exp
 import qualified Ceu.Grammar.Stmt as G
 
@@ -25,19 +25,19 @@ clean "And"
     | otherwise              = (es1++es2, s)
   where
     es1 = if maybeTerminates p1 then [] else
-            [toError (G.getAnnS p1) "trail must terminate"]
+            [toError (getAnn p1) "trail must terminate"]
     es2 = if maybeTerminates p2 then [] else
-            [toError (G.getAnnS p2) "trail must terminate"]
+            [toError (getAnn p2) "trail must terminate"]
 
 clean "Or'" p = fin_or [] p
-clean "Or"  p = fin_or [toError (G.getAnnS p) "no trails terminate"] p
+clean "Or"  p = fin_or [toError (getAnn p) "no trails terminate"] p
 
 clean "Loop" s@(G.Trap _ p) = ([], if escapesAt0 p then s else removeTrap s)
 
 clean "Spawn" p = (es1++es2,p') where
   (es1,p') =
     if maybeTerminates p then
-      ([toError (G.getAnnS p) "terminating `spawn`"], G.Seq (G.getAnnS p) p (G.Halt (G.getAnnS p)))
+      ([toError (getAnn p) "terminating `spawn`"], G.Seq (getAnn p) p (G.Halt (getAnn p)))
     else
       ([], p)
   es2 =
@@ -45,7 +45,7 @@ clean "Spawn" p = (es1++es2,p') where
       if escs == [] then
         []
       else
-        [toError (G.getAnnS p) "escaping `spawn`"] ++ (errs_anns_msg_map (map ((G.getAnnS).fst) escs) "escaping statement")
+        [toError (getAnn p) "escaping `spawn`"] ++ (errs_anns_msg_map (map ((getAnn).fst) escs) "escaping statement")
 
 clean id p = error $ "unexpected clean case: " ++ id ++ "\n" -- ++ (show p)
 

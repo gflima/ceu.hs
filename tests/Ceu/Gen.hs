@@ -93,7 +93,7 @@ tests = [
     (1,   [], [], "if 1==1 then escape 1 else escape 0 end"),
     --(0,   [], [], "escape 1"),    -- (to force error)
     -- TODO: == is not poly
-    --(100, [], [], "val x:((),()) :: ((),()) if x==() then escape 100 else escape 0 end"),
+    (100, [], [], "val x:((),()) :: ((),()) if x==() then escape 100 else escape 0 end"),
     --(100, [], [], "val x:() :: () if x==() then escape 100 else escape 0 end"),
     (0,   ["(line 1, column 1):\n`loop` never iterates"],
         [],

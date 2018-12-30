@@ -1,7 +1,7 @@
 module Ceu.Grammar.Full.Eval where
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Ann      (Ann)
+import Ceu.Grammar.Ann      (Ann, getAnn)
 import Ceu.Grammar.Type     (Type(..))
 import qualified Ceu.Grammar.Stmt as G
 import qualified Ceu.Eval as E
@@ -50,7 +50,7 @@ compile' (o_simp,o_encl,o_prel) p = (es2++es3++es4, p4)
     (es2,p2) = compile p1
     (es3,p3) = toGrammar p2
     (es4,p4) = Check.compile (o_simp,False,False) p3
-    z        = getAnnS p
+    z        = getAnn p
 
     defs = (Seq z (Func  z "(==)" (TypeF (TypeN [(TypeV "a"),  (TypeV "a")])   (Type1 "Bool")))
            (Seq z (Func  z "(+)"  (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))

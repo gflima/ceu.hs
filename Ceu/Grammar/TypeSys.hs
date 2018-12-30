@@ -35,7 +35,7 @@ stmt ids (Write z id exp)    = (es1 ++ es2 ++ es3, Write z id exp')
                                                 []
                                              else
                                                 toErrorTypes z tp1 tp
-                                             where tp = type_ $ getAnnE exp'
+                                             where tp = type_ $ getAnn exp'
 
 stmt ids (AwaitInp z id)     = (fst $ fff id ids z isInp, AwaitInp z id)
 stmt ids (EmitExt  z id exp) = ((fst $ fff id ids z isExt) ++ es, EmitExt z id exp')
@@ -49,7 +49,7 @@ stmt ids (EmitEvt  z id)     = (fst $ fff id ids z isEvt, EmitEvt  z id)
 stmt ids (If  z exp p1 p2)   = (ese ++ es ++ es1 ++ es2, If z exp' p1' p2')
                                where
                                 (ese,exp') = expr ids exp
-                                es = toErrorTypes z (Type1 "Bool") (type_ $ getAnnE exp')
+                                es = toErrorTypes z (Type1 "Bool") (type_ $ getAnn exp')
                                 (es1,p1') = stmt ids p1
                                 (es2,p2') = stmt ids p2
 stmt ids (Seq z p1 p2)       = (es1++es2, Seq z p1' p2')
@@ -167,7 +167,7 @@ expr ids (Tuple z exps)  = (es, Tuple z{type_=tps'} exps')
                             rets  = map (\e -> expr ids e) exps
                             es    = concat $ map fst rets
                             exps' = map snd rets
-                            tps'  = TypeN (map (type_.getAnnE) exps')
+                            tps'  = TypeN (map (type_.getAnn) exps')
 
 expr ids (Read z id)     = if id == "_INPUT" then
                             ([], Read z{type_=Type1 "Int"} id)
@@ -179,7 +179,7 @@ expr ids (Read z id)     = if id == "_INPUT" then
 expr ids (Call z id exp) = (es++es_exp, Call z{type_=tp_out} id exp')
                            where
                             (es_exp, exp') = expr ids exp
-                            tp_exp' = type_ $ getAnnE exp'
+                            tp_exp' = type_ $ getAnn exp'
 
                             (es,tp_out) =
                                 let (es',tp_func) = fff id ids z isFunc in

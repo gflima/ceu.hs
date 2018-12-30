@@ -3,9 +3,9 @@ module Ceu.Grammar.Check where
 import Debug.Trace
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Ann      (Ann(..), errs_anns_msg_map, toError)
+import Ceu.Grammar.Ann      (Ann(..), errs_anns_msg_map, toError, getAnn)
 import Ceu.Grammar.Type     (Type(..))
-import Ceu.Grammar.Stmt     (Stmt(..), getAnnS)
+import Ceu.Grammar.Stmt     (Stmt(..))
 import Ceu.Grammar.Simplify (simplify)
 import qualified Ceu.Grammar.TypeSys as TypeSys
 
@@ -21,8 +21,8 @@ compile (o_simp,o_encl,o_prel) p = (es3,p3) where
   (es2,p2) = TypeSys.go p1
   p3   = if not o_simp then p2 else simplify p2
   es3  = escs ++ (stmts p1) ++ es2
-  z    = getAnnS p
-  escs = errs_anns_msg_map (map (\(s,n)->getAnnS s) (getEscapes p1)) "orphan `escape` statement"
+  z    = getAnn p
+  escs = errs_anns_msg_map (map (\(s,n)->getAnn s) (getEscapes p1)) "orphan `escape` statement"
 
 
 stmts :: Stmt -> Errors
@@ -36,7 +36,7 @@ stmts stmt = case stmt of
   If _ _ p q      -> stmts p ++ stmts q
   Seq _ p q       -> stmts p ++ stmts q ++ es where
                      es = if (maybeTerminates p) then [] else
-                            [toError (getAnnS q) "unreachable statement"]
+                            [toError (getAnn q) "unreachable statement"]
   s@(Loop z p)    -> stmts p ++ es1 ++ es2 where
                      es1 = if boundedLoop s then [] else
                             [toError z "unbounded `loop` execution"]
