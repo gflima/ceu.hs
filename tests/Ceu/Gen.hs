@@ -91,10 +91,10 @@ tests = [
     -- TODO: tmp vars
     (35,  [], [], "val x::Int:1 ; val y::Int:2 ; escape {`(x+y)`+sizeof(tceu_mem_ROOT)}"),
     (1,   [], [], "if 1==1 then escape 1 else escape 0 end"),
-    --(0,   [], [], "escape 1"),    -- (to force error)
     -- TODO: == is not poly
+    (100, [], [], "val x::() : () if x==() then escape 100 else escape 0 end"),
+    --(0,   [], [], "escape 1"),    -- (to force error)
     (100, [], [], "val x::((),()) : ((),()) if x==() then escape 100 else escape 0 end"),
-    --(100, [], [], "val x::() : () if x==() then escape 100 else escape 0 end"),
     (0,   ["(line 1, column 1):\n`loop` never iterates"],
         [],
         "loop do if 1==1 then break else await FOREVER end end ; escape 1"),

@@ -192,7 +192,7 @@ static int negate (int v) {
     return -v;
 }
 
-static int plus (tceu__int__int* v) {
+static int Add__tceu__int__int (tceu__int__int* v) {
     return v->_1 + v->_2;
 }
 
@@ -202,6 +202,14 @@ static int times (tceu__int__int* v) {
 
 static int equal (tceu__int__int* v) {
     return v->_1 == v->_2;
+}
+
+static int Eq__tceu__int__int (tceu__int__int* v) {
+    return v->_1 == v->_2;
+}
+
+static int Eq__tceu__tceu_unit__tceu_unit (tceu__tceu_unit__tceu_unit* v) {
+    return 1;
 }
 
 /*****************************************************************************/

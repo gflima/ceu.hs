@@ -112,6 +112,7 @@ expr vars e@(Tuple z exps) = ([type_ z]++tps', "((" ++ (tp2use $ type_ z) ++ "){
         srcs'= intercalate "," $ map snd exps'
 
 -- TODO-01: check if function dcl exists
+{-
 expr vars (Call  _ "negate" e) = (tps, "(negate(" ++ src ++ "))")
                                     where (tps,src) = expr vars e
 expr vars (Call  _ "(+)"    e) = (tps, "(plus(&" ++ src ++ "))")
@@ -126,8 +127,18 @@ expr vars (Call  _ "(==)"   e) = (tps, "(equal(&" ++ src ++ "))")
                                     where (tps,src) = expr vars e
 expr vars (Call  _ "(<=)"   e) = (tps, "(lte(&" ++ src ++ "))")
                                     where (tps,src) = expr vars e
+-}
 
-expr _ e = error (show e)
+expr vars (Call _ func e) = (tps, "(" ++ id' func ++ "__" ++ (tp2use $ type_ $ getAnn e)
+                                      ++ "(&" ++ src ++ "))")
+                                where
+                                    (tps,src) = expr vars e
+                                    id' "(+)"  = "Add"
+                                    id' "(-)"  = "Sub"
+                                    id' "(*)"  = "Mul"
+                                    id' "(/)"  = "Div"
+                                    id' "(==)" = "Eq"
+                                    id' "(<=)" = "Lte"
 
 fold_raws :: [(ID_Var,Stmt)] -> [RawAt] -> ([Type],String)
 fold_raws vars raws = (tps, take ((length src)-2) (drop 1 src)) where
