@@ -15,7 +15,7 @@ clean "And"
   s@(G.Trap z
     (G.Var _ "__and" _
       (G.Seq _
-        (G.Write _ "__and" (Const _ 0))
+        (G.Write _ (LVar "__and") (Const _ 0))
         (G.Par _
           (G.Seq _ p1 chk1)
           (G.Seq _ p2 chk2))

@@ -25,7 +25,7 @@ data Stmt
   | Evt      Ann ID_Evt Bool                    -- event declaration
   | Func     Ann ID_Var Type                    -- function declaration
   | FuncI    Ann ID_Var Type (Maybe Stmt)       -- function implementation
-  | Write    Ann ID_Var Exp                     -- assignment statement
+  | Write    Ann Loc Exp                        -- assignment statement
   | AwaitInp Ann ID_Inp (Maybe ID_Var)          -- await external event
   | EmitExt  Ann ID_Ext (Maybe Exp)             -- emit external event
   | AwaitTmr Ann Exp                            -- await timer

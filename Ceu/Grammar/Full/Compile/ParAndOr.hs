@@ -26,7 +26,7 @@ aux (And z p1 p2)          = Clean' z "And"
                               (Trap' z
                                 (Var' z "__and" (Type1 "Int") Nothing
                                   (Seq z
-                                    (Write z "__and" (Const z 0))
+                                    (Write z (LVar "__and") (Const z 0))
                                     (Par' z p1' p2'))))
                              where
                               p1' = Seq z (Trap.ins' (aux p1)) check
@@ -34,7 +34,7 @@ aux (And z p1 p2)          = Clean' z "And"
                               check = (If z (Call z "(==)" (Tuple z [(Read z "__and"),(Const z 1)]))
                                         (Escape' z 0)
                                         (Seq z
-                                          (Write z "__and" (Call z "(+)" (Tuple z [(Read z "__and"),(Const z 1)])))
+                                          (Write z (LVar "__and") (Call z "(+)" (Tuple z [(Read z "__and"),(Const z 1)])))
                                           (Halt z)))
 
 aux (Or z p1 p2)           = Clean' z "Or" (Trap' z (Par' z p1' p2')) where

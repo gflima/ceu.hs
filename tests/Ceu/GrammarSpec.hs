@@ -4,7 +4,7 @@ import Debug.Trace
 import Test.Hspec
 
 import Ceu.Grammar.Globals  (Errors)
-import Ceu.Grammar.Ann      (annz)
+import Ceu.Grammar.Ann      (annz, Ann(..))
 import Ceu.Grammar.Type     (Type(..))
 import Ceu.Grammar.Exp
 import Ceu.Grammar.Stmt
@@ -20,7 +20,7 @@ spec = do
   describe "checkLoop -- matching-Break/AwaitInp/Every in all paths" $ do
 
     -- atomic statements --
-    checkLoopIt (Loop annz (Write annz "x" (Call annz "umn" (Const annz 1)))) False
+    checkLoopIt (Loop annz (Write annz (LVar "x") (Call annz "umn" (Const annz 1)))) False
     checkLoopIt (Loop annz (AwaitInp annz "A"))       True
     checkLoopIt (Loop annz (AwaitEvt annz "a"))       False
     checkLoopIt (Loop annz (EmitEvt annz "a"))        False
@@ -68,7 +68,7 @@ spec = do
   describe "checkFin/Every -- no Loop/Escape/Await*/Every/Fin:" $ do
 
     -- atomic statements --
-    checkFinIt (Fin annz (Write annz "x" (Const annz 0))) []
+    checkFinIt (Fin annz (Write annz (LVar "x") (Const annz 0))) []
     checkFinIt (Fin annz (AwaitInp annz "A"))        ["invalid statement"]
     checkFinIt (Fin annz (AwaitEvt annz "a"))        ["invalid statement"]
     checkFinIt (Fin annz (EmitEvt annz "a"))         []
@@ -80,7 +80,7 @@ spec = do
     checkFinIt (Fin annz (Var annz "x" Type0 (Nop annz)))                []
     checkFinIt (Fin annz (Var annz "x" Type0 (Every annz "A" (Nop annz)))) ["invalid statement"]
     checkFinIt (Fin annz (If annz (Const annz 0) (Loop annz (Escape annz 0)) ((Nop annz)))) ["invalid statement"]
-    checkFinIt (Fin annz (If annz (Const annz 0) (Write annz "x" (Const annz 0)) ((Nop annz)))) []
+    checkFinIt (Fin annz (If annz (Const annz 0) (Write annz (LVar "x") (Const annz 0)) ((Nop annz)))) []
     checkFinIt (Fin annz ((Nop annz) `sSeq` (Nop annz) `sSeq` (AwaitInp annz "A") `sSeq` (Nop annz))) ["invalid statement"]
     checkFinIt (Fin annz ((Nop annz) `sSeq` (Nop annz) `sSeq` (EmitEvt annz "a") `sSeq` (Nop annz)))  []
     checkFinIt (Fin annz (Loop annz (AwaitEvt annz "a")))          ["invalid statement"]
@@ -93,7 +93,7 @@ spec = do
     -- atomic statements --
     checkCheckIt (Error annz "")               []
     checkCheckIt (Escape annz 0)               ["orphan `escape` statement"]
-    checkCheckIt (Write annz "x" (Const annz 0)) ["identifier 'x' is not declared"]
+    checkCheckIt (Write annz (LVar "x") (Const annz 0)) ["identifier 'x' is not declared"]
 
     -- compound statements --
     checkCheckIt (Trap annz (Escape annz 0))     []
@@ -108,7 +108,7 @@ spec = do
 
     -- atomic statements --
     checkStmtsIt (Error annz "")               []
-    checkStmtsIt (Write annz "x" (Const annz 0)) []
+    checkStmtsIt (Write annz (LVar "x") (Const annz 0)) []
 
     -- compound statements --
     checkStmtsIt (Seq annz (Escape annz 1) (Escape annz 0)) ["unreachable statement"]
@@ -127,32 +127,54 @@ spec = do
 
     checkTypeSysIt (Nop annz)                                    []
     checkTypeSysIt (Var annz "a" Type0 (Nop annz))                    []
-    checkTypeSysIt (Var annz "a" (Type1 "Int") (Write annz "a" (Const annz 1))) []
-    checkTypeSysIt (Var annz "a" (TypeN [Type1 "Int",Type1 "Int"]) (Write annz "a" (Const annz 1))) ["types do not match"]
-    --checkTypeSysIt (Var annz "a" Type0 (Write annz "a" (Const annz 1))) ["types do not match"]
-    checkTypeSysIt (Var annz "a" Type0 (Write annz "a" (Const annz 1))) ["types do not match"]
+    checkTypeSysIt (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Const annz 1))) []
+    checkTypeSysIt (Var annz "a" (TypeN [Type1 "Int",Type1 "Int"]) (Write annz (LVar "a") (Const annz 1))) ["types do not match"]
+    --checkTypeSysIt (Var annz "a" Type0 (Write annz (LVar "a") (Const annz 1))) ["types do not match"]
+    checkTypeSysIt (Var annz "a" Type0 (Write annz (LVar "a") (Const annz 1))) ["types do not match"]
     checkTypeSysIt (Var annz "a" Type0 (If annz (Read annz "a") (Nop annz) (Nop annz))) ["types do not match"]
     checkTypeSysIt (Var annz "a" (Type1 "Int") (If annz (Read annz "a") (Nop annz) (Nop annz))) ["types do not match"]
     checkTypeSysIt (Var annz "a" (Type1 "Bool") (If annz (Read annz "a") (Nop annz) (Nop annz))) []
     checkTypeSysIt (Var annz "a" Type0 (Var annz "a" Type0 (Nop annz)))    ["identifier 'a' is already declared"]
     checkTypeSysIt (Evt annz "e" (Evt annz "e" (Nop annz)))       ["identifier 'e' is already declared"]
-    checkTypeSysIt (Write annz "a" (Const annz 1))              ["identifier 'a' is not declared"]
+    checkTypeSysIt (Write annz (LVar "a") (Const annz 1))              ["identifier 'a' is not declared"]
     checkTypeSysIt (AwaitEvt annz "e")                        ["identifier 'e' is not declared"]
     checkTypeSysIt (Every annz "e" (Nop annz))                  ["identifier 'e' is not declared"]
     checkTypeSysIt (Pause annz "a" (Nop annz))                  ["identifier 'a' is not declared"]
-    checkTypeSysIt (Func annz "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var annz "a" (Type1 "Int") (Write annz "a" (Call annz "umn" (Read annz "b"))))) ["identifier 'b' is not declared"]
-    checkTypeSysIt (Func annz "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var annz "a" Type0 (Write annz "a" (Call annz "umn" (Read annz "b"))))) ["identifier 'b' is not declared","types do not match"]
-    checkTypeSysIt (Var annz "x" (TypeN [Type0,Type0]) (Write annz "x" (Unit annz)))  ["types do not match"]
-    checkTypeSysIt (Var annz "x" (Type1 "Int") (Write annz "x" (Unit annz))) ["types do not match"]
-    checkTypeSysIt (Func annz "identity" (TypeF (TypeV "a") (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz "a" (Call annz "identity" (Const annz 1))))) []
-    checkTypeSysIt (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz "a" (Call annz "first" (Tuple annz [(Unit annz),(Const annz 1)]))))) ["types do not match"]
-    checkTypeSysIt (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz "a" (Call annz "first" (Tuple annz [(Const annz 1),(Const annz 1)]))))) []
+    checkTypeSysIt (Func annz "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "umn" (Read annz "b"))))) ["identifier 'b' is not declared"]
+    checkTypeSysIt (Func annz "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var annz "a" Type0 (Write annz (LVar "a") (Call annz "umn" (Read annz "b"))))) ["identifier 'b' is not declared","types do not match"]
+    checkTypeSysIt (Var annz "x" (TypeN [Type0,Type0]) (Write annz (LVar "x") (Unit annz)))  ["types do not match"]
+    checkTypeSysIt (Var annz "x" (Type1 "Int") (Write annz (LVar "x") (Unit annz))) ["types do not match"]
+    checkTypeSysIt (Func annz "identity" (TypeF (TypeV "a") (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "identity" (Const annz 1))))) []
+
+    -- func first :: (a,a)->a ; var a::Int ; a = first((),1)
+    checkTypeSysIt (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "first" (Tuple annz [(Unit annz),(Const annz 1)]))))) ["types do not match"]
+    checkTypeSysIt (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "first" (Tuple annz [(Const annz 1),(Const annz 1)]))))) []
+
+    describe "pattern matching" $ do
+        it "_ = 1" $
+            TypeSys.go (Write annz LAny (Const annz 1))
+            `shouldBe` ([],Write annz{type_=TypeB} LAny (Const annz{type_=Type1 "Int"} 1))
+        it "(x,_) = 1" $
+            TypeSys.go (Var annz "x" (Type1 "Int")
+                        (Write annz (LTuple [LVar "x", LAny]) (Const annz 1)))
+            `shouldBe` (["types do not match"],Var annz{type_=TypeB} "x" (Type1 "Int") (Write annz{type_=TypeB} (LTuple [LVar "x",LAny]) (Const annz{type_=Type1 "Int"} 1)))
+        it "(x,_) = (1,1)" $
+            TypeSys.go (Var annz "x" (Type1 "Int")
+                        (Write annz (LTuple [LVar "x", LAny]) (Tuple annz [Const annz 1, Const annz 1])))
+            `shouldBe` ([],Var (annz{type_ = TypeB}) "x" (Type1 "Int") (Write (annz{type_ = TypeB}) (LTuple [LVar "x",LAny]) (Tuple (annz{type_ = TypeN [Type1 "Int",Type1 "Int"]}) [Const (annz{type_ = Type1 "Int"}) 1,Const (annz{type_ = Type1 "Int"}) 1])))
+        it "((_,x),_) = (y,1)" $
+            TypeSys.go (Var annz "x" (Type1 "Int")
+                        (Var annz "y" (TypeN [Type0, Type1 "Int"])
+                            (Write annz
+                                (LTuple [LTuple [LAny,LVar "x"], LAny])
+                                (Tuple annz [Read annz "y", Const annz 1]))))
+            `shouldBe` ([],Var (annz{type_ = TypeB}) "x" (Type1 "Int") (Var (annz{type_ = TypeB}) "y" (TypeN [Type0,Type1 "Int"]) (Write (annz{type_ = TypeB}) (LTuple [LTuple [LAny,LVar "x"],LAny]) (Tuple (annz{type_ = TypeN [TypeN [Type0,Type1 "Int"],Type1 "Int"]}) [Read (annz{type_ = TypeN [Type0,Type1 "Int"]}) "y",Const (annz{type_ = Type1 "Int") 1]))))
 
   --------------------------------------------------------------------------
   describe "checkStmts -- program is valid" $ do
 
     -- atomic statements --
-    checkStmtsIt (Write annz "c" (Const annz 0)) []
+    checkStmtsIt (Write annz (LVar "c") (Const annz 0)) []
     checkStmtsIt (AwaitInp annz "A")        []
     checkStmtsIt (AwaitEvt annz "a")        []
     checkStmtsIt (EmitEvt annz "a")         []

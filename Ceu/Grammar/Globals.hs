@@ -5,6 +5,9 @@ type Errors = [String]
 type Source = (String, Int, Int)    -- filename, line, column
 type Trails = (Int, Int)            -- trail_0, trail_n
 
+data Loc = LAny | LVar ID_Var | LTuple [Loc]
+    deriving (Eq, Show)
+
 -- Primitive types.
 type ID      = String   -- identifier
 type ID_Type = String   -- type identifier

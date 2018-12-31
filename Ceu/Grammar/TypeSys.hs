@@ -27,15 +27,20 @@ stmt ids s@(Func z id tp p)  = ((errDeclared ids (id,z)) ++ es, Func z id tp p')
 stmt ids s@(FuncI z id tp imp p) = (es, FuncI z id tp imp p')
                                     where (es,p') = stmt ids p
 
-stmt ids (Write z id exp)    = (es1 ++ es2 ++ es3, Write z id exp')
+stmt ids (Write z loc exp)   = (es1 ++ es2 ++ es3, Write z loc exp')
                                where
-                                (es1,tp1)  = fff id ids z isVar
+                                (es1,tps_loc)  = aux loc
+                                aux :: Loc -> (Errors,Type)
+                                aux LAny       = ([],TypeT)
+                                aux (LVar var) = fff var ids z isVar
+                                aux (LTuple l) = (es, TypeN tps) where
+                                                 l' :: [(Errors,Type)]
+                                                 l' = map aux l
+                                                 (es,tps) = foldr cat ([],[]) l'
+                                                 cat (es1,tp) (es2,tps) = (es1++es2, tp:tps)
+
                                 (es2,exp') = expr ids exp
-                                es3        = if isTypeB tp1 || isTypeB tp then
-                                                []
-                                             else
-                                                toErrorTypes z tp1 tp
-                                             where tp = type_ $ getAnn exp'
+                                es3        = toErrorTypes z tps_loc (type_ $ getAnn exp')
 
 stmt ids (AwaitInp z id)     = (fst $ fff id ids z isInp, AwaitInp z id)
 stmt ids (EmitExt  z id exp) = ((fst $ fff id ids z isExt) ++ es, EmitExt z id exp')
@@ -185,7 +190,7 @@ expr ids (Call z id exp) = (es++es_exp, Call z{type_=tp_out} id exp')
                                 let (es',tp_func) = fff id ids z isFunc in
                                     case tp_func of
                                         TypeT -> (es', TypeT)    -- func not found
-                                        TypeF inp out ->
-                                            (toErrorTypes z inp tp_exp',
-                                            instType out (inp,tp_exp'))
+                                        TypeF inp out -> case toErrorTypes z inp tp_exp' of
+                                            [] -> ([], instType out (inp,tp_exp'))
+                                            x  -> (x, TypeT)
                                         tp -> error (show tp)

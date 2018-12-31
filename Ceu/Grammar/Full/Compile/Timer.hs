@@ -33,13 +33,13 @@ aux (Trap' z p)           = Trap' z (aux p)
 aux (Clean' z id p)       = Clean' z id (aux p)
 aux (AwaitTmr z exp)      = Var' z "__timer_await" (Type1 "Int") Nothing
                             (Seq z
-                              (Write z "__timer_await" exp)
+                              (Write z (LVar "__timer_await") exp)
                               (Trap' z
                                 (Loop z
                                   (Seq z
                                     (AwaitInp z "TIMER" Nothing)
                                     (Seq z
-                                      (Write z "__timer_await"
+                                      (Write z (LVar "__timer_await")
                                         (Call z "(-)" (Tuple z [(Read z "__timer_await"),(Const z 1)])))
                                       (If z (Call z "(==)" (Tuple z [(Read z "__timer_await"),(Const z 0)]))
                                         (Escape' z 0)

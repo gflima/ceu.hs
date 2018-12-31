@@ -41,12 +41,12 @@ aux (Pause z evt p)       =
   Var' z ("__pause_var_"++evt) (Type1 "Int") Nothing
     (Evt' z ("__pause_int_"++evt) False
       (Seq z
-        (Write z ("__pause_var_"++evt) (Const z 0))
+        (Write z (LVar $ "__pause_var_"++evt) (Const z 0))
         (Or' z
           (Var' z "__tmp" (Type1 "Int") Nothing
             (Every z evt (Just "__tmp")
               (If z (Call z "(==)" (Tuple z [(Read z "__tmp"),(Const z 0)]))
-                  (Seq z (Write z ("__pause_var_"++evt) (Const z 0))
+                  (Seq z (Write z (LVar $ "__pause_var_"++evt) (Const z 0))
                        (EmitEvt z ("__pause_int_"++evt) Nothing))
                   (Nop z))))
         (Or' z
@@ -54,6 +54,6 @@ aux (Pause z evt p)       =
           (Var' z "__tmp" (Type1 "Int") Nothing
             (Every z evt (Just "__tmp")
               (If z (Call z "(==)" (Tuple z [(Read z "__tmp"),(Const z 1)]))
-                  (Write z ("__pause_var_"++evt) (Const z 1))
+                  (Write z (LVar $ "__pause_var_"++evt) (Const z 1))
                   (Nop z))))))))
 aux p                     = p
