@@ -62,7 +62,7 @@ expr_read = do
 
 expr_unit :: Parser Exp
 expr_unit = do
-    pos <- pos2src <$> getPosition
+    pos  <- pos2src <$> getPosition
     void <- tk_str "("
     void <- tk_str ")"
     return $ Unit annz{source=pos}

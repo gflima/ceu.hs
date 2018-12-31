@@ -12,7 +12,7 @@ import Ceu.Parser.Token
 import Ceu.Parser.Type           (type_)
 import Ceu.Parser.Exp            (pos2src, expr, tk_raw)
 
-import Ceu.Grammar.Globals       (Source)
+import Ceu.Grammar.Globals       (Source, Loc(..))
 import Ceu.Grammar.Type          (Type(..))
 import Ceu.Grammar.Ann           (annz, source)
 import Ceu.Grammar.Exp           (Exp(..))
@@ -20,23 +20,23 @@ import Ceu.Grammar.Full.Grammar  (Stmt(..))
 
 -------------------------------------------------------------------------------
 
-attr_exp :: String -> Parser a -> Parser Stmt
-attr_exp var op = do
+attr_exp :: Loc -> Parser a -> Parser Stmt
+attr_exp loc op = do
     pos  <- pos2src <$> getPosition
     void <- op
     exp  <- expr
-    return $ Write annz{source=pos} var exp
+    return $ Write annz{source=pos} loc exp
 
-attr_awaitext :: String -> Parser a -> Parser Stmt
-attr_awaitext var op = do
+attr_awaitext :: Loc -> Parser a -> Parser Stmt
+attr_awaitext loc op = do
     void <- op
-    s    <- stmt_awaitext (Just var)
+    s    <- stmt_awaitext (Just loc)
     return s
 
-attr_awaitevt :: String -> Parser a -> Parser Stmt
-attr_awaitevt var op = do
+attr_awaitevt :: Loc -> Parser a -> Parser Stmt
+attr_awaitevt loc op = do
     void <- op
-    s    <- stmt_awaitevt (Just var)
+    s    <- stmt_awaitevt (Just loc)
     return s
 
 -------------------------------------------------------------------------------
@@ -72,7 +72,7 @@ stmt_var = do
     var  <- tk_var
     void <- tk_str "::"
     tp   <- type_
-    s    <- option (Nop $ annz{source=pos}) (try (attr_exp var (tk_str ":")) <|> try (attr_awaitext var (tk_str ":")) <|> try (attr_awaitevt var (tk_str ":")))
+    s    <- option (Nop $ annz{source=pos}) (try (attr_exp (LVar var) (tk_str ":")) <|> try (attr_awaitext (LVar var) (tk_str ":")) <|> try (attr_awaitevt (LVar var) (tk_str ":")))
     return $ Seq annz{source=pos} (Var annz{source=pos} var tp Nothing) s
 
 stmt_evt :: Parser Stmt
@@ -108,9 +108,18 @@ stmt_output = do
 stmt_attr :: Parser Stmt
 stmt_attr = do
     --pos  <- pos2src <$> getPosition
-    var  <- tk_var
-    s    <- try (attr_exp var (tk_str "<:")) <|> try (attr_awaitext var (tk_str "<:")) <|> try (attr_awaitevt var (tk_str "<:"))
+    loc <- loc_
+    s   <- try (attr_exp loc (tk_str "<:")) <|> try (attr_awaitext loc (tk_str "<:")) <|> try (attr_awaitevt loc (tk_str "<:"))
     return $ s
+
+loc_ :: Parser Loc
+loc_ = do
+    v <- (try lany <|> try lvar <|> try ltuple)
+    return v
+    where
+        lany   = do (tk_str "_") ; return LAny
+        lvar   = LVar   <$> tk_var
+        ltuple = LTuple <$> (tk_str "(" *> (many1 loc_ <* tk_str ")"))
 
 -------------------------------------------------------------------------------
 
@@ -122,12 +131,12 @@ stmt_emitext = do
     exp  <- optionMaybe (tk_str "->" *> expr)
     return $ EmitExt annz{source=pos} ext exp
 
-stmt_awaitext :: (Maybe String) -> Parser Stmt
-stmt_awaitext var = do
+stmt_awaitext :: (Maybe Loc) -> Parser Stmt
+stmt_awaitext loc = do
     pos  <- pos2src <$> getPosition
     void <- tk_key "await"
     ext  <- tk_ext
-    return $ AwaitInp annz{source=pos} ext var
+    return $ AwaitInp annz{source=pos} ext loc
 
 stmt_halt :: Parser Stmt
 stmt_halt = do
@@ -144,12 +153,12 @@ stmt_emitevt = do
     exp  <- optionMaybe (tk_str "->" *> expr)
     return $ EmitEvt annz{source=pos} evt exp
 
-stmt_awaitevt :: (Maybe String) -> Parser Stmt
-stmt_awaitevt var = do
+stmt_awaitevt :: (Maybe Loc) -> Parser Stmt
+stmt_awaitevt loc = do
     pos  <- pos2src <$> getPosition
     void <- tk_key "await"
     evt  <- tk_evt
-    return $ AwaitEvt annz{source=pos} evt var
+    return $ AwaitEvt annz{source=pos} evt loc
 
 -------------------------------------------------------------------------------
 
