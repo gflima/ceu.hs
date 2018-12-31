@@ -196,7 +196,7 @@ static int Add__tceu__int__int (tceu__int__int* v) {
     return v->_1 + v->_2;
 }
 
-static int times (tceu__int__int* v) {
+static int Mul__tceu__int__int (tceu__int__int* v) {
     return v->_1 * v->_2;
 }
 

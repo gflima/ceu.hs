@@ -60,7 +60,7 @@ main = do
 
 tests :: [(Int, Errors, [(String,Int)], String)]
 tests = [
-    --(0,   [], [], "escape 1"),    -- (to force error)
+  --(0,   [], [], "escape 1"),    -- (to force error)
     (10,  [], [], "escape 10"),
     (10,  [], [], "escape 5+5"),
     -- TODO: trap/escape()
@@ -86,6 +86,9 @@ tests = [
     (1,   [], [], "val x::((),()) : ((),()) val y::Int : 1 escape y"),
     (3,   [], [], "val x::(Int,Int):(1;2) ; escape +x"),
     (10,  [], [], "val vs::(Int,Int) : (5 5) ; escape + vs"),
+    (0,   ["(line 1, column 22):\ntypes do not match"],
+            [],
+            "val x::((),()) ; if x==() then escape 100 else escape 0 end"),
     -- TODO: unused vars
     (32,  [], [], "val x::Int ; val y::Int ; escape {sizeof(tceu_mem_ROOT)}"),
     -- TODO: tmp vars
@@ -93,11 +96,11 @@ tests = [
     (1,   [], [], "if 1==1 then escape 1 else escape 0 end"),
     -- TODO: == is not poly
     (100, [], [], "val x::() : () if x==() then escape 100 else escape 0 end"),
-    --(0,   [], [], "escape 1"),    -- (to force error)
-    (100, [], [], "val x::((),()) : ((),()) if x==() then escape 100 else escape 0 end"),
+    --(100, [], [], "val x::((),()) : ((),()) ; val x1::() ; (x1,_)=x  if x1==() then escape 100 else escape 0 end"),
+  --(0,   [], [], "escape 1"),    -- (to force error)
     (0,   ["(line 1, column 1):\n`loop` never iterates"],
-        [],
-        "loop do if 1==1 then break else await FOREVER end end ; escape 1"),
+            [],
+            "loop do if 1==1 then break else await FOREVER end end ; escape 1"),
     (0,   ["(line 1, column 1):\n`loop` never iterates"],
         [],
         "loop do break end ; escape 1"),

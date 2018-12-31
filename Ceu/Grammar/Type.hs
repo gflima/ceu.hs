@@ -69,7 +69,7 @@ groupTypesV vars tps = grouped                -- [k,"a","b","a"] ["Int","Int","B
         filterd = filter (isTypeV.fst) zipped -- [("a",I), ("b",B), ("a",I)]
         sorted  = sortBy (\((TypeV t1),_) ((TypeV t2),_) -> compare t1 t2) filterd
                                               -- [("a",I), ("a",I), ("b",B)]
-        grouped = groupBy (==) sorted         -- [[("a",I),("a",I)], [("b",B)]]
+        grouped = groupBy (\(x,_)(y,_)->x==y) sorted -- [[("a",I),("a",I)], [("b",B)]]
 
         isTypeV (TypeV _) = True
         isTypeV _         = False
