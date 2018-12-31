@@ -70,9 +70,9 @@ stmt_var = do
     pos  <- pos2src <$> getPosition
     void <- (tk_key "val" <|> tk_key "mut")
     var  <- tk_var
-    void <- tk_str ":"
+    void <- tk_str "::"
     tp   <- type_
-    s    <- option (Nop $ annz{source=pos}) (try (attr_exp var (tk_str "::")) <|> try (attr_awaitext var (tk_str "::")) <|> try (attr_awaitevt var (tk_str "::")))
+    s    <- option (Nop $ annz{source=pos}) (try (attr_exp var (tk_str ":")) <|> try (attr_awaitext var (tk_str ":")) <|> try (attr_awaitevt var (tk_str ":")))
     return $ Seq annz{source=pos} (Var annz{source=pos} var tp Nothing) s
 
 stmt_evt :: Parser Stmt
@@ -80,7 +80,7 @@ stmt_evt = do
     pos  <- pos2src <$> getPosition
     void <- tk_key "event"
     evt  <- tk_evt
-    void <- tk_str ":"
+    void <- tk_str "::"
     tp   <- tk_type
     guard $ tp == "Int"         -- TODO
     return $ Evt annz{source=pos} evt True
@@ -90,7 +90,7 @@ stmt_input = do
     pos  <- pos2src <$> getPosition
     void <- tk_key "input"
     ext  <- tk_ext
-    void <- tk_str ":"
+    void <- tk_str "::"
     tp   <- tk_type
     guard $ tp == "Int"         -- TODO
     return $ Inp annz{source=pos} ext True
@@ -100,7 +100,7 @@ stmt_output = do
     pos  <- pos2src <$> getPosition
     void <- tk_key "output"
     ext  <- tk_ext
-    void <- tk_str ":"
+    void <- tk_str "::"
     tp   <- tk_type
     guard $ tp == "Int"         -- TODO
     return $ Out annz{source=pos} ext True
