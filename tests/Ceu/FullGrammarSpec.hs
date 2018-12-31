@@ -438,7 +438,7 @@ end
     evalFullProgItRight (10,[[]]) [] (
       Evt' annz "a" True (
         Par annz
-          (Var' annz "ret" (Type1 "Int") Nothing (Seq annz (AwaitEvt annz "a" (Just "ret")) (Escape annz Nothing (Just (Read annz "ret")))))
+          (Var' annz "ret" (Type1 "Int") Nothing (Seq annz (AwaitEvt annz "a" (Just $ LVar "ret")) (Escape annz Nothing (Just (Read annz "ret")))))
           (EmitEvt annz "a" (Just (Const annz 10)) `sSeq` (Halt annz))
       ))
 
@@ -446,7 +446,7 @@ end
       (Var' annz "ret" (Type1 "Int") Nothing
         (Evt' annz "a" False (
           Par annz
-            (Seq annz (AwaitEvt annz "a" (Just "ret")) (Escape annz Nothing (Just (Const annz 0))))
+            (Seq annz (AwaitEvt annz "a" (Just $ LVar "ret")) (Escape annz Nothing (Just (Const annz 0))))
             (EmitEvt annz "a" (Just (Const annz 10)) `sSeq` (Halt annz)))))
 
     evalFullProgItLeft ["identifier '_a' is not declared"] [] (
@@ -473,7 +473,7 @@ end
       (Var' annz "ret" (Type1 "Int") Nothing
         (Evt' annz "a" True (
           Par annz
-            (Seq annz (AwaitEvt annz "a" (Just "ret")) (Escape annz Nothing (Just (Read annz "ret"))))
+            (Seq annz (AwaitEvt annz "a" (Just $ LVar "ret")) (Escape annz Nothing (Just (Read annz "ret"))))
             (EmitEvt annz "a" Nothing `sSeq` (Halt annz)))))
 
 {-
@@ -490,7 +490,7 @@ end
       (Var' annz "ret" (Type1 "Int") Nothing
         (Seq annz
           (Or annz
-            (Every annz "A" (Just "ret") (Nop annz))
+            (Every annz "A" (Just $ LVar "ret") (Nop annz))
             (AwaitInp annz "F" Nothing))
           (Escape annz Nothing (Just (Read annz "ret")))))))
 
@@ -499,7 +499,7 @@ end
       (Seq annz (Inp annz "F" True)
       (Var' annz "ret" (Type1 "Int") Nothing
         (Par annz
-          (Every annz "A" (Just "ret") (Nop annz))
+          (Every annz "A" (Just $ LVar "ret") (Nop annz))
           (Seq annz (AwaitInp annz "F" Nothing) (Escape annz Nothing (Just (Read annz "ret"))))))))
 
   describe "timers" $ do
@@ -585,7 +585,7 @@ end
       (Seq annz ((Inp annz "I" True) `sSeq` (Inp annz "F" False) `sSeq` (Out annz "O" True)) (Var' annz "i" (Type1 "Int") Nothing
         (Par annz
           (Seq annz (AwaitInp annz "F" Nothing) (Escape annz Nothing (Just (Const annz 1))))
-          (Every annz "I" (Just "i") (EmitExt annz "O" (Just (Read annz "i")))))))
+          (Every annz "I" (Just $ LVar "i") (EmitExt annz "O" (Just (Read annz "i")))))))
 
   describe "pause" $ do
 

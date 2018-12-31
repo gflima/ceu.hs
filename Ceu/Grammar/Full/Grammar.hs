@@ -26,16 +26,16 @@ data Stmt
   | Func     Ann ID_Var Type                    -- function declaration
   | FuncI    Ann ID_Var Type (Maybe Stmt)       -- function implementation
   | Write    Ann Loc Exp                        -- assignment statement
-  | AwaitInp Ann ID_Inp (Maybe ID_Var)          -- await external event
+  | AwaitInp Ann ID_Inp (Maybe Loc)             -- await external event
   | EmitExt  Ann ID_Ext (Maybe Exp)             -- emit external event
   | AwaitTmr Ann Exp                            -- await timer
-  | AwaitEvt Ann ID_Evt (Maybe ID_Var)          -- await internal event
+  | AwaitEvt Ann ID_Evt (Maybe Loc)             -- await internal event
   | EmitEvt  Ann ID_Evt (Maybe Exp)             -- emit internal event
   | Break    Ann                                -- loop escape
   | If       Ann Exp Stmt Stmt                  -- conditional
   | Seq      Ann Stmt Stmt                      -- sequence
   | Loop     Ann Stmt                           -- infinite loop
-  | Every    Ann ID (Maybe ID_Var) Stmt         -- event iteration
+  | Every    Ann ID (Maybe Loc) Stmt            -- event iteration
   | And      Ann Stmt Stmt                      -- par/and statement
   | Or       Ann Stmt Stmt                      -- par/or statement
   | Par      Ann Stmt Stmt                      -- par statement
