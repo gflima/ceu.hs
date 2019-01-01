@@ -14,7 +14,7 @@ import Ceu.Parser.Exp            (pos2src, expr, tk_raw)
 
 import Ceu.Grammar.Globals       (Source, Loc(..))
 import Ceu.Grammar.Type          (Type(..))
-import Ceu.Grammar.Ann           (annz, source)
+import Ceu.Grammar.Ann           (annz, source, getAnn)
 import Ceu.Grammar.Exp           (Exp(..))
 import Ceu.Grammar.Full.Grammar  (Stmt(..))
 
@@ -68,12 +68,16 @@ stmt_break = do
 stmt_var :: Parser Stmt
 stmt_var = do
     pos  <- pos2src <$> getPosition
-    void <- (tk_key "val" <|> tk_key "mut")
-    var  <- tk_var
-    void <- tk_str "::"
-    tp   <- type_
-    s    <- option (Nop $ annz{source=pos}) (try (attr_exp (LVar var) (tk_str ":")) <|> try (attr_awaitext (LVar var) (tk_str ":")) <|> try (attr_awaitevt (LVar var) (tk_str ":")))
-    return $ Seq annz{source=pos} (Var annz{source=pos} var tp Nothing) s
+    mod  <- (tk_key "val" <|> tk_key "mut")
+    (loc,dcls) <- loc_ True
+    s    <- option (Nop $ annz{source=pos})
+                   (try (attr_exp      loc (tk_str $ op mod)) <|>
+                    try (attr_awaitext loc (tk_str $ op mod)) <|>
+                    try (attr_awaitevt loc (tk_str $ op mod)))
+    return $ Seq annz{source=pos} dcls s
+    where
+        op "val" = ":"
+        op "mut" = "<:"
 
 stmt_evt :: Parser Stmt
 stmt_evt = do
@@ -108,18 +112,38 @@ stmt_output = do
 stmt_attr :: Parser Stmt
 stmt_attr = do
     --pos  <- pos2src <$> getPosition
-    loc <- loc_
-    s   <- try (attr_exp loc (tk_str "<:")) <|> try (attr_awaitext loc (tk_str "<:")) <|> try (attr_awaitevt loc (tk_str "<:"))
+    loc <- fst <$> loc_ False
+    s   <- try (attr_exp      loc (tk_str "<:")) <|>
+           try (attr_awaitext loc (tk_str "<:")) <|>
+           try (attr_awaitevt loc (tk_str "<:"))
     return $ s
 
-loc_ :: Parser Loc
-loc_ = do
-    v <- (try lany <|> try lvar <|> try ltuple)
-    return v
+-- (x, (y,_))           -> ([], ...)
+-- (x::Int, (y:(),_))   -> ([x:Int,y:Int], ...)
+loc_ :: Bool -> Parser (Loc, Stmt)
+loc_ isDcl = do
+    (loc,dcls) <- aux
+    return (loc, foldr (\dcl acc -> Seq (getAnn dcl) dcl acc) (Nop annz) dcls)
     where
-        lany   = do (tk_str "_") ; return LAny
-        lvar   = LVar   <$> tk_var
-        ltuple = LTuple <$> (tk_str "(" *> (many1 loc_ <* tk_str ")"))
+        aux :: Parser (Loc, [Stmt])
+        aux = (try lany <|> try lvar <|> try ltuple) where
+            lany   = do (tk_str "_") ; return (LAny, [])
+            lvar   = do
+                        pos <- pos2src <$> getPosition
+                        var <- tk_var
+                        dcl <- if isDcl
+                                then do
+                                    void <- (tk_str "::")
+                                    tp   <- type_
+                                    return [Var annz{source=pos} var tp Nothing]
+                                 else do
+                                    return []
+                        return (LVar var, dcl)
+            ltuple = do
+                        void <- tk_str "("
+                        l    <- many1 aux   -- [(loc,[dcl])]
+                        void <- tk_str ")"
+                        return (LTuple $ map fst l, concat $ map snd l)
 
 -------------------------------------------------------------------------------
 

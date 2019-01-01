@@ -37,7 +37,9 @@ keywords = [
     "with"
   ]
 tk_reserved :: Parser ()
-tk_reserved = foldr1 (<|>) (map tk_key keywords)
+tk_reserved = do
+    void <- foldr1 (<|>) (map tk_key keywords)
+    return ()
 
 s :: Parser ()
 s = void $ many $ (void $ oneOf " ,;\n\t") <|> comm
@@ -92,10 +94,10 @@ tk_type = do
     s
     return (first:rest)
 
-tk_key :: String -> Parser ()
+tk_key :: String -> Parser String
 tk_key k = do
     key  <- string k
     void <- notFollowedBy (letter <|> char '_' <|> digit)
     guard $ elem key keywords
     s
-    return ()
+    return key

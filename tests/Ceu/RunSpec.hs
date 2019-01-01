@@ -71,14 +71,14 @@ spec = do
         it "a <: 1; escape a;" $
             run "a <: 1; escape a" []
             `shouldBe` Left "(line 1, column 3):\nidentifier 'a' is not declared\n(line 1, column 16):\nidentifier 'a' is not declared\n"
-        it "mut a :: Int : 1; escape a;" $
-            run "mut a :: Int : 1; escape a" []
+        it "mut a :: Int <: 1; escape a;" $
+            run "mut a :: Int <: 1; escape a" []
             `shouldBe` Right (1, [[]])
         it "val a::Int" $
             run "val a::Int" []
             `shouldBe` Left "(line 1, column 1):\nterminating `trap` body\n(line 1, column 1):\nmissing `escape` statement\n(line 1, column 1):\nunreachable statement\n"
-        it "mut a::Int : 1" $
-            run "mut a::Int : 1" []
+        it "mut a::Int <: 1" $
+            run "mut a::Int <: 1" []
             `shouldBe` Left "(line 1, column 1):\nterminating `trap` body\n(line 1, column 1):\nmissing `escape` statement\n(line 1, column 1):\nunreachable statement\n"
         it "val a::Int ; a <: 1" $
             run "val a::Int ; a <: 1 ; escape a" []
@@ -91,18 +91,18 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "hide a" $
             run "val a::Int ; val a::Int ; escape 0" []
-            `shouldBe` Left "(line 1, column 14):\nidentifier 'a' is already declared\n"
+            `shouldBe` Left "(line 1, column 18):\nidentifier 'a' is already declared\n"
         it "do a=1 end ; a=2" $
             run "do val a::Int : 1; end val a::Int : 2 ; escape a" []
             `shouldBe` Left "TODO: declared but not used"
-        it "mut x::Int : await X ; escape x" $
-            run "input X::Int mut x::Int : await X ; escape x" [("X",Just 1)]
+        it "mut x::Int <: await X ; escape x" $
+            run "input X::Int mut x::Int <: await X ; escape x" [("X",Just 1)]
             `shouldBe` Right (1, [[],[]])
         it "TODO-index-tuples" $
             run "val x::(Int,()) : (1 ()) ; val y::(Int,()) : x ; escape 1" []
             `shouldBe` Right (1, [[]])
-        it "mut x::(Int,Int) : (1 2) ; escape + x | (TODO: no RT support for tuples)" $
-            run "mut x::(Int,Int) : (1 2) ; escape + x" []
+        it "mut x::(Int,Int) <: (1 2) ; escape + x | (TODO: no RT support for tuples)" $
+            run "mut x::(Int,Int) <: (1 2) ; escape + x" []
             `shouldBe` Right (3, [[]])
 
 -------------------------------------------------------------------------------
@@ -114,8 +114,8 @@ spec = do
         it "await X ; escape 1" $
             run "input X::Int await X ; escape 1" [("X",Nothing)]
             `shouldBe` Right (1,[[],[]])
-        it "mut x::Int : await X ; await X ; escape x" $
-            run "input X::Int mut x::Int : await X ; await X ; escape x" [("X",Just 1),("X",Nothing)]
+        it "mut x::Int <: await X ; await X ; escape x" $
+            run "input X::Int mut x::Int <: await X ; await X ; escape x" [("X",Just 1),("X",Nothing)]
             `shouldBe` Right (1, [[],[],[]])
 
     describe "emitext:" $ do
@@ -128,8 +128,8 @@ spec = do
         it "emit X -> 1" $
             run "output X::Int emit X -> 1 ; escape 2;" []
             `shouldBe` Right (2,[[("X",Just 1)]])
-        it "mut x::Int : await X; emit X -> x ; escape x+1" $    -- TODO: X in/out
-            run "input X::Int mut x::Int : await X; emit X -> x ; escape x+1" [("X",Just 1)]
+        it "mut x::Int <: await X; emit X -> x ; escape x+1" $    -- TODO: X in/out
+            run "input X::Int mut x::Int <: await X; emit X -> x ; escape x+1" [("X",Just 1)]
             `shouldBe` Right (2,[[],[("X",Just 1)]])
 
 -------------------------------------------------------------------------------
