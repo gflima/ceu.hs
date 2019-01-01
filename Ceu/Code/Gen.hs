@@ -249,11 +249,25 @@ aux dn s@(Func z id (TypeF inp out) p) = p'
 aux dn s@(FuncI z id (TypeF inp out) Nothing p) = p' { tps_up=inp:out:(tps_up p') }
     where p' = aux dn p
 
-aux dn (Write z var exp) = upz { code_bef=src', tps_up=tps }
+aux dn (Write _ LAny       _)   = upz
+aux dn (Write z (LVar var) exp) = upz { code_bef=src', tps_up=tps }
     where
         vars = vars_dn dn
         (tps,src) = expr vars exp
         src' = (oln z ++ (ocmd $ (getEnvVar vars var) ++ " = " ++ src))
+
+aux dn (Write z tup exp) = upz { code_bef=src_write, tps_up=tps_exp }
+    where
+        (tps_exp,src_exp) = expr (vars_dn dn) exp
+        src_write = (oln z ++ (ocmd $ aux' tup src_exp))
+        vars = vars_dn dn
+
+        aux' LAny          _   = ""
+        aux' (LVar var)    exp = oln z ++ (ocmd $ (getEnvVar vars var) ++ " = " ++ exp)
+        aux' (LTuple locs) exp =
+            snd $ foldl (\(n,ret) loc -> (n+1, aux' loc (exp++"._"++(show n)) ++ ret))
+                                         (1,"")
+                                         locs
 
 -------------------------------------------------------------------------------
 

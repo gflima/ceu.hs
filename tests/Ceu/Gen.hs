@@ -94,9 +94,7 @@ tests = [
     -- TODO: tmp vars
     (35,  [], [], "val x::Int:1 ; val y::Int:2 ; escape {`(x+y)`+sizeof(tceu_mem_ROOT)}"),
     (1,   [], [], "if 1==1 then escape 1 else escape 0 end"),
-    -- TODO: == is not poly
     (100, [], [], "val x::() : () if x==() then escape 100 else escape 0 end"),
-    --(100, [], [], "val x::((),()) : ((),()) ; val x1::() ; (x1,_)=x  if x1==() then escape 100 else escape 0 end"),
   --(0,   [], [], "escape 1"),    -- (to force error)
     (0,   ["(line 1, column 1):\n`loop` never iterates"],
             [],
@@ -104,6 +102,10 @@ tests = [
     (0,   ["(line 1, column 1):\n`loop` never iterates"],
         [],
         "loop do break end ; escape 1"),
+-- pattern matching
+    (55,  [], [], "mut x::Int; val y::(Int,Int) : (3,55); ((_,x),_)<:(y,1); escape x"),
+    (100, [], [], "val x::((),()) : ((),()) ; val x1::() ; (x1,_)=x  if x1==() then escape 100 else escape 0 end"),
+--
     (4, [], [("KEY",1)],
         unlines [
             "input  KEY   :: Int",
