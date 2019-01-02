@@ -32,7 +32,8 @@ stmts stmt = case stmt of
   Out _ _ p       -> stmts p
   Evt _ _ p       -> stmts p
   Func _ _ _ p    -> stmts p
-  FuncI _ _ _ imp p -> stmts p --(maybe [] id (fmap stmts imp)) ++ stmts p
+  FuncI _ _ _ Nothing    p -> stmts p
+  FuncI z _ _ (Just imp) p -> stmts imp ++ (noComplexs "invalid statement in `func`" z imp) ++ stmts p
   If _ _ p q      -> stmts p ++ stmts q
   Seq _ p q       -> stmts p ++ stmts q ++ es where
                      es = if (maybeTerminates p) then [] else
@@ -59,7 +60,7 @@ stmts stmt = case stmt of
   where
     noComplexs msg z p =
       let ret = getComplexs p in
-        if (ret == []) then
+        if ret == [] then
           []
         else
           [toError z msg] ++ ret

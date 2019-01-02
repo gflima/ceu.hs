@@ -23,6 +23,7 @@ keywords = [
     "escape",
     "event",
     "FOREVER",
+    "func",
     "if",
     "input",
     "loop",

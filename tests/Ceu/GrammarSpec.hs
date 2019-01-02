@@ -211,9 +211,13 @@ spec = do
     checkStmtsIt (Fin annz (Escape annz 0)) ["invalid statement in `finalize`", "invalid statement"]
     checkStmtsIt (Loop annz (Halt annz)) ["`loop` never iterates"]
 
-    it "f ... do await end" $
-        Check.stmts (FuncI annz "f" TypeB (Just $ Halt annz) (Halt annz))
-        `shouldBe` []
+    describe "func impl:" $ do
+        it "f ... do await end" $
+            Check.stmts (FuncI annz "f" TypeB (Just $ Loop annz (Nop annz)) (Halt annz))
+            `shouldBe` ["unbounded `loop` execution"]
+        it "f ... do await end" $
+            Check.stmts (FuncI annz "f" TypeB (Just $ Halt annz) (Halt annz))
+            `shouldBe` ["invalid statement in `func`","invalid statement"]
 
     -- all
     checkCheckIt (Fin annz (Escape annz 0)) ["orphan `escape` statement", "invalid statement in `finalize`", "invalid statement"]

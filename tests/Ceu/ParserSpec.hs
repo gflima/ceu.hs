@@ -229,6 +229,26 @@ spec = do
             it "(Int,())" $
                 parse type_N "(Int,())"
                 `shouldBe` Right (TypeN [Type1 "Int", Type0])
+
+        describe "typeF" $ do
+            it "(Int -> Int)" $
+                parse type_F "(Int -> Int)"
+                `shouldBe` Right (TypeF (Type1 "Int") (Type1 "Int"))
+            it "(a -> Int)" $
+                parse type_F "(a -> Int)"
+                `shouldBe` Right (TypeF (TypeV "a") (Type1 "Int"))
+            it "a -> Int" $
+                parse type_F "a -> Int"
+                `shouldBe` Left "(line 1, column 1):\nunexpected \"a\"\nexpecting \"(\""
+
+        describe "typeV" $ do
+            it "Int" $
+                parse type_V "Int"
+                `shouldBe` Left "(line 1, column 1):\nunexpected \"I\""
+            it "a" $
+                parse type_V "a"
+                `shouldBe` Right (TypeV "a")
+
         describe "type_" $ do
             it "()" $
                 parse type_ "()"
@@ -550,6 +570,11 @@ spec = do
                 `shouldBe` Right (Trap annz{source=("",1,1)} Nothing (Escape annz{source=("",1,9)} Nothing Nothing))
 
 -------------------------------------------------------------------------------
+
+        describe "func:" $ do
+            it "func add" $
+                parse stmt_func "func add :: ((Int, Int) -> Int)"
+                `shouldBe` Right (Func (annz{source = ("",1,1)}) "add" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")))
 
         describe "par:" $ do
             it "par" $

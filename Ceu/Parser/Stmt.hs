@@ -10,7 +10,7 @@ import Text.Parsec.Combinator    (many1, chainl, chainr1, option, optionMaybe, o
 
 import Ceu.Parser.Common
 import Ceu.Parser.Token
-import Ceu.Parser.Type           (type_)
+import Ceu.Parser.Type           (type_, type_F)
 import Ceu.Parser.Exp            (expr, tk_raw)
 
 import Ceu.Grammar.Globals       (Source, Loc(..))
@@ -262,6 +262,17 @@ stmt_paror = do
     void <- tk_key "end"
     return $ snd $ foldr1 (\(p,s) acc -> (p, Or annz{source=p} s (snd acc)))
                           ([(pos1,s1)]++ss)
+
+-------------------------------------------------------------------------------
+
+stmt_func :: Parser Stmt
+stmt_func = do
+    pos  <- pos2src <$> getPosition
+    void <- tk_key "func"
+    func <- tk_func
+    void <- tk_str "::"
+    tp   <- type_F
+    return $ Func annz{source=pos} func tp
 
 -------------------------------------------------------------------------------
 
