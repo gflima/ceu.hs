@@ -24,6 +24,7 @@ spec :: Spec
 spec = do
 
     --describe "TODO:" $ do
+        --parse stmt "mut x::Int; val yyy::(Int,Int) : (3,55); ((_,x),_)<:(yyy,1); escape x"
 
     describe "tokens:" $ do
         describe "comm:" $ do
@@ -221,12 +222,12 @@ spec = do
                 `shouldBe` Left "(line 1, column 2):\nunexpected \")\"\nexpecting \"(\""
             it "(Int)" $
                 parse type_N "(Int)"
-                `shouldBe` Left "(line 1, column 5):\nunexpected \")\"\nexpecting digit, letter, \"_\" or \"(\""
+                `shouldBe` Left "(line 1, column 5):\nunexpected \")\"\nexpecting digit, letter, \"_\" or \",\""
             it "(Int,Int)" $
                 parse type_N "(Int,Int)"
                 `shouldBe` Right (TypeN [Type1 "Int", Type1 "Int"])
-            it "(Int ())" $
-                parse type_N "(Int ())"
+            it "(Int,())" $
+                parse type_N "(Int,())"
                 `shouldBe` Right (TypeN [Type1 "Int", Type0])
         describe "type_" $ do
             it "()" $
@@ -235,8 +236,8 @@ spec = do
             it "Int" $
                 parse type_ "Int"
                 `shouldBe` Right (Type1 "Int")
-            it "(Int (() ()))" $
-                parse type_ "(Int (() ()))"
+            it "(Int, ((),()))" $
+                parse type_ "(Int, ((),()))"
                 `shouldBe` Right (TypeN [Type1 "Int", TypeN [Type0,Type0]])
 
     describe "expr:" $ do
@@ -293,6 +294,11 @@ spec = do
             it "f 1" $
                 parse expr_call_mid "f 1"
                 `shouldBe` Right (Call annz{source=("",1,1)} "f" (Const annz{source=("",1,3)} 1))
+
+        describe "tuple:" $ do
+            it "(3,55,)" $ do
+                parse expr_tuple "(3,55,)"
+                `shouldBe` Right (Tuple annz{source=("",1,1)} [Const annz{source=("",1,2)} 3, Const annz{source=("",1,4)} 55])
 
         describe "expr:" $ do
             it "{0}" $
@@ -377,13 +383,16 @@ spec = do
                 parse stmt_var "val x::() : ()"
                 `shouldBe` Right (Seq annz{source=("",1,1)} (Seq (annz{source=("",1,5)}) (Var annz{source=("",1,5)} "x" Type0 Nothing) (Nop annz)) (Write annz{source=("",1,11)} (LVar "x") (Unit annz{source=("",1,13)})))
             it "mut x::(Int,()) : (1 ())" $
-                parse stmt_var "mut x::(Int,()) <: (1 ())"
+                parse stmt_var "mut x::(Int,()) <: (1,())"
                 `shouldBe` Right (Seq annz{source=("",1,1)} (Seq (annz{source=("",1,5)}) (Var annz{source=("",1,5)} "x" (TypeN [Type1 "Int",Type0]) Nothing) (Nop annz)) (Write annz{source=("",1,17)} (LVar "x") (Tuple annz{source=("",1,20)} [Const annz{source=("",1,21)} 1,Unit annz{source=("",1,23)}])))
 
         describe "var-tuples:" $ do
+            it "((_,x,),_)" $ do
+                parse (loc_ False) "((_,x,),_)"
+                `shouldBe` Right (LTuple [LTuple [LAny,LVar "x"],LAny], Nop annz)
             it "(x::Int, y::Int)" $
                 parse (loc_ False) "(x::Int, y::Int)"
-                `shouldBe` Left "(line 1, column 3):\nunexpected \":\"\nexpecting digit, letter, \"_\", \"(\" or \")\""
+                `shouldBe` Left "(line 1, column 3):\nunexpected \":\"\nexpecting digit, letter, \"_\" or \",\""
             it "(x::Int, y::Int)" $
                 parse (loc_ True) "(x::Int, y::Int)"
                 `shouldBe` Right (LTuple [LVar "x",LVar "y"],Seq (annz{source=("",1,2)}) (Var (annz{source=("",1,2)}) "x" (Type1 "Int") Nothing) (Seq (annz{source=("",1,10)}) (Var (annz{source=("",1,10)}) "y" (Type1 "Int") Nothing) (Nop (annz{source=("",0,0)}))))
@@ -597,8 +606,8 @@ spec = do
                 parse stmt "mut x::Int ; x <: 1 ; escape x"
                 `shouldBe` Right (Seq annz{source=("",1,1)} (Seq annz{source=("",1,1)} (Seq (annz{source=("",1,5)}) (Var annz{source=("",1,5)} "x" (Type1 "Int") Nothing) (Nop annz)) (Nop annz{source=("",1,1)})) (Seq annz{source=("",1,1)} (Write annz{source=("",1,16)} (LVar "x") (Const annz{source=("",1,19)} 1)) (Escape annz{source=("",1,23)} Nothing (Just (Read annz{source=("",1,30)} "x")))))
 
-            it "val x::(Int,Int):(1;2) ; escape +x" $
-                parse stmt "val x::(Int,Int):(1;2) ; escape `+x"
+            it "val x::(Int,Int,):(1,2) ; escape +x" $
+                parse stmt "val x::(Int,Int):(1,2) ; escape `+x"
                 `shouldBe` Right (Seq annz{source=("",1,1)} (Seq annz{source=("",1,1)} (Seq (annz{source=("",1,5)}) (Var annz{source=("",1,5)} "x" (TypeN [Type1 "Int",Type1 "Int"]) Nothing) (Nop annz)) (Write annz{source=("",1,17)} (LVar "x") (Tuple annz{source=("",1,18)} [Const annz{source=("",1,19)} 1,Const annz{source=("",1,21)} 2]))) (Escape annz{source=("",1,26)} Nothing (Just (Call annz{source=("",1,33)} "(+)" (Read annz{source=("",1,35)} "x")))))
 
             it "do ... end" $

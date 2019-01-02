@@ -1,19 +1,15 @@
 module Ceu.Parser.Exp where
 
 import Text.Parsec.Prim         ((<|>), getPosition, try, many)
-import Text.Parsec.Pos          (SourcePos, sourceName, sourceLine, sourceColumn)
 import Text.Parsec.String       (Parser)
 import Text.Parsec.Char         (char, anyChar)
-import Text.Parsec.Combinator   (many1, chainl1, option, notFollowedBy)
+import Text.Parsec.Combinator   (chainl1, option, notFollowedBy)
 
+import Ceu.Parser.Common
 import Ceu.Parser.Token         (tk_num, tk_var, tk_func, tk_str, tk_op, s)
 
-import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann          (annz, source)
 import Ceu.Grammar.Exp          (Exp(..), RawAt(..))
-
-pos2src :: SourcePos -> Source
-pos2src pos = (sourceName pos, sourceLine pos, sourceColumn pos)
 
 -------------------------------------------------------------------------------
 
@@ -77,11 +73,8 @@ expr_parens = do
 expr_tuple :: Parser Exp
 expr_tuple = do
     pos  <- pos2src <$> getPosition
-    void <- tk_str "("
-    exp1 <- expr
-    exps <- many1 expr
-    void <- tk_str ")"
-    return $ Tuple annz{source=pos} (exp1:exps)
+    exps <- list expr
+    return $ Tuple annz{source=pos} exps
 
 expr_prim :: Parser Exp
 expr_prim = try expr_call_pre   <|>

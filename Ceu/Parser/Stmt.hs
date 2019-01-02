@@ -6,11 +6,12 @@ import Control.Applicative       (many)
 
 import Text.Parsec.Prim          ((<|>), try, getPosition)
 import Text.Parsec.String        (Parser)
-import Text.Parsec.Combinator    (many1, chainl, chainr1, option, optionMaybe)
+import Text.Parsec.Combinator    (many1, chainl, chainr1, option, optionMaybe, optional)
 
+import Ceu.Parser.Common
 import Ceu.Parser.Token
 import Ceu.Parser.Type           (type_)
-import Ceu.Parser.Exp            (pos2src, expr, tk_raw)
+import Ceu.Parser.Exp            (expr, tk_raw)
 
 import Ceu.Grammar.Globals       (Source, Loc(..))
 import Ceu.Grammar.Type          (Type(..))
@@ -140,10 +141,8 @@ loc_ isDcl = do
                                     return []
                         return (LVar var, dcl)
             ltuple = do
-                        void <- tk_str "("
-                        l    <- many1 aux   -- [(loc,[dcl])]
-                        void <- tk_str ")"
-                        return (LTuple $ map fst l, concat $ map snd l)
+                        locs <- list aux  -- [(loc,[dcl])]
+                        return (LTuple $ map fst locs, concat $ map snd locs)
 
 -------------------------------------------------------------------------------
 
