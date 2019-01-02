@@ -104,8 +104,8 @@ tests = [
 -- pattern matching
     (55,  [], [], "mut x::Int; val y::(Int,Int) : (3,55); ((_,x),_)<:(y,1); escape x"),
     (100, [], [], "val x::((),()) : ((),()) ; val x1::() ; (x1,_)<:x  if x1==() then escape 100 else escape 0 end"),
-    (3,   [], [], "val (x::Int, y::Int) : (1, 2); escape x+y"),
-    (3,   [], [], "mut (x::Int, (y::Int,_)) <: (1, (2,3)); escape x+y"),
+    (3,   [], [], "val (x,y)::(Int,Int) : (1, 2); escape x+y"),
+    (3,   [], [], "mut (x, (y,_)) :: (Int, (Int,Int)) <: (1, (2,3)); escape x+y"),
 --
     (4, [], [("KEY",1)],
         unlines [

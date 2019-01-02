@@ -91,7 +91,7 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "hide a" $
             run "val a::Int ; val a::Int ; escape 0" []
-            `shouldBe` Left "(line 1, column 18):\nidentifier 'a' is already declared\n"
+            `shouldBe` Left "(line 1, column 14):\nidentifier 'a' is already declared\n"
         it "do a=1 end ; a=2" $
             run "do val a::Int : 1; end val a::Int : 2 ; escape a" []
             `shouldBe` Left "TODO: declared but not used"
