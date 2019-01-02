@@ -61,13 +61,13 @@ spec = do
             run "escape 1+2*3/4" []
             `shouldBe` Right (2, [[]])
         it "+ (1 2)" $
-            run "escape `+ (1 2)" []
+            run "escape `+ (1,2)" []
             `shouldBe` Right (3, [[]])
 
     describe "vars:" $ do
         it "val Int a,b" $
             run "val a,b::Int;" []           -- TODO: support a,b,c? (problem w/ assign/finalization)
-            `shouldBe` Left "(line 1, column 7):\nunexpected \"b\"\nexpecting \"::\""
+            `shouldBe` Left "(line 1, column 6):\nunexpected \",\"\nexpecting digit, letter, \"_\" or \"::\""
         it "a <: 1; escape a;" $
             run "a <: 1; escape a" []
             `shouldBe` Left "(line 1, column 3):\nidentifier 'a' is not declared\n(line 1, column 16):\nidentifier 'a' is not declared\n"
@@ -99,10 +99,10 @@ spec = do
             run "input X::Int mut x::Int <: await X ; escape x" [("X",Just 1)]
             `shouldBe` Right (1, [[],[]])
         it "TODO-index-tuples" $
-            run "val x::(Int,()) : (1 ()) ; val y::(Int,()) : x ; escape 1" []
+            run "val x::(Int,()) : (1,()) ; val y::(Int,()) : x ; escape 1" []
             `shouldBe` Right (1, [[]])
-        it "mut x::(Int,Int) <: (1 2) ; escape `+ x | (TODO: no RT support for tuples)" $
-            run "mut x::(Int,Int) <: (1 2) ; escape `+ x" []
+        it "mut x::(Int,Int) <: (1,2) ; escape `+ x | (TODO: no RT support for tuples)" $
+            run "mut x::(Int,Int) <: (1,2) ; escape `+ x" []
             `shouldBe` Right (3, [[]])
 
 -------------------------------------------------------------------------------
