@@ -60,7 +60,8 @@ main = do
 
 tests :: [(Int, Errors, [(String,Int)], String)]
 tests = [
-  --(0,   [], [], "escape 1"),    -- (to force error)
+    --(10,  [], [], "escape f 1"),
+  --(0,   [], [], "xxx"),    -- (to force error)
     (10,  [], [], "escape 10"),
     (10,  [], [], "escape 5+5"),
     -- TODO: trap/escape()
@@ -83,8 +84,8 @@ tests = [
     (0,   ["(line 1, column 16):\ntypes do not match"], [],
                   "val x::((),()) : () val y::Int : 1 escape y"),
     (1,   [], [], "val x::((),()) : ((),()) val y::Int : 1 escape y"),
-    (3,   [], [], "val x::(Int,Int):(1;2) ; escape +x"),
-    (10,  [], [], "val vs::(Int,Int) : (5 5) ; escape + vs"),
+    (3,   [], [], "val x::(Int,Int):(1;2) ; escape `+x"),
+    (10,  [], [], "val vs::(Int,Int) : (5 5) ; escape `+ vs"),
     (0,   ["(line 1, column 22):\ntypes do not match"],
             [],
             "val x::((),()) ; if x==() then escape 100 else escape 0 end"),

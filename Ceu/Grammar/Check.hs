@@ -42,14 +42,14 @@ stmts stmt = case stmt of
                             [toError z "unbounded `loop` execution"]
                      es2 = if maybeTerminates p then [] else
                             [toError z "`loop` never iterates"]
-  Every z e p     -> stmts p ++ (aux "invalid statement in `every`" z p)
+  Every z e p     -> stmts p ++ (noComplexs "invalid statement in `every`" z p)
   Par z p q       -> es ++ stmts p ++ stmts q where
                      es = if (neverTerminates p) && (neverTerminates q) then
                              []
                           else
                              [toError z "terminating trail"]
   Pause _ _ p     -> stmts p
-  Fin z p         -> stmts p ++ (aux "invalid statement in `finalize`" z p)
+  Fin z p         -> stmts p ++ (noComplexs "invalid statement in `finalize`" z p)
   Trap z p        -> es1 ++ es2 ++ stmts p where
                      es1 = if neverTerminates p then [] else
                              [toError z "terminating `trap` body"]
@@ -57,7 +57,7 @@ stmts stmt = case stmt of
                              [toError z "missing `escape` statement"]
   _               -> []
   where
-    aux msg z p =
+    noComplexs msg z p =
       let ret = getComplexs p in
         if (ret == []) then
           []

@@ -3,7 +3,7 @@ module Ceu.GrammarSpec (main, spec) where
 import Debug.Trace
 import Test.Hspec
 
-import Ceu.Grammar.Globals  (Errors)
+import Ceu.Grammar.Globals  (Errors, Loc(..))
 import Ceu.Grammar.Ann      (annz, Ann(..))
 import Ceu.Grammar.Type     (Type(..))
 import Ceu.Grammar.Exp
@@ -168,7 +168,7 @@ spec = do
                             (Write annz
                                 (LTuple [LTuple [LAny,LVar "x"], LAny])
                                 (Tuple annz [Read annz "y", Const annz 1]))))
-            `shouldBe` ([],Var (annz{type_ = TypeB}) "x" (Type1 "Int") (Var (annz{type_ = TypeB}) "y" (TypeN [Type0,Type1 "Int"]) (Write (annz{type_ = TypeB}) (LTuple [LTuple [LAny,LVar "x"],LAny]) (Tuple (annz{type_ = TypeN [TypeN [Type0,Type1 "Int"],Type1 "Int"]}) [Read (annz{type_ = TypeN [Type0,Type1 "Int"]}) "y",Const (annz{type_ = Type1 "Int") 1]))))
+            `shouldBe` ([],Var (annz{type_ = TypeB}) "x" (Type1 "Int") (Var (annz{type_ = TypeB}) "y" (TypeN [Type0,Type1 "Int"]) (Write (annz{type_ = TypeB}) (LTuple [LTuple [LAny,LVar "x"],LAny]) (Tuple (annz{type_ = TypeN [TypeN [Type0,Type1 "Int"],Type1 "Int"]}) [Read (annz{type_ = TypeN [Type0,Type1 "Int"]}) "y",Const annz{type_ = Type1 "Int"} 1]))))
 
   --------------------------------------------------------------------------
   describe "checkStmts -- program is valid" $ do
@@ -210,6 +210,10 @@ spec = do
     checkStmtsIt (Loop annz ((Escape annz 0) `sPar` Loop annz (Loop annz (Loop annz (AwaitInp annz "A"))))) ["`loop` never iterates","`loop` never iterates","`loop` never iterates"]
     checkStmtsIt (Fin annz (Escape annz 0)) ["invalid statement in `finalize`", "invalid statement"]
     checkStmtsIt (Loop annz (Halt annz)) ["`loop` never iterates"]
+
+    it "f ... do await end" $
+        Check.stmts (FuncI annz "f" TypeB (Just $ Halt annz) (Halt annz))
+        `shouldBe` []
 
     -- all
     checkCheckIt (Fin annz (Escape annz 0)) ["orphan `escape` statement", "invalid statement in `finalize`", "invalid statement"]

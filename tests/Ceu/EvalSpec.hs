@@ -1070,8 +1070,8 @@ spec = do
 
     evalProgItSuccess (11,[[]])
       [] (G.Func annz "(+)" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (G.Var annz "a" (Type1 "Int")
-           (G.Write annz "a" (Const annz 1) `G.sSeq`
-            G.Write annz "_ret" (Call annz "(+)" (Tuple annz [(Read annz "a"),(Const annz 10)])) `G.sSeq`
+           (G.Write annz (LVar "a") (Const annz 1) `G.sSeq`
+            G.Write annz (LVar "_ret") (Call annz "(+)" (Tuple annz [(Read annz "a"),(Const annz 10)])) `G.sSeq`
             G.Escape annz 0)))
 
     evalProgItFail ["orphan `escape` statement","missing `escape` statement","unreachable statement"]
@@ -1080,95 +1080,95 @@ spec = do
     evalProgItFail ["identifier '_ret' is already declared"]
       [] (G.Func annz "(+)" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (G.Var annz "a" (Type1 "Int")
            (G.Var annz "_ret" (Type1 "Int")
-             (G.Write annz "a" (Const annz 1) `G.sSeq`
-              G.Write annz "_ret" (Call annz "(+)" (Tuple annz [(Read annz "a"), (Const annz 10)])) `G.sSeq`
+             (G.Write annz (LVar "a") (Const annz 1) `G.sSeq`
+              G.Write annz (LVar "_ret") (Call annz "(+)" (Tuple annz [(Read annz "a"), (Const annz 10)])) `G.sSeq`
               G.Escape annz 0))))
 
     evalProgItFail ["identifier '_ret' is already declared"]
-      [] (G.Write annz "_ret" (Const annz 1) `G.sSeq`
-          G.Var annz "_ret" (Type1 "Int") (G.Write annz "_ret" (Const annz 99)) `G.sSeq`
+      [] (G.Write annz (LVar "_ret") (Const annz 1) `G.sSeq`
+          G.Var annz "_ret" (Type1 "Int") (G.Write annz (LVar "_ret") (Const annz 99)) `G.sSeq`
           G.Escape annz 0)
 
     evalProgItSuccess (11,[[]])
       [] (G.Func annz "(+)" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (G.Var annz "a" (Type1 "Int")
-           (G.Write annz "a" (Const annz 1) `G.sSeq`
-            G.Var annz "b" (Type1 "Int") (G.Write annz "b" (Const annz 99)) `G.sSeq`
-            G.Write annz "_ret" (Call annz "(+)" (Tuple annz [(Read annz "a"),(Const annz 10)])) `G.sSeq`
+           (G.Write annz (LVar "a") (Const annz 1) `G.sSeq`
+            G.Var annz "b" (Type1 "Int") (G.Write annz (LVar "b") (Const annz 99)) `G.sSeq`
+            G.Write annz (LVar "_ret") (Call annz "(+)" (Tuple annz [(Read annz "a"),(Const annz 10)])) `G.sSeq`
             G.Escape annz 0)))
 
     evalProgItFail ["identifier 'a' is already declared"]
       [] (G.Func annz "(+)" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (G.Var annz "a" (Type1 "Int")
-           (G.Write annz "a" (Const annz 1) `G.sSeq`
-            G.Var annz "a" (Type1 "Int") (G.Write annz "a" (Const annz 99)) `G.sSeq`
-            G.Write annz "_ret" (Call annz "(+)" (Tuple annz [(Read annz "a"),(Const annz 10)])) `G.sSeq`
+           (G.Write annz (LVar "a") (Const annz 1) `G.sSeq`
+            G.Var annz "a" (Type1 "Int") (G.Write annz (LVar "a") (Const annz 99)) `G.sSeq`
+            G.Write annz (LVar "_ret") (Call annz "(+)" (Tuple annz [(Read annz "a"),(Const annz 10)])) `G.sSeq`
             G.Escape annz 0)))
 
     evalProgItSuccess (2,[[]])
-      [] (G.Write annz "_ret" (Const annz 1) `G.sSeq`
-          G.Var annz "_" (Type1 "Int") (G.Write annz "_ret" (Const annz 2)) `G.sSeq`
+      [] (G.Write annz (LVar "_ret") (Const annz 1) `G.sSeq`
+          G.Var annz "_" (Type1 "Int") (G.Write annz (LVar "_ret") (Const annz 2)) `G.sSeq`
           G.Escape annz 0)
 
     evalProgItSuccess (12,[[]])
       [] (G.Func annz "(+)" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (G.Var annz "a" (Type1 "Int")
-           (G.Write annz "a" (Const annz 1) `G.sSeq`
+           (G.Write annz (LVar "a") (Const annz 1) `G.sSeq`
             G.Trap annz (G.Par annz
-             (G.Var annz "b" (Type1 "Int") (G.Write annz "b" (Const annz 99) `G.sSeq` G.Inp annz "A" (G.AwaitInp annz "A")) `G.sSeq` (G.Halt annz))
+             (G.Var annz "b" (Type1 "Int") (G.Write annz (LVar "b") (Const annz 99) `G.sSeq` G.Inp annz "A" (G.AwaitInp annz "A")) `G.sSeq` (G.Halt annz))
              (G.Escape annz 0)) `G.sSeq`
-           G.Write annz "_ret" (Call annz "(+)" (Tuple annz [(Read annz "a"),(Const annz 11)])) `G.sSeq`
+           G.Write annz (LVar "_ret") (Call annz "(+)" (Tuple annz [(Read annz "a"),(Const annz 11)])) `G.sSeq`
            G.Escape annz 0)))
 
     evalProgItFail ["missing `escape` statement"]
       [] (G.Trap annz (G.Par annz
-           (G.Inp annz "A" (G.Var annz "x" (Type1 "Int") (G.Write annz "_ret" (Const annz 1) `G.sSeq` G.AwaitInp annz "A" `G.sSeq` G.Halt annz)))
+           (G.Inp annz "A" (G.Var annz "x" (Type1 "Int") (G.Write annz (LVar "_ret") (Const annz 1) `G.sSeq` G.AwaitInp annz "A" `G.sSeq` G.Halt annz)))
            (G.Escape annz 1)))
 
     evalProgItSuccess (1,[[]])
       [] (G.Seq annz (G.Trap annz (G.Inp annz "A" (G.Par annz
-           (G.Var annz "x" (Type1 "Int") (G.Write annz "_ret" (Const annz 1) `G.sSeq` G.AwaitInp annz "A" `G.sSeq` G.Halt annz))
+           (G.Var annz "x" (Type1 "Int") (G.Write annz (LVar "_ret") (Const annz 1) `G.sSeq` G.AwaitInp annz "A" `G.sSeq` G.Halt annz))
            (G.Escape annz 0)))) (G.Escape annz 0))
 
     evalProgItFail ["`loop` never iterates","identifier 'a' is already declared"]
       [] (G.Func annz "(+)" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (G.Var annz "a" (Type1 "Int")
-           (G.Write annz "a" (Const annz 1) `G.sSeq`
+           (G.Write annz (LVar "a") (Const annz 1) `G.sSeq`
             G.Trap annz (G.Inp annz "A" (G.Loop annz (G.Par annz
-                  (G.Var annz "a" (Type1 "Int") (G.Write annz "a" (Const annz 99) `G.sSeq` G.AwaitInp annz "A" `G.sSeq` G.Halt annz))
+                  (G.Var annz "a" (Type1 "Int") (G.Write annz (LVar "a") (Const annz 99) `G.sSeq` G.AwaitInp annz "A" `G.sSeq` G.Halt annz))
                   (G.Escape annz 0)))) `G.sSeq`
-             G.Write annz "_ret" (Call annz "(+)" (Tuple annz [(Read annz "a"),(Const annz 10)])) `G.sSeq`
+             G.Write annz (LVar "_ret") (Call annz "(+)" (Tuple annz [(Read annz "a"),(Const annz 10)])) `G.sSeq`
             G.Escape annz 0)))
 
     evalProgItSuccess (101,[[]])
       [] (G.Func annz "(+)" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (G.Var annz "a" (Type1 "Int")
-           (G.Write annz "a" (Const annz 1) `G.sSeq`
+           (G.Write annz (LVar "a") (Const annz 1) `G.sSeq`
             G.Inp annz "A" (G.Trap annz (G.Par annz
-                  (G.Var annz "b" (Type1 "Int") (G.Write annz "b" (Const annz 99) `G.sSeq` G.AwaitInp annz "A" `G.sSeq` G.Halt annz))
+                  (G.Var annz "b" (Type1 "Int") (G.Write annz (LVar "b") (Const annz 99) `G.sSeq` G.AwaitInp annz "A" `G.sSeq` G.Halt annz))
                   (G.Escape annz 0)) `G.sSeq`
-            G.Write annz "_ret" (Call annz "(+)" (Tuple annz [(Read annz "a"),(Const annz 100)])) `G.sSeq`
+            G.Write annz (LVar "_ret") (Call annz "(+)" (Tuple annz [(Read annz "a"),(Const annz 100)])) `G.sSeq`
             G.Escape annz 0))))
 
     evalProgItFail ["`loop` never iterates"]
       [] (G.Seq annz (G.Trap annz (G.Loop annz (G.Par annz
-                 (G.Inp annz "A" (G.Var annz "x" (Type1 "Int") (G.Write annz "_ret" (Const annz 1) `G.sSeq` G.AwaitInp annz "A" `G.sSeq` G.Halt annz)))
+                 (G.Inp annz "A" (G.Var annz "x" (Type1 "Int") (G.Write annz (LVar "_ret") (Const annz 1) `G.sSeq` G.AwaitInp annz "A" `G.sSeq` G.Halt annz)))
                  (G.Escape annz 0)))) (G.Escape annz 0))
 
     evalProgItSuccess (1,[[]])
       [] (G.Seq annz (G.Trap annz (G.Par annz
-                 (G.Inp annz "A" (G.Var annz "x" (Type1 "Int") (G.Write annz "_ret" (Const annz 1) `G.sSeq` G.AwaitInp annz "A" `G.sSeq` G.Halt annz)))
+                 (G.Inp annz "A" (G.Var annz "x" (Type1 "Int") (G.Write annz (LVar "_ret") (Const annz 1) `G.sSeq` G.AwaitInp annz "A" `G.sSeq` G.Halt annz)))
                  (G.Escape annz 0))) (G.Escape annz 0))
 
     evalProgItSuccess (5,[[]]) [] (
-      (G.Write annz "_ret" (Const annz 1)) `G.sSeq`
+      (G.Write annz (LVar "_ret") (Const annz 1)) `G.sSeq`
       (G.Evt annz "a"
         (G.Trap annz
         (G.Par annz
-          ((G.AwaitEvt annz "a") `G.sSeq` (G.Write annz "_ret" (Const annz 5)) `G.sSeq` (G.Escape annz 0))
+          ((G.AwaitEvt annz "a") `G.sSeq` (G.Write annz (LVar "_ret") (Const annz 5)) `G.sSeq` (G.Escape annz 0))
           ((G.EmitEvt annz "a") `G.sSeq` G.Halt annz)))) `G.sSeq`
       (G.Escape annz 0))
 
     evalProgItSuccess (5,[[]]) [] (
-      (G.Write annz "_ret" (Const annz 1)) `G.sSeq`
+      (G.Write annz (LVar "_ret") (Const annz 1)) `G.sSeq`
       (G.Evt annz "a"
         (G.Trap annz (G.Par annz
-          ((G.AwaitEvt annz "a") `G.sSeq` (G.Write annz "_ret" (Const annz 5)) `G.sSeq` (G.Escape annz 0))
+          ((G.AwaitEvt annz "a") `G.sSeq` (G.Write annz (LVar "_ret") (Const annz 5)) `G.sSeq` (G.Escape annz 0))
           (G.Seq annz (G.Trap annz (G.Par annz (G.Fin annz (G.EmitEvt annz "a")) (G.Escape annz 0))) (G.Escape annz 0)))
       )) `G.sSeq` (G.Escape annz 0))
 
@@ -1185,12 +1185,12 @@ escape x;
 -}
     evalProgItSuccess (99,[[]]) [] (
       (G.Var annz "x" (Type1 "Int") (
-        (G.Write annz "x" (Const annz 10)) `G.sSeq`
+        (G.Write annz (LVar "x") (Const annz 10)) `G.sSeq`
         (G.Trap annz (G.Par annz
           (G.Var annz "y" (Type1 "Int") (G.Halt annz))
-          (G.Seq annz (G.Write annz "x" (Const annz 99)) (G.Escape annz 0))
+          (G.Seq annz (G.Write annz (LVar "x") (Const annz 99)) (G.Escape annz 0))
         )) `G.sSeq`
-        (G.Write annz "_ret" (Read annz "x")) `G.sSeq`
+        (G.Write annz (LVar "_ret") (Read annz "x")) `G.sSeq`
         (G.Escape annz 0)
       )))
 
@@ -1199,12 +1199,12 @@ escape x;
             (G.Seq annz (G.Seq annz
                 (G.Var annz "x" (Type1 "Int")
                   (G.Seq annz
-                    (G.Write annz "x" (Const annz 1))
+                    (G.Write annz (LVar "x") (Const annz 1))
                     (G.Evt annz "e"
                       (G.Trap annz (G.Par annz
-                        (G.Inp annz "A" (G.Seq annz (G.AwaitInp annz "A") (G.Seq annz (G.Write annz "x" (Const annz 0)) (G.Seq annz (G.EmitEvt annz "e") (G.Halt annz)))))
+                        (G.Inp annz "A" (G.Seq annz (G.AwaitInp annz "A") (G.Seq annz (G.Write annz (LVar "x") (Const annz 0)) (G.Seq annz (G.EmitEvt annz "e") (G.Halt annz)))))
                         (G.Seq annz (G.Pause annz "x" (G.Trap annz (G.Par annz (G.Seq annz (G.AwaitEvt annz "e") (G.Escape annz 0)) ((G.EmitEvt annz "e") `G.sSeq` (G.Halt annz))))) (G.Escape annz 0)))))))
-                (G.Write annz "_ret" (Const annz 99))) (G.Escape annz 0))
+                (G.Write annz (LVar "_ret") (Const annz 99))) (G.Escape annz 0))
             ["A"]
         `shouldBe` Right (99,[[],[]])
 
@@ -1212,34 +1212,34 @@ escape x;
 
     it "await A ; escape 1" $
         compile_run
-            (G.Inp annz "A" (G.AwaitInp annz "A" `G.sSeq` G.Write annz "_ret" (Const annz 1) `G.sSeq` (G.Escape annz 0)))
+            (G.Inp annz "A" (G.AwaitInp annz "A" `G.sSeq` G.Write annz (LVar "_ret") (Const annz 1) `G.sSeq` (G.Escape annz 0)))
             ["A"]
         `shouldBe` Right (1,[[],[]])
 
     evalProgItFail ["program didn't terminate"]
-      [] (G.Inp annz "A" (G.AwaitInp annz "A" `G.sSeq` G.Write annz "_ret" (Const annz 1) `G.sSeq` G.Escape annz 0))
+      [] (G.Inp annz "A" (G.AwaitInp annz "A" `G.sSeq` G.Write annz (LVar "_ret") (Const annz 1) `G.sSeq` G.Escape annz 0))
 
     evalProgItFail ["program didn't terminate"]
-      ["B"] (G.Inp annz "A" (G.AwaitInp annz "A" `G.sSeq` G.Write annz "_ret" (Const annz 1) `G.sSeq` G.Escape annz 0))
+      ["B"] (G.Inp annz "A" (G.AwaitInp annz "A" `G.sSeq` G.Write annz (LVar "_ret") (Const annz 1) `G.sSeq` G.Escape annz 0))
 
     evalProgItFail ["pending inputs"]
-      ["A","A"] (G.Inp annz "A" (G.AwaitInp annz "A" `G.sSeq` G.Write annz "_ret" (Const annz 1) `G.sSeq` G.Escape annz 0))
+      ["A","A"] (G.Inp annz "A" (G.AwaitInp annz "A" `G.sSeq` G.Write annz (LVar "_ret") (Const annz 1) `G.sSeq` G.Escape annz 0))
 
     evalProgItSuccess (1,[[],[],[]])
-      ["A","B"] (G.Inp annz "A" (G.Inp annz "B" (G.AwaitInp annz "A" `G.sSeq` G.AwaitInp annz "B" `G.sSeq` G.Write annz "_ret" (Const annz 1) `G.sSeq` G.Escape annz 0)))
+      ["A","B"] (G.Inp annz "A" (G.Inp annz "B" (G.AwaitInp annz "A" `G.sSeq` G.AwaitInp annz "B" `G.sSeq` G.Write annz (LVar "_ret") (Const annz 1) `G.sSeq` G.Escape annz 0)))
 
-    evalProgItSuccess (1,[[]]) [] (G.Write annz "_ret" (Const annz 1) `G.sSeq` G.Escape annz 0)
+    evalProgItSuccess (1,[[]]) [] (G.Write annz (LVar "_ret") (Const annz 1) `G.sSeq` G.Escape annz 0)
 
     -- multiple outputs
 
     describe "out:" $ do
         it "out O; emit O" $
-            compile_run (G.Out annz "O" (G.Seq annz (G.EmitExt annz "O" Nothing) (G.Seq annz (G.Write annz "_ret" (Const annz 1)) (G.Escape annz 0))))
+            compile_run (G.Out annz "O" (G.Seq annz (G.EmitExt annz "O" Nothing) (G.Seq annz (G.Write annz (LVar "_ret") (Const annz 1)) (G.Escape annz 0))))
                 []
             `shouldBe` Right (1,[[("O",Nothing)]])
 
         it "I-F-O" $
-            compile_run (G.Out annz "O" (G.Inp annz "I" (G.Inp annz "F" (G.Seq annz (G.Seq annz (G.Write annz "_ret" (Const annz 1)) (G.Trap annz (G.Par annz (G.Seq annz (G.AwaitInp annz "F") (G.Escape annz 0)) (G.Every annz "I" (G.EmitExt annz "O" Nothing))))) (G.Escape annz 0)))))
+            compile_run (G.Out annz "O" (G.Inp annz "I" (G.Inp annz "F" (G.Seq annz (G.Seq annz (G.Write annz (LVar "_ret") (Const annz 1)) (G.Trap annz (G.Par annz (G.Seq annz (G.AwaitInp annz "F") (G.Escape annz 0)) (G.Every annz "I" (G.EmitExt annz "O" Nothing))))) (G.Escape annz 0)))))
                 ["I","I","F"]
             `shouldBe` Right (1,[[],[("O",Nothing)],[("O",Nothing)],[]])
 

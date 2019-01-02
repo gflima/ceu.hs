@@ -61,7 +61,7 @@ spec = do
             run "escape 1+2*3/4" []
             `shouldBe` Right (2, [[]])
         it "+ (1 2)" $
-            run "escape + (1 2)" []
+            run "escape `+ (1 2)" []
             `shouldBe` Right (3, [[]])
 
     describe "vars:" $ do
@@ -101,8 +101,8 @@ spec = do
         it "TODO-index-tuples" $
             run "val x::(Int,()) : (1 ()) ; val y::(Int,()) : x ; escape 1" []
             `shouldBe` Right (1, [[]])
-        it "mut x::(Int,Int) <: (1 2) ; escape + x | (TODO: no RT support for tuples)" $
-            run "mut x::(Int,Int) <: (1 2) ; escape + x" []
+        it "mut x::(Int,Int) <: (1 2) ; escape `+ x | (TODO: no RT support for tuples)" $
+            run "mut x::(Int,Int) <: (1 2) ; escape `+ x" []
             `shouldBe` Right (3, [[]])
 
 -------------------------------------------------------------------------------
