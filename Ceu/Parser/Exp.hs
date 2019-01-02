@@ -83,34 +83,35 @@ expr_tuple = do
     void <- tk_str ")"
     return $ Tuple annz{source=pos} (exp1:exps)
 
-expr_call_pre :: Parser Exp
-expr_call_pre = do
-    pos  <- pos2src <$> getPosition
-    f    <- try tk_op <|> try tk_func
-    exp  <- expr
-    return $ Call annz{source=pos} (if f == "(-)" then "negate" else f) exp
-                        -- TODO: unary minus exception
-
 expr_prim :: Parser Exp
-expr_prim = try expr_raw        <|>
+expr_prim = try expr_call_pre   <|>
+            try expr_raw        <|>
             try expr_const      <|>
             try expr_read       <|>
             try expr_unit       <|>
             try expr_parens     <|>
-            try expr_tuple      <|>
-            try expr_call_pre
+            try expr_tuple
 
 -------------------------------------------------------------------------------
+
+expr_call_pre :: Parser Exp
+expr_call_pre = do
+    pos  <- pos2src <$> getPosition
+    f    <- try (char '`' *> tk_op)                   <|>
+            do { try (tk_str "-") ; return "negate" } <|> -- unary minus exception
+            try tk_func
+    exp  <- expr
+    return $ Call annz{source=pos} f exp
 
 expr_call_pos :: Parser Exp
 expr_call_pos = do
     pos <- pos2src <$> getPosition
-    e1  <- expr_call_inf
-    ops <- many (try tk_op <|> try (char '`' *> (tk_func <* char '`')))
+    e1  <- expr_call_mid
+    ops <- many (try tk_op <|> try (char '`' *> tk_func))
     return $ foldl (\e op -> Call annz{source=pos} op e) e1 ops
 
-expr_call_inf :: Parser Exp
-expr_call_inf = chainl1 expr_prim f where
+expr_call_mid :: Parser Exp
+expr_call_mid = expr_prim `chainl1` f where
     f = do
         pos <- pos2src <$> getPosition
         op  <- try tk_op <|> try (char '`' *> (tk_func <* char '`'))

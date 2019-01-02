@@ -252,42 +252,48 @@ spec = do
                 parse expr_read "aaa"
                 `shouldBe` Right (Read annz{source=("",1,1)} "aaa")
         describe "umn:" $ do
-            it "-1" $
+            it "`-1" $
                 parse expr_call_pre "-1"
                 `shouldBe` Right (Call annz{source=("",1,1)} "negate" (Const annz{source=("",1,2)} 1))
+            it "`--1" $
+                parse expr_call_pre "`--1"
+                `shouldBe` Right (Call annz{source=("",1,1)} "(--)" (Const annz{source=("",1,4)} 1))
             it "--1" $
                 parse expr_call_pre "--1"
-                `shouldBe` Right (Call annz{source=("",1,1)} "(--)" (Const annz{source=("",1,3)} 1))
+                `shouldBe` Right (Call (annz{source = ("",1,1)}) "negate" (Call (annz{source = ("",1,2)}) "negate" (Const (annz{source = ("",1,3)}) 1)))
         describe "parens:" $ do
             it "(1)" $
                 parse expr_parens "(1)"
                 `shouldBe` Right (Const annz{source=("",1,2)} 1)
             it "((--1))" $
                 parse expr_parens "((--1))"
-                `shouldBe` Right (Call annz{source=("",1,3)} "(--)" (Const annz{source=("",1,5)} 1))
+                `shouldBe` Right (Call (annz{source = ("",1,3)}) "negate" (Call (annz{source = ("",1,4)}) "negate" (Const (annz{source = ("",1,5)}) 1)))
             it "((- -1))" $
                 parse expr_parens "((- -1))"
                 `shouldBe` Right (Call annz{source=("",1,3)} "negate" (Call annz{source=("",1,5)} "negate" (Const annz{source=("",1,6)} 1)))
         describe "add_sub:" $ do
             it "1+1" $
-                parse expr_call_inf "1+1"
+                parse expr_call_mid "1+1"
                 `shouldBe` Right (Call annz{source=("",1,2)} "(+)" (Tuple annz{source=("",1,2)} [(Const annz{source=("",1,1)} 1),(Const annz{source=("",1,3)} 1)]))
             it "1+2+3" $
-                parse expr_call_inf "1 + 2+3"
+                parse expr_call_mid "1 + 2+3"
                 `shouldBe` Right (Call annz{source=("",1,6)} "(+)" (Tuple annz{source=("",1,6)} [(Call annz{source=("",1,3)} "(+)" (Tuple annz{source=("",1,3)} [(Const annz{source=("",1,1)} 1),(Const annz{source=("",1,5)} 2)])),(Const annz{source=("",1,7)} 3)]))
         describe "mul_div:" $ do
             it "1*1" $
-                parse expr_call_inf "1*1"
+                parse expr_call_mid "1*1"
                 `shouldBe` Right (Call annz{source=("",1,2)} "(*)" (Tuple annz{source=("",1,2)} [(Const annz{source=("",1,1)} 1),(Const annz{source=("",1,3)} 1)]))
             it "1*2*3" $
-                parse expr_call_inf "1 * 2*3"
+                parse expr_call_mid "1 * 2*3"
                 `shouldBe` Right (Call annz{source=("",1,6)} "(*)" (Tuple annz{source=("",1,6)} [(Call annz{source=("",1,3)} "(*)" (Tuple annz{source=("",1,3)} [(Const annz{source=("",1,1)} 1),(Const annz{source=("",1,5)} 2)])),(Const annz{source=("",1,7)} 3)]))
-{-
+
         describe "call:" $ do
             it "f 1" $
-                parse expr_call "f 1"
-                `shouldBe` Right (Nop annz{source=("",1,1)})
--}
+                parse expr_call_pre "f 1"
+                `shouldBe` Right (Call annz{source=("",1,1)} "f" (Const annz{source=("",1,3)} 1))
+            it "f 1" $
+                parse expr_call_mid "f 1"
+                `shouldBe` Right (Call annz{source=("",1,1)} "f" (Const annz{source=("",1,3)} 1))
+
         describe "expr:" $ do
             it "{0}" $
                 parse expr "{0}"
@@ -298,9 +304,9 @@ spec = do
             it "aaa" $
                 parse expr "aaa"
                 `shouldBe` Right (Read annz{source=("",1,1)} "aaa")
-            it "$1" $
-                parse expr "$1"
-                `shouldBe` Right (Call annz{source=("",1,1)} "($)" (Const annz{source=("",1,2)} 1))
+            it "`$1" $
+                parse expr "`$1"
+                `shouldBe` Right (Call annz{source=("",1,1)} "($)" (Const annz{source=("",1,3)} 1))
             it "-1" $
                 parse expr "- 1 "
                 `shouldBe` Right (Call annz{source=("",1,1)} "negate" (Const annz{source=("",1,3)} 1))
@@ -489,7 +495,7 @@ spec = do
         describe "if-then-else/if-else" $ do
             it "if 0 then escape" $
                 parse stmt_if "if 0 then escape"
-                `shouldBe` Left "(line 1, column 17):\nunexpected end of input\nexpecting letter, \"_\", digit, \"{\", \"(\", \"escape\", \"break\", \"val\", \"mut\", \"input\", \"output\", \"event\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 17):\nunexpected end of input\nexpecting letter, \"_\", digit, \"`\", \"-\", \"{\", \"(\", \"escape\", \"break\", \"val\", \"mut\", \"input\", \"output\", \"event\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 then escape 0" $
                 parse stmt_if "if 0 then escape 0"
@@ -592,8 +598,8 @@ spec = do
                 `shouldBe` Right (Seq annz{source=("",1,1)} (Seq annz{source=("",1,1)} (Seq (annz{source=("",1,5)}) (Var annz{source=("",1,5)} "x" (Type1 "Int") Nothing) (Nop annz)) (Nop annz{source=("",1,1)})) (Seq annz{source=("",1,1)} (Write annz{source=("",1,16)} (LVar "x") (Const annz{source=("",1,19)} 1)) (Escape annz{source=("",1,23)} Nothing (Just (Read annz{source=("",1,30)} "x")))))
 
             it "val x::(Int,Int):(1;2) ; escape +x" $
-                parse stmt "val x::(Int,Int):(1;2) ; escape +x"
-                `shouldBe` Right (Seq annz{source=("",1,1)} (Seq annz{source=("",1,1)} (Seq (annz{source=("",1,5)}) (Var annz{source=("",1,5)} "x" (TypeN [Type1 "Int",Type1 "Int"]) Nothing) (Nop annz)) (Write annz{source=("",1,17)} (LVar "x") (Tuple annz{source=("",1,18)} [Const annz{source=("",1,19)} 1,Const annz{source=("",1,21)} 2]))) (Escape annz{source=("",1,26)} Nothing (Just (Call annz{source=("",1,33)} "(+)" (Read annz{source=("",1,34)} "x")))))
+                parse stmt "val x::(Int,Int):(1;2) ; escape `+x"
+                `shouldBe` Right (Seq annz{source=("",1,1)} (Seq annz{source=("",1,1)} (Seq (annz{source=("",1,5)}) (Var annz{source=("",1,5)} "x" (TypeN [Type1 "Int",Type1 "Int"]) Nothing) (Nop annz)) (Write annz{source=("",1,17)} (LVar "x") (Tuple annz{source=("",1,18)} [Const annz{source=("",1,19)} 1,Const annz{source=("",1,21)} 2]))) (Escape annz{source=("",1,26)} Nothing (Just (Call annz{source=("",1,33)} "(+)" (Read annz{source=("",1,35)} "x")))))
 
             it "do ... end" $
                 parse stmt "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end"
