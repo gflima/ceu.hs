@@ -60,8 +60,8 @@ main = do
 
 tests :: [(Int, Errors, [(String,Int)], String)]
 tests = [
+  --(0,   [], [], "xXxXxXxXxXxXxXxXxXxXx"),    -- (to force error)
     --(10,  [], [], "escape f 1"),
-  --(0,   [], [], "xxx"),    -- (to force error)
     (10,  [], [], "escape 10"),
     (10,  [], [], "escape 5+5"),
     -- TODO: trap/escape()
@@ -108,6 +108,10 @@ tests = [
     (3,   [], [], "mut (x, (y,_)) :: (Int, (Int,Int)) <: (1, (2,3)); escape x+y"),
 -- funcs
     (1,   [], [], "func f :: (Int -> Int); escape 1"),
+    (0,   ["(line 1, column 33):\nunexpected \"e\"\nmissing arguments"],
+            [],
+            "func f :: (Int -> Int) do end ; escape 1"),
+    (1,   [], [], "func f :: v :: (Int -> Int) do end ; escape 1"),
 --
     (4, [], [("KEY",1)],
         unlines [

@@ -16,12 +16,14 @@ import qualified Ceu.Code.N as N
 data Down = Down { traps   :: [Stmt]
                  , vars_dn :: [(ID_Var,Stmt)]
                  , evts_dn :: [(ID_Evt,Stmt)]
+                 , isTmp   :: Bool              -- local declaration for Var
                  } -- deriving (Show)
 
 dnz :: Down
 dnz = Down { traps   = []
            , vars_dn = []
            , evts_dn = []
+           , isTmp   = False
            }
 
 -------------------------------------------------------------------------------
@@ -80,30 +82,38 @@ olbl :: String -> String -> String
 olbl lbl src = "static void " ++ lbl ++ " (tceu_stk* _ceu_stk) " ++
                  oblk src ++ "\n"
 
+ofunc :: Stmt -> String -> String
+ofunc (FuncI _ func (TypeF inp out) (Just imp) _) src =
+    "static " ++ tp2use out ++ " CEU_FUNC_" ++ func ++ " (" ++ tp2use inp ++ " __ceu_arg) "
+              ++ oblk src ++ "\n"
+
 -------------------------------------------------------------------------------
 
 getEnv :: [(String,Stmt)] -> String -> Stmt
 getEnv ((v1,s):l) v2 | v1==v2    = s
                      | otherwise = getEnv l v2
+getEnv _          v2 = error v2
 
-getEnvVar env var = if var == "_INPUT" then "_CEU_INPUT" else "CEU_APP.root."++id'
-                    where
-                        id' = var ++ "__" ++ (show $ nn $ getAnn $ getEnv env var)
+getEnvVar isTmp env var = if var == "_INPUT" then "_CEU_INPUT" else
+                            if isTmp then id'
+                                     else "CEU_APP.root."++id'
+                          where
+                            id' = var ++ "__" ++ (show $ nn $ getAnn $ getEnv env var)
 
-getEnvEvt env evt = "CEU_EVENT_" ++ evt ++ "__" ++ (show $ nn $ getAnn $ getEnv env evt)
+getEnvEvt isTmp env evt = "CEU_EVENT_" ++ evt ++ "__" ++ (show $ nn $ getAnn $ getEnv env evt)
 
 -------------------------------------------------------------------------------
 
-expr :: [(ID_Var,Stmt)] -> Exp -> ([Type],String)
-expr vars (RawE  _ raws)   = fold_raws vars raws
-expr vars (Const _ n)      = ([], show n)
-expr vars (Read  _ id)     = ([], getEnvVar vars id)
-expr vars (Unit  _)        = ([], "CEU_UNIT")
+expr :: Bool -> [(ID_Var,Stmt)] -> Exp -> ([Type],String)
+expr isTmp vars (RawE  _ raws)   = fold_raws isTmp vars raws
+expr _     _    (Const _ n)      = ([], show n)
+expr isTmp vars (Read  _ id)     = ([], getEnvVar isTmp vars id)
+expr _     _    (Unit  _)        = ([], "CEU_UNIT")
 --expr vars e@(Tuple _ exps) = "({ tceu__int__int __ceu_" ++ n ++ " = {" ++ vs ++ "}; __ceu_" ++ n ++ ";})"
-expr vars e@(Tuple z exps) = ([type_ z]++tps', "((" ++ (tp2use $ type_ z) ++ "){" ++ srcs' ++ "})")
+expr isTmp vars e@(Tuple z exps) = ([type_ z]++tps', "((" ++ (tp2use $ type_ z) ++ "){" ++ srcs' ++ "})")
     where
         exps' :: [([Type],String)]
-        exps' = map (expr vars) exps
+        exps' = map (expr isTmp vars) exps
 
         tps' :: [Type]
         tps' = concat $ map fst exps'
@@ -129,10 +139,10 @@ expr vars (Call  _ "(<=)"   e) = (tps, "(lte(&" ++ src ++ "))")
                                     where (tps,src) = expr vars e
 -}
 
-expr vars (Call _ func e) = (tps, "(" ++ id' func ++ "__" ++ (tp2use $ type_ $ getAnn e)
-                                      ++ "(&" ++ src ++ "))")
-                                where
-                                    (tps,src) = expr vars e
+expr isTmp vars (Call _ func e) = (tps, "(" ++ id' func ++ "__" ++ (tp2use $ type_ $ getAnn e)
+                                            ++ "(&" ++ src ++ "))")
+                                  where
+                                    (tps,src) = expr isTmp vars e
                                     id' "(+)"  = "Add"
                                     id' "(-)"  = "Sub"
                                     id' "(*)"  = "Mul"
@@ -140,12 +150,12 @@ expr vars (Call _ func e) = (tps, "(" ++ id' func ++ "__" ++ (tp2use $ type_ $ g
                                     id' "(==)" = "Eq"
                                     id' "(<=)" = "Lte"
 
-fold_raws :: [(ID_Var,Stmt)] -> [RawAt] -> ([Type],String)
-fold_raws vars raws = (tps, take ((length src)-2) (drop 1 src)) where
-    (tps,src) = aux vars raws
-    aux vars [] = ([], "")
-    aux vars ((RawAtE e):l) = cat (expr vars e) (aux vars l)
-    aux vars ((RawAtS s):l) = cat ([],s)        (aux vars l)
+fold_raws :: Bool -> [(ID_Var,Stmt)] -> [RawAt] -> ([Type],String)
+fold_raws isTmp vars raws = (tps, take ((length src)-2) (drop 1 src)) where
+    (tps,src) = aux isTmp vars raws
+    aux _     _    [] = ([], "")
+    aux isTmp vars ((RawAtE e):l) = cat (expr isTmp vars e) (aux isTmp vars l)
+    aux isTmp vars ((RawAtS s):l) = cat ([],s)              (aux isTmp vars l)
 
     cat (l1,l2) (l1',l2') = (l1++l1',l2++l2')
 
@@ -221,7 +231,7 @@ aux :: Down -> Stmt -> Up
 aux dn (Nop   z)      = upz { code_bef=(oln z) }
 aux dn (Halt  z)      = upz { code_bef=(oln z), code_brk=Just(label z "Halt") }
 aux dn (RawS  z raws) = upz { code_bef=(oln z)++src++";\n", tps_up=tps }
-                            where (tps,src) = fold_raws (vars_dn dn) raws
+                            where (tps,src) = fold_raws (isTmp dn) (vars_dn dn) raws
 aux dn (Inp   _ id p) = p' { inps=id:(inps p') } where p'=(aux dn p)
 aux dn (Out   _ id p) = aux dn p
 
@@ -232,11 +242,17 @@ aux dn s@(Evt z id p) = p' { evts_up=(id++"__"++(show$nn z)):(evts_up p') }
         p'  = aux dn' p
         dn' = dn{ evts_dn = (id,s):(evts_dn dn) }
 
-aux dn s@(Var z id tp p) = p' { tps_up=tp:(tps_up p'), vars_up=(id',tp):(vars_up p') }
+aux dn s@(Var z id tp p) = p' {
+                                code_bef = src ++ code_bef p',
+                                tps_up   = tp:(tps_up p'),
+                                vars_up  = var ++ (vars_up p')
+                           }
     where
         p'  = aux dn' p
         dn' = dn{ vars_dn = (id,s):(vars_dn dn) }
         id' = id ++ "__" ++ (show $ nn z)
+        (var,src) = if isTmp dn then ([], ocmd $ tp2use tp ++ " " ++ id')
+                                else ([(id',tp)], "")
 
 --aux dn s@(Func z id (TypeF inp out) p) = p' { tps_up=inp:out:(tps_up p') }
 aux dn s@(Func z id (TypeF inp out) p) = p'
@@ -246,24 +262,37 @@ aux dn s@(Func z id (TypeF inp out) p) = p'
         dn' = dn --{ vars_dn = (id,s):(vars_dn dn) }
         --id' = id ++ "__" ++ (show $ nn z)
 
-aux dn s@(FuncI z id (TypeF inp out) Nothing p) = p' { tps_up=inp:out:(tps_up p') }
+aux dn (FuncI z id (TypeF inp out) Nothing p) = p' { tps_up=inp:out:(tps_up p') }
     where p' = aux dn p
+
+aux dn s@(FuncI z id tp@(TypeF inp out) (Just imp) p) =
+    p' {
+            tps_up = tp:(tps_up imp' ++ tps_up p'),
+            labels = func:(labels p')
+    }
+    where
+        p'   = aux dn p
+        imp' = aux dn{isTmp=True} imp
+        func = ofunc s (vars ++ code_bef imp')
+        vars = concat $ map (\(var,tp)->tp2use tp++" "++var++";\n")
+                           -- $ filter (not.reducesToType0.snd)
+                           $ vars_up imp'
 
 aux dn (Write _ LAny       _)   = upz
 aux dn (Write z (LVar var) exp) = upz { code_bef=src', tps_up=tps }
     where
         vars = vars_dn dn
-        (tps,src) = expr vars exp
-        src' = (oln z ++ (ocmd $ (getEnvVar vars var) ++ " = " ++ src))
+        (tps,src) = expr (isTmp dn) vars exp
+        src' = (oln z ++ (ocmd $ (getEnvVar (isTmp dn) vars var) ++ " = " ++ src))
 
 aux dn (Write z tup exp) = upz { code_bef=src_write, tps_up=tps_exp }
     where
-        (tps_exp,src_exp) = expr (vars_dn dn) exp
+        (tps_exp,src_exp) = expr (isTmp dn) (vars_dn dn) exp
         src_write = (oln z ++ (ocmd $ aux' tup src_exp))
         vars = vars_dn dn
 
         aux' LAny          _   = ""
-        aux' (LVar var)    exp = oln z ++ (ocmd $ (getEnvVar vars var) ++ " = " ++ exp)
+        aux' (LVar var)    exp = oln z ++ (ocmd $ (getEnvVar (isTmp dn) vars var) ++ " = " ++ exp)
         aux' (LTuple locs) exp =
             snd $ foldl (\(n,ret) loc -> (n+1, aux' loc (exp++"._"++(show n)) ++ ret))
                                          (1,"")
@@ -286,7 +315,7 @@ aux dn (AwaitEvt z evt) = upz { code_bef=src, code_brk=(Just lbl) }
              (ocmd $ "CEU_APP.root.trails[" ++ trl ++ "].evt = " ++ id') ++
              (ocmd $ "CEU_APP.root.trails[" ++ trl ++ "].lbl = " ++ lbl)
         trl = show $ toTrails0 z
-        id' = getEnvEvt (evts_dn dn) evt
+        id' = getEnvEvt (isTmp dn) (evts_dn dn) evt
         lbl = label z ("AwaitEvt_" ++ evt)
 
 -------------------------------------------------------------------------------
@@ -294,7 +323,7 @@ aux dn (AwaitEvt z evt) = upz { code_bef=src, code_brk=(Just lbl) }
 aux dn (EmitExt z ext exp) = upz { code_bef=src, tps_up=etps }
     where
         src = oln z ++ (ocmd $ "ceu_callback_output_" ++ ext ++ "(" ++ esrc ++ ")")
-        (etps,esrc) = maybe ([],"") (expr $ vars_dn dn) exp
+        (etps,esrc) = maybe ([],"") (expr (isTmp dn) (vars_dn dn)) exp
 
 aux dn (EmitEvt z evt) = upz { code_bef=(oln z)++bef }
     where
@@ -305,7 +334,7 @@ aux dn (EmitEvt z evt) = upz { code_bef=(oln z)++bef }
               (ocmd $ "ceu_bcast(&__ceu_cst, &__ceu_stk)")         ++
               (ocmd $ "if (!_ceu_stk->is_alive) return")
 
-        id' = getEnvEvt (evts_dn dn) evt
+        id' = getEnvEvt (isTmp dn) (evts_dn dn) evt
         (trl0,trlN) = trails $ getAnn $ getEnv (evts_dn dn) evt
 
 -------------------------------------------------------------------------------
@@ -356,7 +385,7 @@ aux dn (If z exp p1 p2) = (up_union p1' p2') {
               "if (" ++ esrc ++ ")\n" ++ oblk bef1 ++
               "else\n" ++ oblk bef2
 
-        (etps,esrc) = expr (vars_dn dn) exp
+        (etps,esrc) = expr (isTmp dn) (vars_dn dn) exp
 
         brk1 = code_brk p1'
         brk2 = code_brk p2'

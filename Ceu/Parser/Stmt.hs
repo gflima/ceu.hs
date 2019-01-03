@@ -192,7 +192,7 @@ stmt_func = do
                                     (Seq ann
                                         (fromJust dcls')
                                         (Seq ann
-                                            (Write ann loc' (RawE ann [RawAtS "{__ceu_args}"]))
+                                            (Write ann loc' (RawE ann [RawAtS "{__ceu_arg}"]))
                                             imp'))))
     return s
 
