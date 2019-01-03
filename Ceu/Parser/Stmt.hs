@@ -74,7 +74,7 @@ stmt_var = do
     loc  <- loc_
     void <- tk_str "::"
     tp   <- type_
-    void <- if isNothing (dcls pos loc tp) then do { fail "error" } else do { return () }
+    void <- if isNothing (dcls pos loc tp) then do { fail "arity mismatch" } else do { return () }
     s    <- option (Nop $ annz{source=pos})
                    (try (attr_exp      loc (tk_str $ op mod)) <|>
                     try (attr_awaitext loc (tk_str $ op mod)) <|>
@@ -87,12 +87,14 @@ stmt_var = do
         op "mut" = "<:"
 
         dcls :: Source -> Loc -> Type -> Maybe [Stmt]
-        dcls pos LAny            _                  = Just []
-        dcls pos (LVar var)      tp                 = Just [Var annz{source=pos} var tp Nothing]
-        dcls pos (LTuple [])     (TypeN [])         = Just []
-        dcls pos (LTuple [])     _                  = Nothing
+        dcls pos LAny              _                = Just []
+        dcls pos (LVar var)        tp               = Just [Var annz{source=pos} var tp Nothing]
+        dcls pos (LTuple [])       (TypeN [])       = Just []
+        dcls pos (LTuple [])       _                = Nothing
+        dcls pos (LTuple _)        (TypeN [])       = Nothing
         dcls pos (LTuple (v1:vs1)) (TypeN (v2:vs2)) = (fmap (++) (dcls pos v1 v2)) <*>
                                                       (dcls pos (LTuple vs1) (TypeN vs2))
+        dcls pos (LTuple _)        _                = Nothing
 
 stmt_evt :: Parser Stmt
 stmt_evt = do

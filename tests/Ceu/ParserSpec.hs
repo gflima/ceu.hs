@@ -416,6 +416,15 @@ spec = do
             it "mut (x,(y,_))::(Int,(Int,Int)) <: (1, (2,3)); escape x+y" $
                 parse stmt "mut (x,(y,_))::(Int, (Int,Int)) <: (1, (2,3)); escape x+y"
                 `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Var (annz{source = ("",1,1)}) "x" (Type1 "Int") Nothing) (Seq (annz{source = ("",1,1)}) (Var (annz{source = ("",1,1)}) "y" (Type1 "Int") Nothing) (Write (annz{source = ("",1,33)}) (LTuple [LVar "x",LTuple [LVar "y",LAny]]) (Tuple (annz{source = ("",1,36)}) [Const (annz{source = ("",1,37)}) 1,Tuple (annz{source = ("",1,40)}) [Const (annz{source = ("",1,41)}) 2,Const (annz{source = ("",1,43)}) 3]])))) (Escape (annz{source = ("",1,48)}) Nothing (Just (Call (annz{source = ("",1,56)}) "(+)" (Tuple (annz{source = ("",1,56)}) [Read (annz{source = ("",1,55)}) "x",Read (annz{source = ("",1,57)}) "y"])))))
+            it "val (_,_)::(Int,Int,Int)" $
+                parse stmt "val (_,_)::(Int,Int,Int)"
+                `shouldBe` Left "(line 1, column 25):\nunexpected end of input\narity mismatch"
+            it "val (_,_,_)::(Int,Int)" $
+                parse stmt "val (_,_,_)::(Int,Int)"
+                `shouldBe` Left "(line 1, column 23):\nunexpected end of input\narity mismatch"
+            it "val (_,_))::Int" $
+                parse stmt "val (_,_)::Int"
+                `shouldBe` Left "(line 1, column 15):\nunexpected end of input\nexpecting digit, letter or \"_\"\narity mismatch"
 
         describe "ext:" $ do
             it "output X:: Int" $
