@@ -67,6 +67,8 @@ stmt_break = do
     void <- tk_key "break"
     return $ Break annz{source=pos}
 
+-------------------------------------------------------------------------------
+
 stmt_var :: Parser Stmt
 stmt_var = do
     pos  <- pos2src <$> getPosition
@@ -86,15 +88,25 @@ stmt_var = do
         op "val" = ":"
         op "mut" = "<:"
 
-        dcls :: Source -> Loc -> Type -> Maybe [Stmt]
-        dcls pos LAny              _                = Just []
-        dcls pos (LVar var)        tp               = Just [Var annz{source=pos} var tp Nothing]
-        dcls pos (LTuple [])       (TypeN [])       = Just []
-        dcls pos (LTuple [])       _                = Nothing
-        dcls pos (LTuple _)        (TypeN [])       = Nothing
-        dcls pos (LTuple (v1:vs1)) (TypeN (v2:vs2)) = (fmap (++) (dcls pos v1 v2)) <*>
-                                                      (dcls pos (LTuple vs1) (TypeN vs2))
-        dcls pos (LTuple _)        _                = Nothing
+stmt_func :: Parser Stmt
+stmt_func = do
+    pos  <- pos2src <$> getPosition
+    void <- tk_key "func"
+    func <- tk_func
+    loc  <- optionMaybe (try loc_')
+    void <- tk_str "::"
+    tp   <- type_F
+    void <- case loc of
+                Nothing -> do { return () }
+                Just v  -> if isNothing (dcls pos v tp') then do { fail "arity mismatch" } else do { return () }
+                            where (TypeF tp' _) = tp
+    return $ Func annz{source=pos} func tp
+    where
+        loc_' :: Parser Loc
+        loc_' = do
+            void <- tk_str "::"
+            loc  <- loc_
+            return loc
 
 stmt_evt :: Parser Stmt
 stmt_evt = do
@@ -148,6 +160,16 @@ loc_ =  (try lany <|> try lvar <|> try ltuple)
         ltuple = do
                     locs <- list loc_
                     return (LTuple $ locs)
+
+dcls :: Source -> Loc -> Type -> Maybe [Stmt]
+dcls pos LAny              _                = Just []
+dcls pos (LVar var)        tp               = Just [Var annz{source=pos} var tp Nothing]
+dcls pos (LTuple [])       (TypeN [])       = Just []
+dcls pos (LTuple [])       _                = Nothing
+dcls pos (LTuple _)        (TypeN [])       = Nothing
+dcls pos (LTuple (v1:vs1)) (TypeN (v2:vs2)) = (fmap (++) (dcls pos v1 v2)) <*>
+                                              (dcls pos (LTuple vs1) (TypeN vs2))
+dcls pos (LTuple _)        _                = Nothing
 
 -------------------------------------------------------------------------------
 
@@ -270,21 +292,10 @@ stmt_paror = do
 
 -------------------------------------------------------------------------------
 
-stmt_func :: Parser Stmt
-stmt_func = do
-    pos  <- pos2src <$> getPosition
-    void <- tk_key "func"
-    func <- tk_func
-    void <- tk_str "::"
-    tp   <- type_F
-    return $ Func annz{source=pos} func tp
-
--------------------------------------------------------------------------------
-
 stmt1 :: Parser Stmt
 stmt1 = do
     s <- try stmt_raw <|> try stmt_escape <|> try stmt_break <|>
-         try stmt_var <|> try stmt_input <|> try stmt_output <|> try stmt_evt <|>
+         try stmt_var <|> try stmt_input <|> try stmt_output <|> try stmt_evt <|> try stmt_func <|>
          try stmt_attr <|>
          try (stmt_awaitext Nothing) <|> try stmt_halt <|> try (stmt_awaitevt Nothing) <|>
          try stmt_emitext <|> try stmt_emitevt <|>

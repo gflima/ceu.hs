@@ -527,11 +527,11 @@ spec = do
         describe "if-then-else/if-else" $ do
             it "if 0 then escape" $
                 parse stmt_if "if 0 then escape"
-                `shouldBe` Left "(line 1, column 17):\nunexpected end of input\nexpecting letter, \"_\", digit, \"`\", \"-\", \"{\", \"(\", \"escape\", \"break\", \"val\", \"mut\", \"input\", \"output\", \"event\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 17):\nunexpected end of input\nexpecting letter, \"_\", digit, \"`\", \"-\", \"{\", \"(\", \"escape\", \"break\", \"val\", \"mut\", \"input\", \"output\", \"event\", \"func\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 then escape 0" $
                 parse stmt_if "if 0 then escape 0"
-                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"`\", \"{\", \"escape\", \"break\", \"val\", \"mut\", \"input\", \"output\", \"event\", \"_\", \"(\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"`\", \"{\", \"escape\", \"break\", \"val\", \"mut\", \"input\", \"output\", \"event\", \"func\", \"_\", \"(\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 escape 0 end" $
                 parse stmt_if "if 0 escape 0 end"
@@ -578,6 +578,12 @@ spec = do
             it "func add" $
                 parse stmt_func "func add :: ((Int, Int) -> Int)"
                 `shouldBe` Right (Func (annz{source = ("",1,1)}) "add" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")))
+            it "func add :: i" $
+                parse stmt_func "func add :: (a,_) :: ((Int, Int) -> Int)"
+                `shouldBe` Right (Func (annz{source = ("",1,1)}) "add" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")))
+            it "func add :: i" $
+                parse stmt_func "func add :: (_,_,_) :: ((Int, Int) -> Int)"
+                `shouldBe` Left "(line 1, column 43):\nunexpected end of input\narity mismatch"
 
         describe "par:" $ do
             it "par" $
