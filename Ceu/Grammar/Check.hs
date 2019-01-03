@@ -191,6 +191,7 @@ neverTerminates _                = False
 
 maybeTerminates = not . neverTerminates
 
+{-
 alwaysTerminates :: Stmt -> Bool
 alwaysTerminates (Var _ _ _ p)    = alwaysTerminates p
 alwaysTerminates (Inp _ _ p)      = alwaysTerminates p
@@ -209,6 +210,7 @@ alwaysTerminates (Fin _ p)        = False
 alwaysTerminates (Trap _ p)       = escapesAt0 p
 alwaysTerminates (Escape _ _)     = False
 alwaysTerminates _                = True
+-}
 
 -------------------------------------------------------------------------------
 
