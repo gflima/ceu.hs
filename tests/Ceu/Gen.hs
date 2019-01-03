@@ -112,6 +112,9 @@ tests = [
             [],
             "func f :: (Int -> Int) do end ; escape 1"),
     (1,   [], [], "func f :: v :: (Int -> Int) do end ; escape 1"),
+    (1,   ["(line 1, column 8):\nidentifier 'f' is not declared"],
+            [],
+            "escape f 1"),
 --
     (4, [], [("KEY",1)],
         unlines [

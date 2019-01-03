@@ -121,29 +121,12 @@ expr isTmp vars e@(Tuple z exps) = ([type_ z]++tps', "((" ++ (tp2use $ type_ z) 
         srcs' :: String
         srcs'= intercalate "," $ map snd exps'
 
--- TODO-01: check if function dcl exists
-{-
-expr vars (Call  _ "negate" e) = (tps, "(negate(" ++ src ++ "))")
-                                    where (tps,src) = expr vars e
-expr vars (Call  _ "(+)"    e) = (tps, "(plus(&" ++ src ++ "))")
-                                    where (tps,src) = expr vars e
-expr vars (Call  _ "(-)"    e) = (tps, "(minus(&" ++ src ++ "))")
-                                    where (tps,src) = expr vars e
-expr vars (Call  _ "(*)"    e) = (tps, "(times(&" ++ src ++ "))")
-                                    where (tps,src) = expr vars e
-expr vars (Call  _ "(/)"    e) = (tps, "(div(&" ++ src ++ "))")
-                                    where (tps,src) = expr vars e
-expr vars (Call  _ "(==)"   e) = (tps, "(equal(&" ++ src ++ "))")
-                                    where (tps,src) = expr vars e
-expr vars (Call  _ "(<=)"   e) = (tps, "(lte(&" ++ src ++ "))")
-                                    where (tps,src) = expr vars e
--}
-
+-- TODO_01: check if function dcl exists
 expr isTmp vars (Call _ func e) = (tps, "(" ++ id' func ++ "__" ++ (tp2use $ type_ $ getAnn e)
                                             ++ "(&" ++ src ++ "))")
                                   where
                                     (tps,src) = expr isTmp vars e
-                                    id' "(+)"  = "Add"
+                                    id' "(+)"  = "Add"  -- TODO_02: names
                                     id' "(-)"  = "Sub"
                                     id' "(*)"  = "Mul"
                                     id' "(/)"  = "Div"
@@ -254,13 +237,11 @@ aux dn s@(Var z id tp p) = p' {
         (var,src) = if isTmp dn then ([], ocmd $ tp2use tp ++ " " ++ id')
                                 else ([(id',tp)], "")
 
---aux dn s@(Func z id (TypeF inp out) p) = p' { tps_up=inp:out:(tps_up p') }
 aux dn s@(Func z id (TypeF inp out) p) = p'
     where
-        -- TODO-01: check if function dcl exists
         p'  = aux dn' p
-        dn' = dn --{ vars_dn = (id,s):(vars_dn dn) }
-        --id' = id ++ "__" ++ (show $ nn z)
+        dn' = dn { vars_dn = (id',s):(vars_dn dn) }
+        id' = id ++ "__" ++ (show $ nn z)
 
 aux dn (FuncI z id (TypeF inp out) Nothing p) = p' { tps_up=inp:out:(tps_up p') }
     where p' = aux dn p

@@ -142,6 +142,7 @@ spec = do
     checkTypeSysIt (Pause annz "a" (Nop annz))                  ["identifier 'a' is not declared"]
     checkTypeSysIt (Func annz "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "umn" (Read annz "b"))))) ["identifier 'b' is not declared"]
     checkTypeSysIt (Func annz "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var annz "a" Type0 (Write annz (LVar "a") (Call annz "umn" (Read annz "b"))))) ["identifier 'b' is not declared","types do not match"]
+    checkTypeSysIt (Write annz (LVar "a") (Call annz "f" (Const annz 1))) ["identifier 'a' is not declared","identifier 'f' is not declared"]
     checkTypeSysIt (Var annz "x" (TypeN [Type0,Type0]) (Write annz (LVar "x") (Unit annz)))  ["types do not match"]
     checkTypeSysIt (Var annz "x" (Type1 "Int") (Write annz (LVar "x") (Unit annz))) ["types do not match"]
     checkTypeSysIt (Func annz "identity" (TypeF (TypeV "a") (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "identity" (Const annz 1))))) []
