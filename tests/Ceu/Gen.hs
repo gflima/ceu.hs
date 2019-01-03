@@ -106,6 +106,8 @@ tests = [
     (100, [], [], "val x::((),()) : ((),()) ; val x1::() ; (x1,_)<:x  if x1==() then escape 100 else escape 0 end"),
     (3,   [], [], "val (x,y)::(Int,Int) : (1, 2); escape x+y"),
     (3,   [], [], "mut (x, (y,_)) :: (Int, (Int,Int)) <: (1, (2,3)); escape x+y"),
+-- funcs
+    (1,   [], [], "func f :: (Int -> Int); escape 1"),
 --
     (4, [], [("KEY",1)],
         unlines [

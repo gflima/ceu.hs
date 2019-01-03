@@ -1,7 +1,7 @@
 module Ceu.Parser.Stmt where
 
 import Debug.Trace
-import Data.Maybe                (isNothing, fromJust)
+import Data.Maybe                (isNothing, fromJust, isJust)
 import Control.Monad             (guard)
 import Control.Applicative       (many)
 
@@ -17,7 +17,7 @@ import Ceu.Parser.Exp            (expr, tk_raw)
 import Ceu.Grammar.Globals       (Source, Loc(..))
 import Ceu.Grammar.Type          (Type(..))
 import Ceu.Grammar.Ann           (annz, source, getAnn)
-import Ceu.Grammar.Exp           (Exp(..))
+import Ceu.Grammar.Exp           (Exp(..), RawAt(..))
 import Ceu.Grammar.Full.Grammar  (Stmt(..))
 
 -------------------------------------------------------------------------------
@@ -88,26 +88,6 @@ stmt_var = do
         op "val" = ":"
         op "mut" = "<:"
 
-stmt_func :: Parser Stmt
-stmt_func = do
-    pos  <- pos2src <$> getPosition
-    void <- tk_key "func"
-    func <- tk_func
-    loc  <- optionMaybe (try loc_')
-    void <- tk_str "::"
-    tp   <- type_F
-    void <- case loc of
-                Nothing -> do { return () }
-                Just v  -> if isNothing (dcls pos v tp') then do { fail "arity mismatch" } else do { return () }
-                            where (TypeF tp' _) = tp
-    return $ Func annz{source=pos} func tp
-    where
-        loc_' :: Parser Loc
-        loc_' = do
-            void <- tk_str "::"
-            loc  <- loc_
-            return loc
-
 stmt_evt :: Parser Stmt
 stmt_evt = do
     pos  <- pos2src <$> getPosition
@@ -170,6 +150,41 @@ dcls pos (LTuple _)        (TypeN [])       = Nothing
 dcls pos (LTuple (v1:vs1)) (TypeN (v2:vs2)) = (fmap (++) (dcls pos v1 v2)) <*>
                                               (dcls pos (LTuple vs1) (TypeN vs2))
 dcls pos (LTuple _)        _                = Nothing
+
+-------------------------------------------------------------------------------
+
+stmt_func :: Parser Stmt
+stmt_func = do
+    pos  <- pos2src <$> getPosition
+    void <- tk_key "func"
+    func <- tk_func
+    loc  <- optionMaybe (try loc_')
+    void <- tk_str "::"
+    tp   <- type_F
+    s    <- optionMaybe $ do
+                void <- tk_key "do"
+                s    <- stmt
+                void <- tk_key "end"
+                return s
+
+    void <- case loc of
+                Nothing -> if isJust s then do { fail "missing arguments" } else do { return () }
+                Just v  -> if isNothing (dcls pos v tp') then do { fail "arity mismatch" } else do { return () }
+                            where (TypeF tp' _) = tp
+
+    return $ let ann = annz{source=pos} in
+                case s of
+                    Nothing -> Func  ann func tp
+                    Just s' -> FuncI ann func tp
+                                (Just (Seq ann
+                                        (Write ann (fromJust loc) (RawE ann [RawAtS "{__ceu_args}"]))
+                                        s'))
+    where
+        loc_' :: Parser Loc
+        loc_' = do
+            void <- tk_str "::"
+            loc  <- loc_
+            return loc
 
 -------------------------------------------------------------------------------
 
@@ -295,7 +310,8 @@ stmt_paror = do
 stmt1 :: Parser Stmt
 stmt1 = do
     s <- try stmt_raw <|> try stmt_escape <|> try stmt_break <|>
-         try stmt_var <|> try stmt_input <|> try stmt_output <|> try stmt_evt <|> try stmt_func <|>
+         try stmt_var <|> try stmt_input <|> try stmt_output <|> try stmt_evt <|>
+         try stmt_func <|>
          try stmt_attr <|>
          try (stmt_awaitext Nothing) <|> try stmt_halt <|> try (stmt_awaitevt Nothing) <|>
          try stmt_emitext <|> try stmt_emitevt <|>
