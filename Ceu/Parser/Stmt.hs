@@ -76,14 +76,14 @@ stmt_var = do
     loc  <- loc_
     void <- tk_str "::"
     tp   <- type_
-    void <- if isNothing (dcls pos loc tp) then do { fail "arity mismatch" } else do { return () }
     s    <- option (Nop $ annz{source=pos})
                    (try (attr_exp      loc (tk_str $ op mod)) <|>
                     try (attr_awaitext loc (tk_str $ op mod)) <|>
                     try (attr_awaitevt loc (tk_str $ op mod)))
-    return $ foldr (Seq annz{source=pos})
-                   s
-                   (fromJust $ dcls pos loc tp)
+    s'   <- case (dcls pos loc tp) of
+                Nothing -> do { fail "arity mismatch" }
+                Just v  -> return $ Seq annz{source=pos} v s
+    return s'
     where
         op "val" = ":"
         op "mut" = "<:"
@@ -141,15 +141,20 @@ loc_ =  (try lany <|> try lvar <|> try ltuple)
                     locs <- list loc_
                     return (LTuple $ locs)
 
-dcls :: Source -> Loc -> Type -> Maybe [Stmt]
-dcls pos LAny              _                = Just []
-dcls pos (LVar var)        tp               = Just [Var annz{source=pos} var tp Nothing]
-dcls pos (LTuple [])       (TypeN [])       = Just []
-dcls pos (LTuple [])       _                = Nothing
-dcls pos (LTuple _)        (TypeN [])       = Nothing
-dcls pos (LTuple (v1:vs1)) (TypeN (v2:vs2)) = (fmap (++) (dcls pos v1 v2)) <*>
-                                              (dcls pos (LTuple vs1) (TypeN vs2))
-dcls pos (LTuple _)        _                = Nothing
+dcls :: Source -> Loc -> Type -> Maybe Stmt
+dcls src loc tp = case (aux src loc tp) of
+                        Nothing -> Nothing
+                        Just v  -> Just $ foldr (Seq annz) (Nop annz) v
+    where
+        aux :: Source -> Loc -> Type -> Maybe [Stmt]
+        aux pos LAny              _                = Just []
+        aux pos (LVar var)        tp               = Just [Var annz{source=pos} var tp Nothing]
+        aux pos (LTuple [])       (TypeN [])       = Just []
+        aux pos (LTuple [])       _                = Nothing
+        aux pos (LTuple _)        (TypeN [])       = Nothing
+        aux pos (LTuple (v1:vs1)) (TypeN (v2:vs2)) = (fmap (++) (aux pos v1 v2)) <*>
+                                                     (aux pos (LTuple vs1) (TypeN vs2))
+        aux pos (LTuple _)        _                = Nothing
 
 -------------------------------------------------------------------------------
 
@@ -161,24 +166,36 @@ stmt_func = do
     loc  <- optionMaybe (try loc_')
     void <- tk_str "::"
     tp   <- type_F
-    s    <- optionMaybe $ do
+    imp  <- optionMaybe $ do
                 void <- tk_key "do"
                 s    <- stmt
                 void <- tk_key "end"
                 return s
 
-    void <- case loc of
-                Nothing -> if isJust s then do { fail "missing arguments" } else do { return () }
-                Just v  -> if isNothing (dcls pos v tp') then do { fail "arity mismatch" } else do { return () }
-                            where (TypeF tp' _) = tp
+    dcls' <- case loc of
+                Nothing -> return Nothing
+                Just v  -> let (TypeF tp' _) = tp
+                               dcls' = (dcls pos v tp') in
+                            case dcls' of
+                                Nothing -> do { fail "arity mismatch" }
+                                Just v'  -> return $ Just v'
+    ann   <- do { return annz{source=pos} }
 
-    return $ let ann = annz{source=pos} in
-                case s of
-                    Nothing -> Func  ann func tp
-                    Just s' -> FuncI ann func tp
-                                (Just (Seq ann
-                                        (Write ann (fromJust loc) (RawE ann [RawAtS "{__ceu_args}"]))
-                                        s'))
+    s     <- case imp of
+                Nothing   -> return $ Func ann func tp
+                Just imp' ->
+                    case loc of
+                        Nothing   -> do { fail "missing arguments" }
+                        Just loc' -> return $
+                            (FuncI ann func tp
+                                (Just
+                                    (Seq ann
+                                        (fromJust dcls')
+                                        (Seq ann
+                                            (Write ann loc' (RawE ann [RawAtS "{__ceu_args}"]))
+                                            imp'))))
+    return s
+
     where
         loc_' :: Parser Loc
         loc_' = do

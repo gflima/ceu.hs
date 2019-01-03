@@ -386,25 +386,25 @@ spec = do
         describe "var:" $ do
             it "val x:: Int" $
                 parse stmt_var "val x:: Int;"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Var (annz{source = ("",1,1)}) "x" (Type1 "Int") Nothing) (Nop (annz{source = ("",1,1)})))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)})))
             it "mut var x" $
                 parse stmt_var "mut var x"
                 `shouldBe` Left "(line 1, column 9):\nunexpected \"x\"\nexpecting \"::\""
             it "val a:: Int : 1" $
                 parse stmt_var "val a :: Int : 1"
-                `shouldBe` Right (Seq annz{source=("",1,1)} (Var annz{source=("",1,1)} "a" (Type1 "Int") Nothing) (Write annz{source=("",1,14)} (LVar "a") (Const annz{source=("",1,16)} 1)))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "a" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)}))) (Write (annz{source = ("",1,14)}) (LVar "a") (Const (annz{source = ("",1,16)}) 1)))
             it "mut x :: Int : await X" $
                 parse stmt_var "mut x :: Int : await X"
                 `shouldBe` Left "(line 1, column 14):\nunexpected ':'\nexpecting \"<:\" or end of input"
             it "mut x :: Int : await X" $
                 parse stmt_var "mut x :: Int <: await X"
-                `shouldBe` Right (Seq annz{source=("",1,1)} (Var annz{source=("",1,1)} "x" (Type1 "Int") Nothing) (AwaitInp annz{source=("",1,17)} "X" (Just $ LVar "x")))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)}))) (AwaitInp (annz{source = ("",1,17)}) "X" (Just (LVar "x"))))
             it "val x::() : ()" $
                 parse stmt_var "val x::() : ()"
-                `shouldBe` Right (Seq annz{source=("",1,1)} (Var annz{source=("",1,1)} "x" Type0 Nothing) (Write annz{source=("",1,11)} (LVar "x") (Unit annz{source=("",1,13)})))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" Type0 Nothing) (Nop (annz{source = ("",0,0)}))) (Write (annz{source = ("",1,11)}) (LVar "x") (Unit (annz{source = ("",1,13)}))))
             it "mut x::(Int,()) : (1 ())" $
                 parse stmt_var "mut x::(Int,()) <: (1,())"
-                `shouldBe` Right (Seq annz{source=("",1,1)} (Var annz{source=("",1,1)} "x" (TypeN [Type1 "Int",Type0]) Nothing) (Write annz{source=("",1,17)} (LVar "x") (Tuple annz{source=("",1,20)} [Const annz{source=("",1,21)} 1,Unit annz{source=("",1,23)}])))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (TypeN [Type1 "Int",Type0]) Nothing) (Nop (annz{source = ("",0,0)}))) (Write (annz{source = ("",1,17)}) (LVar "x") (Tuple (annz{source = ("",1,20)}) [Const (annz{source = ("",1,21)}) 1,Unit (annz{source = ("",1,23)})])))
 
         describe "var-tuples:" $ do
             it "((_,x,),_)" $ do
@@ -412,19 +412,19 @@ spec = do
                 `shouldBe` Right (LTuple [LTuple [LAny,LVar "x"],LAny])
             it "val (x,y) :: (Int,Int) : (1, 2); escape x+y" $
                 parse stmt_var "val (x,y) :: (Int,Int) : (1, 2)"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Var (annz{source = ("",1,1)}) "x" (Type1 "Int") Nothing) (Seq (annz{source = ("",1,1)}) (Var (annz{source = ("",1,1)}) "y" (Type1 "Int") Nothing) (Write (annz{source = ("",1,24)}) (LTuple [LVar "x",LVar "y"]) (Tuple (annz{source = ("",1,26)}) [Const (annz{source = ("",1,27)}) 1,Const (annz{source = ("",1,30)}) 2]))))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (Type1 "Int") Nothing) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "y" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)})))) (Write (annz{source = ("",1,24)}) (LTuple [LVar "x",LVar "y"]) (Tuple (annz{source = ("",1,26)}) [Const (annz{source = ("",1,27)}) 1,Const (annz{source = ("",1,30)}) 2])))
             it "mut (x,(y,_))::(Int,(Int,Int)) <: (1, (2,3)); escape x+y" $
                 parse stmt "mut (x,(y,_))::(Int, (Int,Int)) <: (1, (2,3)); escape x+y"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Var (annz{source = ("",1,1)}) "x" (Type1 "Int") Nothing) (Seq (annz{source = ("",1,1)}) (Var (annz{source = ("",1,1)}) "y" (Type1 "Int") Nothing) (Write (annz{source = ("",1,33)}) (LTuple [LVar "x",LTuple [LVar "y",LAny]]) (Tuple (annz{source = ("",1,36)}) [Const (annz{source = ("",1,37)}) 1,Tuple (annz{source = ("",1,40)}) [Const (annz{source = ("",1,41)}) 2,Const (annz{source = ("",1,43)}) 3]])))) (Escape (annz{source = ("",1,48)}) Nothing (Just (Call (annz{source = ("",1,56)}) "(+)" (Tuple (annz{source = ("",1,56)}) [Read (annz{source = ("",1,55)}) "x",Read (annz{source = ("",1,57)}) "y"])))))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (Type1 "Int") Nothing) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "y" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)})))) (Write (annz{source = ("",1,33)}) (LTuple [LVar "x",LTuple [LVar "y",LAny]]) (Tuple (annz{source = ("",1,36)}) [Const (annz{source = ("",1,37)}) 1,Tuple (annz{source = ("",1,40)}) [Const (annz{source = ("",1,41)}) 2,Const (annz{source = ("",1,43)}) 3]]))) (Escape (annz{source = ("",1,48)}) Nothing (Just (Call (annz{source = ("",1,56)}) "(+)" (Tuple (annz{source = ("",1,56)}) [Read (annz{source = ("",1,55)}) "x",Read (annz{source = ("",1,57)}) "y"])))))
             it "val (_,_)::(Int,Int,Int)" $
                 parse stmt "val (_,_)::(Int,Int,Int)"
-                `shouldBe` Left "(line 1, column 25):\nunexpected end of input\narity mismatch"
+                `shouldBe` Left "(line 1, column 25):\nunexpected end of input\nexpecting \":\"\narity mismatch"
             it "val (_,_,_)::(Int,Int)" $
                 parse stmt "val (_,_,_)::(Int,Int)"
-                `shouldBe` Left "(line 1, column 23):\nunexpected end of input\narity mismatch"
+                `shouldBe` Left "(line 1, column 23):\nunexpected end of input\nexpecting \":\"\narity mismatch"
             it "val (_,_))::Int" $
                 parse stmt "val (_,_)::Int"
-                `shouldBe` Left "(line 1, column 15):\nunexpected end of input\nexpecting digit, letter or \"_\"\narity mismatch"
+                `shouldBe` Left "(line 1, column 15):\nunexpected end of input\nexpecting digit, letter, \"_\" or \":\"\narity mismatch"
 
         describe "ext:" $ do
             it "output X:: Int" $
@@ -589,7 +589,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 39):\nunexpected end of input\nexpecting letter, \"_\" or digit\nmissing arguments"
             it "funcI add" $
                 parse stmt_func "func add :: (a,_) :: ((Int, Int) -> Int) do end"
-                `shouldBe` Right (FuncI (annz{source = ("",1,1)}) "add" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (Just (Seq (annz{source = ("",1,1)}) (Write (annz{source = ("",1,1)}) (LTuple [LVar "a",LAny]) (RawE (annz{source = ("",1,1)}) [RawAtS "{__ceu_args}"])) (Nop (annz{source = ("",1,45)})))))
+                `shouldBe` Right (FuncI (annz{source = ("",1,1)}) "add" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (Just (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "a" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)}))) (Seq (annz{source = ("",1,1)}) (Write (annz{source = ("",1,1)}) (LTuple [LVar "a",LAny]) (RawE (annz{source = ("",1,1)}) [RawAtS "{__ceu_args}"])) (Nop (annz{source = ("",1,45)}))))))
 
         describe "par:" $ do
             it "par" $
@@ -635,20 +635,20 @@ spec = do
 
             it "input KEY::Int ; mut a::Int ; a<:await KEY ; ret<:a" $
                 parse (stmt_seq ("",1,1)) "mut a::Int ; a<:1"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Var (annz{source = ("",1,1)}) "a" (Type1 "Int") Nothing) (Nop (annz{source = ("",1,1)}))) (Write (annz{source = ("",1,15)}) (LVar "a") (Const (annz{source = ("",1,17)}) 1)))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "a" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Write (annz{source = ("",1,15)}) (LVar "a") (Const (annz{source = ("",1,17)}) 1)))
 
         describe "stmt:" $ do
             it "val x::Int; escape 1" $
                 parse stmt "val x::Int ;escape 1"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Var (annz{source = ("",1,1)}) "x" (Type1 "Int") Nothing) (Nop (annz{source = ("",1,1)}))) (Escape (annz{source = ("",1,13)}) Nothing (Just (Const (annz{source = ("",1,20)}) 1))))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Escape (annz{source = ("",1,13)}) Nothing (Just (Const (annz{source = ("",1,20)}) 1))))
 
             it "mut x::Int; x<:1; escape x" $
                 parse stmt "mut x::Int ; x <: 1 ; escape x"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Var (annz{source = ("",1,1)}) "x" (Type1 "Int") Nothing) (Nop (annz{source = ("",1,1)}))) (Seq (annz{source = ("",1,1)}) (Write (annz{source = ("",1,16)}) (LVar "x") (Const (annz{source = ("",1,19)}) 1)) (Escape (annz{source = ("",1,23)}) Nothing (Just (Read (annz{source = ("",1,30)}) "x")))))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Seq (annz{source = ("",1,1)}) (Write (annz{source = ("",1,16)}) (LVar "x") (Const (annz{source = ("",1,19)}) 1)) (Escape (annz{source = ("",1,23)}) Nothing (Just (Read (annz{source = ("",1,30)}) "x")))))
 
             it "val x::(Int,Int,):(1,2) ; escape +x" $
                 parse stmt "val x::(Int,Int):(1,2) ; escape `+x"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Var (annz{source = ("",1,1)}) "x" (TypeN [Type1 "Int",Type1 "Int"]) Nothing) (Write (annz{source = ("",1,17)}) (LVar "x") (Tuple (annz{source = ("",1,18)}) [Const (annz{source = ("",1,19)}) 1,Const (annz{source = ("",1,21)}) 2]))) (Escape (annz{source = ("",1,26)}) Nothing (Just (Call (annz{source = ("",1,33)}) "(+)" (Read (annz{source = ("",1,35)}) "x")))))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (TypeN [Type1 "Int",Type1 "Int"]) Nothing) (Nop (annz{source = ("",0,0)}))) (Write (annz{source = ("",1,17)}) (LVar "x") (Tuple (annz{source = ("",1,18)}) [Const (annz{source = ("",1,19)}) 1,Const (annz{source = ("",1,21)}) 2]))) (Escape (annz{source = ("",1,26)}) Nothing (Just (Call (annz{source = ("",1,33)}) "(+)" (Read (annz{source = ("",1,35)}) "x")))))
 
             it "do ... end" $
                 parse stmt "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end"
