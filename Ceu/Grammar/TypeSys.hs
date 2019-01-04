@@ -24,8 +24,12 @@ stmt ids s@(Evt  z id p)     = ((errDeclared ids (id,z)) ++ es, Evt  z id p')
                                where (es,p') = stmt (s:ids) p
 stmt ids s@(Func z id tp p)  = ((errDeclared ids (id,z)) ++ es, Func z id tp p')
                                where (es,p') = stmt (s:ids) p
-stmt ids s@(FuncI z id tp imp p) = (es, FuncI z id tp imp p')
-                                    where (es,p') = stmt ids p
+stmt ids s@(FuncI z id tp Nothing p) = (es, FuncI z id tp Nothing p')
+                                        where (es,p') = stmt ids p
+stmt ids s@(FuncI z id tp (Just imp) p) = (es1++es2, FuncI z id tp (Just imp') p')
+                                          where
+                                            (es1,imp') = stmt ids imp
+                                            (es2,p')   = stmt ids p
 
 stmt ids (Write z loc exp)   = (es1 ++ es2 ++ es3, Write z loc exp')
                                where

@@ -86,7 +86,7 @@ getComplexs p = errs_anns_msg_map (aux' (-1) p) "invalid statement" where
   aux' n (Pause z _ p)  = [z] ++ aux' n p
   aux' n (Trap _ p)     = aux' (n+1) p
   aux' n (Escape z k)
-    | (n >= k)          = [z]
+    | (n >= k)          = []
     | otherwise         = [z]
   aux' _ (Halt z)       = [z]
   aux' _ _              = []

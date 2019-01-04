@@ -188,27 +188,27 @@ CEU_API int ceu_loop (int argc, char* argv[])
 
 // PRELUDE
 
-static int negate (int v) {
+static int CEU_FUNC_negate (int v) {
     return -v;
 }
 
-static int Add__tceu__int__int (tceu__int__int* v) {
+static int CEU_FUNC_Add__tceu__int__int (tceu_stk* _ceu_stk, tceu__int__int* v) {
     return v->_1 + v->_2;
 }
 
-static int Mul__tceu__int__int (tceu__int__int* v) {
+static int CEU_FUNC_Mul__tceu__int__int (tceu_stk* _ceu_stk, tceu__int__int* v) {
     return v->_1 * v->_2;
 }
 
-static int equal (tceu__int__int* v) {
+static int CEU_FUNC_equal (tceu_stk* _ceu_stk, tceu__int__int* v) {
     return v->_1 == v->_2;
 }
 
-static int Eq__tceu__int__int (tceu__int__int* v) {
+static int CEU_FUNC_Eq__tceu__int__int (tceu_stk* _ceu_stk, tceu__int__int* v) {
     return v->_1 == v->_2;
 }
 
-static int Eq__tceu__tceu_unit__tceu_unit (tceu__tceu_unit__tceu_unit* v) {
+static int CEU_FUNC_Eq__tceu__tceu_unit__tceu_unit (tceu_stk* _ceu_stk, tceu__tceu_unit__tceu_unit* v) {
     return 1;
 }
 

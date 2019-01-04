@@ -1,5 +1,6 @@
 module Ceu.Grammar.Ann where
 
+import Debug.Trace
 import Ceu.Grammar.Globals (Source, Trails, Errors)
 import Ceu.Grammar.Type    (Type(TypeB), checkTypes)
 

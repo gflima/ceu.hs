@@ -21,15 +21,15 @@ type_1 = do
 
 type_N :: Parser Type
 type_N = do
-    tps <- list type_
+    tps <- list pType
     return $ TypeN tps
 
 type_F :: Parser Type
 type_F = do
     void <- tk_str "("
-    inp   <- type_
+    inp   <- pType
     void <- tk_str "->"
-    out   <- type_
+    out   <- pType
     void <- tk_str ")"
     return $ TypeF inp out
 
@@ -38,5 +38,5 @@ type_V = do
     var <- tk_var
     return $ TypeV var
 
-type_ :: Parser Type
-type_ = try type_0 <|> try type_1 <|> try type_N <|> try type_F <|> try type_V
+pType :: Parser Type
+pType = try type_0 <|> try type_1 <|> try type_N <|> try type_F <|> try type_V

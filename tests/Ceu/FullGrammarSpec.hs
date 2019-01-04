@@ -635,6 +635,33 @@ end
             [("X",Just 1),("E",Nothing),("X",Just 0),("E",Nothing)]
         `shouldBe` Right (99,[[],[("P",Nothing)],[],[("R",Nothing)],[("F",Nothing)]])
 
+  describe "func:" $ do
+      it "call f" $ do
+          (compile' (False,True,False)
+              (Seq annz (Seq annz
+                (Func annz "f" (TypeF (Type1 "Int") (Type1 "Int")))
+                (FuncI annz "f"
+                    (TypeF (Type1 "Int") (Type1 "Int"))
+                    (Just $ Escape annz Nothing (Just $ Const annz 1))))
+                (Escape annz Nothing (Just $ Call annz "f" (Const annz 1)))))
+          `shouldBe` ([],
+                (G.Inp annz "TIMER"
+                    (G.Var annz "_ret" (Type1 "Int")
+                        (G.Seq annz
+                            (G.Trap annz
+                                (G.Func annz "f" (TypeF (Type1 "Int") (Type1 "Int"))
+                                    (G.FuncI annz "f" (TypeF (Type1 "Int") (Type1 "Int"))
+                                        (Just
+                                            (G.Var annz "__ret" (Type1 "Int")
+                                                (G.Trap annz
+                                                    (G.Seq annz
+                                                        (G.Write annz (LVar "__ret") (Const (annz {type_ = Type1 "Int"}) 1))
+                                                        (G.Escape annz 0)))))
+                                    (G.Seq annz
+                                        (G.Write annz (LVar "_ret") (Call (annz {type_ = Type1 "Int"}) "f" (Const (annz {type_ = Type1 "Int"}) 1)))
+                                        (G.Escape annz 0)))))
+                            (G.Halt annz)))))
+
       where
         evalFullProgItRight (res,outss) hist prog =
           (it (printf "pass: %s | %s ~> %d %s" (show hist) (show $ snd $ compile' (True,True,False) prog) res (show outss)) $

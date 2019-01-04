@@ -3,6 +3,7 @@ module Ceu.Grammar.Full.Compile.Scope where
 import Debug.Trace
 
 import Ceu.Grammar.Globals
+import Ceu.Grammar.Type             (Type(..))
 import Ceu.Grammar.Full.Grammar
 
 compile :: Stmt -> (Errors, Stmt)
@@ -13,14 +14,14 @@ aux (Inp z inp b)                   = Inp' z inp b (Nop z)
 aux (Out z out b)                   = Out' z out b (Nop z)
 aux (Evt z int b)                   = Evt' z int b (Nop z)
 aux (Func z cod tp)                 = Func' z cod tp (Nop z)
-aux (FuncI z cod tp imp)            = FuncI' z cod tp imp (Nop z)
+aux (FuncI z cod tp imp)            = aux_funci $ FuncI' z cod tp imp (Nop z)
 aux (If z exp p1 p2)                = If z exp (aux p1) (aux p2)
 aux (Seq _ s@(Inp z inp b) p2)      = Inp' z inp b (aux p2)
 aux (Seq _ s@(Out z out b) p2)      = Out' z out b (aux p2)
 aux (Seq _ s@(Var z var tp fin) p2) = Var' z var tp (aux_fin fin) (aux p2)
 aux (Seq _ s@(Evt z int b) p2)      = Evt' z int b (aux p2)
 aux (Seq _ s@(Func z cod tp) p2)    = Func' z cod tp (aux p2)
-aux (Seq _ s@(FuncI z cod tp imp) p2) = FuncI' z cod tp (fmap aux imp) (aux p2)
+aux (Seq _ s@(FuncI z cod tp imp) p2) = aux_funci $ FuncI' z cod tp (fmap aux imp) (aux p2)
 aux (Seq z p1 p2)                   = Seq z (aux p1) (aux p2)
 aux (Loop z p)                      = Loop z (aux p)
 aux (Every z evt exp p)             = Every z evt exp (aux p)
@@ -37,3 +38,10 @@ aux p                               = p
 
 aux_fin (Just (a,b,c)) = Just ((aux a),(aux b),(aux c))
 aux_fin Nothing        = Nothing
+
+aux_funci :: Stmt -> Stmt
+aux_funci (FuncI' z func tp Nothing p) = FuncI' z func tp Nothing p
+aux_funci (FuncI' z func (TypeF inp out) (Just imp) p) =
+    FuncI' z func (TypeF inp out) (Just imp') p
+    where
+        imp' = (Var' z "__ret" out Nothing (Trap z (Just "__ret") imp))

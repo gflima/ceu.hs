@@ -11,12 +11,12 @@ import Text.Parsec.Combinator    (many1, chainl, chainr1, option, optionMaybe, o
 
 import Ceu.Parser.Common
 import Ceu.Parser.Token
-import Ceu.Parser.Type           (type_, type_F)
+import Ceu.Parser.Type           (pType, type_F)
 import Ceu.Parser.Exp            (expr, tk_raw)
 
 import Ceu.Grammar.Globals       (Source, Loc(..))
 import Ceu.Grammar.Type          (Type(..))
-import Ceu.Grammar.Ann           (annz, source, getAnn)
+import Ceu.Grammar.Ann           (annz, source, getAnn, Ann(..))
 import Ceu.Grammar.Exp           (Exp(..), RawAt(..))
 import Ceu.Grammar.Full.Grammar  (Stmt(..))
 
@@ -75,7 +75,7 @@ stmt_var = do
     mod  <- (tk_key "val" <|> tk_key "mut")
     loc  <- loc_
     void <- tk_str "::"
-    tp   <- type_
+    tp   <- pType
     s    <- option (Nop $ annz{source=pos})
                    (try (attr_exp      loc (tk_str $ op mod)) <|>
                     try (attr_awaitext loc (tk_str $ op mod)) <|>
@@ -180,20 +180,23 @@ stmt_func = do
                                 Nothing -> do { fail "arity mismatch" }
                                 Just v'  -> return $ Just v'
     ann   <- do { return annz{source=pos} }
+    ret   <- do { return $ Func ann func tp }
 
     s     <- case imp of
-                Nothing   -> return $ Func ann func tp
+                Nothing   -> return $ ret
                 Just imp' ->
                     case loc of
                         Nothing   -> do { fail "missing arguments" }
                         Just loc' -> return $
-                            (FuncI ann func tp
-                                (Just
-                                    (Seq ann
-                                        (fromJust dcls')
+                            (Seq ann
+                                ret
+                                (FuncI ann func tp
+                                    (Just
                                         (Seq ann
-                                            (Write ann loc' (RawE ann [RawAtS "{__ceu_arg}"]))
-                                            imp'))))
+                                            (fromJust dcls')
+                                            (Seq ann
+                                                (Write ann loc' (RawE ann{type_=TypeT} [RawAtS "{_ceu_arg}"]))
+                                                imp')))))
     return s
 
     where

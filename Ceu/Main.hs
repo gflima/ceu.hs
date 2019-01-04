@@ -1,3 +1,4 @@
+import Test.HUnit
 import System.IO (hPutStrLn, stderr)
 import System.Directory
 import System.Process
@@ -12,38 +13,42 @@ import qualified Ceu.Grammar.Full.Eval    as FullE
 import qualified Ceu.Grammar.Full.Grammar as FullG
 import qualified Ceu.Code.Gen             as Gen
 import qualified Ceu.Code.Template        as Template
-import Ceu.Grammar.Ann.Source
+import Ceu.Grammar.Globals (Errors)
 
-go :: Bool -> String -> [(String,Int)] -> Either String [(String,String)]
-go o_encl src hst =
+ceuc :: String -> [(String,Int)] -> (Errors, Maybe [(String,String)])
+ceuc src hst =
     case Parsec.parse (Token.s *> Parser.stmt <* Parsec.eof) "" src of
-        (Left  e)  -> Left (show e)
-        (Right p1) -> let (es,p2) = FullE.compile' (True,o_encl,True) p1
-{-
-        (Right p1) -> let (es,p2) = FullE.compile' (True,False)
-                                        (FullG.Seq ann
-                                            (FullG.Inp ann "FOREVER" False)
-                                            p1)
--}
-          in
-            case p2 of
-                (G.Nop _) -> Left  (show es)
-                otherwise -> Right (Gen.stmt p2 hst)
-          where
-            ann = FullG.getAnn p1
+        (Left  e)    -> ([show e], Nothing)
+        (Right full) -> (es, out) where
+                            (es,basic) = FullE.compile' (True,True,True) full
+                            out = if null es then
+                                    Just $ Gen.stmt (traceShowId basic) hst
+                                  else
+                                    Nothing
+
+go :: String -> String -> [(String,Int)] -> IO (Int,Errors)
+go tpl src hst =
+    case keypairs of
+        Just kps ->
+            case Template.render kps tpl of
+                Left  err -> return (0,[err])
+                Right out -> do
+                    writeFile "_ceu.c" out
+                    ExitSuccess   <- system "gcc main.c"
+                    ExitFailure v <- system "./a.out"
+                    return (v,es)
+        Nothing -> do
+            return (0,es)
+    where
+        (es,keypairs) = ceuc src hst
+
 
 main :: IO ()
 main = do
-    src <- readFile "x.ceu"
+    src <- readFile "Ceu/Code/x.ceu"
     tpl <- readFile "Ceu/Code/ceu.c"
-    -- o_encl: False
-    --let ret = go True src [("KEY",1),("KEY",2),("KEY",3),("KEY",4)] in
-    case go True src [] of
-        Left  err      -> hPutStrLn stderr err
-        Right keypairs -> case Template.render keypairs tpl of
-                            Left  err -> hPutStrLn stderr err
-                            Right out -> writeFile "Ceu/Code/main/_ceu.c" out
     setCurrentDirectory "Ceu/Code/main/"
-    ExitSuccess   <- system "gcc main.c"
-    ExitFailure v <- system "./a.out"
-    putStrLn $ ">>> " ++ (show v)
+    (ret,es) <- go tpl src []
+    assertEqual "error" [] es
+    print (show ret)
+    return ()

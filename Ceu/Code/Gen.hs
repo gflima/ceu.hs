@@ -84,8 +84,10 @@ olbl lbl src = "static void " ++ lbl ++ " (tceu_stk* _ceu_stk) " ++
 
 ofunc :: Stmt -> String -> String
 ofunc (FuncI _ func (TypeF inp out) (Just imp) _) src =
-    "static " ++ tp2use out ++ " CEU_FUNC_" ++ func ++ " (" ++ tp2use inp ++ " __ceu_arg) "
+    "static " ++ tp2use out ++ " CEU_FUNC_" ++ func ++ "__" ++ inp' ++ " (tceu_stk* _ceu_stk, " ++ inp' ++ " _ceu_arg) "
               ++ oblk src ++ "\n"
+    where
+        inp' = tp2use inp
 
 -------------------------------------------------------------------------------
 
@@ -121,9 +123,8 @@ expr isTmp vars e@(Tuple z exps) = ([type_ z]++tps', "((" ++ (tp2use $ type_ z) 
         srcs' :: String
         srcs'= intercalate "," $ map snd exps'
 
--- TODO_01: check if function dcl exists
-expr isTmp vars (Call _ func e) = (tps, "(" ++ id' func ++ "__" ++ (tp2use $ type_ $ getAnn e)
-                                            ++ "(&" ++ src ++ "))")
+expr isTmp vars (Call _ func e) = (tps, "(CEU_FUNC_" ++ id' func ++ "__" ++ (tp2use tp)
+                                            ++ "(_ceu_stk, " ++ op ++ src ++ "))")
                                   where
                                     (tps,src) = expr isTmp vars e
                                     id' "(+)"  = "Add"  -- TODO_02: names
@@ -132,6 +133,12 @@ expr isTmp vars (Call _ func e) = (tps, "(" ++ id' func ++ "__" ++ (tp2use $ typ
                                     id' "(/)"  = "Div"
                                     id' "(==)" = "Eq"
                                     id' "(<=)" = "Lte"
+                                    id' x      = x
+
+                                    tp = type_ $ getAnn e
+                                    op = case tp of
+                                            Type1 _   -> ""
+                                            otherwise -> "&"
 
 fold_raws :: Bool -> [(ID_Var,Stmt)] -> [RawAt] -> ([Type],String)
 fold_raws isTmp vars raws = (tps, take ((length src)-2) (drop 1 src)) where
@@ -249,7 +256,7 @@ aux dn (FuncI z id (TypeF inp out) Nothing p) = p' { tps_up=inp:out:(tps_up p') 
 aux dn s@(FuncI z id tp@(TypeF inp out) (Just imp) p) =
     p' {
             tps_up = tp:(tps_up imp' ++ tps_up p'),
-            labels = func:(labels p')
+            labels = labels imp' ++ [func] ++ labels p'
     }
     where
         p'   = aux dn p

@@ -589,7 +589,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 39):\nunexpected end of input\nexpecting letter, \"_\" or digit\nmissing arguments"
             it "funcI add" $
                 parse stmt_func "func add :: (a,_) :: ((Int, Int) -> Int) do end"
-                `shouldBe` Right (FuncI (annz{source = ("",1,1)}) "add" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (Just (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "a" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)}))) (Seq (annz{source = ("",1,1)}) (Write (annz{source = ("",1,1)}) (LTuple [LVar "a",LAny]) (RawE (annz{source = ("",1,1)}) [RawAtS "{__ceu_arg}"])) (Nop (annz{source = ("",1,45)}))))))
+                `shouldBe` Right (FuncI (annz{source = ("",1,1)}) "add" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (Just (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "a" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)}))) (Seq (annz{source = ("",1,1)}) (Write (annz{source = ("",1,1)}) (LTuple [LVar "a",LAny]) (RawE (annz{source = ("",1,1)}) [RawAtS "{_ceu_arg}"])) (Nop (annz{source = ("",1,45)}))))))
 
         describe "par:" $ do
             it "par" $
