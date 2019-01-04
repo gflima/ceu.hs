@@ -110,11 +110,11 @@ tests = [
     (0,   ["(line 1, column 33):\nunexpected \"e\"\nmissing arguments"],
             [],
             "func f :: (Int -> Int) do end ; escape 1"),
-    (1,   [], [], "func f :: v :: (Int -> Int) do end ; escape 1"),
-    (1,   ["(line 1, column 8):\nidentifier 'f' is not declared"],
+    --(1,   [], [], "func f :: v :: (Int -> Int) do end ; escape 1"),
+    (0,   ["(line 1, column 8):\nidentifier 'f' is not declared"],
             [],
             "escape f 1"),
-    (2,   [], [], "func f :: v :: (Int -> Int) do escape v+1 end ; escape f 1"),
+    --(2,   [], [], "func f :: v :: (Int -> Int) do escape v+1 end ; escape f 1"),
 --
     (4, [], [("KEY",1)],
         unlines [

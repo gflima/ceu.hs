@@ -13,7 +13,7 @@ import Ceu.Parser.Stmt
 --import Ceu.Grammar.Ann
 import Ceu.Grammar.Globals      (Loc(..))
 import Ceu.Grammar.Type         (Type(..))
-import Ceu.Grammar.Ann          (annz,source)
+import Ceu.Grammar.Ann          (annz,source,type_)
 import Ceu.Grammar.Exp          (Exp(..), RawAt(..))
 import Ceu.Grammar.Full.Grammar (Stmt(..))
 
@@ -249,15 +249,15 @@ spec = do
                 parse type_V "a"
                 `shouldBe` Right (TypeV "a")
 
-        describe "type_" $ do
+        describe "pType" $ do
             it "()" $
-                parse type_ "()"
+                parse pType "()"
                 `shouldBe` Right Type0
             it "Int" $
-                parse type_ "Int"
+                parse pType "Int"
                 `shouldBe` Right (Type1 "Int")
             it "(Int, ((),()))" $
-                parse type_ "(Int, ((),()))"
+                parse pType "(Int, ((),()))"
                 `shouldBe` Right (TypeN [Type1 "Int", TypeN [Type0,Type0]])
 
     describe "expr:" $ do
@@ -589,7 +589,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 39):\nunexpected end of input\nexpecting letter, \"_\" or digit\nmissing arguments"
             it "funcI add" $
                 parse stmt_func "func add :: (a,_) :: ((Int, Int) -> Int) do end"
-                `shouldBe` Right (FuncI (annz{source = ("",1,1)}) "add" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (Just (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "a" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)}))) (Seq (annz{source = ("",1,1)}) (Write (annz{source = ("",1,1)}) (LTuple [LVar "a",LAny]) (RawE (annz{source = ("",1,1)}) [RawAtS "{_ceu_arg}"])) (Nop (annz{source = ("",1,45)}))))))
+                `shouldBe` Right (Seq annz{source = ("",1,1)} (Func annz{source = ("",1,1)} "add" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int"))) (FuncI (annz{source = ("",1,1)}) "add" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (Just (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "a" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)}))) (Seq (annz{source = ("",1,1)}) (Write (annz{source = ("",1,1)}) (LTuple [LVar "a",LAny]) (RawE (annz{type_=TypeT, source = ("",1,1)}) [RawAtS "{_ceu_arg}"])) (Nop (annz{source = ("",1,45)})))))))
 
         describe "par:" $ do
             it "par" $
