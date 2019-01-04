@@ -4,7 +4,8 @@ import Debug.Trace
 import Ceu.Grammar.Globals (Source, Trails, Errors)
 import Ceu.Grammar.Type    (Type(TypeB), checkTypes)
 
-data Ann = Ann { type_  :: Type
+data Ann = Ann { isInst :: Bool     -- TODO
+               , type_  :: Type
                , name   :: String
                , source :: Source
                , nn     :: Int
@@ -16,7 +17,8 @@ class HasAnn a where
     getAnn :: a -> Ann
 
 annz :: Ann
-annz = Ann { type_  = TypeB
+annz = Ann { isInst = True
+           , type_  = TypeB
            , name   = ""
            , source = ("",0,0)
            , nn     = (-1)

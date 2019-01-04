@@ -14,15 +14,16 @@ import qualified Ceu.Grammar.TypeSys as TypeSys
 type Options = (Bool,Bool,Bool)
 
 compile :: Options -> Stmt -> (Errors, Stmt)
-compile (o_simp,o_encl,o_prel) p = (es3,p3) where
+compile (o_simp,o_encl,o_prel) p = (es4,p4) where
     -- TODO: o_prel
   p1   = if not o_encl then p else
           (Var z "_ret" (Type1 "Int") (Seq z (Trap z p) (Halt z)))
-  (es2,p2) = TypeSys.go p1
-  p3   = if not o_simp then p2 else simplify p2
-  es3  = escs ++ (stmts p1) ++ es2
+  p2   = p1     -- TODO: annotate with isInst
+  (es3,p3) = TypeSys.go p2
+  p4   = if not o_simp then p3 else simplify p3
+  es4  = escs ++ (stmts p2) ++ es3
   z    = getAnn p
-  escs = errs_anns_msg_map (map (\(s,n)->getAnn s) (getEscapes p1)) "orphan `escape` statement"
+  escs = errs_anns_msg_map (map (\(s,n)->getAnn s) (getEscapes p2)) "orphan `escape` statement"
 
 
 stmts :: Stmt -> Errors
