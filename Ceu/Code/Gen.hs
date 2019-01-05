@@ -332,7 +332,7 @@ aux dn (Seq z p1 p2) = (up_union p1' p2') {
                             --code_bef = bef,
                             code_brk = brk,
                             code_aft = aft,
-                            labels   = labels p2' ++ lbls ++ labels p1'
+                            labels   = labels p2' ++ mid ++ labels p1'
                          }
     where
         p1' = aux dn p1
@@ -345,49 +345,46 @@ aux dn (Seq z p1 p2) = (up_union p1' p2') {
         aft1 = code_aft p1'
         aft2 = code_aft p2'
 
-        bef  = bef1 ++ bef'
-        bef' = if isNothing brk1 then bef2 else ""
-
-        brk  = if isJust brk2 then brk2
-                              else if isJust brk1 then brk1
-                                                  else Nothing
-
-        aft  = aft' ++ aft2
-        aft' = if isJust brk2 || isNothing brk1 then "" else aft1++bef2
-
-        lbls = if not (isJust brk1 && isJust brk2) then [] else
-                [ olbl (fromJust brk1) (aft1 ++ bef2) ]
+        (bef, mid, brk, aft) = f brk1 brk2 where
+            f Nothing  Nothing  = (bef1++bef2, [],    Nothing, "")
+            f Nothing  (Just _) = (bef1++bef2, [],    brk2,    aft2)
+            f (Just _) Nothing  = (bef1,       [],    brk1,    aft1++bef2)
+            f (Just x) (Just _) = (bef1,       fmid x, brk2,    aft2)
+                where
+                    fmid x = [ olbl x (aft1++bef2) ]
 
 -------------------------------------------------------------------------------
 
 aux dn (If z exp p1 p2) = (up_union p1' p2') {
                                 code_bef = bef,
-                                code_brk = Just lbl,
-                                labels   = lbls1++lbls2 ++ labels p2' ++ labels p1',
+                                code_brk = brk,
+                                labels   = mid1++mid2 ++ labels p2' ++ labels p1',
                                 tps_up   = etps
                             }
     where
         p1' = aux dn p1
         p2' = aux dn p2
-        bef = oln z ++
-              "if (" ++ esrc ++ ")\n" ++ oblk bef1 ++
-              "else\n" ++ oblk bef2
-
         (etps,esrc) = expr (isTmp dn) (vars_dn dn) exp
 
+        bef1 = code_bef p1'
+        bef2 = code_bef p2'
         brk1 = code_brk p1'
         brk2 = code_brk p2'
+        aft1 = code_aft p1'
+        aft2 = code_aft p2'
 
-        bef1 = (code_bef p1') ++ if isNothing brk1 then join else ""
-        bef2 = (code_bef p2') ++ if isNothing brk2 then join else ""
+        bef = oln z ++ "if (" ++ esrc ++ ")\n" ++ oblk bef1'
+                    ++ "else\n"                ++ oblk bef2'
 
-        join = ocmd $ "return " ++ lbl ++ "(_ceu_stk)"
-        lbl  = label z "If_Join"
+        (bef1',bef2',mid1,mid2,brk) = f brk1 brk2 where
+            f Nothing  Nothing  = (bef1,       bef2,       [],          [],          Nothing)
+            f Nothing  (Just y) = (bef1++join, bef2,       [],          fmid y aft2, Just lbl)
+            f (Just x) Nothing  = (bef1,       bef2++join, fmid x aft1, [],          Just lbl)
+            f (Just x) (Just y) = (bef1,       bef2,       fmid x aft1, fmid y aft2, Just lbl)
 
-        lbls1 = if isNothing brk1 then [] else
-                    [ olbl (fromJust brk1) $ (code_aft p1') ++ join ]
-        lbls2 = if isNothing brk2 then [] else
-                    [ olbl (fromJust brk2) $ (code_aft p2') ++ join ]
+            join = ocmd $ "return " ++ lbl ++ "(_ceu_stk)"
+            lbl  = label z "If_Join"
+            fmid brk aft = [ olbl brk (aft ++ join) ]
 
 -------------------------------------------------------------------------------
 

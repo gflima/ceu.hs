@@ -59,8 +59,8 @@ main = do
 
 tests :: [(Int, Errors, [(String,Int)], String)]
 tests = [
+    (10,  [], [], "if 1==1 then else end escape 10"),
   --(0,   [], [], "xXxXxXxXxXxXxXxXxXxXx"),    -- (to force error)
-    --(10,  [], [], "escape f 1"),
     (10,  [], [], "escape 10"),
     (10,  [], [], "escape 5+5"),
     -- TODO: trap/escape()
@@ -110,10 +110,10 @@ tests = [
     (0,   ["(line 1, column 33):\nunexpected \"e\"\nmissing arguments"],
             [],
             "func f :: (Int -> Int) do end ; escape 1"),
-    --(1,   [], [], "func f :: v :: (Int -> Int) do end ; escape 1"),
     (0,   ["(line 1, column 8):\nidentifier 'f' is not declared"],
             [],
             "escape f 1"),
+    --(1,   [], [], "func f :: v :: (Int -> Int) do end ; escape 1"),
     --(2,   [], [], "func f :: v :: (Int -> Int) do escape v+1 end ; escape f 1"),
 --
     (4, [], [("KEY",1)],
