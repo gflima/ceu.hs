@@ -193,6 +193,7 @@ tests = [
             "",
             "escape ret"
         ]),
+  --(0,   [], [], "xXxXxXxXxXxXxXxXxXxXx"),    -- (to force error)
     (4, [], [("KEY",0)],
         unlines [
             "input  KEY   :: Int",

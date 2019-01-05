@@ -346,9 +346,9 @@ aux dn (Seq z p1 p2) = (up_union p1' p2') {
         aft2 = code_aft p2'
 
         (bef, mid, brk, aft) = f brk1 brk2 where
-            f Nothing  Nothing  = (bef1++bef2, [],    Nothing, "")
-            f Nothing  (Just _) = (bef1++bef2, [],    brk2,    aft2)
-            f (Just _) Nothing  = (bef1,       [],    brk1,    aft1++bef2)
+            f Nothing  Nothing  = (bef1++bef2, [],     Nothing, "")
+            f Nothing  (Just _) = (bef1++bef2, [],     brk2,    aft2)
+            f (Just _) Nothing  = (bef1,       [],     brk1,    aft1++bef2)
             f (Just x) (Just _) = (bef1,       fmid x, brk2,    aft2)
                 where
                     fmid x = [ olbl x (aft1++bef2) ]
@@ -358,6 +358,7 @@ aux dn (Seq z p1 p2) = (up_union p1' p2') {
 aux dn (If z exp p1 p2) = (up_union p1' p2') {
                                 code_bef = bef,
                                 code_brk = brk,
+                                code_aft = "",
                                 labels   = mid1++mid2 ++ labels p2' ++ labels p1',
                                 tps_up   = etps
                             }
@@ -389,22 +390,26 @@ aux dn (If z exp p1 p2) = (up_union p1' p2') {
 -------------------------------------------------------------------------------
 
 aux dn (Loop z p) = p' {
-                        code_bef = loop,
+                        code_bef = bef',
                         code_brk = Nothing,
                         code_aft = "",
-                        labels   = [odcl lbl] ++ lbls1 ++ (labels p') ++ lbls2
+                        labels   = dcl ++ pos ++ (labels p') ++ pre
                      }
     where
         p'  = aux dn p
+        bef = code_bef p'
         brk = code_brk p'
+        aft = code_aft p'
 
-        lbls1 = if isNothing brk then [] else
-                    [ olbl (fromJust brk) $ (code_aft p') ++ loop ]
-        lbls2 = [olbl lbl bef]
+        (bef',dcl,pre,pos) = f brk where
+            f Nothing  = (loop, [], [], [])
+            f (Just x) = (call, [ odcl lbl ],
+                                [ olbl lbl bef ],
+                                [ olbl x (aft ++ call) ])
 
-        bef  = code_bef p' ++ if isNothing brk then loop else ""
-        loop = ocmd $ "return " ++ lbl ++ "(_ceu_stk)"
-        lbl  = label z "Loop"
+            loop = oln z ++ "while (1)\n" ++ oblk bef
+            call = ocmd $ "return " ++ lbl ++ "(_ceu_stk)"
+            lbl  = label z "Loop"
 
 -------------------------------------------------------------------------------
 
