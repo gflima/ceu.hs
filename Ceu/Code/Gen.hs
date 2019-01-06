@@ -219,7 +219,7 @@ tp2dcl _ = ""
 aux :: Down -> Stmt -> Up
 
 aux dn (Nop   z)      = upz { code_bef=(oln z) }
-aux dn (Halt  z)      = upz { code_bef=(oln z), code_brk=Just(label z "Halt") }
+aux dn (Halt  z)      = upz { code_bef=(oln z) }
 aux dn (RawS  z raws) = upz { code_bef=(oln z)++src++";\n", tps_up=tps }
                             where (tps,src) = fold_raws (isTmp dn) (vars_dn dn) raws
 aux dn (Inp   _ id p) = p' { inps=id:(inps p') } where p'=(aux dn p)
@@ -391,7 +391,7 @@ aux dn (If z exp p1 p2) = (up_union p1' p2') {
 
 aux dn (Loop z p) = p' {
                         code_bef = bef',
-                        code_brk = Nothing,
+                        code_brk = brk',
                         code_aft = "",
                         labels   = dcl ++ pos ++ (labels p') ++ pre
                      }
@@ -401,11 +401,12 @@ aux dn (Loop z p) = p' {
         brk = code_brk p'
         aft = code_aft p'
 
-        (bef',dcl,pre,pos) = f brk where
-            f Nothing  = (loop, [], [], [])
+        (bef',dcl,pre,pos,brk') = f brk where
+            f Nothing  = (loop, [], [], [], Nothing)
             f (Just x) = (call, [ odcl lbl ],
                                 [ olbl lbl bef ],
-                                [ olbl x (aft ++ call) ])
+                                [ olbl x (aft ++ call) ],
+                                Just $ label z "Nop")
 
             loop = oln z ++ "while (1)\n" ++ oblk bef
             call = ocmd $ "return " ++ lbl ++ "(_ceu_stk)"
@@ -415,7 +416,9 @@ aux dn (Loop z p) = p' {
 
 aux dn (Par z p1 p2) = (up_union p1' p2') {
                             code_bef = oln z ++ bef,
-                            labels   = aft1' ++ labels p1' ++ bef1' ++ aft2' ++ labels p2'
+                            code_brk = brk',
+                            code_aft = "",
+                            labels   = aft1' ++ labels p1' ++ mid' ++ aft2' ++ labels p2'
                          }
     where
         p1'  = aux dn p1
@@ -432,43 +435,60 @@ aux dn (Par z p1 p2) = (up_union p1' p2') {
                 (ocmd $ "tceu_stk __ceu_stk = { _ceu_stk->level+1, 1, "
                                             ++ (show $ toTrails0 $ getAnn p2)
                                             ++ ", _ceu_stk }") ++
-                (ocmd $ lbl1 ++ "(&__ceu_stk)") ++
+                bef' ++
                 (ocmd $ "if (!__ceu_stk.is_alive) return")) ++
               bef2
 
-        lbl1  = label (getAnn p1) "Trail1"
-        bef1' = [ olbl lbl1 (code_bef p1') ]
+        (bef',mid',brk',aft1',aft2') = f brk1 brk2 where
+            f Nothing  Nothing  = (befA, [],                 Nothing,  [],              [])
+            f Nothing  (Just y) = (befA, [],                 Just nop, [],              [ olbl y aft2 ])
+            f (Just x) Nothing  = (befB, [ olbl lbl1 bef1 ], Just nop, [ olbl x aft1 ], [])
+            f (Just x) (Just y) = (befB, [ olbl lbl1 bef1 ], Just nop, [ olbl x aft1 ], [ olbl y aft2 ])
 
-        (aft1', aft2') = f brk1 brk2 where
-            f Nothing  Nothing  = ([],              [])
-            f Nothing  (Just y) = ([],              [ olbl y aft2 ])
-            f (Just x) Nothing  = ([ olbl x aft1 ], [])
-            f (Just x) (Just y) = ([ olbl x aft1 ], [ olbl y aft2 ])
+            tmp = "__ceu_tmp_" ++ (show $ nn z)
+            befA = oblk $
+                    (ocmd $ "tceu_stk* " ++ tmp ++ " = _ceu_stk;") ++
+                    (ocmd $ "_ceu_stk = &__ceu_stk")               ++
+                    bef1                                           ++
+                    (ocmd $ "_ceu_stk = " ++ tmp)
+
+            lbl1 = label (getAnn p1) "Trail1"
+            befB = ocmd $ lbl1 ++ "(&__ceu_stk)"
+            nop  = label z "Nop"
 
 -------------------------------------------------------------------------------
 
 aux dn s@(Trap z p) = p' {
-                        code_bef = code_bef p',
-                        code_brk = Just lbl,
-                        code_aft = clr,
-                        labels   = [odcl lbl] ++ aft ++ (labels p')
+                        code_bef = bef',
+                        code_brk = brk',
+                        code_aft = aft',
+                        labels   = dcl' ++ mid' ++ (labels p')
                       }
     where
         p'  = aux dn' p
         dn' = dn{ traps = s:(traps dn) }
-        lbl = label z "Trap"
 
-        aft = if isNothing brk then [] else
-                [ olbl (fromJust brk) (code_aft p') ]
+        bef = code_bef p'
         brk = code_brk p'
+        aft = code_aft p'
 
-        clr = oblk $ "// clear\n" ++
-              (ocmd $ "memset(&CEU_APP.root.trails[" ++ t0 ++ "], 0, " ++ sz ++ ")") ++
-              (ocmd $ "ceu_stack_clear(_ceu_stk, " ++ t0 ++ "," ++ n ++ ")")
-        t0  = show $ toTrails0 z
-        n   = show $ toTrailsN z
-        sz  = n ++ "*sizeof(tceu_trl)"
+        (bef',brk',dcl',mid',aft') = f brk where
+            f Nothing  = (bef++lblA++":\n", Nothing,   [escA],              [],             "")
+            f (Just x) = (bef,              Just lblB, [escB]++[odcl lblB], [ olbl x aft ], clr)
+
+            clr = oblk $ "// clear\n" ++
+                  (ocmd $ "memset(&CEU_APP.root.trails[" ++ t0 ++ "], 0, " ++ sz ++ ")") ++
+                  (ocmd $ "ceu_stack_clear(_ceu_stk, " ++ t0 ++ "," ++ n ++ ")")
+            t0  = show $ toTrails0 z
+            n   = show $ toTrailsN z
+            sz  = n ++ "*sizeof(tceu_trl)"
+
+            escA = "#define CEU_ESCAPE_" ++ (show $ nn z) ++ "() goto " ++ lblA ++ "\n"
+            escB = "#define CEU_ESCAPE_" ++ (show $ nn z) ++ "() return " ++ lblB ++ "(_ceu_stk)\n"
+
+            lblA = "CEU_TRAP_" ++ (show $ nn z)
+            lblB = label z "Trap"
 
 aux dn (Escape z k) = upz { code_bef=src, code_brk=Just(label z "Escape") }
     where
-        src = oln z ++ (ocmd $ "return " ++ (label (getAnn $ (traps dn)!!k) "Trap") ++ "(_ceu_stk)")
+        src = oln z ++ (ocmd $ "CEU_ESCAPE_" ++ (show $ nn $ getAnn $ (traps dn)!!k) ++ "()")
