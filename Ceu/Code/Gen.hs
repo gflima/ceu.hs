@@ -33,7 +33,7 @@ data Up = Up { inps     :: [String]
              , vars_up  :: [(String,Type)]
              , evts_up  :: [String]
              , code_bef :: String
-             , code_mid :: [String]
+             , code_mid :: String
              , code_brk :: Maybe String
              , code_aft :: String
              }
@@ -45,7 +45,7 @@ upz = Up { inps     = []
          , vars_up  = []
          , evts_up  = []
          , code_bef = ""
-         , code_mid = []
+         , code_mid = ""
          , code_brk = Nothing
          , code_aft = ""
          }
@@ -56,7 +56,7 @@ up_union u1 u2 = upz { inps     = (inps    u1) ++ (inps    u2)
                      , vars_up  = (vars_up u1) ++ (vars_up u2)
                      , evts_up  = (evts_up u1) ++ (evts_up u2)
                      , code_bef = ""
-                     , code_mid = []
+                     , code_mid = ""
                      , code_brk = Nothing
                      , code_aft = ""
                      }
@@ -168,16 +168,16 @@ stmt p h = [
                                -- $ filter (not.reducesToType0.snd)
                                $ vars_up up)
     , ("CEU_HISTORY",   concat $ map (\(evt,v) ->s++"_CEU_INPUT="++show v++"; ceu_input(CEU_INPUT_"++evt++")"++";\n" ) h)
-    , ("CEU_CODE",      concat $ root2 ++ code_mid up ++ root1 )
+    , ("CEU_CODE",      root2 ++ code_mid up ++ root1 )
     ]
     where
         p'    = N.add p
         --p'    = traceShowId $ N.add p
         up    = aux dnz p'
-        root1 = [ olbl "CEU_CODE_ROOT" (code_bef up) ]
+        root1 = olbl "CEU_CODE_ROOT" (code_bef up)
         root2 = case code_brk up of
-                    Nothing  -> []
-                    Just lbl -> [ olbl lbl (code_aft up) ]
+                    Nothing  -> ""
+                    Just lbl -> olbl lbl (code_aft up)
 
         s = "    "
 
@@ -256,7 +256,7 @@ aux dn (FuncI z id (TypeF inp out) Nothing p) = p' { tps_up=inp:out:(tps_up p') 
 aux dn s@(FuncI z id tp@(TypeF inp out) (Just imp) p) =
     p' {
             tps_up   = tp:(tps_up imp' ++ tps_up p'),
-            code_mid = code_mid imp' ++ [func] ++ code_mid p'
+            code_mid = code_mid imp' ++ func ++ code_mid p'
     }
     where
         p'   = aux dn p
@@ -346,12 +346,12 @@ aux dn (Seq z p1 p2) = (up_union p1' p2') {
         aft2 = code_aft p2'
 
         (bef, mid, brk, aft) = f brk1 brk2 where
-            f Nothing  Nothing  = (bef1++bef2, [],     Nothing, "")
-            f Nothing  (Just _) = (bef1++bef2, [],     brk2,    aft2)
-            f (Just _) Nothing  = (bef1,       [],     brk1,    aft1++bef2)
+            f Nothing  Nothing  = (bef1++bef2, "",     Nothing, "")
+            f Nothing  (Just _) = (bef1++bef2, "",     brk2,    aft2)
+            f (Just _) Nothing  = (bef1,       "",     brk1,    aft1++bef2)
             f (Just x) (Just _) = (bef1,       fmid x, brk2,    aft2)
                 where
-                    fmid x = [ olbl x (aft1++bef2) ]
+                    fmid x = olbl x (aft1++bef2)
 
 -------------------------------------------------------------------------------
 
@@ -378,14 +378,14 @@ aux dn (If z exp p1 p2) = (up_union p1' p2') {
                     ++ "else\n"                ++ oblk bef2'
 
         (bef1',bef2',mid1,mid2,brk) = f brk1 brk2 where
-            f Nothing  Nothing  = (bef1,       bef2,       [],          [],          Nothing)
-            f Nothing  (Just y) = (bef1++join, bef2,       [],          fmid y aft2, Just lbl)
+            f Nothing  Nothing  = (bef1,       bef2,       "",          "",          Nothing)
+            f Nothing  (Just y) = (bef1++join, bef2,       "",          fmid y aft2, Just lbl)
             f (Just x) Nothing  = (bef1,       bef2++join, fmid x aft1, [],          Just lbl)
             f (Just x) (Just y) = (bef1,       bef2,       fmid x aft1, fmid y aft2, Just lbl)
 
             join = ocmd $ "return " ++ lbl ++ "(_ceu_stk)"
             lbl  = label z "If_Join"
-            fmid brk aft = [ olbl brk (aft ++ join) ]
+            fmid brk aft = olbl brk (aft ++ join)
 
 -------------------------------------------------------------------------------
 
@@ -402,10 +402,10 @@ aux dn (Loop z p) = p' {
         aft = code_aft p'
 
         (bef',dcl,pre,pos,brk') = f brk where
-            f Nothing  = (loop, [], [], [], Nothing)
-            f (Just x) = (call, [ odcl lbl ],
-                                [ olbl lbl bef ],
-                                [ olbl x (aft ++ call) ],
+            f Nothing  = (loop, "", "", "", Nothing)
+            f (Just x) = (call, odcl lbl,
+                                olbl lbl bef,
+                                olbl x (aft ++ call),
                                 Just $ label z "Nop")
 
             loop = oln z ++ "while (1)\n" ++ oblk bef
@@ -440,10 +440,10 @@ aux dn (Par z p1 p2) = (up_union p1' p2') {
               bef2
 
         (bef',mid',brk',aft1',aft2') = f brk1 brk2 where
-            f Nothing  Nothing  = (befA, [],                 Nothing,  [],              [])
-            f Nothing  (Just y) = (befA, [],                 Just nop, [],              [ olbl y aft2 ])
-            f (Just x) Nothing  = (befB, [ olbl lbl1 bef1 ], Just nop, [ olbl x aft1 ], [])
-            f (Just x) (Just y) = (befB, [ olbl lbl1 bef1 ], Just nop, [ olbl x aft1 ], [ olbl y aft2 ])
+            f Nothing  Nothing  = (befA, "",                 Nothing,  "",              "")
+            f Nothing  (Just y) = (befA, "",                 Just nop, "",              olbl y aft2)
+            f (Just x) Nothing  = (befB, olbl lbl1 bef1, Just nop, olbl x aft1, "")
+            f (Just x) (Just y) = (befB, olbl lbl1 bef1, Just nop, olbl x aft1, olbl y aft2)
 
             tmp = "__ceu_tmp_" ++ (show $ nn z)
             befA = oblk $
@@ -473,8 +473,8 @@ aux dn s@(Trap z p) = p' {
         aft = code_aft p'
 
         (bef',brk',dcl',mid',aft') = f brk where
-            f Nothing  = (bef++lblA++":\n", Nothing,   [escA],              [],             "")
-            f (Just x) = (bef,              Just lblB, [escB]++[odcl lblB], [ olbl x aft ], clr)
+            f Nothing  = (bef++lblA++":\n", Nothing,   escA,            "",         "")
+            f (Just x) = (bef,              Just lblB, escB++odcl lblB, olbl x aft, clr)
 
             clr = oblk $ "// clear\n" ++
                   (ocmd $ "memset(&CEU_APP.root.trails[" ++ t0 ++ "], 0, " ++ sz ++ ")") ++
