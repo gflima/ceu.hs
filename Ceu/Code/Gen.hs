@@ -415,26 +415,35 @@ aux dn (Loop z p) = p' {
 
 aux dn (Par z p1 p2) = (up_union p1' p2') {
                             code_bef = oln z ++ bef,
-                            labels   = lbl11 ++ labels p1' ++ lbl10 ++ lbls2 ++ labels p2'
+                            labels   = aft1' ++ labels p1' ++ bef1' ++ aft2' ++ labels p2'
                          }
     where
         p1'  = aux dn p1
         p2'  = aux dn p2
 
+        bef1 = code_bef p1'
+        bef2 = code_bef p2'
         brk1 = code_brk p1'
         brk2 = code_brk p2'
+        aft1 = code_aft p1'
+        aft2 = code_aft p2'
 
         bef = (oblk $
-                (ocmd $ "tceu_stk __ceu_stk = { _ceu_stk->level+1, 1, 0, _ceu_stk }") ++
-                (ocmd $ "_ceu_stk->trail = " ++ (show $ toTrails0 $ getAnn p2)) ++
-                (ocmd $ bef1 ++ "(&__ceu_stk)")             ++
-                (ocmd $ "if (!_ceu_stk->is_alive) return")) ++
-              (code_bef p2')
+                (ocmd $ "tceu_stk __ceu_stk = { _ceu_stk->level+1, 1, "
+                                            ++ (show $ toTrails0 $ getAnn p2)
+                                            ++ ", _ceu_stk }") ++
+                (ocmd $ lbl1 ++ "(&__ceu_stk)") ++
+                (ocmd $ "if (!__ceu_stk.is_alive) return")) ++
+              bef2
 
-        lbl10 = [ olbl bef1 (code_bef p1') ]
-        lbl11 = if isNothing brk1 then [] else [ olbl (fromJust brk1) (code_aft p1') ]
-        lbls2 = if isNothing brk2 then [] else [ olbl (fromJust brk2) (code_aft p2') ]
-        bef1  = label (getAnn p1) "Trail1"
+        lbl1  = label (getAnn p1) "Trail1"
+        bef1' = [ olbl lbl1 (code_bef p1') ]
+
+        (aft1', aft2') = f brk1 brk2 where
+            f Nothing  Nothing  = ([],              [])
+            f Nothing  (Just y) = ([],              [ olbl y aft2 ])
+            f (Just x) Nothing  = ([ olbl x aft1 ], [])
+            f (Just x) (Just y) = ([ olbl x aft1 ], [ olbl y aft2 ])
 
 -------------------------------------------------------------------------------
 

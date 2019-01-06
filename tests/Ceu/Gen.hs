@@ -59,6 +59,7 @@ main = do
 
 tests :: [(Int, Errors, [(String,Int)], String)]
 tests = [
+    (10,  [], [], "par/and do with end ; escape 10"),
     (10,  [], [], "if 1==1 then else end escape 10"),
   --(0,   [], [], "xXxXxXxXxXxXxXxXxXxXx"),    -- (to force error)
     (10,  [], [], "escape 10"),
@@ -246,14 +247,16 @@ tests = [
             "        emit PRINT -> 12",
             "        ret <: 0",
             "    end",
+            "    emit PRINT -> 2",
             "    await KEY",
+            "    emit PRINT -> 3",
             "    ret <: ret * 5",
             "with",
             "    emit PRINT -> 99",
             "    ret <: ret + 2",
             "end",
             "",
-            "emit PRINT -> 2",
+            "emit PRINT -> 4",
             "escape ret"
         ])
  ]
