@@ -33,9 +33,9 @@ data Up = Up { inps     :: [String]
              , vars_up  :: [(String,Type)]
              , evts_up  :: [String]
              , code_bef :: String
+             , code_mid :: [String]
              , code_brk :: Maybe String
              , code_aft :: String
-             , labels   :: [String]
              }
     deriving Show
 
@@ -45,9 +45,9 @@ upz = Up { inps     = []
          , vars_up  = []
          , evts_up  = []
          , code_bef = ""
+         , code_mid = []
          , code_brk = Nothing
          , code_aft = ""
-         , labels   = []
          }
 
 up_union :: Up -> Up -> Up
@@ -56,9 +56,9 @@ up_union u1 u2 = upz { inps     = (inps    u1) ++ (inps    u2)
                      , vars_up  = (vars_up u1) ++ (vars_up u2)
                      , evts_up  = (evts_up u1) ++ (evts_up u2)
                      , code_bef = ""
+                     , code_mid = []
                      , code_brk = Nothing
                      , code_aft = ""
-                     , labels   = []
                      }
 
 -------------------------------------------------------------------------------
@@ -152,7 +152,7 @@ fold_raws isTmp vars raws = (tps, take ((length src)-2) (drop 1 src)) where
 -------------------------------------------------------------------------------
 
 label :: Ann -> String -> String
-label z lbl = "CEU_LABEL_" ++ (show $ nn z) ++ "_" ++ lbl
+label z lbl = "CEU_CODE_" ++ (show $ nn z) ++ "_" ++ lbl
 
 stmt :: Stmt -> [(String,Int)] -> [(String,String)]
 stmt p h = [
@@ -168,13 +168,13 @@ stmt p h = [
                                -- $ filter (not.reducesToType0.snd)
                                $ vars_up up)
     , ("CEU_HISTORY",   concat $ map (\(evt,v) ->s++"_CEU_INPUT="++show v++"; ceu_input(CEU_INPUT_"++evt++")"++";\n" ) h)
-    , ("CEU_LABELS",    concat $ root2 ++ labels up ++ root1 )
+    , ("CEU_CODE",      concat $ root2 ++ code_mid up ++ root1 )
     ]
     where
         p'    = N.add p
         --p'    = traceShowId $ N.add p
         up    = aux dnz p'
-        root1 = [ olbl "CEU_LABEL_ROOT" (code_bef up) ]
+        root1 = [ olbl "CEU_CODE_ROOT" (code_bef up) ]
         root2 = case code_brk up of
                     Nothing  -> []
                     Just lbl -> [ olbl lbl (code_aft up) ]
@@ -255,8 +255,8 @@ aux dn (FuncI z id (TypeF inp out) Nothing p) = p' { tps_up=inp:out:(tps_up p') 
 
 aux dn s@(FuncI z id tp@(TypeF inp out) (Just imp) p) =
     p' {
-            tps_up = tp:(tps_up imp' ++ tps_up p'),
-            labels = labels imp' ++ [func] ++ labels p'
+            tps_up   = tp:(tps_up imp' ++ tps_up p'),
+            code_mid = code_mid imp' ++ [func] ++ code_mid p'
     }
     where
         p'   = aux dn p
@@ -330,9 +330,9 @@ aux dn (EmitEvt z evt) = upz { code_bef=(oln z)++bef }
 aux dn (Seq z p1 p2) = (up_union p1' p2') {
                             code_bef = oln z ++ bef,
                             --code_bef = bef,
+                            code_mid = code_mid p2' ++ mid ++ code_mid p1',
                             code_brk = brk,
-                            code_aft = aft,
-                            labels   = labels p2' ++ mid ++ labels p1'
+                            code_aft = aft
                          }
     where
         p1' = aux dn p1
@@ -357,9 +357,9 @@ aux dn (Seq z p1 p2) = (up_union p1' p2') {
 
 aux dn (If z exp p1 p2) = (up_union p1' p2') {
                                 code_bef = bef,
+                                code_mid = mid1++mid2 ++ code_mid p2' ++ code_mid p1',
                                 code_brk = brk,
                                 code_aft = "",
-                                labels   = mid1++mid2 ++ labels p2' ++ labels p1',
                                 tps_up   = etps
                             }
     where
@@ -391,9 +391,9 @@ aux dn (If z exp p1 p2) = (up_union p1' p2') {
 
 aux dn (Loop z p) = p' {
                         code_bef = bef',
+                        code_mid = dcl ++ pos ++ (code_mid p') ++ pre,
                         code_brk = brk',
-                        code_aft = "",
-                        labels   = dcl ++ pos ++ (labels p') ++ pre
+                        code_aft = ""
                      }
     where
         p'  = aux dn p
@@ -416,9 +416,9 @@ aux dn (Loop z p) = p' {
 
 aux dn (Par z p1 p2) = (up_union p1' p2') {
                             code_bef = oln z ++ bef,
+                            code_mid = aft1' ++ code_mid p1' ++ mid' ++ aft2' ++ code_mid p2',
                             code_brk = brk',
-                            code_aft = "",
-                            labels   = aft1' ++ labels p1' ++ mid' ++ aft2' ++ labels p2'
+                            code_aft = ""
                          }
     where
         p1'  = aux dn p1
@@ -460,9 +460,9 @@ aux dn (Par z p1 p2) = (up_union p1' p2') {
 
 aux dn s@(Trap z p) = p' {
                         code_bef = bef',
+                        code_mid = dcl' ++ mid' ++ (code_mid p'),
                         code_brk = brk',
-                        code_aft = aft',
-                        labels   = dcl' ++ mid' ++ (labels p')
+                        code_aft = aft'
                       }
     where
         p'  = aux dn' p

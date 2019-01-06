@@ -27,12 +27,12 @@ typedef struct tceu_stk {
     struct tceu_stk* prv;
 } tceu_stk;
 
-static void CEU_LABEL_ROOT (tceu_stk* _ceu_stk);
+static void CEU_CODE_ROOT (tceu_stk* _ceu_stk);
 
 typedef struct tceu_trl {
     tceu_nevt evt;
     tceu_nstk level;
-    typeof(CEU_LABEL_ROOT)* lbl;
+    typeof(CEU_CODE_ROOT)* lbl;
 } tceu_trl;
 
 /* CEU_NATIVE_PRE */
@@ -155,7 +155,7 @@ CEU_API void ceu_start (int argc, char* argv[])
     ceu_callback_start();
 
     tceu_stk stk = { 0, 1, 0, NULL };
-    CEU_LABEL_ROOT(&stk);
+    CEU_CODE_ROOT(&stk);
 
 #ifdef CEU_HISTORY
 <<< CEU_HISTORY >>>
@@ -218,6 +218,6 @@ static int CEU_FUNC_Eq__tceu__tceu_unit__tceu_unit (tceu_stk* _ceu_stk, tceu__tc
 
 //<|< CEU_CALLBACKS_OUTPUTS >|>
 
-/* CEU_LABELS */
+/* CEU_CODE */
 
-<<< CEU_LABELS >>>
+<<< CEU_CODE >>>
