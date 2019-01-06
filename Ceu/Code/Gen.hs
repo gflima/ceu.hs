@@ -261,8 +261,10 @@ aux dn (FuncI z id (TypeF inp out) Nothing p) = p' { tps_up=inp:out:(tps_up p') 
 
 aux dn s@(FuncI z id tp@(TypeF inp out) (Just imp) p) =
     uni {
-        tps_up   = tp:(tps_up imp' ++ tps_up p'),
-        code_mid = (code_mid uni) ++ func
+        code_bef = code_bef p',
+        code_mid = (code_mid uni) ++ func,
+        code_brk = code_brk p',
+        code_aft = code_aft p'
     }
     where
         uni  = up_union imp' p'

@@ -59,11 +59,6 @@ main = do
 
 tests :: [(Int, Errors, [(String,Int)], String)]
 tests = [
-    (0, ["(line 1, column 1):\nterminating `trap` body","(line 1, column 1):\nmissing `escape` statement"],
-        [], "func f :: v :: (Int -> Int) do end ; escape 1"),
-    (1, [], [], "func f :: v :: (Int -> Int) do escape 0 end ; escape 1"),
-    (2, [], [], "func f :: v :: (Int -> Int) do escape x+1 end ; escape f 1"),
-  (0,   [], [], "xXxXxXxXxXxXxXxXxXxXx"),    -- (to force error)
     (10,  [], [], "escape 10"),
     (10,  [], [], "escape 5+5"),
     -- TODO: trap/escape()
@@ -118,8 +113,10 @@ tests = [
     (0,   ["(line 1, column 8):\nidentifier 'f' is not declared"],
             [],
             "escape f 1"),
-    (1,   [], [], "func f :: v :: (Int -> Int) do end ; escape 1"),
-    (2,   [], [], "func f :: v :: (Int -> Int) do escape v+1 end ; escape f 1"),
+    (0, ["(line 1, column 1):\nterminating `trap` body","(line 1, column 1):\nmissing `escape` statement"],
+        [], "func f :: v :: (Int -> Int) do end ; escape 1"),
+    (1, [], [], "func f :: v :: (Int -> Int) do escape 0 end ; escape 1"),
+    (2, [], [], "func f :: v :: (Int -> Int) do escape v+1 end ; escape f 1"),
 -- await
     (35,  [], [("KEY",1)], "input KEY::Int ; val y::Int : 2 ; mut x::Int <: 0 ; x <: await KEY ; escape {`x` + `y` + sizeof(tceu_mem_ROOT)}"),
     (27,  [], [("KEY",1)], "input KEY::Int ; val x::Int : await KEY ; val y::Int : 2 ; escape {`x` + `y` + sizeof(tceu_mem_ROOT)}"),
