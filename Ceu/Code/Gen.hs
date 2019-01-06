@@ -32,6 +32,7 @@ data Up = Up { inps     :: [String]
              , tps_up   :: [Type]
              , vars_up  :: [(String,Type)]
              , evts_up  :: [String]
+             , code_dcl :: String
              , code_bef :: String
              , code_mid :: String
              , code_brk :: Maybe String
@@ -44,6 +45,7 @@ upz = Up { inps     = []
          , tps_up   = []
          , vars_up  = []
          , evts_up  = []
+         , code_dcl = ""
          , code_bef = ""
          , code_mid = ""
          , code_brk = Nothing
@@ -51,12 +53,13 @@ upz = Up { inps     = []
          }
 
 up_union :: Up -> Up -> Up
-up_union u1 u2 = upz { inps     = (inps    u1) ++ (inps    u2)
-                     , tps_up   = (tps_up  u1) ++ (tps_up  u2)
-                     , vars_up  = (vars_up u1) ++ (vars_up u2)
-                     , evts_up  = (evts_up u1) ++ (evts_up u2)
+up_union u1 u2 = upz { inps     = (inps     u1) ++ (inps     u2)
+                     , tps_up   = (tps_up   u1) ++ (tps_up   u2)
+                     , vars_up  = (vars_up  u1) ++ (vars_up  u2)
+                     , evts_up  = (evts_up  u1) ++ (evts_up  u2)
+                     , code_dcl = (code_dcl u1) ++ (code_dcl u2)
                      , code_bef = ""
-                     , code_mid = ""
+                     , code_mid = (code_dcl u1) ++ (code_dcl u2)
                      , code_brk = Nothing
                      , code_aft = ""
                      }
@@ -97,10 +100,7 @@ getEnv ((v1,s):l) v2 | v1==v2    = s
 getEnv _          v2 = error v2
 
 getEnvVar isTmp env var = if var == "_INPUT" then "_CEU_INPUT" else
-                            if isTmp then id'
-                                     else "CEU_APP.root."++id'
-                          where
-                            id' = var ++ "__" ++ (show $ nn $ getAnn $ getEnv env var)
+                            "CEU_VAR_" ++ var ++ "__" ++ (show $ nn $ getAnn $ getEnv env var)
 
 getEnvEvt isTmp env evt = "CEU_EVENT_" ++ evt ++ "__" ++ (show $ nn $ getAnn $ getEnv env evt)
 
@@ -168,7 +168,7 @@ stmt p h = [
                                -- $ filter (not.reducesToType0.snd)
                                $ vars_up up)
     , ("CEU_HISTORY",   concat $ map (\(evt,v) ->s++"_CEU_INPUT="++show v++"; ceu_input(CEU_INPUT_"++evt++")"++";\n" ) h)
-    , ("CEU_CODE",      root2 ++ code_mid up ++ root1 )
+    , ("CEU_CODE",      code_dcl up ++ root2 ++ code_mid up ++ root1 )
     ]
     where
         p'    = N.add p
@@ -233,16 +233,24 @@ aux dn s@(Evt z id p) = p' { evts_up=(id++"__"++(show$nn z)):(evts_up p') }
         dn' = dn{ evts_dn = (id,s):(evts_dn dn) }
 
 aux dn s@(Var z id tp p) = p' {
-                                code_bef = src ++ code_bef p',
+                                code_dcl = dcl' ++ (code_dcl p'),
+                                code_bef = bef' ++ (code_bef p'),
                                 tps_up   = tp:(tps_up p'),
                                 vars_up  = var ++ (vars_up p')
                            }
     where
         p'  = aux dn' p
         dn' = dn{ vars_dn = (id,s):(vars_dn dn) }
-        id' = id ++ "__" ++ (show $ nn z)
-        (var,src) = if isTmp dn then ([], ocmd $ tp2use tp ++ " " ++ id')
-                                else ([(id',tp)], "")
+        brk = code_brk p'
+
+        (var,dcl',bef') = f brk where
+            f Nothing  = ([],
+                          "#define CEU_VAR_" ++ id' ++ " " ++ id' ++ "\n",
+                          ocmd $ tp2use tp ++ " " ++ id')
+            f (Just _) = ([(id',tp)],
+                          "#define CEU_VAR_" ++ id' ++ " " ++ "CEU_APP.root."++id' ++ "\n",
+                          "")
+            id'  = id ++ "__" ++ (show $ nn z)
 
 aux dn s@(Func z id (TypeF inp out) p) = p'
     where
