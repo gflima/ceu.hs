@@ -81,6 +81,7 @@ tests = [
     (100, [], [], "{int x = 100}; escape {x}"),
     (100, [], [], "val x::Int : 100 escape {`x`}"),
     (3,   [], [], "val x::Int:1 ; val y::Int:2 ; escape {`x+y`}"),
+  --(0,   [], [], "xXxXxXxXxXxXxXxXxXxXx"),    -- (to force error)
     (0,   ["(line 1, column 16):\ntypes do not match"], [],
                   "val x::((),()) : () val y::Int : 1 escape y"),
     (1,   [], [], "val x::((),()) : ((),()) val y::Int : 1 escape y"),
@@ -90,9 +91,8 @@ tests = [
             [],
             "val x::((),()) ; if x==() then escape 100 else escape 0 end"),
     -- TODO: unused vars
-    (32,  [], [], "val x::Int ; val y::Int ; escape {sizeof(tceu_mem_ROOT)}"),
-    -- TODO: tmp vars
-    (35,  [], [], "val x::Int:1 ; val y::Int:2 ; escape {`(x+y)`+sizeof(tceu_mem_ROOT)}"),
+    (24,  [], [], "val x::Int ; val y::Int ; escape {sizeof(tceu_mem_ROOT)}"),
+    (27,  [], [], "val x::Int:1 ; val y::Int:2 ; escape {`(x+y)`+sizeof(tceu_mem_ROOT)}"),
     (1,   [], [], "if 1==1 then escape 1 else escape 0 end"),
     (100, [], [], "val x::() : () if x==() then escape 100 else escape 0 end"),
     (0,   ["(line 1, column 1):\n`loop` never iterates"],
@@ -194,7 +194,6 @@ tests = [
             "",
             "escape ret"
         ]),
-  --(0,   [], [], "xXxXxXxXxXxXxXxXxXxXx"),    -- (to force error)
     (4, [], [("KEY",0)],
         unlines [
             "input  KEY   :: Int",
