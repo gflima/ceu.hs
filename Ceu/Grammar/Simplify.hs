@@ -32,12 +32,12 @@ simplify (Evt z id p) =
     otherwise   -> Evt z id p'
   where p' = simplify p
 
-simplify (Func z id tp p) =
-  case p' of
-    Nop z'      -> Nop z'
-    Escape z' n -> Escape z' n
-    otherwise   -> Func z id tp p'
-  where p' = simplify p
+simplify (Func  z id tp     p) = Func  z id tp      (simplify p)
+simplify (FuncI z id tp imp p) = FuncI z id tp imp' (simplify p)
+    where
+        imp' = case imp of
+            Nothing -> Nothing
+            Just x  -> Just $ simplify x
 
 simplify (If z exp p q) =
   if p' == q' then p' else (If z exp p' q')
