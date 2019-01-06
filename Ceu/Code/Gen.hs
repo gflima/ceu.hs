@@ -57,7 +57,7 @@ up_union u1 u2 = upz { inps     = (inps     u1) ++ (inps     u2)
                      , evts_up  = (evts_up  u1) ++ (evts_up  u2)
                      , code_dcl = (code_dcl u1) ++ (code_dcl u2)
                      , code_bef = ""
-                     , code_mid = (code_dcl u1) ++ (code_dcl u2)
+                     , code_mid = (code_mid u1) ++ (code_mid u2)
                      , code_brk = Nothing
                      , code_aft = ""
                      }
@@ -85,7 +85,7 @@ olbl lbl src = "static void " ++ lbl ++ " (tceu_stk* _ceu_stk) " ++
 
 ofunc :: Stmt -> String -> String
 ofunc (FuncI _ func (TypeF inp out) (Just imp) _) src =
-    "static " ++ tp2use out ++ " CEU_FUNC_" ++ func ++ "__" ++ inp' ++ " (tceu_stk* _ceu_stk, " ++ inp' ++ " _ceu_arg) "
+    "static " ++ tp2use out ++ " CEU_FUNC_" ++ func ++ "__" ++ inp' ++ " (" ++ inp' ++ " _ceu_arg) "
               ++ oblk src ++ "\n"
     where
         inp' = tp2use inp
@@ -122,7 +122,7 @@ expr vars e@(Tuple z exps) = ([type_ z]++tps', "((" ++ (tp2use $ type_ z) ++ "){
         srcs'= intercalate "," $ map snd exps'
 
 expr vars (Call _ func e) = (tps, "(CEU_FUNC_" ++ id' func ++ "__" ++ (tp2use tp)
-                                            ++ "(_ceu_stk, " ++ op ++ src ++ "))")
+                                            ++ "(" ++ op ++ src ++ "))")
                                   where
                                     (tps,src) = expr vars e
                                     id' "(+)"  = "Add"  -- TODO_02: names
@@ -260,11 +260,12 @@ aux dn (FuncI z id (TypeF inp out) Nothing p) = p' { tps_up=inp:out:(tps_up p') 
     where p' = aux dn p
 
 aux dn s@(FuncI z id tp@(TypeF inp out) (Just imp) p) =
-    p' {
-            tps_up   = tp:(tps_up imp' ++ tps_up p'),
-            code_mid = code_mid imp' ++ func ++ code_mid p'
+    uni {
+        tps_up   = tp:(tps_up imp' ++ tps_up p'),
+        code_mid = (code_mid uni) ++ func
     }
     where
+        uni  = up_union imp' p'
         p'   = aux dn p
         imp' = aux dn imp
         func = ofunc s (vars ++ code_bef imp')
