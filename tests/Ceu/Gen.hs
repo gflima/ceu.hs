@@ -59,8 +59,8 @@ main = do
 
 tests :: [(Int, Errors, [(String,Int)], String)]
 tests = [
-    (10,  [], [], "par/and do with end ; escape 10"),
-    (10,  [], [], "if 1==1 then else end escape 10"),
+    (35,  [], [("KEY",1)], "input KEY::Int ; val y::Int : 2 ; mut x::Int <: 0 ; x <: await KEY ; escape {`x` + `y` + sizeof(tceu_mem_ROOT)}"),
+    (27,  [], [("KEY",1)], "input KEY::Int ; val x::Int           : await KEY ; val y::Int : 2 ; escape {`x` + `y` + sizeof(tceu_mem_ROOT)}"),
   --(0,   [], [], "xXxXxXxXxXxXxXxXxXxXx"),    -- (to force error)
     (10,  [], [], "escape 10"),
     (10,  [], [], "escape 5+5"),
@@ -87,6 +87,8 @@ tests = [
     (1,   [], [], "val x::((),()) : ((),()) val y::Int : 1 escape y"),
     (3,   [], [], "val x::(Int,Int):(1,2) ; escape `+x"),
     (10,  [], [], "val vs::(Int,Int) : (5,5) ; escape `+ vs"),
+-- if
+    (10,  [], [], "if 1==1 then else end escape 10"),
     (0,   ["(line 1, column 22):\ntypes do not match"],
             [],
             "val x::((),()) ; if x==() then escape 100 else escape 0 end"),
@@ -116,7 +118,8 @@ tests = [
             "escape f 1"),
     --(1,   [], [], "func f :: v :: (Int -> Int) do end ; escape 1"),
     --(2,   [], [], "func f :: v :: (Int -> Int) do escape v+1 end ; escape f 1"),
---
+-- par
+    (10,  [], [], "par/and do with end ; escape 10"),
     (4, [], [("KEY",1)],
         unlines [
             "input  KEY   :: Int",

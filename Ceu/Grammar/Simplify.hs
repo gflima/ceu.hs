@@ -1,5 +1,7 @@
 module Ceu.Grammar.Simplify where
 
+import Debug.Trace
+import Ceu.Grammar.Exp
 import Ceu.Grammar.Stmt (Stmt(..))
 
 simplify :: Stmt -> Stmt
@@ -8,6 +10,8 @@ simplify (Var z id tp p) =
   case p' of
     Nop z'      -> Nop z'
     Escape z' n -> Escape z' n
+    (Seq z2 (AwaitInp z3 inp) (Seq z4 (Write z5 wrt (Read z6 "_INPUT")) p'')) ->
+        (Seq z2 (AwaitInp z3 inp) (Var z id tp (Seq z4 (Write z5 wrt (Read z6 "_INPUT")) p'')))
     otherwise   -> Var z id tp p'
   where p' = simplify p
 
@@ -44,6 +48,8 @@ simplify (If z exp p q) =
   where p' = simplify p
         q' = simplify q
 
+-- normal form: (Seq x (Seq y (Seq z ...)))
+simplify (Seq z1 (Seq z2 p1 p2) p3) = simplify $ Seq z1 p1 (Seq z2 p2 p3)
 simplify (Seq z p q) =
   case (p',q') of
     (Nop _,      q')  -> q'
