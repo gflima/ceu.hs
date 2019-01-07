@@ -22,7 +22,7 @@ data Stmt
   = Var      Ann ID_Var Type (Maybe Fin)        -- variable declaration
   | Inp      Ann ID_Inp Bool                    -- output declaration
   | Out      Ann ID_Out Bool                    -- output declaration
-  | Evt      Ann ID_Evt Bool                    -- event declaration
+  | Evt      Ann ID_Evt Type                    -- event declaration
   | Func     Ann ID_Var Type                    -- function declaration
   | FuncI    Ann ID_Var Type (Maybe Stmt)       -- function implementation
   | Write    Ann Loc Exp                        -- assignment statement
@@ -50,7 +50,7 @@ data Stmt
   | Var'     Ann ID_Var Type (Maybe Fin) Stmt   -- variable declaration w/ stmts in scope
   | Inp'     Ann ID_Inp Bool Stmt               -- output declaration w/ stmts in scope
   | Out'     Ann ID_Out Bool Stmt               -- output declaration w/ stmts in scope
-  | Evt'     Ann ID_Evt Bool Stmt               -- event declaration w/ stmts in scope
+  | Evt'     Ann ID_Evt Type Stmt               -- event declaration w/ stmts in scope
   | Func'    Ann ID_Func Type Stmt              -- functions declaration w/ stmts in scope
   | FuncI'   Ann ID_Func Type (Maybe Stmt) Stmt -- functions implementation w/ stmts in scope
   | Or'      Ann Stmt Stmt                      -- used as an Or with possibly non-terminating trails
@@ -130,7 +130,7 @@ toGrammar (Inp' z inp b p)       = (es, G.Inp z inp p')
 toGrammar (Out' z out b p)       = (es, G.Out z out p')
                                  where
                                    (es,p') = toGrammar p
-toGrammar (Evt' z int b p)       = (es, G.Evt z int p')
+toGrammar (Evt' z int TypeB p)   = (es, G.Evt z int p')
                                  where
                                    (es,p') = toGrammar p
 toGrammar (Func' z cod tp p)     = (es, G.Func z cod tp p')

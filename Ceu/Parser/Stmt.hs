@@ -94,9 +94,8 @@ stmt_evt = do
     void <- tk_key "event"
     evt  <- tk_evt
     void <- tk_str "::"
-    tp   <- tk_type
-    guard $ tp == "Int"         -- TODO
-    return $ Evt annz{source=pos} evt True
+    tp   <- pType
+    return $ Evt annz{source=pos} evt tp
 
 stmt_input :: Parser Stmt
 stmt_input = do

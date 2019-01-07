@@ -118,8 +118,32 @@ tests = [
     (1, [], [], "func f :: v :: (Int -> Int) do escape 0 end ; escape 1"),
     (2, [], [], "func f :: v :: (Int -> Int) do escape v+1 end ; escape f 1"),
 -- await
-    (35,  [], [("KEY",1)], "input KEY::Int ; val y::Int : 2 ; mut x::Int <: 0 ; x <: await KEY ; escape {`x` + `y` + sizeof(tceu_mem_ROOT)}"),
-    (27,  [], [("KEY",1)], "input KEY::Int ; val x::Int : await KEY ; val y::Int : 2 ; escape {`x` + `y` + sizeof(tceu_mem_ROOT)}"),
+    (35, [], [("KEY",1)],
+        unlines [
+            "input KEY::Int",
+            "val y::Int : 2",
+            "mut x::Int <: 0",
+            "x <: await KEY",
+            "escape {`x` + `y` + sizeof(tceu_mem_ROOT)}"
+        ]),
+    (27, [], [("KEY",1)],
+        unlines [
+            "input KEY::Int",
+            "val x::Int : await KEY",
+            "val y::Int : 2",
+            "escape {`x` + `y` + sizeof(tceu_mem_ROOT)}"
+        ]),
+-- emit/await
+    (1, [], [],
+        unlines [
+            "event e :: ()",
+            "par/and do",
+            "   await e",
+            "with",
+            "   emit e",
+            "end",
+            "escape 1"
+        ]),
 -- par
     (10,  [], [], "par/and do with end ; escape 10"),
     (4, [], [("KEY",1)],

@@ -21,7 +21,7 @@ compile p = aux Nothing p where
   aux pse (Out' z id b p)             = (es, Out' z id b p')
                                         where
                                           (es,p') = aux pse p
-  aux pse (Evt' z id b p)             = (es, Evt' z id b p')
+  aux pse (Evt' z id tp p)            = (es, Evt' z id tp p')
                                         where
                                           (es,p') = aux pse p
   aux pse (Func' z id tp p)           = (es, Func' z id tp p')

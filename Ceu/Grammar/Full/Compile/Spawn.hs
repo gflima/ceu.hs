@@ -16,7 +16,7 @@ compile (Inp' z id b p)          = (es, Inp' z id b p')
 compile (Out' z id b p)          = (es, Out' z id b p')
                                    where
                                      (es,p') = compile p
-compile (Evt' z id b p)          = (es, Evt' z id b p')
+compile (Evt' z id tp p)         = (es, Evt' z id tp p')
                                    where
                                      (es,p') = compile p
 compile (Func' z id tp p)        = (es, Func' z id tp p')

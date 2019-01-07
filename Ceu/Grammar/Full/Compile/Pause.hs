@@ -25,7 +25,7 @@ compile p = ([], aux p)
 aux (Var' z id tp Nothing p) = Var' z id tp Nothing (aux p)
 aux (Inp' z id b p)       = Inp' z id b (aux p)
 aux (Out' z id b p)       = Out' z id b (aux p)
-aux (Evt' z id b p)       = Evt' z id b (aux p)
+aux (Evt' z id tp p)      = Evt' z id tp (aux p)
 aux (Func' z id tp p)     = Func' z id tp (aux p)
 aux (FuncI' z id tp imp p)= FuncI' z id tp (fmap aux imp) (aux p)
 aux (If z exp p1 p2)      = If z exp (aux p1) (aux p2)
@@ -39,7 +39,7 @@ aux (Spawn z p)           = Spawn z (aux p)
 aux (Trap' z p)           = Trap' z (aux p)
 aux (Pause z evt p)       =
   Var' z ("__pause_var_"++evt) (Type1 "Int") Nothing
-    (Evt' z ("__pause_int_"++evt) False
+    (Evt' z ("__pause_int_"++evt) Type0
       (Seq z
         (Write z (LVar $ "__pause_var_"++evt) (Const z 0))
         (Or' z

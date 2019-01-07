@@ -443,7 +443,7 @@ spec = do
         describe "evt:" $ do
             it "event x:: Int" $
                 parse stmt_evt "event x:: Int;"
-                `shouldBe` Right (Evt annz{source=("",1,1)} "x" True)
+                `shouldBe` Right (Evt annz{source=("",1,1)} "x" (Type1 "Int"))
             it "event event x" $
                 parse stmt_evt "event event x"
                 `shouldBe` Left "(line 1, column 12):\nunexpected \" \"\nexpecting digit, letter or \"_\""

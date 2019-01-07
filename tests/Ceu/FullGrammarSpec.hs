@@ -78,19 +78,19 @@ spec = do
 
     describe "int:" $ do
       it "int x" $ do
-        Scope.compile (Evt annz "x" False)
-        `shouldBe` ([], (Evt' annz "x" False (Nop annz)))
+        Scope.compile (Evt annz "x" Type0)
+        `shouldBe` ([], (Evt' annz "x" Type0 (Nop annz)))
 
       it "int x; (Nop annz)" $ do
-        Scope.compile (Seq annz (Evt annz "x" False) (Nop annz))
-        `shouldBe` ([], (Evt' annz "x" False (Nop annz)))
+        Scope.compile (Seq annz (Evt annz "x" Type0) (Nop annz))
+        `shouldBe` ([], (Evt' annz "x" Type0 (Nop annz)))
 
       it "scope int x end ; int y" $ do
-        Scope.compile (Seq annz (Scope annz (Evt annz "x" False)) (Evt annz "y" False))
-        `shouldBe` ([],Seq annz (Evt' annz "x" False (Nop annz)) (Evt' annz "y" False (Nop annz)))
+        Scope.compile (Seq annz (Scope annz (Evt annz "x" Type0)) (Evt annz "y" Type0))
+        `shouldBe` ([],Seq annz (Evt' annz "x" Type0 (Nop annz)) (Evt' annz "y" Type0 (Nop annz)))
 
       it "scope int x end ; x=1" $ do
-        compile' (False,False,False) (Seq annz (Scope annz (Evt annz "x" False)) (EmitEvt annz "x" Nothing))
+        compile' (False,False,False) (Seq annz (Scope annz (Evt annz "x" Type0)) (EmitEvt annz "x" Nothing))
         `shouldBe` (["identifier 'x' is not declared"], G.Seq annz (G.Evt annz "x" (G.Nop annz)) (G.EmitEvt annz "x"))
 
     describe "output:" $ do
@@ -391,7 +391,7 @@ with
 end
 -}
     evalFullProgItRight (25,[[]]) [] (
-      (Evt' annz "a" False (
+      (Evt' annz "a" Type0 (
       (Var' annz "ret" (Type1 "Int") Nothing (
       (Write annz (LVar "ret") (Const annz 0)) `sSeq`
       (Par annz
@@ -436,7 +436,7 @@ with
 end
 -}
     evalFullProgItRight (10,[[]]) [] (
-      Evt' annz "a" True (
+      Evt' annz "a" (Type1 "Int") (
         Par annz
           (Var' annz "ret" (Type1 "Int") Nothing (Seq annz (AwaitEvt annz "a" (Just $ LVar "ret")) (Escape annz Nothing (Just (Read annz "ret")))))
           (EmitEvt annz "a" (Just (Const annz 10)) `sSeq` (Halt annz))
@@ -444,13 +444,13 @@ end
 
     evalFullProgItLeft ["identifier '_a' is not declared","identifier '_a' is not declared"] []
       (Var' annz "ret" (Type1 "Int") Nothing
-        (Evt' annz "a" False (
+        (Evt' annz "a" Type0 (
           Par annz
             (Seq annz (AwaitEvt annz "a" (Just $ LVar "ret")) (Escape annz Nothing (Just (Const annz 0))))
             (EmitEvt annz "a" (Just (Const annz 10)) `sSeq` (Halt annz)))))
 
     evalFullProgItLeft ["identifier '_a' is not declared"] [] (
-      (Evt' annz "a" False
+      (Evt' annz "a" Type0
         (Seq annz
           (And annz
             (AwaitEvt annz "a" Nothing)
@@ -458,20 +458,20 @@ end
           (Escape annz Nothing (Just (Const annz 0))))))
 
     evalFullProgItRight (99,[[]]) [] (
-      (Evt' annz "a" False (
+      (Evt' annz "a" Type0 (
         Par annz
           ((AwaitEvt annz "a" Nothing) `sSeq` (Escape annz Nothing (Just (Const annz 99))))
           (EmitEvt annz "a" Nothing `sSeq` (Halt annz))
       )))
     evalFullProgItRight (99,[[]]) [] (
-      (Evt' annz "a" True (
+      (Evt' annz "a" (Type1 "Int") (
         Par annz
           ((AwaitEvt annz "a" Nothing) `sSeq` (Escape annz Nothing (Just (Const annz 99))))
           (EmitEvt annz "a" (Just (Const annz 10)) `sSeq` (Halt annz))
       )))
     evalFullProgItLeft ["varsRead: uninitialized variable: _a"] []
       (Var' annz "ret" (Type1 "Int") Nothing
-        (Evt' annz "a" True (
+        (Evt' annz "a" Type0 (
           Par annz
             (Seq annz (AwaitEvt annz "a" (Just $ LVar "ret")) (Escape annz Nothing (Just (Read annz "ret"))))
             (EmitEvt annz "a" Nothing `sSeq` (Halt annz)))))
@@ -590,12 +590,12 @@ end
   describe "pause" $ do
 
     evalFullProgItRight (99,[[]]) []
-      (Evt' annz "x" True (Pause annz "x" (Escape annz Nothing (Just (Const annz 99)))))
+      (Evt' annz "x" (Type1 "Int") (Pause annz "x" (Escape annz Nothing (Just (Const annz 99)))))
 
     evalFullProgItRight (99,[[]]) []
       (Seq annz ((Inp annz "X" True) `sSeq` (Inp annz "A" False)) (Par annz
         (Seq annz (AwaitInp annz "X" Nothing) (Escape annz Nothing (Just (Const annz 33))))
-        (Evt' annz "x" True
+        (Evt' annz "x" (Type1 "Int")
           (Pause annz "x"
             (Seq annz
               (EmitEvt annz "x" (Just (Const annz 1)))
@@ -664,9 +664,9 @@ end
 
       where
         evalFullProgItRight (res,outss) hist prog =
-          (it (printf "pass: %s | %s ~> %d %s" (show hist) (show $ snd $ compile' (True,True,False) prog) res (show outss)) $
+          (it "todo" $
             (evalFullProg prog hist `shouldBe` Right (res,outss)))
 
         evalFullProgItLeft err hist prog =
-          (it (printf "fail: %s | %s ***%s" (show hist) (show $ snd $ compile' (True,True,False) prog) (show err)) $
+          (it "todo" $
             (evalFullProg prog hist) `shouldBe` Left err)

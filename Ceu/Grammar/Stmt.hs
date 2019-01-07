@@ -8,12 +8,13 @@ import Text.Printf
 
 -- Program (pg 5).
 data Stmt
-  = Var      Ann ID_Var Type Stmt           -- variable declaration
-  | Inp      Ann ID_Inp Stmt                -- input declaration
-  | Out      Ann ID_Out Stmt                -- output declaration
-  | Evt      Ann ID_Evt Stmt                -- event declaration
+  = Var      Ann ID_Var  Type Stmt          -- variable declaration
+  | Inp      Ann ID_Inp  Stmt               -- input declaration
+  | Out      Ann ID_Out  Stmt               -- output declaration
+  | Evt      Ann ID_Evt  Stmt               -- event declaration
   | Func     Ann ID_Func Type Stmt          -- function declaration
   | FuncI    Ann ID_Func Type (Maybe Stmt) Stmt -- function implementation
+--  | Data     Ann ID_Type [ID_Var] DataOr    -- new type declaration
   | Write    Ann Loc Exp                    -- assignment statement
   | AwaitInp Ann ID_Inp                     -- await external event
   | EmitExt  Ann ID_Ext (Maybe Exp)         -- emit external event
@@ -33,6 +34,9 @@ data Stmt
   | RawS     Ann [RawAt]                    -- raw/native statement
   | Error    Ann String                     -- generate runtime error (for testing)
   deriving (Eq, Show)
+
+--type DataOr  = [DataAnd]
+--data DataAnd = DataAnd ID_Type [
 
 sSeq a b = Seq annz a b
 sPar a b = Par annz a b
