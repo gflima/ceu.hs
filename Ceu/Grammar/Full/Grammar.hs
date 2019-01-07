@@ -27,7 +27,7 @@ data Stmt
   | FuncI    Ann ID_Var Type (Maybe Stmt)       -- function implementation
   | Write    Ann Loc Exp                        -- assignment statement
   | AwaitInp Ann ID_Inp (Maybe Loc)             -- await external event
-  | EmitExt  Ann ID_Ext (Maybe Exp)             -- emit external event
+  | EmitExt  Ann ID_Ext Exp                     -- emit external event
   | AwaitTmr Ann Exp                            -- await timer
   | AwaitEvt Ann ID_Evt (Maybe Loc)             -- await internal event
   | EmitEvt  Ann ID_Evt (Maybe Exp)             -- emit internal event

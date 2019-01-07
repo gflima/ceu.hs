@@ -120,17 +120,20 @@ spec = do
 
     describe "emitext:" $ do
         it "emit X" $
-            run "output X::Int emit X ; escape 1;" []
+            run "output X::() emit X ; escape 1;" []
             `shouldBe` Right (1,[[("X",Nothing)]])
+        it "emit X" $
+            run "output X::Int emit X ; escape 1;" []
+            `shouldBe` Left "(line 1, column 15):\ntypes do not match\n"
         it "emit x" $
             run "emit x" []
             `shouldBe` Left "(line 1, column 1):\nterminating `trap` body\n(line 1, column 1):\nmissing `escape` statement\n(line 1, column 1):\nunreachable statement\n(line 1, column 1):\nidentifier 'x' is not declared\n"
         it "emit X -> 1" $
             run "output X::Int emit X -> 1 ; escape 2;" []
             `shouldBe` Right (2,[[("X",Just 1)]])
-        it "mut x::Int <: await X; emit X -> x ; escape x+1" $    -- TODO: X in/out
+        it "mut x::Int <: await X; emit X -> x ; escape x+1" $
             run "input X::Int mut x::Int <: await X; emit X -> x ; escape x+1" [("X",Just 1)]
-            `shouldBe` Right (2,[[],[("X",Just 1)]])
+            `shouldBe` Left "(line 1, column 37):\nidentifier 'X' is invalid\n"
 
 -------------------------------------------------------------------------------
 

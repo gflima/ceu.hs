@@ -58,10 +58,8 @@ stmt n trl0 (Write z var exp) =
 stmt n trl0 (AwaitInp z ext) =
     (n+1,1, AwaitInp z{nn=n,trails=(trl0,1)} ext)
 
-stmt n trl0 (EmitExt z ext Nothing) =
-    (n+1,1, EmitExt z{nn=n,trails=(trl0,1)} ext Nothing)
-stmt n trl0 (EmitExt z ext (Just exp)) =
-    (n',1, EmitExt z{nn=n,trails=(trl0,1)} ext (Just exp'))
+stmt n trl0 (EmitExt z ext exp) =
+    (n',1, EmitExt z{nn=n,trails=(trl0,1)} ext exp')
     where
         (n',exp') = expr (n+1) exp
 

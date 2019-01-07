@@ -147,6 +147,10 @@ spec = do
     checkTypeSysIt (Var annz "x" (Type1 "Int") (Write annz (LVar "x") (Unit annz))) ["types do not match"]
     checkTypeSysIt (Func annz "identity" (TypeF (TypeV "a") (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "identity" (Const annz 1))))) []
 
+    it "input A ; emit A" $
+        TypeSys.go (Inp annz "A" (EmitExt annz "A" (Unit annz)))
+            `shouldBe` (["identifier 'A' is invalid"],Inp annz "A" (EmitExt annz "A" (Unit annz{type_=Type0})))
+
     -- func first :: (a,a)->a ; var a::Int ; a = first((),1)
     checkTypeSysIt (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "first" (Tuple annz [(Unit annz),(Const annz 1)]))))) ["types do not match"]
     checkTypeSysIt (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "first" (Tuple annz [(Const annz 1),(Const annz 1)]))))) []
@@ -231,11 +235,14 @@ spec = do
 
     describe "ext:" $ do
         it "emit O" $
-            (fst $ Check.compile (False,False,False) (EmitExt annz "O" Nothing))
+            (fst $ Check.compile (False,False,False) (EmitExt annz "O" (Unit annz)))
             `shouldBe` ["identifier 'O' is not declared"]
         it "out O; emit O" $
-            Check.compile (False,False,False) (Out annz "O" Type0 (EmitExt annz "O" Nothing))
-            `shouldBe` ([],Out annz "O" Type0 (EmitExt annz "O" Nothing))
+            Check.compile (False,False,False) (Out annz "O" Type0 (EmitExt annz "O" (Unit annz{type_=Type0})))
+            `shouldBe` ([],Out annz "O" Type0 (EmitExt annz "O" (Unit annz{type_=Type0})))
+        it "out O::Int; emit O()" $
+            Check.compile (False,False,False) (Out annz "O" (Type1 "Int") (EmitExt annz "O" (Unit annz)))
+            `shouldBe` (["types do not match"],Out annz "O" (Type1 "Int") (EmitExt annz "O" (Unit annz{type_=Type0})))
 
         it "await I" $
             (fst $ Check.compile (False,False,False) (AwaitInp annz "I"))

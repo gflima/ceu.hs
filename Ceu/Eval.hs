@@ -26,7 +26,7 @@ data Stmt
   | Evt      ID_Evt Stmt                -- event declaration
   | Write    ID_Var Exp                 -- assignment statement
   | AwaitInp ID_Inp                     -- await external event
-  | EmitExt  ID_Ext (Maybe Exp)         -- emit external event
+  | EmitExt  ID_Ext Exp                 -- emit external event
   | AwaitEvt ID_Evt                     -- await internal event
   | EmitEvt  ID_Evt                     -- emit internal event
   | If       Exp Stmt Stmt              -- conditional
@@ -197,9 +197,9 @@ step (Evt int p, n, vars, ints, outs)            -- int-adv
 step (Write var expr, n, vars, ints, outs)       -- write
   = (Nop, n, varsWrite vars var (varsEval vars expr), ints, outs)
 
-step (EmitExt ext Nothing, n, vars, ints, outs)    -- emit-ext
+step (EmitExt ext (Unit _), n, vars, ints, outs)    -- emit-ext
   = (Nop, n, vars, ints, outs++[(ext,Nothing)])
-step (EmitExt ext (Just exp), n, vars, ints, outs) -- emit-ext
+step (EmitExt ext exp, n, vars, ints, outs) -- emit-ext
   = (Nop, n, vars, ints, outs++[(ext,Just (varsEval vars exp))])
 
 step (EmitEvt int, n, vars, ints, outs)          -- emit-int (pg 6)

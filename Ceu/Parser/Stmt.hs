@@ -207,11 +207,12 @@ stmt_func = do
 
 stmt_emitext :: Parser Stmt
 stmt_emitext = do
-    pos  <- pos2src <$> getPosition
+    pos1 <- pos2src <$> getPosition
     void <- tk_key "emit"
     ext  <- tk_ext
-    exp  <- optionMaybe (tk_str "->" *> expr)
-    return $ EmitExt annz{source=pos} ext exp
+    pos2 <- pos2src <$> getPosition
+    exp  <- option (Unit annz{source=pos2}) (tk_str "->" *> expr)
+    return $ EmitExt annz{source=pos1} ext exp
 
 stmt_awaitext :: (Maybe Loc) -> Parser Stmt
 stmt_awaitext loc = do

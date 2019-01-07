@@ -47,11 +47,11 @@ stmt ids (Write z loc exp)   = (es1 ++ es2 ++ es3, Write z loc exp')
                                 es3        = toErrorTypes z tps_loc (type_ $ getAnn exp')
 
 stmt ids (AwaitInp z id)     = (fst $ fff id ids z isInp, AwaitInp z id)
-stmt ids (EmitExt  z id exp) = ((fst $ fff id ids z isExt) ++ es, EmitExt z id exp')
+stmt ids (EmitExt  z id exp) = (es1++es2++es3, EmitExt z id exp')
                                  where
-                                    (es,exp') = case exp of
-                                        Nothing -> ([],Nothing)
-                                        Just e  -> (es,Just exp') where (es,exp') = expr ids e
+                                    (es1,tp)   = fff id ids z isOut
+                                    (es2,exp') = expr ids exp
+                                    es3        = toErrorTypes z tp (type_ $ getAnn exp')
 stmt ids (AwaitEvt z id)     = (fst $ fff id ids z isEvt, AwaitEvt z id)
 stmt ids (EmitEvt  z id)     = (fst $ fff id ids z isEvt, EmitEvt  z id)
 
@@ -97,9 +97,8 @@ stmt _   (Error  z msg)      = ([], Error z msg)
 isVar (Var _ _ _ _) = True
 isVar _             = False
 
-isExt (Inp _ _ _) = True
-isExt (Out _ _ _ _) = True
-isExt _           = False
+isOut (Out _ _ _ _) = True
+isOut _             = False
 
 isInp (Inp _ _ _) = True
 isInp _           = False
@@ -136,16 +135,19 @@ fff id ids z pred =
     case dcl of
         Nothing -> ([toError z "identifier '" ++ id ++ "' is not declared"], TypeT) -- TypeT will prevent extra errors
         Just s  -> if pred s then
-                    ([], retType dcl)
+                    ([], getType dcl)
                    else
                     ([toError z "identifier '" ++ id ++ "' is invalid"], TypeT) -- TypeT will prevent extra errors
     where
         dcl = find' id ids
 
-        retType :: Maybe Stmt -> Type
-        retType Nothing                = TypeB
-        retType (Just (Var  _ _ tp _)) = tp
-        retType (Just (Func _ _ tp _)) = tp
+        -- TODO: move to Stmt.hs?
+        getType :: Maybe Stmt -> Type
+        getType Nothing                = TypeB
+        getType (Just (Var  _ _ tp _)) = tp
+        getType (Just (Out  _ _ tp _)) = tp
+        getType (Just (Func _ _ tp _)) = tp
+        getType p                      = error (show p)
 
 -------------------------------------------------------------------------------
 

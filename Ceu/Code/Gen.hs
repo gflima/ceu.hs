@@ -320,7 +320,7 @@ aux dn (AwaitEvt z evt) = upz { code_bef=src, code_brk=(Just lbl) }
 aux dn (EmitExt z ext exp) = upz { code_bef=src, tps_up=etps }
     where
         src = oln z ++ (ocmd $ "ceu_callback_output_" ++ ext ++ "(" ++ esrc ++ ")")
-        (etps,esrc) = maybe ([],"") (expr (vars_dn dn)) exp
+        (etps,esrc) = expr (vars_dn dn) exp
 
 aux dn (EmitEvt z evt) = upz { code_bef=(oln z)++bef }
     where

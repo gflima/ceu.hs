@@ -17,7 +17,7 @@ data Stmt
 --  | Data     Ann ID_Type [ID_Var] DataOr    -- new type declaration
   | Write    Ann Loc Exp                    -- assignment statement
   | AwaitInp Ann ID_Inp                     -- await external event
-  | EmitExt  Ann ID_Ext (Maybe Exp)         -- emit external event
+  | EmitExt  Ann ID_Ext Exp                 -- emit external event
   | AwaitEvt Ann ID_Evt                     -- await internal event
   | EmitEvt  Ann ID_Evt                     -- emit internal event
   | If       Ann Exp Stmt Stmt              -- conditional

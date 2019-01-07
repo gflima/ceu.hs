@@ -545,16 +545,19 @@ end
           (AwaitTmr annz (Const annz 10))
           (Escape annz Nothing (Just (Const annz 10)))))
 
+    evalFullProgItLeft ["identifier 'A' is invalid"] []
+      (Seq annz (Inp annz "A" Type0) (Seq annz (EmitExt annz "A" (Unit annz)) (Escape annz Nothing (Just (Const annz 1)))))
+
     evalFullProgItRight
       (10,[[],[("B",Just 1),("A",Just 1),("A",Just 2)],[("B",Just 2),("C",Just 1)]])
       [("TIMER",Just 10),("TIMER",Just 11)]
-      (Seq annz (Inp annz "A" Type0) (Seq annz (Inp annz "B" Type0) (Seq annz (Inp annz "C" (Type1 "Int")) (Seq annz
+      (Seq annz (Out annz "A" (Type1 "Int")) (Seq annz (Out annz "B" (Type1 "Int")) (Seq annz (Out annz "C" (Type1 "Int")) (Seq annz
         (And annz
-          ((AwaitTmr annz (Const annz 5)) `sSeq` (EmitExt annz "A" (Just (Const annz 1))) `sSeq` (AwaitTmr annz (Const annz 5)) `sSeq` (EmitExt annz "A" (Just (Const annz 2))))
-          ((AwaitTmr annz (Const annz 4)) `sSeq` (EmitExt annz "B" (Just (Const annz 1))) `sSeq` (AwaitTmr annz (Const annz 7) `sSeq` (EmitExt annz "B" (Just (Const annz 2))))))
+          ((AwaitTmr annz (Const annz 5)) `sSeq` (EmitExt annz "A" (Const annz 1)) `sSeq` (AwaitTmr annz (Const annz 5)) `sSeq` (EmitExt annz "A" (Const annz 2)))
+          ((AwaitTmr annz (Const annz 4)) `sSeq` (EmitExt annz "B" (Const annz 1)) `sSeq` (AwaitTmr annz (Const annz 7) `sSeq` (EmitExt annz "B" (Const annz 2)))))
         (
           (AwaitTmr annz (Const annz 10))          `sSeq`
-          (EmitExt annz "C" (Just (Const annz 1))) `sSeq`
+          (EmitExt annz "C" (Const annz 1)) `sSeq`
           (Escape annz Nothing (Just (Const annz 10))))))))
 
     it "xxx" $
@@ -564,17 +567,17 @@ end
                 (Seq annz
                     (And annz
                         ((AwaitTmr annz (Const annz 5))             `sSeq`
-                        (EmitExt annz "A" (Just (Const annz 1)))    `sSeq`
+                        (EmitExt annz "A" (Const annz 1))           `sSeq`
                         (AwaitTmr annz (Const annz 5))              `sSeq`
-                        (EmitExt annz "A" (Just (Const annz 2))))
+                        (EmitExt annz "A" (Const annz 2)))
 
                         ((AwaitTmr annz (Const annz 4))             `sSeq`
-                        (EmitExt annz "B" (Just (Const annz 1)))    `sSeq`
+                        (EmitExt annz "B" (Const annz 1))           `sSeq`
                         (AwaitTmr annz (Const annz 7)               `sSeq`
-                        (EmitExt annz "B" (Just (Const annz 2))))))
+                        (EmitExt annz "B" (Const annz 2)))))
                     (
                         (AwaitTmr annz (Const annz 10))          `sSeq`
-                        (EmitExt annz "C" (Just (Const annz 1))) `sSeq`
+                        (EmitExt annz "C" (Const annz 1))        `sSeq`
                         (Escape annz Nothing (Just (Const annz 10))))))
             [("TIMER",Just 10),("TIMER",Just 11)]
         `shouldBe` Right (10,[[],[("B",Just 1),("A",Just 1),("A",Just 2)],[("B",Just 2),("C",Just 1)]])
@@ -585,7 +588,7 @@ end
       (Seq annz ((Inp annz "I" (Type1 "Int")) `sSeq` (Inp annz "F" Type0) `sSeq` (Out annz "O" (Type1 "Int"))) (Var' annz "i" (Type1 "Int") Nothing
         (Par annz
           (Seq annz (AwaitInp annz "F" Nothing) (Escape annz Nothing (Just (Const annz 1))))
-          (Every annz "I" (Just $ LVar "i") (EmitExt annz "O" (Just (Read annz "i")))))))
+          (Every annz "I" (Just $ LVar "i") (EmitExt annz "O" (Read annz "i"))))))
 
   describe "pause" $ do
 
@@ -609,7 +612,7 @@ end
     evalFullProgItRight (99,[[],[("P",Nothing)],[]]) [("X",Just 1),("E",Nothing)]
       (Seq annz ((Inp annz "X" (Type1 "Int")) `sSeq` (Inp annz "E" Type0) `sSeq` (Out annz "P" Type0)) (Par annz
         (Pause annz "X"
-          (Seq annz (Fin annz (Nop annz) (EmitExt annz "P" Nothing) (Nop annz)) (Halt annz)))
+          (Seq annz (Fin annz (Nop annz) (EmitExt annz "P" (Unit annz)) (Nop annz)) (Halt annz)))
         (Seq annz (AwaitInp annz "E" Nothing) (Escape annz Nothing (Just (Const annz 99))))))
 
 {-
@@ -629,7 +632,7 @@ end
             (Seq annz ((Inp annz "X" (Type1 "Int")) `sSeq` (Inp annz "E" Type0) `sSeq` (Out annz "F" Type0) `sSeq` (Out annz "P" Type0) `sSeq` (Out annz "R" Type0))
             (Seq annz
                 (Pause annz "X"
-                    (Var' annz "x" Type0 (Just ((EmitExt annz "F" Nothing),(EmitExt annz "P" Nothing),(EmitExt annz "R" Nothing)))
+                    (Var' annz "x" Type0 (Just ((EmitExt annz "F" (Unit annz)),(EmitExt annz "P" (Unit annz)),(EmitExt annz "R" (Unit annz))))
                         (AwaitInp annz "E" Nothing)))
                 (Escape annz Nothing (Just (Const annz 99)))))
             [("X",Just 1),("E",Nothing),("X",Just 0),("E",Nothing)]

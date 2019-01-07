@@ -481,13 +481,13 @@ spec = do
         describe "emitext:" $ do
             it "emit X" $
                 parse stmt_emitext "emit X"
-                `shouldBe` Right (EmitExt annz{source=("",1,1)} "X" Nothing)
+                `shouldBe` Right (EmitExt annz{source=("",1,1)} "X" (Unit annz{source=("",1,7)}))
             it "emit x" $
                 parse stmt_emitext "emit x"
                 `shouldBe` Left "(line 1, column 6):\nunexpected \"x\""
             it "emit X -> 1" $
                 parse stmt_emitext "emit X -> 1"
-                `shouldBe` Right (EmitExt annz{source=("",1,1)} "X" (Just (Const annz{source=("",1,11)} 1)))
+                `shouldBe` Right (EmitExt annz{source=("",1,1)} "X" (Const annz{source=("",1,11)} 1))
 
         describe "awaitevt:" $ do
             it "await x" $

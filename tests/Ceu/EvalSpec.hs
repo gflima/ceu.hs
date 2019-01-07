@@ -1234,12 +1234,12 @@ escape x;
 
     describe "out:" $ do
         it "out O; emit O" $
-            compile_run (G.Out annz "O" Type0 (G.Seq annz (G.EmitExt annz "O" Nothing) (G.Seq annz (G.Write annz (LVar "_ret") (Const annz 1)) (G.Escape annz 0))))
+            compile_run (G.Out annz "O" Type0 (G.Seq annz (G.EmitExt annz "O" (Unit annz)) (G.Seq annz (G.Write annz (LVar "_ret") (Const annz 1)) (G.Escape annz 0))))
                 []
             `shouldBe` Right (1,[[("O",Nothing)]])
 
         it "I-F-O" $
-            compile_run (G.Out annz "O" Type0 (G.Inp annz "I" (G.Inp annz "F" (G.Seq annz (G.Seq annz (G.Write annz (LVar "_ret") (Const annz 1)) (G.Trap annz (G.Par annz (G.Seq annz (G.AwaitInp annz "F") (G.Escape annz 0)) (G.Every annz "I" (G.EmitExt annz "O" Nothing))))) (G.Escape annz 0)))))
+            compile_run (G.Out annz "O" Type0 (G.Inp annz "I" (G.Inp annz "F" (G.Seq annz (G.Seq annz (G.Write annz (LVar "_ret") (Const annz 1)) (G.Trap annz (G.Par annz (G.Seq annz (G.AwaitInp annz "F") (G.Escape annz 0)) (G.Every annz "I" (G.EmitExt annz "O" (Unit annz)))))) (G.Escape annz 0)))))
                 ["I","I","F"]
             `shouldBe` Right (1,[[],[("O",Nothing)],[("O",Nothing)],[]])
 
