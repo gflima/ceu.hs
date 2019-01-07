@@ -13,8 +13,8 @@ compile p = ([], aux (-1) p)
 
 aux :: Int -> Stmt -> Stmt
 aux n (Var' z var tp Nothing p) = Var' z var tp Nothing (aux n p)
-aux n (Inp' z int b p)       = Inp' z int b (aux n p)
-aux n (Out' z int b p)       = Out' z int b (aux n p)
+aux n (Inp' z int tp p)      = Inp' z int tp (aux n p)
+aux n (Out' z int tp p)      = Out' z int tp (aux n p)
 aux n (Evt' z int tp p)      = Evt' z int tp (aux n p)
 aux n (Func' z cod tp p)     = Func' z cod tp (aux n p)
 aux n (FuncI' z cod tp imp p)= FuncI' z cod tp (fmap (aux n) imp) (aux n p)

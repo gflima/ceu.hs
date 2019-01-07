@@ -24,8 +24,8 @@ stmt n trl0 (Inp z id p) =
     where
         (n',ts',p') = stmt (n+1) trl0 p
 
-stmt n trl0 (Out z id p) =
-    (n',ts', Out z{nn=n,trails=(trl0,ts')} id p')
+stmt n trl0 (Out z id tp p) =
+    (n',ts', Out z{nn=n,trails=(trl0,ts')} id tp p')
     where
         (n',ts',p') = stmt (n+1) trl0 p
 

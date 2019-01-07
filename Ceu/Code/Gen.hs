@@ -221,7 +221,7 @@ aux dn (Halt  z)      = upz { code_bef=(oln z) }
 aux dn (RawS  z raws) = upz { code_bef=(oln z)++src++";\n", tps_up=tps }
                             where (tps,src) = fold_raws (vars_dn dn) raws
 aux dn (Inp   _ id p) = p' { inps=id:(inps p') } where p'=(aux dn p)
-aux dn (Out   _ id p) = aux dn p
+aux dn (Out   _ id tp p) = aux dn p
 
 -------------------------------------------------------------------------------
 

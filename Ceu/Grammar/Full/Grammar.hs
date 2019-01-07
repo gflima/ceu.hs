@@ -20,8 +20,8 @@ type Fin = (Stmt, Stmt, Stmt)
 -- Program (pg 5).
 data Stmt
   = Var      Ann ID_Var Type (Maybe Fin)        -- variable declaration
-  | Inp      Ann ID_Inp Bool                    -- output declaration
-  | Out      Ann ID_Out Bool                    -- output declaration
+  | Inp      Ann ID_Inp Type                    -- output declaration
+  | Out      Ann ID_Out Type                    -- output declaration
   | Evt      Ann ID_Evt Type                    -- event declaration
   | Func     Ann ID_Var Type                    -- function declaration
   | FuncI    Ann ID_Var Type (Maybe Stmt)       -- function implementation
@@ -48,8 +48,8 @@ data Stmt
   | Scope    Ann Stmt                           -- scope for local variables
   | Error    Ann String                         -- generate runtime error (for testing purposes)
   | Var'     Ann ID_Var Type (Maybe Fin) Stmt   -- variable declaration w/ stmts in scope
-  | Inp'     Ann ID_Inp Bool Stmt               -- output declaration w/ stmts in scope
-  | Out'     Ann ID_Out Bool Stmt               -- output declaration w/ stmts in scope
+  | Inp'     Ann ID_Inp Type Stmt               -- output declaration w/ stmts in scope
+  | Out'     Ann ID_Out Type Stmt               -- output declaration w/ stmts in scope
   | Evt'     Ann ID_Evt Type Stmt               -- event declaration w/ stmts in scope
   | Func'    Ann ID_Func Type Stmt              -- functions declaration w/ stmts in scope
   | FuncI'   Ann ID_Func Type (Maybe Stmt) Stmt -- functions implementation w/ stmts in scope
@@ -124,10 +124,10 @@ toGrammar :: Stmt -> (Errors, G.Stmt)
 toGrammar (Var' z var tp Nothing p) = (es, G.Var z var tp p')
                                  where
                                    (es,p') = toGrammar p
-toGrammar (Inp' z inp b p)       = (es, G.Inp z inp p')
+toGrammar (Inp' z inp tp p)      = (es, G.Inp z inp p')
                                  where
                                    (es,p') = toGrammar p
-toGrammar (Out' z out b p)       = (es, G.Out z out p')
+toGrammar (Out' z out tp p)      = (es, G.Out z out tp p')
                                  where
                                    (es,p') = toGrammar p
 toGrammar (Evt' z int TypeB p)   = (es, G.Evt z int p')
@@ -221,7 +221,7 @@ stmt2word stmt = case stmt of
   Error _ _      -> "error"
   Var' _ _ _ _ _ -> "declaration"
   Inp' _ _ _ _   -> "declaration"
-  Out' _ _ _ _   -> "declaration"
+  Out' _ _ _ _ _ -> "declaration"
   Evt' _ _ _ _   -> "declaration"
   Func' _ _ _ _  -> "declaration"
   FuncI' _ _ _ _ _-> "implementation"

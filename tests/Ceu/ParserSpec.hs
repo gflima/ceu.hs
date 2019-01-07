@@ -429,13 +429,13 @@ spec = do
         describe "ext:" $ do
             it "output X:: Int" $
                 parse stmt_output "output X:: Int"
-                `shouldBe` Right (Out annz{source=("",1,1)} "X" True)
+                `shouldBe` Right (Out annz{source=("",1,1)} "X" (Type1 "Int"))
             it "output x:: Int" $
                 parse stmt_output "output x:: Int"
                 `shouldBe` Left "(line 1, column 8):\nunexpected \"x\""
             it "input X:: Int" $
                 parse stmt_input "input X:: Int"
-                `shouldBe` Right (Inp annz{source=("",1,1)} "X" True)
+                `shouldBe` Right (Inp annz{source=("",1,1)} "X" (Type1 "Int"))
             it "input x:: Int" $
                 parse stmt_input "input x:: Int"
                 `shouldBe` Left "(line 1, column 7):\nunexpected \"x\""

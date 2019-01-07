@@ -10,7 +10,7 @@ import Text.Printf
 data Stmt
   = Var      Ann ID_Var  Type Stmt          -- variable declaration
   | Inp      Ann ID_Inp  Stmt               -- input declaration
-  | Out      Ann ID_Out  Stmt               -- output declaration
+  | Out      Ann ID_Out  Type Stmt          -- output declaration
   | Evt      Ann ID_Evt  Stmt               -- event declaration
   | Func     Ann ID_Func Type Stmt          -- function declaration
   | FuncI    Ann ID_Func Type (Maybe Stmt) Stmt -- function implementation
@@ -47,7 +47,7 @@ instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
     getAnn (Var      z _ _ _)   = z
     getAnn (Inp      z _ _)     = z
-    getAnn (Out      z _ _)     = z
+    getAnn (Out      z _ _ _)   = z
     getAnn (Evt      z _ _)     = z
     getAnn (Func     z _ _ _)   = z
     getAnn (FuncI    z _ _ _ _) = z
@@ -75,7 +75,7 @@ stmt2word :: Stmt -> String
 stmt2word stmt = case stmt of
   Var _ _ _ _    -> "declaration"
   Inp _ _ _      -> "declaration"
-  Out _ _ _      -> "declaration"
+  Out _ _ _ _    -> "declaration"
   Evt _ _ _      -> "declaration"
   Func _ _ _ _   -> "declaration"
   FuncI _ _ _ _ _-> "implementation"

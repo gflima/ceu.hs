@@ -9,8 +9,8 @@ compile :: Stmt -> (Errors, Stmt)
 compile p = ([], aux False p) where
   aux :: Bool -> Stmt -> Stmt
   aux inA   (Var' z id tp Nothing p) = Var' z id tp Nothing (aux inA p)
-  aux inA   (Inp' z id b p)       = Inp' z id b (aux inA p)
-  aux inA   (Out' z id b p)       = Out' z id b (aux inA p)
+  aux inA   (Inp' z id tp p)      = Inp' z id tp (aux inA p)
+  aux inA   (Out' z id tp p)      = Out' z id tp (aux inA p)
   aux inA   (Evt' z id tp p)      = Evt' z id tp (aux inA p)
   aux inA   (Func' z id tp p)     = Func' z id tp (aux inA p)
   aux inA   (FuncI' z id tp imp p)= FuncI' z id tp (fmap (aux inA) imp) (aux inA p)

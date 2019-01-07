@@ -103,9 +103,8 @@ stmt_input = do
     void <- tk_key "input"
     ext  <- tk_ext
     void <- tk_str "::"
-    tp   <- tk_type
-    guard $ tp == "Int"         -- TODO
-    return $ Inp annz{source=pos} ext True
+    tp   <- pType
+    return $ Inp annz{source=pos} ext tp
 
 stmt_output :: Parser Stmt
 stmt_output = do
@@ -113,9 +112,8 @@ stmt_output = do
     void <- tk_key "output"
     ext  <- tk_ext
     void <- tk_str "::"
-    tp   <- tk_type
-    guard $ tp == "Int"         -- TODO
-    return $ Out annz{source=pos} ext True
+    tp   <- pType
+    return $ Out annz{source=pos} ext tp
 
 stmt_attr :: Parser Stmt
 stmt_attr = do

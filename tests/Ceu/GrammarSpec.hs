@@ -234,8 +234,8 @@ spec = do
             (fst $ Check.compile (False,False,False) (EmitExt annz "O" Nothing))
             `shouldBe` ["identifier 'O' is not declared"]
         it "out O; emit O" $
-            Check.compile (False,False,False) (Out annz "O" (EmitExt annz "O" Nothing))
-            `shouldBe` ([],Out annz "O" (EmitExt annz "O" Nothing))
+            Check.compile (False,False,False) (Out annz "O" Type0 (EmitExt annz "O" Nothing))
+            `shouldBe` ([],Out annz "O" Type0 (EmitExt annz "O" Nothing))
 
         it "await I" $
             (fst $ Check.compile (False,False,False) (AwaitInp annz "I"))

@@ -18,7 +18,7 @@ stmt ids s@(Var  z id tp p)  = ((errDeclared ids (id,z)) ++ es, Var  z id tp p')
                                where (es,p') = stmt (s:ids) p
 stmt ids s@(Inp  z id p)     = ((errDeclared ids (id,z)) ++ es, Inp  z id p')
                                where (es,p') = stmt (s:ids) p
-stmt ids s@(Out  z id p)     = ((errDeclared ids (id,z)) ++ es, Out  z id p')
+stmt ids s@(Out  z id tp p)  = ((errDeclared ids (id,z)) ++ es, Out  z id tp p')
                                where (es,p') = stmt (s:ids) p
 stmt ids s@(Evt  z id p)     = ((errDeclared ids (id,z)) ++ es, Evt  z id p')
                                where (es,p') = stmt (s:ids) p
@@ -98,7 +98,7 @@ isVar (Var _ _ _ _) = True
 isVar _             = False
 
 isExt (Inp _ _ _) = True
-isExt (Out _ _ _) = True
+isExt (Out _ _ _ _) = True
 isExt _           = False
 
 isInp (Inp _ _ _) = True
@@ -117,7 +117,7 @@ isFunc _              = False
 getId :: Stmt -> String
 getId (Var  _ id _ _) = id
 getId (Inp  _ id _)   = id
-getId (Out  _ id _)   = id
+getId (Out  _ id _ _) = id
 getId (Evt  _ id _)   = id
 getId (Func _ id _ _) = id
 

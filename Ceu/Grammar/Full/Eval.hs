@@ -46,7 +46,7 @@ compile' (o_simp,o_encl,o_prel) p = (es2++es3++es4, p4)
     p0       = if not o_prel then p else
                 (Seq z defs p)
     p1       = if not o_encl then p0 else
-                (Seq z (Inp z "TIMER" False) (Seq z (Var z "_ret" (Type1 "Int") Nothing) (Seq z (Trap z (Just "_ret") p0) (Halt z))))
+                (Seq z (Inp z "TIMER" Type0) (Seq z (Var z "_ret" (Type1 "Int") Nothing) (Seq z (Trap z (Just "_ret") p0) (Halt z))))
     (es2,p2) = compile p1
     (es3,p3) = toGrammar p2
     (es4,p4) = Check.compile (o_simp,False,False) p3

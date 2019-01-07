@@ -22,11 +22,11 @@ simplify (Inp z id p) =
     otherwise   -> Inp z id p'
   where p' = simplify p
 
-simplify (Out z id p) =
+simplify (Out z id tp p) =
   case p' of
     Nop z'      -> Nop z'
     Escape z' n -> Escape z' n
-    otherwise   -> Out z id p'
+    otherwise   -> Out z id tp p'
   where p' = simplify p
 
 simplify (Evt z id p) =

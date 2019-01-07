@@ -30,7 +30,7 @@ stmts :: Stmt -> Errors
 stmts stmt = case stmt of
   Var _ _ _ p     -> stmts p
   Inp _ _ p       -> stmts p
-  Out _ _ p       -> stmts p
+  Out _ _ _ p     -> stmts p
   Evt _ _ p       -> stmts p
   Func _ _ _ p    -> stmts p
   FuncI _ _ _ Nothing    p -> stmts p
@@ -77,7 +77,7 @@ getComplexs p = errs_anns_msg_map (aux' (-1) p) "invalid statement" where
   aux' n (Loop _ p)     = aux' n p
   aux' n (Var _ _ _ p)  = aux' n p
   aux' n (Inp _ _ p)    = aux' n p
-  aux' n (Out _ _ p)    = aux' n p
+  aux' n (Out _ _ _ p)  = aux' n p
   aux' n (Evt _ _ p)    = aux' n p
   aux' n (Func _ _ _ p) = aux' n p
   aux' n (FuncI _ _ _ _ p) = aux' n p
@@ -103,7 +103,7 @@ boundedLoop (Loop _ body) = aux 0 body where
     Every _ _ _            -> True
     Var _ _ _ p            -> aux n p
     Inp _ _ p              -> aux n p
-    Out _ _ p              -> aux n p
+    Out _ _ _ p            -> aux n p
     Evt _ _ p              -> aux n p
     Func _ _ _ p           -> aux n p
     FuncI _ _ _ _ p        -> aux n p
@@ -129,7 +129,7 @@ getEscapes p = escs 0 p where
   escs :: Int -> Stmt -> [(Stmt,Int)]
   escs n (Var _ _ _ p)    = (escs n p)
   escs n (Inp _ _ p)      = (escs n p)
-  escs n (Out _ _ p)      = (escs n p)
+  escs n (Out _ _ _ p)    = (escs n p)
   escs n (Evt _ _ p)      = (escs n p)
   escs n (Func _ _ _ p)   = (escs n p)
   escs n (FuncI _ _ _ _ p)= (escs n p)
@@ -151,7 +151,7 @@ removeTrap (Trap _ p) = rT 0 p where
   rT :: Int -> Stmt -> Stmt
   rT n (Var z id tp p)       = Var z id tp (rT n p)
   rT n (Inp z id p)          = Inp z id (rT n p)
-  rT n (Out z id p)          = Out z id (rT n p)
+  rT n (Out z id tp p)       = Out z id tp (rT n p)
   rT n (Evt z id p)          = Evt z id (rT n p)
   rT n (Func z id tp p)      = Func z id tp (rT n p)
   rT n (FuncI z id tp imp p) = FuncI z id tp imp (rT n p)
@@ -174,7 +174,7 @@ removeTrap (Trap _ p) = rT 0 p where
 neverTerminates :: Stmt -> Bool
 neverTerminates (Var _ _ _ p)    = neverTerminates p
 neverTerminates (Inp _ _ p)      = neverTerminates p
-neverTerminates (Out _ _ p)      = neverTerminates p
+neverTerminates (Out _ _ _ p)    = neverTerminates p
 neverTerminates (Evt _ _ p)      = neverTerminates p
 neverTerminates (Func _ _ _ p)   = neverTerminates p
 neverTerminates (FuncI _ _ _ _ p)= neverTerminates p
@@ -196,7 +196,7 @@ maybeTerminates = not . neverTerminates
 alwaysTerminates :: Stmt -> Bool
 alwaysTerminates (Var _ _ _ p)    = alwaysTerminates p
 alwaysTerminates (Inp _ _ p)      = alwaysTerminates p
-alwaysTerminates (Out _ _ p)      = alwaysTerminates p
+alwaysTerminates (Out _ _ _ p)    = alwaysTerminates p
 alwaysTerminates (Evt _ _ p)      = alwaysTerminates p
 alwaysTerminates (Func _ _ _ p)   = alwaysTerminates p
 alwaysTerminates (FuncI _ _ _ _ p)= alwaysTerminates p
@@ -219,7 +219,7 @@ alwaysInstantaneous :: Stmt -> Bool
 alwaysInstantaneous p = aux p where
   aux (Var _ _ _ p)    = aux p
   aux (Inp _ _ p)      = aux p
-  aux (Out _ _ p)      = aux p
+  aux (Out _ _ _ p)    = aux p
   aux (Evt _ _ p)      = aux p
   aux (Func _ _ _ p)   = aux p
   aux (FuncI _ _ _ _ p)= aux p
@@ -241,7 +241,7 @@ neverInstantaneous :: Stmt -> Bool
 neverInstantaneous p = aux p where
   aux (Var _ _ _ p)  = aux p
   aux (Inp _ _ p)    = aux p
-  aux (Out _ _ p)    = aux p
+  aux (Out _ _ _ p)  = aux p
   aux (Evt _ _ p)      = aux p
   aux (Func _ _ _ p)   = aux p
   aux (FuncI _ _ _ _ p)= aux p

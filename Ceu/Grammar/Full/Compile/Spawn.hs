@@ -10,10 +10,10 @@ compile :: Stmt -> (Errors, Stmt)
 compile (Var' z id tp Nothing p) = (es, Var' z id tp Nothing p')
                                    where
                                      (es,p') = compile p
-compile (Inp' z id b p)          = (es, Inp' z id b p')
+compile (Inp' z id tp p)         = (es, Inp' z id tp p')
                                    where
                                      (es,p') = compile p
-compile (Out' z id b p)          = (es, Out' z id b p')
+compile (Out' z id tp p)         = (es, Out' z id tp p')
                                    where
                                      (es,p') = compile p
 compile (Evt' z id tp p)         = (es, Evt' z id tp p')

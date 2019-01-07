@@ -51,7 +51,7 @@ infixr 0 `Par`
 fromGrammar :: G.Stmt -> Stmt
 fromGrammar (G.Var _ id _ p)    = Var (id,Nothing) (fromGrammar p)
 fromGrammar (G.Inp _ _ p)       = (fromGrammar p)
-fromGrammar (G.Out _ _ p)       = (fromGrammar p)
+fromGrammar (G.Out _ _ _ p)     = (fromGrammar p)
 fromGrammar (G.Evt _ id p)      = Evt id (fromGrammar p)
 fromGrammar (G.Func _ _ _ p)    = (fromGrammar p)
 fromGrammar (G.FuncI _ _ _ Nothing p) = (fromGrammar p)

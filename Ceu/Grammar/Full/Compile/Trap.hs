@@ -8,8 +8,8 @@ compile :: Stmt -> (Errors, Stmt)
 compile p = ([], aux [] p) where
   aux :: [Maybe ID_Var] -> Stmt -> Stmt
   aux vars (Var' z var tp fin p) = Var' z var tp fin (aux vars p)
-  aux vars (Inp' z id b p)     = Inp' z id b (aux vars p)
-  aux vars (Out' z id b p)     = Out' z id b (aux vars p)
+  aux vars (Inp' z id tp p)    = Inp' z id tp (aux vars p)
+  aux vars (Out' z id tp p)    = Out' z id tp (aux vars p)
   aux vars (Evt' z id tp p)    = Evt' z id tp (aux vars p)
   aux vars (Func' z id tp p)   = Func' z id tp (aux vars p)
   aux vars (FuncI' z id tp imp p) = FuncI' z id tp (fmap (aux vars) imp) (aux vars p)
@@ -41,9 +41,9 @@ escape _ (Escape z _ _) _ = Escape' z (-1)
 ins' :: Stmt -> Stmt
 ins' p = (aux 0 p) where
   aux n (Var' z var tp Nothing p) = Var' z var tp Nothing (aux n p)
-  aux n (Inp' z inp b p)       = Inp' z inp b (aux n p)
-  aux n (Out' z out b p)       = Out' z out b (aux n p)
-  aux n (Evt' z int b p)       = Evt' z int b (aux n p)
+  aux n (Inp' z inp tp p)      = Inp' z inp tp (aux n p)
+  aux n (Out' z out tp p)      = Out' z out tp (aux n p)
+  aux n (Evt' z int tp p)      = Evt' z int tp (aux n p)
   aux n (Func' z cod tp p)     = Func' z cod tp (aux n p)
   aux n (If z exp p1 p2)       = If z exp (aux n p1) (aux n p2)
   aux n (Seq z p1 p2)          = Seq z (aux n p1) (aux n p2)

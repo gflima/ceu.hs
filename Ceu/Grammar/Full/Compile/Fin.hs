@@ -15,10 +15,10 @@ compile p = aux Nothing p where
   aux pse (Var' z var tp Nothing p)   = (es, Var' z var tp Nothing p')
                                         where
                                           (es,p') = aux pse p
-  aux pse (Inp' z id b p)             = (es, Inp' z id b p')
+  aux pse (Inp' z id tp p)            = (es, Inp' z id tp p')
                                         where
                                           (es,p') = aux pse p
-  aux pse (Out' z id b p)             = (es, Out' z id b p')
+  aux pse (Out' z id tp p)            = (es, Out' z id tp p')
                                         where
                                           (es,p') = aux pse p
   aux pse (Evt' z id tp p)            = (es, Evt' z id tp p')
