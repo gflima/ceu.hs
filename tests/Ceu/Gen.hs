@@ -59,11 +59,16 @@ main = do
 
 tests :: [(Int, Errors, [(String,Int)], String)]
 tests = [
+-- trap/escape()
+-- trap com tupla
+    (1,   [], [], "val void::() : trap do escape () end ; escape 1"),
+    --(1,   [], [], "val void::() : trap do trap do escape/void () end ; escape 1"),
+    -- TODO: escape x@1 + x@2
+    --(1,   [], [], "val x::(Int,Int) : trap do trap do escape/x (1,2) end ; escape 1"),
+  --(0,   [], [], "xXxXxXxXxXxXxXxXxXxXx"),    -- (to force error)
+--
     (10,  [], [], "escape 10"),
     (10,  [], [], "escape 5+5"),
-    -- TODO: trap/escape()
-    --(1,   [], [], "val void::() = trap do trap do escape/void end ; escape 1"),
-    -- TODO: pattern matching
     (100, [], [], "escape 100"),
     (100, [], [], "escape {100}"),
     (1,   [], [], "escape {CEU_TRAILS_N}"),
@@ -78,7 +83,6 @@ tests = [
     (100, [], [], "{int x = 100}; escape {x}"),
     (100, [], [], "val x::Int : 100 escape {`x`}"),
     (3,   [], [], "val x::Int:1 ; val y::Int:2 ; escape {`x+y`}"),
-  --(0,   [], [], "xXxXxXxXxXxXxXxXxXxXx"),    -- (to force error)
     (0,   ["(line 1, column 16):\ntypes do not match"], [],
                   "val x::((),()) : () val y::Int : 1 escape y"),
     (1,   [], [], "val x::((),()) : ((),()) val y::Int : 1 escape y"),
@@ -252,7 +256,7 @@ tests = [
             "",
             "trap do",
             "    await KEY;",
-            "    escape;",
+            "    escape ();",
             "end",
             "",
             "emit PRINT -> 1",

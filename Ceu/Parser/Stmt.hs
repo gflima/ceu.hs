@@ -14,7 +14,7 @@ import Ceu.Parser.Token
 import Ceu.Parser.Type           (pType, type_F)
 import Ceu.Parser.Exp            (expr, tk_raw)
 
-import Ceu.Grammar.Globals       (Source, Loc(..))
+import Ceu.Grammar.Globals       (Source, Loc(..), ID_Var)
 import Ceu.Grammar.Type          (Type(..))
 import Ceu.Grammar.Ann           (annz, source, getAnn, Ann(..))
 import Ceu.Grammar.Exp           (Exp(..), RawAt(..))
@@ -41,6 +41,17 @@ attr_awaitevt loc op = do
     s    <- stmt_awaitevt (Just loc)
     return s
 
+attr_trap :: Loc -> Parser a -> Parser Stmt
+attr_trap loc op = do
+    guard (isLVar loc)
+    void <- op
+    s    <- stmt_trap (Just $ toVar loc)
+    return s
+    where
+        isLVar (LVar _)   = True
+        isLVar _          = False
+        toVar  (LVar var) = var
+
 -------------------------------------------------------------------------------
 
 stmt_nop :: Parser Stmt
@@ -59,7 +70,7 @@ stmt_escape = do
     pos1 <- pos2src <$> getPosition
     void <- tk_key "escape"
     pos2 <- pos2src <$> getPosition
-    e    <- option (Unit annz{source=pos2}) (try expr)
+    e    <- expr
     return $ Escape annz{source=pos1} Nothing e
 
 stmt_break :: Parser Stmt
@@ -80,7 +91,8 @@ stmt_var = do
     s    <- option (Nop $ annz{source=pos})
                    (try (attr_exp      loc (tk_str $ op mod)) <|>
                     try (attr_awaitext loc (tk_str $ op mod)) <|>
-                    try (attr_awaitevt loc (tk_str $ op mod)))
+                    try (attr_awaitevt loc (tk_str $ op mod)) <|>
+                    try (attr_trap     loc (tk_str $ op mod)))
     s'   <- case (dcls pos loc tp) of
                 Nothing -> do { fail "arity mismatch" }
                 Just v  -> return $ Seq annz{source=pos} v s
@@ -122,7 +134,8 @@ stmt_attr = do
     loc <- loc_
     s   <- try (attr_exp      loc (tk_str "<:")) <|>
            try (attr_awaitext loc (tk_str "<:")) <|>
-           try (attr_awaitevt loc (tk_str "<:"))
+           try (attr_awaitevt loc (tk_str "<:")) <|>
+           try (attr_trap     loc (tk_str "<:"))
     return $ s
 
 -- (x, (y,_))
@@ -277,14 +290,14 @@ stmt_loop = do
     void <- tk_key "end"
     return $ Loop annz{source=pos1} s
 
-stmt_trap :: Parser Stmt
-stmt_trap = do
+stmt_trap :: Maybe ID_Var -> Parser Stmt
+stmt_trap var = do
     pos  <- pos2src <$> getPosition
     void <- tk_key "trap"
     void <- tk_key "do"
     s    <- stmt
     void <- tk_key "end"
-    return $ Trap annz{source=pos} Nothing s
+    return $ Trap annz{source=pos} var s
 
 -------------------------------------------------------------------------------
 
@@ -334,7 +347,7 @@ stmt1 = do
          try stmt_attr <|>
          try (stmt_awaitext Nothing) <|> try stmt_halt <|> try (stmt_awaitevt Nothing) <|>
          try stmt_emitext <|> try stmt_emitevt <|>
-         try stmt_do <|> try stmt_if <|> try stmt_loop <|> try stmt_trap <|>
+         try stmt_do <|> try stmt_if <|> try stmt_loop <|> try (stmt_trap Nothing) <|>
          try stmt_par <|> try stmt_parand <|> try stmt_paror
     return s
 

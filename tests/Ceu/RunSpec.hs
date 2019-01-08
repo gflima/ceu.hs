@@ -30,7 +30,7 @@ spec = do
             `shouldBe` Left "(line 1, column 8):\nidentifier 'a' is not declared\n"
         it "escape" $
             run "escape" []
-            `shouldBe` Left "TODO: escape w/o expression"
+            `shouldBe` Left "(line 1, column 7):\nunexpected end of input\nexpecting letter, \"_\", digit, \"`\", \"-\", \"{\" or \"(\""
 
     describe "exps:" $ do
         it "escape -1" $
@@ -179,8 +179,8 @@ spec = do
             `shouldBe` Right (1, [[]])
 
     describe "trap" $ do
-        it "trap do escape end escape 1" $
-            run "trap do escape end escape 1" []
+        it "trap do escape () end escape 1" $
+            run "trap do escape () end escape 1" []
             `shouldBe` Right (1, [[]])
 
 -------------------------------------------------------------------------------
