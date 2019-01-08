@@ -370,18 +370,18 @@ spec = do
                 `shouldBe` Right (RawS annz{source=("",1,1)} [RawAtS "{",RawAtS "int x = 100",RawAtS "}"])
             it "{...};escape 0" $
                 parse stmt "{int x = 100} escape 0"
-                `shouldBe` Right (Seq annz{source=("",1,1)} (RawS annz{source=("",1,1)} [RawAtS "{",RawAtS "int x = 100",RawAtS "}"]) (Escape annz{source=("",1,15)} Nothing (Just (Const annz{source=("",1,22)} 0))))
+                `shouldBe` Right (Seq annz{source=("",1,1)} (RawS annz{source=("",1,1)} [RawAtS "{",RawAtS "int x = 100",RawAtS "}"]) (Escape annz{source=("",1,15)} Nothing (Const annz{source=("",1,22)} 0)))
 
         describe "escape:" $ do
             it "escape" $
                 parse stmt_escape "escape"
-                `shouldBe` Right (Escape annz{source=("",1,1)} Nothing Nothing)
+                `shouldBe` Right (Escape annz{source=("",1,1)} Nothing (Unit annz{source=("",1,7)}))
             it "escape 0" $
                 parse stmt_escape "escape 0"
-                `shouldBe` Right (Escape annz{source=("",1,1)} Nothing (Just (Const annz{source=("",1,8)} 0)))
+                `shouldBe` Right (Escape annz{source=("",1,1)} Nothing (Const annz{source=("",1,8)} 0))
             it "escape aaa" $
                 parse stmt_escape "escape aaa"
-                `shouldBe` Right (Escape annz{source=("",1,1)} Nothing (Just (Read annz{source=("",1,8)} "aaa")))
+                `shouldBe` Right (Escape annz{source=("",1,1)} Nothing (Read annz{source=("",1,8)} "aaa"))
 
         describe "var:" $ do
             it "val x:: Int" $
@@ -415,7 +415,7 @@ spec = do
                 `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (Type1 "Int") Nothing) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "y" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)})))) (Write (annz{source = ("",1,24)}) (LTuple [LVar "x",LVar "y"]) (Tuple (annz{source = ("",1,26)}) [Const (annz{source = ("",1,27)}) 1,Const (annz{source = ("",1,30)}) 2])))
             it "mut (x,(y,_))::(Int,(Int,Int)) <: (1, (2,3)); escape x+y" $
                 parse stmt "mut (x,(y,_))::(Int, (Int,Int)) <: (1, (2,3)); escape x+y"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (Type1 "Int") Nothing) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "y" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)})))) (Write (annz{source = ("",1,33)}) (LTuple [LVar "x",LTuple [LVar "y",LAny]]) (Tuple (annz{source = ("",1,36)}) [Const (annz{source = ("",1,37)}) 1,Tuple (annz{source = ("",1,40)}) [Const (annz{source = ("",1,41)}) 2,Const (annz{source = ("",1,43)}) 3]]))) (Escape (annz{source = ("",1,48)}) Nothing (Just (Call (annz{source = ("",1,56)}) "(+)" (Tuple (annz{source = ("",1,56)}) [Read (annz{source = ("",1,55)}) "x",Read (annz{source = ("",1,57)}) "y"])))))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (Type1 "Int") Nothing) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "y" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)})))) (Write (annz{source = ("",1,33)}) (LTuple [LVar "x",LTuple [LVar "y",LAny]]) (Tuple (annz{source = ("",1,36)}) [Const (annz{source = ("",1,37)}) 1,Tuple (annz{source = ("",1,40)}) [Const (annz{source = ("",1,41)}) 2,Const (annz{source = ("",1,43)}) 3]]))) (Escape (annz{source = ("",1,48)}) Nothing (Call (annz{source = ("",1,56)}) "(+)" (Tuple (annz{source = ("",1,56)}) [Read (annz{source = ("",1,55)}) "x",Read (annz{source = ("",1,57)}) "y"]))))
             it "val (_,_)::(Int,Int,Int)" $
                 parse stmt "val (_,_)::(Int,Int,Int)"
                 `shouldBe` Left "(line 1, column 25):\nunexpected end of input\nexpecting \":\"\narity mismatch"
@@ -513,7 +513,7 @@ spec = do
         describe "do-end:" $ do
             it "do escape 1 end" $
                 parse stmt_do "do escape 1 end"
-                `shouldBe` Right (Scope annz{source=("",1,1)} (Escape annz{source=("",1,4)} Nothing (Just (Const annz{source=("",1,11)} 1))))
+                `shouldBe` Right (Scope annz{source=("",1,1)} (Escape annz{source=("",1,4)} Nothing (Const annz{source=("",1,11)} 1)))
             it "do end" $
                 parse (tk_key "do" >> stmt_nop >> tk_key "end") "do end"
                 `shouldBe` Right "end"
@@ -539,22 +539,22 @@ spec = do
 
             it "if 0 then escape 0 else escape 1 end" $
                 parse stmt_if "if 0 then escape 0 else escape 1 end"
-                `shouldBe` Right (If annz{source=("",1,1)} (Const annz{source=("",1,4)} 0) (Escape annz{source=("",1,11)} Nothing (Just (Const annz{source=("",1,18)} 0))) (Escape annz{source=("",1,25)} Nothing (Just (Const annz{source=("",1,32)} 1))))
+                `shouldBe` Right (If annz{source=("",1,1)} (Const annz{source=("",1,4)} 0) (Escape annz{source=("",1,11)} Nothing (Const annz{source=("",1,18)} 0)) (Escape annz{source=("",1,25)} Nothing (Const annz{source=("",1,32)} 1)))
             it "if 1 then escape 1 end" $
                 parse stmt_if "if 1 then escape 1 end"
-                `shouldBe` Right (If annz{source=("",1,1)} (Const annz{source=("",1,4)} 1) (Escape annz{source=("",1,11)} Nothing (Just (Const annz{source=("",1,18)} 1))) (Nop annz{source=("",1,20)}))
+                `shouldBe` Right (If annz{source=("",1,1)} (Const annz{source=("",1,4)} 1) (Escape annz{source=("",1,11)} Nothing (Const annz{source=("",1,18)} 1)) (Nop annz{source=("",1,20)}))
             it "if then escape 1 end" $
                 parse stmt_if "if then escape 1 end"
                 `shouldBe` Left "(line 1, column 8):\nunexpected \" \"\nexpecting digit, letter or \"_\""
             it "if then (if then else end) end" $
                 parse stmt_if "if 1 then ; if 0 then else escape 1 end ; end"
-                `shouldBe` Right (If annz{source=("",1,1)} (Const annz{source=("",1,4)} 1) (If annz{source=("",1,13)} (Const annz{source=("",1,16)} 0) (Nop annz{source=("",1,23)}) (Escape annz{source=("",1,28)} Nothing (Just (Const annz{source=("",1,35)} 1)))) (Nop annz{source=("",1,43)}))
+                `shouldBe` Right (If annz{source=("",1,1)} (Const annz{source=("",1,4)} 1) (If annz{source=("",1,13)} (Const annz{source=("",1,16)} 0) (Nop annz{source=("",1,23)}) (Escape annz{source=("",1,28)} Nothing (Const annz{source=("",1,35)} 1))) (Nop annz{source=("",1,43)}))
             it "if then (if then end) else end" $
                 parse stmt_if "if 0 then ; if 0 then end ; else escape 1 end"
-                `shouldBe` Right (If annz{source=("",1,1)} (Const annz{source=("",1,4)} 0) (If annz{source=("",1,13)} (Const annz{source=("",1,16)} 0) (Nop annz{source=("",1,23)}) (Nop annz{source=("",1,23)})) (Escape annz{source=("",1,34)} Nothing (Just (Const annz{source=("",1,41)} 1))))
+                `shouldBe` Right (If annz{source=("",1,1)} (Const annz{source=("",1,4)} 0) (If annz{source=("",1,13)} (Const annz{source=("",1,16)} 0) (Nop annz{source=("",1,23)}) (Nop annz{source=("",1,23)})) (Escape annz{source=("",1,34)} Nothing (Const annz{source=("",1,41)} 1)))
             it "if 0 then . else/if 1 then escape 1 else ." $
                 parse stmt_if "if 0 then escape 0 else/if 1 then escape 1 else escape 0 end"
-                `shouldBe` Right (If annz{source=("",1,1)} (Const annz{source=("",1,4)} 0) (Escape annz{source=("",1,11)} Nothing (Just (Const annz{source=("",1,18)} 0))) (If annz{source=("",1,20)} (Const annz{source=("",1,28)} 1) (Escape annz{source=("",1,35)} Nothing (Just (Const annz{source=("",1,42)} 1))) (Escape annz{source=("",1,49)} Nothing (Just (Const annz{source=("",1,56)} 0)))))
+                `shouldBe` Right (If annz{source=("",1,1)} (Const annz{source=("",1,4)} 0) (Escape annz{source=("",1,11)} Nothing (Const annz{source=("",1,18)} 0)) (If annz{source=("",1,20)} (Const annz{source=("",1,28)} 1) (Escape annz{source=("",1,35)} Nothing (Const annz{source=("",1,42)} 1)) (Escape annz{source=("",1,49)} Nothing (Const annz{source=("",1,56)} 0))))
 
         describe "loop" $ do
             it "loop do end" $
@@ -570,7 +570,7 @@ spec = do
         describe "trap" $ do
             it "trap do escape end" $
                 parse stmt_trap "trap do escape end"
-                `shouldBe` Right (Trap annz{source=("",1,1)} Nothing (Escape annz{source=("",1,9)} Nothing Nothing))
+                `shouldBe` Right (Trap annz{source=("",1,1)} Nothing (Escape annz{source=("",1,9)} Nothing (Unit annz{source=("",1,16)})))
 
 -------------------------------------------------------------------------------
 
@@ -597,10 +597,10 @@ spec = do
                 `shouldBe` Right (Par annz{source=("",1,1)} (Nop annz{source=("",1,8)}) (Nop annz{source=("",1,13)}))
             it "par" $
                 parse stmt_par "par do escape 1 with escape 1 end"
-                `shouldBe` Right (Par annz{source=("",1,1)} (Escape annz{source=("",1,8)} Nothing (Just (Const annz{source=("",1,15)} 1))) (Escape annz{source=("",1,22)} Nothing (Just (Const annz{source=("",1,29)} 1))))
+                `shouldBe` Right (Par annz{source=("",1,1)} (Escape annz{source=("",1,8)} Nothing (Const annz{source=("",1,15)} 1)) (Escape annz{source=("",1,22)} Nothing (Const annz{source=("",1,29)} 1)))
             it "par" $
                 parse stmt_par "par do escape 1 with escape 2 with escape 3 end"
-                `shouldBe` Right (Par annz{source=("",1,1)} (Escape annz{source=("",1,8)} Nothing (Just (Const annz{source=("",1,15)} 1))) (Par annz{source=("",1,17)} (Escape annz{source=("",1,22)} Nothing (Just (Const annz{source=("",1,29)} 2))) (Escape annz{source=("",1,36)} Nothing (Just (Const annz{source=("",1,43)} 3)))))
+                `shouldBe` Right (Par annz{source=("",1,1)} (Escape annz{source=("",1,8)} Nothing (Const annz{source=("",1,15)} 1)) (Par annz{source=("",1,17)} (Escape annz{source=("",1,22)} Nothing (Const annz{source=("",1,29)} 2)) (Escape annz{source=("",1,36)} Nothing (Const annz{source=("",1,43)} 3))))
 
         describe "par/and:" $ do
             it "par/and" $
@@ -608,10 +608,10 @@ spec = do
                 `shouldBe` Right (And annz{source=("",1,1)} (Nop annz{source=("",1,12)}) (Nop annz{source=("",1,17)}))
             it "par/and" $
                 parse stmt_parand "par/and do escape 1 with escape 1 end"
-                `shouldBe` Right (And annz{source=("",1,1)} (Escape annz{source=("",1,12)} Nothing (Just (Const annz{source=("",1,19)} 1))) (Escape annz{source=("",1,26)} Nothing (Just (Const annz{source=("",1,33)} 1))))
+                `shouldBe` Right (And annz{source=("",1,1)} (Escape annz{source=("",1,12)} Nothing (Const annz{source=("",1,19)} 1)) (Escape annz{source=("",1,26)} Nothing (Const annz{source=("",1,33)} 1)))
             it "par/and" $
                 parse stmt_parand "par/and do escape 1 with escape 2 with escape 3 end"
-                `shouldBe` Right (And annz{source=("",1,1)} (Escape annz{source=("",1,12)} Nothing (Just (Const annz{source=("",1,19)} 1))) (And annz{source=("",1,21)} (Escape annz{source=("",1,26)} Nothing (Just (Const annz{source=("",1,33)} 2))) (Escape annz{source=("",1,40)} Nothing (Just (Const annz{source=("",1,47)} 3)))))
+                `shouldBe` Right (And annz{source=("",1,1)} (Escape annz{source=("",1,12)} Nothing (Const annz{source=("",1,19)} 1)) (And annz{source=("",1,21)} (Escape annz{source=("",1,26)} Nothing (Const annz{source=("",1,33)} 2)) (Escape annz{source=("",1,40)} Nothing (Const annz{source=("",1,47)} 3))))
 
         describe "par/or:" $ do
             it "par/or" $
@@ -619,15 +619,15 @@ spec = do
                 `shouldBe` Right (Or annz{source=("",1,1)} (Nop annz{source=("",1,11)}) (Nop annz{source=("",1,16)}))
             it "par/or" $
                 parse stmt_paror "par/or do escape 1 with escape 1 end"
-                `shouldBe` Right (Or annz{source=("",1,1)} (Escape annz{source=("",1,11)} Nothing (Just (Const annz{source=("",1,18)} 1))) (Escape annz{source=("",1,25)} Nothing (Just (Const annz{source=("",1,32)} 1))))
+                `shouldBe` Right (Or annz{source=("",1,1)} (Escape annz{source=("",1,11)} Nothing (Const annz{source=("",1,18)} 1)) (Escape annz{source=("",1,25)} Nothing (Const annz{source=("",1,32)} 1)))
             it "par/or" $
                 parse stmt_paror "par/or do escape 1 with escape 2 with escape 3 end"
-                `shouldBe` Right (Or annz{source=("",1,1)} (Escape annz{source=("",1,11)} Nothing (Just (Const annz{source=("",1,18)} 1))) (Or annz{source=("",1,20)} (Escape annz{source=("",1,25)} Nothing (Just (Const annz{source=("",1,32)} 2))) (Escape annz{source=("",1,39)} Nothing (Just (Const annz{source=("",1,46)} 3)))))
+                `shouldBe` Right (Or annz{source=("",1,1)} (Escape annz{source=("",1,11)} Nothing (Const annz{source=("",1,18)} 1)) (Or annz{source=("",1,20)} (Escape annz{source=("",1,25)} Nothing (Const annz{source=("",1,32)} 2)) (Escape annz{source=("",1,39)} Nothing (Const annz{source=("",1,46)} 3))))
 
         describe "seq:" $ do
             it "do end; escape 1" $
                 parse (stmt_seq ("",1,1)) "do end escape 1"
-                `shouldBe` Right (Seq annz{source=("",1,1)} (Scope annz{source=("",1,1)} (Nop annz{source=("",1,4)})) (Escape annz{source=("",1,8)} Nothing (Just (Const annz{source=("",1,15)} 1))))
+                `shouldBe` Right (Seq annz{source=("",1,1)} (Scope annz{source=("",1,1)} (Nop annz{source=("",1,4)})) (Escape annz{source=("",1,8)} Nothing (Const annz{source=("",1,15)} 1)))
 
             it "do end; do end; do end" $
                 parse (stmt_seq ("",1,1)) "do end ; do end ; do end"
@@ -640,15 +640,15 @@ spec = do
         describe "stmt:" $ do
             it "val x::Int; escape 1" $
                 parse stmt "val x::Int ;escape 1"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Escape (annz{source = ("",1,13)}) Nothing (Just (Const (annz{source = ("",1,20)}) 1))))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Escape (annz{source = ("",1,13)}) Nothing (Const (annz{source = ("",1,20)}) 1)))
 
             it "mut x::Int; x<:1; escape x" $
                 parse stmt "mut x::Int ; x <: 1 ; escape x"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Seq (annz{source = ("",1,1)}) (Write (annz{source = ("",1,16)}) (LVar "x") (Const (annz{source = ("",1,19)}) 1)) (Escape (annz{source = ("",1,23)}) Nothing (Just (Read (annz{source = ("",1,30)}) "x")))))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Seq (annz{source = ("",1,1)}) (Write (annz{source = ("",1,16)}) (LVar "x") (Const (annz{source = ("",1,19)}) 1)) (Escape (annz{source = ("",1,23)}) Nothing (Read (annz{source = ("",1,30)}) "x"))))
 
             it "val x::(Int,Int,):(1,2) ; escape +x" $
                 parse stmt "val x::(Int,Int):(1,2) ; escape `+x"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (TypeN [Type1 "Int",Type1 "Int"]) Nothing) (Nop (annz{source = ("",0,0)}))) (Write (annz{source = ("",1,17)}) (LVar "x") (Tuple (annz{source = ("",1,18)}) [Const (annz{source = ("",1,19)}) 1,Const (annz{source = ("",1,21)}) 2]))) (Escape (annz{source = ("",1,26)}) Nothing (Just (Call (annz{source = ("",1,33)}) "(+)" (Read (annz{source = ("",1,35)}) "x")))))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (TypeN [Type1 "Int",Type1 "Int"]) Nothing) (Nop (annz{source = ("",0,0)}))) (Write (annz{source = ("",1,17)}) (LVar "x") (Tuple (annz{source = ("",1,18)}) [Const (annz{source = ("",1,19)}) 1,Const (annz{source = ("",1,21)}) 2]))) (Escape (annz{source = ("",1,26)}) Nothing (Call (annz{source = ("",1,33)}) "(+)" (Read (annz{source = ("",1,35)}) "x"))))
 
             it "do ... end" $
                 parse stmt "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end"

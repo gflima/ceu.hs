@@ -2,6 +2,7 @@ module Ceu.Grammar.Full.Compile.Trap where
 
 import Debug.Trace
 import Ceu.Grammar.Globals
+import Ceu.Grammar.Exp
 import Ceu.Grammar.Full.Grammar
 
 compile :: Stmt -> (Errors, Stmt)
@@ -29,12 +30,10 @@ compile p = ([], aux [] p) where
   aux vars p                   = p
 
 escape :: [Maybe ID_Var] -> Stmt -> Int -> Stmt
-escape (Nothing:_) (Escape z Nothing Nothing) _ = Escape' z 0
-escape ((Just var):_) (Escape z Nothing (Just val)) _ = Seq z (Write z (LVar var) val) (Escape' z 0)
-escape ((Just var'):l) s@(Escape z (Just var) val) n
-  | var == var' = case val of
-                    (Just val') -> Seq z (Write z (LVar var) val') (Escape' z n)
-                    Nothing     -> Escape' z n
+escape (Nothing:_)     (Escape z Nothing (Unit _)) _ = Escape' z 0
+escape ((Just var):_)  (Escape z Nothing exp) _      = Seq z (Write z (LVar var) exp) (Escape' z 0)
+escape ((Just var'):l) s@(Escape z (Just var) exp) n
+  | var == var' = Seq z (Write z (LVar var) exp) (Escape' z n)
   | otherwise   = escape l s (n+1)
 escape _ (Escape z _ _) _ = Escape' z (-1)
 

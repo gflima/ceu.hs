@@ -56,10 +56,11 @@ stmt_raw = do
 
 stmt_escape :: Parser Stmt
 stmt_escape = do
-    pos  <- pos2src <$> getPosition
+    pos1 <- pos2src <$> getPosition
     void <- tk_key "escape"
-    e    <- optionMaybe (try expr)
-    return $ Escape annz{source=pos} Nothing e
+    pos2 <- pos2src <$> getPosition
+    e    <- option (Unit annz{source=pos2}) (try expr)
+    return $ Escape annz{source=pos1} Nothing e
 
 stmt_break :: Parser Stmt
 stmt_break = do

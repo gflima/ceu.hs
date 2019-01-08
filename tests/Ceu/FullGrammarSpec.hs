@@ -111,38 +111,38 @@ spec = do
         `shouldBe` (["identifier 'X' is not declared"], G.Seq annz (G.Out annz "X" Type0 (G.Nop annz)) (G.EmitEvt annz "X"))
 
       it "scope escape 1 end" $ do
-        compile' (False,False,False) (Scope annz (Escape annz Nothing (Just (Const annz 1))))
+        compile' (False,False,False) (Scope annz (Escape annz Nothing (Const annz 1)))
         `shouldBe` (["orphan `escape` statement"],G.Escape annz (-1))
 
       it "scope escape 1 end" $ do
-        compile' (False,True,False) (Scope annz (Escape annz Nothing (Just (Const annz 1))))
+        compile' (False,True,False) (Scope annz (Escape annz Nothing (Const annz 1)))
         `shouldBe` ([],G.Inp annz "TIMER" (G.Var annz "_ret" (Type1 "Int") (G.Seq annz (G.Trap annz (G.Seq annz (G.Write annz (LVar "_ret") (Const annz{type_=Type1 "Int"} 1)) (G.Escape annz 0))) (G.Halt annz))))
 
   --------------------------------------------------------------------------
   describe "Trap.compile" $ do
 
     it "trap escape;" $ do
-      Trap.compile (Trap annz Nothing (Escape annz Nothing Nothing))
+      Trap.compile (Trap annz Nothing (Escape annz Nothing (Unit annz)))
       `shouldBe` ([], (Trap' annz (Escape' annz 0)))
 
     it "trap/a escape/a;" $ do
-      Trap.compile (Var' annz "a" Type0 Nothing (Trap annz (Just "a") (Escape annz (Just "a") Nothing)))
-      `shouldBe` ([], (Var' annz "a" Type0 Nothing (Trap' annz (Escape' annz 0))))
+      Trap.compile (Var' annz "a" Type0 Nothing (Trap annz (Just "a") (Escape annz (Just "a") (Unit annz))))
+      `shouldBe` ([], (Var' annz "a" Type0 Nothing (Trap' annz (Seq annz (Write annz (LVar "a") (Unit annz)) (Escape' annz 0)))))
 
     it "trap/a escape/a;" $ do
-      Trap.compile (Var' annz "ret" Type0 Nothing (Trap annz (Just "ret") (Escape annz (Just "ret") (Just (Const annz 1)))))
+      Trap.compile (Var' annz "ret" Type0 Nothing (Trap annz (Just "ret") (Escape annz (Just "ret") (Const annz 1))))
       `shouldBe` ([], (Var' annz "ret" Type0 Nothing (Trap' annz (Seq annz (Write annz (LVar "ret") (Const annz 1)) (Escape' annz 0)))))
 
     it "trap/a escape;" $ do
-      Trap.compile (Var' annz "ret" Type0 Nothing (Trap annz (Just "ret") (Escape annz Nothing Nothing)))
+      Trap.compile (Var' annz "ret" Type0 Nothing (Trap annz (Just "ret") (Escape annz Nothing (Unit annz))))
+      `shouldBe` ([], (Var' annz "ret" Type0 Nothing (Trap' annz (Seq annz (Write annz (LVar "ret") (Unit annz)) (Escape' annz 0)))))
+
+    it "trap/a escape/a;" $ do
+      Trap.compile (Var' annz "ret" Type0 Nothing (Trap annz (Just "ret") (Escape annz (Just "xxx") (Const annz 1))))
       `shouldBe` ([], (Var' annz "ret" Type0 Nothing (Trap' annz (Escape' annz (-1)))))
 
     it "trap/a escape/a;" $ do
-      Trap.compile (Var' annz "ret" Type0 Nothing (Trap annz (Just "ret") (Escape annz (Just "xxx") (Just (Const annz 1)))))
-      `shouldBe` ([], (Var' annz "ret" Type0 Nothing (Trap' annz (Escape' annz (-1)))))
-
-    it "trap/a escape/a;" $ do
-      compile' (False,False,False) (Var' annz "ret" Type0 Nothing (Trap annz (Just "ret") (Escape annz (Just "xxx") (Just (Const annz 1)))))
+      compile' (False,False,False) (Var' annz "ret" Type0 Nothing (Trap annz (Just "ret") (Escape annz (Just "xxx") (Const annz 1))))
       `shouldBe` (["orphan `escape` statement","missing `escape` statement"], (G.Var annz "ret" Type0 (G.Trap annz (G.Escape annz (-1)))))
 
   --------------------------------------------------------------------------
@@ -230,8 +230,8 @@ spec = do
       `shouldBe` ([], Or' annz (Clean' annz "Spawn" (Halt annz)) (Nop annz))
 
     it "spawn escape || escape" $ do
-      compile' (False,False,False) (Trap annz (Just "a") (Seq annz (Spawn annz (Par annz (Escape annz Nothing (Just (Const annz 1))) (Escape annz (Just "a") Nothing))) (Nop annz)))
-      `shouldBe` (["escaping `spawn`","escaping statement","escaping statement","terminating `trap` body","identifier 'a' is not declared"],G.Trap annz (G.Trap annz (G.Par annz (G.Par annz (G.Seq annz (G.Write annz (LVar "a") (Const annz{type_=Type1 "Int"} 1)) (G.Escape annz 1)) (G.Escape annz 1)) (G.Seq annz (G.Nop annz) (G.Escape annz 0)))))
+      compile' (False,False,False) (Trap annz (Just "a") (Seq annz (Spawn annz (Par annz (Escape annz Nothing (Const annz 1)) (Escape annz (Just "a") (Unit annz)))) (Nop annz)))
+      `shouldBe` (["escaping `spawn`","escaping statement","escaping statement","terminating `trap` body","identifier 'a' is not declared","identifier 'a' is not declared"],G.Trap annz (G.Trap annz (G.Par annz (G.Par annz (G.Seq annz (G.Write annz (LVar "a") (Const annz{type_=Type1 "Int"} 1)) (G.Escape annz 1)) (G.Seq annz (G.Write annz (LVar "a") (Unit annz{type_=Type0})) (G.Escape annz 1))) (G.Seq annz (G.Nop annz) (G.Escape annz 0)))))
 
   --------------------------------------------------------------------------
   describe "ParAndOr.compile" $ do
@@ -256,7 +256,7 @@ spec = do
       (compile' (True,True,False) (Seq annz defs (And annz (Seq annz (Loop annz (Break annz)) (Seq annz (Inp annz "X" Type0) (AwaitInp annz "X" Nothing))) (Nop annz))))
       `shouldBe` (["terminating `trap` body","missing `escape` statement","`loop` never iterates","unreachable statement"], G.Inp annz "TIMER" (G.Var annz "_ret" (Type1 "Int") (G.Seq annz (G.Trap annz (G.Func annz "(==)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Bool")) (G.Func annz "(+)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func annz "(-)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func annz "(*)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Trap annz (G.Var annz "__and" (Type1 "Int") (G.Seq annz (G.Write annz (LVar "__and") (Const annz{type_=Type1 "Int"} 0)) (G.Par annz (G.Seq annz (G.Inp annz "X" (G.AwaitInp annz "X")) (G.If annz (Call annz{type_=Type1 "Bool"} "(==)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)])) (G.Escape annz 0) (G.Seq annz (G.Write annz (LVar "__and") (Call annz{type_=Type1 "Int"} "(+)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)]))) (G.Halt annz)))) (G.If annz (Call annz{type_=Type1 "Bool"} "(==)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)])) (G.Escape annz 0) (G.Seq annz (G.Write annz (LVar "__and") (Call annz{type_=Type1 "Int"} "(+)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)]))) (G.Halt annz)))))))))))) (G.Halt annz))))
     it "(loop break) ; await X and nop" $ do
-      (compile' (False,True,False) (Seq annz defs (Seq annz (And annz (Seq annz (Loop annz (Break annz)) (AwaitInp annz "X" Nothing)) (Nop annz)) (Escape annz Nothing (Just (Const annz 1))) )))
+      (compile' (False,True,False) (Seq annz defs (Seq annz (And annz (Seq annz (Loop annz (Break annz)) (AwaitInp annz "X" Nothing)) (Nop annz)) (Escape annz Nothing (Const annz 1)) )))
       `shouldBe` (["`loop` never iterates","identifier 'X' is not declared"], G.Inp annz "TIMER" (G.Var annz "_ret" (Type1 "Int") (G.Seq annz (G.Trap annz (G.Func annz "(==)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Bool")) (G.Func annz "(+)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func annz "(-)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func annz "(*)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Seq annz (G.Trap annz (G.Var annz "__and" (Type1 "Int") (G.Seq annz (G.Write annz (LVar "__and") (Const annz{type_=Type1 "Int"} 0)) (G.Par annz (G.Seq annz (G.Seq annz (G.Trap annz (G.Loop annz (G.Escape annz 0))) (G.AwaitInp annz "X")) (G.If annz (Call annz{type_=Type1 "Bool"} "(==)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)])) (G.Escape annz 0) (G.Seq annz (G.Write annz (LVar "__and") (Call annz{type_=Type1 "Int"} "(+)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)]))) (G.Halt annz)))) (G.Seq annz (G.Nop annz) (G.If annz (Call annz{type_=Type1 "Bool"} "(==)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)])) (G.Escape annz 0) (G.Seq annz (G.Write annz (LVar "__and") (Call annz{type_=Type1 "Int"} "(+)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)]))) (G.Halt annz)))))))) (G.Seq annz (G.Write annz (LVar "_ret") (Const annz{type_=Type1 "Int"} 1)) (G.Escape annz 0)))))))) (G.Halt annz))))
 
   --------------------------------------------------------------------------
@@ -353,12 +353,12 @@ nop;
 -}
 
     evalFullProgItRight (25,[[]]) []
-      (Escape annz Nothing (Just (Const annz 25)))
+      (Escape annz Nothing (Const annz 25))
 
     -- TODO: OK
     evalFullProgItRight (10,[[]]) [] (
       (Var' annz "a" (Type1 "Int") (Just ((Nop annz),(Nop annz),(Nop annz)))
-        (Escape annz Nothing (Just (Const annz 10)))
+        (Escape annz Nothing (Const annz 10))
       ))
 
     -- TODO: OK
@@ -368,7 +368,7 @@ nop;
         (Var' annz "b" (Type1 "Int") Nothing
           (Seq annz
             (Write annz (LVar "b") (Const annz 99))
-            (Escape annz Nothing (Just (Const annz 0)))
+            (Escape annz Nothing (Const annz 0))
           )
         )
       ))))
@@ -395,7 +395,7 @@ end
       (Var' annz "ret" (Type1 "Int") Nothing (
       (Write annz (LVar "ret") (Const annz 0)) `sSeq`
       (Par annz
-        ((AwaitEvt annz "a" Nothing) `sSeq` (Escape annz Nothing (Just (Call annz "(+)" (Tuple annz [(Read annz "ret"),(Const annz 5)])))))
+        ((AwaitEvt annz "a" Nothing) `sSeq` (Escape annz Nothing (Call annz "(+)" (Tuple annz [(Read annz "ret"),(Const annz 5)]))))
         (Seq annz
           (Or annz
             (
@@ -413,17 +413,17 @@ end
     evalFullProgItLeft ["no trails terminate"] []
       (Or annz
         (Loop annz (AwaitTmr annz (Const annz 5)))
-        (Escape annz Nothing (Just (Const annz 25))))
+        (Escape annz Nothing (Const annz 25)))
 
     evalFullProgItLeft ["trail must terminate","trail must terminate","terminating `trap` body","unreachable statement","unreachable statement"] []
       (And annz
         (Loop annz (AwaitTmr annz (Const annz 5)))
-        (Escape annz Nothing (Just (Const annz 25))))
+        (Escape annz Nothing (Const annz 25)))
 
     evalFullProgItRight (25,[[]]) []
       (Par annz
         (Loop annz (AwaitTmr annz (Const annz 5)))
-        (Escape annz Nothing (Just (Const annz 25))))
+        (Escape annz Nothing (Const annz 25)))
 
   describe "events" $ do
 
@@ -438,7 +438,7 @@ end
     evalFullProgItRight (10,[[]]) [] (
       Evt' annz "a" (Type1 "Int") (
         Par annz
-          (Var' annz "ret" (Type1 "Int") Nothing (Seq annz (AwaitEvt annz "a" (Just $ LVar "ret")) (Escape annz Nothing (Just (Read annz "ret")))))
+          (Var' annz "ret" (Type1 "Int") Nothing (Seq annz (AwaitEvt annz "a" (Just $ LVar "ret")) (Escape annz Nothing (Read annz "ret"))))
           (EmitEvt annz "a" (Just (Const annz 10)) `sSeq` (Halt annz))
       ))
 
@@ -446,7 +446,7 @@ end
       (Var' annz "ret" (Type1 "Int") Nothing
         (Evt' annz "a" Type0 (
           Par annz
-            (Seq annz (AwaitEvt annz "a" (Just $ LVar "ret")) (Escape annz Nothing (Just (Const annz 0))))
+            (Seq annz (AwaitEvt annz "a" (Just $ LVar "ret")) (Escape annz Nothing (Const annz 0)))
             (EmitEvt annz "a" (Just (Const annz 10)) `sSeq` (Halt annz)))))
 
     evalFullProgItLeft ["identifier '_a' is not declared"] [] (
@@ -455,25 +455,25 @@ end
           (And annz
             (AwaitEvt annz "a" Nothing)
             (EmitEvt annz "a" (Just (Const annz 10))))
-          (Escape annz Nothing (Just (Const annz 0))))))
+          (Escape annz Nothing (Const annz 0)))))
 
     evalFullProgItRight (99,[[]]) [] (
       (Evt' annz "a" Type0 (
         Par annz
-          ((AwaitEvt annz "a" Nothing) `sSeq` (Escape annz Nothing (Just (Const annz 99))))
+          ((AwaitEvt annz "a" Nothing) `sSeq` (Escape annz Nothing (Const annz 99)))
           (EmitEvt annz "a" Nothing `sSeq` (Halt annz))
       )))
     evalFullProgItRight (99,[[]]) [] (
       (Evt' annz "a" (Type1 "Int") (
         Par annz
-          ((AwaitEvt annz "a" Nothing) `sSeq` (Escape annz Nothing (Just (Const annz 99))))
+          ((AwaitEvt annz "a" Nothing) `sSeq` (Escape annz Nothing (Const annz 99)))
           (EmitEvt annz "a" (Just (Const annz 10)) `sSeq` (Halt annz))
       )))
     evalFullProgItLeft ["varsRead: uninitialized variable: _a"] []
       (Var' annz "ret" (Type1 "Int") Nothing
         (Evt' annz "a" Type0 (
           Par annz
-            (Seq annz (AwaitEvt annz "a" (Just $ LVar "ret")) (Escape annz Nothing (Just (Read annz "ret"))))
+            (Seq annz (AwaitEvt annz "a" (Just $ LVar "ret")) (Escape annz Nothing (Read annz "ret")))
             (EmitEvt annz "a" Nothing `sSeq` (Halt annz)))))
 
 {-
@@ -492,7 +492,7 @@ end
           (Or annz
             (Every annz "A" (Just $ LVar "ret") (Nop annz))
             (AwaitInp annz "F" Nothing))
-          (Escape annz Nothing (Just (Read annz "ret")))))))
+          (Escape annz Nothing (Read annz "ret"))))))
 
     evalFullProgItRight (99,[[],[],[],[]]) [("A",Just 1),("A",Just 99),("F",Just 2)]
       (Seq annz (Inp annz "A" (Type1 "Int"))
@@ -500,32 +500,32 @@ end
       (Var' annz "ret" (Type1 "Int") Nothing
         (Par annz
           (Every annz "A" (Just $ LVar "ret") (Nop annz))
-          (Seq annz (AwaitInp annz "F" Nothing) (Escape annz Nothing (Just (Read annz "ret"))))))))
+          (Seq annz (AwaitInp annz "F" Nothing) (Escape annz Nothing (Read annz "ret")))))))
 
   describe "timers" $ do
 
     evalFullProgItRight (10,[[],[]]) [("TIMER",Just 10)]
-      (Seq annz (AwaitTmr annz (Const annz 10)) (Escape annz Nothing (Just (Const annz 10))))
+      (Seq annz (AwaitTmr annz (Const annz 10)) (Escape annz Nothing (Const annz 10)))
     evalFullProgItLeft ["pending inputs"] [("TIMER",Just 11)]
-      (Seq annz (AwaitTmr annz (Const annz 10)) (Escape annz Nothing (Just (Const annz 10))))
+      (Seq annz (AwaitTmr annz (Const annz 10)) (Escape annz Nothing (Const annz 10)))
     evalFullProgItRight (10,[[],[]]) [("TIMER",Just 10)]
-      ((AwaitTmr annz (Const annz 5)) `sSeq` (AwaitTmr annz (Const annz 5)) `sSeq` (Escape annz Nothing (Just (Const annz 10))))
+      ((AwaitTmr annz (Const annz 5)) `sSeq` (AwaitTmr annz (Const annz 5)) `sSeq` (Escape annz Nothing (Const annz 10)))
     evalFullProgItRight (10,[[],[]]) [("TIMER",Just 10)]
-      ((AwaitTmr annz (Const annz 8)) `sSeq` (AwaitTmr annz (Const annz 2)) `sSeq` (Escape annz Nothing (Just (Const annz 10))))
+      ((AwaitTmr annz (Const annz 8)) `sSeq` (AwaitTmr annz (Const annz 2)) `sSeq` (Escape annz Nothing (Const annz 10)))
 
     evalFullProgItRight (10,[[],[]]) [("TIMER",Just 10)]
       (Seq annz
         (And annz
           (AwaitTmr annz (Const annz 10))
           (AwaitTmr annz (Const annz 10)))
-        (Escape annz Nothing (Just (Const annz 10))))
+        (Escape annz Nothing (Const annz 10)))
 
     evalFullProgItRight (10,[[],[]]) [("TIMER",Just 10)]
       (Seq annz
         (And annz
           ((AwaitTmr annz (Const annz 5)) `sSeq` (AwaitTmr annz (Const annz 5)))
           ((AwaitTmr annz (Const annz 5)) `sSeq` (AwaitTmr annz (Const annz 5))))
-        (Escape annz Nothing (Just (Const annz 10))))
+        (Escape annz Nothing (Const annz 10)))
 
     evalFullProgItRight (10,[[],[]]) [("TIMER",Just 20)]
       (Seq annz
@@ -534,7 +534,7 @@ end
           ((AwaitTmr annz (Const annz 5)) `sSeq` (AwaitTmr annz (Const annz 5))))
         (Seq annz
           (AwaitTmr annz (Const annz 10))
-          (Escape annz Nothing (Just (Const annz 10)))))
+          (Escape annz Nothing (Const annz 10))))
 
     evalFullProgItRight (10,[[],[]]) [("TIMER",Just 20)]
       (Seq annz
@@ -543,10 +543,10 @@ end
           ((AwaitTmr annz (Const annz 4)) `sSeq` (AwaitTmr annz (Const annz 5))))
         (Seq annz
           (AwaitTmr annz (Const annz 10))
-          (Escape annz Nothing (Just (Const annz 10)))))
+          (Escape annz Nothing (Const annz 10))))
 
     evalFullProgItLeft ["identifier 'A' is invalid"] []
-      (Seq annz (Inp annz "A" Type0) (Seq annz (EmitExt annz "A" (Unit annz)) (Escape annz Nothing (Just (Const annz 1)))))
+      (Seq annz (Inp annz "A" Type0) (Seq annz (EmitExt annz "A" (Unit annz)) (Escape annz Nothing (Const annz 1))))
 
     evalFullProgItRight
       (10,[[],[("B",Just 1),("A",Just 1),("A",Just 2)],[("B",Just 2),("C",Just 1)]])
@@ -558,7 +558,7 @@ end
         (
           (AwaitTmr annz (Const annz 10))          `sSeq`
           (EmitExt annz "C" (Const annz 1)) `sSeq`
-          (Escape annz Nothing (Just (Const annz 10))))))))
+          (Escape annz Nothing (Const annz 10)))))))
 
     it "xxx" $
         evalFullProg
@@ -578,7 +578,7 @@ end
                     (
                         (AwaitTmr annz (Const annz 10))          `sSeq`
                         (EmitExt annz "C" (Const annz 1))        `sSeq`
-                        (Escape annz Nothing (Just (Const annz 10))))))
+                        (Escape annz Nothing (Const annz 10)))))
             [("TIMER",Just 10),("TIMER",Just 11)]
         `shouldBe` Right (10,[[],[("B",Just 1),("A",Just 1),("A",Just 2)],[("B",Just 2),("C",Just 1)]])
 
@@ -587,33 +587,33 @@ end
     evalFullProgItRight (1,[[],[("O",Just 1)],[("O",Just 2)],[]]) [("I",Just 1),("I",Just 2),("F",Nothing)]
       (Seq annz ((Inp annz "I" (Type1 "Int")) `sSeq` (Inp annz "F" Type0) `sSeq` (Out annz "O" (Type1 "Int"))) (Var' annz "i" (Type1 "Int") Nothing
         (Par annz
-          (Seq annz (AwaitInp annz "F" Nothing) (Escape annz Nothing (Just (Const annz 1))))
+          (Seq annz (AwaitInp annz "F" Nothing) (Escape annz Nothing (Const annz 1)))
           (Every annz "I" (Just $ LVar "i") (EmitExt annz "O" (Read annz "i"))))))
 
   describe "pause" $ do
 
     evalFullProgItRight (99,[[]]) []
-      (Evt' annz "x" (Type1 "Int") (Pause annz "x" (Escape annz Nothing (Just (Const annz 99)))))
+      (Evt' annz "x" (Type1 "Int") (Pause annz "x" (Escape annz Nothing (Const annz 99))))
 
     evalFullProgItRight (99,[[]]) []
       (Seq annz ((Inp annz "X" (Type1 "Int")) `sSeq` (Inp annz "A" Type0)) (Par annz
-        (Seq annz (AwaitInp annz "X" Nothing) (Escape annz Nothing (Just (Const annz 33))))
+        (Seq annz (AwaitInp annz "X" Nothing) (Escape annz Nothing (Const annz 33)))
         (Evt' annz "x" (Type1 "Int")
           (Pause annz "x"
             (Seq annz
               (EmitEvt annz "x" (Just (Const annz 1)))
-              (Escape annz Nothing (Just (Const annz 99))))))))
+              (Escape annz Nothing (Const annz 99)))))))
 
     evalFullProgItRight (99,[[],[],[],[],[]]) [("X",(Just 1)),("A",Nothing),("X",(Just 0)),("A",Nothing)]
       (Seq annz ((Inp annz "X" (Type1 "Int")) `sSeq` (Inp annz "A" Type0)) (Seq annz
         (Pause annz "X" (AwaitInp annz "A" Nothing))
-        (Escape annz Nothing (Just (Const annz 99)))))
+        (Escape annz Nothing (Const annz 99))))
 
     evalFullProgItRight (99,[[],[("P",Nothing)],[]]) [("X",Just 1),("E",Nothing)]
       (Seq annz ((Inp annz "X" (Type1 "Int")) `sSeq` (Inp annz "E" Type0) `sSeq` (Out annz "P" Type0)) (Par annz
         (Pause annz "X"
           (Seq annz (Fin annz (Nop annz) (EmitExt annz "P" (Unit annz)) (Nop annz)) (Halt annz)))
-        (Seq annz (AwaitInp annz "E" Nothing) (Escape annz Nothing (Just (Const annz 99))))))
+        (Seq annz (AwaitInp annz "E" Nothing) (Escape annz Nothing (Const annz 99)))))
 
 {-
 pause/if X with
@@ -634,7 +634,7 @@ end
                 (Pause annz "X"
                     (Var' annz "x" Type0 (Just ((EmitExt annz "F" (Unit annz)),(EmitExt annz "P" (Unit annz)),(EmitExt annz "R" (Unit annz))))
                         (AwaitInp annz "E" Nothing)))
-                (Escape annz Nothing (Just (Const annz 99)))))
+                (Escape annz Nothing (Const annz 99))))
             [("X",Just 1),("E",Nothing),("X",Just 0),("E",Nothing)]
         `shouldBe` Right (99,[[],[("P",Nothing)],[],[("R",Nothing)],[("F",Nothing)]])
 
@@ -645,8 +645,8 @@ end
                 (Func annz "f" (TypeF (Type1 "Int") (Type1 "Int")))
                 (FuncI annz "f"
                     (TypeF (Type1 "Int") (Type1 "Int"))
-                    (Just $ Escape annz Nothing (Just $ Const annz 1))))
-                (Escape annz Nothing (Just $ Call annz "f" (Const annz 1)))))
+                    (Just $ Escape annz Nothing (Const annz 1))))
+                (Escape annz Nothing (Call annz "f" (Const annz 1)))))
           `shouldBe` ([],
                 (G.Inp annz "TIMER"
                     (G.Var annz "_ret" (Type1 "Int")

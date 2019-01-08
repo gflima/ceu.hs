@@ -44,7 +44,7 @@ data Stmt
   | Fin      Ann Stmt Stmt Stmt                 -- finalize/pause/resume statement
   | Async    Ann Stmt                           -- async statement
   | Trap     Ann (Maybe ID_Var) Stmt            -- trap with optional assignment
-  | Escape   Ann (Maybe ID_Var) (Maybe Exp)     -- escape enclosing trap
+  | Escape   Ann (Maybe ID_Var) Exp             -- escape enclosing trap
   | Scope    Ann Stmt                           -- scope for local variables
   | Error    Ann String                         -- generate runtime error (for testing purposes)
   | Var'     Ann ID_Var Type (Maybe Fin) Stmt   -- variable declaration w/ stmts in scope
