@@ -275,6 +275,7 @@ aux dn s@(FuncI z id tp@(TypeF inp out) (Just imp) p) =
                            -- $ filter (not.reducesToType0.snd)
                            $ vars_up imp'
 
+aux dn (Write _ _   (Unit _))   = error "Simplify.hs should remove this"
 aux dn (Write _ LAny       _)   = upz
 aux dn (Write z (LVar var) exp) = upz { code_bef=src', tps_up=tps }
     where

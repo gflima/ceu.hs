@@ -43,6 +43,8 @@ simplify (FuncI z id tp imp p) = FuncI z id tp imp' (simplify p)
             Nothing -> Nothing
             Just x  -> Just $ simplify x
 
+simplify (Write z _ (Unit _)) = Nop z
+
 simplify (If z exp p q) =
   if p' == q' then p' else (If z exp p' q')
   where p' = simplify p

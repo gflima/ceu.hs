@@ -51,6 +51,11 @@ spec = do
     it "Evt annz -> Break" $ do
       simplify' (Evt annz "" (Seq annz (Nop annz) (Escape annz 0))) `shouldBe` (Escape annz 0)
 
+    it "write unit" $ do
+      simplify' (Write annz (LVar "") (Unit annz)) `shouldBe` (Nop annz)
+    it "write unit" $ do
+      simplify' (Seq annz (Write annz (LVar "") (Unit annz)) (Nop annz)) `shouldBe` (Nop annz)
+
     it "If annz a a -> a" $ do
       simplify' (If annz (Const annz 1) (AwaitInp annz "") (AwaitInp annz "")) `shouldBe` (AwaitInp annz "")
     it "If annz x y -> If annz x y" $ do
