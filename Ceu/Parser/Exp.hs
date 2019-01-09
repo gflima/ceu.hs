@@ -90,7 +90,7 @@ expr_prim = try expr_call_pre   <|>
 expr_call_pre :: Parser Exp
 expr_call_pre = do
     pos  <- pos2src <$> getPosition
-    f    <- try (char '`' *> tk_op)                   <|>
+    f    <- try (char '\'' *> tk_op)                   <|>
             do { try (tk_str "-") ; return "negate" } <|> -- unary minus exception
             try tk_func
     exp  <- expr
@@ -100,14 +100,14 @@ expr_call_pos :: Parser Exp
 expr_call_pos = do
     pos <- pos2src <$> getPosition
     e1  <- expr_call_mid
-    ops <- many (try tk_op <|> try (char '`' *> tk_func))
+    ops <- many (try tk_op <|> try (char '\'' *> tk_func))
     return $ foldl (\e op -> Call annz{source=pos} op e) e1 ops
 
 expr_call_mid :: Parser Exp
 expr_call_mid = expr_prim `chainl1` f where
     f = do
         pos <- pos2src <$> getPosition
-        op  <- try tk_op <|> try (char '`' *> (tk_func <* char '`'))
+        op  <- try tk_op <|> try (char '\'' *> (tk_func <* char '\''))
         return (\a b -> Call annz{source=pos} op (Tuple annz{source=pos} [a,b]))
 
 -------------------------------------------------------------------------------

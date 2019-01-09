@@ -276,8 +276,8 @@ spec = do
             it "`-1" $
                 parse expr_call_pre "-1"
                 `shouldBe` Right (Call annz{source=("",1,1)} "negate" (Const annz{source=("",1,2)} 1))
-            it "`--1" $
-                parse expr_call_pre "`--1"
+            it "'--1" $
+                parse expr_call_pre "'--1"
                 `shouldBe` Right (Call annz{source=("",1,1)} "(--)" (Const annz{source=("",1,4)} 1))
             it "--1" $
                 parse expr_call_pre "--1"
@@ -330,8 +330,8 @@ spec = do
             it "aaa" $
                 parse expr "aaa"
                 `shouldBe` Right (Read annz{source=("",1,1)} "aaa")
-            it "`$1" $
-                parse expr "`$1"
+            it "'$1" $
+                parse expr "'$1"
                 `shouldBe` Right (Call annz{source=("",1,1)} "($)" (Const annz{source=("",1,3)} 1))
             it "-1" $
                 parse expr "- 1 "
@@ -533,15 +533,15 @@ spec = do
         describe "if-then-else/if-else" $ do
             it "if 0 then escape ()" $
                 parse stmt_if "if 0 then escape ()"
-                `shouldBe` Left "(line 1, column 20):\nunexpected end of input\nexpecting \"`\", \"{\", \"escape\", \"break\", \"val\", \"mut\", \"input\", \"output\", \"event\", \"func\", \"_\", \"(\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 20):\nunexpected end of input\nexpecting \"'\", \"{\", \"escape\", \"break\", \"val\", \"mut\", \"input\", \"output\", \"event\", \"func\", \"_\", \"(\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 then escape 0" $
                 parse stmt_if "if 0 then escape 0"
-                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"`\", \"{\", \"escape\", \"break\", \"val\", \"mut\", \"input\", \"output\", \"event\", \"func\", \"_\", \"(\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"'\", \"{\", \"escape\", \"break\", \"val\", \"mut\", \"input\", \"output\", \"event\", \"func\", \"_\", \"(\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 escape 0 end" $
                 parse stmt_if "if 0 escape 0 end"
-                `shouldBe` Left "(line 1, column 6):\nunexpected \"e\"\nexpecting \"`\" or \"then\""
+                `shouldBe` Left "(line 1, column 6):\nunexpected \"e\"\nexpecting \"'\" or \"then\""
 
             it "if 0 then escape 0 else escape 1 end" $
                 parse stmt_if "if 0 then escape 0 else escape 1 end"
@@ -662,7 +662,7 @@ spec = do
                 `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (Type1 "Int") Nothing) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Seq (annz{source = ("",1,1)}) (Write (annz{source = ("",1,16)}) (LVar "x") (Const (annz{source = ("",1,19)}) 1)) (Escape (annz{source = ("",1,23)}) Nothing (Read (annz{source = ("",1,30)}) "x"))))
 
             it "val x::(Int,Int,):(1,2) ; escape +x" $
-                parse stmt "val x::(Int,Int):(1,2) ; escape `+x"
+                parse stmt "val x::(Int,Int):(1,2) ; escape '+x"
                 `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (TypeN [Type1 "Int",Type1 "Int"]) Nothing) (Nop (annz{source = ("",0,0)}))) (Write (annz{source = ("",1,17)}) (LVar "x") (Tuple (annz{source = ("",1,18)}) [Const (annz{source = ("",1,19)}) 1,Const (annz{source = ("",1,21)}) 2]))) (Escape (annz{source = ("",1,26)}) Nothing (Call (annz{source = ("",1,33)}) "(+)" (Read (annz{source = ("",1,35)}) "x"))))
 
             it "do ... end" $

@@ -79,8 +79,8 @@ tests = [
     (0,   ["(line 1, column 16):\ntypes do not match"], [],
                   "val x::((),()) : () val y::Int : 1 escape y"),
     (1,   [], [], "val x::((),()) : ((),()) val y::Int : 1 escape y"),
-    (3,   [], [], "val x::(Int,Int):(1,2) ; escape `+x"),
-    (10,  [], [], "val vs::(Int,Int) : (5,5) ; escape `+ vs"),
+    (3,   [], [], "val x::(Int,Int):(1,2) ; escape '+x"),
+    (10,  [], [], "val vs::(Int,Int) : (5,5) ; escape '+ vs"),
 -- if
     (10,  [], [], "if 1==1 then else end escape 10"),
     (0,   ["(line 1, column 22):\ntypes do not match"],
@@ -141,7 +141,7 @@ tests = [
             "end",
             "val (x,y)::(Int,Int) : f 1",
             "val z::(Int,Int) : (x,y)",
-            "escape `+ z"
+            "escape '+ z"
         ]),
     (1, [],
         [],
