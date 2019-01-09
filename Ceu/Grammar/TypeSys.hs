@@ -22,8 +22,13 @@ stmt ids s@(Out  z id tp p)  = ((errDeclared ids (id,z)) ++ es, Out  z id tp p')
                                where (es,p') = stmt (s:ids) p
 stmt ids s@(Evt  z id p)     = ((errDeclared ids (id,z)) ++ es, Evt  z id p')
                                where (es,p') = stmt (s:ids) p
-stmt ids s@(Func z id tp p)  = ((errDeclared ids (id,z)) ++ es, Func z id tp p')
-                               where (es,p') = stmt (s:ids) p
+
+stmt ids s@(Func z id tp p)  = (es ++ es', Func z id tp p') where
+    (es',p') = stmt (s:ids) p
+    es = case find' id ids of
+        Nothing               -> []
+        Just (Func _ _ tp' _) -> toErrorTypes z tp tp'
+
 stmt ids s@(FuncI z id tp Nothing p) = (es, FuncI z id tp Nothing p')
                                         where (es,p') = stmt ids p
 stmt ids s@(FuncI z id tp (Just imp) p) = (es1++es2, FuncI z id tp (Just imp') p')
@@ -128,7 +133,7 @@ errDeclared ids (id,z) =
     if (take 1 id == "_") then [] else    -- nested _ret, __and (par/and)
         case find' id ids of
             Nothing   -> []
-            s         -> [toError z "identifier '" ++ id ++ "' is already declared"]
+            _         -> [toError z "identifier '" ++ id ++ "' is already declared"]
 
 fff :: String -> [Stmt] -> Ann -> (Stmt -> Bool) -> (Errors, Type)
 fff id ids z pred =

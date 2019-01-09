@@ -133,6 +133,7 @@ tests = [
         [], "func f :: v :: (Int -> Int) do end ; escape 1"),
     (1, [], [], "func f :: v :: (Int -> Int) do escape 0 end ; escape 1"),
     (2, [], [], "func f :: v :: (Int -> Int) do escape v+1 end ; escape f 1"),
+    -- TODO: ((f 1)._1 , (f 1)._2)
     (3, [], [],
         unlines [
             "func f :: v :: (Int -> (Int,Int)) do",
@@ -141,6 +142,27 @@ tests = [
             "val (x,y)::(Int,Int) : f 1",
             "val z::(Int,Int) : (x,y)",
             "escape `+ z"
+        ]),
+    (1, [],
+        [],
+        unlines [
+            "func f :: (Int -> Int)",
+            "func f :: (Int -> Int)",
+            "escape 1"
+        ]),
+    (0, ["(line 2, column 1):\ntypes do not match"],
+        [],
+        unlines [
+            "func f :: (Int -> Int)",
+            "func f :: a :: (Int -> ()) do escape end",
+            "escape 0"
+        ]),
+    (2, [],
+        [],
+        unlines [
+            "func f :: (Int -> Int)",
+            "func f :: a :: (Int -> Int) do escape a+1 end",
+            "escape f 1"
         ]),
 -- await
     (35, [], [("KEY",1)],

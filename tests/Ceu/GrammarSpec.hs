@@ -147,6 +147,14 @@ spec = do
     checkTypeSysIt (Var annz "x" (Type1 "Int") (Write annz (LVar "x") (Unit annz))) ["types do not match"]
     checkTypeSysIt (Func annz "identity" (TypeF (TypeV "a") (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "identity" (Const annz 1))))) []
 
+    it "func f; func f" $
+        TypeSys.go (Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 Type0) (Nop annz)))
+            `shouldBe` ([],Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 Type0) (Nop annz)))
+
+    it "func f; func ~f" $
+        TypeSys.go (Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 TypeB) (Nop annz)))
+            `shouldBe` (["types do not match"],Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 TypeB) (Nop annz)))
+
     it "input A ; emit A" $
         TypeSys.go (Inp annz "A" (EmitExt annz "A" (Unit annz)))
             `shouldBe` (["identifier 'A' is invalid"],Inp annz "A" (EmitExt annz "A" (Unit annz{type_=Type0})))
