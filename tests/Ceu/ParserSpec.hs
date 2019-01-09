@@ -375,10 +375,13 @@ spec = do
         describe "escape:" $ do
             it "escape" $
                 parse stmt_escape "escape"
-                `shouldBe` Left "(line 1, column 7):\nunexpected end of input\nexpecting letter, \"_\", digit, \"`\", \"-\", \"{\" or \"(\""
+                `shouldBe` Right (Escape annz{source=("",1,1)} Nothing (Unit annz{source=("",1,1)}))
             it "escape ()" $
                 parse stmt_escape "escape ()"
                 `shouldBe` Right (Escape annz{source=("",1,1)} Nothing (Unit annz{source=("",1,8)}))
+            it "escape/a ()" $
+                parse stmt_escape "escape/a ()"
+                `shouldBe` Right (Escape annz{source=("",1,1)} (Just "a") (Unit annz{source=("",1,10)}))
             it "escape 0" $
                 parse stmt_escape "escape 0"
                 `shouldBe` Right (Escape annz{source=("",1,1)} Nothing (Const annz{source=("",1,8)} 0))

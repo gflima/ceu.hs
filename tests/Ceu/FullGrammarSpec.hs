@@ -133,11 +133,15 @@ spec = do
       Trap.compile (Var' annz "ret" Type0 Nothing (Trap annz (Just "ret") (Escape annz (Just "ret") (Const annz 1))))
       `shouldBe` ([], (Var' annz "ret" Type0 Nothing (Trap' annz (Seq annz (Write annz (LVar "ret") (Const annz 1)) (Escape' annz 0)))))
 
+    it "trap/a trap escape/a;" $ do
+      Trap.compile (Var' annz "ret" Type0 Nothing (Trap annz (Just "ret") (Trap annz Nothing (Escape annz (Just "ret") (Unit annz)))))
+      `shouldBe` ([],Var' annz "ret" Type0 Nothing (Trap' annz (Trap' annz (Seq annz (Write annz (LVar "ret") (Unit annz)) (Escape' annz 1)))))
+
     it "trap/a escape;" $ do
       Trap.compile (Var' annz "ret" Type0 Nothing (Trap annz (Just "ret") (Escape annz Nothing (Unit annz))))
       `shouldBe` ([], (Var' annz "ret" Type0 Nothing (Trap' annz (Seq annz (Write annz (LVar "ret") (Unit annz)) (Escape' annz 0)))))
 
-    it "trap/a escape/a;" $ do
+    it "trap/a escape/b;" $ do
       Trap.compile (Var' annz "ret" Type0 Nothing (Trap annz (Just "ret") (Escape annz (Just "xxx") (Const annz 1))))
       `shouldBe` ([], (Var' annz "ret" Type0 Nothing (Trap' annz (Escape' annz (-1)))))
 

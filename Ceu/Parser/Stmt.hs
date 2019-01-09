@@ -67,11 +67,11 @@ stmt_raw = do
 
 stmt_escape :: Parser Stmt
 stmt_escape = do
-    pos1 <- pos2src <$> getPosition
+    pos  <- pos2src <$> getPosition
     void <- tk_key "escape"
-    pos2 <- pos2src <$> getPosition
-    e    <- expr
-    return $ Escape annz{source=pos1} Nothing e
+    var  <- optionMaybe (try (tk_str "/" *> tk_var))
+    e    <- option (Unit annz{source=pos}) expr
+    return $ Escape annz{source=pos} var e
 
 stmt_break :: Parser Stmt
 stmt_break = do

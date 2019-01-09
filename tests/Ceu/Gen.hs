@@ -58,13 +58,6 @@ main = do
 
 tests :: [(Int, Errors, [(String,Int)], String)]
 tests = [
--- trap/escape()
--- trap com tupla
-    (1,   [], [], "val void::() : trap do escape () end ; escape 1"),
-    (2,   [], [], "val x::((),Int) : trap do escape ((),2) end ; val (_,y)::((),Int) : x ; escape y"),
-    --(1,   [], [], "val void::() : trap do trap do escape/void () end ; escape 1"),
-    -- TODO: escape x@1 + x@2
-    --(1,   [], [], "val x::(Int,Int) : trap do trap do escape/x (1,2) end ; escape 1"),
   --(0,   [], [], "xXxXxXxXxXxXxXxXxXxXx"),    -- (to force error)
 --
     (10,  [], [], "escape 10"),
@@ -109,6 +102,25 @@ tests = [
     (100, [], [], "val x::((),()) : ((),()) ; val x1::() ; (x1,_)<:x  if x1==() then escape 100 else escape 0 end"),
     (3,   [], [], "val (x,y)::(Int,Int) : (1, 2); escape x+y"),
     (3,   [], [], "mut (x, (y,_)) :: (Int, (Int,Int)) <: (1, (2,3)); escape x+y"),
+-- trap/escape()
+    (1,   [], [], "val void::() : trap do escape () end ; escape 1"),
+    -- TODO: escape x@1 + x@2
+    (2,   [], [], "val x::((),Int) : trap do escape ((),2) end ; val (_,y)::((),Int) : x ; escape y"),
+    (1,   [], [],
+        unlines [
+            "mut ret::Int <: 1",
+            "val x::() : trap do",
+            "   trap do",
+            "       if 1==1 then",
+            "           escape/x",
+            "       end",
+            "       ret <: 99",
+            "       escape ()",
+            "   end",
+            "   escape/x",
+            "end",
+            "escape ret"
+        ]),
 -- funcs
     (1,   [], [], "func f :: (Int -> Int); escape 1"),
     (0,   ["(line 1, column 33):\nunexpected \"e\"\nmissing arguments"],

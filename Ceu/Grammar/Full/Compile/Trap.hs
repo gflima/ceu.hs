@@ -30,8 +30,9 @@ compile p = ([], aux [] p) where
   aux vars p                   = p
 
 escape :: [Maybe ID_Var] -> Stmt -> Int -> Stmt
-escape (Nothing:_)     (Escape z Nothing (Unit _)) _ = Escape' z 0
-escape ((Just var):_)  (Escape z Nothing exp) _      = Seq z (Write z (LVar var) exp) (Escape' z 0)
+escape (Nothing:_)     (Escape z Nothing  (Unit _)) _ = Escape' z 0
+escape (Nothing:l)   s@(Escape z (Just _) (Unit _)) n = escape l s (n+1)
+escape ((Just var):_)  (Escape z Nothing  exp)      _ = Seq z (Write z (LVar var) exp) (Escape' z 0)
 escape ((Just var'):l) s@(Escape z (Just var) exp) n
   | var == var' = Seq z (Write z (LVar var) exp) (Escape' z n)
   | otherwise   = escape l s (n+1)
