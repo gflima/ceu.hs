@@ -1077,18 +1077,6 @@ spec = do
     evalProgItFail ["orphan `escape` statement","missing `escape` statement","unreachable statement"]
       [] (G.Escape annz 1)
 
-    evalProgItFail ["identifier '_ret' is already declared"]
-      [] (G.Func annz "(+)" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (G.Var annz "a" (Type1 "Int")
-           (G.Var annz "_ret" (Type1 "Int")
-             (G.Write annz (LVar "a") (Const annz 1) `G.sSeq`
-              G.Write annz (LVar "_ret") (Call annz "(+)" (Tuple annz [(Read annz "a"), (Const annz 10)])) `G.sSeq`
-              G.Escape annz 0))))
-
-    evalProgItFail ["identifier '_ret' is already declared"]
-      [] (G.Write annz (LVar "_ret") (Const annz 1) `G.sSeq`
-          G.Var annz "_ret" (Type1 "Int") (G.Write annz (LVar "_ret") (Const annz 99)) `G.sSeq`
-          G.Escape annz 0)
-
     evalProgItSuccess (11,[[]])
       [] (G.Func annz "(+)" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (G.Var annz "a" (Type1 "Int")
            (G.Write annz (LVar "a") (Const annz 1) `G.sSeq`

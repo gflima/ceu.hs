@@ -29,12 +29,10 @@ stmt ids s@(Func z id tp p)  = (es ++ es', Func z id tp p') where
         Nothing               -> []
         Just (Func _ _ tp' _) -> toErrorTypes z tp tp'
 
-stmt ids s@(FuncI z id tp Nothing p) = (es, FuncI z id tp Nothing p')
-                                        where (es,p') = stmt ids p
-stmt ids s@(FuncI z id tp (Just imp) p) = (es1++es2, FuncI z id tp (Just imp') p')
-                                          where
-                                            (es1,imp') = stmt ids imp
-                                            (es2,p')   = stmt ids p
+stmt ids s@(FuncI z id tp imp p) = (es1++es2, FuncI z id tp imp' p')
+                                   where
+                                    (es1,imp') = stmt ids imp
+                                    (es2,p')   = stmt ids p
 
 stmt ids (Write z loc exp)   = (es1 ++ es2 ++ es3, Write z loc exp')
                                where

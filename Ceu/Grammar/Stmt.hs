@@ -13,7 +13,7 @@ data Stmt
   | Out      Ann ID_Out  Type Stmt          -- output declaration
   | Evt      Ann ID_Evt  Stmt               -- event declaration
   | Func     Ann ID_Func Type Stmt          -- function declaration
-  | FuncI    Ann ID_Func Type (Maybe Stmt) Stmt -- function implementation
+  | FuncI    Ann ID_Func Type Stmt Stmt     -- function implementation
 --  | Data     Ann ID_Type [ID_Var] DataOr    -- new type declaration
   | Write    Ann Loc Exp                    -- assignment statement
   | AwaitInp Ann ID_Inp                     -- await external event

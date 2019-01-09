@@ -226,10 +226,10 @@ spec = do
 
     describe "func impl:" $ do
         it "f ... do await end" $
-            Check.stmts (FuncI annz "f" TypeB (Just $ Loop annz (Nop annz)) (Halt annz))
+            Check.stmts (FuncI annz "f" TypeB (Loop annz (Nop annz)) (Halt annz))
             `shouldBe` ["unbounded `loop` execution"]
         it "f ... do await end" $
-            Check.stmts (FuncI annz "f" TypeB (Just $ Halt annz) (Halt annz))
+            Check.stmts (FuncI annz "f" TypeB (Halt annz) (Halt annz))
             `shouldBe` ["invalid statement in `func`","invalid statement"]
 
     -- all

@@ -36,12 +36,8 @@ simplify (Evt z id p) =
     otherwise   -> Evt z id p'
   where p' = simplify p
 
-simplify (Func  z id tp     p) = Func  z id tp      (simplify p)
-simplify (FuncI z id tp imp p) = FuncI z id tp imp' (simplify p)
-    where
-        imp' = case imp of
-            Nothing -> Nothing
-            Just x  -> Just $ simplify x
+simplify (Func  z id tp     p) = Func  z id tp (simplify p)
+simplify (FuncI z id tp imp p) = FuncI z id tp (simplify imp) (simplify p)
 
 simplify (Write z _ (Unit _)) = Nop z
 
