@@ -43,6 +43,18 @@ checkTypes (TypeN t1s)       (TypeN t2s)       = (checkTypesN t1s t2s) && (check
 
 -------------------------------------------------------------------------------
 
+get1s :: Type -> [ID_Type]
+
+get1s (TypeV _)       = []
+get1s TypeT           = []
+get1s TypeB           = []
+get1s Type0           = []
+get1s (Type1 v)       = [v]
+get1s (TypeF inp out) = get1s inp ++ get1s out
+get1s (TypeN ts)      = concatMap get1s ts
+
+-------------------------------------------------------------------------------
+
 checkTypesN :: [Type] -> [Type] -> Bool
 checkTypesN []      []      = True
 checkTypesN []      _       = False
