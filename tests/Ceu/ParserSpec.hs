@@ -15,7 +15,7 @@ import Ceu.Grammar.Globals      (Loc(..))
 import Ceu.Grammar.Type         (Type(..))
 import Ceu.Grammar.Ann          (annz,source,type_)
 import Ceu.Grammar.Exp          (Exp(..), RawAt(..))
-import Ceu.Grammar.Full.Grammar (Stmt(..))
+import Ceu.Grammar.Full.Stmt    (Stmt(..))
 
 main :: IO ()
 main = hspec spec

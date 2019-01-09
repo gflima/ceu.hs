@@ -1,7 +1,7 @@
 module Ceu.Grammar.Full.Compile.Async where
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Full.Grammar
+import Ceu.Grammar.Full.Stmt
 
 -- compile: Adds AwaitAsync in Loops inside Asyncs
 

@@ -1,4 +1,4 @@
-module Ceu.Grammar.Full.Grammar where
+module Ceu.Grammar.Full.Stmt where
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann      (Ann, HasAnn(..), annz)

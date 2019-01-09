@@ -3,7 +3,7 @@ module Ceu.Grammar.Full.Compile.Break where
 import Debug.Trace
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Full.Grammar
+import Ceu.Grammar.Full.Stmt
 import qualified Ceu.Grammar.Full.Compile.Trap as Trap
 
 -- compile

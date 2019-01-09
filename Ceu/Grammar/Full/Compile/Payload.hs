@@ -5,7 +5,7 @@ import Data.Char (toUpper)
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Type     (Type(..))
 import Ceu.Grammar.Exp      (Exp(..))
-import Ceu.Grammar.Full.Grammar
+import Ceu.Grammar.Full.Stmt
 
 -- compile:
 -- (Evt' e tp ...)  -> (Var' e_ (Evt' e TypeB) ...)

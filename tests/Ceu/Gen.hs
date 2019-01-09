@@ -12,7 +12,6 @@ import qualified Ceu.Parser.Token         as Token
 import qualified Ceu.Parser.Stmt          as Parser
 import qualified Ceu.Grammar.Stmt         as G
 import qualified Ceu.Grammar.Full.Eval    as FullE
-import qualified Ceu.Grammar.Full.Grammar as FullG
 import qualified Ceu.Code.Gen             as Gen
 import qualified Ceu.Code.Template        as Template
 import Ceu.Grammar.Globals (Errors)
@@ -62,6 +61,7 @@ tests = [
 -- trap/escape()
 -- trap com tupla
     (1,   [], [], "val void::() : trap do escape () end ; escape 1"),
+    (2,   [], [], "val x::((),Int) : trap do escape ((),2) end ; val (_,y)::((),Int) : x ; escape y"),
     --(1,   [], [], "val void::() : trap do trap do escape/void () end ; escape 1"),
     -- TODO: escape x@1 + x@2
     --(1,   [], [], "val x::(Int,Int) : trap do trap do escape/x (1,2) end ; escape 1"),

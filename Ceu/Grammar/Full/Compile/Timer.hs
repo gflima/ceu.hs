@@ -4,7 +4,7 @@ import Ceu.Grammar.Globals
 import Ceu.Grammar.Type     (Type(..))
 import Ceu.Grammar.Exp      (Exp(..))
 import qualified Ceu.Eval as E
-import Ceu.Grammar.Full.Grammar
+import Ceu.Grammar.Full.Stmt
 
 -- compile:
 --  var int tot_ = <DT>;

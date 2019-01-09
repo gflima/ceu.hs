@@ -6,7 +6,7 @@ import Ceu.Grammar.Ann (Ann(type_),annz)
 import Ceu.Grammar.Exp
 import qualified Ceu.Grammar.Stmt as G
 import qualified Ceu.Eval         as E
-import Ceu.Grammar.Full.Grammar
+import Ceu.Grammar.Full.Stmt
 import Ceu.Grammar.Full.Eval
 import qualified Ceu.Grammar.Full.Compile.Break    as Break
 import qualified Ceu.Grammar.Full.Compile.ParAndOr as ParAndOr

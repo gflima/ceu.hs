@@ -2,7 +2,7 @@ module Ceu.Grammar.Full.Compile.Fin where
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann      (Ann, toError)
-import Ceu.Grammar.Full.Grammar
+import Ceu.Grammar.Full.Stmt
 
 -- compile:
 -- (Fin f1 f2 f3);A -> (or (Fin' p) A)

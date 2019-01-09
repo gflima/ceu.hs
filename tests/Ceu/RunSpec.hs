@@ -7,7 +7,7 @@ import Text.Parsec (eof, parse)
 import Ceu.Parser.Stmt          (stmt)
 import Ceu.Eval                 (Outs)
 import Ceu.Grammar.Globals      (Source(..), Val)
-import Ceu.Grammar.Full.Grammar (In)
+import Ceu.Grammar.Full.Stmt    (In)
 import Ceu.Grammar.Full.Eval    (evalFullProg)
 
 main :: IO ()

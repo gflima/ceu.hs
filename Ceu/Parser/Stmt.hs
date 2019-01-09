@@ -18,7 +18,7 @@ import Ceu.Grammar.Globals       (Source, Loc(..), ID_Var)
 import Ceu.Grammar.Type          (Type(..))
 import Ceu.Grammar.Ann           (annz, source, getAnn, Ann(..))
 import Ceu.Grammar.Exp           (Exp(..), RawAt(..))
-import Ceu.Grammar.Full.Grammar  (Stmt(..))
+import Ceu.Grammar.Full.Stmt     (Stmt(..))
 
 -------------------------------------------------------------------------------
 

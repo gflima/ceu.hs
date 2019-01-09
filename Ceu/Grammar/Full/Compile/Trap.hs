@@ -3,7 +3,7 @@ module Ceu.Grammar.Full.Compile.Trap where
 import Debug.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Exp
-import Ceu.Grammar.Full.Grammar
+import Ceu.Grammar.Full.Stmt
 
 compile :: Stmt -> (Errors, Stmt)
 compile p = ([], aux [] p) where

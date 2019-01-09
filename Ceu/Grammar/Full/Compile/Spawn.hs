@@ -2,7 +2,7 @@ module Ceu.Grammar.Full.Compile.Spawn where
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann      (Ann, toError)
-import Ceu.Grammar.Full.Grammar
+import Ceu.Grammar.Full.Stmt
 
 -- compile: Converts (spawn p1; ...) into (p1;Halt or ...)
 

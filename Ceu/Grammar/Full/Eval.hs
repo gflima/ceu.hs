@@ -7,7 +7,7 @@ import qualified Ceu.Grammar.Stmt as G
 import qualified Ceu.Eval as E
 import Debug.Trace
 
-import Ceu.Grammar.Full.Grammar
+import Ceu.Grammar.Full.Stmt
 import qualified Ceu.Grammar.Full.Compile.Timer    as Timer
 import qualified Ceu.Grammar.Full.Compile.Payload  as Payload
 import qualified Ceu.Grammar.Full.Compile.Break    as Break

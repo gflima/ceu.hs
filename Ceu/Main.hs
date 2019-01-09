@@ -10,7 +10,6 @@ import qualified Ceu.Parser.Token         as Token
 import qualified Ceu.Parser.Stmt          as Parser
 import qualified Ceu.Grammar.Stmt         as G
 import qualified Ceu.Grammar.Full.Eval    as FullE
-import qualified Ceu.Grammar.Full.Grammar as FullG
 import qualified Ceu.Code.Gen             as Gen
 import qualified Ceu.Code.Template        as Template
 import Ceu.Grammar.Globals (Errors)
