@@ -24,7 +24,7 @@ data Stmt
   | Out      Ann ID_Out Type                    -- output declaration
   | Evt      Ann ID_Evt Type                    -- event declaration
   | Func     Ann ID_Var Type                    -- function declaration
-  | FuncI    Ann ID_Var Type (Maybe Stmt)       -- function implementation
+  | FuncI    Ann ID_Var Type Stmt               -- function implementation
   | Write    Ann Loc Exp                        -- assignment statement
   | AwaitInp Ann ID_Inp (Maybe Loc)             -- await external event
   | EmitExt  Ann ID_Ext Exp                     -- emit external event
@@ -52,7 +52,7 @@ data Stmt
   | Out'     Ann ID_Out Type Stmt               -- output declaration w/ stmts in scope
   | Evt'     Ann ID_Evt Type Stmt               -- event declaration w/ stmts in scope
   | Func'    Ann ID_Func Type Stmt              -- functions declaration w/ stmts in scope
-  | FuncI'   Ann ID_Func Type (Maybe Stmt) Stmt -- functions implementation w/ stmts in scope
+  | FuncI'   Ann ID_Func Type Stmt Stmt         -- functions implementation w/ stmts in scope
   | Or'      Ann Stmt Stmt                      -- used as an Or with possibly non-terminating trails
   | Par'     Ann Stmt Stmt                      -- par as in basic Grammar
   | Pause'   Ann ID_Var Stmt                    -- pause as in basic Grammar
@@ -139,9 +139,7 @@ toGrammar (Func' z cod tp p)     = (es, G.Func z cod tp p')
 toGrammar (FuncI' z cod tp imp p) = (esi++es, G.FuncI z cod tp imp' p')
                                  where
                                    (es,p')    = toGrammar p
-                                   (esi,imp') = case fmap toGrammar imp of
-                                                Nothing    -> ([],Nothing)
-                                                Just (x,y) -> (x, Just y)
+                                   (esi,imp') = toGrammar imp
 toGrammar (Write z var exp)      = ([], G.Write z var exp)
 toGrammar (AwaitInp z inp var)   = ([], G.AwaitInp z inp)
 toGrammar (EmitExt z ext exp)    = ([], G.EmitExt z ext exp)

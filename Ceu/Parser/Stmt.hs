@@ -202,12 +202,11 @@ stmt_func = do
                             (Seq ann
                                 ret
                                 (FuncI ann func tp
-                                    (Just
+                                    (Seq ann
+                                        (fromJust dcls')
                                         (Seq ann
-                                            (fromJust dcls')
-                                            (Seq ann
-                                                (Write ann loc' (RawE ann{type_=TypeT} [RawAtS "{_ceu_arg}"]))
-                                                imp')))))
+                                            (Write ann loc' (RawE ann{type_=TypeT} [RawAtS "{_ceu_arg}"]))
+                                            imp'))))
     return s
 
     where

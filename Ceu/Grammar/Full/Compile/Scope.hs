@@ -21,7 +21,7 @@ aux (Seq _ s@(Out z out tp) p2)      = Out' z out tp (aux p2)
 aux (Seq _ s@(Var z var tp fin) p2) = Var' z var tp (aux_fin fin) (aux p2)
 aux (Seq _ s@(Evt z int tp) p2)     = Evt' z int tp (aux p2)
 aux (Seq _ s@(Func z cod tp) p2)    = Func' z cod tp (aux p2)
-aux (Seq _ s@(FuncI z cod tp imp) p2) = aux_funci $ FuncI' z cod tp (fmap aux imp) (aux p2)
+aux (Seq _ s@(FuncI z cod tp imp) p2) = aux_funci $ FuncI' z cod tp (aux imp) (aux p2)
 aux (Seq z p1 p2)                   = Seq z (aux p1) (aux p2)
 aux (Loop z p)                      = Loop z (aux p)
 aux (Every z evt exp p)             = Every z evt exp (aux p)
@@ -40,8 +40,7 @@ aux_fin (Just (a,b,c)) = Just ((aux a),(aux b),(aux c))
 aux_fin Nothing        = Nothing
 
 aux_funci :: Stmt -> Stmt
-aux_funci (FuncI' z func tp Nothing p) = FuncI' z func tp Nothing p
-aux_funci (FuncI' z func (TypeF inp out) (Just imp) p) =
-    FuncI' z func (TypeF inp out) (Just imp') p
+aux_funci (FuncI' z func (TypeF inp out) imp p) =
+    FuncI' z func (TypeF inp out) imp' p
     where
         imp' = (Var' z "_ret" out Nothing (Trap z (Just "_ret") imp))

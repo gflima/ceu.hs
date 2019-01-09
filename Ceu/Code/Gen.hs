@@ -6,7 +6,7 @@ import qualified Data.Set as Set
 import Data.Maybe
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann  (Ann(..), toTrails0, toTrailsN, getAnn)
-import Ceu.Grammar.Type (Type(..)) --, reducesToType0)
+import Ceu.Grammar.Type (Type(..), isPolymorphic)
 import Ceu.Grammar.Exp  (Exp(..), RawAt(..))
 import Ceu.Grammar.Stmt (Stmt(..))
 import qualified Ceu.Code.N as N
@@ -84,7 +84,7 @@ olbl lbl src = "static void " ++ lbl ++ " (tceu_stk* _ceu_stk) " ++
                  oblk src ++ "\n"
 
 ofunc :: Stmt -> String -> String
-ofunc (FuncI _ func (TypeF inp out) (Just imp) _) src =
+ofunc (FuncI _ func (TypeF inp out) imp _) src =
     "static " ++ tp2use out ++ " CEU_FUNC_" ++ func ++ "__" ++ inp' ++ " (" ++ inp' ++ " _ceu_arg) "
               ++ oblk (src++ret) ++ "\n"
     where
@@ -162,7 +162,7 @@ stmt p h = [
     , ("CEU_INPS",      concat $ map (\inp->s++"CEU_INPUT_"++inp++",\n") $ inps    up)
     , ("CEU_EVTS",      concat $ map (\evt->s++"CEU_EVENT_"++evt++",\n") $ evts_up up)
     , ("CEU_TYPES",     concat $ rmdups $ map (\tp->tp2dcl tp++"\n")
-                                        -- $ filter (not.reducesToType0)
+                                        $ filter (not.isPolymorphic)
                                         $ tps_up up)
     , ("CEU_VARS",      concat $ map (\(var,tp)->s++tp2use tp++" "++var++";\n")
                                -- $ filter (not.reducesToType0.snd)
@@ -252,16 +252,13 @@ aux dn s@(Var z id tp p) = p' {
                           "")
             id'  = id ++ "__" ++ (show $ nn z)
 
-aux dn s@(Func z id (TypeF inp out) p) = p'
+aux dn s@(Func z id (TypeF inp out) p) = p' { tps_up=inp:out:(tps_up p') }
     where
         p'  = aux dn' p
         dn' = dn { vars_dn = (id',s):(vars_dn dn) }
         id' = id ++ "__" ++ (show $ nn z)
 
-aux dn (FuncI z id (TypeF inp out) Nothing p) = p' { tps_up=inp:out:(tps_up p') }
-    where p' = aux dn p
-
-aux dn s@(FuncI z id tp@(TypeF inp out) (Just imp) p) =
+aux dn s@(FuncI z id tp@(TypeF inp out) imp p) =
     uni {
         code_bef = code_bef p',
         code_mid = (code_mid uni) ++ func,

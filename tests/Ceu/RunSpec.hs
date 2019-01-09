@@ -30,7 +30,7 @@ spec = do
             `shouldBe` Left "(line 1, column 8):\nidentifier 'a' is not declared\n"
         it "escape" $
             run "escape" []
-            `shouldBe` Left "(line 1, column 7):\nunexpected end of input\nexpecting letter, \"_\", digit, \"`\", \"-\", \"{\" or \"(\""
+            `shouldBe` Left "(line 1, column 1):\ntypes do not match\n"
 
     describe "exps:" $ do
         it "escape -1" $

@@ -649,7 +649,7 @@ end
                 (Func annz "f" (TypeF (Type1 "Int") (Type1 "Int")))
                 (FuncI annz "f"
                     (TypeF (Type1 "Int") (Type1 "Int"))
-                    (Just $ Escape annz Nothing (Const annz 1))))
+                    (Escape annz Nothing (Const annz 1))))
                 (Escape annz Nothing (Call annz "f" (Const annz 1)))))
           `shouldBe` ([],
                 (G.Inp annz "TIMER"
@@ -658,12 +658,11 @@ end
                             (G.Trap annz
                                 (G.Func annz "f" (TypeF (Type1 "Int") (Type1 "Int"))
                                     (G.FuncI annz "f" (TypeF (Type1 "Int") (Type1 "Int"))
-                                        (Just
-                                            (G.Var annz "_ret" (Type1 "Int")
-                                                (G.Trap annz
-                                                    (G.Seq annz
-                                                        (G.Write annz (LVar "_ret") (Const (annz {type_ = Type1 "Int"}) 1))
-                                                        (G.Escape annz 0)))))
+                                        (G.Var annz "_ret" (Type1 "Int")
+                                            (G.Trap annz
+                                                (G.Seq annz
+                                                    (G.Write annz (LVar "_ret") (Const (annz {type_ = Type1 "Int"}) 1))
+                                                    (G.Escape annz 0))))
                                     (G.Seq annz
                                         (G.Write annz (LVar "_ret") (Call (annz {type_ = Type1 "Int"}) "f" (Const (annz {type_ = Type1 "Int"}) 1)))
                                         (G.Escape annz 0)))))

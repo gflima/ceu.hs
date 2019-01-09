@@ -24,10 +24,9 @@ stmt ids s@(Evt  z id p)     = ((errDeclared ids (id,z)) ++ es, Evt  z id p')
                                where (es,p') = stmt (s:ids) p
 
 stmt ids s@(Func z id tp p)  = (es ++ es', Func z id tp p') where
-    (es',p') = stmt (s:ids) p
-    es = case find' id ids of
-        Nothing               -> []
-        Just (Func _ _ tp' _) -> toErrorTypes z tp tp'
+    (es, (es',p')) = case find' id ids of
+        Nothing               -> ([],                    stmt (s:ids) p)
+        Just (Func _ _ tp' _) -> (toErrorTypes z tp' tp, stmt ids p)
 
 stmt ids s@(FuncI z id tp imp p) = (es1++es2, FuncI z id tp imp' p')
                                    where

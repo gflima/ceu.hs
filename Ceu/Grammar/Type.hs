@@ -92,6 +92,14 @@ instType' tp _ = tp
 
 -------------------------------------------------------------------------------
 
+isPolymorphic :: Type -> Bool
+isPolymorphic (TypeV _)     = True
+isPolymorphic (TypeF t1 t2) = isPolymorphic t1 || isPolymorphic t2
+isPolymorphic (TypeN l)     = foldr (\tp acc -> isPolymorphic tp || acc) False l
+isPolymorphic _             = False
+
+-------------------------------------------------------------------------------
+
 {-
 reducesToType0 :: Type -> Bool
 reducesToType0 Type0     = True

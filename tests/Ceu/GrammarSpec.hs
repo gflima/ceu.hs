@@ -151,6 +151,10 @@ spec = do
         TypeSys.go (Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 Type0) (Nop annz)))
             `shouldBe` ([],Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 Type0) (Nop annz)))
 
+    it "func f[a]; func f[0]" $
+        TypeSys.go (Func annz "f" (TypeF (TypeV "a") (TypeV "a")) (Func annz "f" (TypeF Type0 Type0) (Nop annz)))
+            `shouldBe` ([],Func annz "f" (TypeF (TypeV "a") (TypeV "a")) (Func annz "f" (TypeF Type0 Type0) (Nop annz)))
+
     it "func f; func ~f" $
         TypeSys.go (Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 TypeB) (Nop annz)))
             `shouldBe` (["types do not match"],Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 TypeB) (Nop annz)))
