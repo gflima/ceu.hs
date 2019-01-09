@@ -125,7 +125,7 @@ find' id ids = find (\s -> getId s == id) ids
 
 errDeclared :: [Stmt] -> (String, Ann) -> Errors
 errDeclared ids (id,z) =
-    if (take 2 id == "__") then [] else    -- nested par/and (__and)
+    if (take 1 id == "_") then [] else    -- nested _ret, __and (par/and)
         case find' id ids of
             Nothing   -> []
             s         -> [toError z "identifier '" ++ id ++ "' is already declared"]

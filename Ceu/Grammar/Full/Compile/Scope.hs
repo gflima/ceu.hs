@@ -44,4 +44,4 @@ aux_funci (FuncI' z func tp Nothing p) = FuncI' z func tp Nothing p
 aux_funci (FuncI' z func (TypeF inp out) (Just imp) p) =
     FuncI' z func (TypeF inp out) (Just imp') p
     where
-        imp' = (Var' z "__ret" out Nothing (Trap z (Just "__ret") imp))
+        imp' = (Var' z "_ret" out Nothing (Trap z (Just "_ret") imp))

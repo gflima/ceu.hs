@@ -86,9 +86,11 @@ olbl lbl src = "static void " ++ lbl ++ " (tceu_stk* _ceu_stk) " ++
 ofunc :: Stmt -> String -> String
 ofunc (FuncI _ func (TypeF inp out) (Just imp) _) src =
     "static " ++ tp2use out ++ " CEU_FUNC_" ++ func ++ "__" ++ inp' ++ " (" ++ inp' ++ " _ceu_arg) "
-              ++ oblk src ++ "\n"
+              ++ oblk (src++ret) ++ "\n"
     where
         inp' = tp2use inp
+        ret  = ocmd $ "return CEU_VAR__ret__" ++ (show $ nn z)
+        (Var z "_ret" _ _) = imp
 
 -------------------------------------------------------------------------------
 

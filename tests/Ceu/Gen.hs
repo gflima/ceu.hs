@@ -133,6 +133,15 @@ tests = [
         [], "func f :: v :: (Int -> Int) do end ; escape 1"),
     (1, [], [], "func f :: v :: (Int -> Int) do escape 0 end ; escape 1"),
     (2, [], [], "func f :: v :: (Int -> Int) do escape v+1 end ; escape f 1"),
+    (3, [], [],
+        unlines [
+            "func f :: v :: (Int -> (Int,Int)) do",
+            "   escape (v,v+1)",
+            "end",
+            "val (x,y)::(Int,Int) : f 1",
+            "val z::(Int,Int) : (x,y)",
+            "escape `+ z"
+        ]),
 -- await
     (35, [], [("KEY",1)],
         unlines [
