@@ -14,8 +14,15 @@ go p = stmt [] p
 
 stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
 
-stmt ids s@(Var  z id tp p)  = ((errDeclared ids (id,z)) ++ es, Var  z id tp p')
-                               where (es,p') = stmt (s:ids) p
+stmt ids s@(Data z id []   ors p) = ((errDeclared ids (id,z)) ++ es, Data z id [] ors p')
+                                    where (es,p') = stmt (s:ids) p
+stmt ids s@(Data z id vars ors p) = error "not implemented"
+
+stmt ids s@(Var  z id tp p)  = (es_tp ++ es_id ++ es, Var z id tp p')
+                               where
+                                es_tp   = []
+                                es_id   = errDeclared ids (id,z)
+                                (es,p') = stmt (s:ids) p
 stmt ids s@(Inp  z id p)     = ((errDeclared ids (id,z)) ++ es, Inp  z id p')
                                where (es,p') = stmt (s:ids) p
 stmt ids s@(Out  z id tp p)  = ((errDeclared ids (id,z)) ++ es, Out  z id tp p')
@@ -116,11 +123,12 @@ isFunc (Func _ _ _ _) = True
 isFunc _              = False
 
 getId :: Stmt -> String
-getId (Var  _ id _ _) = id
-getId (Inp  _ id _)   = id
-getId (Out  _ id _ _) = id
-getId (Evt  _ id _)   = id
-getId (Func _ id _ _) = id
+getId (Data _ id _ _ _) = id
+getId (Var  _ id _ _)   = id
+getId (Inp  _ id _)     = id
+getId (Out  _ id _ _)   = id
+getId (Evt  _ id _)     = id
+getId (Func _ id _ _)   = id
 
 find' :: String -> [Stmt] -> Maybe Stmt
 find' id ids = find (\s -> getId s == id) ids

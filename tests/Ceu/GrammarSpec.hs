@@ -188,6 +188,27 @@ spec = do
             `shouldBe` ([],Var (annz{type_ = TypeB}) "x" (Type1 "Int") (Var (annz{type_ = TypeB}) "y" (TypeN [Type0,Type1 "Int"]) (Write (annz{type_ = TypeB}) (LTuple [LTuple [LAny,LVar "x"],LAny]) (Tuple (annz{type_ = TypeN [TypeN [Type0,Type1 "Int"],Type1 "Int"]}) [Read (annz{type_ = TypeN [Type0,Type1 "Int"]}) "y",Const annz{type_ = Type1 "Int"} 1]))))
 
   --------------------------------------------------------------------------
+  describe "new types" $ do
+    it "Bool/Int" $
+        (fst $ Check.compile (False,False,False)
+            (Data annz "Bool" [] (Just [DataOr ("True",[]), DataOr ("False",[])])
+                (Data annz "Int" [] Nothing
+                    (Nop annz))))
+        `shouldBe` []
+
+    it "Int/Int" $
+        (fst $ Check.compile (False,False,False)
+            (Data annz "Int" [] Nothing
+                (Data annz "Int" [] Nothing
+                    (Nop annz))))
+        `shouldBe` ["identifier 'Int' is already declared"]
+
+    it "~Int / x::Int" $
+        (fst $ Check.compile (False,False,False)
+            (Var annz "x" (Type1 "Int") (Nop annz)))
+        `shouldBe` []
+
+  --------------------------------------------------------------------------
   describe "checkStmts -- program is valid" $ do
 
     -- atomic statements --
