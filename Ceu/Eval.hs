@@ -49,6 +49,7 @@ infixr 1 `Seq`
 infixr 0 `Par`
 
 fromGrammar :: G.Stmt -> Stmt
+fromGrammar (G.Data _ _ _ _ p)  = fromGrammar p
 fromGrammar (G.Var _ id _ p)    = Var (id,Nothing) (fromGrammar p)
 fromGrammar (G.Inp _ _ p)       = (fromGrammar p)
 fromGrammar (G.Out _ _ _ p)     = (fromGrammar p)
@@ -325,7 +326,7 @@ run prog ins reaction = eP (fromGrammar prog) ins []
 -- Returns the last value of global "_ret" set by the program.
 compile_run :: G.Stmt -> [ID_Inp] -> Result
 compile_run prog ins =
-  let (es,p) = Check.compile (True,True,False) prog in
+  let (es,p) = Check.compile (True,True,True) prog in
     if es == [] then
       run p ("BOOT":ins) reaction
     else

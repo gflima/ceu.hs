@@ -48,6 +48,7 @@ infixr 0 `sPar`
 
 instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
+    getAnn (Data     z _ _ _ _) = z
     getAnn (Var      z _ _ _)   = z
     getAnn (Inp      z _ _)     = z
     getAnn (Out      z _ _ _)   = z
