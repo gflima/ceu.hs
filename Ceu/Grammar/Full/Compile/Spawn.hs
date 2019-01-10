@@ -7,6 +7,9 @@ import Ceu.Grammar.Full.Stmt
 -- compile: Converts (spawn p1; ...) into (p1;Halt or ...)
 
 compile :: Stmt -> (Errors, Stmt)
+compile (Data' z id vars ors p)  = (es, Data' z id vars ors p')
+                                   where
+                                     (es,p') = compile p
 compile (Var' z id tp Nothing p) = (es, Var' z id tp Nothing p')
                                    where
                                      (es,p') = compile p

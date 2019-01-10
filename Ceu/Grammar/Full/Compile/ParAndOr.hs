@@ -11,6 +11,7 @@ import qualified Ceu.Grammar.Full.Compile.Trap as Trap
 compile :: Stmt -> (Errors, Stmt)
 compile p = ([], aux p)
 
+aux (Data' z tp vars ors p)   = Data' z tp vars ors (aux p)
 aux (Var' z var tp Nothing p) = Var' z var tp Nothing (aux p)
 aux (Inp' z int tp p)      = Inp' z int tp (aux p)
 aux (Out' z int tp p)      = Out' z int tp (aux p)

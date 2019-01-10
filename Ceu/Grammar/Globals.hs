@@ -19,5 +19,11 @@ type ID_Evt  = String   -- event identifier
 type ID_Func = String   -- function identifier
 type Val     = Int      -- value
 
+                        -- constr,  fields
+newtype DataOr  = DataOr  (ID_Type, [DataAnd])
+    deriving (Eq, Show)
+newtype DataAnd = DataAnd (Either ID_Var (ID_Type,[DataAnd]))
+    deriving (Eq, Show)
+
 -- Special events:
 -- "BOOT"

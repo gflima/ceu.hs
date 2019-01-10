@@ -19,7 +19,8 @@ type Fin = (Stmt, Stmt, Stmt)
 
 -- Program (pg 5).
 data Stmt
-  = Var      Ann ID_Var Type (Maybe Fin)        -- variable declaration
+  = Data     Ann ID_Type [ID_Var] (Maybe [DataOr]) -- new type declaration
+  | Var      Ann ID_Var Type (Maybe Fin)        -- variable declaration
   | Inp      Ann ID_Inp Type                    -- output declaration
   | Out      Ann ID_Out Type                    -- output declaration
   | Evt      Ann ID_Evt Type                    -- event declaration
@@ -47,6 +48,7 @@ data Stmt
   | Escape   Ann (Maybe ID_Var) Exp             -- escape enclosing trap
   | Scope    Ann Stmt                           -- scope for local variables
   | Error    Ann String                         -- generate runtime error (for testing purposes)
+  | Data'    Ann ID_Type [ID_Var] (Maybe [DataOr]) Stmt -- new type declaration w/ stmts in scope
   | Var'     Ann ID_Var Type (Maybe Fin) Stmt   -- variable declaration w/ stmts in scope
   | Inp'     Ann ID_Inp Type Stmt               -- output declaration w/ stmts in scope
   | Out'     Ann ID_Out Type Stmt               -- output declaration w/ stmts in scope
@@ -75,6 +77,7 @@ infixr 0 `sOr`
 
 instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
+    getAnn (Data     z _ _ _) = z
     getAnn (Var      z _ _ _) = z
     getAnn (Inp      z _ _  ) = z
     getAnn (Out      z _ _  ) = z
@@ -103,6 +106,7 @@ instance HasAnn Stmt where
     getAnn (Escape   z _ _  ) = z
     getAnn (Scope    z _    ) = z
     getAnn (Error    z _    ) = z
+    getAnn (Data'    z _ _ _ _) = z
     getAnn (Var'     z _ _ _ _) = z
     getAnn (Inp'     z _ _ _) = z
     getAnn (Out'     z _ _ _) = z
@@ -121,6 +125,9 @@ instance HasAnn Stmt where
     getAnn (RawS     z _    ) = z
 
 toGrammar :: Stmt -> (Errors, G.Stmt)
+toGrammar (Data' z tp vars ors p) = (es, G.Data z tp vars ors p')
+                                    where
+                                        (es,p') = toGrammar p
 toGrammar (Var' z var tp Nothing p) = (es, G.Var z var tp p')
                                  where
                                    (es,p') = toGrammar p
@@ -184,52 +191,3 @@ toGrammar (Nop z)                = ([], G.Nop z)
 toGrammar (Halt z)               = ([], G.Halt z)
 toGrammar (RawS z vs)            = ([], G.RawS z vs)
 toGrammar p                      = error $ "toGrammar: unexpected statement: " ++ (show p)
-
--------------------------------------------------------------------------------
-
-{-
-stmt2word :: Stmt -> String
-stmt2word stmt = case stmt of
-  Var _ _ _ _    -> "declaration"
-  Inp _ _ _      -> "declaration"
-  Out _ _ _      -> "declaration"
-  Evt _ _ _      -> "declaration"
-  Func _ _ _     -> "declaration"
-  FuncI _ _ _ _  -> "implementation"
-  Write _ _ _    -> "assignment"
-  AwaitInp _ _ _ -> "await"
-  AwaitTmr _ _   -> "await"
-  EmitExt _ _ _  -> "emit"
-  AwaitEvt _ _ _ -> "await"
-  EmitEvt _ _ _  -> "emit"
-  Break _        -> "break"
-  If _ _ _ _     -> "if"
-  Seq _ _ _      -> "sequence"
-  Loop _ _       -> "loop"
-  Every _ _ _ _  -> "every"
-  And _ _ _      -> "par/and"
-  Or _ _ _       -> "par/or"
-  Spawn _ _      -> "spawn"
-  Pause _ _ _    -> "pause/if"
-  Fin _ _ _ _    -> "finalize"
-  Async _ _      -> "async"
-  Trap _ _ _     -> "trap"
-  Escape _ _ _   -> "escape"
-  Scope _ _      -> "scope"
-  Error _ _      -> "error"
-  Var' _ _ _ _ _ -> "declaration"
-  Inp' _ _ _ _   -> "declaration"
-  Out' _ _ _ _ _ -> "declaration"
-  Evt' _ _ _ _   -> "declaration"
-  Func' _ _ _ _  -> "declaration"
-  FuncI' _ _ _ _ _-> "implementation"
-  Par' _ _ _     -> "parallel"
-  Pause' _ _ _   -> "pause/if"
-  Fin' _ _       -> "finalize"
-  Trap' _ _      -> "trap"
-  Escape' _ _    -> "escape"
-  Clean' _ _ _   -> "clean"
-  Nop _          -> "nop"
-  Halt _         -> "halt"
-  RawS _ _       -> "raw"
--}

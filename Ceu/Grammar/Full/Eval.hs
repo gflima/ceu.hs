@@ -40,32 +40,34 @@ compile p = --traceShowId $
     comb :: (Stmt -> (Errors,Stmt)) -> (Errors,Stmt) -> (Errors,Stmt)
     comb f (es,p) = (es++es',p') where (es',p') = f p
 
+prelude z =
+    (Seq z (Data z "Int" [] Nothing)
+    (Seq z (Func z "(==)"   (TypeF (TypeN [(TypeV "a"),  (TypeV "a")])   (Type1 "Bool")))
+    (Seq z (Func z "(+)"    (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
+    (Seq z (Func z "(-)"    (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
+    (Seq z (Func z "(/)"    (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
+    (Seq z (Func z "(*)"    (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
+    (Seq z (Func z "negate" (TypeF (TypeV "a") (TypeV "a")))
+    (Seq z (Func z "(==)"   (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Bool")))
+    (Seq z (Func z "(==)"   (TypeF (TypeN [Type0,Type0]) (Type1 "Bool")))
+    (Seq z (Func z "(+)"    (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
+    (Seq z (Func z "(-)"    (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
+    (Seq z (Func z "(/)"    (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
+    (Seq z (Func z "(*)"    (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
+           (Func z "negate" (TypeF (Type1 "Int") (Type1 "Int")))
+    )))))))))))))
+
 compile' :: Check.Options -> Stmt -> (Errors, G.Stmt)
 compile' (o_simp,o_encl,o_prel) p = (es2++es3++es4, p4)
   where
-    p0       = if not o_prel then p else
-                (Seq z defs p)
-    p1       = if not o_encl then p0 else
-                (Seq z (Inp z "TIMER" Type0) (Seq z (Var z "_ret" (Type1 "Int") Nothing) (Seq z (Trap z (Just "_ret") p0) (Halt z))))
+    p0       = if not o_encl then p else
+                (Seq z (Inp z "TIMER" Type0) (Seq z (Var z "_ret" (Type1 "Int") Nothing) (Seq z (Trap z (Just "_ret") p) (Halt z))))
+    p1       = if not o_prel then p0 else
+                (Seq z (prelude z) p0)
     (es2,p2) = compile p1
     (es3,p3) = toGrammar p2
     (es4,p4) = Check.compile (o_simp,False,False) p3
     z        = getAnn p
-
-    defs = (Seq z (Func  z "(==)" (TypeF (TypeN [(TypeV "a"),  (TypeV "a")])   (Type1 "Bool")))
-           (Seq z (Func  z "(+)"  (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
-           (Seq z (Func  z "(-)"  (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
-           (Seq z (Func  z "(/)"  (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
-           (Seq z (Func  z "(*)"  (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
-           (Seq z (Func  z "negate" (TypeF (TypeV "a") (TypeV "a")))
-           (Seq z (Func z "(==)" (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Bool")))
-           (Seq z (Func z "(==)" (TypeF (TypeN [Type0,Type0]) (Type1 "Bool")))
-           (Seq z (Func z "(+)"  (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
-           (Seq z (Func z "(-)"  (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
-           (Seq z (Func z "(/)"  (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
-           (Seq z (Func z "(*)"  (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Int")))
-                  (Func z "negate" (TypeF (Type1 "Int") (Type1 "Int")))
-           ))))))))))))
 
 reaction :: E.Stmt -> In -> (E.Stmt, E.Outs)
 reaction p (ext,val) = (p''',outs) where

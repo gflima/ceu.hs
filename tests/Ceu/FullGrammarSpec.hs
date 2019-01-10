@@ -66,15 +66,15 @@ spec = do
 
       it "scope var x end ; x=1" $ do
         compile' (False,False,False) (Seq annz (Scope annz (Var annz "x" (Type1 "Int") Nothing)) (Write annz (LVar "x") (Const annz 1)))
-        `shouldBe` (["identifier 'x' is not declared"], G.Seq annz (G.Var annz "x" (Type1 "Int") (G.Nop annz)) (G.Write annz (LVar "x") (Const (annz{type_=Type1 "Int"}) 1)))
+        `shouldBe` (["identifier 'Int' is not declared","identifier 'x' is not declared"], G.Seq annz (G.Var annz "x" (Type1 "Int") (G.Nop annz)) (G.Write annz (LVar "x") (Const (annz{type_=Type1 "Int"}) 1)))
 
       it "var x" $ do
         compile' (False,True,False) (Var annz "x" Type0 Nothing)
-        `shouldBe` (["terminating `trap` body","missing `escape` statement","unreachable statement"], G.Inp annz "TIMER" (G.Var annz "_ret" (Type1 "Int") (G.Seq annz (G.Trap annz (G.Var annz "x" Type0 (G.Nop annz))) (G.Halt annz))))
+        `shouldBe` (["terminating `trap` body","missing `escape` statement","unreachable statement","identifier 'Int' is not declared"], G.Inp annz "TIMER" (G.Var annz "_ret" (Type1 "Int") (G.Seq annz (G.Trap annz (G.Var annz "x" Type0 (G.Nop annz))) (G.Halt annz))))
 
       it "var x" $ do
         compile' (True,True,False) (Var annz "x" Type0 Nothing)
-        `shouldBe` (["terminating `trap` body","missing `escape` statement","unreachable statement"], G.Inp annz "TIMER" (G.Var annz "_ret" (Type1 "Int") (G.Halt annz)))
+        `shouldBe` (["terminating `trap` body","missing `escape` statement","unreachable statement","identifier 'Int' is not declared"], G.Inp annz "TIMER" (G.Var annz "_ret" (Type1 "Int") (G.Halt annz)))
 
     describe "int:" $ do
       it "int x" $ do
@@ -116,7 +116,7 @@ spec = do
 
       it "scope escape 1 end" $ do
         compile' (False,True,False) (Scope annz (Escape annz Nothing (Const annz 1)))
-        `shouldBe` ([],G.Inp annz "TIMER" (G.Var annz "_ret" (Type1 "Int") (G.Seq annz (G.Trap annz (G.Seq annz (G.Write annz (LVar "_ret") (Const annz{type_=Type1 "Int"} 1)) (G.Escape annz 0))) (G.Halt annz))))
+        `shouldBe` (["identifier 'Int' is not declared"],G.Inp annz "TIMER" (G.Var annz "_ret" (Type1 "Int") (G.Seq annz (G.Trap annz (G.Seq annz (G.Write annz (LVar "_ret") (Const annz{type_=Type1 "Int"} 1)) (G.Escape annz 0))) (G.Halt annz))))
 
   --------------------------------------------------------------------------
   describe "Trap.compile" $ do
@@ -258,10 +258,10 @@ spec = do
       `shouldBe` ([], G.Nop annz)
     it "(loop break) ; await X and nop" $ do
       (compile' (True,True,False) (Seq annz defs (And annz (Seq annz (Loop annz (Break annz)) (Seq annz (Inp annz "X" Type0) (AwaitInp annz "X" Nothing))) (Nop annz))))
-      `shouldBe` (["terminating `trap` body","missing `escape` statement","`loop` never iterates","unreachable statement"], G.Inp annz "TIMER" (G.Var annz "_ret" (Type1 "Int") (G.Seq annz (G.Trap annz (G.Func annz "(==)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Bool")) (G.Func annz "(+)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func annz "(-)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func annz "(*)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Trap annz (G.Var annz "__and" (Type1 "Int") (G.Seq annz (G.Write annz (LVar "__and") (Const annz{type_=Type1 "Int"} 0)) (G.Par annz (G.Seq annz (G.Inp annz "X" (G.AwaitInp annz "X")) (G.If annz (Call annz{type_=Type1 "Bool"} "(==)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)])) (G.Escape annz 0) (G.Seq annz (G.Write annz (LVar "__and") (Call annz{type_=Type1 "Int"} "(+)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)]))) (G.Halt annz)))) (G.If annz (Call annz{type_=Type1 "Bool"} "(==)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)])) (G.Escape annz 0) (G.Seq annz (G.Write annz (LVar "__and") (Call annz{type_=Type1 "Int"} "(+)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)]))) (G.Halt annz)))))))))))) (G.Halt annz))))
+      `shouldBe` (["terminating `trap` body","missing `escape` statement","`loop` never iterates","unreachable statement","identifier 'Int' is not declared","identifier 'Int' is not declared"], G.Inp annz "TIMER" (G.Var annz "_ret" (Type1 "Int") (G.Seq annz (G.Trap annz (G.Func annz "(==)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Bool")) (G.Func annz "(+)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func annz "(-)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func annz "(*)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Trap annz (G.Var annz "__and" (Type1 "Int") (G.Seq annz (G.Write annz (LVar "__and") (Const annz{type_=Type1 "Int"} 0)) (G.Par annz (G.Seq annz (G.Inp annz "X" (G.AwaitInp annz "X")) (G.If annz (Call annz{type_=Type1 "Bool"} "(==)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)])) (G.Escape annz 0) (G.Seq annz (G.Write annz (LVar "__and") (Call annz{type_=Type1 "Int"} "(+)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)]))) (G.Halt annz)))) (G.If annz (Call annz{type_=Type1 "Bool"} "(==)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)])) (G.Escape annz 0) (G.Seq annz (G.Write annz (LVar "__and") (Call annz{type_=Type1 "Int"} "(+)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)]))) (G.Halt annz)))))))))))) (G.Halt annz))))
     it "(loop break) ; await X and nop" $ do
       (compile' (False,True,False) (Seq annz defs (Seq annz (And annz (Seq annz (Loop annz (Break annz)) (AwaitInp annz "X" Nothing)) (Nop annz)) (Escape annz Nothing (Const annz 1)) )))
-      `shouldBe` (["`loop` never iterates","identifier 'X' is not declared"], G.Inp annz "TIMER" (G.Var annz "_ret" (Type1 "Int") (G.Seq annz (G.Trap annz (G.Func annz "(==)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Bool")) (G.Func annz "(+)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func annz "(-)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func annz "(*)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Seq annz (G.Trap annz (G.Var annz "__and" (Type1 "Int") (G.Seq annz (G.Write annz (LVar "__and") (Const annz{type_=Type1 "Int"} 0)) (G.Par annz (G.Seq annz (G.Seq annz (G.Trap annz (G.Loop annz (G.Escape annz 0))) (G.AwaitInp annz "X")) (G.If annz (Call annz{type_=Type1 "Bool"} "(==)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)])) (G.Escape annz 0) (G.Seq annz (G.Write annz (LVar "__and") (Call annz{type_=Type1 "Int"} "(+)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)]))) (G.Halt annz)))) (G.Seq annz (G.Nop annz) (G.If annz (Call annz{type_=Type1 "Bool"} "(==)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)])) (G.Escape annz 0) (G.Seq annz (G.Write annz (LVar "__and") (Call annz{type_=Type1 "Int"} "(+)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)]))) (G.Halt annz)))))))) (G.Seq annz (G.Write annz (LVar "_ret") (Const annz{type_=Type1 "Int"} 1)) (G.Escape annz 0)))))))) (G.Halt annz))))
+      `shouldBe` (["`loop` never iterates","identifier 'Int' is not declared","identifier 'Int' is not declared","identifier 'X' is not declared"], G.Inp annz "TIMER" (G.Var annz "_ret" (Type1 "Int") (G.Seq annz (G.Trap annz (G.Func annz "(==)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Bool")) (G.Func annz "(+)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func annz "(-)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Func annz "(*)" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (G.Seq annz (G.Trap annz (G.Var annz "__and" (Type1 "Int") (G.Seq annz (G.Write annz (LVar "__and") (Const annz{type_=Type1 "Int"} 0)) (G.Par annz (G.Seq annz (G.Seq annz (G.Trap annz (G.Loop annz (G.Escape annz 0))) (G.AwaitInp annz "X")) (G.If annz (Call annz{type_=Type1 "Bool"} "(==)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)])) (G.Escape annz 0) (G.Seq annz (G.Write annz (LVar "__and") (Call annz{type_=Type1 "Int"} "(+)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)]))) (G.Halt annz)))) (G.Seq annz (G.Nop annz) (G.If annz (Call annz{type_=Type1 "Bool"} "(==)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)])) (G.Escape annz 0) (G.Seq annz (G.Write annz (LVar "__and") (Call annz{type_=Type1 "Int"} "(+)" (Tuple annz{type_=(TypeN [Type1 "Int",Type1 "Int"])} [(Read annz{type_=Type1 "Int"} "__and"),(Const annz{type_=Type1 "Int"} 1)]))) (G.Halt annz)))))))) (G.Seq annz (G.Write annz (LVar "_ret") (Const annz{type_=Type1 "Int"} 1)) (G.Escape annz 0)))))))) (G.Halt annz))))
 
   --------------------------------------------------------------------------
   describe "(Break annz).compile" $ do
@@ -303,7 +303,7 @@ spec = do
 
     it "do var x; x = 1 end" $ do
       compile' (False,False,False) (Var' annz "x" (Type1 "Int") Nothing (Write annz (LVar "x") (Const annz 1)))
-      `shouldBe` ([], (G.Var annz "x" (Type1 "Int") (G.Write annz (LVar "x") (Const annz{type_=Type1 "Int"} 1))))
+      `shouldBe` (["identifier 'Int' is not declared"], (G.Var annz "x" (Type1 "Int") (G.Write annz (LVar "x") (Const annz{type_=Type1 "Int"} 1))))
 
     it "spawn do await A; end ;; await B; var x; await FOREVER;" $ do
       compile' (False,False,False) (Seq annz (Inp annz "A" Type0) (Seq annz (Inp annz "B" Type0) (Seq annz (Spawn annz (AwaitInp annz "A" Nothing)) (Seq annz (AwaitInp annz "B" Nothing) (Var' annz "x" Type0 Nothing (Halt annz))))))
@@ -651,7 +651,7 @@ end
                     (TypeF (Type1 "Int") (Type1 "Int"))
                     (Escape annz Nothing (Const annz 1))))
                 (Escape annz Nothing (Call annz "f" (Const annz 1)))))
-          `shouldBe` ([],
+          `shouldBe` (["identifier 'Int' is not declared","identifier 'Int' is not declared"],
                 (G.Inp annz "TIMER"
                     (G.Var annz "_ret" (Type1 "Int")
                         (G.Seq annz

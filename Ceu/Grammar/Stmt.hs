@@ -35,12 +35,6 @@ data Stmt
   | Error    Ann String                     -- generate runtime error (for testing)
   deriving (Eq, Show)
 
-                        -- constr,  fields
-newtype DataOr  = DataOr  (ID_Type, [DataAnd])
-    deriving (Eq, Show)
-newtype DataAnd = DataAnd (Either ID_Var (ID_Type,[DataAnd]))
-    deriving (Eq, Show)
-
 sSeq a b = Seq annz a b
 sPar a b = Par annz a b
 infixr 1 `sSeq`

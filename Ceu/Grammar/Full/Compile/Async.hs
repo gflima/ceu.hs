@@ -8,6 +8,7 @@ import Ceu.Grammar.Full.Stmt
 compile :: Stmt -> (Errors, Stmt)
 compile p = ([], aux False p) where
   aux :: Bool -> Stmt -> Stmt
+  aux inA   (Data' z id vars ors p)  = Data' z id vars ors (aux inA p)
   aux inA   (Var' z id tp Nothing p) = Var' z id tp Nothing (aux inA p)
   aux inA   (Inp' z id tp p)      = Inp' z id tp (aux inA p)
   aux inA   (Out' z id tp p)      = Out' z id tp (aux inA p)

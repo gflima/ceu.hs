@@ -8,6 +8,7 @@ import Ceu.Grammar.Full.Stmt
 compile :: Stmt -> (Errors, Stmt)
 compile p = ([], aux p)
 aux :: Stmt -> Stmt
+aux (Data z id vars ors)       = Data z id vars ors
 aux (Var z id tp fin)          = Var z id tp (aux_fin fin)
 aux (FuncI z id tp p)          = FuncI z id tp (aux p)
 aux (If z exp p1 p2)           = If z exp (aux p1) (aux p2)

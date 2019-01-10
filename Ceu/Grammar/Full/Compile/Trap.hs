@@ -8,26 +8,27 @@ import Ceu.Grammar.Full.Stmt
 compile :: Stmt -> (Errors, Stmt)
 compile p = ([], aux [] p) where
   aux :: [Maybe ID_Var] -> Stmt -> Stmt
-  aux vars (Var' z var tp fin p) = Var' z var tp fin (aux vars p)
-  aux vars (Inp' z id tp p)    = Inp' z id tp (aux vars p)
-  aux vars (Out' z id tp p)    = Out' z id tp (aux vars p)
-  aux vars (Evt' z id tp p)    = Evt' z id tp (aux vars p)
-  aux vars (Func' z id tp p)   = Func' z id tp (aux vars p)
-  aux vars (FuncI' z id tp imp p) = FuncI' z id tp (aux vars imp) (aux vars p)
-  aux vars (If z exp p1 p2)    = If z exp (aux vars p1) (aux vars p2)
-  aux vars (Seq z p1 p2)       = Seq z (aux vars p1) (aux vars p2)
-  aux vars (Loop z p)          = Loop z (aux vars p)
-  aux vars (Every z evt exp p) = Every z evt exp (aux vars p)
-  aux vars (Par z p1 p2)       = Par z (aux vars p1) (aux vars p2)
-  aux vars (And z p1 p2)       = And z (aux vars p1) (aux vars p2)
-  aux vars (Or z p1 p2)        = Or z (aux vars p1) (aux vars p2)
-  aux vars (Spawn z p)         = Spawn z (aux vars p)
-  aux vars (Pause z evt p)     = Pause z evt (aux vars p)
-  aux vars (Fin z a b c)       = Fin z (aux vars a) (aux vars b) (aux vars c)
-  aux vars (Async z p)         = Async z (aux vars p)
-  aux vars (Trap z var p)      = Trap' z (aux (var:vars) p)
-  aux vars s@(Escape _ _ _)    = escape vars s 0
-  aux vars p                   = p
+  aux ids (Data' z tp vars ors p) = Data' z tp vars ors (aux ids p)
+  aux ids (Var' z var tp fin p)   = Var' z var tp fin (aux ids p)
+  aux ids (Inp' z id tp p)    = Inp' z id tp (aux ids p)
+  aux ids (Out' z id tp p)    = Out' z id tp (aux ids p)
+  aux ids (Evt' z id tp p)    = Evt' z id tp (aux ids p)
+  aux ids (Func' z id tp p)   = Func' z id tp (aux ids p)
+  aux ids (FuncI' z id tp imp p) = FuncI' z id tp (aux ids imp) (aux ids p)
+  aux ids (If z exp p1 p2)    = If z exp (aux ids p1) (aux ids p2)
+  aux ids (Seq z p1 p2)       = Seq z (aux ids p1) (aux ids p2)
+  aux ids (Loop z p)          = Loop z (aux ids p)
+  aux ids (Every z evt exp p) = Every z evt exp (aux ids p)
+  aux ids (Par z p1 p2)       = Par z (aux ids p1) (aux ids p2)
+  aux ids (And z p1 p2)       = And z (aux ids p1) (aux ids p2)
+  aux ids (Or z p1 p2)        = Or z (aux ids p1) (aux ids p2)
+  aux ids (Spawn z p)         = Spawn z (aux ids p)
+  aux ids (Pause z evt p)     = Pause z evt (aux ids p)
+  aux ids (Fin z a b c)       = Fin z (aux ids a) (aux ids b) (aux ids c)
+  aux ids (Async z p)         = Async z (aux ids p)
+  aux ids (Trap z var p)      = Trap' z (aux (var:ids) p)
+  aux ids s@(Escape _ _ _)    = escape ids s 0
+  aux ids p                   = p
 
 escape :: [Maybe ID_Var] -> Stmt -> Int -> Stmt
 escape (Nothing:_)     (Escape z Nothing  (Unit _)) _ = Escape' z 0
