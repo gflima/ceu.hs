@@ -195,10 +195,10 @@ stmt p h = [
 -------------------------------------------------------------------------------
 
 tp2use :: Type -> String
-tp2use Type0         = "tceu_unit"
-tp2use (Type1 "Int") = "int"
-tp2use (TypeN tps)   = "tceu__" ++ intercalate "__" (map (\tp -> tp2use tp) tps)
-tp2use tp            = error $ show tp
+tp2use Type0           = "tceu_unit"
+tp2use (Type1 ["Int"]) = "int"
+tp2use (TypeN tps)     = "tceu__" ++ intercalate "__" (map (\tp -> tp2use tp) tps)
+tp2use tp              = error $ show tp
 
 tp2dcl :: Type -> String
 tp2dcl tp@(TypeN tps) =
@@ -228,7 +228,7 @@ aux dn (Out   _ id tp p) = aux dn p
 
 -------------------------------------------------------------------------------
 
-aux dn s@(Data z id vars ors p) = aux dn p
+aux dn s@(Data z id vars cons abs p) = aux dn p
 
 aux dn s@(Var z id tp p) = p' {
                                 code_dcl = dcl' ++ (code_dcl p'),
