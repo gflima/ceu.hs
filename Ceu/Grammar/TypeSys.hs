@@ -2,7 +2,6 @@ module Ceu.Grammar.TypeSys where
 
 import Debug.Trace
 import Data.List (find)
-import Data.Maybe (isJust)
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Type
@@ -15,13 +14,13 @@ go p = stmt [] p
 
 stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
 
-stmt ids s@(Data z id []   ors p) = ((errDeclared ids (id,z)) ++ es, Data z id [] ors p')
+stmt ids s@(Data z id [] cons abs p) = ((errDeclared ids (tp12str id,z)) ++ es, Data z id [] cons abs p')
                                     where (es,p') = stmt (s:ids) p
-stmt ids s@(Data z id vars ors p) = error "not implemented"
+stmt ids s@(Data z id vars cons abs p) = error "not implemented"
 
 stmt ids s@(Var  z id tp p)  = (es_data ++ es_id ++ es, Var z id tp p')
                                where
-                                es_data = concatMap (fst . (fff ids z isData)) (get1s tp)
+                                es_data = concatMap (fst . (fff ids z isData)) (map tp12str $ get1s tp)
                                 es_id   = errDeclared ids (id,z)
                                 (es,p') = stmt (s:ids) p
 stmt ids s@(Inp  z id p)     = ((errDeclared ids (id,z)) ++ es, Inp  z id p')
@@ -68,7 +67,7 @@ stmt ids (EmitEvt  z id)     = (fst $ fff ids z isEvt id, EmitEvt  z id)
 stmt ids (If  z exp p1 p2)   = (ese ++ es ++ es1 ++ es2, If z exp' p1' p2')
                                where
                                 (ese,exp') = expr ids exp
-                                es = toErrorTypes z (Type1 "Bool") (type_ $ getAnn exp')
+                                es = toErrorTypes z (Type1 ["Bool"]) (type_ $ getAnn exp')
                                 (es1,p1') = stmt ids p1
                                 (es2,p2') = stmt ids p2
 stmt ids (Seq z p1 p2)       = (es1++es2, Seq z p1' p2')
@@ -104,7 +103,7 @@ stmt _   (Error  z msg)      = ([], Error z msg)
 
 -------------------------------------------------------------------------------
 
-isData (Data _ _ _ _ _) = True
+isData (Data _ _ _ _ _ _) = True
 isData _                = False
 isVar  (Var _ _ _ _)    = True
 isVar  _                = False
@@ -121,7 +120,7 @@ isInpEvt (Evt _ _ _)    = True
 isInpEvt _              = False
 
 getId :: Stmt -> String
-getId (Data _ id _ _ _) = id
+getId (Data _ id _ _ _ _) = tp12str id
 getId (Var  _ id _ _)   = id
 getId (Inp  _ id _)     = id
 getId (Out  _ id _ _)   = id
@@ -152,7 +151,7 @@ fff ids z pred id =
         -- TODO: move to Stmt.hs?
         getType :: Maybe Stmt -> Type
         getType Nothing                = TypeB
-        getType (Just (Data _ _ _ _ _)) = TypeB     -- TODO: caller should use "errUndeclared"
+        getType (Just (Data _ _ _ _ _ _)) = TypeB     -- TODO: caller should use "errUndeclared"
         getType (Just (Var  _ _ tp _)) = tp
         getType (Just (Out  _ _ tp _)) = tp
         getType (Just (Func _ _ tp _)) = tp
@@ -178,19 +177,16 @@ expr :: [Stmt] -> Exp -> (Errors, Exp)
 expr ids (RawE  z raws)  = (es, RawE z{type_=TypeT} raws')
                            where
                             (es,raws') = fold_raws ids raws
-expr _   (Const z val)   = ([], Const z{type_=Type1 "Int"} val)
+expr _   (Const z val)   = ([], Const z{type_=Type1 ["Int"]} val)
 expr _   (Unit z)        = ([], Unit  z{type_=Type0})
 
-expr ids (Cons  z id)    = (es, Cons  z{type_=tp} id)
+expr ids (Cons  z id)    = (es, Cons  z{type_=(Type1 id)} id)
     where
-    ds = take 1 $ concatMap f ids
-    f s@(Data _ _ _ (Just ors) _) = map (flip (,) s) $
-                                        filter (\(DataOr (id',_))->id==id') ors
-    f _                           = []
-
-    (es,tp) = case ds of
-        []                     -> ([toError z "identifier '" ++ id ++ "' is not declared"], TypeT)
-        [(_, Data _ tp _ _ _)] -> ([], Type1 tp)
+    eqs = map (\(Data _ tp _ _ _ _) -> tp == id)
+              (filter isData ids)
+    es = if null eqs
+            then [toError z "identifier '" ++ tp12str id ++ "' is not declared"]
+            else []
 
 expr ids (Tuple z exps)  = (es, Tuple z{type_=tps'} exps')
                            where
@@ -201,7 +197,7 @@ expr ids (Tuple z exps)  = (es, Tuple z{type_=tps'} exps')
                             tps'  = TypeN (map (type_.getAnn) exps')
 
 expr ids (Read z id)     = if id == "_INPUT" then
-                            ([], Read z{type_=Type1 "Int"} id)
+                            ([], Read z{type_=Type1 ["Int"]} id)
                            else
                             (es, Read z{type_=tp'} id)
                            where

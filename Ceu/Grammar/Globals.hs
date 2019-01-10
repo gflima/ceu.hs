@@ -10,8 +10,7 @@ data Loc = LAny | LVar ID_Var | LTuple [Loc]
 
 -- Primitive types.
 type ID      = String   -- identifier
-type ID_Type = String   -- type identifier
-type ID_Cons = String   -- data constructor
+type ID_Type = [String] -- type identifier/constructor
 type ID_Var  = String   -- variable identifier
 type ID_Ext  = String   -- external event identifier
 type ID_Inp  = String   -- external event identifier
@@ -20,10 +19,7 @@ type ID_Evt  = String   -- event identifier
 type ID_Func = String   -- function identifier
 type Val     = Int      -- value
 
-                        -- constr,  fields
-newtype DataOr  = DataOr  (ID_Cons, [DataAnd])
-    deriving (Eq, Show)
-newtype DataAnd = DataAnd (Either ID_Var (ID_Type,[DataAnd]))
+newtype DataCons = DataCons (Either ID_Var (ID_Type,[DataCons]))
     deriving (Eq, Show)
 
 -- Special events:

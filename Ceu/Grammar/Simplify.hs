@@ -6,11 +6,11 @@ import Ceu.Grammar.Stmt (Stmt(..))
 
 simplify :: Stmt -> Stmt
 
-simplify (Data z id vars ors p) =
+simplify (Data z id vars cons abs p) =
   case p' of
     Nop z'      -> Nop z'
     Escape z' n -> Escape z' n
-    otherwise   -> Data z id vars ors p'
+    otherwise   -> Data z id vars cons abs p'
   where p' = simplify p
 
 simplify (Var z id tp p) =

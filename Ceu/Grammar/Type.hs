@@ -2,7 +2,7 @@ module Ceu.Grammar.Type where
 
 import Debug.Trace
 import Data.Maybe (fromJust)
-import Data.List (sortBy, groupBy, find)
+import Data.List (sortBy, groupBy, find, intercalate, isPrefixOf)
 import Ceu.Grammar.Globals
 
 data Type = TypeB
@@ -31,7 +31,7 @@ checkTypes Type0             Type0             = True
 checkTypes Type0             _                 = False
 checkTypes _                 Type0             = False
 
-checkTypes (Type1 t1)        (Type1 t2)        = (t1 == t2)
+checkTypes (Type1 t1)        (Type1 t2)        = (t1 `isPrefixOf` t2)
 checkTypes (Type1 _)         _                 = False
 checkTypes _                 (Type1 _)         = False
 
@@ -40,6 +40,10 @@ checkTypes (TypeF _    _)    _                 = False
 checkTypes _                 (TypeF _    _)    = False
 
 checkTypes (TypeN t1s)       (TypeN t2s)       = (checkTypesN t1s t2s) && (checkTypesV t1s t2s)
+
+-------------------------------------------------------------------------------
+
+tp12str = intercalate "."
 
 -------------------------------------------------------------------------------
 

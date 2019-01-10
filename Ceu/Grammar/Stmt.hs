@@ -8,7 +8,8 @@ import Text.Printf
 
 -- Program (pg 5).
 data Stmt
-  = Data     Ann ID_Type [ID_Var] (Maybe [DataOr]) Stmt -- new type declaration
+              -- type    vars     cons       abstract?
+  = Data     Ann ID_Type [ID_Var] [DataCons] Bool Stmt -- new type declaration
   | Var      Ann ID_Var  Type Stmt          -- variable declaration
   | Inp      Ann ID_Inp  Stmt               -- input declaration
   | Out      Ann ID_Out  Type Stmt          -- output declaration
@@ -42,7 +43,7 @@ infixr 0 `sPar`
 
 instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
-    getAnn (Data     z _ _ _ _) = z
+    getAnn (Data     z _ _ _ _ _) = z
     getAnn (Var      z _ _ _)   = z
     getAnn (Inp      z _ _)     = z
     getAnn (Out      z _ _ _)   = z

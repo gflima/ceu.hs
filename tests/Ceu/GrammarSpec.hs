@@ -127,25 +127,25 @@ spec = do
 
     checkTypeSysIt (Nop annz)                                    []
     checkTypeSysIt (Var annz "a" Type0 (Nop annz))                    []
-    checkTypeSysIt (Check.prelude annz (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Const annz 1)))) []
-    checkTypeSysIt (Check.prelude annz (Var annz "a" (TypeN [Type1 "Int",Type1 "Int"]) (Write annz (LVar "a") (Const annz 1)))) ["types do not match"]
+    checkTypeSysIt (Check.prelude annz (Var annz "a" (Type1 ["Int"]) (Write annz (LVar "a") (Const annz 1)))) []
+    checkTypeSysIt (Check.prelude annz (Var annz "a" (TypeN [Type1 ["Int"],Type1 ["Int"]]) (Write annz (LVar "a") (Const annz 1)))) ["types do not match"]
     --checkTypeSysIt (Var annz "a" Type0 (Write annz (LVar "a") (Const annz 1))) ["types do not match"]
     checkTypeSysIt (Var annz "a" Type0 (Write annz (LVar "a") (Const annz 1))) ["types do not match"]
     checkTypeSysIt (Var annz "a" Type0 (If annz (Read annz "a") (Nop annz) (Nop annz))) ["types do not match"]
-    checkTypeSysIt (Check.prelude annz (Var annz "a" (Type1 "Int") (If annz (Read annz "a") (Nop annz) (Nop annz)))) ["types do not match"]
-    checkTypeSysIt (Data annz "Bool" [] Nothing (Var annz "a" (Type1 "Bool") (If annz (Read annz "a") (Nop annz) (Nop annz)))) []
+    checkTypeSysIt (Check.prelude annz (Var annz "a" (Type1 ["Int"]) (If annz (Read annz "a") (Nop annz) (Nop annz)))) ["types do not match"]
+    checkTypeSysIt (Data annz ["Bool"] [] [] False (Var annz "a" (Type1 ["Bool"]) (If annz (Read annz "a") (Nop annz) (Nop annz)))) []
     checkTypeSysIt (Var annz "a" Type0 (Var annz "a" Type0 (Nop annz)))    ["identifier 'a' is already declared"]
     checkTypeSysIt (Evt annz "e" (Evt annz "e" (Nop annz)))       ["identifier 'e' is already declared"]
     checkTypeSysIt (Write annz (LVar "a") (Const annz 1))              ["identifier 'a' is not declared"]
     checkTypeSysIt (AwaitEvt annz "e")                        ["identifier 'e' is not declared"]
     checkTypeSysIt (Every annz "e" (Nop annz))                  ["identifier 'e' is not declared"]
     checkTypeSysIt (Pause annz "a" (Nop annz))                  ["identifier 'a' is not declared"]
-    checkTypeSysIt (Check.prelude annz (Func annz "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "umn" (Read annz "b")))))) ["identifier 'b' is not declared"]
-    checkTypeSysIt (Check.prelude annz (Func annz "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var annz "a" Type0 (Write annz (LVar "a") (Call annz "umn" (Read annz "b")))))) ["identifier 'b' is not declared","types do not match"]
+    checkTypeSysIt (Check.prelude annz (Func annz "umn" (TypeF (Type1 ["Int"]) (Type1 ["Int"])) (Var annz "a" (Type1 ["Int"]) (Write annz (LVar "a") (Call annz "umn" (Read annz "b")))))) ["identifier 'b' is not declared"]
+    checkTypeSysIt (Check.prelude annz (Func annz "umn" (TypeF (Type1 ["Int"]) (Type1 ["Int"])) (Var annz "a" Type0 (Write annz (LVar "a") (Call annz "umn" (Read annz "b")))))) ["identifier 'b' is not declared","types do not match"]
     checkTypeSysIt (Write annz (LVar "a") (Call annz "f" (Const annz 1))) ["identifier 'a' is not declared","identifier 'f' is not declared"]
     checkTypeSysIt (Var annz "x" (TypeN [Type0,Type0]) (Write annz (LVar "x") (Unit annz)))  ["types do not match"]
-    checkTypeSysIt (Check.prelude annz (Var annz "x" (Type1 "Int") (Write annz (LVar "x") (Unit annz)))) ["types do not match"]
-    checkTypeSysIt (Check.prelude annz (Func annz "identity" (TypeF (TypeV "a") (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "identity" (Const annz 1)))))) []
+    checkTypeSysIt (Check.prelude annz (Var annz "x" (Type1 ["Int"]) (Write annz (LVar "x") (Unit annz)))) ["types do not match"]
+    checkTypeSysIt (Check.prelude annz (Func annz "identity" (TypeF (TypeV "a") (TypeV "a")) (Var annz "a" (Type1 ["Int"]) (Write annz (LVar "a") (Call annz "identity" (Const annz 1)))))) []
 
     it "func f; func f" $
         TypeSys.go (Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 Type0) (Nop annz)))
@@ -164,65 +164,69 @@ spec = do
             `shouldBe` (["identifier 'A' is invalid"],Inp annz "A" (EmitExt annz "A" (Unit annz{type_=Type0})))
 
     -- func first :: (a,a)->a ; var a::Int ; a = first((),1)
-    checkTypeSysIt (Check.prelude annz (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "first" (Tuple annz [(Unit annz),(Const annz 1)])))))) ["types do not match"]
-    checkTypeSysIt (Check.prelude annz (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "first" (Tuple annz [(Const annz 1),(Const annz 1)])))))) []
+    checkTypeSysIt (Check.prelude annz (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 ["Int"]) (Write annz (LVar "a") (Call annz "first" (Tuple annz [(Unit annz),(Const annz 1)])))))) ["types do not match"]
+    checkTypeSysIt (Check.prelude annz (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 ["Int"]) (Write annz (LVar "a") (Call annz "first" (Tuple annz [(Const annz 1),(Const annz 1)])))))) []
 
     describe "pattern matching" $ do
         it "_ = 1" $
             TypeSys.go (Write annz LAny (Const annz 1))
-            `shouldBe` ([],Write annz{type_=TypeB} LAny (Const annz{type_=Type1 "Int"} 1))
+            `shouldBe` ([],Write annz{type_=TypeB} LAny (Const annz{type_=Type1 ["Int"]} 1))
         it "(x,_) = 1" $
             TypeSys.go (Check.prelude annz
-                        (Var annz "x" (Type1 "Int")
+                        (Var annz "x" (Type1 ["Int"])
                             (Write annz (LTuple [LVar "x", LAny]) (Const annz 1))))
-            `shouldBe` (["types do not match"],Data annz "Int" [] Nothing (Var annz{type_=TypeB} "x" (Type1 "Int") (Write annz{type_=TypeB} (LTuple [LVar "x",LAny]) (Const annz{type_=Type1 "Int"} 1))))
+            `shouldBe` (["types do not match"],Data annz ["Int"] [] [] False (Var annz{type_=TypeB} "x" (Type1 ["Int"]) (Write annz{type_=TypeB} (LTuple [LVar "x",LAny]) (Const annz{type_=Type1 ["Int"]} 1))))
         it "(x,_) = (1,1)" $
             TypeSys.go (Check.prelude annz
-                        (Var annz "x" (Type1 "Int")
+                        (Var annz "x" (Type1 ["Int"])
                             (Write annz (LTuple [LVar "x", LAny]) (Tuple annz [Const annz 1, Const annz 1]))))
-            `shouldBe` ([],Data annz "Int" [] Nothing (Var (annz{type_ = TypeB}) "x" (Type1 "Int") (Write (annz{type_ = TypeB}) (LTuple [LVar "x",LAny]) (Tuple (annz{type_ = TypeN [Type1 "Int",Type1 "Int"]}) [Const (annz{type_ = Type1 "Int"}) 1,Const (annz{type_ = Type1 "Int"}) 1]))))
+            `shouldBe` ([],Data annz ["Int"] [] [] False (Var (annz{type_ = TypeB}) "x" (Type1 ["Int"]) (Write (annz{type_ = TypeB}) (LTuple [LVar "x",LAny]) (Tuple (annz{type_ = TypeN [Type1 ["Int"],Type1 ["Int"]]}) [Const (annz{type_ = Type1 ["Int"]}) 1,Const (annz{type_ = Type1 ["Int"]}) 1]))))
         it "((_,x),_) = (y,1)" $
             TypeSys.go (Check.prelude annz
-                        (Var annz "x" (Type1 "Int")
-                            (Var annz "y" (TypeN [Type0, Type1 "Int"])
+                        (Var annz "x" (Type1 ["Int"])
+                            (Var annz "y" (TypeN [Type0, Type1 ["Int"]])
                                 (Write annz
                                     (LTuple [LTuple [LAny,LVar "x"], LAny])
                                     (Tuple annz [Read annz "y", Const annz 1])))))
-            `shouldBe` ([],Data annz "Int" [] Nothing (Var (annz{type_ = TypeB}) "x" (Type1 "Int") (Var (annz{type_ = TypeB}) "y" (TypeN [Type0,Type1 "Int"]) (Write (annz{type_ = TypeB}) (LTuple [LTuple [LAny,LVar "x"],LAny]) (Tuple (annz{type_ = TypeN [TypeN [Type0,Type1 "Int"],Type1 "Int"]}) [Read (annz{type_ = TypeN [Type0,Type1 "Int"]}) "y",Const annz{type_ = Type1 "Int"} 1])))))
+            `shouldBe` ([],Data annz ["Int"] [] [] False (Var (annz{type_ = TypeB}) "x" (Type1 ["Int"]) (Var (annz{type_ = TypeB}) "y" (TypeN [Type0,Type1 ["Int"]]) (Write (annz{type_ = TypeB}) (LTuple [LTuple [LAny,LVar "x"],LAny]) (Tuple (annz{type_ = TypeN [TypeN [Type0,Type1 ["Int"]],Type1 ["Int"]]}) [Read (annz{type_ = TypeN [Type0,Type1 ["Int"]]}) "y",Const annz{type_ = Type1 ["Int"]} 1])))))
 
   --------------------------------------------------------------------------
   describe "new types" $ do
     it "Bool/Int" $
         (fst $ Check.compile (False,False,False)
-            (Data annz "Bool" [] (Just [DataOr ("True",[]), DataOr ("False",[])])
-                (Data annz "Int" [] Nothing
-                    (Nop annz))))
+            (Data annz ["Bool"] [] [] True
+            (Data annz ["Bool","True"] [] [] False
+            (Data annz ["Bool","False"] [] [] False
+                (Data annz ["Int"] [] [] False
+                    (Nop annz))))))
         `shouldBe` []
 
     it "Int/Int" $
         (fst $ Check.compile (False,False,False)
-            (Data annz "Int" [] Nothing
-                (Data annz "Int" [] Nothing
+            (Data annz ["Int"] [] [] False
+                (Data annz ["Int"] [] [] False
                     (Nop annz))))
         `shouldBe` ["identifier 'Int' is already declared"]
 
     it "~Int / x::Int" $
         (fst $ Check.compile (False,False,False)
-            (Var annz "x" (Type1 "Int") (Nop annz)))
+            (Var annz "x" (Type1 ["Int"]) (Nop annz)))
         `shouldBe` ["identifier 'Int' is not declared"]
 
     it "Bool ; x=True" $
         (fst $ Check.compile (False,False,False)
-            (Data annz "Bool" [] (Just [DataOr ("True",[]), DataOr ("False",[])])
-                (Var annz "x" (Type1 "Bool")
-                    (Write annz (LVar "x") (Cons annz{type_=(Type1 "Bool")} "True")))))
+            (Data annz ["Bool"] [] [] True
+            (Data annz ["Bool","True"] [] [] False
+            (Data annz ["Bool","False"] [] [] False
+                (Var annz "x" (Type1 ["Bool"])
+                    (Write annz (LVar "x") (Cons annz{type_=(Type1 ["Bool"])} ["Bool","True"])))))))
         `shouldBe` []
 
     it "~Bool ; x=True" $
         (fst $ Check.compile (False,False,False)
-            (Var annz "x" (Type1 "Bool")
-                (Write annz (LVar "x") (Cons annz{type_=(Type1 "Bool")} "True"))))
-        `shouldBe` ["identifier 'Bool' is not declared","identifier 'True' is not declared"]
+            (Var annz "x" (Type1 ["Bool"])
+                (Write annz (LVar "x") (Cons annz{type_=(Type1 ["Bool"])} ["Bool","True"]))))
+        `shouldBe` ["identifier 'Bool' is not declared","identifier 'Bool.True' is not declared"]
 
   --------------------------------------------------------------------------
   describe "checkStmts -- program is valid" $ do
@@ -290,8 +294,8 @@ spec = do
             Check.compile (False,False,False) (Out annz "O" Type0 (EmitExt annz "O" (Unit annz{type_=Type0})))
             `shouldBe` ([],Out annz "O" Type0 (EmitExt annz "O" (Unit annz{type_=Type0})))
         it "out O::Int; emit O()" $
-            Check.compile (False,False,False) (Out annz "O" (Type1 "Int") (EmitExt annz "O" (Unit annz)))
-            `shouldBe` (["types do not match"],Out annz "O" (Type1 "Int") (EmitExt annz "O" (Unit annz{type_=Type0})))
+            Check.compile (False,False,False) (Out annz "O" (Type1 ["Int"]) (EmitExt annz "O" (Unit annz)))
+            `shouldBe` (["types do not match"],Out annz "O" (Type1 ["Int"]) (EmitExt annz "O" (Unit annz{type_=Type0})))
 
         it "await I" $
             (fst $ Check.compile (False,False,False) (AwaitInp annz "I"))
