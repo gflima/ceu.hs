@@ -2,6 +2,7 @@ module Ceu.Grammar.TypeSys where
 
 import Debug.Trace
 import Data.List (find)
+import Data.Maybe (isJust)
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Type
@@ -179,6 +180,17 @@ expr ids (RawE  z raws)  = (es, RawE z{type_=TypeT} raws')
                             (es,raws') = fold_raws ids raws
 expr _   (Const z val)   = ([], Const z{type_=Type1 "Int"} val)
 expr _   (Unit z)        = ([], Unit  z{type_=Type0})
+
+expr ids (Cons  z id)    = (es, Cons  z{type_=tp} id)
+    where
+    ds = take 1 $ concatMap f ids
+    f s@(Data _ _ _ (Just ors) _) = map (flip (,) s) $
+                                        filter (\(DataOr (id',_))->id==id') ors
+    f _                           = []
+
+    (es,tp) = case ds of
+        []                     -> ([toError z "identifier '" ++ id ++ "' is not declared"], TypeT)
+        [(_, Data _ tp _ _ _)] -> ([], Type1 tp)
 
 expr ids (Tuple z exps)  = (es, Tuple z{type_=tps'} exps')
                            where

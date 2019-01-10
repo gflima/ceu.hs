@@ -211,6 +211,19 @@ spec = do
             (Var annz "x" (Type1 "Int") (Nop annz)))
         `shouldBe` ["identifier 'Int' is not declared"]
 
+    it "Bool ; x=True" $
+        (fst $ Check.compile (False,False,False)
+            (Data annz "Bool" [] (Just [DataOr ("True",[]), DataOr ("False",[])])
+                (Var annz "x" (Type1 "Bool")
+                    (Write annz (LVar "x") (Cons annz{type_=(Type1 "Bool")} "True")))))
+        `shouldBe` []
+
+    it "~Bool ; x=True" $
+        (fst $ Check.compile (False,False,False)
+            (Var annz "x" (Type1 "Bool")
+                (Write annz (LVar "x") (Cons annz{type_=(Type1 "Bool")} "True"))))
+        `shouldBe` ["identifier 'Bool' is not declared","identifier 'True' is not declared"]
+
   --------------------------------------------------------------------------
   describe "checkStmts -- program is valid" $ do
 
