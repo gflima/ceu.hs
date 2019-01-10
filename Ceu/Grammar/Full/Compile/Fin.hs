@@ -11,7 +11,7 @@ import Ceu.Grammar.Full.Stmt
 compile :: Stmt -> (Errors, Stmt)
 compile p = aux Nothing p where
   aux :: (Maybe ID_Evt) -> Stmt -> (Errors, Stmt)
-  aux pse (Data' z tp vars ors p)     = (es, Data' z tp vars ors p')
+  aux pse (Data' z tp vars cons abs p)= (es, Data' z tp vars cons abs p')
                                         where
                                           (es,p') = aux pse p
   aux pse (Var' z var tp (Just (f1,f2,f3)) p) = aux pse (Var' z var tp Nothing (Seq z (Fin z f1 f2 f3) p))

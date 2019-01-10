@@ -49,7 +49,7 @@ infixr 1 `Seq`
 infixr 0 `Par`
 
 fromGrammar :: G.Stmt -> Stmt
-fromGrammar (G.Data _ _ _ _ p)  = fromGrammar p
+fromGrammar (G.Data _ _ _ _ _ p)= fromGrammar p
 fromGrammar (G.Var _ id _ p)    = Var (id,Nothing) (fromGrammar p)
 fromGrammar (G.Inp _ _ p)       = (fromGrammar p)
 fromGrammar (G.Out _ _ _ p)     = (fromGrammar p)

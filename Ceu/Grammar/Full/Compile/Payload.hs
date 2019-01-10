@@ -14,7 +14,7 @@ import Ceu.Grammar.Full.Stmt
 -- (Every e var ...) -> (Every e Nothing ((Write var e_) ; ...)
 compile :: Stmt -> (Errors, Stmt)
 compile p = ([], aux p)
-aux (Data' z id vars ors p)     = Data' z id vars ors (aux p)
+aux (Data' z id vars cons abs p)= Data' z id vars cons abs (aux p)
 aux (Var' z id tp Nothing p)    = Var' z id tp Nothing (aux p)
 aux (Inp' z id tp p)            = Inp' z id tp (aux p)
 aux (Out' z id tp p)            = Out' z id tp (aux p)

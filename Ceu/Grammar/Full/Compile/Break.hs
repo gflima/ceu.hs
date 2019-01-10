@@ -12,7 +12,7 @@ compile :: Stmt -> (Errors, Stmt)
 compile p = ([], aux (-1) p)
 
 aux :: Int -> Stmt -> Stmt
-aux n (Data' z tp vars ors p)   = Data' z tp vars ors (aux n p)
+aux n (Data' z tp vars cons abs p) = Data' z tp vars cons abs (aux n p)
 aux n (Var' z var tp Nothing p) = Var' z var tp Nothing (aux n p)
 aux n (Inp' z int tp p)      = Inp' z int tp (aux n p)
 aux n (Out' z int tp p)      = Out' z int tp (aux n p)

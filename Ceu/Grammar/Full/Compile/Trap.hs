@@ -8,7 +8,7 @@ import Ceu.Grammar.Full.Stmt
 compile :: Stmt -> (Errors, Stmt)
 compile p = ([], aux [] p) where
   aux :: [Maybe ID_Var] -> Stmt -> Stmt
-  aux ids (Data' z tp vars ors p) = Data' z tp vars ors (aux ids p)
+  aux ids (Data' z tp vars cons abs p) = Data' z tp vars cons abs (aux ids p)
   aux ids (Var' z var tp fin p)   = Var' z var tp fin (aux ids p)
   aux ids (Inp' z id tp p)    = Inp' z id tp (aux ids p)
   aux ids (Out' z id tp p)    = Out' z id tp (aux ids p)
