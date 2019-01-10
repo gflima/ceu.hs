@@ -160,6 +160,7 @@ typedef struct tceu_code_mem_ROOT {
     tceu_code_mem _mem;                                                         
     tceu_trl      _trails[7];                                                   
     byte          _params[0];                                                   
+    int           _ret;
 } tceu_code_mem_ROOT;
 
 typedef struct tceu_app {

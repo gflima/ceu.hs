@@ -45,4 +45,4 @@ aux_funci :: Stmt -> Stmt
 aux_funci (FuncI' z func (TypeF inp out) imp p) =
     FuncI' z func (TypeF inp out) imp' p
     where
-        imp' = (Var' z "_ret" out Nothing (Trap z (Just "_ret") imp))
+        imp' = (Var' z "_fret" out Nothing (Trap z (Just "_fret") imp))

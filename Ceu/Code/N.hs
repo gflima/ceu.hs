@@ -14,6 +14,11 @@ stmt :: Int -> Int -> Stmt -> (Int, Int, Stmt)
 
 stmt n trl0 (Nop z) = (n+1,1, Nop z{nn=n,trails=(trl0,1)})
 
+stmt n trl0 (Data z id vars ors p) =
+    (n',ts', Data z{nn=n,trails=(trl0,ts')} id vars ors p')
+    where
+        (n',ts',p') = stmt (n+1) trl0 p
+
 stmt n trl0 (Var z id tp p) =
     (n',ts', Var z{nn=n,trails=(trl0,ts')} id tp p')
     where

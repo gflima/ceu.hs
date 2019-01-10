@@ -89,8 +89,8 @@ ofunc (FuncI _ func (TypeF inp out) imp _) src =
               ++ oblk (src++ret) ++ "\n"
     where
         inp' = tp2use inp
-        ret  = ocmd $ "return CEU_VAR__ret__" ++ (show $ nn z)
-        (Var z "_ret" _ _) = imp
+        ret  = ocmd $ "return CEU_VAR__fret__" ++ (show $ nn z)
+        (Var z "_fret" _ _) = imp
 
 -------------------------------------------------------------------------------
 
@@ -100,7 +100,8 @@ getEnv ((v1,s):l) v2 | v1==v2    = s
 getEnv _          v2 = error v2
 
 getEnvVar env var = if var == "_INPUT" then "_CEU_INPUT" else
-                            "CEU_VAR_" ++ var ++ "__" ++ (show $ nn $ getAnn $ getEnv env var)
+                            "CEU_VAR_" ++ var ++
+                                (if var=="_ret" then "" else "__" ++ (show $ nn $ getAnn $ getEnv env var))
 
 getEnvEvt env evt = "CEU_EVENT_" ++ evt ++ "__" ++ (show $ nn $ getAnn $ getEnv env evt)
 
@@ -227,10 +228,7 @@ aux dn (Out   _ id tp p) = aux dn p
 
 -------------------------------------------------------------------------------
 
-aux dn s@(Evt z id p) = p' { evts_up=(id++"__"++(show$nn z)):(evts_up p') }
-    where
-        p'  = aux dn' p
-        dn' = dn{ evts_dn = (id,s):(evts_dn dn) }
+aux dn s@(Data z id vars ors p) = aux dn p
 
 aux dn s@(Var z id tp p) = p' {
                                 code_dcl = dcl' ++ (code_dcl p'),
@@ -243,6 +241,7 @@ aux dn s@(Var z id tp p) = p' {
         dn' = dn{ vars_dn = (id,s):(vars_dn dn) }
         brk = code_brk p'
 
+        -- top-level "_ret" must not be tmp
         (var,dcl',bef') = f (if id=="_ret" then (Just "") else brk) where
             f Nothing  = ([],
                           "#define CEU_VAR_" ++ id' ++ " " ++ id' ++ "\n",
@@ -250,7 +249,12 @@ aux dn s@(Var z id tp p) = p' {
             f (Just _) = ([(id',tp)],
                           "#define CEU_VAR_" ++ id' ++ " " ++ "CEU_APP.root."++id' ++ "\n",
                           "")
-            id'  = id ++ "__" ++ (show $ nn z)
+            id'  = id ++ (if id=="_ret" then "" else "__" ++ (show $ nn z))
+
+aux dn s@(Evt z id p) = p' { evts_up=(id++"__"++(show$nn z)):(evts_up p') }
+    where
+        p'  = aux dn' p
+        dn' = dn{ evts_dn = (id,s):(evts_dn dn) }
 
 aux dn s@(Func z id (TypeF inp out) p) = p' { tps_up=inp:out:(tps_up p') }
     where
