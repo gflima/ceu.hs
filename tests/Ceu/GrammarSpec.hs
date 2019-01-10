@@ -3,7 +3,7 @@ module Ceu.GrammarSpec (main, spec) where
 import Debug.Trace
 import Test.Hspec
 
-import Ceu.Grammar.Globals  (Errors, Loc(..))
+import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann      (annz, Ann(..))
 import Ceu.Grammar.Type     (Type(..))
 import Ceu.Grammar.Exp
