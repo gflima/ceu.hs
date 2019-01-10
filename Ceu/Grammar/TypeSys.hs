@@ -18,10 +18,9 @@ stmt ids s@(Data z id []   ors p) = ((errDeclared ids (id,z)) ++ es, Data z id [
                                     where (es,p') = stmt (s:ids) p
 stmt ids s@(Data z id vars ors p) = error "not implemented"
 
-stmt ids s@(Var  z id tp p)  = (es_tp ++ es_id ++ es, Var z id tp p')
+stmt ids s@(Var  z id tp p)  = (es_data ++ es_id ++ es, Var z id tp p')
                                where
-                                es_tp   = concatMap (errDeclared ids)
-                                                    (map (flip (,) z) (get1s tp))
+                                es_data = concatMap (fst . (fff ids z isData)) (get1s tp)
                                 es_id   = errDeclared ids (id,z)
                                 (es,p') = stmt (s:ids) p
 stmt ids s@(Inp  z id p)     = ((errDeclared ids (id,z)) ++ es, Inp  z id p')
@@ -46,7 +45,7 @@ stmt ids (Write z loc exp)   = (es1 ++ es2 ++ es3, Write z loc exp')
                                 (es1,tps_loc)  = aux loc
                                 aux :: Loc -> (Errors,Type)
                                 aux LAny       = ([],TypeT)
-                                aux (LVar var) = fff var ids z isVar
+                                aux (LVar var) = fff ids z isVar var
                                 aux (LTuple l) = (es, TypeN tps) where
                                                  l' :: [(Errors,Type)]
                                                  l' = map aux l
@@ -56,14 +55,14 @@ stmt ids (Write z loc exp)   = (es1 ++ es2 ++ es3, Write z loc exp')
                                 (es2,exp') = expr ids exp
                                 es3        = toErrorTypes z tps_loc (type_ $ getAnn exp')
 
-stmt ids (AwaitInp z id)     = (fst $ fff id ids z isInp, AwaitInp z id)
+stmt ids (AwaitInp z id)     = (fst $ fff ids z isInp id, AwaitInp z id)
 stmt ids (EmitExt  z id exp) = (es1++es2++es3, EmitExt z id exp')
                                  where
-                                    (es1,tp)   = fff id ids z isOut
+                                    (es1,tp)   = fff ids z isOut id
                                     (es2,exp') = expr ids exp
                                     es3        = toErrorTypes z tp (type_ $ getAnn exp')
-stmt ids (AwaitEvt z id)     = (fst $ fff id ids z isEvt, AwaitEvt z id)
-stmt ids (EmitEvt  z id)     = (fst $ fff id ids z isEvt, EmitEvt  z id)
+stmt ids (AwaitEvt z id)     = (fst $ fff ids z isEvt id, AwaitEvt z id)
+stmt ids (EmitEvt  z id)     = (fst $ fff ids z isEvt id, EmitEvt  z id)
 
 stmt ids (If  z exp p1 p2)   = (ese ++ es ++ es1 ++ es2, If z exp' p1' p2')
                                where
@@ -78,14 +77,14 @@ stmt ids (Seq z p1 p2)       = (es1++es2, Seq z p1' p2')
 stmt ids (Loop z p)          = (es, Loop z p')
                                where
                                 (es,p') = stmt ids p
-stmt ids (Every z evt p)     = ((fst $ fff evt ids z isInpEvt) ++ es, Every z evt p')
+stmt ids (Every z evt p)     = ((fst $ fff ids z isInpEvt evt) ++ es, Every z evt p')
                                where
                                 (es,p') = stmt ids p
 stmt ids (Par z p1 p2)       = (es1++es2, Par z p1' p2')
                                where
                                 (es1,p1') = stmt ids p1
                                 (es2,p2') = stmt ids p2
-stmt ids (Pause z id p)      = ((fst $ fff id ids z isVar) ++ es, Pause z id p')
+stmt ids (Pause z id p)      = ((fst $ fff ids z isVar id) ++ es, Pause z id p')
                                where
                                 (es,p') = stmt ids p
 stmt ids (Fin z p)           = (es, Fin z p')
@@ -104,24 +103,21 @@ stmt _   (Error  z msg)      = ([], Error z msg)
 
 -------------------------------------------------------------------------------
 
-isVar (Var _ _ _ _) = True
-isVar _             = False
-
-isOut (Out _ _ _ _) = True
-isOut _             = False
-
-isInp (Inp _ _ _) = True
-isInp _           = False
-
-isEvt (Evt _ _ _) = True
-isEvt _           = False
-
-isInpEvt (Inp _ _ _) = True
-isInpEvt (Evt _ _ _) = True
-isInpEvt _           = False
-
-isFunc (Func _ _ _ _) = True
-isFunc _              = False
+isData (Data _ _ _ _ _) = True
+isData _                = False
+isVar  (Var _ _ _ _)    = True
+isVar  _                = False
+isOut  (Out _ _ _ _)    = True
+isOut  _                = False
+isInp  (Inp _ _ _)      = True
+isInp  _                = False
+isEvt  (Evt _ _ _)      = True
+isEvt  _                = False
+isFunc (Func _ _ _ _)   = True
+isFunc _                = False
+isInpEvt (Inp _ _ _)    = True
+isInpEvt (Evt _ _ _)    = True
+isInpEvt _              = False
 
 getId :: Stmt -> String
 getId (Data _ id _ _ _) = id
@@ -141,8 +137,8 @@ errDeclared ids (id,z) =
             Nothing   -> []
             _         -> [toError z "identifier '" ++ id ++ "' is already declared"]
 
-fff :: String -> [Stmt] -> Ann -> (Stmt -> Bool) -> (Errors, Type)
-fff id ids z pred =
+fff :: [Stmt] -> Ann -> (Stmt -> Bool) -> String -> (Errors, Type)
+fff ids z pred id =
     case dcl of
         Nothing -> ([toError z "identifier '" ++ id ++ "' is not declared"], TypeT) -- TypeT will prevent extra errors
         Just s  -> if pred s then
@@ -155,6 +151,7 @@ fff id ids z pred =
         -- TODO: move to Stmt.hs?
         getType :: Maybe Stmt -> Type
         getType Nothing                = TypeB
+        getType (Just (Data _ _ _ _ _)) = TypeB     -- TODO: caller should use "errUndeclared"
         getType (Just (Var  _ _ tp _)) = tp
         getType (Just (Out  _ _ tp _)) = tp
         getType (Just (Func _ _ tp _)) = tp
@@ -196,7 +193,7 @@ expr ids (Read z id)     = if id == "_INPUT" then
                            else
                             (es, Read z{type_=tp'} id)
                            where
-                            (es,tp') = fff id ids z isVar
+                            (es,tp') = fff ids z isVar id
 
 expr ids (Call z id exp) = (es++es_exp, Call z{type_=tp_out} id exp')
                            where
@@ -204,7 +201,7 @@ expr ids (Call z id exp) = (es++es_exp, Call z{type_=tp_out} id exp')
                             tp_exp' = type_ $ getAnn exp'
 
                             (es,tp_out) =
-                                let (es',tp_func) = fff id ids z isFunc in
+                                let (es',tp_func) = fff ids z isFunc id in
                                     case tp_func of
                                         TypeT -> (es', TypeT)    -- func not found
                                         TypeF inp out -> case toErrorTypes z inp tp_exp' of

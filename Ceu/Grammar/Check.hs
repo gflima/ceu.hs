@@ -13,9 +13,13 @@ import qualified Ceu.Grammar.TypeSys as TypeSys
 
 type Options = (Bool,Bool,Bool)
 
+prelude z p = (Data z "Int" [] Nothing p)
+
 compile :: Options -> Stmt -> (Errors, Stmt)
 compile (o_simp,o_encl,o_prel) p = (es4,p4) where
     -- TODO: o_prel
+  p0   = if not o_prel then p else
+          prelude z p
   p1   = if not o_encl then p else
           (Var z "_ret" (Type1 "Int") (Seq z (Trap z p) (Halt z)))
   p2   = p1     -- TODO: annotate with isInst
