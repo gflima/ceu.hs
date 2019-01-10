@@ -84,29 +84,26 @@ stmt_break = do
 stmt_var :: Parser Stmt
 stmt_var = do
     pos  <- pos2src <$> getPosition
-    mod  <- (tk_key "val" <|> tk_key "mut")
+    void <- (tk_key "val" <|> tk_key "mut")
     loc  <- loc_
-    void <- tk_str "::"
+    void <- tk_str ":"
     tp   <- pType
     s    <- option (Nop $ annz{source=pos})
-                   (try (attr_exp      loc (tk_str $ op mod)) <|>
-                    try (attr_awaitext loc (tk_str $ op mod)) <|>
-                    try (attr_awaitevt loc (tk_str $ op mod)) <|>
-                    try (attr_trap     loc (tk_str $ op mod)))
+                   (try (attr_exp      loc (tk_str "<-")) <|>
+                    try (attr_awaitext loc (tk_str "<-")) <|>
+                    try (attr_awaitevt loc (tk_str "<-")) <|>
+                    try (attr_trap     loc (tk_str "<-")))
     s'   <- case (dcls pos loc tp) of
                 Nothing -> do { fail "arity mismatch" }
                 Just v  -> return $ Seq annz{source=pos} v s
     return s'
-    where
-        op "val" = ":"
-        op "mut" = "<:"
 
 stmt_evt :: Parser Stmt
 stmt_evt = do
     pos  <- pos2src <$> getPosition
     void <- tk_key "event"
     evt  <- tk_evt
-    void <- tk_str "::"
+    void <- tk_str ":"
     tp   <- pType
     return $ Evt annz{source=pos} evt tp
 
@@ -115,7 +112,7 @@ stmt_input = do
     pos  <- pos2src <$> getPosition
     void <- tk_key "input"
     ext  <- tk_ext
-    void <- tk_str "::"
+    void <- tk_str ":"
     tp   <- pType
     return $ Inp annz{source=pos} ext tp
 
@@ -124,7 +121,7 @@ stmt_output = do
     pos  <- pos2src <$> getPosition
     void <- tk_key "output"
     ext  <- tk_ext
-    void <- tk_str "::"
+    void <- tk_str ":"
     tp   <- pType
     return $ Out annz{source=pos} ext tp
 
@@ -132,10 +129,10 @@ stmt_attr :: Parser Stmt
 stmt_attr = do
     --pos  <- pos2src <$> getPosition
     loc <- loc_
-    s   <- try (attr_exp      loc (tk_str "<:")) <|>
-           try (attr_awaitext loc (tk_str "<:")) <|>
-           try (attr_awaitevt loc (tk_str "<:")) <|>
-           try (attr_trap     loc (tk_str "<:"))
+    s   <- try (attr_exp      loc (tk_str "<-")) <|>
+           try (attr_awaitext loc (tk_str "<-")) <|>
+           try (attr_awaitevt loc (tk_str "<-")) <|>
+           try (attr_trap     loc (tk_str "<-"))
     return $ s
 
 -- (x, (y,_))
@@ -175,7 +172,7 @@ stmt_func = do
     void <- tk_key "func"
     func <- tk_func
     loc  <- optionMaybe (try loc_')
-    void <- tk_str "::"
+    void <- tk_str ":"
     tp   <- type_F
     imp  <- optionMaybe $ do
                 void <- tk_key "do"
@@ -212,7 +209,7 @@ stmt_func = do
     where
         loc_' :: Parser Loc
         loc_' = do
-            void <- tk_str "::"
+            void <- tk_str ":"
             loc  <- loc_
             return loc
 
@@ -224,7 +221,7 @@ stmt_emitext = do
     void <- tk_key "emit"
     ext  <- tk_ext
     pos2 <- pos2src <$> getPosition
-    exp  <- option (Unit annz{source=pos2}) (tk_str "->" *> expr)
+    exp  <- option (Unit annz{source=pos2}) (tk_str "<-" *> expr)
     return $ EmitExt annz{source=pos1} ext exp
 
 stmt_awaitext :: (Maybe Loc) -> Parser Stmt
@@ -246,7 +243,7 @@ stmt_emitevt = do
     pos  <- pos2src <$> getPosition
     void <- tk_key "emit"
     evt  <- tk_evt
-    exp  <- optionMaybe (tk_str "->" *> expr)
+    exp  <- optionMaybe (tk_str "<-" *> expr)
     return $ EmitEvt annz{source=pos} evt exp
 
 stmt_awaitevt :: (Maybe Loc) -> Parser Stmt

@@ -90,7 +90,7 @@ expr_prim = try expr_call_pre   <|>
 expr_call_pre :: Parser Exp
 expr_call_pre = do
     pos  <- pos2src <$> getPosition
-    f    <- try (char '\'' *> tk_op)                   <|>
+    f    <- try (char '\'' *> tk_op)                  <|>
             do { try (tk_str "-") ; return "negate" } <|> -- unary minus exception
             try tk_func
     exp  <- expr

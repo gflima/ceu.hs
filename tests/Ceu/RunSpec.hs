@@ -66,73 +66,73 @@ spec = do
 
     describe "vars:" $ do
         it "val Int a,b" $
-            run "val a,b::Int;" []           -- TODO: support a,b,c? (problem w/ assign/finalization)
-            `shouldBe` Left "(line 1, column 6):\nunexpected \",\"\nexpecting digit, letter, \"_\" or \"::\""
-        it "a <: 1; escape a;" $
-            run "a <: 1; escape a" []
+            run "val a,b :Int;" []           -- TODO: support a,b,c? (problem w/ assign/finalization)
+            `shouldBe` Left "(line 1, column 6):\nunexpected \",\"\nexpecting digit, letter, \"_\" or \":\""
+        it "a <- 1; escape a;" $
+            run "a <- 1; escape a" []
             `shouldBe` Left "(line 1, column 3):\nidentifier 'a' is not declared\n(line 1, column 16):\nidentifier 'a' is not declared\n"
-        it "mut a :: Int <: 1; escape a;" $
-            run "mut a :: Int <: 1; escape a" []
+        it "mut a  : Int <- 1; escape a;" $
+            run "mut a  : Int <- 1; escape a" []
             `shouldBe` Right (1, [[]])
-        it "val a::Int" $
-            run "val a::Int" []
+        it "val a :Int" $
+            run "val a :Int" []
             `shouldBe` Left "(line 1, column 1):\nterminating `trap` body\n(line 1, column 1):\nmissing `escape` statement\n(line 1, column 1):\nunreachable statement\n"
-        it "mut a::Int <: 1" $
-            run "mut a::Int <: 1" []
+        it "mut a :Int <- 1" $
+            run "mut a :Int <- 1" []
             `shouldBe` Left "(line 1, column 1):\nterminating `trap` body\n(line 1, column 1):\nmissing `escape` statement\n(line 1, column 1):\nunreachable statement\n"
-        it "val a::Int ; a <: 1" $
-            run "val a::Int ; a <: 1 ; escape a" []
+        it "val a :Int ; a <- 1" $
+            run "val a :Int ; a <- 1 ; escape a" []
             `shouldBe` Left "TODO: val cannot be reassigned"
-        it "mut a:Int ; a <: 1" $
-            run "mut a::Int ; a <: 1 ; escape a" []
+        it "mut a:Int ; a <- 1" $
+            run "mut a :Int ; a <- 1 ; escape a" []
             `shouldBe` Right (1, [[]])
-        it "mut x::Int; x:1; escape x" $
-            run "mut x::Int; x <: 1 ;escape x" []
+        it "mut x :Int; x<-1; escape x" $
+            run "mut x:Int; x <- 1 ;escape x" []
             `shouldBe` Right (1, [[]])
         it "hide a" $
-            run "val a::Int ; val a::Int ; escape 0" []
+            run "val a :Int ; val a :Int ; escape 0" []
             `shouldBe` Left "(line 1, column 14):\nidentifier 'a' is already declared\n"
         it "do a=1 end ; a=2" $
-            run "do val a::Int : 1; end val a::Int : 2 ; escape a" []
+            run "do val a:Int <- 1; end val a:Int <- 2 ; escape a" []
             `shouldBe` Left "TODO: declared but not used"
-        it "mut x::Int <: await X ; escape x" $
-            run "input X::Int mut x::Int <: await X ; escape x" [("X",Just 1)]
+        it "mut x:Int <- await X ; escape x" $
+            run "input X:Int mut x:Int <- await X ; escape x" [("X",Just 1)]
             `shouldBe` Right (1, [[],[]])
         it "TODO-index-tuples" $
-            run "val x::(Int,()) : (1,()) ; val y::(Int,()) : x ; escape 1" []
+            run "val x:(Int,()) <- (1,()) ; val y:(Int,()) <- x ; escape 1" []
             `shouldBe` Right (1, [[]])
-        it "mut x::(Int,Int) <: (1,2) ; escape '+ x | (TODO: no RT support for tuples)" $
-            run "mut x::(Int,Int) <: (1,2) ; escape '+ x" []
+        it "mut x:(Int,Int) <- (1,2) ; escape '+ x | (TODO: no RT support for tuples)" $
+            run "mut x:(Int,Int) <- (1,2) ; escape '+ x" []
             `shouldBe` Right (3, [[]])
 
 -------------------------------------------------------------------------------
 
     describe "awaitext:" $ do
         it "await X ; escape 1" $
-            run "input X::Int await X ; escape 1" []
+            run "input X:Int await X ; escape 1" []
             `shouldBe` Left "program didn't terminate\n"
         it "await X ; escape 1" $
-            run "input X::Int await X ; escape 1" [("X",Nothing)]
+            run "input X:Int await X ; escape 1" [("X",Nothing)]
             `shouldBe` Right (1,[[],[]])
-        it "mut x::Int <: await X ; await X ; escape x" $
-            run "input X::Int mut x::Int <: await X ; await X ; escape x" [("X",Just 1),("X",Nothing)]
+        it "mut x:Int <- await X ; await X ; escape x" $
+            run "input X:Int mut x:Int <- await X ; await X ; escape x" [("X",Just 1),("X",Nothing)]
             `shouldBe` Right (1, [[],[],[]])
 
     describe "emitext:" $ do
         it "emit X" $
-            run "output X::() emit X ; escape 1;" []
+            run "output X:() emit X ; escape 1;" []
             `shouldBe` Right (1,[[("X",Nothing)]])
         it "emit X" $
-            run "output X::Int emit X ; escape 1;" []
+            run "output X :Int emit X ; escape 1;" []
             `shouldBe` Left "(line 1, column 15):\ntypes do not match\n"
         it "emit x" $
             run "emit x" []
             `shouldBe` Left "(line 1, column 1):\nterminating `trap` body\n(line 1, column 1):\nmissing `escape` statement\n(line 1, column 1):\nunreachable statement\n(line 1, column 1):\nidentifier 'x' is not declared\n"
-        it "emit X -> 1" $
-            run "output X::Int emit X -> 1 ; escape 2;" []
+        it "emit X <- 1" $
+            run "output X :Int emit X <- 1 ; escape 2;" []
             `shouldBe` Right (2,[[("X",Just 1)]])
-        it "mut x::Int <: await X; emit X -> x ; escape x+1" $
-            run "input X::Int mut x::Int <: await X; emit X -> x ; escape x+1" [("X",Just 1)]
+        it "mut x :Int <- await X; emit X <- x ; escape x+1" $
+            run "input X :Int mut x :Int <- await X; emit X <- x ; escape x+1" [("X",Just 1)]
             `shouldBe` Left "(line 1, column 37):\nidentifier 'X' is invalid\n"
 
 -------------------------------------------------------------------------------
@@ -172,7 +172,7 @@ spec = do
             run "if 0==1 then ; if 0==1 then end ; else escape 1 end ; await FOREVER" []
             `shouldBe` Right (1, [[]])
         it "if 1==1 then a=1; a=2; if 1==1 then escape a end end" $
-            run "if 1==1 then val a::Int :1 ; a<:2; if 1==1 then escape a end end ; await FOREVER" []
+            run "if 1==1 then val a:Int <-1 ; a<-2; if 1==1 then escape a end end ; await FOREVER" []
             `shouldBe` Right (2, [[]])
         it "if 0==1 then . else/if 1==1 then escape 1 else ." $
             run "if 0==1 then escape 0 else/if 1==1 then escape 1 else escape 0 end" []
@@ -208,7 +208,7 @@ spec = do
             --`shouldBe` Right (3, [[]])
             `shouldBe` Left "(line 1, column 12):\ntrail must terminate\n(line 1, column 22):\ntrail must terminate\n"
         it "par/and ... with ... with escape 3 end" $
-            run "input X::Int input Y::Int par/and do await X with await Y with escape 3 end" []
+            run "input X :Int input Y: Int par/and do await X with await Y with escape 3 end" []
             `shouldBe` Left "(line 1, column 64):\ntrail must terminate\n(line 1, column 1):\nterminating `trap` body\n(line 1, column 46):\nunreachable statement\n"
 
     describe "par/or:" $ do

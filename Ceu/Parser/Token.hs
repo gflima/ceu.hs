@@ -56,7 +56,9 @@ tk_str str = do
 
 tk_op :: Parser String
 tk_op = do
-    op <- many1 $ oneOf "!@#$%&*-+=/?^~\\|<>"
+    --void <- notFollowedBy (tk_str "<-" <|> tk_str "->")
+    op   <- many1 $ oneOf "!@#$%&*-+=/?^~\\|<>"
+    guard $ op /= "<-" && op /= "->"
     s
     return $ "(" ++ op ++ ")"
 
