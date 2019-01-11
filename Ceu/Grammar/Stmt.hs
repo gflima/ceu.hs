@@ -8,9 +8,9 @@ import Text.Printf
 
 -- Program (pg 5).
 data Stmt
-  = Class    Ann ID_Type [ID_Var] Stmt Stmt  -- new class declaration
-  | Inst     Ann ID_Type [ID_Hier] Stmt Stmt -- new class instance
-  | Data     Ann ID_Hier [ID_Var] [DataCons] Bool Stmt -- new type declaration
+  = Class    Ann ID_Class [ID_Var] Stmt Stmt  -- new class declaration
+  | Inst     Ann ID_Class [ID_Type] Stmt Stmt -- new class instance
+  | Data     Ann ID_Type [ID_Var] [DataCons] Bool Stmt -- new type declaration
   | Var      Ann ID_Var  Type Stmt          -- variable declaration
   | Inp      Ann ID_Inp  Stmt               -- input declaration
   | Out      Ann ID_Out  Type Stmt          -- output declaration

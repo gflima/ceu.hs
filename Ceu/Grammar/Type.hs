@@ -8,7 +8,7 @@ import Ceu.Grammar.Globals
 data Type = TypeB
           | TypeT
           | Type0
-          | Type1 ID_Hier
+          | Type1 ID_Type
           | TypeN [Type]    -- (len >= 2)
           | TypeF Type Type
           | TypeV ID_Var
@@ -43,11 +43,7 @@ checkTypes (TypeN t1s)       (TypeN t2s)       = (checkTypesN t1s t2s) && (check
 
 -------------------------------------------------------------------------------
 
-tp12str = intercalate "."
-
--------------------------------------------------------------------------------
-
-get1s :: Type -> [ID_Hier]
+get1s :: Type -> [ID_Type]
 
 get1s (TypeV _)       = []
 get1s TypeT           = []

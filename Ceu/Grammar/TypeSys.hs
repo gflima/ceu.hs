@@ -12,31 +12,72 @@ import Ceu.Grammar.Stmt
 go :: Stmt -> (Errors, Stmt)
 go p = stmt [] p
 
+-------------------------------------------------------------------------------
+
+isData id (Data _ id' _ _ _ _) = (id == id')
+isData _  _                    = False
+
+isVar  id (Var _ id' _ _) = (id == id')
+isVar  _  _               = False
+
+isInp  id (Inp _ id' _)   = (id == id')
+isInp  _  _               = False
+
+isOut  id (Out _ id' _ _) = (id == id')
+isOut  _  _               = False
+
+isEvt  id (Evt _ id' _)   = (id == id')
+isEvt  _  _               = False
+
+isFunc id (Func _ id' _ _)= True
+isFunc _  _               = False
+
+isInpEvt id s = isInp id s || isEvt id s
+
+isAny id s = isData id s || isVar id s || isInp  id s ||
+             isOut  id s || isEvt id s || isFunc id s
+
+errDeclared :: Ann -> String -> String -> [Stmt] -> Errors
+errDeclared z str id ids =
+    if (take 1 id == "_") then [] else    -- nested _ret, __and (par/and)
+        case find (isAny id) ids of
+            Nothing   -> []
+            _         -> [toError z str ++ " '" ++ id ++ "' is already declared"]
+
+fold_raws :: [Stmt] -> [RawAt] -> (Errors, [RawAt])
+fold_raws ids raws = foldr f ([],[]) raws where
+                        f (RawAtE exp) (l1,l2) = (es'++l1, (RawAtE exp'):l2)
+                                                 where
+                                                    (es',exp') = expr ids exp
+                        f (RawAtS str) (l1,l2) = (l1, (RawAtS str):l2)
+
+-------------------------------------------------------------------------------
+
 stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
 
-stmt ids s@(Class z id vars ifc p) = ((errDeclared "typeclass" ids (id,z)) ++ es1 ++ es2,
+stmt ids s@(Class z id vars ifc p) = ((errDeclared z "typeclass" id ids) ++ es1 ++ es2,
                                         Class z id vars ifc' p')
                                         where
                                             (es1,ifc') = stmt (traceShowId ids) (traceShowId ifc)
                                             (es2,p')   = stmt (s:ids) p
 
-stmt ids s@(Data z id [] cons abs p) = ((errDeclared "type" ids (tp12str id,z)) ++ es, Data z id [] cons abs p')
+stmt ids s@(Data z id [] cons abs p) = ((errDeclared z "type" id ids) ++ es, Data z id [] cons abs p')
                                     where (es,p') = stmt (s:ids) p
 stmt ids s@(Data z id vars cons abs p) = error "not implemented"
 
 stmt ids s@(Var  z id tp p)  = (es_data ++ es_id ++ es, Var z id tp p')
                                where
                                 es_data = concatMap f $ map (\id->(id, find (isData id) ids)) $ get1s tp
-                                f (id, Nothing) = [toError z "type '" ++ (tp12str id) ++ "' is not declared"]
+                                f (id, Nothing) = [toError z "type '" ++ id ++ "' is not declared"]
                                 f (_,  Just _)  = []
 
-                                es_id   = errDeclared "variable" ids (id,z)
+                                es_id   = errDeclared z "variable" id ids
                                 (es,p') = stmt (s:ids) p
-stmt ids s@(Inp  z id p)     = ((errDeclared "input" ids (id,z)) ++ es, Inp  z id p')
+stmt ids s@(Inp  z id p)     = ((errDeclared z "input" id ids) ++ es, Inp  z id p')
                                where (es,p') = stmt (s:ids) p
-stmt ids s@(Out  z id tp p)  = ((errDeclared "output" ids (id,z)) ++ es, Out  z id tp p')
+stmt ids s@(Out  z id tp p)  = ((errDeclared z "output" id ids) ++ es, Out  z id tp p')
                                where (es,p') = stmt (s:ids) p
-stmt ids s@(Evt  z id p)     = ((errDeclared "event" ids (id,z)) ++ es, Evt  z id p')
+stmt ids s@(Evt  z id p)     = ((errDeclared z "event" id ids) ++ es, Evt  z id p')
                                where (es,p') = stmt (s:ids) p
 
 stmt ids s@(Func z id tp p)  = (es ++ es', Func z id tp p') where
@@ -96,7 +137,7 @@ stmt ids s@(EmitEvt  z id)   = (es, s) where
 stmt ids (If  z exp p1 p2)   = (ese ++ es ++ es1 ++ es2, If z exp' p1' p2')
                                where
                                 (ese,exp') = expr ids exp
-                                es = toErrorTypes z (Type1 ["Bool"]) (type_ $ getAnn exp')
+                                es = toErrorTypes z (Type1 "Bool") (type_ $ getAnn exp')
                                 (es1,p1') = stmt ids p1
                                 (es2,p2') = stmt ids p2
 stmt ids (Seq z p1 p2)       = (es1++es2, Seq z p1' p2')
@@ -142,68 +183,19 @@ stmt _   (Error  z msg)      = ([], Error z msg)
 
 -------------------------------------------------------------------------------
 
-isData id (Data _ id' _ _ _ _) = (id == id')
-isData _  _                    = False
-
-isVar  id (Var _ id' _ _) = (id == id')
-isVar  _  _               = False
-
-isInp  id (Inp _ id' _)   = (id == id')
-isInp  _  _               = False
-
-isOut  id (Out _ id' _ _) = (id == id')
-isOut  _  _               = False
-
-isEvt  id (Evt _ id' _)   = (id == id')
-isEvt  _  _               = False
-
-isFunc id (Func _ id' _ _)= True
-isFunc _  _               = False
-
-isInpEvt id s = isInp id s || isEvt id s
-
-isAny id (Data _ id' _ _ _ _) = id == tp12str id'
-isAny id (Var  _ id' _ _)     = id == id'
-isAny id (Inp  _ id' _)       = id == id'
-isAny id (Out  _ id' _ _)     = id == id'
-isAny id (Evt  _ id' _)       = id == id'
-isAny id (Func _ id' _ _)     = id == id'
-
-errDeclared :: String -> [Stmt] -> (String, Ann) -> Errors
-errDeclared str ids (id,z) =
-    if (take 1 id == "_") then [] else    -- nested _ret, __and (par/and)
-        case find (isAny id) ids of
-            Nothing   -> []
-            _         -> [toError z str ++ " '" ++ id ++ "' is already declared"]
-
--------------------------------------------------------------------------------
-
-
-isTypeB TypeB = True
-isTypeB _     = False
-
-fold_raws :: [Stmt] -> [RawAt] -> (Errors, [RawAt])
-fold_raws ids raws = foldr f ([],[]) raws where
-                        f (RawAtE exp) (l1,l2) = (es'++l1, (RawAtE exp'):l2)
-                                                 where
-                                                    (es',exp') = expr ids exp
-                        f (RawAtS str) (l1,l2) = (l1, (RawAtS str):l2)
-
--------------------------------------------------------------------------------
-
 expr :: [Stmt] -> Exp -> (Errors, Exp)
 
 expr ids (RawE  z raws)  = (es, RawE z{type_=TypeT} raws')
                            where
                             (es,raws') = fold_raws ids raws
-expr _   (Const z val)   = ([], Const z{type_=Type1 ["Int"]} val)
+expr _   (Const z val)   = ([], Const z{type_=Type1 "Int"} val)
 expr _   (Unit z)        = ([], Unit  z{type_=Type0})
 
 expr ids (Cons  z id)    = (es, Cons  z{type_=(Type1 id)} id)
     where
         es = case find (isData id) ids of
-            Nothing                    -> [toError z "type '" ++ tp12str id ++ "' is not declared"]
-            Just (Data _ _ _ _ True _) -> [toError z "type '" ++ tp12str id ++ "' is abstract"]
+            Nothing                    -> [toError z "type '" ++ id ++ "' is not declared"]
+            Just (Data _ _ _ _ True _) -> [toError z "type '" ++ id ++ "' is abstract"]
             otherwise                  -> []
 
 expr ids (Tuple z exps)  = (es, Tuple z{type_=tps'} exps')
@@ -215,7 +207,7 @@ expr ids (Tuple z exps)  = (es, Tuple z{type_=tps'} exps')
                             tps'  = TypeN (map (type_.getAnn) exps')
 
 expr ids (Read z id)     = if id == "_INPUT" then
-                            ([], Read z{type_=Type1 ["Int"]} id)
+                            ([], Read z{type_=Type1 "Int"} id)
                            else
                             (es, Read z{type_=tp'} id)
                            where
