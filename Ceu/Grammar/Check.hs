@@ -31,7 +31,9 @@ compile (o_simp,o_encl,o_prel) p = (es4,p4) where
 
 stmts :: Stmt -> Errors
 stmts stmt = case stmt of
-  Data _ _ _ _ _ p-> stmts p
+  Class _ _ _ _ p   -> stmts p
+  Inst  _ _ _ _ p   -> stmts p
+  Data  _ _ _ _ _ p -> stmts p
   Var _ _ _ p     -> stmts p
   Inp _ _ p       -> stmts p
   Out _ _ _ p     -> stmts p
@@ -78,7 +80,9 @@ getComplexs p = errs_anns_msg_map (aux' (-1) p) "invalid statement" where
   aux' n (Every z _ p)  = [z] ++ aux' n p
   aux' n (Fin z p)      = [z] ++ aux' n p
   aux' n (Loop _ p)     = aux' n p
-  aux' n (Data _ _ _ _ _ p) = aux' n p
+  aux' n (Class _ _ _ _ p)   = aux' n p
+  aux' n (Inst  _ _ _ _ p)   = aux' n p
+  aux' n (Data  _ _ _ _ _ p) = aux' n p
   aux' n (Var _ _ _ p)  = aux' n p
   aux' n (Inp _ _ p)    = aux' n p
   aux' n (Out _ _ _ p)  = aux' n p
@@ -105,7 +109,9 @@ boundedLoop (Loop _ body) = aux 0 body where
   aux n stmt = case stmt of
     AwaitInp _ _           -> True
     Every _ _ _            -> True
-    Data _ _ _ _ _ p       -> aux n p
+    Class _ _ _ ifc p      -> aux n ifc && aux n p
+    Inst  _ _ _ imp p      -> aux n imp && aux n p
+    Data  _ _ _ _ _ p      -> aux n p
     Var _ _ _ p            -> aux n p
     Inp _ _ p              -> aux n p
     Out _ _ _ p            -> aux n p
@@ -132,7 +138,9 @@ escapesAt0 p = (length $ filter (\(_,n) -> n==0) (getEscapes p)) >= 1
 getEscapes :: Stmt -> [(Stmt,Int)]
 getEscapes p = escs 0 p where
   escs :: Int -> Stmt -> [(Stmt,Int)]
-  escs n (Data _ _ _ _ _ p) = (escs n p)
+  escs n (Class _ _ _ _ p)   = (escs n p)
+  escs n (Inst  _ _ _ _ p)   = (escs n p)
+  escs n (Data  _ _ _ _ _ p) = (escs n p)
   escs n (Var _ _ _ p)    = (escs n p)
   escs n (Inp _ _ p)      = (escs n p)
   escs n (Out _ _ _ p)    = (escs n p)
@@ -155,7 +163,9 @@ getEscapes p = escs 0 p where
 removeTrap :: Stmt -> Stmt
 removeTrap (Trap _ p) = rT 0 p where
   rT :: Int -> Stmt -> Stmt
-  rT n (Data z id vars cons abs p) = Data z id vars cons abs (rT n p)
+  rT n (Class z id vars ifc p)      = Class z id vars ifc (rT n p)
+  rT n (Inst  z cls tp imp p)       = Inst  z cls tp imp (rT n p)
+  rT n (Data  z id vars cons abs p) = Data  z id vars cons abs (rT n p)
   rT n (Var z id tp p)       = Var z id tp (rT n p)
   rT n (Inp z id p)          = Inp z id (rT n p)
   rT n (Out z id tp p)       = Out z id tp (rT n p)
@@ -179,7 +189,9 @@ removeTrap (Trap _ p) = rT 0 p where
 -------------------------------------------------------------------------------
 
 neverTerminates :: Stmt -> Bool
-neverTerminates (Data _ _ _ _ _ p) = neverTerminates p
+neverTerminates (Class _ _ _ _ p)   = neverTerminates p
+neverTerminates (Inst  _ _ _ _ p)   = neverTerminates p
+neverTerminates (Data  _ _ _ _ _ p) = neverTerminates p
 neverTerminates (Var _ _ _ p)    = neverTerminates p
 neverTerminates (Inp _ _ p)      = neverTerminates p
 neverTerminates (Out _ _ _ p)    = neverTerminates p
@@ -204,7 +216,9 @@ maybeTerminates = not . neverTerminates
 
 alwaysInstantaneous :: Stmt -> Bool
 alwaysInstantaneous p = aux p where
-  aux (Data _ _ _ _ _ p) = aux p
+  aux (Class _ _ _ _ p)   = aux p
+  aux (Inst  _ _ _ _ p)   = aux p
+  aux (Data  _ _ _ _ _ p) = aux p
   aux (Var _ _ _ p)    = aux p
   aux (Inp _ _ p)      = aux p
   aux (Out _ _ _ p)    = aux p

@@ -8,7 +8,7 @@ import Ceu.Grammar.Globals
 data Type = TypeB
           | TypeT
           | Type0
-          | Type1 ID_Type
+          | Type1 ID_Hier
           | TypeN [Type]    -- (len >= 2)
           | TypeF Type Type
           | TypeV ID_Var
@@ -47,7 +47,7 @@ tp12str = intercalate "."
 
 -------------------------------------------------------------------------------
 
-get1s :: Type -> [ID_Type]
+get1s :: Type -> [ID_Hier]
 
 get1s (TypeV _)       = []
 get1s TypeT           = []

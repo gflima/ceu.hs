@@ -2,7 +2,7 @@ module Ceu.Grammar.Exp where
 
 import Text.Printf
 
-import Ceu.Grammar.Globals  (Val, ID_Type, ID_Func, ID_Var)
+import Ceu.Grammar.Globals  (Val, ID_Hier, ID_Func, ID_Var)
 import Ceu.Grammar.Ann      (Ann,HasAnn(..))
 
 data RawAt = RawAtE Exp | RawAtS String
@@ -11,7 +11,7 @@ data RawAt = RawAtE Exp | RawAtS String
 data Exp
     = RawE   Ann [RawAt]        -- {@(ceu)+c}
     | Const  Ann Val            -- 1
-    | Cons   Ann ID_Type        -- True
+    | Cons   Ann ID_Hier        -- True
     | Read   Ann ID_Var         -- a ; xs
     | Unit   Ann                -- ()
     -- | Parens Ann Exp         -- (1) ; (f 1) ; (f (1,2)) ; (())

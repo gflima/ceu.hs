@@ -14,24 +14,33 @@ go p = stmt [] p
 
 stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
 
-stmt ids s@(Data z id [] cons abs p) = ((errDeclared ids (tp12str id,z)) ++ es, Data z id [] cons abs p')
+stmt ids s@(Class z id vars ifc p) = ((errDeclared "typeclass" ids (id,z)) ++ es1 ++ es2,
+                                        Class z id vars ifc' p')
+                                        where
+                                            (es1,ifc') = stmt (traceShowId ids) (traceShowId ifc)
+                                            (es2,p')   = stmt (s:ids) p
+
+stmt ids s@(Data z id [] cons abs p) = ((errDeclared "type" ids (tp12str id,z)) ++ es, Data z id [] cons abs p')
                                     where (es,p') = stmt (s:ids) p
 stmt ids s@(Data z id vars cons abs p) = error "not implemented"
 
 stmt ids s@(Var  z id tp p)  = (es_data ++ es_id ++ es, Var z id tp p')
                                where
-                                es_data = concatMap (fst . (fff ids z isData)) (map tp12str $ get1s tp)
-                                es_id   = errDeclared ids (id,z)
+                                es_data = concatMap f $ map (\id->(id, find (isData id) ids)) $ get1s tp
+                                f (id, Nothing) = [toError z "type '" ++ (tp12str id) ++ "' is not declared"]
+                                f (_,  Just _)  = []
+
+                                es_id   = errDeclared "variable" ids (id,z)
                                 (es,p') = stmt (s:ids) p
-stmt ids s@(Inp  z id p)     = ((errDeclared ids (id,z)) ++ es, Inp  z id p')
+stmt ids s@(Inp  z id p)     = ((errDeclared "input" ids (id,z)) ++ es, Inp  z id p')
                                where (es,p') = stmt (s:ids) p
-stmt ids s@(Out  z id tp p)  = ((errDeclared ids (id,z)) ++ es, Out  z id tp p')
+stmt ids s@(Out  z id tp p)  = ((errDeclared "output" ids (id,z)) ++ es, Out  z id tp p')
                                where (es,p') = stmt (s:ids) p
-stmt ids s@(Evt  z id p)     = ((errDeclared ids (id,z)) ++ es, Evt  z id p')
+stmt ids s@(Evt  z id p)     = ((errDeclared "event" ids (id,z)) ++ es, Evt  z id p')
                                where (es,p') = stmt (s:ids) p
 
 stmt ids s@(Func z id tp p)  = (es ++ es', Func z id tp p') where
-    (es, (es',p')) = case find' id ids of
+    (es, (es',p')) = case find (isFunc id) ids of
         Nothing               -> ([],                    stmt (s:ids) p)
         Just (Func _ _ tp' _) -> (toErrorTypes z tp' tp, stmt ids p)
 
@@ -42,27 +51,47 @@ stmt ids s@(FuncI z id tp imp p) = (es1++es2, FuncI z id tp imp' p')
 
 stmt ids (Write z loc exp)   = (es1 ++ es2 ++ es3, Write z loc exp')
                                where
-                                (es1,tps_loc)  = aux loc
-                                aux :: Loc -> (Errors,Type)
-                                aux LAny       = ([],TypeT)
-                                aux (LVar var) = fff ids z isVar var
-                                aux (LTuple l) = (es, TypeN tps) where
-                                                 l' :: [(Errors,Type)]
+                                (tps_loc, es1) = aux loc
+                                aux :: Loc -> (Type, Errors)
+                                aux LAny       = (TypeT, [])
+                                aux (LVar var) = case find (isVar var) ids of
+                                                    Nothing ->
+                                                        (TypeT, [toError z "variable '" ++ var ++ "' is not declared"])
+                                                    (Just (Var _ _ tp _)) ->
+                                                        (tp,    [])
+                                aux (LTuple l) = (TypeN tps, es) where
+                                                 l' :: [(Type,Errors)]
                                                  l' = map aux l
-                                                 (es,tps) = foldr cat ([],[]) l'
-                                                 cat (es1,tp) (es2,tps) = (es1++es2, tp:tps)
+                                                 (tps,es) = foldr cat ([],[]) l'
+                                                 cat (tp,es1) (tps,es2) = (tp:tps, es1++es2)
 
                                 (es2,exp') = expr ids exp
                                 es3        = toErrorTypes z tps_loc (type_ $ getAnn exp')
 
-stmt ids (AwaitInp z id)     = (fst $ fff ids z isInp id, AwaitInp z id)
-stmt ids (EmitExt  z id exp) = (es1++es2++es3, EmitExt z id exp')
-                                 where
-                                    (es1,tp)   = fff ids z isOut id
-                                    (es2,exp') = expr ids exp
-                                    es3        = toErrorTypes z tp (type_ $ getAnn exp')
-stmt ids (AwaitEvt z id)     = (fst $ fff ids z isEvt id, AwaitEvt z id)
-stmt ids (EmitEvt  z id)     = (fst $ fff ids z isEvt id, EmitEvt  z id)
+stmt ids s@(AwaitInp z id) = (es,s) where
+                             es = case find (isInp id) ids of
+                                Nothing   -> [toError z "input '" ++ id ++ "' is not declared"]
+                                otherwise -> []
+
+stmt ids (EmitExt z id exp) = (es1++es2++es3, EmitExt z id exp')
+                              where
+                                (tp,es1) = case find (isOut id) ids of
+                                    Nothing ->
+                                        (TypeT, [toError z "output '" ++ id ++ "' is not declared"])
+                                    Just (Out _ _ tp _) ->
+                                        (tp, [])
+                                (es2,exp') = expr ids exp
+                                es3        = toErrorTypes z tp (type_ $ getAnn exp')
+
+stmt ids s@(AwaitEvt z id)   = (es, s) where
+                                es = case find (isEvt id) ids of
+                                        Nothing -> [toError z "event '" ++ id ++ "' is not declared"]
+                                        Just _  -> []
+
+stmt ids s@(EmitEvt  z id)   = (es, s) where
+                                es = case find (isEvt id) ids of
+                                        Nothing -> [toError z "event '" ++ id ++ "' is not declared"]
+                                        Just _  -> []
 
 stmt ids (If  z exp p1 p2)   = (ese ++ es ++ es1 ++ es2, If z exp' p1' p2')
                                where
@@ -77,16 +106,26 @@ stmt ids (Seq z p1 p2)       = (es1++es2, Seq z p1' p2')
 stmt ids (Loop z p)          = (es, Loop z p')
                                where
                                 (es,p') = stmt ids p
-stmt ids (Every z evt p)     = ((fst $ fff ids z isInpEvt evt) ++ es, Every z evt p')
+
+stmt ids (Every z evt p)     = (es1++es2, Every z evt p')
                                where
-                                (es,p') = stmt ids p
+                                (es2,p') = stmt ids p
+                                es1 = case find (isInpEvt evt) ids of
+                                        Nothing -> [toError z "event '" ++ evt ++ "' is not declared"]
+                                        Just _  -> []
+
 stmt ids (Par z p1 p2)       = (es1++es2, Par z p1' p2')
                                where
                                 (es1,p1') = stmt ids p1
                                 (es2,p2') = stmt ids p2
-stmt ids (Pause z id p)      = ((fst $ fff ids z isVar id) ++ es, Pause z id p')
+
+stmt ids (Pause z id p)      = (es1++es2, Pause z id p')
                                where
-                                (es,p') = stmt ids p
+                                (es2,p') = stmt ids p
+                                es1 = case find (isVar id) ids of
+                                        Nothing -> [toError z "variable '" ++ id ++ "' is not declared"]
+                                        Just _  -> []
+
 stmt ids (Fin z p)           = (es, Fin z p')
                                where
                                 (es,p') = stmt ids p
@@ -103,59 +142,39 @@ stmt _   (Error  z msg)      = ([], Error z msg)
 
 -------------------------------------------------------------------------------
 
-isData (Data _ _ _ _ _ _) = True
-isData _                = False
-isVar  (Var _ _ _ _)    = True
-isVar  _                = False
-isOut  (Out _ _ _ _)    = True
-isOut  _                = False
-isInp  (Inp _ _ _)      = True
-isInp  _                = False
-isEvt  (Evt _ _ _)      = True
-isEvt  _                = False
-isFunc (Func _ _ _ _)   = True
-isFunc _                = False
-isInpEvt (Inp _ _ _)    = True
-isInpEvt (Evt _ _ _)    = True
-isInpEvt _              = False
+isData id (Data _ id' _ _ _ _) = (id == id')
+isData _  _                    = False
 
-getId :: Stmt -> String
-getId (Data _ id _ _ _ _) = tp12str id
-getId (Var  _ id _ _)   = id
-getId (Inp  _ id _)     = id
-getId (Out  _ id _ _)   = id
-getId (Evt  _ id _)     = id
-getId (Func _ id _ _)   = id
+isVar  id (Var _ id' _ _) = (id == id')
+isVar  _  _               = False
 
-find' :: String -> [Stmt] -> Maybe Stmt
-find' id ids = find (\s -> getId s == id) ids
+isInp  id (Inp _ id' _)   = (id == id')
+isInp  _  _               = False
 
-errDeclared :: [Stmt] -> (String, Ann) -> Errors
-errDeclared ids (id,z) =
+isOut  id (Out _ id' _ _) = (id == id')
+isOut  _  _               = False
+
+isEvt  id (Evt _ id' _)   = (id == id')
+isEvt  _  _               = False
+
+isFunc id (Func _ id' _ _)= True
+isFunc _  _               = False
+
+isInpEvt id s = isInp id s || isEvt id s
+
+isAny id (Data _ id' _ _ _ _) = id == tp12str id'
+isAny id (Var  _ id' _ _)     = id == id'
+isAny id (Inp  _ id' _)       = id == id'
+isAny id (Out  _ id' _ _)     = id == id'
+isAny id (Evt  _ id' _)       = id == id'
+isAny id (Func _ id' _ _)     = id == id'
+
+errDeclared :: String -> [Stmt] -> (String, Ann) -> Errors
+errDeclared str ids (id,z) =
     if (take 1 id == "_") then [] else    -- nested _ret, __and (par/and)
-        case find' id ids of
+        case find (isAny id) ids of
             Nothing   -> []
-            _         -> [toError z "identifier '" ++ id ++ "' is already declared"]
-
-fff :: [Stmt] -> Ann -> (Stmt -> Bool) -> String -> (Errors, Type)
-fff ids z pred id =
-    case dcl of
-        Nothing -> ([toError z "identifier '" ++ id ++ "' is not declared"], TypeT) -- TypeT will prevent extra errors
-        Just s  -> if pred s then
-                    ([], getType dcl)
-                   else
-                    ([toError z "identifier '" ++ id ++ "' is invalid"], TypeT) -- TypeT will prevent extra errors
-    where
-        dcl = find' id ids
-
-        -- TODO: move to Stmt.hs?
-        getType :: Maybe Stmt -> Type
-        getType Nothing                = TypeB
-        getType (Just (Data _ _ _ _ _ _)) = TypeB     -- TODO: caller should use "errUndeclared"
-        getType (Just (Var  _ _ tp _)) = tp
-        getType (Just (Out  _ _ tp _)) = tp
-        getType (Just (Func _ _ tp _)) = tp
-        getType p                      = error (show p)
+            _         -> [toError z str ++ " '" ++ id ++ "' is already declared"]
 
 -------------------------------------------------------------------------------
 
@@ -182,11 +201,10 @@ expr _   (Unit z)        = ([], Unit  z{type_=Type0})
 
 expr ids (Cons  z id)    = (es, Cons  z{type_=(Type1 id)} id)
     where
-    eqs = filter (\(Data _ tp _ _ abs _) -> (tp == id) && (not abs))
-              (filter isData ids)
-    es = if null eqs
-            then [toError z "identifier '" ++ tp12str id ++ "' is not declared"]
-            else []
+        es = case find (isData id) ids of
+            Nothing                    -> [toError z "type '" ++ tp12str id ++ "' is not declared"]
+            Just (Data _ _ _ _ True _) -> [toError z "type '" ++ tp12str id ++ "' is abstract"]
+            otherwise                  -> []
 
 expr ids (Tuple z exps)  = (es, Tuple z{type_=tps'} exps')
                            where
@@ -201,18 +219,19 @@ expr ids (Read z id)     = if id == "_INPUT" then
                            else
                             (es, Read z{type_=tp'} id)
                            where
-                            (es,tp') = fff ids z isVar id
+                            (tp',es) = case find (isVar id) ids of
+                                        Nothing               -> (TypeT, [toError z "variable '" ++ id ++ "' is not declared"])
+                                        (Just (Var _ _ tp _)) -> (tp,    [])
 
 expr ids (Call z id exp) = (es++es_exp, Call z{type_=tp_out} id exp')
                            where
                             (es_exp, exp') = expr ids exp
                             tp_exp' = type_ $ getAnn exp'
 
-                            (es,tp_out) =
-                                let (es',tp_func) = fff ids z isFunc id in
-                                    case tp_func of
-                                        TypeT -> (es', TypeT)    -- func not found
-                                        TypeF inp out -> case toErrorTypes z inp tp_exp' of
-                                            [] -> ([], instType out (inp,tp_exp'))
-                                            x  -> (x, TypeT)
-                                        tp -> error (show tp)
+                            (tp_out,es) = case find (isFunc id) ids of
+                                            Nothing ->
+                                                (TypeT, [toError z "function '" ++ id ++ "' is not declared"])
+                                            (Just (Func _ _ (TypeF inp out) _)) ->
+                                                case toErrorTypes z inp tp_exp' of
+                                                    [] -> (instType out (inp,tp_exp'), [])
+                                                    x  -> (TypeT,                      x)
