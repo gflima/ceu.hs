@@ -32,6 +32,7 @@ keywords = [
     "par",
     "par/and",
     "par/or",
+    "set",
     "then",
     "trap",
     "val",

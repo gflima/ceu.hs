@@ -69,8 +69,8 @@ spec = do
             run "val a,b :Int;" []           -- TODO: support a,b,c? (problem w/ assign/finalization)
             `shouldBe` Left "(line 1, column 6):\nunexpected \",\"\nexpecting digit, letter, \"_\" or \":\""
         it "a <- 1; escape a;" $
-            run "a <- 1; escape a" []
-            `shouldBe` Left "(line 1, column 3):\nidentifier 'a' is not declared\n(line 1, column 16):\nidentifier 'a' is not declared\n"
+            run "set a <- 1; escape a" []
+            `shouldBe` Left "(line 1, column 7):\nidentifier 'a' is not declared\n(line 1, column 20):\nidentifier 'a' is not declared\n"
         it "mut a  : Int <- 1; escape a;" $
             run "mut a  : Int <- 1; escape a" []
             `shouldBe` Right (1, [[]])
@@ -81,13 +81,13 @@ spec = do
             run "mut a :Int <- 1" []
             `shouldBe` Left "(line 1, column 1):\nterminating `trap` body\n(line 1, column 1):\nmissing `escape` statement\n(line 1, column 1):\nunreachable statement\n"
         it "val a :Int ; a <- 1" $
-            run "val a :Int ; a <- 1 ; escape a" []
+            run "val a :Int ; set a <- 1 ; escape a" []
             `shouldBe` Left "TODO: val cannot be reassigned"
         it "mut a:Int ; a <- 1" $
-            run "mut a :Int ; a <- 1 ; escape a" []
+            run "mut a :Int ; set a <- 1 ; escape a" []
             `shouldBe` Right (1, [[]])
         it "mut x :Int; x<-1; escape x" $
-            run "mut x:Int; x <- 1 ;escape x" []
+            run "mut x:Int; set x <- 1 ;escape x" []
             `shouldBe` Right (1, [[]])
         it "hide a" $
             run "val a :Int ; val a :Int ; escape 0" []
@@ -172,7 +172,7 @@ spec = do
             run "if 0==1 then ; if 0==1 then end ; else escape 1 end ; await FOREVER" []
             `shouldBe` Right (1, [[]])
         it "if 1==1 then a=1; a=2; if 1==1 then escape a end end" $
-            run "if 1==1 then val a:Int <-1 ; a<-2; if 1==1 then escape a end end ; await FOREVER" []
+            run "if 1==1 then val a:Int <-1 ; set a<-2; if 1==1 then escape a end end ; await FOREVER" []
             `shouldBe` Right (2, [[]])
         it "if 0==1 then . else/if 1==1 then escape 1 else ." $
             run "if 0==1 then escape 0 else/if 1==1 then escape 1 else escape 0 end" []

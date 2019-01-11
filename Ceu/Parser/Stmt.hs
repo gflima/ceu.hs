@@ -128,11 +128,12 @@ stmt_output = do
 stmt_attr :: Parser Stmt
 stmt_attr = do
     --pos  <- pos2src <$> getPosition
-    loc <- loc_
-    s   <- try (attr_exp      loc (tk_str "<-")) <|>
-           try (attr_awaitext loc (tk_str "<-")) <|>
-           try (attr_awaitevt loc (tk_str "<-")) <|>
-           try (attr_trap     loc (tk_str "<-"))
+    void <- tk_str "set"
+    loc  <- loc_
+    s    <- try (attr_exp      loc (tk_str "<-")) <|>
+            try (attr_awaitext loc (tk_str "<-")) <|>
+            try (attr_awaitevt loc (tk_str "<-")) <|>
+            try (attr_trap     loc (tk_str "<-"))
     return $ s
 
 -- (x, (y,_))

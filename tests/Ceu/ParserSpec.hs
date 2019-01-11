@@ -459,17 +459,17 @@ spec = do
 
         describe "write:" $ do
             it "x <- 1" $
-                parse stmt_attr "x <- 1"
-                `shouldBe` Right (Write annz{source=("",1,3)} (LVar "x") (Const annz{source=("",1,6)} 1))
+                parse stmt_attr "set x <- 1"
+                `shouldBe` Right (Write annz{source=("",1,7)} (LVar "x") (Const annz{source=("",1,10)} 1))
             it "x <- await A" $
-                parse stmt_attr "x <- await A"
-                `shouldBe` Right (AwaitInp annz{source=("",1,6)} "A" (Just $ LVar "x"))
+                parse stmt_attr "set x <- await A"
+                `shouldBe` Right (AwaitInp annz{source=("",1,10)} "A" (Just $ LVar "x"))
             it "x <- await a" $
-                parse stmt_attr "x <- await a"
-                `shouldBe` Right (AwaitEvt annz{source=("",1,6)} "a" (Just $ LVar "x"))
+                parse stmt_attr "set x <- await a"
+                `shouldBe` Right (AwaitEvt annz{source=("",1,10)} "a" (Just $ LVar "x"))
             it "var <- 1" $
-                parse stmt_attr "var <- 1"
-                `shouldBe` Right (Write annz{source=("",1,5)} (LVar "var") (Const annz{source=("",1,8)} 1))
+                parse stmt_attr "set var <- 1"
+                `shouldBe` Right (Write annz{source=("",1,9)} (LVar "var") (Const annz{source=("",1,12)} 1))
 
 -------------------------------------------------------------------------------
 
@@ -530,11 +530,11 @@ spec = do
         describe "if-then-else/if-else" $ do
             it "if 0 then escape ()" $
                 parse stmt_if "if 0 then escape ()"
-                `shouldBe` Left "(line 1, column 20):\nunexpected end of input\nexpecting \"'\", \"{\", \"escape\", \"break\", \"val\", \"mut\", \"input\", \"output\", \"event\", \"func\", \"_\", \"(\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 20):\nunexpected end of input\nexpecting \"'\", \"{\", \"escape\", \"break\", \"val\", \"mut\", \"input\", \"output\", \"event\", \"func\", \"set\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 then escape 0" $
                 parse stmt_if "if 0 then escape 0"
-                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"'\", \"{\", \"escape\", \"break\", \"val\", \"mut\", \"input\", \"output\", \"event\", \"func\", \"_\", \"(\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"'\", \"{\", \"escape\", \"break\", \"val\", \"mut\", \"input\", \"output\", \"event\", \"func\", \"set\", \"await\", \"emit\", \"do\", \"if\", \"loop\", \"trap\", \"par\", \"par/and\", \"par/or\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 escape 0 end" $
                 parse stmt_if "if 0 escape 0 end"
@@ -564,11 +564,11 @@ spec = do
                 parse stmt_loop "loop do end"
                 `shouldBe` Right (Loop annz{source=("",1,1)} (Nop annz{source=("",1,9)}))
             it "loop do v<-1 end" $
-                parse stmt_loop "loop do v<-1 end"
-                `shouldBe` Right (Loop annz{source=("",1,1)} (Write annz{source=("",1,10)} (LVar "v") (Const annz{source=("",1,12)} 1)))
+                parse stmt_loop "loop do set v<-1 end"
+                `shouldBe` Right (Loop annz{source=("",1,1)} (Write annz{source=("",1,14)} (LVar "v") (Const annz{source=("",1,16)} 1)))
             it "loop do v<-1 ; await FOREVER end" $
-                parse stmt_loop "loop do v<-1 ; await FOREVER end"
-                `shouldBe` Right (Loop annz{source=("",1,1)} (Seq annz{source=("",1,9)} (Write annz{source=("",1,10)} (LVar "v") (Const annz{source=("",1,12)} 1)) (Halt annz{source=("",1,16)})))
+                parse stmt_loop "loop do set v<-1 ; await FOREVER end"
+                `shouldBe` Right (Loop annz{source=("",1,1)} (Seq annz{source=("",1,9)} (Write annz{source=("",1,14)} (LVar "v") (Const annz{source=("",1,16)} 1)) (Halt annz{source=("",1,20)})))
 
         describe "trap" $ do
             it "trap do escape () end" $
@@ -638,8 +638,8 @@ spec = do
 
         describe "seq:" $ do
             it "x <- k k <- 1" $
-                parse (stmt_seq ("",1,1)) "x <- k k <- 1"
-                `shouldBe` Right (Nop annz)
+                parse (stmt_seq ("",1,1)) "set x <- k set k <- 1"
+                `shouldBe` Right (Seq annz{source=("",1,1)} (Write annz{source=("",1,7)} (LVar "x") (Read annz{source=("",1,10)} "k")) (Write annz{source=("",1,18)} (LVar "k") (Const annz{source=("",1,21)} 1)))
 
             it "do end; escape 1" $
                 parse (stmt_seq ("",1,1)) "do end escape 1"
@@ -649,9 +649,9 @@ spec = do
                 parse (stmt_seq ("",1,1)) "do end ; do end ; do end"
                 `shouldBe` Right (Seq annz{source=("",1,1)} (Scope annz{source=("",1,1)} (Nop annz{source=("",1,4)})) (Seq annz{source=("",1,1)} (Scope annz{source=("",1,10)} (Nop annz{source=("",1,13)})) (Scope annz{source=("",1,19)} (Nop annz{source=("",1,22)}))))
 
-            it "input KEY:Int ; mut a:Int ; a<-await KEY ; ret<-a" $
-                parse (stmt_seq ("",1,1)) "mut a:Int ; a<-1"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "a" (Type1 ["Int"]) Nothing) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Write (annz{source = ("",1,14)}) (LVar "a") (Const (annz{source = ("",1,16)}) 1)))
+            it "mut a:Int ; a<-1" $
+                parse (stmt_seq ("",1,1)) "mut a:Int ; set a<-1"
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "a" (Type1 ["Int"]) Nothing) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Write (annz{source = ("",1,18)}) (LVar "a") (Const (annz{source = ("",1,20)}) 1)))
 
         describe "stmt:" $ do
             it "val x:Int; escape 1" $
@@ -659,8 +659,8 @@ spec = do
                 `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (Type1 ["Int"]) Nothing) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Escape (annz{source = ("",1,12)}) Nothing (Const (annz{source = ("",1,19)}) 1)))
 
             it "mut x:Int; x<-1; escape x" $
-                parse stmt "mut x:Int ; x <- 1 ; escape x"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (Type1 ["Int"]) Nothing) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Seq (annz{source = ("",1,1)}) (Write (annz{source = ("",1,15)}) (LVar "x") (Const (annz{source = ("",1,18)}) 1)) (Escape (annz{source = ("",1,22)}) Nothing (Read (annz{source = ("",1,29)}) "x"))))
+                parse stmt "mut x:Int ; set x <- 1 ; escape x"
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (Type1 ["Int"]) Nothing) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Seq (annz{source = ("",1,1)}) (Write (annz{source = ("",1,19)}) (LVar "x") (Const (annz{source = ("",1,22)}) 1)) (Escape (annz{source = ("",1,26)}) Nothing (Read (annz{source = ("",1,33)}) "x"))))
 
             it "val x:(Int,Int,)<-(1,2) ; escape +x" $
                 parse stmt "val x:(Int,Int)<-(1,2) ; escape '+x"
