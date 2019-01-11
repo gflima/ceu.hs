@@ -182,7 +182,7 @@ expr _   (Unit z)        = ([], Unit  z{type_=Type0})
 
 expr ids (Cons  z id)    = (es, Cons  z{type_=(Type1 id)} id)
     where
-    eqs = map (\(Data _ tp _ _ _ _) -> tp == id)
+    eqs = filter (\(Data _ tp _ _ abs _) -> (tp == id) && (not abs))
               (filter isData ids)
     es = if null eqs
             then [toError z "identifier '" ++ tp12str id ++ "' is not declared"]

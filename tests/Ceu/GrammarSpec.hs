@@ -192,41 +192,101 @@ spec = do
 
   --------------------------------------------------------------------------
   describe "new types" $ do
-    it "Bool/Int" $
-        (fst $ Check.compile (False,False,False)
-            (Data annz ["Bool"] [] [] True
-            (Data annz ["Bool","True"] [] [] False
-            (Data annz ["Bool","False"] [] [] False
+      describe "bool:" $ do
+        it "Bool/Int" $
+            (fst $ Check.compile (False,False,False)
+                (Data annz ["Bool"] [] [] True
+                (Data annz ["Bool","True"] [] [] False
+                (Data annz ["Bool","False"] [] [] False
+                    (Data annz ["Int"] [] [] False
+                        (Nop annz))))))
+            `shouldBe` []
+
+        it "Int/Int" $
+            (fst $ Check.compile (False,False,False)
                 (Data annz ["Int"] [] [] False
-                    (Nop annz))))))
-        `shouldBe` []
+                    (Data annz ["Int"] [] [] False
+                        (Nop annz))))
+            `shouldBe` ["identifier 'Int' is already declared"]
 
-    it "Int/Int" $
-        (fst $ Check.compile (False,False,False)
-            (Data annz ["Int"] [] [] False
-                (Data annz ["Int"] [] [] False
-                    (Nop annz))))
-        `shouldBe` ["identifier 'Int' is already declared"]
+        it "~Int / x::Int" $
+            (fst $ Check.compile (False,False,False)
+                (Var annz "x" (Type1 ["Int"]) (Nop annz)))
+            `shouldBe` ["identifier 'Int' is not declared"]
 
-    it "~Int / x::Int" $
-        (fst $ Check.compile (False,False,False)
-            (Var annz "x" (Type1 ["Int"]) (Nop annz)))
-        `shouldBe` ["identifier 'Int' is not declared"]
+        it "x=Bool" $
+            (fst $ Check.compile (False,False,False)
+                (Data annz ["Bool"] [] [] True
+                    (Var annz "x" (Type1 ["Bool"])
+                        (Write annz (LVar "x") (Cons annz ["Bool"])))))
+            `shouldBe` ["identifier 'Bool' is not declared"]
 
-    it "Bool ; x=True" $
-        (fst $ Check.compile (False,False,False)
-            (Data annz ["Bool"] [] [] True
-            (Data annz ["Bool","True"] [] [] False
-            (Data annz ["Bool","False"] [] [] False
+        it "Bool ; x=True" $
+            (fst $ Check.compile (False,False,False)
+                (Data annz ["Bool"] [] [] True
+                (Data annz ["Bool","True"] [] [] False
+                (Data annz ["Bool","False"] [] [] False
+                    (Var annz "x" (Type1 ["Bool"])
+                        (Write annz (LVar "x") (Cons annz ["Bool","True"])))))))
+            `shouldBe` []
+
+        it "Bool ; x=True" $
+            (fst $ Check.compile (False,False,False)
+                (Func annz "==" (TypeF (TypeN [(Type1 ["Bool"]),(Type1 ["Bool"])]) (Type1 ["Bool"]))
+                (Data annz ["Bool"] [] [] True
+                (Data annz ["Bool","True"] [] [] False
+                (Data annz ["Bool","False"] [] [] False
+                    (If annz
+                        (Call annz "=="
+                            (Tuple annz
+                                [Cons annz ["Bool","True"],
+                                 Cons annz ["Bool","False"]]))
+                        (Nop annz)
+                        (Nop annz)))))))
+            `shouldBe` []
+
+        it "Bool ; x=True" $
+            (fst $ Check.compile (False,False,False)
+                (Func annz "==" (TypeF (TypeN [(Type1 ["Int"]),(Type1 ["Int"])]) (Type1 ["Bool"]))
+                (Data annz ["Bool"] [] [] True
+                (Data annz ["Bool","True"] [] [] False
+                (Data annz ["Bool","False"] [] [] False
+                    (If annz
+                        (Call annz "=="
+                            (Tuple annz
+                                [Cons annz ["Bool","True"],
+                                 Cons annz ["Bool","False"]]))
+                        (Nop annz)
+                        (Nop annz)))))))
+            `shouldBe` ["types do not match"]
+
+        it "Bool ; x=True" $
+            (fst $ Check.compile (False,False,False)
+                (Func annz "==" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (Type1 ["Bool"]))
+                (Data annz ["Bool"] [] [] True
+                (Data annz ["Bool","True"] [] [] False
+                (Data annz ["Bool","False"] [] [] False
+                    (If annz
+                        (Call annz "=="
+                            (Tuple annz
+                                [Cons annz ["Bool","True"],
+                                 Cons annz ["Bool","False"]]))
+                        (Nop annz)
+                        (Nop annz)))))))
+            `shouldBe` []
+
+        it "~Bool ; x=True" $
+            (fst $ Check.compile (False,False,False)
                 (Var annz "x" (Type1 ["Bool"])
-                    (Write annz (LVar "x") (Cons annz{type_=(Type1 ["Bool"])} ["Bool","True"])))))))
-        `shouldBe` []
+                    (Write annz (LVar "x") (Cons annz{type_=(Type1 ["Bool"])} ["Bool","True"]))))
+            `shouldBe` ["identifier 'Bool' is not declared","identifier 'Bool.True' is not declared"]
 
-    it "~Bool ; x=True" $
-        (fst $ Check.compile (False,False,False)
-            (Var annz "x" (Type1 ["Bool"])
-                (Write annz (LVar "x") (Cons annz{type_=(Type1 ["Bool"])} ["Bool","True"]))))
-        `shouldBe` ["identifier 'Bool' is not declared","identifier 'Bool.True' is not declared"]
+      describe "node:" $ do
+        it "type Node : Int" $
+            (Check.compile (False,False,False)
+                (Data annz ["Node"] [] [DataCons (Right (["Int"],[]))] False
+                    (Nop annz)))
+            `shouldBe` ([],Data annz ["Node"] [] [DataCons (Right (["Int"],[]))] False (Nop annz))
 
   --------------------------------------------------------------------------
   describe "checkStmts -- program is valid" $ do
@@ -306,10 +366,10 @@ spec = do
 
       where
         checkIt ck p b   =
-          (it ((if b then "pass" else "fail") ++ ": " ++ show p) $
+          (it ((if b then "pass" else "fail") ++ ": todo") $
             (ck p) `shouldBe` b)
         checkIt' ck p b   =
-          (it ((if b==[] then "pass" else "fail") ++ ": " ++ show p) $
+          (it ((if b==[] then "pass" else "fail") ++ ": todo") $
             (ck p) `shouldBe` b)
         checkLoopIt p b      = checkIt  Check.boundedLoop p b
         checkFinIt (Fin _ p) b = checkIt' Check.getComplexs p b
