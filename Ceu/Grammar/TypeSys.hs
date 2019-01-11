@@ -17,20 +17,20 @@ go p = stmt [] p
 isData id (Data _ id' _ _ _ _) = (id == id')
 isData _  _                    = False
 
-isVar  id (Var _ id' _ _) = (id == id')
-isVar  _  _               = False
+isVar  id (Var _ id' _ _)  = (id == id')
+isVar  _  _                = False
 
-isInp  id (Inp _ id' _)   = (id == id')
-isInp  _  _               = False
+isInp  id (Inp _ id' _)    = (id == id')
+isInp  _  _                = False
 
-isOut  id (Out _ id' _ _) = (id == id')
-isOut  _  _               = False
+isOut  id (Out _ id' _ _)  = (id == id')
+isOut  _  _                = False
 
-isEvt  id (Evt _ id' _)   = (id == id')
-isEvt  _  _               = False
+isEvt  id (Evt _ id' _)    = (id == id')
+isEvt  _  _                = False
 
-isFunc id (Func _ id' _ _)= True
-isFunc _  _               = False
+isFunc id (Func _ id' _ _) = (id == id')
+isFunc _  _                = False
 
 isInpEvt id s = isInp id s || isEvt id s
 
@@ -58,7 +58,7 @@ stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
 stmt ids s@(Class z id vars ifc p) = ((errDeclared z "typeclass" id ids) ++ es1 ++ es2,
                                         Class z id vars ifc' p')
                                         where
-                                            (es1,ifc') = stmt (traceShowId ids) (traceShowId ifc)
+                                            (es1,ifc') = stmt ids ifc
                                             (es2,p')   = stmt (s:ids) p
 
 stmt ids s@(Data z id [] cons abs p) = ((errDeclared z "type" id ids) ++ es, Data z id [] cons abs p')
@@ -73,11 +73,11 @@ stmt ids s@(Var  z id tp p)  = (es_data ++ es_id ++ es, Var z id tp p')
 
                                 es_id   = errDeclared z "variable" id ids
                                 (es,p') = stmt (s:ids) p
-stmt ids s@(Inp  z id p)     = ((errDeclared z "input" id ids) ++ es, Inp  z id p')
+stmt ids s@(Inp  z id p)     = ((errDeclared z "input" id ids)  ++ es, Inp z id p')
                                where (es,p') = stmt (s:ids) p
-stmt ids s@(Out  z id tp p)  = ((errDeclared z "output" id ids) ++ es, Out  z id tp p')
+stmt ids s@(Out  z id tp p)  = ((errDeclared z "output" id ids) ++ es, Out z id tp p')
                                where (es,p') = stmt (s:ids) p
-stmt ids s@(Evt  z id p)     = ((errDeclared z "event" id ids) ++ es, Evt  z id p')
+stmt ids s@(Evt  z id p)     = ((errDeclared z "event" id ids)  ++ es, Evt z id p')
                                where (es,p') = stmt (s:ids) p
 
 stmt ids s@(Func z id tp p)  = (es ++ es', Func z id tp p') where
