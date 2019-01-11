@@ -128,13 +128,13 @@ expr vars (Call _ func e) = (tps, "(CEU_FUNC_" ++ id' func ++ "__" ++ (tp2use tp
                                             ++ "(" ++ op ++ src ++ "))")
                                   where
                                     (tps,src) = expr vars e
-                                    id' "(+)"  = "Add"  -- TODO_02: names
-                                    id' "(-)"  = "Sub"
-                                    id' "(*)"  = "Mul"
-                                    id' "(/)"  = "Div"
-                                    id' "(==)" = "Eq"
-                                    id' "(<=)" = "Lte"
-                                    id' x      = x
+                                    id' "+"  = "Add"  -- TODO_02: names
+                                    id' "-"  = "Sub"
+                                    id' "*"  = "Mul"
+                                    id' "/"  = "Div"
+                                    id' "==" = "Eq"
+                                    id' "<=" = "Lte"
+                                    id' x    = x
 
                                     tp = type_ $ getAnn e
                                     op = case tp of

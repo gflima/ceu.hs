@@ -101,12 +101,12 @@ spec = do
 
       it "pass: eval in simple env" $
         let vars = [("x",Just 1),("y",Just 2)] in
-          varsEval vars (Call annz "(+)" (Tuple annz [(Call annz "(-)" (Tuple annz [(Read annz "x"),(Const annz 3)])),(Call annz "negate" (Read annz "y"))]))
+          varsEval vars (Call annz "+" (Tuple annz [(Call annz "-" (Tuple annz [(Read annz "x"),(Const annz 3)])),(Call annz "negate" (Read annz "y"))]))
           `shouldBe` (-4)
 
       it "pass: eval in complex env" $
         let vars = [("y",Just 2),("x",Just 1),("y",Just 99),("x",Just 99)] in
-          varsEval vars (Call annz "(+)" (Tuple annz [(Call annz "(-)" (Tuple annz [(Read annz "x"),(Const annz 3)])),(Call annz "negate" (Read annz "y"))]))
+          varsEval vars (Call annz "+" (Tuple annz [(Call annz "-" (Tuple annz [(Read annz "x"),(Const annz 3)])),(Call annz "negate" (Read annz "y"))]))
           `shouldBe` (-4)
 
   --------------------------------------------------------------------------
@@ -176,14 +176,14 @@ spec = do
         step (
           (Var ("x",(Just 1))
           (Var ("y",Nothing)
-            (Write "y" (Call annz "(+)" (Tuple annz [(Read annz "x"),(Const annz 2)])))), 0, [], [], []))
+            (Write "y" (Call annz "+" (Tuple annz [(Read annz "x"),(Const annz 2)])))), 0, [], [], []))
         `shouldBe` (Var ("x",(Just 1)) (Var ("y",(Just 3)) Nop),0,[],[], [])
 
       it "pass: [x=1,y=?] y=x+2" $
         step
         (Var ("x",(Just 1))
         (Var ("y",Nothing)
-          (Write "y" (Call annz "(+)" (Tuple annz [(Read annz "x"),(Const annz 2)])))), 0, [], [], [])
+          (Write "y" (Call annz "+" (Tuple annz [(Read annz "x"),(Const annz 2)])))), 0, [], [], [])
         `shouldBe`
         (Var ("x",(Just 1))
         (Var ("y",(Just 3)) Nop), 0, [], [], [])
@@ -191,7 +191,7 @@ spec = do
       it "pass: [x=?] x=-(5+1)" $
         step
         (Var ("x",(Just 0))
-          (Write "x" (Call annz "negate" (Call annz "(+)" (Tuple annz [(Const annz 5),(Const annz 1)])))), 0, [], [], [])
+          (Write "x" (Call annz "negate" (Call annz "+" (Tuple annz [(Const annz 5),(Const annz 1)])))), 0, [], [], [])
         `shouldBe`
         (Var ("x",(Just (-6))) Nop, 0, [], [], [])
 
@@ -1069,26 +1069,26 @@ spec = do
   describe "compile_run" $ do
 
     evalProgItSuccess (11,[[]])
-      [] (G.Func annz "(+)" (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"])) (G.Var annz "a" (Type1 ["Int"])
+      [] (G.Func annz "+" (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"])) (G.Var annz "a" (Type1 ["Int"])
            (G.Write annz (LVar "a") (Const annz 1) `G.sSeq`
-            G.Write annz (LVar "_ret") (Call annz "(+)" (Tuple annz [(Read annz "a"),(Const annz 10)])) `G.sSeq`
+            G.Write annz (LVar "_ret") (Call annz "+" (Tuple annz [(Read annz "a"),(Const annz 10)])) `G.sSeq`
             G.Escape annz 0)))
 
     evalProgItFail ["orphan `escape` statement","missing `escape` statement","unreachable statement"]
       [] (G.Escape annz 1)
 
     evalProgItSuccess (11,[[]])
-      [] (G.Func annz "(+)" (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"])) (G.Var annz "a" (Type1 ["Int"])
+      [] (G.Func annz "+" (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"])) (G.Var annz "a" (Type1 ["Int"])
            (G.Write annz (LVar "a") (Const annz 1) `G.sSeq`
             G.Var annz "b" (Type1 ["Int"]) (G.Write annz (LVar "b") (Const annz 99)) `G.sSeq`
-            G.Write annz (LVar "_ret") (Call annz "(+)" (Tuple annz [(Read annz "a"),(Const annz 10)])) `G.sSeq`
+            G.Write annz (LVar "_ret") (Call annz "+" (Tuple annz [(Read annz "a"),(Const annz 10)])) `G.sSeq`
             G.Escape annz 0)))
 
     evalProgItFail ["identifier 'a' is already declared"]
-      [] (G.Func annz "(+)" (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"])) (G.Var annz "a" (Type1 ["Int"])
+      [] (G.Func annz "+" (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"])) (G.Var annz "a" (Type1 ["Int"])
            (G.Write annz (LVar "a") (Const annz 1) `G.sSeq`
             G.Var annz "a" (Type1 ["Int"]) (G.Write annz (LVar "a") (Const annz 99)) `G.sSeq`
-            G.Write annz (LVar "_ret") (Call annz "(+)" (Tuple annz [(Read annz "a"),(Const annz 10)])) `G.sSeq`
+            G.Write annz (LVar "_ret") (Call annz "+" (Tuple annz [(Read annz "a"),(Const annz 10)])) `G.sSeq`
             G.Escape annz 0)))
 
     evalProgItSuccess (2,[[]])
@@ -1097,12 +1097,12 @@ spec = do
           G.Escape annz 0)
 
     evalProgItSuccess (12,[[]])
-      [] (G.Func annz "(+)" (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"])) (G.Var annz "a" (Type1 ["Int"])
+      [] (G.Func annz "+" (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"])) (G.Var annz "a" (Type1 ["Int"])
            (G.Write annz (LVar "a") (Const annz 1) `G.sSeq`
             G.Trap annz (G.Par annz
              (G.Var annz "b" (Type1 ["Int"]) (G.Write annz (LVar "b") (Const annz 99) `G.sSeq` G.Inp annz "A" (G.AwaitInp annz "A")) `G.sSeq` (G.Halt annz))
              (G.Escape annz 0)) `G.sSeq`
-           G.Write annz (LVar "_ret") (Call annz "(+)" (Tuple annz [(Read annz "a"),(Const annz 11)])) `G.sSeq`
+           G.Write annz (LVar "_ret") (Call annz "+" (Tuple annz [(Read annz "a"),(Const annz 11)])) `G.sSeq`
            G.Escape annz 0)))
 
     evalProgItFail ["missing `escape` statement"]
@@ -1116,21 +1116,21 @@ spec = do
            (G.Escape annz 0)))) (G.Escape annz 0))
 
     evalProgItFail ["`loop` never iterates","identifier 'a' is already declared"]
-      [] (G.Func annz "(+)" (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"])) (G.Var annz "a" (Type1 ["Int"])
+      [] (G.Func annz "+" (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"])) (G.Var annz "a" (Type1 ["Int"])
            (G.Write annz (LVar "a") (Const annz 1) `G.sSeq`
             G.Trap annz (G.Inp annz "A" (G.Loop annz (G.Par annz
                   (G.Var annz "a" (Type1 ["Int"]) (G.Write annz (LVar "a") (Const annz 99) `G.sSeq` G.AwaitInp annz "A" `G.sSeq` G.Halt annz))
                   (G.Escape annz 0)))) `G.sSeq`
-             G.Write annz (LVar "_ret") (Call annz "(+)" (Tuple annz [(Read annz "a"),(Const annz 10)])) `G.sSeq`
+             G.Write annz (LVar "_ret") (Call annz "+" (Tuple annz [(Read annz "a"),(Const annz 10)])) `G.sSeq`
             G.Escape annz 0)))
 
     evalProgItSuccess (101,[[]])
-      [] (G.Func annz "(+)" (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"])) (G.Var annz "a" (Type1 ["Int"])
+      [] (G.Func annz "+" (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"])) (G.Var annz "a" (Type1 ["Int"])
            (G.Write annz (LVar "a") (Const annz 1) `G.sSeq`
             G.Inp annz "A" (G.Trap annz (G.Par annz
                   (G.Var annz "b" (Type1 ["Int"]) (G.Write annz (LVar "b") (Const annz 99) `G.sSeq` G.AwaitInp annz "A" `G.sSeq` G.Halt annz))
                   (G.Escape annz 0)) `G.sSeq`
-            G.Write annz (LVar "_ret") (Call annz "(+)" (Tuple annz [(Read annz "a"),(Const annz 100)])) `G.sSeq`
+            G.Write annz (LVar "_ret") (Call annz "+" (Tuple annz [(Read annz "a"),(Const annz 100)])) `G.sSeq`
             G.Escape annz 0))))
 
     evalProgItFail ["`loop` never iterates"]
@@ -1233,22 +1233,22 @@ escape x;
 
       where
         stepsItPass (p,n,e,vars,outs) (p',n',e',vars',outs') =
-          (it (printf "pass: %s -> %s#" (show p) (show p'))
+          (it (printf "pass: %s -> %s#" "todo" "todo")
            ((steps (p,n,e,vars,outs) `shouldBe` (p',n',e',vars',outs'))
              >> ((isReducible (p',n',e',vars',outs')) `shouldBe` False)))
 
         stepsItFail err (p,n,e,vars,outs) =
-          (it (printf "fail: %s ***%s" (show p) err)
+          (it (printf "fail: %s ***%s" "todo" err)
            (forceEval (steps (p,n,e,vars,outs)) `shouldThrow` errorCall err))
 
         reactionItPass (p,e,vars) (p',vars',outs') =
-          (it (printf "pass: %s | %s -> %s" e (show p) (show p'))
+          (it (printf "pass: %s | %s -> %s" e "todo" "todo")
             (reaction p e `shouldBe` (p',outs')))
 
         evalProgItSuccess (res,outss) hist prog =
-          (it (printf "pass: %s | %s ~> %d %s" (show hist) (show prog) res (show outss)) $
+          (it (printf "pass: %s | %s ~> %d %s" (show hist) "todo" res (show outss)) $
             (compile_run prog hist `shouldBe` Right (res,outss)))
 
         evalProgItFail err hist prog =
-          (it (printf "pass: %s | %s ***%s" (show hist) (show prog) (show err)) $
+          (it (printf "pass: %s | %s ***%s" (show hist) "todo" (show err)) $
             (compile_run prog hist `shouldBe` Left err))

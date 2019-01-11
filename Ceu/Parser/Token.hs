@@ -61,7 +61,7 @@ tk_op = do
     op   <- many1 $ oneOf "!@#$%&*-+=/?^~\\|<>"
     guard $ op /= "<-" && op /= "->"
     s
-    return $ "(" ++ op ++ ")"
+    return $ op
 
 tk_num :: Parser Int
 tk_num = do

@@ -100,12 +100,12 @@ varsEval vars expr = case expr of
   Const _ val     -> val
   Read  _ var     -> varsRead vars var
   Call  _ "negate" e -> negate $ varsEval vars e
-  Call  _ "(+)"  (Tuple _ [e1,e2]) -> (varsEval vars e1) + (varsEval vars e2)
-  Call  _ "(-)"  (Tuple _ [e1,e2]) -> (varsEval vars e1) - (varsEval vars e2)
-  Call  _ "(*)"  (Tuple _ [e1,e2]) -> (varsEval vars e1) * (varsEval vars e2)
-  Call  _ "(/)"  (Tuple _ [e1,e2]) -> (varsEval vars e1) `div` (varsEval vars e2)
-  Call  _ "(==)" (Tuple _ [e1,e2]) -> if (varsEval vars e1) == (varsEval vars e2) then 1 else 0
-  Call  _ "(<=)" (Tuple _ [e1,e2]) -> if (varsEval vars e1) <= (varsEval vars e2) then 1 else 0
+  Call  _ "+"  (Tuple _ [e1,e2]) -> (varsEval vars e1) + (varsEval vars e2)
+  Call  _ "-"  (Tuple _ [e1,e2]) -> (varsEval vars e1) - (varsEval vars e2)
+  Call  _ "*"  (Tuple _ [e1,e2]) -> (varsEval vars e1) * (varsEval vars e2)
+  Call  _ "/"  (Tuple _ [e1,e2]) -> (varsEval vars e1) `div` (varsEval vars e2)
+  Call  _ "==" (Tuple _ [e1,e2]) -> if (varsEval vars e1) == (varsEval vars e2) then 1 else 0
+  Call  _ "<=" (Tuple _ [e1,e2]) -> if (varsEval vars e1) <= (varsEval vars e2) then 1 else 0
 
 -- Set event in environment.
 evtsEmit :: Evts -> ID_Evt -> Evts
