@@ -85,7 +85,6 @@ classinst2ids p = case p of
     where
         aux (Nop _)             = []
         aux s@(Func  _ _ _ p)   = s : aux p
-        aux s@(FuncI _ _ _ _ p) = s : aux p
 
 expandInsts :: [Stmt] -> [Stmt]
 expandInsts [] = []
@@ -122,8 +121,6 @@ stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] im
             Nothing                     -> [toError z "typeclass '" ++ id ++ "' is not declared"]
             Just (Class _ _ [var] ifc _) -> compares ifc imp where
                 compares (Func _ id1 tp1 p1) (Func  _ id2 tp2   p2) =
-                    (names id1 id2) ++ (supOf tp1 tp2) ++ (instOf var tp1 tp2) ++ (compares p1 p2)
-                compares (Func _ id1 tp1 p1) (FuncI _ id2 tp2 _ p2) =
                     (names id1 id2) ++ (supOf tp1 tp2) ++ (instOf var tp1 tp2) ++ (compares p1 p2)
                 compares (Nop _) (Nop _) = []
 
