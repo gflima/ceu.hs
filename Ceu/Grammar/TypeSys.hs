@@ -87,10 +87,11 @@ stmt ids s@(Out  z id tp p)  = ((errDeclared z "output" id ids) ++ es, Out z id 
 stmt ids s@(Evt  z id p)     = ((errDeclared z "event" id ids)  ++ es, Evt z id p')
                                where (es,p') = stmt (s:ids) p
 
-stmt ids s@(Func z id tp p)  = (es ++ es', Func z id tp p') where
+stmt ids s@(Func z id tp p)  = (es_data ++ es ++ es', Func z id tp p') where
     (es, (es',p')) = case find (isFunc id) ids of
         Nothing               -> ([],                    stmt (s:ids) p)
         Just (Func _ _ tp' _) -> (getErrsTypesMatch z tp' tp, stmt ids p)
+    es_data = getErrsTypesDeclared z tp ids
 
 stmt ids s@(FuncI z id tp imp p) = (es1++es2, FuncI z id tp imp' p')
                                    where

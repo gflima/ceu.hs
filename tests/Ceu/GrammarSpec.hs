@@ -147,25 +147,30 @@ spec = do
     checkTypeSysIt (Check.prelude annz (Var annz "x" (Type1 "Int") (Write annz (LVar "x") (Unit annz)))) ["types do not match"]
     checkTypeSysIt (Check.prelude annz (Func annz "identity" (TypeF (TypeV "a") (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "identity" (Const annz 1)))))) []
 
-    it "func f; func f" $
-        TypeSys.go (Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 Type0) (Nop annz)))
-            `shouldBe` ([],Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 Type0) (Nop annz)))
+    describe "functions" $ do
+        it "func ~Int" $
+            (fst $ TypeSys.go (Func annz "f" (TypeF Type0 (Type1 "Int")) (Nop annz)))
+                `shouldBe` ["type 'Int' is not declared"]
 
-    it "func f[a]; func f[0]" $
-        TypeSys.go (Func annz "f" (TypeF (TypeV "a") (TypeV "a")) (Func annz "f" (TypeF Type0 Type0) (Nop annz)))
-            `shouldBe` ([],Func annz "f" (TypeF (TypeV "a") (TypeV "a")) (Func annz "f" (TypeF Type0 Type0) (Nop annz)))
+        it "func f; func f" $
+            TypeSys.go (Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 Type0) (Nop annz)))
+                `shouldBe` ([],Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 Type0) (Nop annz)))
 
-    it "func f; func ~f" $
-        TypeSys.go (Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 TypeB) (Nop annz)))
-            `shouldBe` (["types do not match"],Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 TypeB) (Nop annz)))
+        it "func f[a]; func f[0]" $
+            TypeSys.go (Func annz "f" (TypeF (TypeV "a") (TypeV "a")) (Func annz "f" (TypeF Type0 Type0) (Nop annz)))
+                `shouldBe` ([],Func annz "f" (TypeF (TypeV "a") (TypeV "a")) (Func annz "f" (TypeF Type0 Type0) (Nop annz)))
 
-    it "input A ; emit A" $
-        TypeSys.go (Inp annz "A" (EmitExt annz "A" (Unit annz)))
-            `shouldBe` (["output 'A' is not declared"],Inp annz "A" (EmitExt annz "A" (Unit annz{type_=Type0})))
+        it "func f; func ~f" $
+            TypeSys.go (Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 TypeB) (Nop annz)))
+                `shouldBe` (["types do not match"],Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 TypeB) (Nop annz)))
 
-    -- func first :: (a,a)->a ; var a::Int ; a = first((),1)
-    checkTypeSysIt (Check.prelude annz (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "first" (Tuple annz [(Unit annz),(Const annz 1)])))))) ["types do not match"]
-    checkTypeSysIt (Check.prelude annz (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "first" (Tuple annz [(Const annz 1),(Const annz 1)])))))) []
+        it "input A ; emit A" $
+            TypeSys.go (Inp annz "A" (EmitExt annz "A" (Unit annz)))
+                `shouldBe` (["output 'A' is not declared"],Inp annz "A" (EmitExt annz "A" (Unit annz{type_=Type0})))
+
+        -- func first :: (a,a)->a ; var a::Int ; a = first((),1)
+        checkTypeSysIt (Check.prelude annz (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "first" (Tuple annz [(Unit annz),(Const annz 1)])))))) ["types do not match"]
+        checkTypeSysIt (Check.prelude annz (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "first" (Tuple annz [(Const annz 1),(Const annz 1)])))))) []
 
     describe "pattern matching" $ do
         it "_ = 1" $
@@ -233,10 +238,10 @@ spec = do
 
         it "Bool ; x=True" $
             (fst $ Check.compile (False,False,False)
-                (Func annz "==" (TypeF (TypeN [(Type1 "Bool"),(Type1 "Bool")]) (Type1 "Bool"))
                 (Data annz "Bool" [] [] True
                 (Data annz "Bool.True" [] [] False
                 (Data annz "Bool.False" [] [] False
+                (Func annz "==" (TypeF (TypeN [(Type1 "Bool"),(Type1 "Bool")]) (Type1 "Bool"))
                     (If annz
                         (Call annz "=="
                             (Tuple annz
@@ -248,34 +253,19 @@ spec = do
 
         it "Bool ; x=True" $
             (fst $ Check.compile (False,False,False)
+                (Data annz "Int" [] [] True
+                (Data annz "Bool" [] [] True
+                (Data annz "Bool.True" [] [] False
+                (Data annz "Bool.False" [] [] False
                 (Func annz "==" (TypeF (TypeN [(Type1 "Int"),(Type1 "Int")]) (Type1 "Bool"))
-                (Data annz "Bool" [] [] True
-                (Data annz "Bool.True" [] [] False
-                (Data annz "Bool.False" [] [] False
                     (If annz
                         (Call annz "=="
                             (Tuple annz
                                 [Cons annz "Bool.True",
                                  Cons annz "Bool.False"]))
                         (Nop annz)
-                        (Nop annz)))))))
+                        (Nop annz))))))))
             `shouldBe` ["types do not match"]
-
--- TODO: == has to be instantiated as func '== :: (a=Bool,a=Bool)->Bool
-        it "Bool ; if True==False ..." $
-            (fst $ Check.compile (False,False,False)
-                (Func annz "==" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (Type1 "Bool"))
-                (Data annz "Bool" [] [] True
-                (Data annz "Bool.True" [] [] False
-                (Data annz "Bool.False" [] [] False
-                    (If annz
-                        (Call annz "=="
-                            (Tuple annz
-                                [Cons annz "Bool.True",
-                                 Cons annz "Bool.False"]))
-                        (Nop annz)
-                        (Nop annz)))))))
-            `shouldBe` []
 
         it "~Bool ; x=True" $
             (fst $ Check.compile (False,False,False)
@@ -299,7 +289,7 @@ spec = do
                     (Func annz "==" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (Type1 "Bool"))
                         (Nop annz))
                     (Nop annz))
-            `shouldBe` ([],Data annz "Bool" [] [] True (Class annz "Equalable" ["a"] (Func annz "==" (TypeF (TypeN [TypeV "a",TypeV "a"]) (Type1 "Bool")) (Nop annz)) (Nop annz)))
+            `shouldBe` (["type 'Bool' is not declared"],(Class annz "Equalable" ["a"] (Func annz "==" (TypeF (TypeN [TypeV "a",TypeV "a"]) (Type1 "Bool")) (Nop annz)) (Nop annz)))
 
         it "Bool ; Equable ; (==)" $
             Check.compile (False,False,False)
@@ -309,6 +299,32 @@ spec = do
                     (Nop annz))
                 (Nop annz)))
             `shouldBe` ([],Data annz "Bool" [] [] True (Class annz "Equalable" ["a"] (Func annz "==" (TypeF (TypeN [TypeV "a",TypeV "a"]) (Type1 "Bool")) (Nop annz)) (Nop annz)))
+
+{-
+        it "Bool ; Equable ; (==)" $
+            Check.compile (False,False,False)
+                (Data annz "Bool" [] [] False
+                (Class annz "Equalable" ["a"]
+                    (Func annz "fff" (TypeF (Type1 "Bool") Type0) (Nop annz))
+                (Call annz "fff" (Cons "Bool"))))
+            `shouldBe` ([],Data annz "Bool" [] [] True (Class annz "Equalable" ["a"] (Func annz "==" (TypeF (TypeN [TypeV "a",TypeV "a"]) (Type1 "Bool")) (Nop annz)) (Nop annz)))
+-}
+
+-- TODO: == has to be instantiated as func '== :: (a=Bool,a=Bool)->Bool
+        it "Bool ; if True==False ..." $
+            (fst $ Check.compile (False,False,False)
+                (Func annz "==" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (Type1 "Bool"))
+                (Data annz "Bool" [] [] True
+                (Data annz "Bool.True" [] [] False
+                (Data annz "Bool.False" [] [] False
+                    (If annz
+                        (Call annz "=="
+                            (Tuple annz
+                                [Cons annz "Bool.True",
+                                 Cons annz "Bool.False"]))
+                        (Nop annz)
+                        (Nop annz)))))))
+            `shouldBe` []
 
   --------------------------------------------------------------------------
 
