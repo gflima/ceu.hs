@@ -51,6 +51,16 @@ fold_raws ids raws = foldr f ([],[]) raws where
                                                     (es',exp') = expr ids exp
                         f (RawAtS str) (l1,l2) = (l1, (RawAtS str):l2)
 
+getErrsTypesDeclared :: Ann -> Type -> [Stmt] -> Errors
+getErrsTypesDeclared z tp ids = concatMap aux $ map (\id->(id, find (isData id) ids)) $ get1s tp
+    where
+        aux (id, Nothing) = [toError z "type '" ++ id ++ "' is not declared"]
+        aux (_,  Just _)  = []
+
+getErrsTypesMatch :: Ann -> Type -> Type -> Errors
+getErrsTypesMatch z t1 t2 = if checkTypes t1 t2 then [] else
+                                [toError z "types do not match"]
+
 -------------------------------------------------------------------------------
 
 stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
@@ -67,10 +77,7 @@ stmt ids s@(Data z id vars cons abs p) = error "not implemented"
 
 stmt ids s@(Var  z id tp p)  = (es_data ++ es_id ++ es, Var z id tp p')
                                where
-                                es_data = concatMap f $ map (\id->(id, find (isData id) ids)) $ get1s tp
-                                f (id, Nothing) = [toError z "type '" ++ id ++ "' is not declared"]
-                                f (_,  Just _)  = []
-
+                                es_data = getErrsTypesDeclared z tp ids
                                 es_id   = errDeclared z "variable" id ids
                                 (es,p') = stmt (s:ids) p
 stmt ids s@(Inp  z id p)     = ((errDeclared z "input" id ids)  ++ es, Inp z id p')
@@ -83,7 +90,7 @@ stmt ids s@(Evt  z id p)     = ((errDeclared z "event" id ids)  ++ es, Evt z id 
 stmt ids s@(Func z id tp p)  = (es ++ es', Func z id tp p') where
     (es, (es',p')) = case find (isFunc id) ids of
         Nothing               -> ([],                    stmt (s:ids) p)
-        Just (Func _ _ tp' _) -> (toErrorTypes z tp' tp, stmt ids p)
+        Just (Func _ _ tp' _) -> (getErrsTypesMatch z tp' tp, stmt ids p)
 
 stmt ids s@(FuncI z id tp imp p) = (es1++es2, FuncI z id tp imp' p')
                                    where
@@ -107,7 +114,7 @@ stmt ids (Write z loc exp)   = (es1 ++ es2 ++ es3, Write z loc exp')
                                                  cat (tp,es1) (tps,es2) = (tp:tps, es1++es2)
 
                                 (es2,exp') = expr ids exp
-                                es3        = toErrorTypes z tps_loc (type_ $ getAnn exp')
+                                es3        = getErrsTypesMatch z tps_loc (type_ $ getAnn exp')
 
 stmt ids s@(AwaitInp z id) = (es,s) where
                              es = case find (isInp id) ids of
@@ -122,7 +129,7 @@ stmt ids (EmitExt z id exp) = (es1++es2++es3, EmitExt z id exp')
                                     Just (Out _ _ tp _) ->
                                         (tp, [])
                                 (es2,exp') = expr ids exp
-                                es3        = toErrorTypes z tp (type_ $ getAnn exp')
+                                es3        = getErrsTypesMatch z tp (type_ $ getAnn exp')
 
 stmt ids s@(AwaitEvt z id)   = (es, s) where
                                 es = case find (isEvt id) ids of
@@ -137,7 +144,7 @@ stmt ids s@(EmitEvt  z id)   = (es, s) where
 stmt ids (If  z exp p1 p2)   = (ese ++ es ++ es1 ++ es2, If z exp' p1' p2')
                                where
                                 (ese,exp') = expr ids exp
-                                es = toErrorTypes z (Type1 "Bool") (type_ $ getAnn exp')
+                                es = getErrsTypesMatch z (Type1 "Bool") (type_ $ getAnn exp')
                                 (es1,p1') = stmt ids p1
                                 (es2,p2') = stmt ids p2
 stmt ids (Seq z p1 p2)       = (es1++es2, Seq z p1' p2')
@@ -224,6 +231,6 @@ expr ids (Call z id exp) = (es++es_exp, Call z{type_=tp_out} id exp')
                                             Nothing ->
                                                 (TypeT, [toError z "function '" ++ id ++ "' is not declared"])
                                             (Just (Func _ _ (TypeF inp out) _)) ->
-                                                case toErrorTypes z inp tp_exp' of
+                                                case getErrsTypesMatch z inp tp_exp' of
                                                     [] -> (instType out (inp,tp_exp'), [])
                                                     x  -> (TypeT,                      x)

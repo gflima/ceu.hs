@@ -32,10 +32,6 @@ toError z msg = src ++ pre ++ msg where
         (_,0, 0)  -> ""
         (_,ln,cl) -> "(line " ++ (show ln) ++ ", column " ++ (show cl) ++ "):\n"
 
-toErrorTypes :: Ann -> Type -> Type -> Errors
-toErrorTypes z t1 t2 = if checkTypes t1 t2 then [] else
-                          [toError z "types do not match"]
-
 toTrails0 :: Ann -> Int
 toTrails0 = fst . trails
 toTrailsN :: Ann -> Int
