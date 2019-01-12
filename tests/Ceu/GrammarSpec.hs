@@ -291,6 +291,31 @@ spec = do
                 (Nop annz)))))
             `shouldBe` ["typeclass 'X' is already declared"]
 
+        it "X.f ; Y.f" $
+            (fst $ Check.compile (False,False,False)
+                (Data annz "Bool" [] [] False
+                (Class annz "X" ["a"] (Nop annz)
+                (Class annz "X" ["a"] (Nop annz)
+                (Nop annz)))))
+            `shouldBe` ["typeclass 'X' is already declared"]
+
+        it "X.f ; Y.f" $
+            (fst $ Check.compile (False,False,False)
+                (Class annz "X" ["a"]
+                    (Func annz "f" (TypeF (TypeV "a") Type0) (Nop annz))
+                (Class annz "Y" ["a"]
+                    (Func annz "f" (TypeF (TypeV "a") Type0) (Nop annz))
+                (Nop annz))))
+            `shouldBe` ["TODO: f is already declared"]
+
+        it "X.f ; f" $
+            (fst $ Check.compile (False,False,False)
+                (Class annz "X" ["a"]
+                    (Func annz "f" (TypeF (TypeV "a") Type0) (Nop annz))
+                (Func annz "f" (TypeF (TypeV "a") Type0)
+                (Nop annz))))
+            `shouldBe` ["TODO: f is already declared"]
+
         it "~Bool ; Equalable ; (==)" $
             Check.compile (False,False,False)
                 (Class annz "Equalable" ["a"]
@@ -384,7 +409,7 @@ spec = do
                 (CallS annz "fff" (Const annz 1)))))))
             `shouldBe` ["types do not match : Bool :> Int"]
 
-        it "Int ; Bool ; Equalable a ; inst Equalable Bool ; fff 1" $
+        it "Int ; Bool ; Equalable a ; inst Equalable Bool/Int ; fff 1" $
             (fst $ Check.compile (False,False,False)
                 (Data annz "Int" [] [] False
                 (Data annz "Bool" [] [] False
@@ -395,7 +420,7 @@ spec = do
                 (Inst annz "Equalable" ["Int"]
                     (Func annz "fff" (TypeF (Type1 "Int") Type0) (Nop annz))
                 (CallS annz "fff" (Const annz 1))))))))
-            `shouldBe` []
+            `shouldBe` ["TODO: fff(1) uses second instance"]
 
   --------------------------------------------------------------------------
 
