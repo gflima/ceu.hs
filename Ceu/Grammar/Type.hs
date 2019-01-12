@@ -22,8 +22,8 @@ typeShow TypeT           = "top"
 typeShow TypeB           = "bot"
 typeShow Type0           = "()"
 typeShow (Type1 id)      = id
-typeShow (TypeF inp out) = typeShow inp ++ " -> " ++ typeShow out
-typeShow (TypeN tps)     = intercalate "," (map typeShow tps)
+typeShow (TypeF inp out) = "(" ++ typeShow inp ++ " -> " ++ typeShow out ++ ")"
+typeShow (TypeN tps)     = "(" ++ intercalate "," (map typeShow tps) ++ ")"
 
 -------------------------------------------------------------------------------
 
