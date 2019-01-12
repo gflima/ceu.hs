@@ -312,6 +312,28 @@ spec = do
                 (Nop annz))))))
             `shouldBe` ["instance 'Equalable (Bool)' is already declared"]
 
+        it "Bool ; Equable a ; inst Equable Bool ; a/=Bool" $
+            (fst $ Check.compile (False,False,False)
+                (Data annz "Int" [] [] False
+                (Data annz "Bool" [] [] False
+                (Class annz "Equalable" ["a"]
+                    (Func annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
+                (Inst annz "Equalable" ["Bool"]
+                    (Func annz "fff" (TypeF (Type1 "Int") (Type1 "Int")) (Nop annz))
+                (Nop annz))))))
+            `shouldBe` ["TODO: Type0 vs Int"]
+
+        it "Bool ; Equable a ; inst Equable Bool ; a/=Bool" $
+            (fst $ Check.compile (False,False,False)
+                (Data annz "Int" [] [] False
+                (Data annz "Bool" [] [] False
+                (Class annz "Equalable" ["a"]
+                    (Func annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
+                (Inst annz "Equalable" ["Bool"]
+                    (Func annz "fff" (TypeF (Type1 "Int") Type0) (Nop annz))
+                (Nop annz))))))
+            `shouldBe` ["TODO: Bool vs Int"]
+
         it "Bool ; Equable ; (==)" $
             (fst $ Check.compile (False,False,False)
                 (Data annz "Bool" [] [] False

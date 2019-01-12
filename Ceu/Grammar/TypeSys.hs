@@ -58,7 +58,7 @@ getErrsTypesDeclared z tp ids = concatMap aux $ map (\id->(id, find (isData id) 
         aux (_,  Just _)  = []
 
 getErrsTypesMatch :: Ann -> Type -> Type -> Errors
-getErrsTypesMatch z t1 t2 = if checkTypes t1 t2 then [] else
+getErrsTypesMatch z t1 t2 = if t1 `isSupOf` t2 then [] else
                                 [toError z "types do not match"]
 
 call :: Ann -> [Stmt] -> ID_Func -> Exp -> (Errors, Type, Exp)
@@ -102,6 +102,8 @@ stmt ids s@(Inst z id tps imp p) = (es1 ++ es2 ++ es3, Inst z id tps imp' p')
             (Just _) -> [toError z "instance '" ++ id ++ " (" ++ intercalate "," tps ++ ")' is already declared"]
         isSameInst (Inst _ id' tps' _ _) = (id==id' && tps==tps')
         isSameInst _                     = False
+
+        -- check if (instance functions types) match (class functions types)
 
 stmt ids s@(Data z id [] cons abs p) = ((errDeclared z "type" id ids) ++ es, Data z id [] cons abs p')
                                     where (es,p') = stmt (s:ids) p

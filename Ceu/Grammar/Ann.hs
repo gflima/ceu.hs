@@ -2,7 +2,7 @@ module Ceu.Grammar.Ann where
 
 import Debug.Trace
 import Ceu.Grammar.Globals (Source, Trails, Errors)
-import Ceu.Grammar.Type    (Type(TypeB), checkTypes)
+import Ceu.Grammar.Type    (Type(TypeB))
 
 data Ann = Ann { isInst :: Bool     -- TODO
                , type_  :: Type
