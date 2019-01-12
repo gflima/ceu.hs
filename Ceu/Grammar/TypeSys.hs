@@ -66,28 +66,31 @@ getErrsTypesMatch z t1 t2 = if t1 `isSupOf` t2 then [] else
 
 call :: Ann -> [Stmt] -> ID_Func -> Exp -> (Errors, Type, Exp)
 call z ids id exp = (es++es_exp, tp_out, exp')
-                    where
-                        (es_exp, exp') = expr ids exp
-                        tp_exp' = type_ $ getAnn exp'
-
-                        (tp_out,es) = case find (isFunc id) ids of
-                                        Nothing ->
-                                            (TypeT, [toError z "function '" ++ id ++ "' is not declared"])
-                                        (Just (Func _ _ (TypeF inp out) _)) ->
-                                            case getErrsTypesMatch z inp tp_exp' of
-                                                [] -> (instType out (inp,tp_exp'), [])
-                                                x  -> (TypeT,                      x)
-
-class2ids :: Stmt -> [Stmt]
-class2ids (Class _ _ _ ifc _) = traceShowId $ aux ifc
     where
-        aux (Nop _)          = []
-        aux s@(Func _ _ _ p) = s : aux p
+        (es_exp, exp') = expr ids exp
+        tp_exp' = type_ $ getAnn exp'
 
-expandClasses :: [Stmt] -> [Stmt]
-expandClasses [] = []
-expandClasses (s@(Class _ _ _ _ _) : l) = class2ids s ++ expandClasses l
-expandClasses (s : l) = s : expandClasses l
+        (tp_out,es) = case find (isFunc id) (expandInsts ids) of
+                        Nothing ->
+                            (TypeT, [toError z "function '" ++ id ++ "' is not declared"])
+                        (Just (Func _ _ (TypeF inp out) _)) ->
+                            case getErrsTypesMatch z inp tp_exp' of
+                                [] -> (instType out (inp,tp_exp'), [])
+                                x  -> (TypeT,                      x)
+
+classinst2ids :: Stmt -> [Stmt]
+classinst2ids p = case p of
+    (Class _ _ _ ifc _) -> aux ifc
+    (Inst  _ _ _ imp _) -> aux imp
+    where
+        aux (Nop _)             = []
+        aux s@(Func  _ _ _ p)   = s : aux p
+        aux s@(FuncI _ _ _ _ p) = s : aux p
+
+expandInsts :: [Stmt] -> [Stmt]
+expandInsts [] = []
+expandInsts (s@(Inst _ _ _ _ _) : l) = classinst2ids s ++ expandInsts l
+expandInsts (s : l) = s : expandInsts l
 
 -------------------------------------------------------------------------------
 
@@ -165,7 +168,7 @@ stmt ids s@(Func z id tp p)  = (es_data ++ es_dcl ++ es ++ es', Func z id tp p')
 
     -- check if clashes with functions in classes
     es_dcl = errDeclared z "function" id ids'
-    ids' = concatMap class2ids $ filter isClass' ids
+    ids' = concatMap classinst2ids $ filter isClass' ids
     isClass' (Class _ _ _ _ _) = True
     isClass' _                 = False
 

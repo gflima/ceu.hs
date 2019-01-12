@@ -420,7 +420,7 @@ spec = do
                 (Inst annz "Equalable" ["Int"]
                     (Func annz "fff" (TypeF (Type1 "Int") Type0) (Nop annz))
                 (CallS annz "fff" (Const annz 1))))))))
-            `shouldBe` ["TODO: fff(1) uses second instance"]
+            `shouldBe` []
 
   --------------------------------------------------------------------------
 
