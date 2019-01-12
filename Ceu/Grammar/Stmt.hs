@@ -19,6 +19,7 @@ data Stmt
   | FuncI    Ann ID_Func Type Stmt Stmt     -- function implementation
   | Write    Ann Loc Exp                    -- assignment statement
   | AwaitInp Ann ID_Inp                     -- await external event
+  | CallS    Ann ID_Func Exp                -- call function
   | EmitExt  Ann ID_Ext Exp                 -- emit external event
   | AwaitEvt Ann ID_Evt                     -- await internal event
   | EmitEvt  Ann ID_Evt                     -- emit internal event
@@ -55,6 +56,7 @@ instance HasAnn Stmt where
     getAnn (FuncI    z _ _ _ _) = z
     getAnn (Write    z _ _)     = z
     getAnn (AwaitInp z _)       = z
+    getAnn (CallS    z _ _)     = z
     getAnn (EmitExt  z _ _)     = z
     getAnn (AwaitEvt z _)       = z
     getAnn (EmitEvt  z _)       = z
@@ -83,6 +85,7 @@ stmt2word stmt = case stmt of
   FuncI _ _ _ _ _-> "implementation"
   Write _ _ _    -> "assignment"
   AwaitInp _ _   -> "await"
+  CallS   _ _ _  -> "emit"
   EmitExt _ _ _  -> "emit"
   AwaitEvt _ _   -> "await"
   EmitEvt _ _    -> "emit"

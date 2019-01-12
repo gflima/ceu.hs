@@ -1,7 +1,7 @@
 module Ceu.Grammar.TypeSys where
 
 import Debug.Trace
-import Data.List (find)
+import Data.List (find, intercalate)
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Type
@@ -41,8 +41,8 @@ errDeclared :: Ann -> String -> String -> [Stmt] -> Errors
 errDeclared z str id ids =
     if (take 1 id == "_") then [] else    -- nested _ret, __and (par/and)
         case find (isAny id) ids of
-            Nothing   -> []
-            _         -> [toError z str ++ " '" ++ id ++ "' is already declared"]
+            Nothing  -> []
+            (Just _) -> [toError z str ++ " '" ++ id ++ "' is already declared"]
 
 fold_raws :: [Stmt] -> [RawAt] -> (Errors, [RawAt])
 fold_raws ids raws = foldr f ([],[]) raws where
@@ -61,6 +61,20 @@ getErrsTypesMatch :: Ann -> Type -> Type -> Errors
 getErrsTypesMatch z t1 t2 = if checkTypes t1 t2 then [] else
                                 [toError z "types do not match"]
 
+call :: Ann -> [Stmt] -> ID_Func -> Exp -> (Errors, Type, Exp)
+call z ids id exp = (es++es_exp, tp_out, exp')
+                    where
+                        (es_exp, exp') = expr ids exp
+                        tp_exp' = type_ $ getAnn exp'
+
+                        (tp_out,es) = case find (isFunc id) ids of
+                                        Nothing ->
+                                            (TypeT, [toError z "function '" ++ id ++ "' is not declared"])
+                                        (Just (Func _ _ (TypeF inp out) _)) ->
+                                            case getErrsTypesMatch z inp tp_exp' of
+                                                [] -> (instType out (inp,tp_exp'), [])
+                                                x  -> (TypeT,                      x)
+
 -------------------------------------------------------------------------------
 
 stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
@@ -70,6 +84,24 @@ stmt ids s@(Class z id vars ifc p) = ((errDeclared z "typeclass" id ids) ++ es1 
                                         where
                                             (es1,ifc') = stmt ids ifc
                                             (es2,p')   = stmt (s:ids) p
+
+stmt ids s@(Inst z id tps imp p) = (es1 ++ es2 ++ es3, Inst z id tps imp' p')
+    where
+        (es2,imp') = stmt ids imp
+
+        -- include all instance functions in ids
+        (es3,p') = stmt ([s] ++ funcs imp' ++ ids) p
+        funcs s@(Func  _ _ _ (Nop _))   = [s]
+        funcs s@(Func  _ _ _ func)      = s : (funcs func)
+        funcs s@(FuncI _ _ _ _ (Nop _)) = [s]
+        funcs s@(FuncI _ _ _ _ func)    = s : (funcs func)
+
+        -- check if this instance is already declared
+        es1 = case find isSameInst ids of
+            Nothing  -> []
+            (Just _) -> [toError z "instance '" ++ id ++ " (" ++ intercalate "," tps ++ ")' is already declared"]
+        isSameInst (Inst _ id' tps' _ _) = (id==id' && tps==tps')
+        isSameInst _                     = False
 
 stmt ids s@(Data z id [] cons abs p) = ((errDeclared z "type" id ids) ++ es, Data z id [] cons abs p')
                                     where (es,p') = stmt (s:ids) p
@@ -121,6 +153,9 @@ stmt ids s@(AwaitInp z id) = (es,s) where
                              es = case find (isInp id) ids of
                                 Nothing   -> [toError z "input '" ++ id ++ "' is not declared"]
                                 otherwise -> []
+
+stmt ids (CallS z id exp)   = (es, CallS z id exp') where
+                              (es,_,exp') = call z ids id exp
 
 stmt ids (EmitExt z id exp) = (es1++es2++es3, EmitExt z id exp')
                               where
@@ -223,15 +258,5 @@ expr ids (Read z id)     = if id == "_INPUT" then
                                         Nothing               -> (TypeT, [toError z "variable '" ++ id ++ "' is not declared"])
                                         (Just (Var _ _ tp _)) -> (tp,    [])
 
-expr ids (Call z id exp) = (es++es_exp, Call z{type_=tp_out} id exp')
-                           where
-                            (es_exp, exp') = expr ids exp
-                            tp_exp' = type_ $ getAnn exp'
-
-                            (tp_out,es) = case find (isFunc id) ids of
-                                            Nothing ->
-                                                (TypeT, [toError z "function '" ++ id ++ "' is not declared"])
-                                            (Just (Func _ _ (TypeF inp out) _)) ->
-                                                case getErrsTypesMatch z inp tp_exp' of
-                                                    [] -> (instType out (inp,tp_exp'), [])
-                                                    x  -> (TypeT,                      x)
+expr ids (Call z id exp) = (es, Call z{type_=tp_out} id exp') where
+                           (es, tp_out, exp') = call z ids id exp
