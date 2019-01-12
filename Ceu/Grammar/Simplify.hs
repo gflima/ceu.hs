@@ -6,6 +6,20 @@ import Ceu.Grammar.Stmt (Stmt(..))
 
 simplify :: Stmt -> Stmt
 
+simplify (Class z id vars ifc p) =
+  case p' of
+    Nop z'      -> Nop z'
+    Escape z' n -> Escape z' n
+    otherwise   -> Class z id vars ifc p'
+  where p' = simplify p
+
+simplify (Inst z id vars imp p) =
+  case p' of
+    Nop z'      -> Nop z'
+    Escape z' n -> Escape z' n
+    otherwise   -> Inst z id vars imp p'
+  where p' = simplify p
+
 simplify (Data z id vars cons abs p) =
   case p' of
     Nop z'      -> Nop z'

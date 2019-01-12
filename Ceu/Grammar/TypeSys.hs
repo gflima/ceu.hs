@@ -14,23 +14,29 @@ go p = stmt [] p
 
 -------------------------------------------------------------------------------
 
-isData id (Data _ id' _ _ _ _) = (id == id')
-isData _  _                    = False
+isClass id (Class _ id' _ _ _)  = (id == id')
+isClass _  _                    = False
 
-isVar  id (Var _ id' _ _)  = (id == id')
-isVar  _  _                = False
+isInst  id (Inst _ id' _ _ _)   = (id == id')
+isInst  _  _                    = False
 
-isInp  id (Inp _ id' _)    = (id == id')
-isInp  _  _                = False
+isData  id (Data _ id' _ _ _ _) = (id == id')
+isData  _  _                    = False
 
-isOut  id (Out _ id' _ _)  = (id == id')
-isOut  _  _                = False
+isVar   id (Var _ id' _ _)      = (id == id')
+isVar   _  _                    = False
 
-isEvt  id (Evt _ id' _)    = (id == id')
-isEvt  _  _                = False
+isInp   id (Inp _ id' _)        = (id == id')
+isInp   _  _                    = False
 
-isFunc id (Func _ id' _ _) = (id == id')
-isFunc _  _                = False
+isOut   id (Out _ id' _ _)      = (id == id')
+isOut   _  _                    = False
+
+isEvt   id (Evt _ id' _)        = (id == id')
+isEvt   _  _                    = False
+
+isFunc  id (Func _ id' _ _)     = (id == id')
+isFunc  _  _                    = False
 
 isInpEvt id s = isInp id s || isEvt id s
 
@@ -85,12 +91,12 @@ stmt ids s@(Class z id vars ifc p) = ((errDeclared z "typeclass" id ids) ++ es1 
                                             (es1,ifc') = stmt ids ifc
                                             (es2,p')   = stmt (s:ids) p
 
-stmt ids s@(Inst z id tps imp p) = (es1 ++ es2 ++ es3, Inst z id tps imp' p')
+stmt ids s@(Inst z id tps imp p) = (es0 ++ es1 ++ es2 ++ es3 ++ es4, Inst z id tps imp' p')
     where
         (es2,imp') = stmt ids imp
 
         -- include all instance functions in ids
-        (es3,p') = stmt ([s] ++ funcs imp' ++ ids) p
+        (es4,p') = stmt ([s] ++ funcs imp' ++ ids) p
         funcs s@(Func  _ _ _ (Nop _))   = [s]
         funcs s@(Func  _ _ _ func)      = s : (funcs func)
         funcs s@(FuncI _ _ _ _ (Nop _)) = [s]
@@ -103,7 +109,14 @@ stmt ids s@(Inst z id tps imp p) = (es1 ++ es2 ++ es3, Inst z id tps imp' p')
         isSameInst (Inst _ id' tps' _ _) = (id==id' && tps==tps')
         isSameInst _                     = False
 
+        -- check if class exists
+        es0 = case find (isClass id) ids of
+            Nothing  -> [toError z "typeclass '" ++ id ++ "' is not declared"]
+            Just cls -> []
+
+
         -- check if (instance functions types) match (class functions types)
+        es3 = [] --[toError z "types do not match"]
 
 stmt ids s@(Data z id [] cons abs p) = ((errDeclared z "type" id ids) ++ es, Data z id [] cons abs p')
                                     where (es,p') = stmt (s:ids) p

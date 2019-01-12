@@ -323,6 +323,17 @@ spec = do
                 (Nop annz))))))
             `shouldBe` ["TODO: Type0 vs Int"]
 
+        it "Bool ; Equable a ; inst X Bool" $
+            (fst $ Check.compile (False,False,False)
+                (Data annz "Int" [] [] False
+                (Data annz "Bool" [] [] False
+                (Class annz "Equalable" ["a"]
+                    (Func annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
+                (Inst annz "X" ["Bool"]
+                    (Func annz "fff" (TypeF (Type1 "Int") Type0) (Nop annz))
+                (Nop annz))))))
+            `shouldBe` ["typeclass 'X' is not declared"]
+
         it "Bool ; Equable a ; inst Equable Bool ; a/=Bool" $
             (fst $ Check.compile (False,False,False)
                 (Data annz "Int" [] [] False
