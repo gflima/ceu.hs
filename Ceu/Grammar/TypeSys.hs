@@ -78,6 +78,17 @@ call z ids id exp = (es++es_exp, tp_out, exp')
                                                 [] -> (instType out (inp,tp_exp'), [])
                                                 x  -> (TypeT,                      x)
 
+class2ids :: Stmt -> [Stmt]
+class2ids (Class _ _ _ ifc _) = traceShowId $ aux ifc
+    where
+        aux (Nop _)          = []
+        aux s@(Func _ _ _ p) = s : aux p
+
+expandClasses :: [Stmt] -> [Stmt]
+expandClasses [] = []
+expandClasses (s@(Class _ _ _ _ _) : l) = class2ids s ++ expandClasses l
+expandClasses (s : l) = s : expandClasses l
+
 -------------------------------------------------------------------------------
 
 stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
@@ -87,21 +98,13 @@ stmt ids s@(Class z id [var] ifc p) = ((errDeclared z "typeclass" id ids) ++ es1
                                         where
                                             (es1,ifc') = stmt ids ifc
                                             (es2,p')   = stmt (s:ids) p
+
 stmt ids (Class _ _ vars _ _) = error "not implemented: multiple vars"
 
 stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] imp' p')
     where
-        (es2,imp') = stmt ids imp
-
-        -- include all instance functions in ids
-        (es3,p') = stmt (s:ids) p
-{-
-        (es3,p') = stmt ([s] ++ funcs imp' ++ ids) p
-        funcs s@(Func  _ _ _ (Nop _))   = [s]
-        funcs s@(Func  _ _ _ func)      = s : (funcs func)
-        funcs s@(FuncI _ _ _ _ (Nop _)) = [s]
-        funcs s@(FuncI _ _ _ _ func)    = s : (funcs func)
--}
+        (es2,imp') = stmt (filter (not . isClass id) ids) imp -- prevent clashes w/ own class
+        (es3,p')   = stmt (s:ids) p
 
         -- check if this instance is already declared
         es1 = case find isSameInst ids of
@@ -154,11 +157,17 @@ stmt ids s@(Out  z id tp p)  = ((errDeclared z "output" id ids) ++ es, Out z id 
 stmt ids s@(Evt  z id p)     = ((errDeclared z "event" id ids)  ++ es, Evt z id p')
                                where (es,p') = stmt (s:ids) p
 
-stmt ids s@(Func z id tp p)  = (es_data ++ es ++ es', Func z id tp p') where
+stmt ids s@(Func z id tp p)  = (es_data ++ es_dcl ++ es ++ es', Func z id tp p') where
     (es, (es',p')) = case find (isFunc id) ids of
         Nothing               -> ([],                    stmt (s:ids) p)
         Just (Func _ _ tp' _) -> (getErrsTypesMatch z tp' tp, stmt ids p)
     es_data = getErrsTypesDeclared z tp ids
+
+    -- check if clashes with functions in classes
+    es_dcl = errDeclared z "function" id ids'
+    ids' = concatMap class2ids $ filter isClass' ids
+    isClass' (Class _ _ _ _ _) = True
+    isClass' _                 = False
 
 stmt ids s@(FuncI z id tp imp p) = (es1++es2, FuncI z id tp imp' p')
                                    where

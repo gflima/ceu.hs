@@ -306,7 +306,7 @@ spec = do
                 (Class annz "Y" ["a"]
                     (Func annz "f" (TypeF (TypeV "a") Type0) (Nop annz))
                 (Nop annz))))
-            `shouldBe` ["TODO: f is already declared"]
+            `shouldBe` ["function 'f' is already declared"]
 
         it "X.f ; f" $
             (fst $ Check.compile (False,False,False)
@@ -314,7 +314,7 @@ spec = do
                     (Func annz "f" (TypeF (TypeV "a") Type0) (Nop annz))
                 (Func annz "f" (TypeF (TypeV "a") Type0)
                 (Nop annz))))
-            `shouldBe` ["TODO: f is already declared"]
+            `shouldBe` ["function 'f' is already declared"]
 
         it "~Bool ; Equalable ; (==)" $
             Check.compile (False,False,False)
@@ -375,7 +375,7 @@ spec = do
                 (Inst annz "X" ["Bool"]
                     (Func annz "fff" (TypeF (Type1 "Int") Type0) (Nop annz))
                 (Nop annz))))))
-            `shouldBe` ["typeclass 'X' is not declared"]
+            `shouldBe` ["typeclass 'X' is not declared","function 'fff' is already declared"]
 
         it "Bool ; Equalable a ; inst Equalable Bool ; a/=Bool" $
             (fst $ Check.compile (False,False,False)
