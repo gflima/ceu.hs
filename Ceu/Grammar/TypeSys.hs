@@ -85,18 +85,19 @@ call z ids id exp = (es++es_exp, tp_out, exp')
 
 stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
 
-stmt ids s@(Class z id vars ifc p) = ((errDeclared z "typeclass" id ids) ++ es1 ++ es2,
-                                        Class z id vars ifc' p')
+stmt ids s@(Class z id [var] ifc p) = ((errDeclared z "typeclass" id ids) ++ es1 ++ es2,
+                                        Class z id [var] ifc' p')
                                         where
                                             (es1,ifc') = stmt ids ifc
                                             (es2,p')   = stmt (s:ids) p
+stmt ids (Class _ _ vars _ _) = error "not implemented: multiple vars"
 
-stmt ids s@(Inst z id tps imp p) = (es0 ++ es1 ++ es2 ++ es3 ++ es4, Inst z id tps imp' p')
+stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] imp' p')
     where
         (es2,imp') = stmt ids imp
 
         -- include all instance functions in ids
-        (es4,p') = stmt ([s] ++ funcs imp' ++ ids) p
+        (es3,p') = stmt ([s] ++ funcs imp' ++ ids) p
         funcs s@(Func  _ _ _ (Nop _))   = [s]
         funcs s@(Func  _ _ _ func)      = s : (funcs func)
         funcs s@(FuncI _ _ _ _ (Nop _)) = [s]
@@ -105,18 +106,37 @@ stmt ids s@(Inst z id tps imp p) = (es0 ++ es1 ++ es2 ++ es3 ++ es4, Inst z id t
         -- check if this instance is already declared
         es1 = case find isSameInst ids of
             Nothing  -> []
-            (Just _) -> [toError z "instance '" ++ id ++ " (" ++ intercalate "," tps ++ ")' is already declared"]
-        isSameInst (Inst _ id' tps' _ _) = (id==id' && tps==tps')
+            (Just _) -> [toError z "instance '" ++ id ++ " (" ++ intercalate "," [tp] ++ ")' is already declared"]
+        isSameInst (Inst _ id' [tp'] _ _) = (id==id' && [tp]==[tp'])
         isSameInst _                     = False
 
         -- check if class exists
+        -- compares class vs instance function by function in order
         es0 = case find (isClass id) ids of
-            Nothing  -> [toError z "typeclass '" ++ id ++ "' is not declared"]
-            Just cls -> []
+            Nothing                     -> [toError z "typeclass '" ++ id ++ "' is not declared"]
+            Just (Class _ _ [var] ifc _) -> compares ifc imp where
+                compares (Func _ id1 tp1 p1) (Func  _ id2 tp2   p2) =
+                    (names id1 id2) ++ (supOf tp1 tp2) ++ (instOf var tp1 tp2) ++ (compares p1 p2)
+                compares (Func _ id1 tp1 p1) (FuncI _ id2 tp2 _ p2) =
+                    (names id1 id2) ++ (supOf tp1 tp2) ++ (instOf var tp1 tp2) ++ (compares p1 p2)
+                compares (Nop _) (Nop _) = []
 
+        -- check if function names are the same
+        names id1 id2 | id1==id2  = []
+                      | otherwise = [toError z "names do not match : " ++ id1 ++ " :> " ++ id2]
 
-        -- check if (instance functions types) match (class functions types)
-        es3 = [] --[toError z "types do not match"]
+        -- check if function types match
+        supOf tp1 tp2 | tp1 `isSupOf` tp2 = []
+                      | otherwise         = [toError z "types do not match : (" ++
+                                             typeShow tp1 ++ ") :> (" ++ typeShow tp2 ++ ")"]
+
+        -- check if (Inst tps) match (Class vars) in all functions
+        instOf var tp1 tp2 = case instType (TypeV var) (tp1,tp2) of
+                                (Type1 tp') | tp==tp'   -> []
+                                            | otherwise -> ["types do not match : " ++
+                                                            tp ++ " :> " ++ tp']
+
+stmt ids (Inst _ _ tps _ _) = error "not implemented: multiple types"
 
 stmt ids s@(Data z id [] cons abs p) = ((errDeclared z "type" id ids) ++ es, Data z id [] cons abs p')
                                     where (es,p') = stmt (s:ids) p

@@ -16,6 +16,17 @@ data Type = TypeB
 
 -------------------------------------------------------------------------------
 
+typeShow :: Type -> String
+typeShow (TypeV id)      = id
+typeShow TypeT           = "top"
+typeShow TypeB           = "bot"
+typeShow Type0           = "()"
+typeShow (Type1 id)      = id
+typeShow (TypeF inp out) = typeShow inp ++ " -> " ++ typeShow out
+typeShow (TypeN tps)     = intercalate "," (map typeShow tps)
+
+-------------------------------------------------------------------------------
+
 isSupOf :: Type -> Type -> Bool
 
 isSupOf (TypeV _)         _                 = True
@@ -87,17 +98,20 @@ groupTypesV vars tps = grouped                -- [k,"a","b","a"] ["Int","Int","B
 -------------------------------------------------------------------------------
 
 instType :: Type -> (Type,Type) -> Type -- TypeV -> (TypeV|~TypeV,~TypeV) -> ~TypeV
-instType tp (TypeN tps1, TypeN tps2) = instType' tp (tps1,tps2)
-instType tp (tp1,        tp2)        = instType' tp ([tp1],[tp2])
-
-instType' :: Type -> ([Type],[Type]) -> Type -- TypeV -> ([TypeV|~TypeV],[~TypeV]) -> ~TypeV
-instType' (TypeV var) (vars,tps) = tp
+instType tp (tp1, tp2) = aux tp (flatten tp1, flatten tp2)
     where
-        grouped = groupTypesV vars tps          -- [[("a",I),("a",I)], [("b",B)]]
-        singles = map head grouped              -- [("a",I), ("b",B)]
-        tp'     = find (\(TypeV var',_) -> var==var') singles -- ("b",B)
-        tp      = snd $ fromJust tp'
-instType' tp _ = tp
+        flatten (TypeF inp out) = flatten inp ++ flatten out
+        flatten (TypeN tps)     = concatMap flatten tps
+        flatten tp              = [tp]
+
+        aux :: Type -> ([Type],[Type]) -> Type -- TypeV -> ([TypeV|~TypeV],[~TypeV]) -> ~TypeV
+        aux (TypeV var) (vars,tps) = tp
+            where
+                grouped = groupTypesV vars tps -- [[("a",I),("a",I)], [("b",B)]]
+                singles = map head grouped     -- [("a",I), ("b",B)]
+                tp'     = find (\(TypeV var',_) -> var==var') singles -- ("b",B)
+                tp      = snd $ fromJust tp'
+        aux tp _ = tp
 
 -------------------------------------------------------------------------------
 

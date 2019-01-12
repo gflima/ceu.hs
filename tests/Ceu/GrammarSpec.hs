@@ -312,16 +312,26 @@ spec = do
                 (Nop annz))))))
             `shouldBe` ["instance 'Equalable (Bool)' is already declared"]
 
-        it "Bool ; Equable a ; inst Equable Bool ; a/=Bool" $
+        it "Bool ; Equable a ; inst Equable Bool ; ()/=Int" $
+            (fst $ Check.compile (False,False,False)
+                (Data annz "Bool" [] [] False
+                (Class annz "Equalable" ["a"]
+                    (Func annz "fff1" (TypeF (TypeV "a") Type0) (Nop annz))
+                (Inst annz "Equalable" ["Bool"]
+                    (Func annz "fff2" (TypeF (Type1 "Bool") Type0) (Nop annz))
+                (Nop annz)))))
+            `shouldBe` ["names do not match : fff1 :> fff2"]
+
+        it "Bool ; Equable a ; inst Equable Bool ; ()/=Int" $
             (fst $ Check.compile (False,False,False)
                 (Data annz "Int" [] [] False
                 (Data annz "Bool" [] [] False
                 (Class annz "Equalable" ["a"]
                     (Func annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
                 (Inst annz "Equalable" ["Bool"]
-                    (Func annz "fff" (TypeF (Type1 "Int") (Type1 "Int")) (Nop annz))
+                    (Func annz "fff" (TypeF (Type1 "Bool") (Type1 "Int")) (Nop annz))
                 (Nop annz))))))
-            `shouldBe` ["TODO: Type0 vs Int"]
+            `shouldBe` ["types do not match : (a -> ()) :> (Bool -> Int)"]
 
         it "Bool ; Equable a ; inst X Bool" $
             (fst $ Check.compile (False,False,False)
@@ -343,7 +353,7 @@ spec = do
                 (Inst annz "Equalable" ["Bool"]
                     (Func annz "fff" (TypeF (Type1 "Int") Type0) (Nop annz))
                 (Nop annz))))))
-            `shouldBe` ["TODO: Bool vs Int"]
+            `shouldBe` ["types do not match : Bool :> Int"]
 
         it "Bool ; Equable ; (==)" $
             (fst $ Check.compile (False,False,False)
@@ -353,22 +363,6 @@ spec = do
                 (Inst annz "Equalable" ["Bool"]
                     (Func annz "fff" (TypeF (Type1 "Bool") Type0) (Nop annz))
                 (CallS annz "fff" (Cons annz "Bool"))))))
-            `shouldBe` []
-
--- TODO: == has to be instantiated as func '== :: (a=Bool,a=Bool)->Bool
-        it "Bool ; if True==False ..." $
-            (fst $ Check.compile (False,False,False)
-                (Func annz "==" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (Type1 "Bool"))
-                (Data annz "Bool" [] [] True
-                (Data annz "Bool.True" [] [] False
-                (Data annz "Bool.False" [] [] False
-                    (If annz
-                        (Call annz "=="
-                            (Tuple annz
-                                [Cons annz "Bool.True",
-                                 Cons annz "Bool.False"]))
-                        (Nop annz)
-                        (Nop annz)))))))
             `shouldBe` []
 
   --------------------------------------------------------------------------
