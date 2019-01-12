@@ -25,7 +25,7 @@ aux (Par z p1 p2)          = Par' z (aux p1) (aux p2)
 
 aux (And z p1 p2)          = Clean' z "And"
                               (Trap' z
-                                (Var' z "__and" (Type1 ["Int"]) Nothing
+                                (Var' z "__and" (Type1 "Int") Nothing
                                   (Seq z
                                     (Write z (LVar "__and") (Const z 0))
                                     (Par' z p1' p2'))))

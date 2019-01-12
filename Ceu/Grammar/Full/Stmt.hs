@@ -19,7 +19,7 @@ type Fin = (Stmt, Stmt, Stmt)
 
 -- Program (pg 5).
 data Stmt
-  = Data     Ann ID_Hier [ID_Var] [DataCons] Bool -- new type declaration
+  = Data     Ann ID_Type [ID_Var] [DataCons] Bool -- new type declaration
   | Var      Ann ID_Var Type (Maybe Fin)        -- variable declaration
   | Inp      Ann ID_Inp Type                    -- output declaration
   | Out      Ann ID_Out Type                    -- output declaration
@@ -48,7 +48,7 @@ data Stmt
   | Escape   Ann (Maybe ID_Var) Exp             -- escape enclosing trap
   | Scope    Ann Stmt                           -- scope for local variables
   | Error    Ann String                         -- generate runtime error (for testing purposes)
-  | Data'    Ann ID_Hier [ID_Var] [DataCons] Bool Stmt -- new type declaration w/ stmts in scope
+  | Data'    Ann ID_Type [ID_Var] [DataCons] Bool Stmt -- new type declaration w/ stmts in scope
   | Var'     Ann ID_Var Type (Maybe Fin) Stmt   -- variable declaration w/ stmts in scope
   | Inp'     Ann ID_Inp Type Stmt               -- output declaration w/ stmts in scope
   | Out'     Ann ID_Out Type Stmt               -- output declaration w/ stmts in scope

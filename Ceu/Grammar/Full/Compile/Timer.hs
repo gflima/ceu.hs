@@ -32,7 +32,7 @@ aux (Par' z p1 p2)        = Par' z (aux p1) (aux p2)
 aux (Pause' z var p)      = Pause' z var (aux p)
 aux (Trap' z p)           = Trap' z (aux p)
 aux (Clean' z id p)       = Clean' z id (aux p)
-aux (AwaitTmr z exp)      = Var' z "__timer_await" (Type1 ["Int"]) Nothing
+aux (AwaitTmr z exp)      = Var' z "__timer_await" (Type1 "Int") Nothing
                             (Seq z
                               (Write z (LVar "__timer_await") exp)
                               (Trap' z

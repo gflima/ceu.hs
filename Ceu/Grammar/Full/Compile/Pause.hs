@@ -39,12 +39,12 @@ aux (Or' z p1 p2)         = Or' z (aux p1) (aux p2)
 aux (Spawn z p)           = Spawn z (aux p)
 aux (Trap' z p)           = Trap' z (aux p)
 aux (Pause z evt p)       =
-  Var' z ("__pause_var_"++evt) (Type1 ["Int"]) Nothing
+  Var' z ("__pause_var_"++evt) (Type1 "Int") Nothing
     (Evt' z ("__pause_int_"++evt) Type0
       (Seq z
         (Write z (LVar $ "__pause_var_"++evt) (Const z 0))
         (Or' z
-          (Var' z "__tmp" (Type1 ["Int"]) Nothing
+          (Var' z "__tmp" (Type1 "Int") Nothing
             (Every z evt (Just $ LVar "__tmp")
               (If z (Call z "==" (Tuple z [(Read z "__tmp"),(Const z 0)]))
                   (Seq z (Write z (LVar $ "__pause_var_"++evt) (Const z 0))
@@ -52,7 +52,7 @@ aux (Pause z evt p)       =
                   (Nop z))))
         (Or' z
           (Pause' z ("__pause_var_"++evt) p)
-          (Var' z "__tmp" (Type1 ["Int"]) Nothing
+          (Var' z "__tmp" (Type1 "Int") Nothing
             (Every z evt (Just $ LVar "__tmp")
               (If z (Call z "==" (Tuple z [(Read z "__tmp"),(Const z 1)]))
                   (Write z (LVar $ "__pause_var_"++evt) (Const z 1))
