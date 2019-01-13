@@ -1231,6 +1231,37 @@ escape x;
                 ["I","I","F"]
             `shouldBe` Right (1,[[],[("O",Nothing)],[("O",Nothing)],[]])
 
+{-
+    describe "typesystem:" $ do
+
+        it "id(1)" $
+            compile_run
+                (G.FuncI annz "id"
+                    (TypeF (Type1 "Int") (Type1 "Int"))
+                    (G.Var annz "_fret" (Type1 "Int")
+                        (G.Write annz (LVar "_ret") (Read annz "_arg_0")))
+                (G.Seq annz
+                    (G.Write annz (LVar "_ret") (Call annz "id" (Const annz 1)))
+                    (G.Escape annz 0)))
+                []
+            `shouldBe` Right (1,[[]])
+
+        it "Int ; Bool ; Equalable a ; inst Equalable Bool/Int ; fff 1" $
+            compile_run
+                (G.Data annz "Bool" [] [] False
+                (G.Class annz "Equalable" ["a"]
+                    (G.Func annz "fff" (TypeF (TypeV "a") (Type1 "Int")) (G.Nop annz))
+                (G.Inst annz "Equalable" ["Bool"]
+                    (G.Func annz "fff" (TypeF (Type1 "Bool") (Type1 "Int")) (G.Nop annz))
+                (G.Inst annz "Equalable" ["Int"]
+                    (G.Func annz "fff" (TypeF (Type1 "Int") (Type1 "Int")) (G.Nop annz))
+                (G.Seq annz
+                    (G.Write annz (LVar "_ret") (Call annz "fff" (Const annz 1)))
+                    (G.Escape annz 0))))))
+                []
+            `shouldBe` Right (1,[[]])
+-}
+
       where
         stepsItPass (p,n,e,vars,outs) (p',n',e',vars',outs') =
           (it (printf "pass: %s -> %s#" "todo" "todo")
