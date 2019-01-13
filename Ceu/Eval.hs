@@ -3,8 +3,8 @@ module Ceu.Eval where
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann (annz)
 import Ceu.Grammar.Exp
-import qualified Ceu.Grammar.Stmt     as G
-import qualified Ceu.Grammar.Check    as Check
+import qualified Ceu.Grammar.Stmt  as G
+import qualified Ceu.Grammar.Check as Check
 import Data.Maybe
 import Text.Printf
 import Debug.Trace
@@ -21,14 +21,15 @@ type Desc = (Stmt, Lvl, Vars, Evts, Outs)
 
 -- Program (pg 5).
 data Stmt
-  = Var      (ID_Var,Maybe Val) Stmt    -- block with environment store
-  | Evt      ID_Evt Stmt                -- event declaration
-  | Write    ID_Var Exp                 -- assignment statement
-  | If       Exp Stmt Stmt              -- conditional
-  | Seq      Stmt Stmt                  -- sequence
-  | Nop                                 -- dummy statement (internal)
-  | Loop' Stmt Stmt                     -- unrolled Loop (internal)
-  deriving (Eq, Show)
+    = Var   (ID_Var,Maybe Val) Stmt    -- block with environment store
+    | Evt   ID_Evt Stmt                -- event declaration
+    | Write ID_Var Exp                 -- assignment statement
+    | If    Exp Stmt Stmt              -- conditional
+    | Seq   Stmt Stmt                  -- sequence
+    | Nop                              -- dummy statement (internal)
+    | Ret   Exp                        -- terminate program with exp
+    | Loop' Stmt Stmt                  -- unrolled Loop (internal)
+    deriving (Eq, Show)
 
 infixr 1 `Seq`
 
@@ -89,28 +90,6 @@ evtsEmit ints int = case ints of
 ----------------------------------------------------------------------------
 -- Nested transition
 
--- Tests whether program is blocked at the given stack level.
--- (pg 8, fig 4.ii)
-isBlocked :: Lvl -> Stmt -> Bool
-isBlocked n stmt = case stmt of
-  Var _ p      -> isBlocked n p
-  Seq p _      -> isBlocked n p
-  Loop' p _    -> isBlocked n p
-  _            -> False
-
-isBlockedNop n Nop = True
-isBlockedNop n p   = isBlocked n p
-
--- Obtains the body of all active Fin statements in program.
--- (pg 8, fig 4.iii)
-clear :: Stmt -> Stmt
-clear stmt = case stmt of
-  Var _ p      -> clear p
-  Seq p _      -> clear p
-  Loop' p _    -> clear p
-  Nop          -> Nop -- because of blocked (Par Nop Nop)
-  _            -> error "clear: invalid clear"
-
 -- Helper function used by step in the *-adv rules.
 stepAdv :: Desc -> (Stmt -> Stmt) -> Desc
 stepAdv d f = (f p, n, vars, ints, outs)
@@ -124,6 +103,9 @@ step :: Desc -> Desc
 step (Var _ Nop, n, vars, ints, outs)            -- var-nop
   = (Nop, n, vars, ints, outs)
 
+step (Var _ (Ret e), n, vars, ints, outs)            -- var-nop
+  = (Ret e, n, vars, ints, outs)
+
 step (Var vv p, n, vars, ints, outs)             -- var-adv
   = (Var vv' p', n', vars', ints', outs')
     where
@@ -135,6 +117,9 @@ step (Write var expr, n, vars, ints, outs)       -- write
 step (Seq Nop q, n, vars, ints, outs)            -- seq-nop (pg 6)
   = (q, n, vars, ints, outs)
 
+step (Seq (Ret e) q, n, vars, ints, outs)            -- seq-nop (pg 6)
+  = (Ret e, n, vars, ints, outs)
+
 step (Seq p q, n, vars, ints, outs)              -- seq-adv (pg 6)
   = stepAdv (p, n, vars, ints, outs) (\p' -> Seq p' q)
 
@@ -145,22 +130,22 @@ step (If exp p q, n, vars, ints, outs)           -- if-true/false (pg 6)
 step (Loop' Nop q, n, vars, ints, outs)          -- loop-nop (pg 7)
   = (Loop' q q, n, vars, ints, outs)
 
+step (Loop' (Ret e) q, n, vars, ints, outs)          -- loop-nop (pg 7)
+  = (Ret e, n, vars, ints, outs)
+
 step (Loop' p q, n, vars, ints, outs)            -- loop-adv (pg 7)
   = stepAdv (p, n, vars, ints, outs) (\p' -> Loop' p' q)
 
-step (p, n, vars, ints, outs)                    -- pop
-  | isReducible (p,n,vars,ints, outs) = (p, n-1, vars, ints, outs)
-
-step _ = error "step: cannot advance"
---step p =  traceShow p (error "step: cannot advance")
+--step _ = error "step: cannot advance"
+step p =  error $ "step: cannot advance : " ++ (show p)
 
 -- Tests whether the description is nst-irreducible.
 -- CHECK: nst should only produce nst-irreducible descriptions.
 isReducible :: Desc -> Bool
 isReducible desc = case desc of
   (_,     n, _, _, _) | n>0 -> True
-  (Nop,   _, _, _, _)       -> False
-  (p,     n, _, _, _)       -> not $ isBlocked n p
+  (Ret _, _, _, _, _)       -> False
+  (p,     n, _, _, _)       -> True
 
 -- Awakes all trails waiting for the given event.
 -- (pg 8, fig 4.i)
@@ -189,26 +174,22 @@ type Result = Either Errors (Val,[Outs])
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "_ret" set by the program.
-run :: G.Stmt -> [a] -> (Stmt -> a -> (Stmt, Outs)) -> Result
-run prog ins reaction = eP (fromGrammar prog) ins []
+run :: G.Stmt -> (Stmt -> a -> (Stmt, Outs)) -> Result
+run prog reaction = eP (fromGrammar prog) []
   where
     --eP :: Stmt -> [a] -> [Outs] -> (Val,[Outs])
-    eP prog ins outss = case prog of
+    eP prog outss = case prog of
       (Var ("_ret",val) Nop)
-        | not (null ins) -> Left ["pending inputs"]
         | isNothing val  -> Left ["no return value"]
         | otherwise      -> Right ((fromJust val), outss)
-      _
-        | null ins       -> Left ["program didn't terminate"]
-        | otherwise      -> eP prog' (tail ins) (outss++[outs']) where
-                               (prog',outs') = reaction prog (head ins)
+      _ -> Left ["program didn't terminate"]
 
 -- Evaluates program over history of input events.
 -- Returns the last value of global "_ret" set by the program.
-compile_run :: G.Stmt -> [ID_Inp] -> Result
-compile_run prog ins =
+compile_run :: G.Stmt -> Result
+compile_run prog =
   let (es,p) = Check.compile (True) prog in
     if es == [] then
-      run p ("BOOT":ins) reaction
+      run p reaction
     else
       Left es

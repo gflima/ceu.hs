@@ -8,19 +8,20 @@ import Text.Printf
 
 -- Program (pg 5).
 data Stmt
-  = Class Ann ID_Class [ID_Var] Stmt Stmt  -- new class declaration
-  | Inst  Ann ID_Class [ID_Type] Stmt Stmt -- new class instance
-  | Data  Ann ID_Type [ID_Var] [DataCons] Bool Stmt -- new type declaration
-  | Var   Ann ID_Var  Type Stmt            -- variable declaration
-  | Func  Ann ID_Func Type Stmt            -- function declaration
-  | FuncI Ann ID_Func Type Stmt Stmt       -- function implementation (must have accompainying Func)
-  | Write Ann Loc Exp                      -- assignment statement
-  | CallS Ann ID_Func Exp                  -- call function
-  | If    Ann Exp Stmt Stmt                -- conditional
-  | Seq   Ann Stmt Stmt                    -- sequence
-  | Loop  Ann Stmt                         -- infinite loop
-  | Nop   Ann                              -- dummy statement (internal)
-  deriving (Eq, Show)
+    = Class Ann ID_Class [ID_Var] Stmt Stmt  -- new class declaration
+    | Inst  Ann ID_Class [ID_Type] Stmt Stmt -- new class instance
+    | Data  Ann ID_Type [ID_Var] [DataCons] Bool Stmt -- new type declaration
+    | Var   Ann ID_Var  Type Stmt            -- variable declaration
+    | Func  Ann ID_Func Type Stmt            -- function declaration
+    | FuncI Ann ID_Func Type Stmt Stmt       -- function implementation (must have accompainying Func)
+    | Write Ann Loc Exp                      -- assignment statement
+    | CallS Ann ID_Func Exp                  -- call function
+    | If    Ann Exp Stmt Stmt                -- conditional
+    | Seq   Ann Stmt Stmt                    -- sequence
+    | Loop  Ann Stmt                         -- infinite loop
+    | Ret   Ann Exp                          -- terminate program with Ret
+    | Nop   Ann                              -- dummy statement (internal)
+    deriving (Eq, Show)
 
 sSeq a b = Seq annz a b
 infixr 1 `sSeq`
@@ -38,4 +39,7 @@ instance HasAnn Stmt where
     getAnn (If    z _ _ _)     = z
     getAnn (Seq   z _ _)       = z
     getAnn (Loop  z _)         = z
+    getAnn (Ret   z _)         = z
     getAnn (Nop   z)           = z
+
+prelude z p = (Data z "Int" [] [] False p)
