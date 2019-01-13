@@ -185,7 +185,11 @@ stmt ids (Loop z p)          = (es, Loop z p')
                                where
                                 (es,p') = stmt ids p
 
-stmt _   (Nop    z)          = ([], Nop z)
+stmt ids (Ret z exp)         = (es, Ret z exp')
+                               where
+                                (es,exp') = expr ids exp
+
+stmt _   (Nop z)             = ([], Nop z)
 
 -------------------------------------------------------------------------------
 
