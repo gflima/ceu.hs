@@ -23,6 +23,26 @@ data Stmt
     | Nop   Ann                              -- dummy statement (internal)
     deriving (Eq, Show)
 
+--  class Equalable a where
+--      eq :: a -> a -> Bool
+--
+--  instance Equalable X where
+--      eq :: X -> X -> Bool
+--      eq a b = ...
+--
+--  instance Equalable Int where
+--      eq :: Int -> Int -> Bool
+--      eq a b = <primitive>
+--
+--  eq 10 20    :: eq Int Int
+--
+-- To resolve call to `eq`:
+--  * find associated `func`:
+--      * top-level funcs
+--      * expand class declarations
+--      ! only one is allowed in the whole program
+--      * in either case, check if type matches
+
 sSeq a b = Seq annz a b
 infixr 1 `sSeq`
 

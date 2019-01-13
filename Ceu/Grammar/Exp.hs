@@ -13,7 +13,6 @@ data Exp
     | Cons   Ann ID_Type        -- True
     | Read   Ann ID_Var         -- a ; xs
     | Unit   Ann                -- ()
-    -- | Parens Ann Exp         -- (1) ; (f 1) ; (f (1,2)) ; (())
     | Tuple  Ann [Exp]          -- (1,2) ; ((1),2) ; ((1,2),3) ; ((),()) // (len >= 2)
     | Call   Ann ID_Func Exp    -- f a ; f(a) ; f(1,2)
     deriving (Eq, Show)

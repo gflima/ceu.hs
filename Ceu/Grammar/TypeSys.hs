@@ -43,7 +43,7 @@ getErrsTypesDeclared z tp ids = concatMap aux $ map (\id->(id, find (isData id) 
 
 getErrsTypesMatch :: Ann -> Type -> Type -> Errors
 getErrsTypesMatch z t1 t2 = if t1 `isSupOf` t2 then [] else
-                                [toError z "types do not match : " ++ typeShow t1 ++ " :> " ++ typeShow t2]
+                                [toError z "types do not match : expected '" ++ typeShow t1 ++ "' : found '" ++ typeShow t2 ++ "'"]
 
 call :: Ann -> [Stmt] -> ID_Func -> Exp -> (Errors, Type, Exp)
 call z ids id exp = (es++es_exp, tp_out, exp')
@@ -51,6 +51,7 @@ call z ids id exp = (es++es_exp, tp_out, exp')
         (es_exp, exp') = expr ids exp
         tp_exp' = type_ $ getAnn exp'
 
+        --(tp_out,es) = case find (isFunc id) (expandClasses ids) of
         (tp_out,es) = case find (isFunc id) (expandInsts ids) of
                         Nothing ->
                             (TypeT, [toError z "function '" ++ id ++ "' is not declared"])
@@ -66,6 +67,11 @@ classinst2ids p = case p of
     where
         aux (Nop _)             = []
         aux s@(Func  _ _ _ p)   = s : aux p
+
+expandClasses :: [Stmt] -> [Stmt]
+expandClasses [] = []
+expandClasses (s@(Class _ _ _ _ _) : l) = classinst2ids s ++ expandClasses l
+expandClasses (s : l) = s : expandClasses l
 
 expandInsts :: [Stmt] -> [Stmt]
 expandInsts [] = []
@@ -107,18 +113,18 @@ stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] im
 
         -- check if function names are the same
         names id1 id2 | id1==id2  = []
-                      | otherwise = [toError z "names do not match : " ++ id1 ++ " :> " ++ id2]
+                      | otherwise = [toError z "names do not match : expected '" ++ id1 ++ "' : found '" ++ id2 ++ "'"]
 
         -- check if function types match
         supOf tp1 tp2 | tp1 `isSupOf` tp2 = []
-                      | otherwise         = [toError z "types do not match : " ++
-                                             typeShow tp1 ++ " :> " ++ typeShow tp2]
+                      | otherwise         = [toError z "types do not match : expected '" ++
+                                             typeShow tp1 ++ "' : found '" ++ typeShow tp2 ++ "'"]
 
         -- check if (Inst tps) match (Class vars) in all functions
         instOf var tp1 tp2 = case instType (TypeV var) (tp1,tp2) of
                                 (Type1 tp') | tp==tp'   -> []
-                                            | otherwise -> ["types do not match : " ++
-                                                            tp ++ " :> " ++ tp']
+                                            | otherwise -> ["types do not match : expected '" ++
+                                                            tp ++ "' : found '" ++ tp' ++ "'"]
 
 stmt ids (Inst _ _ tps _ _) = error "not implemented: multiple types"
 
