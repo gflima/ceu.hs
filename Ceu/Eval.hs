@@ -1,13 +1,22 @@
 module Ceu.Eval where
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Exp
+import qualified Ceu.Grammar.Exp     as E
 import qualified Ceu.Grammar.Stmt    as G
 import qualified Ceu.Grammar.TypeSys as T
 import Debug.Trace
 
 type Vars = [(ID_Var, Maybe Exp)]
 type Desc = (Stmt, Vars)
+
+data Exp
+    = Number Int            -- 1
+    | Cons   ID_Type        -- True
+    | Read   ID_Var         -- a ; xs
+    | Unit                  -- ()
+    | Tuple  [Exp]          -- (1,2) ; ((1),2) ; ((1,2),3) ; ((),()) // (len >= 2)
+    | Call   ID_Func Exp    -- f a ; f(a) ; f(1,2)
+    deriving (Eq, Show)
 
 data Stmt
     = Var   (ID_Var,Maybe Exp) Stmt    -- block with environment store
@@ -21,19 +30,27 @@ data Stmt
 
 infixr 1 `Seq`
 
-fromGrammar :: G.Stmt -> Stmt
-fromGrammar (G.Class _ _ _ _ p)     = fromGrammar p
-fromGrammar (G.Inst _ _ _ _ p)      = fromGrammar p
-fromGrammar (G.Data _ _ _ _ _ p)    = fromGrammar p
-fromGrammar (G.Var _ id _ p)        = Var (id,Nothing) (fromGrammar p)
-fromGrammar (G.Func _ _ _ p)        = (fromGrammar p)
-fromGrammar (G.FuncI _ _ _ _ _)     = error "not implemented"
-fromGrammar (G.Write _ (LVar id) e) = Write id e
-fromGrammar (G.If _ e p1 p2)        = If e (fromGrammar p1) (fromGrammar p2)
-fromGrammar (G.Seq _ p1 p2)         = Seq (fromGrammar p1) (fromGrammar p2)
-fromGrammar (G.Loop _ p)            = Loop' (fromGrammar p) (fromGrammar p)
-fromGrammar (G.Ret _ e)             = Ret e
-fromGrammar (G.Nop _)               = Nop
+fromExp :: E.Exp -> Exp
+fromExp (E.Number _ v)    = Number v
+fromExp (E.Cons   _ id)   = Cons id
+fromExp (E.Read   _ id)   = Read id
+fromExp (E.Unit   _)      = Unit
+fromExp (E.Tuple  _ vs)   = Tuple (map fromExp vs)
+fromExp (E.Call   _ id e) = Call id (fromExp e)
+
+fromStmt :: G.Stmt -> Stmt
+fromStmt (G.Class _ _ _ _ p)     = fromStmt p
+fromStmt (G.Inst  _ _ _ _ p)     = fromStmt p
+fromStmt (G.Data  _ _ _ _ _ p)   = fromStmt p
+fromStmt (G.Var   _ id _ p)      = Var (id,Nothing) (fromStmt p)
+fromStmt (G.Func  _ _ _ p)       = (fromStmt p)
+fromStmt (G.FuncI _ _ _ _ _)     = error "not implemented"
+fromStmt (G.Write _ (LVar id) e) = Write id (fromExp e)
+fromStmt (G.If    _ e p1 p2)     = If (fromExp e) (fromStmt p1) (fromStmt p2)
+fromStmt (G.Seq   _ p1 p2)       = Seq (fromStmt p1) (fromStmt p2)
+fromStmt (G.Loop  _ p)           = Loop' (fromStmt p) (fromStmt p)
+fromStmt (G.Ret   _ e)           = Ret (fromExp e)
+fromStmt (G.Nop   _)             = Nop
 
 ----------------------------------------------------------------------------
 
@@ -57,7 +74,7 @@ envRead vars var =
 
 envEval :: Vars -> Exp -> Exp
 envEval vars e = case e of
-    Read  _ var     -> envRead vars var
+    Read  var -> envRead vars var
 {-
     Call  _ "negate" e -> negate $ envEval vars e
     Call  _ "+"  (Tuple _ [e1,e2]) -> (envEval vars e1) + (envEval vars e2)
@@ -67,7 +84,7 @@ envEval vars e = case e of
     Call  _ "==" (Tuple _ [e1,e2]) -> if (envEval vars e1) == (envEval vars e2) then 1 else 0
     Call  _ "<=" (Tuple _ [e1,e2]) -> if (envEval vars e1) <= (envEval vars e2) then 1 else 0
 -}
-    e               -> e
+    e         -> e
 
 ----------------------------------------------------------------------------
 
@@ -85,8 +102,8 @@ step (Seq p       q, vars)   = (Seq p' q,   vars') where (p',vars') = step (p,va
 
 step (If exp p q,    vars)   =
     case envEval vars exp of
-        (Cons _ "Bool.True") -> (p,         vars)
-        otherwise            -> (q,         vars)
+        (Cons "Bool.True")  -> (p,          vars)
+        otherwise           -> (q,          vars)
 
 step (Loop' Nop     q, vars) = (Loop' q q,  vars)
 step (Loop' (Ret e) q, vars) = (Ret e,      vars)
@@ -102,5 +119,5 @@ steps d             = steps (step d)
 
 go :: G.Stmt -> Exp
 go p = case T.go p of
-    ([], p) -> steps ((fromGrammar p), [])
+    ([], p) -> steps ((fromStmt p), [])
     (es, _) -> error $ "compile error : " ++ show es
