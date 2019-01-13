@@ -9,7 +9,8 @@ data RawAt = RawAtE Exp | RawAtS String
   deriving (Eq, Show)
 
 data Exp
-    = Const  Ann Val            -- 1
+    = RawE   Ann [RawAt]        -- {@(ceu)+c}
+    | Const  Ann Val            -- 1
     | Cons   Ann ID_Type        -- True
     | Read   Ann ID_Var         -- a ; xs
     | Unit   Ann                -- ()
@@ -20,9 +21,20 @@ data Exp
 
 instance HasAnn Exp where
     --getAnn :: Exp -> Ann
+    getAnn (RawE  z _)   = z
     getAnn (Const z _)   = z
     getAnn (Cons  z _)   = z
     getAnn (Read  z _)   = z
     getAnn (Unit  z)     = z
     getAnn (Tuple z _)   = z
     getAnn (Call  z _ _) = z
+
+{-
+exp2word :: Exp ann -> String
+exp2word (RawE   _ _)  = "raw"
+exp2word (Const  _ _)  = "constant"
+exp2word (Unit   _)    = "unit"
+exp2word (Tuple  _ _)  = "tuple"
+exp2word (Read  _ _)   = "read"
+exp2word (Call  _ _ _) = "call"
+-}
