@@ -27,10 +27,10 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "escape a" $
             run "escape a" []
-            `shouldBe` Left "(line 1, column 8):\nidentifier 'a' is not declared\n"
+            `shouldBe` Left "(line 1, column 8):\nvariable 'a' is not declared\n"
         it "escape" $
             run "escape" []
-            `shouldBe` Left "(line 1, column 1):\ntypes do not match\n"
+            `shouldBe` Left "(line 1, column 1):\ntypes do not match : Int :> ()\n"
 
     describe "exps:" $ do
         it "escape -1" $
@@ -70,7 +70,7 @@ spec = do
             `shouldBe` Left "(line 1, column 6):\nunexpected \",\"\nexpecting digit, letter, \"_\" or \":\""
         it "a <- 1; escape a;" $
             run "set a <- 1; escape a" []
-            `shouldBe` Left "(line 1, column 7):\nidentifier 'a' is not declared\n(line 1, column 20):\nidentifier 'a' is not declared\n"
+            `shouldBe` Left "(line 1, column 7):\nvariable 'a' is not declared\n(line 1, column 20):\nvariable 'a' is not declared\n"
         it "mut a  : Int <- 1; escape a;" $
             run "mut a  : Int <- 1; escape a" []
             `shouldBe` Right (1, [[]])
@@ -91,7 +91,7 @@ spec = do
             `shouldBe` Right (1, [[]])
         it "hide a" $
             run "val a :Int ; val a :Int ; escape 0" []
-            `shouldBe` Left "(line 1, column 14):\nidentifier 'a' is already declared\n"
+            `shouldBe` Left "(line 1, column 14):\nvariable 'a' is already declared\n"
         it "do a=1 end ; a=2" $
             run "do val a:Int <- 1; end val a:Int <- 2 ; escape a" []
             `shouldBe` Left "TODO: declared but not used"
@@ -124,16 +124,16 @@ spec = do
             `shouldBe` Right (1,[[("X",Nothing)]])
         it "emit X" $
             run "output X :Int emit X ; escape 1;" []
-            `shouldBe` Left "(line 1, column 15):\ntypes do not match\n"
+            `shouldBe` Left "(line 1, column 15):\ntypes do not match : Int :> ()\n"
         it "emit x" $
             run "emit x" []
-            `shouldBe` Left "(line 1, column 1):\nterminating `trap` body\n(line 1, column 1):\nmissing `escape` statement\n(line 1, column 1):\nunreachable statement\n(line 1, column 1):\nidentifier 'x' is not declared\n"
+            `shouldBe` Left "(line 1, column 1):\nterminating `trap` body\n(line 1, column 1):\nmissing `escape` statement\n(line 1, column 1):\nunreachable statement\n(line 1, column 1):\nevent 'x' is not declared\n"
         it "emit X <- 1" $
             run "output X :Int emit X <- 1 ; escape 2;" []
             `shouldBe` Right (2,[[("X",Just 1)]])
         it "mut x :Int <- await X; emit X <- x ; escape x+1" $
             run "input X :Int mut x :Int <- await X; emit X <- x ; escape x+1" [("X",Just 1)]
-            `shouldBe` Left "(line 1, column 37):\nidentifier 'X' is invalid\n"
+            `shouldBe` Left "(line 1, column 37):\noutput 'X' is not declared\n"
 
 -------------------------------------------------------------------------------
 
@@ -157,7 +157,7 @@ spec = do
     describe "if-then-else/if-else" $ do
         it "if 0 then escape 0 else escape 1 end" $
             run "if 0 then escape 0 else escape 1 end" []
-            `shouldBe` Left "(line 1, column 1):\ntypes do not match\n"
+            `shouldBe` Left "(line 1, column 1):\ntypes do not match : Bool :> Int\n"
         it "if 0==1 then escape 0 else escape 1 end" $
             run "if 0==1 then escape 0 else escape 1 end" []
             `shouldBe` Right (1, [[]])

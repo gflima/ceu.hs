@@ -17,7 +17,7 @@ type_0 = do
 type_1 :: Parser Type
 type_1 = do
     tp <- tk_type
-    return $ Type1 [tp]
+    return $ Type1 tp
 
 type_N :: Parser Type
 type_N = do

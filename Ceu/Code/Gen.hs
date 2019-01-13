@@ -195,10 +195,10 @@ stmt p h = [
 -------------------------------------------------------------------------------
 
 tp2use :: Type -> String
-tp2use Type0           = "tceu_unit"
-tp2use (Type1 ["Int"]) = "int"
-tp2use (TypeN tps)     = "tceu__" ++ intercalate "__" (map (\tp -> tp2use tp) tps)
-tp2use tp              = error $ show tp
+tp2use Type0         = "tceu_unit"
+tp2use (Type1 "Int") = "int"
+tp2use (TypeN tps)   = "tceu__" ++ intercalate "__" (map (\tp -> tp2use tp) tps)
+tp2use tp            = error $ show tp
 
 tp2dcl :: Type -> String
 tp2dcl tp@(TypeN tps) =
