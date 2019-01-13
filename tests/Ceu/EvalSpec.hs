@@ -22,38 +22,38 @@ spec = do
   describe "Env/Envs" $ do
 
       it "pass: 1st write" $
-        envWrite [("x",Nothing)] "x" (Const annz 0) `shouldBe` [("x",Just (Const annz 0))]
+        envWrite [("x",Nothing)] "x" (Number annz 0) `shouldBe` [("x",Just (Number annz 0))]
 
       it "pass: 2nd write" $
-        envWrite [("x",Just (Const annz 99))] "x" (Const annz 0) `shouldBe` [("x",Just (Const annz 0))]
+        envWrite [("x",Just (Number annz 99))] "x" (Number annz 0) `shouldBe` [("x",Just (Number annz 0))]
 
       it "pass: write in middle" $
-        envWrite [("a",Nothing),("x",Just (Const annz 99)),("b",Nothing)] "x" (Const annz 0) `shouldBe` [("a",Nothing),("x",Just (Const annz 0)),("b",Nothing)]
+        envWrite [("a",Nothing),("x",Just (Number annz 99)),("b",Nothing)] "x" (Number annz 0) `shouldBe` [("a",Nothing),("x",Just (Number annz 0)),("b",Nothing)]
 
       it "pass: write in last" $
-        envWrite [("a",Nothing),("b",Nothing),("x",Just (Const annz 99))] "x" (Const annz 0) `shouldBe` [("a",Nothing),("b",Nothing),("x",Just (Const annz 0))]
+        envWrite [("a",Nothing),("b",Nothing),("x",Just (Number annz 99))] "x" (Number annz 0) `shouldBe` [("a",Nothing),("b",Nothing),("x",Just (Number annz 0))]
 
   describe "envRead vars id" $ do
       it "pass: read in simple env" $
-        envRead [("x",Just (Const annz 0))] "x" `shouldBe` (Const annz 0)
+        envRead [("x",Just (Number annz 0))] "x" `shouldBe` (Number annz 0)
 
       it "pass: read in complex env" $
-        let vars = [("y",Just (Const annz 0)),("x",Just (Const annz 1)),("z",Just (Const annz 0))] in
-          envRead vars "x" `shouldBe` (Const annz 1)
+        let vars = [("y",Just (Number annz 0)),("x",Just (Number annz 1)),("z",Just (Number annz 0))] in
+          envRead vars "x" `shouldBe` (Number annz 1)
 
   describe "envEval vars exp" $ do
-      it "pass: vars == [] && exp == (Const _)" $
-        envEval [] (Const annz 0) `shouldBe` (Const annz 0)
+      it "pass: vars == [] && exp == (Number _)" $
+        envEval [] (Number annz 0) `shouldBe` (Number annz 0)
 
       it "pass: eval in simple env" $
-        let vars = [("x",Just (Const annz 1)),("y",Just (Const annz 2))] in
-          envEval vars (Call annz "+" (Tuple annz [(Call annz "-" (Tuple annz [(Read annz "x"),(Const annz 3)])),(Call annz "negate" (Read annz "y"))]))
-          `shouldBe` (Const annz (-4))
+        let vars = [("x",Just (Number annz 1)),("y",Just (Number annz 2))] in
+          envEval vars (Call annz "+" (Tuple annz [(Call annz "-" (Tuple annz [(Read annz "x"),(Number annz 3)])),(Call annz "negate" (Read annz "y"))]))
+          `shouldBe` (Number annz (-4))
 
       it "pass: eval in complex env" $
-        let vars = [("y",Just (Const annz 2)),("x",Just (Const annz 1)),("y",Just (Const annz 99)),("x",Just (Const annz 99))] in
-          envEval vars (Call annz "+" (Tuple annz [(Call annz "-" (Tuple annz [(Read annz "x"),(Const annz 3)])),(Call annz "negate" (Read annz "y"))]))
-          `shouldBe` (Const annz (-4))
+        let vars = [("y",Just (Number annz 2)),("x",Just (Number annz 1)),("y",Just (Number annz 99)),("x",Just (Number annz 99))] in
+          envEval vars (Call annz "+" (Tuple annz [(Call annz "-" (Tuple annz [(Read annz "x"),(Number annz 3)])),(Call annz "negate" (Read annz "y"))]))
+          `shouldBe` (Number annz (-4))
 
   --------------------------------------------------------------------------
   describe "step" $ do
@@ -61,43 +61,43 @@ spec = do
     -- write --
     describe "write" $ do
       it "[x=?] x=1" $
-        step (Var ("x",Nothing) (Write "x" (Const annz 1)), [])
-        `shouldBe` (Var ("x",(Just (Const annz 1))) Nop, [])
+        step (Var ("x",Nothing) (Write "x" (Number annz 1)), [])
+        `shouldBe` (Var ("x",(Just (Number annz 1))) Nop, [])
 
       it "[x=1] x=2" $
-        step (Var ("x",(Just (Const annz 1))) (Write "x" (Const annz 2)), [])
-        `shouldBe` (Var ("x",(Just (Const annz 2))) Nop, [])
+        step (Var ("x",(Just (Number annz 1))) (Write "x" (Number annz 2)), [])
+        `shouldBe` (Var ("x",(Just (Number annz 2))) Nop, [])
 
       it "nop; x=1" $
         step
         (Var ("x",Nothing)
-          (Nop `Seq` (Write "x" (Const annz 1))), [])
+          (Nop `Seq` (Write "x" (Number annz 1))), [])
         `shouldBe`
         (Var ("x",Nothing)
-          (Write "x" (Const annz 1)), [])
+          (Write "x" (Number annz 1)), [])
 
       it "[x=1,y=?] y=x+2" $
         step (
-          (Var ("x",(Just (Const annz 1)))
+          (Var ("x",(Just (Number annz 1)))
           (Var ("y",Nothing)
-            (Write "y" (Call annz "+" (Tuple annz [(Read annz "x"),(Const annz 2)])))), []))
-        `shouldBe` (Var ("x",(Just (Const annz 1))) (Var ("y",(Just (Const annz 3))) Nop), [])
+            (Write "y" (Call annz "+" (Tuple annz [(Read annz "x"),(Number annz 2)])))), []))
+        `shouldBe` (Var ("x",(Just (Number annz 1))) (Var ("y",(Just (Number annz 3))) Nop), [])
 
       it "[x=1,y=?] y=x+2" $
         step
-        (Var ("x",(Just (Const annz 1)))
+        (Var ("x",(Just (Number annz 1)))
         (Var ("y",Nothing)
-          (Write "y" (Call annz "+" (Tuple annz [(Read annz "x"),(Const annz 2)])))), [])
+          (Write "y" (Call annz "+" (Tuple annz [(Read annz "x"),(Number annz 2)])))), [])
         `shouldBe`
-        (Var ("x",(Just (Const annz 1)))
-        (Var ("y",(Just (Const annz 3))) Nop), [])
+        (Var ("x",(Just (Number annz 1)))
+        (Var ("y",(Just (Number annz 3))) Nop), [])
 
       it "[x=?] x=-(5+1)" $
         step
-        (Var ("x",(Just (Const annz 0)))
-          (Write "x" (Call annz "negate" (Call annz "+" (Tuple annz [(Const annz 5),(Const annz 1)])))), [])
+        (Var ("x",(Just (Number annz 0)))
+          (Write "x" (Call annz "negate" (Call annz "+" (Tuple annz [(Number annz 5),(Number annz 1)])))), [])
         `shouldBe`
-        (Var ("x",(Just (Const annz (-6)))) Nop, [])
+        (Var ("x",(Just (Number annz (-6)))) Nop, [])
 
   describe "seq" $ do
       it "nop" $
@@ -109,11 +109,11 @@ spec = do
 
   describe "if" $ do
       it "x == 0" $
-        step (If (Read annz "x") Nop Nop, [("x",Just (Const annz 0))])
-        `shouldBe` (Nop, [("x",Just (Const annz 0))])
+        step (If (Read annz "x") Nop Nop, [("x",Just (Number annz 0))])
+        `shouldBe` (Nop, [("x",Just (Number annz 0))])
       it "x /= 0" $
-        step (If (Read annz "x") Nop Nop, [("x",Just (Const annz 1))])
-        `shouldBe` (Nop, [("x",Just (Const annz 1))])
+        step (If (Read annz "x") Nop Nop, [("x",Just (Number annz 1))])
+        `shouldBe` (Nop, [("x",Just (Number annz 1))])
 
   describe "loop" $ do
       it "nop" $
@@ -136,22 +136,22 @@ spec = do
   --------------------------------------------------------------------------
   describe "go" $ do
 
-    evalProgItSuccess (Const annz 11)
+    evalProgItSuccess (Number annz 11)
       (G.Func annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (G.Var annz "a" (Type1 "Int")
-           (G.Write annz (LVar "a") (Const annz 1) `G.sSeq`
-            G.Ret   annz (Call annz "+" (Tuple annz [(Read annz "a"),(Const annz 10)])) `G.sSeq`
+           (G.Write annz (LVar "a") (Number annz 1) `G.sSeq`
+            G.Ret   annz (Call annz "+" (Tuple annz [(Read annz "a"),(Number annz 10)])) `G.sSeq`
             G.Nop annz)))
 
-    evalProgItSuccess (Const annz 11)
+    evalProgItSuccess (Number annz 11)
       (G.Func annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (G.Var annz "a" (Type1 "Int")
-           (G.Write annz (LVar "a") (Const annz 1) `G.sSeq`
-            G.Var annz "b" (Type1 "Int") (G.Write annz (LVar "b") (Const annz 99)) `G.sSeq`
-            G.Ret annz (Call annz "+" (Tuple annz [(Read annz "a"),(Const annz 10)])) `G.sSeq`
+           (G.Write annz (LVar "a") (Number annz 1) `G.sSeq`
+            G.Var annz "b" (Type1 "Int") (G.Write annz (LVar "b") (Number annz 99)) `G.sSeq`
+            G.Ret annz (Call annz "+" (Tuple annz [(Read annz "a"),(Number annz 10)])) `G.sSeq`
             G.Nop annz)))
 
-    evalProgItSuccess (Const annz 1)
-      (G.Ret annz (Const annz 1) `G.sSeq`
-          G.Var annz "_" (Type1 "Int") (G.Ret annz (Const annz 2)) `G.sSeq`
+    evalProgItSuccess (Number annz 1)
+      (G.Ret annz (Number annz 1) `G.sSeq`
+          G.Var annz "_" (Type1 "Int") (G.Ret annz (Number annz 2)) `G.sSeq`
           G.Nop annz)
 
 {-
@@ -164,7 +164,7 @@ spec = do
                     (G.Var annz "_fret" (Type1 "Int")
                         (G.Write annz (LVar "_ret") (Read annz "_arg_0")))
                 (G.Seq annz
-                    (G.Write annz (LVar "_ret") (Call annz "id" (Const annz 1)))
+                    (G.Write annz (LVar "_ret") (Call annz "id" (Number annz 1)))
                     (G.Escape annz 0)))
                 []
             `shouldBe` Right (1,[[]])
@@ -179,7 +179,7 @@ spec = do
                 (G.Inst annz "Equalable" ["Int"]
                     (G.Func annz "fff" (TypeF (Type1 "Int") (Type1 "Int")) (G.Nop annz))
                 (G.Seq annz
-                    (G.Write annz (LVar "_ret") (Call annz "fff" (Const annz 1)))
+                    (G.Write annz (LVar "_ret") (Call annz "fff" (Number annz 1)))
                     (G.Escape annz 0))))))
                 []
             `shouldBe` Right (1,[[]])

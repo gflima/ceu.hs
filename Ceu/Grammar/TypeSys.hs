@@ -195,8 +195,8 @@ stmt _   (Nop z)             = ([], Nop z)
 
 expr :: [Stmt] -> Exp -> (Errors, Exp)
 
-expr _   (Const z val)   = ([], Const z{type_=Type1 "Int"} val)
-expr _   (Unit z)        = ([], Unit  z{type_=Type0})
+expr _   (Number z val)  = ([], Number z{type_=Type1 "Int"} val)
+expr _   (Unit z)        = ([], Unit   z{type_=Type0})
 
 expr ids (Cons  z id)    = (es, Cons  z{type_=(Type1 id)} id)
     where
