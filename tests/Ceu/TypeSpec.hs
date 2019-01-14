@@ -12,6 +12,31 @@ main = hspec spec
 spec :: Spec
 spec = do
 
+  describe "supOf'" $ do
+
+    it "Int > BOT" $
+      Type1 "Int" `supOf'` TypeB             `shouldBe` (True,  TypeB,       [])
+    it "BOT > Int" $
+      TypeB       `supOf'` Type1 "Int"       `shouldBe` (False, TypeB,       [])
+    it "a > Int" $
+      TypeV "a"   `supOf'` Type1 "Int"       `shouldBe` (True,  Type1 "Int", [("a",Type1 "Int")])
+    it "a > b" $
+      TypeV "a"   `supOf'` TypeV "b"         `shouldBe` (True,  TypeV "b",   [("a",TypeV "b")])
+
+  describe "supOf" $ do
+
+    it "(a -> a) > (Int -> Int)" $
+      TypeF (TypeV "a") (TypeV "a") `supOf` TypeF (Type1 "Int") (Type1 "Int")
+      `shouldBe` Right ((TypeF (Type1 "Int") (Type1 "Int")), [("a", Type1 "Int")])
+
+    it "(a -> a) > (Int -> ())" $
+      TypeF (TypeV "a") (TypeV "a") `supOf` TypeF (Type1 "Int") Type0
+      `shouldBe` Left ["types do not match : expected '(a -> a)' : found '(Int -> ())'","ambigous instances for 'a' : 'Int', '()'"]
+
+    it "(a,b) > (Int,())" $
+      TypeN [(TypeV "a"),(TypeV "b")] `supOf` TypeN [(Type1 "Int"),Type0]
+      `shouldBe` Right (TypeN [Type1 "Int",Type0],[("a",Type1 "Int"),("b",Type0)])
+
   describe "instantiation" $ do
 
     it "Int : (Int ~ Int) ~> Int" $
@@ -25,3 +50,27 @@ spec = do
     it "a : (a ~ Int) ~> Int" $
       instantiate (TypeV "a") (TypeV "a", Type1 "Int")
       `shouldBe` (Type1 "Int")
+
+    it "a : ((Int,a) ~ (Int,Int)) ~> Int" $
+      instantiate (TypeV "a") (TypeN [Type1 "Int",TypeV "a"], TypeN [Type1 "Int",Type1 "Int"])
+      `shouldBe` (Type1 "Int")
+
+    it "a : ((a,Int) ~ (Int,Int)) ~> Int" $
+      instantiate (TypeV "a") (TypeN [TypeV "a",Type1 "Int"], TypeN [Type1 "Int",Type1 "Int"])
+      `shouldBe` (Type1 "Int")
+
+    it "a : ((a,a) ~ (Int,Int)) ~> Int" $
+      instantiate (TypeV "a") (TypeN [TypeV "a",TypeV "a"], TypeN [Type1 "Int",Type1 "Int"])
+      `shouldBe` (Type1 "Int")
+
+    it "a : ((a,a) ~ (Int,Bool)) ~> ERROR" $
+      instantiate (TypeV "a") (TypeN [TypeV "a",TypeV "a"], TypeN [Type1 "Int",Type1 "Bool"])
+      `shouldBe` (Type1 "Int")
+
+    it "a : ((a,b) ~ (Int,Bool)) ~> Int" $
+      instantiate (TypeV "a") (TypeN [TypeV "a",TypeV "b"], TypeN [Type1 "Int",Type1 "Bool"])
+      `shouldBe` (Type1 "Int")
+
+    it "b : ((a,b) ~ (Int,Bool)) ~> Bool" $
+      instantiate (TypeV "b") (TypeN [TypeV "a",TypeV "b"], TypeN [Type1 "Int",Type1 "Bool"])
+      `shouldBe` (Type1 "Bool")

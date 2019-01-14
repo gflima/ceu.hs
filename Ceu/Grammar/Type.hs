@@ -115,6 +115,101 @@ instantiate tp (tp1, tp2) = aux tp (flatten tp1, flatten tp2)
 
 -------------------------------------------------------------------------------
 
+{-
+-- ID_Var: variable we want to instantiate
+-- Type:   supertype with the variable
+-- Type:   subtype with the concretes
+-- Type:   type of the instantiated variable
+instantiate' :: ID_Var -> Type -> Type -> Type
+instantiate' var tp1 tp2 =
+  let (ret, tp, insts) = tp1 `supOf'` tp2 in
+    
+
+
+
+
+
+ (tp1, tp2) = aux tp (flatten tp1, flatten tp2)
+    where
+        flatten (TypeF inp out) = flatten inp ++ flatten out
+        flatten (TypeN tps)     = concatMap flatten tps
+        flatten tp              = [tp]
+
+        aux :: Type -> ([Type],[Type]) -> Type -- TypeV -> ([TypeV|~TypeV],[~TypeV]) -> ~TypeV
+        aux (TypeV var) (vars,tps) = tp
+            where
+                grouped = groupTypesV vars tps -- [[("a",I),("a",I)], [("b",B)]]
+                singles = map head grouped     -- [("a",I), ("b",B)]
+                tp'     = find (\(TypeV var',_) -> var==var') singles -- ("b",B)
+                tp      = snd $ fromJust tp'
+        aux tp _ = tp
+-}
+
+-------------------------------------------------------------------------------
+
+supOf :: Type -> Type -> Either Errors (Type, [(ID_Var,Type)])
+supOf tp1 tp2 =
+  if ret && null es_inst
+    then Right (tp, singles)
+    else Left $ es_tps ++ es_inst
+  where
+    (ret, tp, insts) = tp1 `supOf'` tp2
+
+    es_tps = ["types do not match : expected '" ++ show' tp1 ++
+              "' : found '" ++ show' tp2 ++ "'"]
+
+    sorted  = sortBy (\(a,_)(b,_) -> compare a b) insts -- [("a",A),("a",A),("b",B)]
+    grouped = groupBy (\(x,_)(y,_)->x==y) sorted        -- [[("a",A),("a",A)], [("b",B)]]
+    es_inst = concatMap f grouped
+    f l@((var,tp):m) = if all (== (var,tp)) m then [] else
+                        ["ambigous instances for '" ++ var ++ "' : " ++
+                         intercalate ", " (map (quote.show'.snd) l)]
+    singles = map head grouped                    -- [("a",A), ("b",B)]
+    quote x = "'" ++ x ++ "'"
+
+-- Is first argument a supertype of second argument?
+--  * Bool: whether it is or not
+--  * Type: most specific type between the two (second argument on success, first otherwise)
+--  * list: all instantiations of parametric types [(a,X),(b,Y),(a,X),...]
+
+supOf' :: Type -> Type -> (Bool, Type, [(ID_Var,Type)])
+
+supOf' _                 TypeB             = (True,  TypeB, [])
+supOf' TypeB             _                 = (False, TypeB, [])
+
+supOf' TypeT             tp2               = (True,  tp2,   [])
+supOf' (TypeV a1)        tp2               = (True,  tp2,   [(a1,tp2)])
+supOf' tp1               (TypeV _)         = (False, tp1,   [])
+supOf' tp1               TypeT             = (False, tp1,   [])
+
+supOf' Type0             Type0             = (True,  Type0, [])
+supOf' Type0             _                 = (False, Type0, [])
+supOf' tp1               Type0             = (False, tp1,   [])
+
+supOf' tp1@(Type1 x)     tp2@(Type1 y)
+  | x `isPrefixOf` y                       = (True,  tp2,   [])
+  | otherwise                              = (False, tp1,   [])
+
+supOf' tp1@(Type1 _)     _                 = (False, tp1,   [])
+supOf' tp1               (Type1 _)         = (False, tp1,   [])
+
+supOf' tp1@(TypeF inp1 out1) tp2@(TypeF inp2 out2) =
+  let (i,_,k) = inp1 `supOf'` inp2
+      (x,_,z) = out1 `supOf'` out2 in
+    if i && x then                           (True,  tp2,   k++z)
+              else                           (False, tp1,   k++z)
+
+supOf' tp1@(TypeF _ _)   _                 = (False, tp1,   [])
+supOf' tp1               (TypeF _ _)       = (False, tp1,   [])
+
+supOf' (TypeN tp1s)      (TypeN tp2s)      = foldr f (True, TypeN [], []) $
+                                              zipWith supOf' tp1s tp2s
+  where
+    f (ret, tp, insts) (ret', TypeN tps', insts') =
+      (ret&&ret', TypeN (tp:tps'), insts++insts')
+
+-------------------------------------------------------------------------------
+
 isParametric :: Type -> Bool
 isParametric (TypeV _)     = True
 isParametric (TypeF t1 t2) = isParametric t1 || isParametric t2
