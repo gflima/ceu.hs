@@ -51,42 +51,45 @@ spec = do
       instantiate [("a",Type1 "A"), ("b",Type1 "B")] (TypeF (TypeV "a") (Type1 "C"))
       `shouldBe` (TypeF (Type1 "A") (Type1 "C"))
 
------
-
-{-
     it "Int : (Int ~ Int) ~> Int" $
-      instantiate (Type1 "Int") (Type1 "Int", Type1 "Int")
+      inst' (Type1 "Int") (Type1 "Int", Type1 "Int")
       `shouldBe` (Type1 "Int")
 
     it "Int : (a ~ Int) ~> Int" $
-      instantiate (Type1 "Int") (Type1 "a", Type1 "Int")
+      inst' (Type1 "Int") (TypeV "a", Type1 "Int")
       `shouldBe` (Type1 "Int")
 
     it "a : (a ~ Int) ~> Int" $
-      instantiate (TypeV "a") (TypeV "a", Type1 "Int")
+      inst' (TypeV "a") (TypeV "a", Type1 "Int")
       `shouldBe` (Type1 "Int")
 
     it "a : ((Int,a) ~ (Int,Int)) ~> Int" $
-      instantiate (TypeV "a") (TypeN [Type1 "Int",TypeV "a"], TypeN [Type1 "Int",Type1 "Int"])
+      inst' (TypeV "a") (TypeN [Type1 "Int",TypeV "a"], TypeN [Type1 "Int",Type1 "Int"])
       `shouldBe` (Type1 "Int")
 
     it "a : ((a,Int) ~ (Int,Int)) ~> Int" $
-      instantiate (TypeV "a") (TypeN [TypeV "a",Type1 "Int"], TypeN [Type1 "Int",Type1 "Int"])
+      inst' (TypeV "a") (TypeN [TypeV "a",Type1 "Int"], TypeN [Type1 "Int",Type1 "Int"])
       `shouldBe` (Type1 "Int")
 
     it "a : ((a,a) ~ (Int,Int)) ~> Int" $
-      instantiate (TypeV "a") (TypeN [TypeV "a",TypeV "a"], TypeN [Type1 "Int",Type1 "Int"])
+      inst' (TypeV "a") (TypeN [TypeV "a",TypeV "a"], TypeN [Type1 "Int",Type1 "Int"])
       `shouldBe` (Type1 "Int")
 
     it "a : ((a,a) ~ (Int,Bool)) ~> ERROR" $
-      instantiate (TypeV "a") (TypeN [TypeV "a",TypeV "a"], TypeN [Type1 "Int",Type1 "Bool"])
-      `shouldBe` (Type1 "Int")
+      inst' (TypeV "a") (TypeN [TypeV "a",TypeV "a"], TypeN [Type1 "Int",Type1 "Bool"])
+      `shouldBe` TypeT
 
     it "a : ((a,b) ~ (Int,Bool)) ~> Int" $
-      instantiate (TypeV "a") (TypeN [TypeV "a",TypeV "b"], TypeN [Type1 "Int",Type1 "Bool"])
+      inst' (TypeV "a") (TypeN [TypeV "a",TypeV "b"], TypeN [Type1 "Int",Type1 "Bool"])
       `shouldBe` (Type1 "Int")
 
     it "b : ((a,b) ~ (Int,Bool)) ~> Bool" $
-      instantiate (TypeV "b") (TypeN [TypeV "a",TypeV "b"], TypeN [Type1 "Int",Type1 "Bool"])
+      inst' (TypeV "b") (TypeN [TypeV "a",TypeV "b"], TypeN [Type1 "Int",Type1 "Bool"])
       `shouldBe` (Type1 "Bool")
--}
+
+  where
+    inst' :: Type -> (Type,Type) -> Type
+    inst' tp (sup,sub) =
+      case sup `supOf` sub of
+        Right (_,insts) -> instantiate insts tp
+        Left _          -> TypeT

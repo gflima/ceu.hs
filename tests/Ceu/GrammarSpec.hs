@@ -56,11 +56,11 @@ spec = do
                 `shouldBe` ([],Func annz "f" (TypeF (TypeV "a") (TypeV "a")) (Func annz "f" (TypeF Type0 Type0) (Nop annz)))
 
         it "func f; func ~f" $
-            TypeSys.go (Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 TypeB) (Nop annz)))
-                `shouldBe` (["types do not match : expected '(() -> ())' : found '(() -> bot)'"],Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 TypeB) (Nop annz)))
+            TypeSys.go (Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 TypeT) (Nop annz)))
+                `shouldBe` (["types do not match : expected '(() -> ())' : found '(() -> top)'"],Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 TypeT) (Nop annz)))
 
         -- func first :: (a,a)->a ; var a::Int ; a = first((),1)
-        checkCheckIt (prelude annz (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "first" (Tuple annz [(Unit annz),(Number annz 1)])))))) ["types do not match : expected '(a,a)' : found '((),Int)'"]
+        checkCheckIt (prelude annz (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "first" (Tuple annz [(Unit annz),(Number annz 1)])))))) ["types do not match : expected '(a,a)' : found '((),Int)'","ambigous instances for 'a' : '()', 'Int'"]
         checkCheckIt (prelude annz (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "first" (Tuple annz [(Number annz 1),(Number annz 1)])))))) []
 
     describe "pattern matching" $ do
@@ -288,7 +288,7 @@ spec = do
                 (Inst annz "Xable" [TypeN [Type1 "A", Type1 "A"]]
                     (Func annz "fff" (TypeF (TypeN [Type1 "A", Type1 "A"]) Type0) (Nop annz))
                 (CallS annz "fff" (Tuple annz [(Cons annz "A"),(Cons annz "A")])))))
-            `shouldBe` ([],Data annz "Bool" [] [] True (Class annz "Equalable" ["a"] (Func annz "==" (TypeF (TypeN [TypeV "a",TypeV "a"]) (Type1 "Bool")) (Nop annz)) (Nop annz)))
+            `shouldBe` ([],Data annz "A" [] [] False (Class annz "Xable" ["a"] (Func annz "fff" (TypeF (TypeV "a") Type0) (Nop annz)) (Inst annz "Xable" [TypeN [Type1 "A",Type1 "A"]] (Func annz "fff" (TypeF (TypeN [Type1 "A",Type1 "A"]) Type0) (Nop annz)) (SCallS annz "(A,A)__fff" (Tuple annz{type_=TypeN [Type1 "A",Type1 "A"]} [Cons annz{type_=Type1 "A"} "A",Cons annz{type_=Type1 "A"} "A"])))))
 
         it "Int ; A ; Xable a ; inst Xable A ; fff 1" $
             (fst $ TypeSys.go
@@ -308,7 +308,8 @@ spec = do
                 (Class annz "Equalable" ["a"]
                     (Func annz "eq" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (Type1 "Bool")) (Nop annz))
                 (CallS annz "eq" (Tuple annz [(Cons annz "Bool"),(Number annz 1)]))))))
-            `shouldBe` ["types do not match : expected '(a,a)' : found '(Bool,Int)'"]
+            `shouldBe` ["types do not match : expected '(a,a)' : found '(Bool,Int)'",
+                        "ambigous instances for 'a' : 'Bool', 'Int'"]
 
         it "Int ; Bool ; Xable a ; inst Xable Bool/Int ; fff 1 ; fff Bool" $
             (TypeSys.go
