@@ -55,7 +55,7 @@ getErrsTypesMatch z t1 t2 = if t1 `isSupOf` t2 then [] else
 
 -------------------------------------------------------------------------------
 
-call :: Ann -> [Stmt] -> ID_Func -> Exp -> (Errors, Type, Exp, Maybe String)
+call :: Ann -> [Stmt] -> ID_Func -> Exp -> (Errors, Type, Exp, String)
 call z ids id exp = (es++es_exp, tp_out, exp', fid)
   where
     (es_exp, exp') = expr ids exp
@@ -67,24 +67,24 @@ call z ids id exp = (es++es_exp, tp_out, exp', fid)
         -- found in top-level `Func`
         (Just (Func _ _ (TypeF inp out) _)) ->
           case getErrsTypesMatch z inp tp_exp' of
-            [] -> (Just id, instType out (inp,tp_exp'), [])
-            x  -> (Nothing, TypeT,                      x)
+            [] -> (id,    instType out (inp,tp_exp'), [])
+            x  -> ("???", TypeT,                      x)
 
         -- find in classes
         Nothing ->
           case find (\(_,f)->isJust f) $ map cls2func $ filter (isClass true) ids of
             -- not found
-            Nothing -> (Nothing, TypeT, [toError z "function '" ++ id ++ "' is not declared"])
+            Nothing -> ("???", TypeT, [toError z "function '" ++ id ++ "' is not declared"])
             -- found in class `cls`
             Just (Class _ id' [var] _ _, Just (Func _ id (TypeF inp out) _)) ->
               case getErrsTypesMatch z inp tp_exp' of
                 []  ->
                   let tp = instType (TypeV var) (inp,tp_exp') in
                     case find (isSubOf' tp) $ filter (isInst $ (==id')) (sort' ids) of
-                      Nothing -> (Nothing, TypeT,
+                      Nothing -> ("???", TypeT,
                                  [toError z "call for '" ++ id ++ "' has no instance in '" ++ id' ++ "'"])
-                      Just (Inst _ _ [tp'] _ _) -> (Just $ tp'++"__"++id, instType out (inp,tp_exp'), [])
-                err -> (Nothing, TypeT, err)
+                      Just (Inst _ _ [tp'] _ _) -> (tp'++"__"++id, instType out (inp,tp_exp'), [])
+                err -> ("???", TypeT, err)
 
     cls2func cls = (cls, find (isFunc $ (==)id) (classinst2ids cls))
     isSubOf' tp (Inst _ _ [tp'] _ _) = (Type1 tp') `isSupOf` tp
@@ -125,7 +125,7 @@ stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] im
         -- check if class exists
         -- compares class vs instance function by function in order
         es0 = case find (isClass $ (==)id) ids of
-            Nothing                     -> [toError z "typeclass '" ++ id ++ "' is not declared"]
+            Nothing                      -> [toError z "typeclass '" ++ id ++ "' is not declared"]
             Just (Class _ _ [var] ifc _) -> compares ifc imp where
                 compares (Func _ id1 tp1 p1) (Func  _ id2 tp2   p2) =
                     (names id1 id2) ++ (supOf tp1 tp2) ++ (instOf var tp1 tp2) ++ (compares p1 p2)

@@ -16,7 +16,7 @@ data Stmt
     | FuncI  Ann ID_Func Type Stmt Stmt       -- function implementation (must have accompainying Func)
     | Write  Ann Loc Exp                      -- assignment statement
     | CallS  Ann ID_Func Exp                  -- call function
-    | SCallS Ann (Maybe ID_Func) Exp          -- resolved call function
+    | SCallS Ann ID_Func Exp                  -- resolved call function
     | If     Ann Exp Stmt Stmt                -- conditional
     | Seq    Ann Stmt Stmt                    -- sequence
     | Loop   Ann Stmt                         -- infinite loop
