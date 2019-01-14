@@ -224,96 +224,105 @@ spec = do
                 (Nop annz)))
             `shouldBe` ([],Data annz "Bool" [] [] True (Class annz "Equalable" ["a"] (Func annz "==" (TypeF (TypeN [TypeV "a",TypeV "a"]) (Type1 "Bool")) (Nop annz)) (Nop annz)))
 
-        it "Bool ; Equalable ; inst ; inst" $
+        it "Bool ; Xable ; inst ; inst" $
             (fst $ TypeSys.go
                 (Data annz "Bool" [] [] False
-                (Class annz "Equalable" ["a"]
+                (Class annz "Xable" ["a"]
                     (Func annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
-                (Inst annz "Equalable" ["Bool"]
+                (Inst annz "Xable" ["Bool"]
                     (Func annz "fff" (TypeF (Type1 "Bool") Type0) (Nop annz))
-                (Inst annz "Equalable" ["Bool"]
+                (Inst annz "Xable" ["Bool"]
                     (Func annz "fff" (TypeF (Type1 "Bool") Type0) (Nop annz))
                 (Nop annz))))))
-            `shouldBe` ["instance 'Equalable (Bool)' is already declared"]
+            `shouldBe` ["instance 'Xable (Bool)' is already declared"]
 
-        it "Bool ; Equalable a ; inst Equalable Bool ; ()/=Int" $
+        it "Bool ; Xable a ; inst Xable Bool ; ()/=Int" $
             (fst $ TypeSys.go
                 (Data annz "Bool" [] [] False
-                (Class annz "Equalable" ["a"]
+                (Class annz "Xable" ["a"]
                     (Func annz "fff1" (TypeF (TypeV "a") Type0) (Nop annz))
-                (Inst annz "Equalable" ["Bool"]
+                (Inst annz "Xable" ["Bool"]
                     (Func annz "fff2" (TypeF (Type1 "Bool") Type0) (Nop annz))
                 (Nop annz)))))
             `shouldBe` ["names do not match : expected 'fff1' : found 'fff2'"]
 
-        it "Bool ; Equalable a ; inst Equalable Bool ; ()/=Int" $
+        it "Bool ; Xable a ; inst Xable Bool ; ()/=Int" $
             (fst $ TypeSys.go
                 (Data annz "Int" [] [] False
                 (Data annz "Bool" [] [] False
-                (Class annz "Equalable" ["a"]
+                (Class annz "Xable" ["a"]
                     (Func annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
-                (Inst annz "Equalable" ["Bool"]
+                (Inst annz "Xable" ["Bool"]
                     (Func annz "fff" (TypeF (Type1 "Bool") (Type1 "Int")) (Nop annz))
                 (Nop annz))))))
             `shouldBe` ["types do not match : expected '(a -> ())' : found '(Bool -> Int)'"]
 
-        it "Bool ; Equalable a ; inst X Bool" $
+        it "Bool ; Xable a ; inst X Bool" $
             (fst $ TypeSys.go
                 (Data annz "Int" [] [] False
                 (Data annz "Bool" [] [] False
-                (Class annz "Equalable" ["a"]
+                (Class annz "Xable" ["a"]
                     (Func annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
                 (Inst annz "X" ["Bool"]
                     (Func annz "fff" (TypeF (Type1 "Int") Type0) (Nop annz))
                 (Nop annz))))))
             `shouldBe` ["typeclass 'X' is not declared","function 'fff' is already declared"]
 
-        it "Bool ; Equalable a ; inst Equalable Bool ; a/=Bool" $
+        it "Bool ; Xable a ; inst Xable Bool ; a/=Bool" $
             (fst $ TypeSys.go
                 (Data annz "Int" [] [] False
                 (Data annz "Bool" [] [] False
-                (Class annz "Equalable" ["a"]
+                (Class annz "Xable" ["a"]
                     (Func annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
-                (Inst annz "Equalable" ["Bool"]
+                (Inst annz "Xable" ["Bool"]
                     (Func annz "fff" (TypeF (Type1 "Int") Type0) (Nop annz))
                 (Nop annz))))))
             `shouldBe` ["types do not match : expected 'Bool' : found 'Int'"]
 
-        it "Bool ; Equalable a ; inst Equalable Bool ; fff" $
+        it "Bool ; Xable a ; inst Xable Bool ; fff" $
             (fst $ TypeSys.go
                 (Data annz "Bool" [] [] False
-                (Class annz "Equalable" ["a"]
+                (Class annz "Xable" ["a"]
                     (Func annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
-                (Inst annz "Equalable" ["Bool"]
+                (Inst annz "Xable" ["Bool"]
                     (Func annz "fff" (TypeF (Type1 "Bool") Type0) (Nop annz))
                 (CallS annz "fff" (Cons annz "Bool"))))))
             `shouldBe` []
 
-        it "Int ; Bool ; Equalable a ; inst Equalable Bool ; fff 1" $
+        it "Int ; Bool ; Xable a ; inst Xable Bool ; fff 1" $
             (fst $ TypeSys.go
                 (Data annz "Int" [] [] False
                 (Data annz "Bool" [] [] False
-                (Class annz "Equalable" ["a"]
+                (Class annz "Xable" ["a"]
                     (Func annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
-                (Inst annz "Equalable" ["Bool"]
+                (Inst annz "Xable" ["Bool"]
                     (Func annz "fff" (TypeF (Type1 "Bool") Type0) (Nop annz))
                 (CallS annz "fff" (Number annz 1)))))))
-            `shouldBe` ["types do not match : expected 'Bool' : found 'Int'"]
+            `shouldBe` ["call for 'fff' has no instance in 'Xable'"]
 
-        it "Int ; Bool ; Equalable a ; inst Equalable Bool/Int ; fff 1 ; fff Bool" $
+        it "Int ; Bool ; Xable a ; inst Xable Bool/Int ; fff 1 ; fff Bool" $
             (fst $ TypeSys.go
                 (Data annz "Int" [] [] False
                 (Data annz "Bool" [] [] False
-                (Class annz "Equalable" ["a"]
+                (Class annz "Xable" ["a"]
                     (Func annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
-                (Inst annz "Equalable" ["Bool"]
+                (Inst annz "Xable" ["Bool"]
                     (Func annz "fff" (TypeF (Type1 "Bool") Type0) (Nop annz))
-                (Inst annz "Equalable" ["Int"]
+                (Inst annz "Xable" ["Int"]
                     (Func annz "fff" (TypeF (Type1 "Int") Type0) (Nop annz))
                 (Seq annz
                     (CallS annz "fff" (Number annz 1))
                     (CallS annz "fff" (Cons annz "Bool")))))))))
-            `shouldBe` []
+            `shouldBe` ["TODO: CallS' para instancia correta"]
+
+        it "Int ; Bool ; Equalable a ; eq 1 Bool" $
+            (fst $ TypeSys.go
+                (Data annz "Int" [] [] False
+                (Data annz "Bool" [] [] False
+                (Class annz "Equalable" ["a"]
+                    (Func annz "eq" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (Type1 "Bool")) (Nop annz))
+                (CallS annz "eq" (Tuple annz [(Cons annz "Bool"),(Number annz 1)]))))))
+            `shouldBe` ["types do not match : expected '(a,a)' : found '(Bool,Int)'"]
 
   --------------------------------------------------------------------------
 

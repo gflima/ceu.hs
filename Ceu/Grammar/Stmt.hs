@@ -39,9 +39,12 @@ data Stmt
 -- To resolve call to `eq`:
 --  * find associated `func`:
 --      * top-level funcs
---      * expand class declarations
+--      * class declarations
 --      ! only one is allowed in the whole program
 --      * in either case, check if type matches
+--  * if found class:
+--      * instantiate class variable `a` against call `eq 10 20`, resolving to `Int`
+--          ! must find `instance Equable Int`
 
 sSeq a b = Seq annz a b
 infixr 1 `sSeq`

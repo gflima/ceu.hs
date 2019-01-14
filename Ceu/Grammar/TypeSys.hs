@@ -2,6 +2,7 @@ module Ceu.Grammar.TypeSys where
 
 import Debug.Trace
 import Data.List (find, intercalate)
+import Data.Maybe (isJust)
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Type
@@ -14,29 +15,34 @@ go p = stmt [] p
 
 -------------------------------------------------------------------------------
 
-isClass id (Class _ id' _ _ _)  = (id == id')
-isClass _  _                    = False
+isClass f (Class _ id _ _ _)   = f id
+isClass _  _                   = False
 
-isData  id (Data _ id' _ _ _ _) = (id == id')
-isData  _  _                    = False
+isInst  f (Inst  _ id _ _ _)   = f id
+isInst  _  _                   = False
 
-isVar   id (Var _ id' _ _)      = (id == id')
-isVar   _  _                    = False
+isData  f (Data  _ id _ _ _ _) = f id
+isData  _  _                   = False
 
-isFunc  id (Func _ id' _ _)     = (id == id')
-isFunc  _  _                    = False
+isVar   f (Var   _ id _ _)     = f id
+isVar   _  _                   = False
 
-isAny id s = isClass id s || isData id s || isVar  id s || isFunc id s
+isFunc  f (Func  _ id _ _)     = f id
+isFunc  _  _                   = False
+
+isAny f s = isClass f s || isData f s || isVar  f s || isFunc f s
+
+true x = True
 
 errDeclared :: Ann -> String -> String -> [Stmt] -> Errors
 errDeclared z str id ids =
     if (take 1 id == "_") then [] else    -- nested _ret, __and (par/and)
-        case find (isAny id) ids of
+        case find (isAny $ (==)id) ids of
             Nothing  -> []
             (Just _) -> [toError z str ++ " '" ++ id ++ "' is already declared"]
 
 getErrsTypesDeclared :: Ann -> Type -> [Stmt] -> Errors
-getErrsTypesDeclared z tp ids = concatMap aux $ map (\id->(id, find (isData id) ids)) $ get1s tp
+getErrsTypesDeclared z tp ids = concatMap aux $ map (\id->(id, find (isData $ (==)id) ids)) $ get1s tp
     where
         aux (id, Nothing) = [toError z "type '" ++ id ++ "' is not declared"]
         aux (_,  Just _)  = []
@@ -51,23 +57,44 @@ call z ids id exp = (es++es_exp, tp_out, exp')
         (es_exp, exp') = expr ids exp
         tp_exp' = type_ $ getAnn exp'
 
-        --(tp_out,es) = case find (isFunc id) (expandClasses ids) of
-        (tp_out,es) = case find (isFunc id) (expandInsts ids) of
-                        Nothing ->
-                            (TypeT, [toError z "function '" ++ id ++ "' is not declared"])
-                        (Just (Func _ _ (TypeF inp out) _)) ->
+        -- find in top-level funcs
+        (tp_out,es) =
+            case find (isFunc $ (==)id) ids of
+                -- found in top-level `Func`
+                (Just (Func _ _ (TypeF inp out) _)) ->
+                    case getErrsTypesMatch z inp tp_exp' of
+                        [] -> (instType out (inp,tp_exp'), [])
+                        x  -> (TypeT,                      x)
+
+                -- find in classes
+                Nothing ->
+                    case find (\(_,f)->isJust f) $ map cls2func $ filter (isClass true) ids of
+                        -- not found
+                        Nothing -> (TypeT, [toError z "function '" ++ id ++ "' is not declared"])
+                        -- found in class `cls`
+                        Just (Class _ id' _ _ _, Just (Func _ _ (TypeF inp _) _)) ->
                             case getErrsTypesMatch z inp tp_exp' of
-                                [] -> (instType out (inp,tp_exp'), [])
-                                x  -> (TypeT,                      x)
+                                []  ->
+                                    case find isJust $ map inst2func $ filter (isInst $ (==id')) ids of
+                                        Nothing ->
+                                            (TypeT, [toError z "call for '" ++ id ++ "' has no instance in '" ++ id' ++ "'"])
+                                        Just (Just (Func _ _ tp@(TypeF inp out) _)) ->
+                                            (instType out (inp,tp_exp'), [])
+                                err -> (TypeT, err)
+
+        cls2func  cls  = (cls, find (isFunc $ (==)id) (classinst2ids cls))
+        inst2func inst = find supOfExp (classinst2ids inst)
+        supOfExp (Func _ func tp@(TypeF inp _) _) = func==id && inp `isSupOf` tp_exp'
 
 classinst2ids :: Stmt -> [Stmt]
 classinst2ids p = case p of
     (Class _ _ _ ifc _) -> aux ifc
     (Inst  _ _ _ imp _) -> aux imp
     where
-        aux (Nop _)             = []
-        aux s@(Func  _ _ _ p)   = s : aux p
+        aux (Nop _)          = []
+        aux s@(Func _ _ _ p) = s : aux p
 
+{-
 expandClasses :: [Stmt] -> [Stmt]
 expandClasses [] = []
 expandClasses (s@(Class _ _ _ _ _) : l) = classinst2ids s ++ expandClasses l
@@ -77,6 +104,7 @@ expandInsts :: [Stmt] -> [Stmt]
 expandInsts [] = []
 expandInsts (s@(Inst _ _ _ _ _) : l) = classinst2ids s ++ expandInsts l
 expandInsts (s : l) = s : expandInsts l
+-}
 
 -------------------------------------------------------------------------------
 
@@ -92,7 +120,7 @@ stmt ids (Class _ _ vars _ _) = error "not implemented: multiple vars"
 
 stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] imp' p')
     where
-        (es2,imp') = stmt (filter (not . isClass id) ids) imp -- prevent clashes w/ own class
+        (es2,imp') = stmt (filter (not . (isClass $ (==)id)) ids) imp -- prevent clashes w/ own class
         (es3,p')   = stmt (s:ids) p
 
         -- check if this instance is already declared
@@ -104,7 +132,7 @@ stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] im
 
         -- check if class exists
         -- compares class vs instance function by function in order
-        es0 = case find (isClass id) ids of
+        es0 = case find (isClass $ (==)id) ids of
             Nothing                     -> [toError z "typeclass '" ++ id ++ "' is not declared"]
             Just (Class _ _ [var] ifc _) -> compares ifc imp where
                 compares (Func _ id1 tp1 p1) (Func  _ id2 tp2   p2) =
@@ -139,16 +167,14 @@ stmt ids s@(Var  z id tp p)  = (es_data ++ es_id ++ es, Var z id tp p')
                                 (es,p') = stmt (s:ids) p
 
 stmt ids s@(Func z id tp p)  = (es_data ++ es_dcl ++ es ++ es', Func z id tp p') where
-    (es, (es',p')) = case find (isFunc id) ids of
+    (es, (es',p')) = case find (isFunc $ (==)id) ids of
         Nothing               -> ([],                    stmt (s:ids) p)
         Just (Func _ _ tp' _) -> (getErrsTypesMatch z tp' tp, stmt ids p)
     es_data = getErrsTypesDeclared z tp ids
 
     -- check if clashes with functions in classes
     es_dcl = errDeclared z "function" id ids'
-    ids' = concatMap classinst2ids $ filter isClass' ids
-    isClass' (Class _ _ _ _ _) = True
-    isClass' _                 = False
+    ids' = concatMap classinst2ids $ filter (isClass true) ids
 
 stmt ids s@(FuncI z id tp imp p) = (es1++es2, FuncI z id tp imp' p')
                                    where
@@ -160,7 +186,7 @@ stmt ids (Write z loc exp)   = (es1 ++ es2 ++ es3, Write z loc exp')
                                 (tps_loc, es1) = aux loc
                                 aux :: Loc -> (Type, Errors)
                                 aux LAny       = (TypeT, [])
-                                aux (LVar var) = case find (isVar var) ids of
+                                aux (LVar var) = case find (isVar $ (==)var) ids of
                                                     Nothing ->
                                                         (TypeT, [toError z "variable '" ++ var ++ "' is not declared"])
                                                     (Just (Var _ _ tp _)) ->
@@ -206,7 +232,7 @@ expr _   (Unit z)        = ([], Unit   z{type_=Type0})
 
 expr ids (Cons  z id)    = (es, Cons  z{type_=(Type1 id)} id)
     where
-        es = case find (isData id) ids of
+        es = case find (isData $ (==)id) ids of
             Nothing                    -> [toError z "type '" ++ id ++ "' is not declared"]
             Just (Data _ _ _ _ True _) -> [toError z "type '" ++ id ++ "' is abstract"]
             otherwise                  -> []
@@ -224,7 +250,7 @@ expr ids (Read z id)     = if id == "_INPUT" then
                            else
                             (es, Read z{type_=tp'} id)
                            where
-                            (tp',es) = case find (isVar id) ids of
+                            (tp',es) = case find (isVar $ (==)id) ids of
                                         Nothing               -> (TypeT, [toError z "variable '" ++ id ++ "' is not declared"])
                                         (Just (Var _ _ tp _)) -> (tp,    [])
 
