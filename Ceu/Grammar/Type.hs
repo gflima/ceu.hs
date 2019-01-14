@@ -1,8 +1,9 @@
 module Ceu.Grammar.Type where
 
 import Debug.Trace
-import Data.Maybe (fromJust)
-import Data.List (sortBy, groupBy, find, intercalate, isPrefixOf)
+import Data.Maybe  (fromJust)
+import Data.Either (isRight)
+import Data.List   (sortBy, groupBy, find, intercalate, isPrefixOf)
 import Ceu.Grammar.Globals
 
 data Type = TypeB
@@ -27,49 +28,6 @@ show' (TypeN tps)     = "(" ++ intercalate "," (map show' tps) ++ ")"
 
 -------------------------------------------------------------------------------
 
-isSupOf :: Type -> Type -> Bool
-
-isSupOf (TypeV _)         _                 = True
-isSupOf _                 (TypeV _)         = False
-
-isSupOf TypeT             _                 = True
-isSupOf _                 TypeT             = True
-
-isSupOf TypeB             _                 = False
-isSupOf _                 TypeB             = False
-
-isSupOf Type0             Type0             = True
-isSupOf Type0             _                 = False
-isSupOf _                 Type0             = False
-
-isSupOf (Type1 t1)        (Type1 t2)        = (t1 `isPrefixOf` t2)
-isSupOf (Type1 _)         _                 = False
-isSupOf _                 (Type1 _)         = False
-
-isSupOf (TypeF inp1 out1) (TypeF inp2 out2) = (inp1 `isSupOf` inp2) && (out1 `isSupOf` out2)
-isSupOf (TypeF _    _)    _                 = False
-isSupOf _                 (TypeF _    _)    = False
-
-isSupOf (TypeN t1s)       (TypeN t2s)       = (t1s `isSupOfN` t2s) && (t1s `isSupOfV` t2s)
-
-    where
-        isSupOfN :: [Type] -> [Type] -> Bool
-        isSupOfN []      []      = True
-        isSupOfN []      _       = False
-        isSupOfN _       []      = False
-        isSupOfN (t1:l1) (t2:l2) = (t1 `isSupOf` t2) && (TypeN l1 `isSupOf` TypeN l2)
-
-        isSupOfV :: [Type] -> [Type] -> Bool
-        isSupOfV vars tps = ok                     -- [k,"a","b","a"] ["Int","Int","Bool","Int"]
-            where
-                grouped = groupTypesV vars tps        -- [[("a",I),("a",I)], [("b",B)]]
-                mapped  = map (map snd) grouped       -- [["Int","Int"], ["Bool"]]
-                equals  = map (\l -> all (== head l) l) mapped
-                                                      -- [True, True]
-                ok      = all id equals               -- True
-
--------------------------------------------------------------------------------
-
 get1s :: Type -> [ID_Type]
 
 get1s (TypeV _)       = []
@@ -82,81 +40,36 @@ get1s (TypeN ts)      = concatMap get1s ts
 
 -------------------------------------------------------------------------------
 
-groupTypesV :: [Type] -> [Type] -> [[(Type,Type)]] -- [TypeV|~TypeV] -> [~TypeV] -> [[(TypeV,~TypeV)]]
-groupTypesV vars tps = grouped                -- [k,"a","b","a"] ["Int","Int","Bool","Int"]
-    where
-        zipped  = zip vars tps                -- [(k,I),("a",I),("b",B),("a",I)]
-        filterd = filter (isTypeV.fst) zipped -- [("a",I), ("b",B), ("a",I)]
-        sorted  = sortBy (\((TypeV t1),_) ((TypeV t2),_) -> compare t1 t2) filterd
-                                              -- [("a",I), ("a",I), ("b",B)]
-        grouped = groupBy (\(x,_)(y,_)->x==y) sorted -- [[("a",I),("a",I)], [("b",B)]]
-
-        isTypeV (TypeV _) = True
-        isTypeV _         = False
-
+-- list: list with instantiated pairs (var,Type)
+-- Type: type (possibly TypeV) we want to instantiate
+-- Type: type of the instantiated variable
+instantiate :: [(ID_Var,Type)] -> Type -> Type
+instantiate vars (TypeV var)     = snd $ fromJust $ find (\(var',_) -> var==var') vars
+instantiate vars (TypeF inp out) = TypeF (instantiate vars inp) (instantiate vars out)
+instantiate vars (TypeN tps)     = TypeN $ map (instantiate vars) tps
+instantiate _    tp              = tp
 
 -------------------------------------------------------------------------------
 
-instantiate :: Type -> (Type,Type) -> Type -- TypeV -> (TypeV|~TypeV,~TypeV) -> ~TypeV
-instantiate tp (tp1, tp2) = aux tp (flatten tp1, flatten tp2)
-    where
-        flatten (TypeF inp out) = flatten inp ++ flatten out
-        flatten (TypeN tps)     = concatMap flatten tps
-        flatten tp              = [tp]
+isSupOf :: Type -> Type -> Bool
+isSupOf sup sub = isRight $ sup `supOf` sub
 
-        aux :: Type -> ([Type],[Type]) -> Type -- TypeV -> ([TypeV|~TypeV],[~TypeV]) -> ~TypeV
-        aux (TypeV var) (vars,tps) = tp
-            where
-                grouped = groupTypesV vars tps -- [[("a",I),("a",I)], [("b",B)]]
-                singles = map head grouped     -- [("a",I), ("b",B)]
-                tp'     = find (\(TypeV var',_) -> var==var') singles -- ("b",B)
-                tp      = snd $ fromJust tp'
-        aux tp _ = tp
+isSubOf :: Type -> Type -> Bool
+isSubOf sub sup = isRight $ sup `supOf` sub
 
--------------------------------------------------------------------------------
-
-{-
--- ID_Var: variable we want to instantiate
--- Type:   supertype with the variable
--- Type:   subtype with the concretes
--- Type:   type of the instantiated variable
-instantiate' :: ID_Var -> Type -> Type -> Type
-instantiate' var tp1 tp2 =
-  let (ret, tp, insts) = tp1 `supOf'` tp2 in
-    
-
-
-
-
-
- (tp1, tp2) = aux tp (flatten tp1, flatten tp2)
-    where
-        flatten (TypeF inp out) = flatten inp ++ flatten out
-        flatten (TypeN tps)     = concatMap flatten tps
-        flatten tp              = [tp]
-
-        aux :: Type -> ([Type],[Type]) -> Type -- TypeV -> ([TypeV|~TypeV],[~TypeV]) -> ~TypeV
-        aux (TypeV var) (vars,tps) = tp
-            where
-                grouped = groupTypesV vars tps -- [[("a",I),("a",I)], [("b",B)]]
-                singles = map head grouped     -- [("a",I), ("b",B)]
-                tp'     = find (\(TypeV var',_) -> var==var') singles -- ("b",B)
-                tp      = snd $ fromJust tp'
-        aux tp _ = tp
--}
-
--------------------------------------------------------------------------------
+supOfErrors :: Type -> Type -> Errors
+supOfErrors sup sub = either id (const []) (sup `supOf` sub)
 
 supOf :: Type -> Type -> Either Errors (Type, [(ID_Var,Type)])
-supOf tp1 tp2 =
+supOf sup sub =
   if ret && null es_inst
     then Right (tp, singles)
     else Left $ es_tps ++ es_inst
   where
-    (ret, tp, insts) = tp1 `supOf'` tp2
+    (ret, tp, insts) = sup `supOf'` sub
 
-    es_tps = ["types do not match : expected '" ++ show' tp1 ++
-              "' : found '" ++ show' tp2 ++ "'"]
+    es_tps = ["types do not match : expected '" ++ show' sup ++
+              "' : found '" ++ show' sub ++ "'"]
 
     sorted  = sortBy (\(a,_)(b,_) -> compare a b) insts -- [("a",A),("a",A),("b",B)]
     grouped = groupBy (\(x,_)(y,_)->x==y) sorted        -- [[("a",A),("a",A)], [("b",B)]]
@@ -166,6 +79,8 @@ supOf tp1 tp2 =
                          intercalate ", " (map (quote.show'.snd) l)]
     singles = map head grouped                    -- [("a",A), ("b",B)]
     quote x = "'" ++ x ++ "'"
+
+-------------------------------------------------------------------------------
 
 -- Is first argument a supertype of second argument?
 --  * Bool: whether it is or not
@@ -177,33 +92,33 @@ supOf' :: Type -> Type -> (Bool, Type, [(ID_Var,Type)])
 supOf' _                 TypeB             = (True,  TypeB, [])
 supOf' TypeB             _                 = (False, TypeB, [])
 
-supOf' TypeT             tp2               = (True,  tp2,   [])
-supOf' (TypeV a1)        tp2               = (True,  tp2,   [(a1,tp2)])
-supOf' tp1               (TypeV _)         = (False, tp1,   [])
-supOf' tp1               TypeT             = (False, tp1,   [])
+supOf' TypeT             sub               = (True,  sub,   [])
+supOf' (TypeV a1)        sub               = (True,  sub,   [(a1,sub)])
+supOf' sup               (TypeV _)         = (False, sup,   [])
+supOf' sup               TypeT             = (False, sup,   [])
 
 supOf' Type0             Type0             = (True,  Type0, [])
 supOf' Type0             _                 = (False, Type0, [])
-supOf' tp1               Type0             = (False, tp1,   [])
+supOf' sup               Type0             = (False, sup,   [])
 
-supOf' tp1@(Type1 x)     tp2@(Type1 y)
-  | x `isPrefixOf` y                       = (True,  tp2,   [])
-  | otherwise                              = (False, tp1,   [])
+supOf' sup@(Type1 x)     sub@(Type1 y)
+  | x `isPrefixOf` y                       = (True,  sub,   [])
+  | otherwise                              = (False, sup,   [])
 
-supOf' tp1@(Type1 _)     _                 = (False, tp1,   [])
-supOf' tp1               (Type1 _)         = (False, tp1,   [])
+supOf' sup@(Type1 _)     _                 = (False, sup,   [])
+supOf' sup               (Type1 _)         = (False, sup,   [])
 
-supOf' tp1@(TypeF inp1 out1) tp2@(TypeF inp2 out2) =
+supOf' sup@(TypeF inp1 out1) sub@(TypeF inp2 out2) =
   let (i,_,k) = inp1 `supOf'` inp2
       (x,_,z) = out1 `supOf'` out2 in
-    if i && x then                           (True,  tp2,   k++z)
-              else                           (False, tp1,   k++z)
+    if i && x then                           (True,  sub,   k++z)
+              else                           (False, sup,   k++z)
 
-supOf' tp1@(TypeF _ _)   _                 = (False, tp1,   [])
-supOf' tp1               (TypeF _ _)       = (False, tp1,   [])
+supOf' sup@(TypeF _ _)   _                 = (False, sup,   [])
+supOf' sup               (TypeF _ _)       = (False, sup,   [])
 
-supOf' (TypeN tp1s)      (TypeN tp2s)      = foldr f (True, TypeN [], []) $
-                                              zipWith supOf' tp1s tp2s
+supOf' (TypeN sups)      (TypeN subs)      = foldr f (True, TypeN [], []) $
+                                              zipWith supOf' sups subs
   where
     f (ret, tp, insts) (ret', TypeN tps', insts') =
       (ret&&ret', TypeN (tp:tps'), insts++insts')

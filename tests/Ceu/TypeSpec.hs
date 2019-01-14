@@ -15,13 +15,13 @@ spec = do
   describe "supOf'" $ do
 
     it "Int > BOT" $
-      Type1 "Int" `supOf'` TypeB             `shouldBe` (True,  TypeB,       [])
+      Type1 "Int" `supOf'` TypeB       `shouldBe` (True,  TypeB,       [])
     it "BOT > Int" $
-      TypeB       `supOf'` Type1 "Int"       `shouldBe` (False, TypeB,       [])
+      TypeB       `supOf'` Type1 "Int" `shouldBe` (False, TypeB,       [])
     it "a > Int" $
-      TypeV "a"   `supOf'` Type1 "Int"       `shouldBe` (True,  Type1 "Int", [("a",Type1 "Int")])
+      TypeV "a"   `supOf'` Type1 "Int" `shouldBe` (True,  Type1 "Int", [("a",Type1 "Int")])
     it "a > b" $
-      TypeV "a"   `supOf'` TypeV "b"         `shouldBe` (True,  TypeV "b",   [("a",TypeV "b")])
+      TypeV "a"   `supOf'` TypeV "b"   `shouldBe` (True,  TypeV "b",   [("a",TypeV "b")])
 
   describe "supOf" $ do
 
@@ -37,8 +37,23 @@ spec = do
       TypeN [(TypeV "a"),(TypeV "b")] `supOf` TypeN [(Type1 "Int"),Type0]
       `shouldBe` Right (TypeN [Type1 "Int",Type0],[("a",Type1 "Int"),("b",Type0)])
 
-  describe "instantiation" $ do
+  describe "instantiate" $ do
 
+    it "A in [...] ~> A" $
+      instantiate [("a",Type1 "A"), ("b",Type1 "B")] (Type1 "A")
+      `shouldBe` (Type1 "A")
+
+    it "(a,b) in [(a,A),(b,B)] ~> (A,B)" $
+      instantiate [("a",Type1 "A"), ("b",Type1 "B")] (TypeN [TypeV "a", TypeV "b"])
+      `shouldBe` (TypeN [Type1 "A", Type1 "B"])
+
+    it "(a->C) in [(a,A),(b,B)] ~> (A->C)" $
+      instantiate [("a",Type1 "A"), ("b",Type1 "B")] (TypeF (TypeV "a") (Type1 "C"))
+      `shouldBe` (TypeF (Type1 "A") (Type1 "C"))
+
+-----
+
+{-
     it "Int : (Int ~ Int) ~> Int" $
       instantiate (Type1 "Int") (Type1 "Int", Type1 "Int")
       `shouldBe` (Type1 "Int")
@@ -74,3 +89,4 @@ spec = do
     it "b : ((a,b) ~ (Int,Bool)) ~> Bool" $
       instantiate (TypeV "b") (TypeN [TypeV "a",TypeV "b"], TypeN [Type1 "Int",Type1 "Bool"])
       `shouldBe` (Type1 "Bool")
+-}
