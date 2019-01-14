@@ -34,6 +34,8 @@ isAny f s = isClass f s || isData f s || isVar  f s || isFunc f s
 
 true x = True
 
+-------------------------------------------------------------------------------
+
 errDeclared :: Ann -> String -> String -> [Stmt] -> Errors
 errDeclared z str id ids =
     if (take 1 id == "_") then [] else    -- nested _ret, __and (par/and)
@@ -51,40 +53,42 @@ getErrsTypesMatch :: Ann -> Type -> Type -> Errors
 getErrsTypesMatch z t1 t2 = if t1 `isSupOf` t2 then [] else
                                 [toError z "types do not match : expected '" ++ typeShow t1 ++ "' : found '" ++ typeShow t2 ++ "'"]
 
-call :: Ann -> [Stmt] -> ID_Func -> Exp -> (Errors, Type, Exp)
-call z ids id exp = (es++es_exp, tp_out, exp')
-    where
-        (es_exp, exp') = expr ids exp
-        tp_exp' = type_ $ getAnn exp'
+-------------------------------------------------------------------------------
 
-        -- find in top-level funcs
-        (tp_out,es) =
-            case find (isFunc $ (==)id) ids of
-                -- found in top-level `Func`
-                (Just (Func _ _ (TypeF inp out) _)) ->
-                    case getErrsTypesMatch z inp tp_exp' of
-                        [] -> (instType out (inp,tp_exp'), [])
-                        x  -> (TypeT,                      x)
+call :: Ann -> [Stmt] -> ID_Func -> Exp -> (Errors, Type, Exp, Maybe String)
+call z ids id exp = (es++es_exp, tp_out, exp', fid)
+  where
+    (es_exp, exp') = expr ids exp
+    tp_exp' = type_ $ getAnn exp'
 
-                -- find in classes
-                Nothing ->
-                    case find (\(_,f)->isJust f) $ map cls2func $ filter (isClass true) ids of
-                        -- not found
-                        Nothing -> (TypeT, [toError z "function '" ++ id ++ "' is not declared"])
-                        -- found in class `cls`
-                        Just (Class _ id' _ _ _, Just (Func _ _ (TypeF inp _) _)) ->
-                            case getErrsTypesMatch z inp tp_exp' of
-                                []  ->
-                                    case find isJust $ map inst2func $ filter (isInst $ (==id')) ids of
-                                        Nothing ->
-                                            (TypeT, [toError z "call for '" ++ id ++ "' has no instance in '" ++ id' ++ "'"])
-                                        Just (Just (Func _ _ tp@(TypeF inp out) _)) ->
-                                            (instType out (inp,tp_exp'), [])
-                                err -> (TypeT, err)
+    -- find in top-level funcs
+    (fid,tp_out,es) =
+      case find (isFunc $ (==)id) ids of
+        -- found in top-level `Func`
+        (Just (Func _ fid' (TypeF inp out) _)) ->
+          case getErrsTypesMatch z inp tp_exp' of
+            [] -> (Just fid',  instType out (inp,tp_exp'), [])
+            x  -> (Nothing,   TypeT,                      x)
 
-        cls2func  cls  = (cls, find (isFunc $ (==)id) (classinst2ids cls))
-        inst2func inst = find supOfExp (classinst2ids inst)
-        supOfExp (Func _ func tp@(TypeF inp _) _) = func==id && inp `isSupOf` tp_exp'
+        -- find in classes
+        Nothing ->
+          case find (\(_,f)->isJust f) $ map cls2func $ filter (isClass true) ids of
+            -- not found
+            Nothing -> (Nothing, TypeT, [toError z "function '" ++ id ++ "' is not declared"])
+            -- found in class `cls`
+            Just (Class _ id' _ _ _, Just (Func _ _ (TypeF inp _) _)) ->
+              case getErrsTypesMatch z inp tp_exp' of
+                []  ->
+                  case find isJust $ map inst2func $ filter (isInst $ (==id')) ids of
+                    Nothing ->
+                      (Nothing, TypeT, [toError z "call for '" ++ id ++ "' has no instance in '" ++ id' ++ "'"])
+                    Just (Just (Func _ fid' tp@(TypeF inp out) _)) ->
+                      (Just fid', instType out (inp,tp_exp'), [])
+                err -> (Nothing, TypeT, err)
+
+    cls2func  cls  = (cls, find (isFunc $ (==)id) (classinst2ids cls))
+    inst2func inst = find supOfExp (classinst2ids inst)
+    supOfExp (Func _ f tp@(TypeF inp _) _) = f==id && inp `isSupOf` tp_exp'
 
 classinst2ids :: Stmt -> [Stmt]
 classinst2ids p = case p of
@@ -105,6 +109,8 @@ expandInsts [] = []
 expandInsts (s@(Inst _ _ _ _ _) : l) = classinst2ids s ++ expandInsts l
 expandInsts (s : l) = s : expandInsts l
 -}
+
+--func2id (Func _ id tp
 
 -------------------------------------------------------------------------------
 
@@ -201,7 +207,7 @@ stmt ids (Write z loc exp)   = (es1 ++ es2 ++ es3, Write z loc exp')
                                 es3        = getErrsTypesMatch z tps_loc (type_ $ getAnn exp')
 
 stmt ids (CallS z id exp)   = (es, CallS z id exp') where
-                              (es,_,exp') = call z ids id exp
+                              (es,_,exp',fid) = call z ids id exp
 
 stmt ids (If  z exp p1 p2)   = (ese ++ es ++ es1 ++ es2, If z exp' p1' p2')
                                where
@@ -255,4 +261,4 @@ expr ids (Read z id)     = if id == "_INPUT" then
                                         (Just (Var _ _ tp _)) -> (tp,    [])
 
 expr ids (Call z id exp) = (es, Call z{type_=tp_out} id exp') where
-                           (es, tp_out, exp') = call z ids id exp
+                           (es, tp_out, exp', fid) = call z ids id exp

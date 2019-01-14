@@ -9,12 +9,13 @@ data RawAt = RawAtE Exp | RawAtS String
   deriving (Eq, Show)
 
 data Exp
-    = Number Ann Int            -- 1
-    | Cons   Ann ID_Type        -- True
-    | Read   Ann ID_Var         -- a ; xs
-    | Unit   Ann                -- ()
-    | Tuple  Ann [Exp]          -- (1,2) ; ((1),2) ; ((1,2),3) ; ((),()) // (len >= 2)
-    | Call   Ann ID_Func Exp    -- f a ; f(a) ; f(1,2)
+    = Number Ann Int                    -- 1
+    | Cons   Ann ID_Type                -- True
+    | Read   Ann ID_Var                 -- a ; xs
+    | Unit   Ann                        -- ()
+    | Tuple  Ann [Exp]                  -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
+    | Call   Ann ID_Func Exp            -- f a ; f(a) ; f(1,2)
+    -- | SCall  Ann (Maybe ID_Func) Exp    -- f__int a
     deriving (Eq, Show)
 
 instance HasAnn Exp where
