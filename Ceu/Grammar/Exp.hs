@@ -15,7 +15,7 @@ data Exp
     | Unit   Ann                        -- ()
     | Tuple  Ann [Exp]                  -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
     | Call   Ann ID_Func Exp            -- f a ; f(a) ; f(1,2)
-    -- | SCall  Ann (Maybe ID_Func) Exp    -- f__int a
+    | SCall  Ann (Maybe ID_Func) Exp    -- f__int a
     deriving (Eq, Show)
 
 instance HasAnn Exp where
@@ -26,3 +26,4 @@ instance HasAnn Exp where
     getAnn (Unit   z)     = z
     getAnn (Tuple  z _)   = z
     getAnn (Call   z _ _) = z
+    getAnn (SCall  z _ _) = z

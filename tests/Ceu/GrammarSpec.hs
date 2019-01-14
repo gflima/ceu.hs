@@ -300,8 +300,17 @@ spec = do
                 (CallS annz "fff" (Number annz 1)))))))
             `shouldBe` ["call for 'fff' has no instance in 'Xable'"]
 
-        it "Int ; Bool ; Xable a ; inst Xable Bool/Int ; fff 1 ; fff Bool" $
+        it "Int ; Bool ; Equalable a ; eq 1 Bool" $
             (fst $ TypeSys.go
+                (Data annz "Int" [] [] False
+                (Data annz "Bool" [] [] False
+                (Class annz "Equalable" ["a"]
+                    (Func annz "eq" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (Type1 "Bool")) (Nop annz))
+                (CallS annz "eq" (Tuple annz [(Cons annz "Bool"),(Number annz 1)]))))))
+            `shouldBe` ["types do not match : expected '(a,a)' : found '(Bool,Int)'"]
+
+        it "Int ; Bool ; Xable a ; inst Xable Bool/Int ; fff 1 ; fff Bool" $
+            (TypeSys.go
                 (Data annz "Int" [] [] False
                 (Data annz "Bool" [] [] False
                 (Class annz "Xable" ["a"]
@@ -313,16 +322,44 @@ spec = do
                 (Seq annz
                     (CallS annz "fff" (Number annz 1))
                     (CallS annz "fff" (Cons annz "Bool")))))))))
-            `shouldBe` ["TODO: CallS' para instancia correta"]
+            `shouldBe` ([],Data annz "Int" [] [] False (Data annz "Bool" [] [] False (Class annz "Xable" ["a"] (Func annz "fff" (TypeF (TypeV "a") Type0) (Nop annz)) (Inst annz "Xable" ["Bool"] (Func annz "fff" (TypeF (Type1 "Bool") Type0) (Nop annz)) (Inst annz "Xable" ["Int"] (Func annz "fff" (TypeF (Type1 "Int") Type0) (Nop annz)) (Seq annz (SCallS annz (Just "Int__fff") (Number annz{type_=Type1 "Int"} 1)) (SCallS annz (Just "Bool__fff") (Cons annz{type_=Type1 "Bool"} "Bool"))))))))
 
-        it "Int ; Bool ; Equalable a ; eq 1 Bool" $
+        it "A ; A.B ; Xable a ; inst Xable A ; fff A.B (must use A.fff)" $
+            (TypeSys.go
+                (Data annz "A" [] [] False
+                (Data annz "A.B" [] [] False
+                (Class annz "Xable" ["a"]
+                    (Func annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
+                (Inst annz "Xable" ["A"]
+                    (Func annz "fff" (TypeF (Type1 "A") Type0) (Nop annz))
+                (CallS annz "fff" (Cons annz "A.B")))))))
+            `shouldBe` ([],Data annz "A" [] [] False (Data annz "A.B" [] [] False (Class annz "Xable" ["a"] (Func annz "fff" (TypeF (TypeV "a") Type0) (Nop annz)) (Inst annz "Xable" ["A"] (Func annz "fff" (TypeF (Type1 "A") Type0) (Nop annz)) (SCallS annz (Just "A__fff") (Cons annz{type_=Type1 "A.B"} "A.B"))))))
+
+        it "A ; A.B ; Xable a ; inst Xable A/A.B ; fff A.B ; (must use A.B.fff)" $
+            (TypeSys.go
+                (Data annz "A" [] [] False
+                (Data annz "A.B" [] [] False
+                (Class annz "Xable" ["a"]
+                    (Func annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
+                (Inst annz "Xable" ["A"]
+                    (Func annz "fff" (TypeF (Type1 "A") Type0) (Nop annz))
+                (Inst annz "Xable" ["A.B"]
+                    (Func annz "fff" (TypeF (Type1 "A.B") Type0) (Nop annz))
+                (CallS annz "fff" (Cons annz "A.B"))))))))
+            `shouldBe` ([],Data annz "A" [] [] False (Data annz "A.B" [] [] False (Class annz "Xable" ["a"] (Func annz "fff" (TypeF (TypeV "a") Type0) (Nop annz)) (Inst annz "Xable" ["A"] (Func annz "fff" (TypeF (Type1 "A") Type0) (Nop annz)) (Inst annz "Xable" ["A.B"] (Func annz "fff" (TypeF (Type1 "A.B") Type0) (Nop annz)) (SCallS annz (Just "A.B__fff") (Cons annz{type_=Type1 "A.B"} "A.B")))))))
+
+        it "A ; A.B ; Xable a ; inst Xable A.B/A ; fff A.B ; (must use A.B.fff)" $
             (fst $ TypeSys.go
-                (Data annz "Int" [] [] False
-                (Data annz "Bool" [] [] False
-                (Class annz "Equalable" ["a"]
-                    (Func annz "eq" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (Type1 "Bool")) (Nop annz))
-                (CallS annz "eq" (Tuple annz [(Cons annz "Bool"),(Number annz 1)]))))))
-            `shouldBe` ["types do not match : expected '(a,a)' : found '(Bool,Int)'"]
+                (Data annz "A" [] [] False
+                (Data annz "A.B" [] [] False
+                (Class annz "Xable" ["a"]
+                    (Func annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
+                (Inst annz "Xable" ["A.B"]
+                    (Func annz "fff" (TypeF (Type1 "A.B") Type0) (Nop annz))
+                (Inst annz "Xable" ["A"]
+                    (Func annz "fff" (TypeF (Type1 "A") Type0) (Nop annz))
+                (CallS annz "fff" (Cons annz "A.B"))))))))
+            `shouldBe` ["TODO: sort by subtyping relation"]
 
   --------------------------------------------------------------------------
 

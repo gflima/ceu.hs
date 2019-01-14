@@ -16,7 +16,7 @@ data Stmt
     | FuncI  Ann ID_Func Type Stmt Stmt       -- function implementation (must have accompainying Func)
     | Write  Ann Loc Exp                      -- assignment statement
     | CallS  Ann ID_Func Exp                  -- call function
-    -- | SCallS Ann (Maybe ID_Func) Exp          -- resolved call function
+    | SCallS Ann (Maybe ID_Func) Exp          -- resolved call function
     | If     Ann Exp Stmt Stmt                -- conditional
     | Seq    Ann Stmt Stmt                    -- sequence
     | Loop   Ann Stmt                         -- infinite loop
@@ -52,18 +52,19 @@ infixr 1 `sSeq`
 
 instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
-    getAnn (Class z _ _ _ _)   = z
-    getAnn (Inst  z _ _ _ _)   = z
-    getAnn (Data  z _ _ _ _ _) = z
-    getAnn (Var   z _ _ _)     = z
-    getAnn (Func  z _ _ _)     = z
-    getAnn (FuncI z _ _ _ _)   = z
-    getAnn (Write z _ _)       = z
-    getAnn (CallS z _ _)       = z
-    getAnn (If    z _ _ _)     = z
-    getAnn (Seq   z _ _)       = z
-    getAnn (Loop  z _)         = z
-    getAnn (Ret   z _)         = z
-    getAnn (Nop   z)           = z
+    getAnn (Class  z _ _ _ _)   = z
+    getAnn (Inst   z _ _ _ _)   = z
+    getAnn (Data   z _ _ _ _ _) = z
+    getAnn (Var    z _ _ _)     = z
+    getAnn (Func   z _ _ _)     = z
+    getAnn (FuncI  z _ _ _ _)   = z
+    getAnn (Write  z _ _)       = z
+    getAnn (CallS  z _ _)       = z
+    getAnn (SCallS z _ _)       = z
+    getAnn (If     z _ _ _)     = z
+    getAnn (Seq    z _ _)       = z
+    getAnn (Loop   z _)         = z
+    getAnn (Ret    z _)         = z
+    getAnn (Nop    z)           = z
 
 prelude z p = (Data z "Int" [] [] False p)
