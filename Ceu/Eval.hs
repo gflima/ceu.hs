@@ -1,10 +1,12 @@
 module Ceu.Eval where
 
+import Data.List (find)
+import Debug.Trace
+
 import Ceu.Grammar.Globals
 import qualified Ceu.Grammar.Exp     as E
 import qualified Ceu.Grammar.Stmt    as G
 import qualified Ceu.Grammar.TypeSys as T
-import Debug.Trace
 
 type Vars = [(ID_Var, Maybe Exp)]
 type Desc = (Stmt, Vars)
@@ -15,17 +17,18 @@ data Exp
     | Read   ID_Var         -- a ; xs
     | Unit                  -- ()
     | Tuple  [Exp]          -- (1,2) ; ((1),2) ; ((1,2),3) ; ((),()) // (len >= 2)
-    | Call   ID_Func Exp    -- f a ; f(a) ; f(1,2)
+    | SCall  ID_Func Exp    -- f a ; f(a) ; f(1,2)
     deriving (Eq, Show)
 
 data Stmt
-    = Var   (ID_Var,Maybe Exp) Stmt    -- block with environment store
-    | Write ID_Var Exp                 -- assignment statement
-    | If    Exp Stmt Stmt              -- conditional
-    | Seq   Stmt Stmt                  -- sequence
-    | Nop                              -- dummy statement (internal)
-    | Ret   Exp                        -- terminate program with exp
-    | Loop' Stmt Stmt                  -- unrolled Loop (internal)
+    = Var    (ID_Var,Maybe Exp) Stmt    -- block with environment store
+    | Write  ID_Var Exp                 -- assignment statement
+    | SCallS ID_Func Exp                -- procedure call
+    | If     Exp Stmt Stmt              -- conditional
+    | Seq    Stmt Stmt                  -- sequence
+    | Nop                               -- dummy statement (internal)
+    | Ret    Exp                        -- terminate program with exp
+    | Loop'  Stmt Stmt                  -- unrolled Loop (internal)
     deriving (Eq, Show)
 
 infixr 1 `Seq`
@@ -36,21 +39,22 @@ fromExp (E.Cons   _ id)   = Cons id
 fromExp (E.Read   _ id)   = Read id
 fromExp (E.Unit   _)      = Unit
 fromExp (E.Tuple  _ vs)   = Tuple (map fromExp vs)
-fromExp (E.Call   _ id e) = Call id (fromExp e)
+fromExp (E.SCall  _ id e) = SCall id (fromExp e)
 
 fromStmt :: G.Stmt -> Stmt
-fromStmt (G.Class _ _ _ _ p)     = fromStmt p
-fromStmt (G.Inst  _ _ _ _ p)     = fromStmt p
-fromStmt (G.Data  _ _ _ _ _ p)   = fromStmt p
-fromStmt (G.Var   _ id _ p)      = Var (id,Nothing) (fromStmt p)
-fromStmt (G.Func  _ _ _ p)       = (fromStmt p)
-fromStmt (G.FuncI _ _ _ _ _)     = error "not implemented"
-fromStmt (G.Write _ (LVar id) e) = Write id (fromExp e)
-fromStmt (G.If    _ e p1 p2)     = If (fromExp e) (fromStmt p1) (fromStmt p2)
-fromStmt (G.Seq   _ p1 p2)       = Seq (fromStmt p1) (fromStmt p2)
-fromStmt (G.Loop  _ p)           = Loop' (fromStmt p) (fromStmt p)
-fromStmt (G.Ret   _ e)           = Ret (fromExp e)
-fromStmt (G.Nop   _)             = Nop
+fromStmt (G.Class  _ _ _ _ p)     = fromStmt p
+fromStmt (G.Inst   _ _ _ _ p)     = fromStmt p
+fromStmt (G.Data   _ _ _ _ _ p)   = fromStmt p
+fromStmt (G.Var    _ id _ p)      = Var (id,Nothing) (fromStmt p)
+fromStmt (G.Func   _ _ _ p)       = (fromStmt p)
+fromStmt (G.FuncI  _ _ _ _ _)     = error "not implemented"
+fromStmt (G.Write  _ (LVar id) e) = Write id (fromExp e)
+fromStmt (G.SCallS _ id e)        = SCallS id (fromExp e)
+fromStmt (G.If     _ e p1 p2)     = If (fromExp e) (fromStmt p1) (fromStmt p2)
+fromStmt (G.Seq    _ p1 p2)       = Seq (fromStmt p1) (fromStmt p2)
+fromStmt (G.Loop   _ p)           = Loop' (fromStmt p) (fromStmt p)
+fromStmt (G.Ret    _ e)           = Ret (fromExp e)
+fromStmt (G.Nop    _)             = Nop
 
 ----------------------------------------------------------------------------
 
@@ -64,17 +68,16 @@ envWrite vars var val =
 
 envRead :: Vars -> ID_Var -> Exp
 envRead vars var =
-    case vars of
-        (var',val):vars'
-            | var' == var -> case val of
-                                Just v    -> v
-                                otherwise -> error $ "envRead: uninitialized variable: " ++ var
-            | otherwise   -> envRead vars' var
-        []                -> error ("envRead: undeclared variable: " ++ var)
+  case find (\(var',_)->var'==var) vars of
+    Nothing         -> error ("envRead: undeclared variable: " ++ var)
+    Just (var',val) -> case val of
+                        Just v    -> v
+                        otherwise -> error $ "envRead: uninitialized variable: " ++ var
 
 envEval :: Vars -> Exp -> Exp
 envEval vars e = case e of
-    Read  var -> envRead vars var
+    Read  var    -> envRead vars var
+    SCall func e -> envRead vars func
 {-
     Call  _ "negate" e -> negate $ envEval vars e
     Call  _ "+"  (Tuple _ [e1,e2]) -> (envEval vars e1) + (envEval vars e2)

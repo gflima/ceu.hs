@@ -47,12 +47,12 @@ spec = do
 
       it "pass: eval in simple env" $
         let vars = [("x",Just (Number 1)),("y",Just (Number 2))] in
-          envEval vars (Call "+" (Tuple [(Call "-" (Tuple [(Read "x"),(Number 3)])),(Call "negate" (Read "y"))]))
+          envEval vars (SCall "+" (Tuple [(SCall "-" (Tuple [(Read "x"),(Number 3)])),(SCall "negate" (Read "y"))]))
           `shouldBe` (Number (-4))
 
       it "pass: eval in complex env" $
         let vars = [("y",Just (Number 2)),("x",Just (Number 1)),("y",Just (Number 99)),("x",Just (Number 99))] in
-          envEval vars (Call "+" (Tuple [(Call "-" (Tuple [(Read "x"),(Number 3)])),(Call "negate" (Read "y"))]))
+          envEval vars (SCall "+" (Tuple [(SCall "-" (Tuple [(Read "x"),(Number 3)])),(SCall "negate" (Read "y"))]))
           `shouldBe` (Number (-4))
 
   --------------------------------------------------------------------------
@@ -80,14 +80,14 @@ spec = do
         step (
           (Var ("x",(Just (Number 1)))
           (Var ("y",Nothing)
-            (Write "y" (Call "+" (Tuple [(Read "x"),(Number 2)])))), []))
+            (Write "y" (SCall "+" (Tuple [(Read "x"),(Number 2)])))), []))
         `shouldBe` (Var ("x",(Just (Number 1))) (Var ("y",(Just (Number 3))) Nop), [])
 
       it "[x=1,y=?] y=x+2" $
         step
         (Var ("x",(Just (Number 1)))
         (Var ("y",Nothing)
-          (Write "y" (Call "+" (Tuple [(Read "x"),(Number 2)])))), [])
+          (Write "y" (SCall "+" (Tuple [(Read "x"),(Number 2)])))), [])
         `shouldBe`
         (Var ("x",(Just (Number 1)))
         (Var ("y",(Just (Number 3))) Nop), [])
@@ -95,7 +95,7 @@ spec = do
       it "[x=?] x=-(5+1)" $
         step
         (Var ("x",(Just (Number 0)))
-          (Write "x" (Call "negate" (Call "+" (Tuple [(Number 5),(Number 1)])))), [])
+          (Write "x" (SCall "negate" (SCall "+" (Tuple [(Number 5),(Number 1)])))), [])
         `shouldBe`
         (Var ("x",(Just (Number (-6)))) Nop, [])
 
@@ -139,14 +139,14 @@ spec = do
     evalProgItSuccess (Number 11)
       (G.Func annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (G.Var annz "a" (Type1 "Int")
            (G.Write annz (LVar "a") (E.Number annz 1) `G.sSeq`
-            G.Ret   annz (E.Call annz "+" (E.Tuple annz [(E.Read annz "a"),(E.Number annz 10)])) `G.sSeq`
+            G.Ret   annz (E.SCall annz "+" (E.Tuple annz [(E.Read annz "a"),(E.Number annz 10)])) `G.sSeq`
             G.Nop annz)))
 
     evalProgItSuccess (Number 11)
       (G.Func annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (G.Var annz "a" (Type1 "Int")
            (G.Write annz (LVar "a") (E.Number annz 1) `G.sSeq`
             G.Var annz "b" (Type1 "Int") (G.Write annz (LVar "b") (E.Number annz 99)) `G.sSeq`
-            G.Ret annz (E.Call annz "+" (E.Tuple annz [(E.Read annz "a"),(E.Number annz 10)])) `G.sSeq`
+            G.Ret annz (E.SCall annz "+" (E.Tuple annz [(E.Read annz "a"),(E.Number annz 10)])) `G.sSeq`
             G.Nop annz)))
 
     evalProgItSuccess (Number 1)
@@ -164,7 +164,7 @@ spec = do
                     (G.Var annz "_fret" (Type1 "Int")
                         (G.Write annz (LVar "_ret") (Read annz "_arg_0")))
                 (G.Seq annz
-                    (G.Write annz (LVar "_ret") (Call annz "id" (Number annz 1)))
+                    (G.Write annz (LVar "_ret") (SCall annz "id" (Number annz 1)))
                     (G.Escape annz 0)))
                 []
             `shouldBe` Right (1,[[]])
@@ -179,7 +179,7 @@ spec = do
                 (G.Inst annz "Equalable" ["Int"]
                     (G.Func annz "fff" (TypeF (Type1 "Int") (Type1 "Int")) (G.Nop annz))
                 (G.Seq annz
-                    (G.Write annz (LVar "_ret") (E.Call annz "fff" (E.Number annz 1)))
+                    (G.Write annz (LVar "_ret") (E.SCall annz "fff" (E.Number annz 1)))
                     (G.Escape annz 0))))))
                 []
             `shouldBe` Right (1,[[]])
