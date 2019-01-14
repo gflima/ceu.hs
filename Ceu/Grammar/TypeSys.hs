@@ -5,7 +5,7 @@ import Data.List (find, intercalate)
 import Data.Maybe (isJust)
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Type
+import Ceu.Grammar.Type as Type (Type(..), instantiate, show', isSupOf, get1s)
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Exp
 import Ceu.Grammar.Stmt
@@ -44,14 +44,14 @@ errDeclared z str id ids =
             (Just _) -> [toError z str ++ " '" ++ id ++ "' is already declared"]
 
 getErrsTypesDeclared :: Ann -> Type -> [Stmt] -> Errors
-getErrsTypesDeclared z tp ids = concatMap aux $ map (\id->(id, find (isData $ (==)id) ids)) $ get1s tp
+getErrsTypesDeclared z tp ids = concatMap aux $ map (\id->(id, find (isData $ (==)id) ids)) $ Type.get1s tp
     where
         aux (id, Nothing) = [toError z "type '" ++ id ++ "' is not declared"]
         aux (_,  Just _)  = []
 
 getErrsTypesMatch :: Ann -> Type -> Type -> Errors
 getErrsTypesMatch z t1 t2 = if t1 `isSupOf` t2 then [] else
-                                [toError z "types do not match : expected '" ++ typeShow t1 ++ "' : found '" ++ typeShow t2 ++ "'"]
+                                [toError z "types do not match : expected '" ++ Type.show' t1 ++ "' : found '" ++ Type.show' t2 ++ "'"]
 
 -------------------------------------------------------------------------------
 
@@ -67,8 +67,8 @@ call z ids id exp = (es++es_exp, tp_out, exp', fid)
         -- found in top-level `Func`
         (Just (Func _ _ (TypeF inp out) _)) ->
           case getErrsTypesMatch z inp tp_exp' of
-            [] -> (id,    instType out (inp,tp_exp'), [])
-            x  -> ("???", TypeT,                      x)
+            [] -> (id,    Type.instantiate out (inp,tp_exp'), [])
+            x  -> ("???", TypeT,                              x)
 
         -- find in classes
         Nothing ->
@@ -79,15 +79,16 @@ call z ids id exp = (es++es_exp, tp_out, exp', fid)
             Just (Class _ id' [var] _ _, Just (Func _ id (TypeF inp out) _)) ->
               case getErrsTypesMatch z inp tp_exp' of
                 []  ->
-                  let tp = instType (TypeV var) (inp,tp_exp') in
+                  let tp = Type.instantiate (TypeV var) $ traceShowId (inp,tp_exp') in
                     case find (isSubOf' tp) $ filter (isInst $ (==id')) (sort' ids) of
                       Nothing -> ("???", TypeT,
                                  [toError z "call for '" ++ id ++ "' has no instance in '" ++ id' ++ "'"])
-                      Just (Inst _ _ [tp'] _ _) -> (tp'++"__"++id, instType out (inp,tp_exp'), [])
+                      Just (Inst _ _ [Type1 tp'] _ _) ->
+                                 (tp'++"__"++id, Type.instantiate out (inp,tp_exp'), [])
                 err -> ("???", TypeT, err)
 
     cls2func cls = (cls, find (isFunc $ (==)id) (classinst2ids cls))
-    isSubOf' tp (Inst _ _ [tp'] _ _) = (Type1 tp') `isSupOf` tp
+    isSubOf' tp (Inst _ _ [tp'] _ _) = traceShow (show tp' ++ " vs " ++ show tp) $ tp' `isSupOf` tp
     sort' ids = ids -- TODO: sort by subtyping (topological order)
 
 classinst2ids :: Stmt -> [Stmt]
@@ -118,7 +119,8 @@ stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] im
         -- check if this instance is already declared
         es1 = case find isSameInst ids of
             Nothing  -> []
-            (Just _) -> [toError z "instance '" ++ id ++ " (" ++ intercalate "," [tp] ++ ")' is already declared"]
+            (Just _) -> [toError z "instance '" ++ id ++ " (" ++
+                         intercalate "," [Type.show' tp] ++ ")' is already declared"]
         isSameInst (Inst _ id' [tp'] _ _) = (id==id' && [tp]==[tp'])
         isSameInst _                     = False
 
@@ -138,13 +140,14 @@ stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] im
         -- check if function types match
         supOf tp1 tp2 | tp1 `isSupOf` tp2 = []
                       | otherwise         = [toError z "types do not match : expected '" ++
-                                             typeShow tp1 ++ "' : found '" ++ typeShow tp2 ++ "'"]
+                                             Type.show' tp1 ++ "' : found '" ++ Type.show' tp2 ++ "'"]
 
         -- check if (Inst tps) match (Class vars) in all functions
-        instOf var tp1 tp2 = case instType (TypeV var) (tp1,tp2) of
-                                (Type1 tp') | tp==tp'   -> []
-                                            | otherwise -> ["types do not match : expected '" ++
-                                                            tp ++ "' : found '" ++ tp' ++ "'"]
+        instOf var tp1 tp2 = let tp' = Type.instantiate (TypeV var) (tp1,tp2) in
+                              if tp' == tp
+                                then []
+                                else ["types do not match : expected '" ++
+                                      (Type.show' tp) ++ "' : found '" ++ (Type.show' tp') ++ "'"]
 
 stmt ids (Inst _ _ tps _ _) = error "not implemented: multiple types"
 

@@ -16,14 +16,14 @@ data Type = TypeB
 
 -------------------------------------------------------------------------------
 
-typeShow :: Type -> String
-typeShow (TypeV id)      = id
-typeShow TypeT           = "top"
-typeShow TypeB           = "bot"
-typeShow Type0           = "()"
-typeShow (Type1 id)      = id
-typeShow (TypeF inp out) = "(" ++ typeShow inp ++ " -> " ++ typeShow out ++ ")"
-typeShow (TypeN tps)     = "(" ++ intercalate "," (map typeShow tps) ++ ")"
+show' :: Type -> String
+show' (TypeV id)      = id
+show' TypeT           = "top"
+show' TypeB           = "bot"
+show' Type0           = "()"
+show' (Type1 id)      = id
+show' (TypeF inp out) = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
+show' (TypeN tps)     = "(" ++ intercalate "," (map show' tps) ++ ")"
 
 -------------------------------------------------------------------------------
 
@@ -97,8 +97,8 @@ groupTypesV vars tps = grouped                -- [k,"a","b","a"] ["Int","Int","B
 
 -------------------------------------------------------------------------------
 
-instType :: Type -> (Type,Type) -> Type -- TypeV -> (TypeV|~TypeV,~TypeV) -> ~TypeV
-instType tp (tp1, tp2) = aux tp (flatten tp1, flatten tp2)
+instantiate :: Type -> (Type,Type) -> Type -- TypeV -> (TypeV|~TypeV,~TypeV) -> ~TypeV
+instantiate tp (tp1, tp2) = aux tp (flatten tp1, flatten tp2)
     where
         flatten (TypeF inp out) = flatten inp ++ flatten out
         flatten (TypeN tps)     = concatMap flatten tps
@@ -115,11 +115,11 @@ instType tp (tp1, tp2) = aux tp (flatten tp1, flatten tp2)
 
 -------------------------------------------------------------------------------
 
-isPolymorphic :: Type -> Bool
-isPolymorphic (TypeV _)     = True
-isPolymorphic (TypeF t1 t2) = isPolymorphic t1 || isPolymorphic t2
-isPolymorphic (TypeN l)     = foldr (\tp acc -> isPolymorphic tp || acc) False l
-isPolymorphic _             = False
+isParametric :: Type -> Bool
+isParametric (TypeV _)     = True
+isParametric (TypeF t1 t2) = isParametric t1 || isParametric t2
+isParametric (TypeN l)     = foldr (\tp acc -> isParametric tp || acc) False l
+isParametric _             = False
 
 -------------------------------------------------------------------------------
 
