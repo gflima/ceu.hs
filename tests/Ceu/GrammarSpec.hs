@@ -35,8 +35,16 @@ spec = do
   checkCheckIt (Data annz "Bool" [] [] False (Var annz "a" (Type1 "Bool") (If annz (Read annz "a") (Nop annz) (Nop annz)))) []
   checkCheckIt (Var annz "a" Type0 (Var annz "a" Type0 (Nop annz)))  ["variable 'a' is already declared"]
   checkCheckIt (Write annz (LVar "a") (Number annz 1))        ["variable 'a' is not declared"]
-  checkCheckIt (prelude annz (Func annz "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "umn" (Read annz "b")))))) ["variable 'b' is not declared"]
-  checkCheckIt (prelude annz (Func annz "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var annz "a" Type0 (Write annz (LVar "a") (Call annz "umn" (Read annz "b")))))) ["variable 'b' is not declared","types do not match : expected '()' : found 'Int'"]
+
+  checkCheckIt (prelude annz (Func annz "umn" (TypeF (Type1 "Int") (Type1 "Int")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "umn" (Read annz "b"))))))
+               ["variable 'b' is not declared"]
+
+  checkCheckIt (prelude annz
+                (Func annz "umn" (TypeF (Type1 "Int") (Type1 "Int"))
+                (Var annz "a" Type0
+                (Write annz (LVar "a") (Call annz "umn" (Read annz "b"))))))
+               ["types do not match : expected '(Int -> Int)' : found '(_ -> ())'", "variable 'b' is not declared","types do not match : expected '()' : found 'Int'"]
+
   checkCheckIt (Write annz (LVar "a") (Call annz "f" (Number annz 1))) ["variable 'a' is not declared","function 'f' is not declared"]
   checkCheckIt (Var annz "x" (TypeN [Type0,Type0]) (Write annz (LVar "x") (Unit annz)))  ["types do not match : expected '((),())' : found '()'"]
   checkCheckIt (prelude annz (Var annz "x" (Type1 "Int") (Write annz (LVar "x") (Unit annz)))) ["types do not match : expected 'Int' : found '()'"]
@@ -60,7 +68,9 @@ spec = do
         `shouldBe` (["types do not match : expected '(() -> ())' : found '(() -> top)'"],Func annz "f" (TypeF Type0 Type0) (Func annz "f" (TypeF Type0 TypeT) (Nop annz)))
 
     -- func first :: (a,a)->a ; var a::Int ; a = first((),1)
-    checkCheckIt (prelude annz (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "first" (Tuple annz [(Unit annz),(Number annz 1)])))))) ["types do not match : expected '(a,a)' : found '((),Int)'","ambigous instances for 'a' : '()', 'Int'"]
+    checkCheckIt (prelude annz (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "first" (Tuple annz [(Unit annz),(Number annz 1)]))))))
+                 ["types do not match : expected '((a,a) -> a)' : found '(((),Int) -> Int)'","ambigous instances for 'a' : '()', 'Int', 'Int'"]
+
     checkCheckIt (prelude annz (Func annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz "first" (Tuple annz [(Number annz 1),(Number annz 1)])))))) []
 
   describe "pattern matching" $ do
@@ -156,7 +166,7 @@ spec = do
                  Cons annz "Bool.False"]))
             (Nop annz)
             (Nop annz))))))))
-      `shouldBe` ["types do not match : expected '(Int,Int)' : found '(Bool.True,Bool.False)'"]
+      `shouldBe` ["types do not match : expected '((Int,Int) -> Bool)' : found '((Bool.True,Bool.False) -> Bool)'"]
 
     it "~Bool ; x=True" $
       (fst $ TypeSys.go
@@ -308,8 +318,8 @@ spec = do
         (Class annz "Equalable" ["a"]
           (Func annz "eq" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (Type1 "Bool")) (Nop annz))
         (CallS annz "eq" (Tuple annz [(Cons annz "Bool"),(Number annz 1)]))))))
-      `shouldBe` ["types do not match : expected '(a,a)' : found '(Bool,Int)'",
-            "ambigous instances for 'a' : 'Bool', 'Int'"]
+      `shouldBe` ["types do not match : expected '((a,a) -> Bool)' : found '((Bool,Int) -> _)'",
+                  "ambigous instances for 'a' : 'Bool', 'Int'"]
 
     it "Int ; Bool ; Xable a ; inst Xable Bool/Int ; fff 1 ; fff Bool" $
       (TypeSys.go

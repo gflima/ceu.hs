@@ -197,9 +197,9 @@ stmt ids (Write z loc exp)   = (es1 ++ es2 ++ es3, Write z loc exp')
                                 es3        = map (toError z) (supOfErrors tps_loc (type_ $ getAnn exp'))
 
 stmt ids (CallS z id exp)   = (es, SCallS z id' exp') where
-                              (es,_,exp',id') = call z (TypeV "a") ids id exp
+                              (es,_,exp',id') = call z (TypeV "_") ids id exp
 
-stmt ids (If  z exp p1 p2)   = (ese ++ es ++ es1 ++ es2, If z exp' p1' p2')
+stmt ids (If z exp p1 p2)   = (ese ++ es ++ es1 ++ es2, If z exp' p1' p2')
                                where
                                 (ese,exp') = expr (Type1 "Bool") ids exp
                                 es = map (toError z) (supOfErrors (Type1 "Bool") (type_ $ getAnn exp'))
@@ -247,7 +247,7 @@ expr _ ids (Read z id)     = if id == "_INPUT" then
                             (es, Read z{type_=tp'} id)
                            where
                             (tp',es) = case find (isVar $ (==)id) ids of
-                                        Nothing               -> ((TypeV "a"), [toError z "variable '" ++ id ++ "' is not declared"])
+                                        Nothing               -> ((TypeV "_"), [toError z "variable '" ++ id ++ "' is not declared"])
                                         (Just (Var _ _ tp _)) -> (tp,    [])
 
 expr tp_out ids (Call z id exp) = (es, SCall z{type_=tp_out'} id' exp') where
