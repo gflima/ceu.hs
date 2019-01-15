@@ -29,6 +29,10 @@ spec = do
       TypeF (TypeV "a") (TypeV "a") `supOf` TypeF (Type1 "Int") (Type1 "Int")
       `shouldBe` Right ((TypeF (Type1 "Int") (Type1 "Int")), [("a", Type1 "Int")])
 
+    it "(a -> b) > (A -> B)" $
+      TypeF (TypeV "a") (TypeV "b") `supOf` TypeF (Type1 "A") (Type1 "B")
+      `shouldBe` Right ((TypeF (Type1 "A") (Type1 "B")), [("a", Type1 "A"), ("b", Type1 "B")])
+
     it "(a -> a) > (Int -> ())" $
       TypeF (TypeV "a") (TypeV "a") `supOf` TypeF (Type1 "Int") Type0
       `shouldBe` Left ["types do not match : expected '(a -> a)' : found '(Int -> ())'","ambigous instances for 'a' : 'Int', '()'"]
