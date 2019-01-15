@@ -4,8 +4,7 @@ import Data.List (find)
 import Debug.Trace
 
 import Ceu.Grammar.Globals
-import qualified Ceu.Grammar.Exp     as E
-import qualified Ceu.Grammar.Stmt    as G
+import qualified Ceu.Grammar.Basic   as B
 import qualified Ceu.Grammar.TypeSys as T
 
 type Vars = [(ID_Var, Maybe Exp)]
@@ -33,28 +32,28 @@ data Stmt
 
 infixr 1 `Seq`
 
-fromExp :: E.Exp -> Exp
-fromExp (E.Number _ v)    = Number v
-fromExp (E.Cons   _ id)   = Cons id
-fromExp (E.Read   _ id)   = Read id
-fromExp (E.Unit   _)      = Unit
-fromExp (E.Tuple  _ vs)   = Tuple (map fromExp vs)
-fromExp (E.SCall  _ id e) = SCall id (fromExp e)
+fromExp :: B.Exp -> Exp
+fromExp (B.Number _ v)    = Number v
+fromExp (B.Cons   _ id)   = Cons id
+fromExp (B.Read   _ id)   = Read id
+fromExp (B.Unit   _)      = Unit
+fromExp (B.Tuple  _ vs)   = Tuple (map fromExp vs)
+fromExp (B.SCall  _ id e) = SCall id (fromExp e)
 
-fromStmt :: G.Stmt -> Stmt
-fromStmt (G.Class  _ _ _ _ p)     = fromStmt p
-fromStmt (G.Inst   _ _ _ _ p)     = fromStmt p
-fromStmt (G.Data   _ _ _ _ _ p)   = fromStmt p
-fromStmt (G.Var    _ id _ p)      = Var (id,Nothing) (fromStmt p)
-fromStmt (G.Func   _ _ _ p)       = (fromStmt p)
-fromStmt (G.FuncI  _ _ _ _ _)     = error "not implemented"
-fromStmt (G.Write  _ (LVar id) e) = Write id (fromExp e)
-fromStmt (G.SCallS _ id e)        = SCallS id (fromExp e)
-fromStmt (G.If     _ e p1 p2)     = If (fromExp e) (fromStmt p1) (fromStmt p2)
-fromStmt (G.Seq    _ p1 p2)       = Seq (fromStmt p1) (fromStmt p2)
-fromStmt (G.Loop   _ p)           = Loop' (fromStmt p) (fromStmt p)
-fromStmt (G.Ret    _ e)           = Ret (fromExp e)
-fromStmt (G.Nop    _)             = Nop
+fromStmt :: B.Stmt -> Stmt
+fromStmt (B.Class  _ _ _ _ p)     = fromStmt p
+fromStmt (B.Inst   _ _ _ _ p)     = fromStmt p
+fromStmt (B.Data   _ _ _ _ _ p)   = fromStmt p
+fromStmt (B.Var    _ id _ p)      = Var (id,Nothing) (fromStmt p)
+fromStmt (B.Func   _ _ _ p)       = (fromStmt p)
+fromStmt (B.FuncI  _ _ _ _ _)     = error "not implemented"
+fromStmt (B.Write  _ (LVar id) e) = Write id (fromExp e)
+fromStmt (B.SCallS _ id e)        = SCallS id (fromExp e)
+fromStmt (B.If     _ e p1 p2)     = If (fromExp e) (fromStmt p1) (fromStmt p2)
+fromStmt (B.Seq    _ p1 p2)       = Seq (fromStmt p1) (fromStmt p2)
+fromStmt (B.Loop   _ p)           = Loop' (fromStmt p) (fromStmt p)
+fromStmt (B.Ret    _ e)           = Ret (fromExp e)
+fromStmt (B.Nop    _)             = Nop
 
 ----------------------------------------------------------------------------
 
@@ -120,7 +119,7 @@ steps :: Desc -> Exp
 steps (Ret e, vars) = envEval vars e
 steps d             = steps (step d)
 
-go :: G.Stmt -> Exp
+go :: B.Stmt -> Exp
 go p = case T.go p of
     ([], p) -> steps ((fromStmt p), [])
     (es, _) -> error $ "compile error : " ++ show es

@@ -1,12 +1,33 @@
-module Ceu.Grammar.Stmt where
+module Ceu.Grammar.Basic where
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann      (Ann, HasAnn(..), annz)
 import Ceu.Grammar.Type     (Type(..))
-import Ceu.Grammar.Exp      (Exp(..), RawAt)
-import Text.Printf
 
--- Program (pg 5).
+-------------------------------------------------------------------------------
+
+data Exp
+    = Number Ann Int            -- 1
+    | Cons   Ann ID_Type        -- True
+    | Read   Ann ID_Var         -- a ; xs
+    | Unit   Ann                -- ()
+    | Tuple  Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
+    | Call   Ann ID_Func Exp    -- f a ; f(a) ; f(1,2)
+    | SCall  Ann ID_Func Exp    -- f__int a
+    deriving (Eq, Show)
+
+instance HasAnn Exp where
+    --getAnn :: Exp -> Ann
+    getAnn (Number z _)   = z
+    getAnn (Cons   z _)   = z
+    getAnn (Read   z _)   = z
+    getAnn (Unit   z)     = z
+    getAnn (Tuple  z _)   = z
+    getAnn (Call   z _ _) = z
+    getAnn (SCall  z _ _) = z
+
+-------------------------------------------------------------------------------
+
 data Stmt
     = Class  Ann ID_Class [ID_Var] Stmt Stmt  -- new class declaration
     | Inst   Ann ID_Class [Type] Stmt Stmt    -- new class instance

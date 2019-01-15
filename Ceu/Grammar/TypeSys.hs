@@ -7,8 +7,7 @@ import Data.Maybe (isJust)
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Type as Type (Type(..), show', supOf, isSubOf, supOfErrors, instantiate, get1s)
 import Ceu.Grammar.Ann
-import Ceu.Grammar.Exp
-import Ceu.Grammar.Stmt
+import Ceu.Grammar.Basic
 
 go :: Stmt -> (Errors, Stmt)
 go p = stmt [] p

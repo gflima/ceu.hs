@@ -3,8 +3,7 @@ module Ceu.EvalSpec (main, spec) where
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Type     (Type(..))
 import Ceu.Grammar.Ann      (annz)
-import qualified Ceu.Grammar.Exp  as E
-import qualified Ceu.Grammar.Stmt as G
+import qualified Ceu.Grammar.Basic as B
 import Ceu.Eval
 import Control.DeepSeq
 import Control.Exception
@@ -137,50 +136,50 @@ spec = do
   describe "go" $ do
 
     evalProgItSuccess (Number 11)
-      (G.Func annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (G.Var annz "a" (Type1 "Int")
-           (G.Write annz (LVar "a") (E.Number annz 1) `G.sSeq`
-            G.Ret   annz (E.SCall annz "+" (E.Tuple annz [(E.Read annz "a"),(E.Number annz 10)])) `G.sSeq`
-            G.Nop annz)))
+      (B.Func annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (B.Var annz "a" (Type1 "Int")
+           (B.Write annz (LVar "a") (B.Number annz 1) `B.sSeq`
+            B.Ret   annz (B.SCall annz "+" (B.Tuple annz [(B.Read annz "a"),(B.Number annz 10)])) `B.sSeq`
+            B.Nop annz)))
 
     evalProgItSuccess (Number 11)
-      (G.Func annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (G.Var annz "a" (Type1 "Int")
-           (G.Write annz (LVar "a") (E.Number annz 1) `G.sSeq`
-            G.Var annz "b" (Type1 "Int") (G.Write annz (LVar "b") (E.Number annz 99)) `G.sSeq`
-            G.Ret annz (E.SCall annz "+" (E.Tuple annz [(E.Read annz "a"),(E.Number annz 10)])) `G.sSeq`
-            G.Nop annz)))
+      (B.Func annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (B.Var annz "a" (Type1 "Int")
+           (B.Write annz (LVar "a") (B.Number annz 1) `B.sSeq`
+            B.Var annz "b" (Type1 "Int") (B.Write annz (LVar "b") (B.Number annz 99)) `B.sSeq`
+            B.Ret annz (B.SCall annz "+" (B.Tuple annz [(B.Read annz "a"),(B.Number annz 10)])) `B.sSeq`
+            B.Nop annz)))
 
     evalProgItSuccess (Number 1)
-      (G.Ret annz (E.Number annz 1) `G.sSeq`
-          G.Var annz "_" (Type1 "Int") (G.Ret annz (E.Number annz 2)) `G.sSeq`
-          G.Nop annz)
+      (B.Ret annz (B.Number annz 1) `B.sSeq`
+          B.Var annz "_" (Type1 "Int") (B.Ret annz (B.Number annz 2)) `B.sSeq`
+          B.Nop annz)
 
 {-
     describe "typesystem:" $ do
 
         it "id(1)" $
             go
-                (G.FuncI annz "id"
+                (B.FuncI annz "id"
                     (TypeF (Type1 "Int") (Type1 "Int"))
-                    (G.Var annz "_fret" (Type1 "Int")
-                        (G.Write annz (LVar "_ret") (Read annz "_arg_0")))
-                (G.Seq annz
-                    (G.Write annz (LVar "_ret") (SCall annz "id" (Number annz 1)))
-                    (G.Escape annz 0)))
+                    (B.Var annz "_fret" (Type1 "Int")
+                        (B.Write annz (LVar "_ret") (Read annz "_arg_0")))
+                (B.Seq annz
+                    (B.Write annz (LVar "_ret") (SCall annz "id" (Number annz 1)))
+                    (B.Escape annz 0)))
                 []
             `shouldBe` Right (1,[[]])
 
         it "Int ; Bool ; Equalable a ; inst Equalable Bool/Int ; fff 1" $
             go
-                (G.Data annz "Bool" [] [] False
-                (G.Class annz "Equalable" ["a"]
-                    (G.Func annz "fff" (TypeF (TypeV "a") (Type1 "Int")) (G.Nop annz))
-                (G.Inst annz "Equalable" ["Bool"]
-                    (G.Func annz "fff" (TypeF (Type1 "Bool") (Type1 "Int")) (G.Nop annz))
-                (G.Inst annz "Equalable" ["Int"]
-                    (G.Func annz "fff" (TypeF (Type1 "Int") (Type1 "Int")) (G.Nop annz))
-                (G.Seq annz
-                    (G.Write annz (LVar "_ret") (E.SCall annz "fff" (E.Number annz 1)))
-                    (G.Escape annz 0))))))
+                (B.Data annz "Bool" [] [] False
+                (B.Class annz "Equalable" ["a"]
+                    (B.Func annz "fff" (TypeF (TypeV "a") (Type1 "Int")) (B.Nop annz))
+                (B.Inst annz "Equalable" ["Bool"]
+                    (B.Func annz "fff" (TypeF (Type1 "Bool") (Type1 "Int")) (B.Nop annz))
+                (B.Inst annz "Equalable" ["Int"]
+                    (B.Func annz "fff" (TypeF (Type1 "Int") (Type1 "Int")) (B.Nop annz))
+                (B.Seq annz
+                    (B.Write annz (LVar "_ret") (B.SCall annz "fff" (B.Number annz 1)))
+                    (B.Escape annz 0))))))
                 []
             `shouldBe` Right (1,[[]])
 -}
@@ -188,4 +187,4 @@ spec = do
       where
         evalProgItSuccess res p =
           (it (printf "pass: %s ~> %s" "todo" (show res)) $
-            (go (G.prelude annz p) `shouldBe` res))
+            (go (B.prelude annz p) `shouldBe` res))

@@ -1,4 +1,4 @@
-module Ceu.GrammarSpec (main, spec) where
+module Ceu.BasicSpec (main, spec) where
 
 import Debug.Trace
 import Test.Hspec
@@ -6,8 +6,7 @@ import Test.Hspec
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann    (annz, Ann(..))
 import Ceu.Grammar.Type   (Type(..))
-import Ceu.Grammar.Exp
-import Ceu.Grammar.Stmt
+import Ceu.Grammar.Basic
 import qualified Ceu.Grammar.TypeSys as TypeSys
 
 main :: IO ()
