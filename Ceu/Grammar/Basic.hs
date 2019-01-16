@@ -67,7 +67,7 @@ data Stmt
 --      * instantiate class variable `a` against call `eq 10 20`, resolving to `Int`
 --          ! must find `instance Equable Int`
 --
--- Expected layout of named function:
+-- Expected layout of Inst.imp:
 --  (Var _ "f" tp
 --    (Seq _
 --      (Write _ (LVar "f") (Func ...))   -- or (Nop _) // no implementation

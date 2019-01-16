@@ -4,7 +4,7 @@ import Data.List  (find, intercalate)
 import Debug.Trace
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Ann          (type_)
+import Ceu.Grammar.Ann          (type_, getAnn)
 import Ceu.Grammar.Type as Type (Type(..), show')
 import qualified Ceu.Grammar.Basic   as B
 import qualified Ceu.Grammar.TypeSys as T
@@ -43,38 +43,33 @@ fromExp (B.Unit   _)      = Unit
 fromExp (B.Tuple  _ vs)   = Tuple (map fromExp vs)
 fromExp (B.Call   _ f e)  = Call (fromExp f) (fromExp e)
 fromExp (B.Func   _ z p)  = Func (fromStmt p)
-fromExp (B.Read   z id)   = Read id'
-  where
-    id' = case type_ z of
-      tp@(TypeF _ _) -> id ++ "__" ++ Type.show' tp
-      otherwise      -> id
+fromExp (B.Read   z id)   = Read id' where
+                              id' = case type_ z of
+                                tp@(TypeF _ _) -> id ++ "__" ++ Type.show' tp
+                                otherwise      -> id
 
 fromStmt :: B.Stmt -> Stmt
-fromStmt (B.Class  _ _ _ _ p)     = fromStmt p
-fromStmt (B.Data   _ _ _ _ _ p)   = fromStmt p
-fromStmt (B.Write  _ (LVar id) e) = Write id (fromExp e)
-fromStmt (B.CallS  _ f e)         = CallS (fromExp f) (fromExp e)
-fromStmt (B.Seq    _ p1 p2)       = Seq (fromStmt p1) (fromStmt p2)
-fromStmt (B.If     _ e p1 p2)     = If (fromExp e) (fromStmt p1) (fromStmt p2)
-fromStmt (B.Loop   _ p)           = Loop' (fromStmt p) (fromStmt p)
-fromStmt (B.Ret    _ e)           = Ret (fromExp e)
-fromStmt (B.Nop    _)             = Nop
-fromStmt (B.Var _ id1 tp@(TypeF _ _)
-          (B.Seq _
-            (B.Write _ (LVar id2) f)
-            p))
-  | (id1 == id2)                  = Var (id1++"__"++Type.show' tp, Just $ fromExp f) (fromStmt p)
-fromStmt (B.Var _ id1 tp@(TypeF _ _)
-          (B.Seq _
-            (B.Nop _)
-            p))                   = Var (id1++"__"++Type.show' tp, Nothing) (fromStmt p)
-fromStmt (B.Var _ id _ p)         = Var (id,Nothing) (fromStmt p)
+fromStmt (B.Class  _ _ _ _ p)          = fromStmt p
+fromStmt (B.Data   _ _ _ _ _ p)        = fromStmt p
+fromStmt (B.Var _ id tp@(TypeF _ _) p) = Var (id++"__"++Type.show' tp, Nothing) (fromStmt p)
+fromStmt (B.Var _ id _ p)              = Var (id,Nothing) (fromStmt p)
+fromStmt (B.Write  _ (LVar id) e)      = Write id' (fromExp e) where
+                                          id' = case type_ $ getAnn e of
+                                            tp@(TypeF _ _) -> id ++ "__" ++ Type.show' tp
+                                            otherwise      -> id
+fromStmt (B.Write  _ _ _)              = error "TODO: not implemented"
+fromStmt (B.CallS  _ f e)              = CallS (fromExp f) (fromExp e)
+fromStmt (B.Seq    _ p1 p2)            = Seq (fromStmt p1) (fromStmt p2)
+fromStmt (B.If     _ e p1 p2)          = If (fromExp e) (fromStmt p1) (fromStmt p2)
+fromStmt (B.Loop   _ p)                = Loop' (fromStmt p) (fromStmt p)
+fromStmt (B.Ret    _ e)                = Ret (fromExp e)
+fromStmt (B.Nop    _)                  = Nop
 
-fromStmt (B.Inst   _ _ _ imp p)   = aux (fromStmt imp) (fromStmt p)
+fromStmt (B.Inst   _ _ _ imp p)        = aux (fromStmt imp) (fromStmt p)
   where
-    aux Nop        p = p
-    aux (Var vv x) p = Var vv (aux x p)
-    --aux x p = error $ show (x,p)
+    aux Nop                p = p
+    aux (Var vv (Seq x y)) p = Var vv (Seq x (aux y p))
+    aux x p = error $ show (x,p)
 
 ----------------------------------------------------------------------------
 
@@ -100,11 +95,10 @@ envEval vars e = case e of
     Tuple es' -> Tuple $ map (envEval vars) es'
     Call f e' ->
       case (envEval vars f, envEval vars e') of
-        (Read "negate", Number x)                   -> Number (-x)
-        (Read "+",      Tuple [Number x, Number y]) -> Number (x+y)
-        (Read "+__((Int,Int) -> Int)",      Tuple [Number x, Number y]) -> Number (x+y)
-        (Read "-",      Tuple [Number x, Number y]) -> Number (x-y)
-        (Func p,        arg)                        -> steps (p, ("_arg",Just arg):vars)
+        (Read "negate__(Int -> Int)",  Number x)                   -> Number (-x)
+        (Read "+__((Int,Int) -> Int)", Tuple [Number x, Number y]) -> Number (x+y)
+        (Read "-__((Int,Int) -> Int)", Tuple [Number x, Number y]) -> Number (x-y)
+        (Func p,        arg)                                       -> steps (p, ("_arg",Just arg):vars)
         otherwise -> error $ show (f,e')
 
     e         -> e
