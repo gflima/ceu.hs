@@ -54,14 +54,12 @@ getErrsTypesDeclared z tp ids = concatMap aux $ map (\id->(id, find (isData $ (=
 
 -------------------------------------------------------------------------------
 
-call :: Ann -> (Bool,Type) -> [Stmt] -> Exp -> Exp -> (Errors, Type, Exp, Exp)
-call z (isSup,tp_xp) ids f exp = (bool es_exp es_f (null es_exp), out, f', exp')
+call :: Ann -> Type -> [Stmt] -> Exp -> Exp -> (Errors, Type, Exp, Exp)
+call z tp_xp ids f exp = (bool es_exp es_f (null es_exp), out, f', exp')
   where
     --(es_f,   f')   = expr z (TypeF (TypeV "_") tp_xp) ids f
-    (es_f,   f')   = expr z (isSup, TypeF (type_$getAnn$exp') tp_xp) ids f
-                      -- VAR: I expect exp.type (actual) to be a subtype of f.type (formal)
-    (es_exp, exp') = expr z (isSup, inp) ids exp
-                      -- VAR: I expect exp.type (actual) to be a subtype of inp (formal)
+    (es_f,   f')   = expr z (TypeF (type_$getAnn$exp') tp_xp) ids f
+    (es_exp, exp') = expr z inp ids exp
     (inp,out) = case type_ $ getAnn f' of
       TypeF inp' out' -> (inp',out')
       otherwise       -> (TypeV "_", TypeV "_")
@@ -144,19 +142,19 @@ stmt ids (Write z loc exp) = (es1 ++ es2, Write z loc exp')
                                                 (tps,es) = foldr cat ([],[]) l'
                                                 cat (tp,es1) (tps,es2) = (tp:tps, es1++es2)
 
-                              (es2,exp') = expr z (True,tps_loc) ids exp
+                              (es2,exp') = expr z tps_loc ids exp
                                 -- VAR: I expect exp.type to be a subtype of tps_loc
 
 stmt ids (CallS z f exp)   = (es, CallS z f' exp')
                              where
-                              (es, _, f', exp') = call z (True,(TypeV "_")) ids f exp
+                              (es, _, f', exp') = call z (TypeV "_") ids f exp
 
 -------------------------------------------------------------------------------
 
 
 stmt ids (If z exp p1 p2)   = (ese ++ es1 ++ es2, If z exp' p1' p2')
                               where
-                                (ese,exp') = expr z (True,Type1 "Bool") ids exp
+                                (ese,exp') = expr z (Type1 "Bool") ids exp
                                   -- VAR: I expect exp.type to be a subtype of Bool
                                 (es1,p1') = stmt ids p1
                                 (es2,p2') = stmt ids p2
@@ -170,27 +168,25 @@ stmt ids (Loop z p)         = (es, Loop z p')
 
 stmt ids (Ret z exp)        = (es, Ret z exp')
                               where
-                                (es,exp') = expr z (True,TypeT) ids exp
+                                (es,exp') = expr z TypeT ids exp
                                   -- VAR: I expect exp.type to be a subtype of Top (any type)
 
 stmt _   (Nop z)            = ([], Nop z)
 
 -------------------------------------------------------------------------------
 
-expr :: Ann -> (Bool,Type) -> [Stmt] -> Exp -> (Errors, Exp)
-expr z (isSup,tp_xp) ids exp = (es1++es2, exp') where
-  (es1, exp') = expr' (isSup,tp_xp) ids exp
+expr :: Ann -> Type -> [Stmt] -> Exp -> (Errors, Exp)
+expr z tp_xp ids exp = (es1++es2, exp') where
+  (es1, exp') = expr' tp_xp ids exp
   es2 = if not.null $ es1 then [] else
-          map (toError z) ((bool (flip supOfErrors) supOfErrors isSup)
-                           tp_xp (type_ $ getAnn exp'))
-  --f = traceShow ([show isSup, show tp_xp, show $ type_ $ getAnn exp])
+          map (toError z) (tp_xp `supOfErrors` (type_ $ getAnn exp'))
 
 -- TODO: use tp_xp in the cases below:
 --  * number: decide for float/int/etc
 --  * cons:   ?
 --  * tuple:  instantiate sub exps
 
-expr' :: (Bool,Type) -> [Stmt] -> Exp -> (Errors, Exp)
+expr' :: Type -> [Stmt] -> Exp -> (Errors, Exp)
 
 expr' _ _   (Number z val)  = ([], Number z{type_=Type1 "Int"} val)
 expr' _ _   (Unit z)        = ([], Unit   z{type_=Type0})
@@ -205,12 +201,12 @@ expr' _ ids (Cons  z id)    = (es, Cons  z{type_=(Type1 id)} id)
 expr' _ ids (Tuple z exps)  = (es, Tuple z{type_=tps'} exps')
                               where
                                 rets :: [(Errors,Exp)]
-                                rets  = map (\e -> expr z (True,TypeT) ids e) exps
+                                rets  = map (\e -> expr z TypeT ids e) exps
                                 es    = concat $ map fst rets
                                 exps' = map snd rets
                                 tps'  = TypeN (map (type_.getAnn) exps')
 
-expr' (isSup,tp_xp) ids (Read z id) = if id == "_INPUT" then
+expr' tp_xp ids (Read z id) = if id == "_INPUT" then
                                 ([], Read z{type_=Type1 "Int"} id)
                               else
                                 (es, Read z{type_=tp_ret} id)
