@@ -9,6 +9,7 @@ import Control.DeepSeq
 import Control.Exception
 import Test.Hspec
 import Text.Printf
+import Debug.Trace
 
 main :: IO ()
 main = hspec spec

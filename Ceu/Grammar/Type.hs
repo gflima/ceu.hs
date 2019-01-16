@@ -109,7 +109,7 @@ supOf' sup@(Type1 _)     _                 = (False, sup,   [])
 supOf' sup               (Type1 _)         = (False, sup,   [])
 
 supOf' sup@(TypeF inp1 out1) sub@(TypeF inp2 out2) =
-  let (i,_,k) = inp2 `supOf'` inp1
+  let (i,_,k) = inp2 `supOf'` inp1      -- contravariance on inputs
       (x,_,z) = out1 `supOf'` out2 in
     if i && x then                           (True,  sub,   k++z)
               else                           (False, sup,   k++z)

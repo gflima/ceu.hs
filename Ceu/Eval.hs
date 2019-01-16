@@ -101,7 +101,7 @@ envEval vars e = case e of
 step :: Desc -> Desc
 
 step (Var _  Nop,     vars)  = (Nop,        vars)
-step (Var _  (Ret e), vars)  = (Ret e,      vars)
+step (Var vv (Ret e), vars)  = (Ret e,      vv:vars)
 step (Var vv p,       vars)  = (Var vv' p', vars') where (p',vv':vars') = step (p,vv:vars)
 
 step (Write var e, vars)     = (Nop,        envWrite vars var (envEval vars e))
@@ -129,5 +129,5 @@ steps d             = steps (step d)
 
 go :: B.Stmt -> Exp
 go p = case T.go p of
-    ([], p) -> steps ((fromStmt p), [])
+    ([], p) -> steps (fromStmt p, [])
     (es, _) -> error $ "compile error : " ++ show es
