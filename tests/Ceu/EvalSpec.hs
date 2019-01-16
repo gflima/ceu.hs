@@ -146,6 +146,14 @@ spec = do
   --------------------------------------------------------------------------
   describe "go" $ do
 
+    describe "func" $ do
+      it "ret f()" $
+        steps (
+          (Var ("f", Just $ Func (Ret (Number 1)))
+          (Ret (Call (Read "f") Unit)))
+          , [])
+        `shouldBe` (Number 1)
+
     evalProgItSuccess (Number 11)
       (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
       (B.Var annz "a" (Type1 "Int")
