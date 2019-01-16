@@ -24,7 +24,7 @@ data Exp
 
 data Stmt
     = Var    (ID_Var,Maybe Exp) Stmt    -- block with environment store
-    | Write  ID_Var Exp                 -- assignment statement
+    | Write  Loc Exp                    -- assignment statement
     | CallS  Exp Exp                    -- procedure call
     | If     Exp Stmt Stmt              -- conditional
     | Seq    Stmt Stmt                  -- sequence
@@ -53,17 +53,21 @@ fromStmt (B.Class  _ _ _ _ p)          = fromStmt p
 fromStmt (B.Data   _ _ _ _ _ p)        = fromStmt p
 fromStmt (B.Var _ id tp@(TypeF _ _) p) = Var (id++"__"++Type.show' tp, Nothing) (fromStmt p)
 fromStmt (B.Var _ id _ p)              = Var (id,Nothing) (fromStmt p)
-fromStmt (B.Write  _ (LVar id) e)      = Write id' (fromExp e) where
-                                          id' = case type_ $ getAnn e of
-                                            tp@(TypeF _ _) -> id ++ "__" ++ Type.show' tp
-                                            otherwise      -> id
-fromStmt (B.Write  _ _ _)              = error "TODO: not implemented"
 fromStmt (B.CallS  _ f e)              = CallS (fromExp f) (fromExp e)
 fromStmt (B.Seq    _ p1 p2)            = Seq (fromStmt p1) (fromStmt p2)
 fromStmt (B.If     _ e p1 p2)          = If (fromExp e) (fromStmt p1) (fromStmt p2)
 fromStmt (B.Loop   _ p)                = Loop' (fromStmt p) (fromStmt p)
 fromStmt (B.Ret    _ e)                = Ret (fromExp e)
 fromStmt (B.Nop    _)                  = Nop
+
+fromStmt (B.Write  _ loc e)            = Write (aux loc (type_ $ getAnn e)) (fromExp e)
+  where
+    aux LAny          _           = LAny
+    aux (LVar id)      tp         =
+      case tp of
+        tp@(TypeF _ _) -> LVar $ id ++ "__" ++ Type.show' tp
+        otherwise      -> LVar $ id
+    aux (LTuple locs) (TypeN tps) = LTuple $ zipWith aux locs tps
 
 fromStmt (B.Inst   _ _ _ imp p)        = aux (fromStmt imp) (fromStmt p)
   where
@@ -111,13 +115,19 @@ step (Var _  Nop,     vars)  = (Nop,        vars)
 step (Var vv (Ret e), vars)  = (Ret e,      vv:vars)
 step (Var vv p,       vars)  = (Var vv' p', vars') where (p',vv':vars') = step (p,vv:vars)
 
-step (Write var e, vars)     = (Nop,        envWrite vars var (envEval vars e))
+step (Write loc e,    vars)  = (Nop, aux vars loc e)
+  where
+    aux vars LAny          _          = vars
+    aux vars (LVar var)    e          = envWrite vars var (envEval vars e)
+    aux vars (LTuple locs) (Tuple es) = foldr (\(loc,e) vars' -> aux vars' loc e)
+                                              vars
+                                              (zip locs (map (envEval vars) es))
 
-step (Seq Nop     q, vars)   = (q,          vars)
-step (Seq (Ret e) q, vars)   = (Ret e,      vars)
-step (Seq p       q, vars)   = (Seq p' q,   vars') where (p',vars') = step (p,vars)
+step (Seq Nop     q,  vars)  = (q,          vars)
+step (Seq (Ret e) q,  vars)  = (Ret e,      vars)
+step (Seq p       q,  vars)  = (Seq p' q,   vars') where (p',vars') = step (p,vars)
 
-step (If exp p q,    vars)   =
+step (If exp p q,     vars)  =
     case envEval vars exp of
         (Cons "Bool.True")  -> (p,          vars)
         otherwise           -> (q,          vars)

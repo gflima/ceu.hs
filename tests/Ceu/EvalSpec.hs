@@ -64,27 +64,27 @@ spec = do
     -- write --
     describe "write" $ do
       it "[x=?] x=1" $
-        step (Var ("x",Nothing) (Write "x" (Number 1)), [])
+        step (Var ("x",Nothing) (Write (LVar "x") (Number 1)), [])
         `shouldBe` (Var ("x",(Just (Number 1))) Nop, [])
 
       it "[x=1] x=2" $
-        step (Var ("x",(Just (Number 1))) (Write "x" (Number 2)), [])
+        step (Var ("x",(Just (Number 1))) (Write (LVar "x") (Number 2)), [])
         `shouldBe` (Var ("x",(Just (Number 2))) Nop, [])
 
       it "nop; x=1" $
         step
         (Var ("x",Nothing)
-          (Nop `Seq` (Write "x" (Number 1))), [])
+          (Nop `Seq` (Write (LVar "x") (Number 1))), [])
         `shouldBe`
         (Var ("x",Nothing)
-          (Write "x" (Number 1)), [])
+          (Write (LVar "x") (Number 1)), [])
 
       it "[x=1,y=?] y=x+2" $
         step (
           (Var ("+__((Int,Int) -> Int)",Nothing)
           (Var ("x",(Just (Number 1)))
           (Var ("y",Nothing)
-          (Write "y" (Call (Read "+__((Int,Int) -> Int)") (Tuple [(Read "x"),(Number 2)])))))), [])
+          (Write (LVar "y") (Call (Read "+__((Int,Int) -> Int)") (Tuple [(Read "x"),(Number 2)])))))), [])
         `shouldBe` (Var ("+__((Int,Int) -> Int)",Nothing) (Var ("x",(Just (Number 1))) (Var ("y",(Just (Number 3))) Nop)), [])
 
       it "[x=1,y=?] y=x+2" $
@@ -92,7 +92,7 @@ spec = do
           (Var ("+__((Int,Int) -> Int)",Nothing)
         (Var ("x",(Just (Number 1)))
         (Var ("y",Nothing)
-          (Write "y" (Call (Read "+__((Int,Int) -> Int)") (Tuple [(Read "x"),(Number 2)]))))), [])
+          (Write (LVar "y") (Call (Read "+__((Int,Int) -> Int)") (Tuple [(Read "x"),(Number 2)]))))), [])
         `shouldBe`
         (Var ("+__((Int,Int) -> Int)",Nothing)
         (Var ("x",(Just (Number 1)))
@@ -103,7 +103,7 @@ spec = do
         (Var ("negate__(Int -> Int)",Nothing)
         (Var ("+__((Int,Int) -> Int)",Nothing)
         (Var ("x",(Just (Number 0)))
-          (Write "x" (Call (Read "negate__(Int -> Int)") (Call (Read "+__((Int,Int) -> Int)") (Tuple [(Number 5),(Number 1)])))))), [])
+          (Write (LVar "x") (Call (Read "negate__(Int -> Int)") (Call (Read "+__((Int,Int) -> Int)") (Tuple [(Number 5),(Number 1)])))))), [])
         `shouldBe`
         (Var ("negate__(Int -> Int)",Nothing)
         (Var ("+__((Int,Int) -> Int)",Nothing)
@@ -169,6 +169,16 @@ spec = do
 
   --------------------------------------------------------------------------
   describe "go" $ do
+
+    it "(a,b) = (1,2)" $
+      go
+        (B.Data annz "Int" [] [] False
+        (B.Var annz "a" TypeT
+        (B.Var annz "b" TypeT
+        (B.Seq annz
+        (B.Write annz (LTuple [LVar "a",LVar "b"]) (B.Tuple annz [B.Number annz 1,B.Number annz 2]))
+        (B.Ret annz (B.Read annz "b"))))))
+        `shouldBe` (Number 2)
 
     it "Int ; f1 ; return f1 1" $
       go

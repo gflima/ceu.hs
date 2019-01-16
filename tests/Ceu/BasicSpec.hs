@@ -64,6 +64,13 @@ spec = do
         (Var annz "ret" TypeT
         (Write annz (LVar "ret") (Number annz 1)))))
         `shouldBe` []
+    it "(a,b) = (1,2)" $
+      (fst $ TypeSys.go
+        (Data annz "Int" [] [] False
+        (Var annz "a" TypeT
+        (Var annz "b" TypeT
+        (Write annz (LTuple [LVar "a",LVar "b"]) (Tuple annz [Number annz 1,Number annz 2]))))))
+        `shouldBe` []
     it "ret = f()" $
       (fst $ TypeSys.go
         (Data annz "Int" [] [] False
