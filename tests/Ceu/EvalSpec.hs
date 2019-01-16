@@ -34,25 +34,25 @@ spec = do
 
   describe "envRead vars id" $ do
       it "pass: read in simple env" $
-        envRead [("x",Just (Number 0))] "x" `shouldBe` (Just $ Number 0)
+        envRead [("x",Just (Number 0))] "x" `shouldBe` (Number 0)
 
       it "pass: read in complex env" $
         let vars = [("y",Just (Number 0)),("x",Just (Number 1)),("z",Just (Number 0))] in
-          envRead vars "x" `shouldBe` (Just $ Number 1)
+          envRead vars "x" `shouldBe` (Number 1)
 
   describe "envEval vars exp" $ do
       it "pass: vars == [] && exp == (Number _)" $
-        envEval [] (Number 0) `shouldBe` (Just $ Number 0)
+        envEval [] (Number 0) `shouldBe` (Number 0)
 
       it "pass: eval in simple env" $
-        let vars = [("x",Just (Number 1)),("y",Just (Number 2))] in
+        let vars = [("+",Nothing), ("negate",Nothing), ("x",Just (Number 1)),("y",Just (Number 2))] in
           envEval vars (Call (Read "+") (Tuple [(Call (Read "-") (Tuple [(Read "x"),(Number 3)])),(Call (Read "negate") (Read "y"))]))
-          `shouldBe` (Just $ Number (-4))
+          `shouldBe` (Number (-4))
 
       it "pass: eval in complex env" $
         let vars = [("y",Just (Number 2)),("x",Just (Number 1)),("y",Just (Number 99)),("x",Just (Number 99))] in
           envEval vars (Call (Read "+") (Tuple [(Call (Read "-") (Tuple [(Read "x"),(Number 3)])),(Call (Read "negate") (Read "y"))]))
-          `shouldBe` (Just $ Number (-4))
+          `shouldBe` (Number (-4))
 
   --------------------------------------------------------------------------
   describe "step" $ do

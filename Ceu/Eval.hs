@@ -1,7 +1,6 @@
 module Ceu.Eval where
 
 import Data.List  (find)
-import Data.Maybe (fromJust)
 import Debug.Trace
 
 import Ceu.Grammar.Globals
@@ -66,19 +65,25 @@ envWrite vars var val =
             | otherwise   -> (var',val'):(envWrite vars' var val)
         []                -> error ("envWrite: undeclared variable: " ++ var)
 
-envRead :: Vars -> ID_Var -> Maybe Exp
+envRead :: Vars -> ID_Var -> Exp
 envRead vars var =
   case find (\(var',_)->var'==var) vars of
     Nothing      -> error ("envRead: undeclared variable: " ++ var)
-    Just (_,val) -> val
+    Just (_,val) -> case val of
+      Just val' -> val'
+      Nothing   -> Read var   -- keep original (Read "+")
 
-envEval :: Vars -> Exp -> Maybe Exp
+envEval :: Vars -> Exp -> Exp
 envEval vars e = case e of
-    Read var -> envRead vars var
-    Call f e ->
-      case envEval vars f of
-        Just _  -> error "non-primitive call" --envRead vars f
-        Nothing -> error "primitive call"
+    Read var  -> envRead vars var
+    Call f e' ->
+      case (envEval vars f, envEval vars e') of
+        (Read "negate", Number x)                   -> Number (-x)
+        (Read "+",      Tuple [Number x, Number y]) -> Number (x+y)
+        otherwise -> error $ show (f,e')
+
+    e         -> e
+
 {-
     Call  _ "negate" e -> negate $ envEval vars e
     Call  _ "+"  (Tuple _ [e1,e2]) -> (envEval vars e1) + (envEval vars e2)
@@ -88,7 +93,6 @@ envEval vars e = case e of
     Call  _ "==" (Tuple _ [e1,e2]) -> if (envEval vars e1) == (envEval vars e2) then 1 else 0
     Call  _ "<=" (Tuple _ [e1,e2]) -> if (envEval vars e1) <= (envEval vars e2) then 1 else 0
 -}
-    e        -> Just e
 
 ----------------------------------------------------------------------------
 
@@ -98,14 +102,14 @@ step (Var _  Nop,     vars)  = (Nop,        vars)
 step (Var _  (Ret e), vars)  = (Ret e,      vars)
 step (Var vv p,       vars)  = (Var vv' p', vars') where (p',vv':vars') = step (p,vv:vars)
 
-step (Write var e, vars)     = (Nop,        envWrite vars var (fromJust $ envEval vars e))
+step (Write var e, vars)     = (Nop,        envWrite vars var (envEval vars e))
 
 step (Seq Nop     q, vars)   = (q,          vars)
 step (Seq (Ret e) q, vars)   = (Ret e,      vars)
 step (Seq p       q, vars)   = (Seq p' q,   vars') where (p',vars') = step (p,vars)
 
 step (If exp p q,    vars)   =
-    case fromJust $ envEval vars exp of
+    case envEval vars exp of
         (Cons "Bool.True")  -> (p,          vars)
         otherwise           -> (q,          vars)
 
@@ -118,7 +122,7 @@ step p =  error $ "step: cannot advance : " ++ (show p)
 ----------------------------------------------------------------------------
 
 steps :: Desc -> Exp
-steps (Ret e, vars) = fromJust $ envEval vars e
+steps (Ret e, vars) = envEval vars e
 steps d             = steps (step d)
 
 go :: B.Stmt -> Exp
