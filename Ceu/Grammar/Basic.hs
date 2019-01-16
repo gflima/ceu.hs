@@ -12,8 +12,8 @@ data Exp
     | Read   Ann ID_Var         -- a ; xs
     | Unit   Ann                -- ()
     | Tuple  Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
-    | Call   Ann ID_Func Exp    -- f a ; f(a) ; f(1,2)
-    | SCall  Ann ID_Func Exp    -- f__int a
+    | Func   Ann Type Stmt      -- function implementation
+    | Call   Ann Exp Exp        -- f a ; f(a) ; f(1,2)
     deriving (Eq, Show)
 
 instance HasAnn Exp where
@@ -23,8 +23,8 @@ instance HasAnn Exp where
     getAnn (Read   z _)   = z
     getAnn (Unit   z)     = z
     getAnn (Tuple  z _)   = z
+    getAnn (Func   z _ _) = z
     getAnn (Call   z _ _) = z
-    getAnn (SCall  z _ _) = z
 
 -------------------------------------------------------------------------------
 
@@ -33,11 +33,8 @@ data Stmt
     | Inst   Ann ID_Class [Type] Stmt Stmt    -- new class instance
     | Data   Ann ID_Type [ID_Var] [DataCons] Bool Stmt -- new type declaration
     | Var    Ann ID_Var  Type Stmt            -- variable declaration
-    | Func   Ann ID_Func Type Stmt            -- function declaration
-    | FuncI  Ann ID_Func Type Stmt Stmt       -- function implementation (must have accompainying Func)
     | Write  Ann Loc Exp                      -- assignment statement
-    | CallS  Ann ID_Func Exp                  -- call function
-    | SCallS Ann ID_Func Exp                  -- resolved call function
+    | CallS  Ann Exp Exp                      -- call function
     | If     Ann Exp Stmt Stmt                -- conditional
     | Seq    Ann Stmt Stmt                    -- sequence
     | Loop   Ann Stmt                         -- infinite loop
@@ -77,11 +74,8 @@ instance HasAnn Stmt where
     getAnn (Inst   z _ _ _ _)   = z
     getAnn (Data   z _ _ _ _ _) = z
     getAnn (Var    z _ _ _)     = z
-    getAnn (Func   z _ _ _)     = z
-    getAnn (FuncI  z _ _ _ _)   = z
     getAnn (Write  z _ _)       = z
     getAnn (CallS  z _ _)       = z
-    getAnn (SCallS z _ _)       = z
     getAnn (If     z _ _ _)     = z
     getAnn (Seq    z _ _)       = z
     getAnn (Loop   z _)         = z

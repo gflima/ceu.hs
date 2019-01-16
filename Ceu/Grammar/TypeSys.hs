@@ -2,7 +2,8 @@ module Ceu.Grammar.TypeSys where
 
 import Debug.Trace
 import Data.List (find, intercalate)
-import Data.Maybe (isJust)
+import Data.Maybe (isJust, fromJust)
+import Data.Bool (bool)
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Type as Type (Type(..), show', supOf, isSubOf, supOfErrors, instantiate, get1s)
@@ -26,12 +27,15 @@ isData  _  _                   = False
 isVar   f (Var   _ id _ _)     = f id
 isVar   _  _                   = False
 
-isFunc  f (Func  _ id _ _)     = f id
-isFunc  _  _                   = False
+isAny f s = isClass f s || isData f s || isVar  f s
 
-isAny f s = isClass f s || isData f s || isVar  f s || isFunc f s
-
-true x = True
+classinst2ids :: Stmt -> [Stmt]
+classinst2ids p = case p of
+    (Class _ _ _ ifc _) -> aux ifc
+    (Inst  _ _ _ imp _) -> aux imp
+    where
+        aux (Nop _)          = []
+        aux s@(Var _ _ _ p) = s : aux p
 
 -------------------------------------------------------------------------------
 
@@ -50,56 +54,17 @@ getErrsTypesDeclared z tp ids = concatMap aux $ map (\id->(id, find (isData $ (=
 
 -------------------------------------------------------------------------------
 
-call :: Ann -> Type -> [Stmt] -> ID_Func -> Exp -> (Errors, Type, Exp, String)
-call z tp_out ids id exp = (es++es_exp, tp_out', exp', fid)
+call :: Ann -> (Bool,Type) -> [Stmt] -> Exp -> Exp -> (Errors, Type, Exp, Exp)
+call z (isSup,tp_xp) ids f exp = (bool es_exp es_f (null es_exp), out, f', exp')
   where
-    (es_exp, exp') = expr z TypeT ids exp
-    tp_exp' = type_ $ getAnn exp'
-
-    -- find in top-level funcs | f : A -> B
-    (fid,tp_out',es) =
-      case find (isFunc $ (==)id) ids of
-        -- found in top-level `Func`
-        (Just (Func _ _ tp_f@(TypeF _ out) _)) ->
-          case tp_f `supOf` (TypeF tp_exp' tp_out) of
-            Left  es         -> ("???", out,                        map (toError z) es)
-            Right (tp,insts) -> (id,    Type.instantiate insts out, [])
-
-        -- find in classes | class X a with ...
-        Nothing ->
-          case find (\(_,f)->isJust f) $ map cls2func $ filter (isClass true) ids of
-            -- not found
-            Nothing -> ("???", TypeB, [toError z "function '" ++ id ++ "' is not declared"])
-
-            -- found in class | class X a with f : C -> a -> b
-            -- find instance matching call | f x y:A z
-            --    instantiate 'a' in 'f' using call to find 'A'
-            -- find 'X A' with 'f : C -> A -> b'
-            Just (Class _ id' [var] _ _, Just (Func _ id tp_f@(TypeF _ out) _)) ->
-              case tp_f `supOf` (TypeF tp_exp' tp_out) of
-                Left  es        -> ("???", out, map (toError z) es)
-                Right (_,insts) ->
-                  let tp = Type.instantiate insts (TypeV var) in
-                    case find (isSubOf tp . getTP) $ filter (isInst $ (==id')) (sort' ids) of
-                      Nothing -> ("???",
-                                  out,
-                                  [toError z "call for '" ++ id ++ "' has no instance in '" ++ id' ++ "'"])
-                      Just (Inst _ _ [tp'] _ _) ->
-                                 (Type.show' tp' ++ "__" ++ id,
-                                  Type.instantiate insts out,
-                                  [])
-
-    cls2func cls = (cls, find (isFunc $ (==)id) (classinst2ids cls))
-    getTP (Inst _ _ [tp] _ _) = tp
-    sort' ids = ids -- TODO: sort by subtyping (topological order)
-
-classinst2ids :: Stmt -> [Stmt]
-classinst2ids p = case p of
-    (Class _ _ _ ifc _) -> aux ifc
-    (Inst  _ _ _ imp _) -> aux imp
-    where
-        aux (Nop _)          = []
-        aux s@(Func _ _ _ p) = s : aux p
+    --(es_f,   f')   = expr z (TypeF (TypeV "_") tp_xp) ids f
+    (es_f,   f')   = expr z (not isSup, TypeF (type_$getAnn$exp') tp_xp) ids f
+                      -- VAR: I expect exp.type (actual) to be a subtype of f.type (formal)
+    (es_exp, exp') = expr z (isSup, inp) ids exp
+                      -- VAR: I expect exp.type (actual) to be a subtype of inp (formal)
+    (inp,out) = case type_ $ getAnn f' of
+      TypeF inp' out' -> (inp',out')
+      otherwise       -> (TypeV "_", TypeV "_")
 
 -------------------------------------------------------------------------------
 
@@ -124,14 +89,14 @@ stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] im
             (Just _) -> [toError z "instance '" ++ id ++ " (" ++
                          intercalate "," [Type.show' tp] ++ ")' is already declared"]
         isSameInst (Inst _ id' [tp'] _ _) = (id==id' && [tp]==[tp'])
-        isSameInst _                     = False
+        isSameInst _                      = False
 
         -- check if class exists
         -- compares class vs instance function by function in order
         es0 = case find (isClass $ (==)id) ids of
             Nothing                      -> [toError z "typeclass '" ++ id ++ "' is not declared"]
             Just (Class _ _ [var] ifc _) -> compares ifc imp where
-                compares (Func _ id1 tp1 p1) (Func  _ id2 tp2   p2) =
+                compares (Var _ id1 tp1 p1) (Var _ id2 tp2 p2) =
                     (names id1 id2) ++ (instOf var tp1 tp2) ++ (compares p1 p2)
                 compares (Nop _) (Nop _) = []
 
@@ -152,76 +117,80 @@ stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] im
 stmt ids (Inst _ _ tps _ _) = error "not implemented: multiple types"
 
 stmt ids s@(Data z id [] cons abs p) = ((errDeclared z "type" id ids) ++ es, Data z id [] cons abs p')
-                                    where (es,p') = stmt (s:ids) p
+                                       where (es,p') = stmt (s:ids) p
 stmt ids s@(Data z id vars cons abs p) = error "not implemented"
 
-stmt ids s@(Var  z id tp p)  = (es_data ++ es_id ++ es, Var z id tp p')
-                               where
+stmt ids s@(Var  z id tp p) = (es_data ++ es_dcl ++ es_id ++ es, Var z id tp p')
+                              where
                                 es_data = getErrsTypesDeclared z tp ids
                                 es_id   = errDeclared z "variable" id ids
                                 (es,p') = stmt (s:ids) p
+                                es_dcl = errDeclared z "variable" id ids'
+                                ids' = concatMap classinst2ids $ filter (isClass $ const True) ids
 
-stmt ids s@(Func z id tp p)  = (es_data ++ es_dcl ++ es ++ es', Func z id tp p') where
-    (es, (es',p')) = case find (isFunc $ (==)id) ids of
-        Nothing               -> ([],                                   stmt (s:ids) p)
-        Just (Func _ _ tp' _) -> (map (toError z) (supOfErrors tp' tp), stmt ids p)
-    es_data = getErrsTypesDeclared z tp ids
+stmt ids (Write z loc exp) = (es1 ++ es2, Write z loc exp')
+                             where
+                              (tps_loc, es1) = aux loc
+                              aux :: Loc -> (Type, Errors)
+                              aux LAny       = (TypeT, [])
+                              aux (LVar var) = case find (isVar $ (==)var) ids of
+                                                Nothing ->
+                                                  (TypeT, [toError z "variable '" ++ var ++ "' is not declared"])
+                                                Just (Var _ _ tp _) ->
+                                                  (tp,    [])
+                              aux (LTuple l) = (TypeN tps, es) where
+                                                l' :: [(Type,Errors)]
+                                                l' = map aux l
+                                                (tps,es) = foldr cat ([],[]) l'
+                                                cat (tp,es1) (tps,es2) = (tp:tps, es1++es2)
 
-    -- check if clashes with functions in classes
-    es_dcl = errDeclared z "function" id ids'
-    ids' = concatMap classinst2ids $ filter (isClass true) ids
+                              (es2,exp') = expr z (True,tps_loc) ids exp
+                                -- VAR: I expect exp.type to be a subtype of tps_loc
 
-stmt ids s@(FuncI z id tp imp p) = (es1++es2, FuncI z id tp imp' p')
-                                   where
-                                    (es1,imp') = stmt ids imp
-                                    (es2,p')   = stmt ids p
-
-stmt ids (Write z loc exp)   = (es1 ++ es2, Write z loc exp')
-                               where
-                                (tps_loc, es1) = aux loc
-                                aux :: Loc -> (Type, Errors)
-                                aux LAny       = (TypeT, [])
-                                aux (LVar var) = case find (isVar $ (==)var) ids of
-                                                    Nothing ->
-                                                        (TypeT, [toError z "variable '" ++ var ++ "' is not declared"])
-                                                    (Just (Var _ _ tp _)) ->
-                                                        (tp,    [])
-                                aux (LTuple l) = (TypeN tps, es) where
-                                                 l' :: [(Type,Errors)]
-                                                 l' = map aux l
-                                                 (tps,es) = foldr cat ([],[]) l'
-                                                 cat (tp,es1) (tps,es2) = (tp:tps, es1++es2)
-
-                                (es2,exp') = expr z tps_loc ids exp
-
-stmt ids (CallS z id exp)   = (es, SCallS z id' exp') where
-                              (es,_,exp',id') = call z (TypeV "_") ids id exp
-
-stmt ids (If z exp p1 p2)   = (ese ++ es1 ++ es2, If z exp' p1' p2')
-                               where
-                                (ese,exp') = expr z (Type1 "Bool") ids exp
-                                (es1,p1') = stmt ids p1
-                                (es2,p2') = stmt ids p2
-stmt ids (Seq z p1 p2)       = (es1++es2, Seq z p1' p2')
-                               where
-                                (es1,p1') = stmt ids p1
-                                (es2,p2') = stmt ids p2
-stmt ids (Loop z p)          = (es, Loop z p')
-                               where
-                                (es,p') = stmt ids p
-
-stmt ids (Ret z exp)         = (es, Ret z exp')
-                               where
-                                (es,exp') = expr z TypeT ids exp
-
-stmt _   (Nop z)             = ([], Nop z)
+stmt ids (CallS z f exp)   = (es, CallS z f' exp')
+                             where
+                              (es, _, f', exp') = call z (True,(TypeV "_")) ids f exp
 
 -------------------------------------------------------------------------------
 
-expr :: Ann -> Type -> [Stmt] -> Exp -> (Errors, Exp)
-expr z tp ids exp = (es1++es2, exp') where
-  (es1, exp') = expr' tp ids exp
-  es2 = map (toError z) (supOfErrors tp (type_ $ getAnn exp'))
+
+stmt ids (If z exp p1 p2)   = (ese ++ es1 ++ es2, If z exp' p1' p2')
+                              where
+                                (ese,exp') = expr z (True,Type1 "Bool") ids exp
+                                  -- VAR: I expect exp.type to be a subtype of Bool
+                                (es1,p1') = stmt ids p1
+                                (es2,p2') = stmt ids p2
+stmt ids (Seq z p1 p2)      = (es1++es2, Seq z p1' p2')
+                              where
+                                (es1,p1') = stmt ids p1
+                                (es2,p2') = stmt ids p2
+stmt ids (Loop z p)         = (es, Loop z p')
+                              where
+                                (es,p') = stmt ids p
+
+stmt ids (Ret z exp)        = (es, Ret z exp')
+                              where
+                                (es,exp') = expr z (True,TypeT) ids exp
+                                  -- VAR: I expect exp.type to be a subtype of Top (any type)
+
+stmt _   (Nop z)            = ([], Nop z)
+
+-------------------------------------------------------------------------------
+
+expr :: Ann -> (Bool,Type) -> [Stmt] -> Exp -> (Errors, Exp)
+expr z (isSup,tp_xp) ids exp = (es1++es2, exp') where
+  (es1, exp') = expr' (isSup,tp_xp) ids exp
+  es2 = if not.null $ es1 then [] else
+          map (toError z) ((bool (flip supOfErrors) supOfErrors isSup)
+                           tp_xp (type_ $ getAnn exp'))
+  --f = traceShow ([show isSup, show tp_xp, show $ type_ $ getAnn exp])
+
+-- TODO: use tp_xp in the cases below:
+--  * number: decide for float/int/etc
+--  * cons:   ?
+--  * tuple:  instantiate sub exps
+
+expr' :: (Bool,Type) -> [Stmt] -> Exp -> (Errors, Exp)
 
 expr' _ _   (Number z val)  = ([], Number z{type_=Type1 "Int"} val)
 expr' _ _   (Unit z)        = ([], Unit   z{type_=Type0})
@@ -236,19 +205,49 @@ expr' _ ids (Cons  z id)    = (es, Cons  z{type_=(Type1 id)} id)
 expr' _ ids (Tuple z exps)  = (es, Tuple z{type_=tps'} exps')
                               where
                                 rets :: [(Errors,Exp)]
-                                rets  = map (\e -> expr z TypeT ids e) exps
+                                rets  = map (\e -> expr z (True,TypeT) ids e) exps
                                 es    = concat $ map fst rets
                                 exps' = map snd rets
                                 tps'  = TypeN (map (type_.getAnn) exps')
 
-expr' _ ids (Read z id)     = if id == "_INPUT" then
+expr' (isSup,tp_xp) ids (Read z id) = if id == "_INPUT" then
                                 ([], Read z{type_=Type1 "Int"} id)
                               else
-                                (es, Read z{type_=tp'} id)
-                              where
-                                (tp',es) = case find (isVar $ (==)id) ids of
-                                            Nothing               -> ((TypeV "_"), [toError z "variable '" ++ id ++ "' is not declared"])
-                                            (Just (Var _ _ tp _)) -> (tp,    [])
+                                (es, Read z{type_=tp_ret} id)
+  where
+    -- find in top-level ids | id : a
+    (tp_ret,es) =
+      case find (isVar $ (==)id) ids of
+        Just (Var _ _ tp _) -> (tp, [])   -- found
+        Nothing             ->            -- not found
+          -- find in classes | class X a with id : a
+          case find (\(_,var) -> isJust var)            -- Just (clsI, Just (Var ...))
+               $ map (\(cls,ids) -> (cls, find (isVar $ (==)id) ids)) -- [(cls1,Just (Var .)), .]
+               $ map (\cls -> (cls, classinst2ids cls)) -- [(cls1,ids1), ...]
+               $ filter (isClass $ const True) ids              -- [cls1,cls2, ...]
+            of
+            -- not found
+            Nothing -> (TypeV "_", [toError z "variable '" ++ id ++ "' is not declared"])
 
-expr' tp_out ids (Call z id exp) = (es, SCall z{type_=tp_out'} id' exp') where
-                                   (es, tp_out', exp', id') = call z tp_out ids id exp
+            -- find matching instance | id : a=<tp_xp>
+            Just (Class _ cls [var] _ _, Just (Var _ id tp_var _)) ->
+              case tp_var `supOf` tp_xp of
+                Left  es        -> (TypeV "_", map (toError z) es)
+                Right (_,insts) ->
+                  let tp = Type.instantiate insts (TypeV var) in
+                    case find (isSubOf tp . getTP) $ filter (isInst $ (==cls)) (sort' ids) of
+                      Nothing   -> (TypeV "_",
+                                    [toError z "variable '" ++ id ++
+                                     "' has no associated instance for type '" ++
+                                     Type.show' tp_xp ++ "' in class '" ++ cls ++ "'"])
+                      Just inst -> (getTP $ fromJust
+                                          $ find (isVar $ (==)id) (classinst2ids inst),
+                                    [])
+
+    getTP (Inst _ _ [tp] _ _) = tp
+    getTP (Var  _ _ tp _)     = tp
+    sort' ids = ids -- TODO: sort by subtyping (topological order)
+
+expr' xp ids (Call z f exp) = (es, Call z{type_=out} f' exp')
+                                 where
+                                  (es, out, f', exp') = call z xp ids f exp

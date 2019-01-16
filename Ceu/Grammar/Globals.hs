@@ -10,7 +10,6 @@ data Loc = LAny | LVar ID_Var | LTuple [Loc]
 type ID_Class = String   -- type identifier/constructor
 type ID_Type  = String   -- type identifier/constructor
 type ID_Var   = String   -- variable identifier
-type ID_Func  = String   -- function identifier
 
 newtype DataCons = DataCons (Either ID_Var (ID_Type,[DataCons]))
     deriving (Eq, Show)
