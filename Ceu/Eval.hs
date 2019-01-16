@@ -16,13 +16,14 @@ data Exp
     | Read   ID_Var         -- a ; xs
     | Unit                  -- ()
     | Tuple  [Exp]          -- (1,2) ; ((1),2) ; ((1,2),3) ; ((),()) // (len >= 2)
-    | SCall  ID_Func Exp    -- f a ; f(a) ; f(1,2)
+    | Func   Stmt
+    | Call   Exp Exp        -- f a ; f(a) ; f(1,2)
     deriving (Eq, Show)
 
 data Stmt
     = Var    (ID_Var,Maybe Exp) Stmt    -- block with environment store
     | Write  ID_Var Exp                 -- assignment statement
-    | SCallS ID_Func Exp                -- procedure call
+    | CallS  Exp Exp                    -- procedure call
     | If     Exp Stmt Stmt              -- conditional
     | Seq    Stmt Stmt                  -- sequence
     | Nop                               -- dummy statement (internal)
@@ -38,17 +39,16 @@ fromExp (B.Cons   _ id)   = Cons id
 fromExp (B.Read   _ id)   = Read id
 fromExp (B.Unit   _)      = Unit
 fromExp (B.Tuple  _ vs)   = Tuple (map fromExp vs)
-fromExp (B.SCall  _ id e) = SCall id (fromExp e)
+fromExp (B.Func   _ _ p)  = Func (fromStmt p)
+fromExp (B.Call   _ f e)  = Call (fromExp f) (fromExp e)
 
 fromStmt :: B.Stmt -> Stmt
 fromStmt (B.Class  _ _ _ _ p)     = fromStmt p
 fromStmt (B.Inst   _ _ _ _ p)     = fromStmt p
 fromStmt (B.Data   _ _ _ _ _ p)   = fromStmt p
 fromStmt (B.Var    _ id _ p)      = Var (id,Nothing) (fromStmt p)
-fromStmt (B.Func   _ _ _ p)       = (fromStmt p)
-fromStmt (B.FuncI  _ _ _ _ _)     = error "not implemented"
 fromStmt (B.Write  _ (LVar id) e) = Write id (fromExp e)
-fromStmt (B.SCallS _ id e)        = SCallS id (fromExp e)
+fromStmt (B.CallS  _ f e)         = CallS (fromExp f) (fromExp e)
 fromStmt (B.If     _ e p1 p2)     = If (fromExp e) (fromStmt p1) (fromStmt p2)
 fromStmt (B.Seq    _ p1 p2)       = Seq (fromStmt p1) (fromStmt p2)
 fromStmt (B.Loop   _ p)           = Loop' (fromStmt p) (fromStmt p)
@@ -75,8 +75,8 @@ envRead vars var =
 
 envEval :: Vars -> Exp -> Exp
 envEval vars e = case e of
-    Read  var    -> envRead vars var
-    SCall func e -> envRead vars func
+    Read var -> envRead vars var
+    Call f e -> error "Call" --envRead vars f
 {-
     Call  _ "negate" e -> negate $ envEval vars e
     Call  _ "+"  (Tuple _ [e1,e2]) -> (envEval vars e1) + (envEval vars e2)

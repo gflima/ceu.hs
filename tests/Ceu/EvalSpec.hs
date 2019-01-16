@@ -46,12 +46,12 @@ spec = do
 
       it "pass: eval in simple env" $
         let vars = [("x",Just (Number 1)),("y",Just (Number 2))] in
-          envEval vars (SCall "+" (Tuple [(SCall "-" (Tuple [(Read "x"),(Number 3)])),(SCall "negate" (Read "y"))]))
+          envEval vars (Call (Read "+") (Tuple [(Call (Read "-") (Tuple [(Read "x"),(Number 3)])),(Call (Read "negate") (Read "y"))]))
           `shouldBe` (Number (-4))
 
       it "pass: eval in complex env" $
         let vars = [("y",Just (Number 2)),("x",Just (Number 1)),("y",Just (Number 99)),("x",Just (Number 99))] in
-          envEval vars (SCall "+" (Tuple [(SCall "-" (Tuple [(Read "x"),(Number 3)])),(SCall "negate" (Read "y"))]))
+          envEval vars (Call (Read "+") (Tuple [(Call (Read "-") (Tuple [(Read "x"),(Number 3)])),(Call (Read "negate") (Read "y"))]))
           `shouldBe` (Number (-4))
 
   --------------------------------------------------------------------------
@@ -79,14 +79,14 @@ spec = do
         step (
           (Var ("x",(Just (Number 1)))
           (Var ("y",Nothing)
-            (Write "y" (SCall "+" (Tuple [(Read "x"),(Number 2)])))), []))
+            (Write "y" (Call (Read "+") (Tuple [(Read "x"),(Number 2)])))), []))
         `shouldBe` (Var ("x",(Just (Number 1))) (Var ("y",(Just (Number 3))) Nop), [])
 
       it "[x=1,y=?] y=x+2" $
         step
         (Var ("x",(Just (Number 1)))
         (Var ("y",Nothing)
-          (Write "y" (SCall "+" (Tuple [(Read "x"),(Number 2)])))), [])
+          (Write "y" (Call (Read "+") (Tuple [(Read "x"),(Number 2)])))), [])
         `shouldBe`
         (Var ("x",(Just (Number 1)))
         (Var ("y",(Just (Number 3))) Nop), [])
@@ -94,7 +94,7 @@ spec = do
       it "[x=?] x=-(5+1)" $
         step
         (Var ("x",(Just (Number 0)))
-          (Write "x" (SCall "negate" (SCall "+" (Tuple [(Number 5),(Number 1)])))), [])
+          (Write "x" (Call (Read "negate") (Call (Read "+") (Tuple [(Number 5),(Number 1)])))), [])
         `shouldBe`
         (Var ("x",(Just (Number (-6)))) Nop, [])
 
@@ -136,17 +136,23 @@ spec = do
   describe "go" $ do
 
     evalProgItSuccess (Number 11)
-      (B.Func annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (B.Var annz "a" (Type1 "Int")
-           (B.Write annz (LVar "a") (B.Number annz 1) `B.sSeq`
-            B.Ret   annz (B.SCall annz "+" (B.Tuple annz [(B.Read annz "a"),(B.Number annz 10)])) `B.sSeq`
-            B.Nop annz)))
+      (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
+      (B.Var annz "a" (Type1 "Int")
+      (B.Seq annz
+      (B.Write annz (LVar "a") (B.Number annz 1))
+      (B.Ret annz (B.Call annz (B.Read annz "+") (B.Tuple annz [(B.Read annz "a"),(B.Number annz 10)]))))))
 
     evalProgItSuccess (Number 11)
-      (B.Func annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")) (B.Var annz "a" (Type1 "Int")
-           (B.Write annz (LVar "a") (B.Number annz 1) `B.sSeq`
-            B.Var annz "b" (Type1 "Int") (B.Write annz (LVar "b") (B.Number annz 99)) `B.sSeq`
-            B.Ret annz (B.SCall annz "+" (B.Tuple annz [(B.Read annz "a"),(B.Number annz 10)])) `B.sSeq`
-            B.Nop annz)))
+      (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
+      (B.Var annz "a" (Type1 "Int")
+      (B.Seq annz
+      (B.Write annz (LVar "a") (B.Number annz 1))
+      (B.Var annz "b" (Type1 "Int")
+      (B.Seq annz
+      (B.Write annz (LVar "b") (B.Number annz 99))
+      (B.Ret annz
+        (B.Call annz (B.Read annz "+")
+                     (B.Tuple annz [(B.Read annz "a"),(B.Number annz 10)]))))))))
 
     evalProgItSuccess (Number 1)
       (B.Ret annz (B.Number annz 1) `B.sSeq`
