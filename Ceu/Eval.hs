@@ -82,7 +82,7 @@ envEval vars e = case e of
         (Read "negate", Number x)                   -> Number (-x)
         (Read "+",      Tuple [Number x, Number y]) -> Number (x+y)
         (Read "-",      Tuple [Number x, Number y]) -> Number (x-y)
-        (Func p,        _)                          -> steps (p, vars)
+        (Func p,        arg)                        -> steps (p, ("_arg",Just arg):vars)
         otherwise -> error $ show (f,e')
 
     e         -> e

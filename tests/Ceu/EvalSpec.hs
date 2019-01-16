@@ -154,6 +154,14 @@ spec = do
           , [])
         `shouldBe` (Number 1)
 
+      it "ret f(1)" $
+        steps (
+          (Var ("+", Nothing)
+          (Var ("f", Just $ Func (Ret (Call (Read "+") (Tuple [Read "_arg",Number 1]))))
+          (Ret (Call (Read "f") (Number 2)))))
+          , [])
+        `shouldBe` (Number 3)
+
     evalProgItSuccess (Number 11)
       (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
       (B.Var annz "a" (Type1 "Int")
