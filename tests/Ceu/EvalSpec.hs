@@ -170,105 +170,133 @@ spec = do
   --------------------------------------------------------------------------
   describe "go" $ do
 
-    it "(a,b) = (1,2)" $
-      go
-        (B.Data annz "Int" [] [] False
-        (B.Var annz "a" TypeT
-        (B.Var annz "b" TypeT
-        (B.Seq annz
-        (B.Write annz (LTuple [LVar "a",LVar "b"]) (B.Tuple annz [B.Number annz 1,B.Number annz 2]))
-        (B.Ret annz (B.Read annz "b"))))))
+    describe "write" $ do
+
+      it "(a,b) <- (1,2)" $
+        go
+          (B.Data annz "Int" [] [] False
+          (B.Var annz "a" TypeT
+          (B.Var annz "b" TypeT
+          (B.Seq annz
+          (B.Write annz (LTuple [LVar "a",LVar "b"]) (B.Tuple annz [B.Number annz 1,B.Number annz 2]))
+          (B.Ret annz (B.Read annz "b"))))))
+          `shouldBe` (Number 2)
+
+    describe "func" $ do
+
+      it "Int ; f1 ; return f1 1" $
+        go
+          (B.Data annz "Int" [] [] False
+          (B.Var annz "f1" (TypeF Type0 (Type1 "Int"))
+          (B.Seq annz
+          (B.Write annz
+            (LVar "f1")
+            (B.Func annz (TypeF Type0 (Type1 "Int"))
+              (B.Ret annz (B.Number annz 1))))
+          (B.Ret annz (B.Call annz (B.Read annz "f1") (B.Unit annz))))))
+        `shouldBe` (Number 1)
+
+      it "(f,g) <- (+,c) ; return f(g 1, g 2)" $
+        go
+          (B.Data annz "Int" [] [] False
+          (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
+          (B.Var annz "c" (TypeF (Type1 "Int") (Type1 "Int"))
+          (B.Seq annz
+          (B.Write annz
+            (LVar "c")
+            (B.Func annz (TypeF (Type1 "Int") (Type1 "Int"))
+              (B.Ret annz (B.Arg annz))))
+          (B.Var annz "f" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
+          (B.Var annz "g" (TypeF (Type1 "Int") (Type1 "Int"))
+          (B.Seq annz
+          (B.Write annz (LTuple [LVar "f",LVar "g"]) (B.Tuple annz [B.Read annz "+",B.Read annz "c"]))
+          (B.Ret annz
+            (B.Call annz
+              (B.Read annz "f")
+              (B.Tuple annz [
+                B.Call annz (B.Read annz "c") (B.Number annz 1),
+                B.Call annz (B.Read annz "c") (B.Number annz 2)]))))))))))
+          `shouldBe` (Number 3)
+
+    describe "class" $ do
+
+      it "Int ; Bool ; X a ; inst X Bool/Int ; return f2 1" $
+        go
+          (B.Data annz "Int" [] [] False
+          (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
+          (B.Data annz "Bool" [] [] False
+          (B.Class annz "X" ["a"]
+            (B.Var annz "f2" (TypeF (TypeV "a") (Type1 "Int")) (B.Nop annz))
+          (B.Inst annz "X" [Type1 "Bool"]
+            (B.Var annz "f2" (TypeF (Type1 "Bool") (Type1 "Int"))
+            (B.Seq annz
+            (B.Write annz
+              (LVar "f2")
+              (B.Func annz (TypeF (Type1 "Bool") (Type1 "Int"))
+                (B.Ret annz (B.Number annz 0))))
+            (B.Nop annz)))
+          (B.Inst annz "X" [Type1 "Int"]
+            (B.Var annz "f2" (TypeF (Type1 "Int") (Type1 "Int"))
+            (B.Seq annz
+            (B.Write annz
+              (LVar "f2")
+              (B.Func annz (TypeF (Type1 "Int") (Type1 "Int"))
+                (B.Ret annz
+                  (B.Call annz
+                    (B.Read annz "+")
+                    (B.Tuple annz [B.Arg annz, B.Number annz 1])))))
+            (B.Nop annz)))
+          (B.Var annz "ret" (Type1 "Int")
+          (B.Seq annz
+          (B.Write annz (LVar "ret")
+            (B.Call annz (B.Read annz "f2") (B.Number annz 1)))
+          (B.Ret annz (B.Read annz "ret"))))))))))
         `shouldBe` (Number 2)
 
-    it "Int ; f1 ; return f1 1" $
-      go
-        (B.Data annz "Int" [] [] False
-        (B.Var annz "f1" (TypeF Type0 (Type1 "Int"))
-        (B.Seq annz
-        (B.Write annz
-          (LVar "f1")
-          (B.Func annz (TypeF Type0 (Type1 "Int"))
-            (B.Ret annz (B.Number annz 1))))
-        (B.Ret annz (B.Call annz (B.Read annz "f1") (B.Unit annz))))))
-      `shouldBe` (Number 1)
-
-    it "Int ; Bool ; X a ; inst X Bool/Int ; return f2 1" $
-      go
-        (B.Data annz "Int" [] [] False
-        (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
-        (B.Data annz "Bool" [] [] False
-        (B.Class annz "X" ["a"]
-          (B.Var annz "f2" (TypeF (TypeV "a") (Type1 "Int")) (B.Nop annz))
-        (B.Inst annz "X" [Type1 "Bool"]
-          (B.Var annz "f2" (TypeF (Type1 "Bool") (Type1 "Int"))
-          (B.Seq annz
-          (B.Write annz
-            (LVar "f2")
-            (B.Func annz (TypeF (Type1 "Bool") (Type1 "Int"))
-              (B.Ret annz (B.Number annz 0))))
-          (B.Nop annz)))
-        (B.Inst annz "X" [Type1 "Int"]
-          (B.Var annz "f2" (TypeF (Type1 "Int") (Type1 "Int"))
-          (B.Seq annz
-          (B.Write annz
-            (LVar "f2")
-            (B.Func annz (TypeF (Type1 "Int") (Type1 "Int"))
-              (B.Ret annz
-                (B.Call annz
-                  (B.Read annz "+")
-                  (B.Tuple annz [B.Arg annz, B.Number annz 1])))))
-          (B.Nop annz)))
-        (B.Var annz "ret" (Type1 "Int")
-        (B.Seq annz
-        (B.Write annz (LVar "ret")
-          (B.Call annz (B.Read annz "f2") (B.Number annz 1)))
-        (B.Ret annz (B.Read annz "ret"))))))))))
-      `shouldBe` (Number 2)
-
-    it "Int ; X a ; inst X Int ; return f3 1" $
-      go
-        (B.Data annz "Int" [] [] False
-        (B.Class annz "X" ["a"]
-          (B.Var annz "f3" (TypeF (TypeV "a") (Type1 "Int")) (B.Nop annz))
-        (B.Inst annz "X" [Type1 "Int"]
-          (B.Var annz "f3" (TypeF (Type1 "Int") (Type1 "Int"))
-          (B.Seq annz
-          (B.Write annz
-            (LVar "f3")
-            (B.Func annz (TypeF (Type1 "Int") (Type1 "Int"))
-              (B.Ret annz (B.Number annz 1))))
-          (B.Nop annz)))
-        (B.Ret annz (B.Call annz (B.Read annz "f3") (B.Number annz 1))))))
-      `shouldBe` (Number 1)
-
-    it "Int ; Bool ; X a ; inst X Bool/Int ; return f4 1" $
-      go
-        (B.Data annz "Int" [] [] False
-        (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
-        (B.Data annz "Bool" [] [] False
-        (B.Class annz "X" ["a"]
-          (B.Var annz "f4" (TypeF (TypeV "a") (Type1 "Int")) (B.Nop annz))
-        (B.Inst annz "X" [Type1 "Bool"]
-          (B.Var annz "f4" (TypeF (Type1 "Bool") (Type1 "Int"))
-          (B.Seq annz
-          (B.Write annz
-            (LVar "f4")
-            (B.Func annz (TypeF (Type1 "Bool") (Type1 "Int"))
-              (B.Ret annz (B.Number annz 0))))
-          (B.Nop annz)))
-        (B.Inst annz "X" [Type1 "Int"]
-          (B.Var annz "f4" (TypeF (Type1 "Int") (Type1 "Int"))
-          (B.Seq annz
-          (B.Write annz
-            (LVar "f4")
-            (B.Func annz (TypeF (Type1 "Int") (Type1 "Int"))
-              (B.Ret annz
-                (B.Call annz
-                  (B.Read annz "+")
-                  (B.Tuple annz [B.Arg annz, B.Number annz 1])))))
+      it "Int ; X a ; inst X Int ; return f3 1" $
+        go
+          (B.Data annz "Int" [] [] False
+          (B.Class annz "X" ["a"]
+            (B.Var annz "f3" (TypeF (TypeV "a") (Type1 "Int")) (B.Nop annz))
+          (B.Inst annz "X" [Type1 "Int"]
+            (B.Var annz "f3" (TypeF (Type1 "Int") (Type1 "Int"))
+            (B.Seq annz
+            (B.Write annz
+              (LVar "f3")
+              (B.Func annz (TypeF (Type1 "Int") (Type1 "Int"))
+                (B.Ret annz (B.Number annz 1))))
             (B.Nop annz)))
-        (B.Ret annz (B.Call annz (B.Read annz "f4") (B.Number annz 1)))))))))
-      `shouldBe` (Number 2)
+          (B.Ret annz (B.Call annz (B.Read annz "f3") (B.Number annz 1))))))
+        `shouldBe` (Number 1)
+
+      it "Int ; Bool ; X a ; inst X Bool/Int ; return f4 1" $
+        go
+          (B.Data annz "Int" [] [] False
+          (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
+          (B.Data annz "Bool" [] [] False
+          (B.Class annz "X" ["a"]
+            (B.Var annz "f4" (TypeF (TypeV "a") (Type1 "Int")) (B.Nop annz))
+          (B.Inst annz "X" [Type1 "Bool"]
+            (B.Var annz "f4" (TypeF (Type1 "Bool") (Type1 "Int"))
+            (B.Seq annz
+            (B.Write annz
+              (LVar "f4")
+              (B.Func annz (TypeF (Type1 "Bool") (Type1 "Int"))
+                (B.Ret annz (B.Number annz 0))))
+            (B.Nop annz)))
+          (B.Inst annz "X" [Type1 "Int"]
+            (B.Var annz "f4" (TypeF (Type1 "Int") (Type1 "Int"))
+            (B.Seq annz
+            (B.Write annz
+              (LVar "f4")
+              (B.Func annz (TypeF (Type1 "Int") (Type1 "Int"))
+                (B.Ret annz
+                  (B.Call annz
+                    (B.Read annz "+")
+                    (B.Tuple annz [B.Arg annz, B.Number annz 1])))))
+              (B.Nop annz)))
+          (B.Ret annz (B.Call annz (B.Read annz "f4") (B.Number annz 1)))))))))
+        `shouldBe` (Number 2)
 
     describe "misc" $ do
 
