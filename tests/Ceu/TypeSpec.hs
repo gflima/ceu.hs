@@ -41,6 +41,28 @@ spec = do
       TypeN [(TypeV "a"),(TypeV "b")] `supOf` TypeN [(Type1 "Int"),Type0]
       `shouldBe` Right (TypeN [Type1 "Int",Type0],[("a",Type1 "Int"),("b",Type0)])
 
+  describe "isSupOf / isSubOf" $ do
+    it "(bot -> top) > (bot -> top)" $
+      TypeF TypeB TypeT `isSupOf` TypeF TypeB TypeT
+      `shouldBe` True
+    it "(bot -> top) < (bot -> top)" $
+      TypeF TypeB TypeT `isSubOf` TypeF TypeB TypeT
+      `shouldBe` True
+
+    it "(bot -> top) > (bot -> bot)" $
+      TypeF TypeB TypeT `isSupOf` TypeF TypeB TypeB
+      `shouldBe` True
+    it "(top -> top) > (bot -> bot)" $
+      TypeF TypeT TypeT `isSupOf` TypeF TypeB TypeB
+      `shouldBe` False
+
+    it "top > Int" $
+      TypeT `isSupOf` (Type1 "Int")
+      `shouldBe` True
+    it "(() -> top) > (() -> Int)" $
+      TypeF Type0 TypeT `isSupOf` TypeF Type0 (Type1 "Int")
+      `shouldBe` True
+
   describe "instantiate" $ do
 
     it "A in [...] ~> A" $

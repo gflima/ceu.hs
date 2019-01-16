@@ -50,12 +50,27 @@ spec = do
       (Var annz "umn" (TypeF (Type1 "Int") (Type1 "Int"))
       (Var annz "a" Type0
       (Write annz (LVar "a") (Call annz (Read annz "umn") (Number annz 1))))))
-    ["types do not match : expected '(Int -> Int)' : found '(Int -> ())'"]
+    ["types do not match : expected '(Int -> ())' : found '(Int -> Int)'"]
 
   checkCheckIt (Write annz (LVar "a") (Call annz (Read annz "f") (Number annz 1))) ["variable 'a' is not declared","variable 'f' is not declared"]
   checkCheckIt (Var annz "x" (TypeN [Type0,Type0]) (Write annz (LVar "x") (Unit annz)))  ["types do not match : expected '((),())' : found '()'"]
   checkCheckIt (prelude annz (Var annz "x" (Type1 "Int") (Write annz (LVar "x") (Unit annz)))) ["types do not match : expected 'Int' : found '()'"]
   checkCheckIt (prelude annz (Var annz "identity" (TypeF (TypeV "a") (TypeV "a")) (Var annz "a" (Type1 "Int") (Write annz (LVar "a") (Call annz (Read annz "identity") (Number annz 1)))))) []
+
+  describe "write" $ do
+    it "ret = 1" $
+      (fst $ TypeSys.go
+        (Data annz "Int" [] [] False
+        (Var annz "ret" TypeT
+        (Write annz (LVar "ret") (Number annz 1)))))
+        `shouldBe` []
+    it "ret = f()" $
+      (fst $ TypeSys.go
+        (Data annz "Int" [] [] False
+        (Var annz "f" (TypeF Type0 (Type1 "Int"))
+        (Var annz "ret" TypeT
+        (Write annz (LVar "ret") (Call annz (Read annz "f") (Unit annz)))))))
+        `shouldBe` []
 
   describe "functions" $ do
     it "func ~Int" $

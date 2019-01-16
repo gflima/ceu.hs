@@ -58,7 +58,7 @@ call :: Ann -> (Bool,Type) -> [Stmt] -> Exp -> Exp -> (Errors, Type, Exp, Exp)
 call z (isSup,tp_xp) ids f exp = (bool es_exp es_f (null es_exp), out, f', exp')
   where
     --(es_f,   f')   = expr z (TypeF (TypeV "_") tp_xp) ids f
-    (es_f,   f')   = expr z (not isSup, TypeF (type_$getAnn$exp') tp_xp) ids f
+    (es_f,   f')   = expr z (isSup, TypeF (type_$getAnn$exp') tp_xp) ids f
                       -- VAR: I expect exp.type (actual) to be a subtype of f.type (formal)
     (es_exp, exp') = expr z (isSup, inp) ids exp
                       -- VAR: I expect exp.type (actual) to be a subtype of inp (formal)
