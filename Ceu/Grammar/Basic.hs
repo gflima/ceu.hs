@@ -66,6 +66,13 @@ data Stmt
 --  * if found class:
 --      * instantiate class variable `a` against call `eq 10 20`, resolving to `Int`
 --          ! must find `instance Equable Int`
+--
+-- Expected layout of named function:
+--  (Var _ "f" tp
+--    (Seq _
+--      (Write _ (LVar "f") (Func ...))   -- or (Nop _) // no implementation
+--      (Var _ "g" tp                     -- or (Nop _) // eof
+--        ...
 
 sSeq a b = Seq annz a b
 infixr 1 `sSeq`

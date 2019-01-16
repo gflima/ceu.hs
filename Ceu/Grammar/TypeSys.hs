@@ -96,7 +96,7 @@ stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] im
             Nothing                      -> [toError z "typeclass '" ++ id ++ "' is not declared"]
             Just (Class _ _ [var] ifc _) -> compares ifc imp where
                 compares (Var _ id1 tp1 p1)
-                         (Seq _ (Var _ id2 tp2 _) p2) =
+                         (Var _ id2 tp2 (Seq _ _ p2)) =
                     (names id1 id2) ++ (instOf var tp1 tp2) ++ (compares p1 p2)
                 compares (Nop _) (Nop _) = []
 

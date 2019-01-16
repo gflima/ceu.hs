@@ -21,7 +21,7 @@ spec = do
     it "a > Int" $
       TypeV "a"   `supOf'` Type1 "Int" `shouldBe` (True,  Type1 "Int", [("a",Type1 "Int")])
     it "a > b" $
-      TypeV "a"   `supOf'` TypeV "b"   `shouldBe` (True,  TypeV "b",   [("a",TypeV "b")])
+      TypeV "a"   `supOf'` TypeV "b"   `shouldBe` (True,  TypeV "b",   [("a",TypeV "b"),("b",TypeV "a")])
 
   describe "supOf" $ do
 
