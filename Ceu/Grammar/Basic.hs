@@ -10,6 +10,7 @@ data Exp
     = Number Ann Int            -- 1
     | Cons   Ann ID_Type        -- True
     | Read   Ann ID_Var         -- a ; xs
+    | Arg    Ann
     | Unit   Ann                -- ()
     | Tuple  Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
     | Func   Ann Type Stmt      -- function implementation
@@ -21,6 +22,7 @@ instance HasAnn Exp where
     getAnn (Number z _)   = z
     getAnn (Cons   z _)   = z
     getAnn (Read   z _)   = z
+    getAnn (Arg    z)     = z
     getAnn (Unit   z)     = z
     getAnn (Tuple  z _)   = z
     getAnn (Func   z _ _) = z

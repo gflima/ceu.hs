@@ -37,6 +37,7 @@ fromExp :: B.Exp -> Exp
 fromExp (B.Number _ v)    = Number v
 fromExp (B.Cons   _ id)   = Cons id
 fromExp (B.Read   _ id)   = Read id
+fromExp (B.Arg    _)      = Read "_arg"
 fromExp (B.Unit   _)      = Unit
 fromExp (B.Tuple  _ vs)   = Tuple (map fromExp vs)
 fromExp (B.Func   _ _ p)  = Func (fromStmt p)

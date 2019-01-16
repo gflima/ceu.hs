@@ -34,8 +34,9 @@ classinst2ids p = case p of
     (Class _ _ _ ifc _) -> aux ifc
     (Inst  _ _ _ imp _) -> aux imp
     where
-        aux (Nop _)          = []
-        aux s@(Var _ _ _ p) = s : aux p
+        aux (Nop _)                   = []
+        aux s@(Var _ _ _ p)           = s : aux p
+        aux (Seq _ s@(Var _ _ _ p) _) = s : aux p
 
 -------------------------------------------------------------------------------
 
@@ -94,7 +95,8 @@ stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] im
         es0 = case find (isClass $ (==)id) ids of
             Nothing                      -> [toError z "typeclass '" ++ id ++ "' is not declared"]
             Just (Class _ _ [var] ifc _) -> compares ifc imp where
-                compares (Var _ id1 tp1 p1) (Var _ id2 tp2 p2) =
+                compares (Var _ id1 tp1 p1)
+                         (Seq _ (Var _ id2 tp2 _) p2) =
                     (names id1 id2) ++ (instOf var tp1 tp2) ++ (compares p1 p2)
                 compares (Nop _) (Nop _) = []
 
@@ -189,7 +191,11 @@ expr z tp_xp ids exp = (es1++es2, exp') where
 expr' :: Type -> [Stmt] -> Exp -> (Errors, Exp)
 
 expr' _ _   (Number z val)  = ([], Number z{type_=Type1 "Int"} val)
-expr' _ _   (Unit z)        = ([], Unit   z{type_=Type0})
+expr' _ _   (Unit   z)      = ([], Unit   z{type_=Type0})
+expr' _ _   (Arg    z)      = ([], Arg    z{type_=TypeB})
+expr' _ ids (Func   z tp p) = (es, Func   z{type_=tp} tp p')
+                              where
+                                (es,p') = stmt ids p
 
 expr' _ ids (Cons  z id)    = (es, Cons  z{type_=(Type1 id)} id)
     where

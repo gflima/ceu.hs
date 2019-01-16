@@ -162,60 +162,95 @@ spec = do
           , [])
         `shouldBe` (Number 3)
 
-    evalProgItSuccess (Number 11)
-      (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
-      (B.Var annz "a" (Type1 "Int")
-      (B.Seq annz
-      (B.Write annz (LVar "a") (B.Number annz 1))
-      (B.Ret annz (B.Call annz (B.Read annz "+") (B.Tuple annz [(B.Read annz "a"),(B.Number annz 10)]))))))
+      it "ret f(1,2)" $
+        steps (
+          (Var ("+", Nothing)
+          (Var ("f", Just $ Func (Ret (Call (Read "+") (Read "_arg"))))
+          (Ret (Call (Read "f") (Tuple [Number 1,Number 2])))))
+          , [])
+        `shouldBe` (Number 3)
 
-    evalProgItSuccess (Number 11)
-      (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
-      (B.Var annz "a" (Type1 "Int")
-      (B.Seq annz
-      (B.Write annz (LVar "a") (B.Number annz 1))
-      (B.Var annz "b" (Type1 "Int")
-      (B.Seq annz
-      (B.Write annz (LVar "b") (B.Number annz 99))
-      (B.Ret annz
-        (B.Call annz (B.Read annz "+")
-                     (B.Tuple annz [(B.Read annz "a"),(B.Number annz 10)]))))))))
+      it "Int ; Bool ; X a ; inst X Bool/Int ; return fff 1" $
+        go
+          (B.Data annz "Int" [] [] False
+          (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
+          (B.Data annz "Bool" [] [] False
+          (B.Class annz "X" ["a"]
+              (B.Var annz "fff" (TypeF (TypeV "a") (Type1 "Int")) (B.Nop annz))
+          (B.Inst annz "X" [Type1 "Bool"]
+              (B.Seq annz
+              (B.Var annz "fff" (TypeF (Type1 "Bool") (Type1 "Int"))
+                (B.Nop annz))
+              (B.Nop annz))
+          (B.Inst annz "X" [Type1 "Int"]
+              (B.Seq annz
+              (B.Var annz "fff" (TypeF (Type1 "Int") (Type1 "Int"))
+                (B.Write annz
+                  (LVar "fff")
+                  (B.Func annz (TypeF (Type1 "Int") (Type1 "Int"))
+                    (B.Ret annz
+                      (B.Call annz
+                        (B.Read annz "+")
+                        (B.Tuple annz [B.Arg annz, B.Number annz 1]))))))
+              (B.Nop annz))
+          (B.Var annz "ret" (Type1 "Int")
+          (B.Seq annz
+          (B.Write annz (LVar "ret")
+            (B.Call annz (B.Read annz "fff") (B.Number annz 1)))
+          (B.Ret annz (B.Read annz "ret"))))))))))
+        `shouldBe` (Number 1)
 
-    evalProgItSuccess (Number 1)
-      (B.Ret annz (B.Number annz 1) `B.sSeq`
-          B.Var annz "_" (Type1 "Int") (B.Ret annz (B.Number annz 2)) `B.sSeq`
-          B.Nop annz)
+      it "Int ; Bool ; X a ; inst X Bool/Int ; return fff 1" $
+        go
+          (B.Data annz "Int" [] [] False
+          (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
+          (B.Data annz "Bool" [] [] False
+          (B.Class annz "X" ["a"]
+              (B.Var annz "fff" (TypeF (TypeV "a") (Type1 "Int")) (B.Nop annz))
+          (B.Inst annz "X" [Type1 "Bool"]
+              (B.Seq annz
+              (B.Var annz "fff" (TypeF (Type1 "Bool") (Type1 "Int"))
+                (B.Nop annz))
+              (B.Nop annz))
+          (B.Inst annz "X" [Type1 "Int"]
+              (B.Seq annz
+              (B.Var annz "fff" (TypeF (Type1 "Int") (Type1 "Int"))
+                (B.Write annz
+                  (LVar "fff")
+                  (B.Func annz (TypeF (Type1 "Int") (Type1 "Int"))
+                    (B.Ret annz
+                      (B.Call annz
+                        (B.Read annz "+")
+                        (B.Tuple annz [B.Arg annz, B.Number annz 1]))))))
+              (B.Nop annz))
+          (B.Ret annz (B.Call annz (B.Read annz "fff") (B.Number annz 1)))))))))
+        `shouldBe` (Number 1)
 
-{-
-    describe "typesystem:" $ do
+    describe "misc" $ do
 
-        it "id(1)" $
-            go
-                (B.FuncI annz "id"
-                    (TypeF (Type1 "Int") (Type1 "Int"))
-                    (B.Var annz "_fret" (Type1 "Int")
-                        (B.Write annz (LVar "_ret") (Read annz "_arg_0")))
-                (B.Seq annz
-                    (B.Write annz (LVar "_ret") (SCall annz "id" (Number annz 1)))
-                    (B.Escape annz 0)))
-                []
-            `shouldBe` Right (1,[[]])
+      evalProgItSuccess (Number 11)
+        (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
+        (B.Var annz "a" (Type1 "Int")
+        (B.Seq annz
+        (B.Write annz (LVar "a") (B.Number annz 1))
+        (B.Ret annz (B.Call annz (B.Read annz "+") (B.Tuple annz [(B.Read annz "a"),(B.Number annz 10)]))))))
 
-        it "Int ; Bool ; Equalable a ; inst Equalable Bool/Int ; fff 1" $
-            go
-                (B.Data annz "Bool" [] [] False
-                (B.Class annz "Equalable" ["a"]
-                    (B.Func annz "fff" (TypeF (TypeV "a") (Type1 "Int")) (B.Nop annz))
-                (B.Inst annz "Equalable" ["Bool"]
-                    (B.Func annz "fff" (TypeF (Type1 "Bool") (Type1 "Int")) (B.Nop annz))
-                (B.Inst annz "Equalable" ["Int"]
-                    (B.Func annz "fff" (TypeF (Type1 "Int") (Type1 "Int")) (B.Nop annz))
-                (B.Seq annz
-                    (B.Write annz (LVar "_ret") (B.SCall annz "fff" (B.Number annz 1)))
-                    (B.Escape annz 0))))))
-                []
-            `shouldBe` Right (1,[[]])
--}
+      evalProgItSuccess (Number 11)
+        (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
+        (B.Var annz "a" (Type1 "Int")
+        (B.Seq annz
+        (B.Write annz (LVar "a") (B.Number annz 1))
+        (B.Var annz "b" (Type1 "Int")
+        (B.Seq annz
+        (B.Write annz (LVar "b") (B.Number annz 99))
+        (B.Ret annz
+          (B.Call annz (B.Read annz "+")
+                       (B.Tuple annz [(B.Read annz "a"),(B.Number annz 10)]))))))))
+
+      evalProgItSuccess (Number 1)
+        (B.Ret annz (B.Number annz 1) `B.sSeq`
+            B.Var annz "_" (Type1 "Int") (B.Ret annz (B.Number annz 2)) `B.sSeq`
+            B.Nop annz)
 
       where
         evalProgItSuccess res p =
