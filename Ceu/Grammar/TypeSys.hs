@@ -58,12 +58,12 @@ getErrsTypesDeclared z tp ids = concatMap aux $ map (\id->(id, find (isData $ (=
 call :: Ann -> Type -> [Stmt] -> Exp -> Exp -> (Errors, Type, Exp, Exp)
 call z tp_xp ids f exp = (bool es_exp es_f (null es_exp), out, f', exp')
   where
-    --(es_f,   f')   = expr z (TypeF (TypeV "_") tp_xp) ids f
     (es_f,   f')   = expr z (TypeF (type_$getAnn$exp') tp_xp) ids f
     (es_exp, exp') = expr z inp ids exp
     (inp,out) = case type_ $ getAnn f' of
       TypeF inp' out' -> (inp',out')
       otherwise       -> (TypeV "_", TypeV "_")
+    --xx = traceShow $ [tp_xp,(type_$getAnn$exp')]
 
 -------------------------------------------------------------------------------
 
@@ -233,7 +233,7 @@ expr' tp_xp ids (Read z id) = if id == "_INPUT" then
 
             -- find matching instance | id : a=<tp_xp>
             Just (Class _ cls [var] _ _, Just (Var _ id tp_var _)) ->
-              case tp_var `supOf` tp_xp of
+              case tp_xp `supOf` tp_var of
                 Left  es        -> (TypeV "_", map (toError z) es)
                 Right (_,insts) ->
                   let tp = Type.instantiate insts (TypeV var) in

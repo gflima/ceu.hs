@@ -104,6 +104,35 @@ spec = do
             (Ret annz (Arg annz))))))
         `shouldBe` []
 
+    it "f : () -> a ; return f()" $
+      (fst $ TypeSys.go
+        (Var annz "f" (TypeF Type0 (TypeV "a"))
+        (Ret annz (Call annz (Read annz "f") (Unit annz)))))
+        `shouldBe` []
+
+    it "f : a -> Int ; return f(1)" $
+      (fst $ TypeSys.go
+        (Data annz "Int" [] [] False
+        (Var annz "f" (TypeF (TypeV "a") (Type1 "Int"))
+        (Ret annz (Call annz (Read annz "f") (Number annz 1))))))
+        `shouldBe` []
+
+    it "Int ; X a ; inst X Int ; return fff 1" $
+      (fst $ TypeSys.go
+        (Data annz "Int" [] [] False
+        (Class annz "X" ["a"]
+            (Var annz "fff" (TypeF (TypeV "a") (Type1 "Int")) (Nop annz))
+        (Inst annz "X" [Type1 "Int"]
+            (Seq annz
+            (Var annz "fff" (TypeF (Type1 "Int") (Type1 "Int"))
+              (Write annz
+                (LVar "fff")
+                (Func annz (TypeF (Type1 "Int") (Type1 "Int"))
+                  (Ret annz (Number annz 1)))))
+            (Nop annz))
+        (Ret annz (Call annz (Read annz "fff") (Number annz 1)))))))
+      `shouldBe` []
+
   describe "pattern matching" $ do
     it "_ = 1" $
       TypeSys.go (Write annz LAny (Number annz 1))
@@ -367,7 +396,7 @@ spec = do
         (Class annz "Equalable" ["a"]
           (Var annz "eq" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (Type1 "Bool")) (Nop annz))
         (CallS annz (Read annz "eq") (Tuple annz [(Cons annz "Bool"),(Number annz 1)]))))))
-      `shouldBe` ["types do not match : expected '((a,a) -> Bool)' : found '((Bool,Int) -> _)'",
+      `shouldBe` ["types do not match : expected '((Bool,Int) -> _)' : found '((a,a) -> Bool)'",
                   "ambigous instances for 'a' : 'Bool', 'Int'"]
 
     it "Int ; Bool ; Xable a ; inst Xable Bool/Int ; fff 1 ; fff Bool" $

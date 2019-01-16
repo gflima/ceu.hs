@@ -93,6 +93,7 @@ supOf' _                 TypeB             = (True,  TypeB, [])
 supOf' TypeB             _                 = (False, TypeB, [])
 
 supOf' TypeT             sub               = (True,  sub,   [])
+supOf' sup@(TypeV a1)    sub@(TypeV a2)    = (True,  sub,   [(a1,sub),(a2,sup)])
 supOf' (TypeV a1)        sub               = (True,  sub,   [(a1,sub)])
 supOf' sup               sub@(TypeV a2)    = (True,  sub,   [(a2,sup)])
 supOf' sup               TypeT             = (False, sup,   [])

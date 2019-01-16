@@ -200,6 +200,22 @@ spec = do
           (B.Ret annz (B.Read annz "ret"))))))))))
         `shouldBe` (Number 1)
 
+      it "Int ; X a ; inst X Int ; return fff 1" $
+        go
+          (B.Data annz "Int" [] [] False
+          (B.Class annz "X" ["a"]
+              (B.Var annz "fff" (TypeF (TypeV "a") (Type1 "Int")) (B.Nop annz))
+          (B.Inst annz "X" [Type1 "Int"]
+              (B.Seq annz
+              (B.Var annz "fff" (TypeF (Type1 "Int") (Type1 "Int"))
+                (B.Write annz
+                  (LVar "fff")
+                  (B.Func annz (TypeF (Type1 "Int") (Type1 "Int"))
+                    (B.Ret annz (B.Number annz 1)))))
+              (B.Nop annz))
+          (B.Ret annz (B.Call annz (B.Read annz "fff") (B.Number annz 1))))))
+        `shouldBe` (Number 1)
+
       it "Int ; Bool ; X a ; inst X Bool/Int ; return fff 1" $
         go
           (B.Data annz "Int" [] [] False
