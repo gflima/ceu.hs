@@ -76,10 +76,12 @@ envRead vars var =
 envEval :: Vars -> Exp -> Exp
 envEval vars e = case e of
     Read var  -> envRead vars var
+    Tuple es' -> Tuple $ map (envEval vars) es'
     Call f e' ->
       case (envEval vars f, envEval vars e') of
         (Read "negate", Number x)                   -> Number (-x)
         (Read "+",      Tuple [Number x, Number y]) -> Number (x+y)
+        (Read "-",      Tuple [Number x, Number y]) -> Number (x-y)
         otherwise -> error $ show (f,e')
 
     e         -> e

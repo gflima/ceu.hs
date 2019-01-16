@@ -45,12 +45,15 @@ spec = do
         envEval [] (Number 0) `shouldBe` (Number 0)
 
       it "pass: eval in simple env" $
-        let vars = [("+",Nothing), ("negate",Nothing), ("x",Just (Number 1)),("y",Just (Number 2))] in
+        let vars = [("negate",Nothing), ("+",Nothing), ("-",Nothing),
+                    ("x",Just (Number 1)),("y",Just (Number 2))] in
           envEval vars (Call (Read "+") (Tuple [(Call (Read "-") (Tuple [(Read "x"),(Number 3)])),(Call (Read "negate") (Read "y"))]))
           `shouldBe` (Number (-4))
 
       it "pass: eval in complex env" $
-        let vars = [("y",Just (Number 2)),("x",Just (Number 1)),("y",Just (Number 99)),("x",Just (Number 99))] in
+        let vars = [("negate",Nothing), ("+",Nothing), ("-",Nothing),
+                    ("y",Just (Number 2)),("x",Just (Number 1)),
+                    ("y",Just (Number 99)),("x",Just (Number 99))] in
           envEval vars (Call (Read "+") (Tuple [(Call (Read "-") (Tuple [(Read "x"),(Number 3)])),(Call (Read "negate") (Read "y"))]))
           `shouldBe` (Number (-4))
 
@@ -77,26 +80,33 @@ spec = do
 
       it "[x=1,y=?] y=x+2" $
         step (
+          (Var ("+",Nothing)
           (Var ("x",(Just (Number 1)))
           (Var ("y",Nothing)
-            (Write "y" (Call (Read "+") (Tuple [(Read "x"),(Number 2)])))), []))
-        `shouldBe` (Var ("x",(Just (Number 1))) (Var ("y",(Just (Number 3))) Nop), [])
+          (Write "y" (Call (Read "+") (Tuple [(Read "x"),(Number 2)])))))), [])
+        `shouldBe` (Var ("+",Nothing) (Var ("x",(Just (Number 1))) (Var ("y",(Just (Number 3))) Nop)), [])
 
       it "[x=1,y=?] y=x+2" $
         step
+          (Var ("+",Nothing)
         (Var ("x",(Just (Number 1)))
         (Var ("y",Nothing)
-          (Write "y" (Call (Read "+") (Tuple [(Read "x"),(Number 2)])))), [])
+          (Write "y" (Call (Read "+") (Tuple [(Read "x"),(Number 2)]))))), [])
         `shouldBe`
+        (Var ("+",Nothing)
         (Var ("x",(Just (Number 1)))
-        (Var ("y",(Just (Number 3))) Nop), [])
+        (Var ("y",(Just (Number 3))) Nop)), [])
 
       it "[x=?] x=-(5+1)" $
         step
+        (Var ("negate",Nothing)
+        (Var ("+",Nothing)
         (Var ("x",(Just (Number 0)))
-          (Write "x" (Call (Read "negate") (Call (Read "+") (Tuple [(Number 5),(Number 1)])))), [])
+          (Write "x" (Call (Read "negate") (Call (Read "+") (Tuple [(Number 5),(Number 1)])))))), [])
         `shouldBe`
-        (Var ("x",(Just (Number (-6)))) Nop, [])
+        (Var ("negate",Nothing)
+        (Var ("+",Nothing)
+        (Var ("x",(Just (Number (-6)))) Nop)), [])
 
   describe "seq" $ do
       it "nop" $
