@@ -218,6 +218,61 @@ spec = do
                 B.Call annz (B.Read annz "c") (B.Number annz 2)]))))))))))
           `shouldBe` (Number 3)
 
+      it "glb <- 1 ; f () -> glb ; ret glb" $
+        go
+          (B.Data  annz "Int" [] [] False
+          (B.Var   annz "glb" (Type1 "Int")
+          (B.Seq   annz
+          (B.Write annz (LVar "glb") (B.Number annz 1))
+          (B.Var   annz "f" (TypeF Type0 (Type1 "Int"))
+          (B.Seq   annz
+          (B.Write annz (LVar "f")
+            (B.Func annz (TypeF Type0 (Type1 "Int"))
+              (B.Ret annz (B.Read annz "glb"))))
+          (B.Ret annz
+            (B.Call annz (B.Read annz "f") (B.Unit annz))))))))
+          `shouldBe` (Number 1)
+
+      it "glb <- 1 ; f() -> g() -> glb ; ret f()()" $
+        go
+          (B.Data  annz "Int" [] [] False
+          (B.Var   annz "glb" (Type1 "Int")
+          (B.Seq   annz
+          (B.Write annz (LVar "glb") (B.Number annz 1))
+          (B.Var   annz "f" (TypeF Type0 (TypeF Type0 (Type1 "Int")))
+          (B.Seq   annz
+          (B.Write annz (LVar "f")
+            (B.Func annz (TypeF Type0 (TypeF Type0 (Type1 "Int")))
+              (B.Ret annz
+                (B.Func annz (TypeF Type0 (Type1 "Int"))
+                  (B.Ret annz (B.Read annz "glb"))))))
+          (B.Ret annz
+            (B.Call annz
+              (B.Call annz (B.Read annz "f") (B.Unit annz))
+              (B.Unit annz))))))))
+          `shouldBe` (Number 1)
+
+      it "(TODO: loc lifetime) g' <- nil ; { loc <- 1 ; f() -> g() -> glb ; g' <- f() } ; ret g'()" $
+        go
+          (B.Data  annz "Int" [] [] False
+          (B.Var   annz "g'" (TypeF Type0 (Type1 "Int"))
+          (B.Seq   annz
+          (B.Var   annz "loc" (Type1 "Int")
+          (B.Seq   annz
+          (B.Write annz (LVar "loc") (B.Number annz 1))
+          (B.Var   annz "f" (TypeF Type0 (TypeF Type0 (Type1 "Int")))
+          (B.Seq   annz
+          (B.Write annz (LVar "f")
+            (B.Func annz (TypeF Type0 (TypeF Type0 (Type1 "Int")))
+              (B.Ret annz
+                (B.Func annz (TypeF Type0 (Type1 "Int"))
+                  (B.Ret annz (B.Read annz "loc"))))))
+          (B.Write annz (LVar "g'")
+            (B.Call annz (B.Read annz "f") (B.Unit annz)))))))
+          (B.Ret annz
+            (B.Call annz (B.Read annz "g'") (B.Unit annz))))))
+          `shouldBe` (Number 1)
+
     describe "class" $ do
 
       it "Int ; Bool ; X a ; inst X Bool/Int ; return f2 1" $
