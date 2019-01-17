@@ -62,7 +62,7 @@ call z tp_xp ids f exp = (bool es_exp es_f (null es_exp), out, f', exp')
     (es_exp, exp') = expr z inp ids exp
     (inp,out) = case type_ $ getAnn f' of
       TypeF inp' out' -> (inp',out')
-      otherwise       -> (TypeV "_", TypeV "_")
+      otherwise       -> (TypeV "?", TypeV "?")
     --xx = traceShow $ [tp_xp,(type_$getAnn$exp')]
 
 -------------------------------------------------------------------------------
@@ -149,7 +149,7 @@ stmt ids (Write z loc exp) = (es1 ++ es2, Write z loc exp')
 
 stmt ids (CallS z f exp)   = (es, CallS z f' exp')
                              where
-                              (es, _, f', exp') = call z (TypeV "_") ids f exp
+                              (es, _, f', exp') = call z (TypeV "?") ids f exp
 
 -------------------------------------------------------------------------------
 
@@ -229,16 +229,16 @@ expr' tp_xp ids (Read z id) = if id == "_INPUT" then
                $ filter (isClass $ const True) ids              -- [cls1,cls2, ...]
             of
             -- not found
-            Nothing -> (TypeV "_", [toError z "variable '" ++ id ++ "' is not declared"])
+            Nothing -> (TypeV "?", [toError z "variable '" ++ id ++ "' is not declared"])
 
             -- find matching instance | id : a=<tp_xp>
             Just (Class _ cls [var] _ _, Just (Var _ id tp_var _)) ->
               case tp_xp `supOf` tp_var of
-                Left  es        -> (TypeV "_", map (toError z) es)
+                Left  es        -> (TypeV "?", map (toError z) es)
                 Right (_,insts) ->
                   let tp = Type.instantiate insts (TypeV var) in
                     case find (isSubOf tp . getTP) $ filter (isInst $ (==cls)) (sort' ids) of
-                      Nothing   -> (TypeV "_",
+                      Nothing   -> (TypeV "?",
                                     [toError z "variable '" ++ id ++
                                      "' has no associated instance for type '" ++
                                      Type.show' tp_xp ++ "' in class '" ++ cls ++ "'"])

@@ -403,7 +403,7 @@ spec = do
           (Nop annz)
           (Nop annz)))
         (CallS annz (Read annz "fff") (Number annz 1)))))))
-      `shouldBe` ["variable 'fff' has no associated instance for type '(Int -> _)' in class 'Xable'"]
+      `shouldBe` ["variable 'fff' has no associated instance for type '(Int -> ?)' in class 'Xable'"]
 
     it "Int ; Bool ; Equalable a ; eq 1 Bool" $
       (fst $ TypeSys.go
@@ -412,7 +412,7 @@ spec = do
         (Class annz "Equalable" ["a"]
           (Var annz "eq" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (Type1 "Bool")) (Nop annz))
         (CallS annz (Read annz "eq") (Tuple annz [(Cons annz "Bool"),(Number annz 1)]))))))
-      `shouldBe` ["types do not match : expected '((Bool,Int) -> _)' : found '((a,a) -> Bool)'",
+      `shouldBe` ["types do not match : expected '((Bool,Int) -> ?)' : found '((a,a) -> Bool)'",
                   "ambigous instances for 'a' : 'Bool', 'Int'"]
 
     it "Int ; Bool ; Xable a ; inst Xable Bool/Int ; fff 1 ; fff Bool" $
