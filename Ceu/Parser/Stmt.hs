@@ -1,24 +1,23 @@
 module Ceu.Parser.Stmt where
 
 import Debug.Trace
-import Data.Maybe                (isNothing, fromJust, isJust)
+import Data.Maybe                (fromJust)
 import Control.Monad             (guard)
-import Control.Applicative       (many)
 
-import Text.Parsec.Prim          ((<|>), try, getPosition)
+import Text.Parsec.Prim          ((<|>), try, getPosition, many)
+import Text.Parsec.Char          (char, anyChar)
 import Text.Parsec.String        (Parser)
-import Text.Parsec.Combinator    (many1, chainl, chainr1, option, optionMaybe, optional)
+import Text.Parsec.Combinator    (many1, chainl, chainl1, chainr1, option, optionMaybe, optional)
 
 import Ceu.Parser.Common
 import Ceu.Parser.Token
 import Ceu.Parser.Type           (pType, type_F)
-import Ceu.Parser.Exp            (expr)
 
 import Ceu.Grammar.Globals       (Source, Loc(..), ID_Var)
 import Ceu.Grammar.Type          (Type(..))
 import Ceu.Grammar.Ann           (annz, source, getAnn, Ann(..))
-import Ceu.Grammar.Basic         (Exp(..))
-import Ceu.Grammar.Full.Stmt     (Stmt(..))
+import Ceu.Grammar.Basic hiding  (Stmt(..))
+import Ceu.Grammar.Full.Stmt     (Stmt(..), toBasic)
 
 -------------------------------------------------------------------------------
 
@@ -146,3 +145,117 @@ stmt = do
     s   <- stmt_seq pos
     return s
 
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+
+expr_number :: Parser Exp
+expr_number = do
+    pos <- pos2src <$> getPosition
+    num <- tk_num
+    return $ Number annz{source=pos} num
+
+expr_read :: Parser Exp
+expr_read = do
+    pos <- pos2src <$> getPosition
+    str <- tk_var
+    return $ Read annz{source=pos} str
+
+expr_unit :: Parser Exp
+expr_unit = do
+    pos  <- pos2src <$> getPosition
+    void <- tk_str "("
+    void <- tk_str ")"
+    return $ Unit annz{source=pos}
+
+expr_parens :: Parser Exp
+expr_parens = do
+    void <- tk_str "("
+    exp  <- expr
+    void <- tk_str ")"
+    return exp
+
+expr_tuple :: Parser Exp
+expr_tuple = do
+    pos  <- pos2src <$> getPosition
+    exps <- list expr
+    return $ Tuple annz{source=pos} exps
+
+expr_prim :: Parser Exp
+expr_prim = try expr_call_pre   <|>
+            try expr_number     <|>
+            try expr_read       <|>
+            try expr_unit       <|>
+            try expr_parens     <|>
+            try expr_tuple      <|>
+            try expr_func
+
+-------------------------------------------------------------------------------
+
+expr_func :: Parser Exp
+expr_func = do
+  pos  <- pos2src <$> getPosition
+  void <- tk_key "func"
+  loc  <- try loc_'
+  void <- tk_str ":"
+  tp   <- type_F
+  imp  <- do
+            void <- tk_key "do"
+            s    <- stmt
+            void <- tk_key "end"
+            return s
+
+  dcls' <- let (TypeF tp' _) = tp
+               dcls' = (dcls pos loc tp') in
+            case dcls' of
+              Nothing -> do { fail "arity mismatch" }
+              Just v' -> return $ Just v'
+
+  ann   <- do { return annz{source=pos} }
+
+  return $ Func ann tp (snd $ toBasic $
+            (Seq ann
+              (fromJust dcls')
+              (Seq ann
+                (Write ann loc (Arg ann))
+                imp)))
+
+  where
+    --loc_' :: Parser Loc
+    loc_' = do
+      void <- tk_str ":"
+      loc  <- loc_
+      return loc
+
+-------------------------------------------------------------------------------
+
+expr_call_pre :: Parser Exp
+expr_call_pre = do
+    pos  <- pos2src <$> getPosition
+    f    <- try (char '\'' *> tk_op)                  <|>
+            do { try (tk_str "-") ; return "negate" } <|> -- unary minus exception
+            try tk_func
+    exp  <- expr
+    return $ Call annz{source=pos} (Read annz{source=pos} f) exp
+
+expr_call_pos :: Parser Exp
+expr_call_pos = do
+    pos <- pos2src <$> getPosition
+    e1  <- expr_call_mid
+    ops <- many (try tk_op <|> try (char '\'' *> tk_func))
+    return $ foldl (\e op -> Call annz{source=pos} (Read annz{source=pos} op) e)
+                   e1 ops
+
+expr_call_mid :: Parser Exp
+expr_call_mid = expr_prim `chainl1` f where
+    f = do
+        pos <- pos2src <$> getPosition
+        op  <- try tk_op <|> try (char '\'' *> (tk_func <* char '\''))
+        return (\a b -> Call annz{source=pos} (Read annz{source=pos} op)
+                                              (Tuple annz{source=pos} [a,b]))
+
+-------------------------------------------------------------------------------
+
+expr :: Parser Exp
+expr = do
+    e <- expr_call_pos
+    return e
