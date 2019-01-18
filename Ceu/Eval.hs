@@ -1,6 +1,7 @@
 module Ceu.Eval where
 
 import Data.List  (find, intercalate)
+import Data.Bool  (bool)
 import Debug.Trace
 
 import Ceu.Grammar.Globals
@@ -99,10 +100,13 @@ envEval vars e = case e of
     Tuple es' -> Tuple $ map (envEval vars) es'
     Call f e' ->
       case (envEval vars f, envEval vars e') of
-        (Read "negate__(Int -> Int)",  Number x)                   -> Number (-x)
-        (Read "+__((Int,Int) -> Int)", Tuple [Number x, Number y]) -> Number (x+y)
-        (Read "-__((Int,Int) -> Int)", Tuple [Number x, Number y]) -> Number (x-y)
-        (Func p,        arg)                                       -> steps (p, ("_arg",Just arg):vars)
+        (Read "negate__(Int -> Int)",    Number x)                   -> Number (-x)
+        (Read "+__((Int,Int) -> Int)",   Tuple [Number x, Number y]) -> Number (x+y)
+        (Read "-__((Int,Int) -> Int)",   Tuple [Number x, Number y]) -> Number (x-y)
+        (Read "*__((Int,Int) -> Int)",   Tuple [Number x, Number y]) -> Number (x*y)
+        (Read "/__((Int,Int) -> Int)",   Tuple [Number x, Number y]) -> Number (x `div` y)
+        (Read "==__((Int,Int) -> Bool)", Tuple [Number x, Number y]) -> Cons (bool "Bool.False" "Bool.True" (x == y))
+        (Func p,        arg)                                        -> steps (p, ("_arg",Just arg):vars)
         otherwise -> error $ show (f,e')
 
     e         -> e
