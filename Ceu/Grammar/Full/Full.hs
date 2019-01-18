@@ -1,4 +1,4 @@
-module Ceu.Grammar.Full.Stmt where
+module Ceu.Grammar.Full.Full where
 
 import Debug.Trace
 

@@ -8,7 +8,7 @@ import qualified Ceu.Grammar.TypeSys as T
 import qualified Ceu.Eval as E
 import Debug.Trace
 
-import Ceu.Grammar.Full.Stmt
+import Ceu.Grammar.Full.Full
 import qualified Ceu.Grammar.Full.Compile.Scope as Scope
 import qualified Ceu.Grammar.Full.Compile.Seq   as Seq
 

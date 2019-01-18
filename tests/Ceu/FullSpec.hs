@@ -11,7 +11,7 @@ import Ceu.Grammar.Ann      (Ann(type_),annz)
 import qualified Ceu.Grammar.Basic as B
 import qualified Ceu.Eval as E
 
-import Ceu.Grammar.Full.Stmt
+import Ceu.Grammar.Full.Full
 import Ceu.Grammar.Full.Eval
 import qualified Ceu.Grammar.Full.Compile.Scope as Scope
 
