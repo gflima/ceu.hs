@@ -13,30 +13,17 @@ types = [
   ]
 
 keywords = [
-    "await",
-    "break",
     "do",
     "else",
     "else/if",
-    "emit",
     "end",
-    "escape",
-    "event",
-    "FOREVER",
     "func",
     "if",
-    "input",
     "loop",
-    "mut",
-    "output",
-    "par",
-    "par/and",
-    "par/or",
     "set",
     "then",
-    "trap",
-    "val",
-    "with"
+    "var",
+    "return"
   ]
 tk_reserved :: Parser ()
 tk_reserved = do
@@ -69,15 +56,6 @@ tk_num = do
     s
     return (read n)
 
-tk_ext :: Parser String
-tk_ext = do
-    --void  <- notFollowedBy tk_reserved
-    first <- satisfy isUpper
-    rest  <- many $ (digit <|> satisfy isUpper <|> char '_')
-    guard $ (first:rest) /= "FOREVER"
-    s
-    return (first:rest)
-
 tk_var :: Parser String     -- x, x_0       // Xx
 tk_var = do
     --void  <- notFollowedBy tk_reserved
@@ -87,7 +65,6 @@ tk_var = do
     s
     return (first:rest)
 
-tk_evt  = tk_var
 tk_func = tk_var
 
 tk_type :: Parser String    -- Int, Int_0   // I, II, int, _Int
