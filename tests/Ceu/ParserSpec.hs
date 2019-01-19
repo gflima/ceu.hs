@@ -336,11 +336,11 @@ spec = do
         describe "if-then-else/if-else" $ do
             it "if 0 then return ()" $
                 parse stmt_if "if 0 then return ()"
-                `shouldBe` Left "(line 1, column 20):\nunexpected end of input\nexpecting \"'\", \"var\", \"set\", \"do\", \"if\", \"loop\", \"return\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 20):\nunexpected end of input\nexpecting \"'\", \"var\", \"func\", \"set\", \"do\", \"if\", \"loop\", \"return\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 then return 0" $
                 parse stmt_if "if 0 then return 0"
-                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"'\", \"var\", \"set\", \"do\", \"if\", \"loop\", \"return\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"'\", \"var\", \"func\", \"set\", \"do\", \"if\", \"loop\", \"return\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 return 0 end" $
                 parse stmt_if "if 0 return 0 end"
@@ -379,20 +379,30 @@ spec = do
             it "var add : ..." $
                 parse stmt "var add : ((Int, Int) -> Int)"
                 `shouldBe` Right (Seq annz{source = ("",1,1)} (Seq annz (Var annz{source = ("",1,1)} "add" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int"))) (Nop annz)) (Nop annz{source = ("",1,1)}))
-{-
-            it "func (...) : (...) do end" $
-                parse expr_func "func (a,_) : ((Int, Int) -> Int) do end"
-                `shouldBe` Right (Func annz (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (Nop annz))
-            it "func add : i" $
-                parse stmt_func "func add : (_,_,_) : ((Int, Int) -> Int)"
-                `shouldBe` Left "(line 1, column 41):\nunexpected end of input\nexpecting \"do\"\narity mismatch"
-            it "funcI add" $
-                parse stmt_func "func add : ((Int, Int) -> Int) do end"
-                `shouldBe` Left "(line 1, column 38):\nunexpected end of input\nexpecting letter, \"_\" or digit\nmissing arguments"
-            it "funcI add" $
-                parse stmt_func "func add : (a,_) : ((Int, Int) -> Int) do end"
-                `shouldBe` Right (Seq annz{source = ("",1,1)} (Func annz{source = ("",1,1)} "add" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int"))) (FuncI (annz{source = ("",1,1)}) "add" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "a" (Type1 "Int")) (Nop (annz{source = ("",0,0)}))) (Seq (annz{source = ("",1,1)}) (Write (annz{source = ("",1,1)}) (LTuple [LVar "a",LAny]) (Arg annz)) (Nop (annz{source = ("",1,43)}))))))
--}
+            it "var add : ... <- func ..." $
+                parse stmt "var add : ((Int, Int) -> Int) <- func (a,_) : ((Int, Int) -> Int) do end"
+                `shouldBe` Right (Seq annz{source=("",1,1)} (Seq annz (Var annz{source=("",1,1)} "add" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int"))) (Nop annz)) (Write annz{source=("",1,31)} (LVar "add") (Func annz{source=("",1,34)} (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (Seq annz{source=("",1,34)} (Seq annz (Var annz{source=("",1,34)} "a" (Type1 "Int")) (Nop annz)) (Seq annz{source=("",1,34)} (Write annz{source=("",1,34)} (LTuple [LVar "a",LAny]) (Arg annz{source=("",1,34)})) (Nop annz{source=("",1,70)}))))))
+            it "func add : (...) do end" $
+                parse stmt_funcs "func add (a,_) : ((Int, Int) -> Int) do end"
+                `shouldBe` Right (FuncS annz{source=("",1,1)} "add" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (Seq annz{source=("",1,1)} (Seq annz{source=("",0,0)} (Var annz{source=("",1,1)} "a" (Type1 "Int")) (Nop annz{source=("",0,0)})) (Seq annz{source=("",1,1)} (Write annz{source=("",1,1)} (LTuple [LVar "a",LAny]) (Arg annz{source=("",1,1)})) (Nop annz{source=("",1,41)}))))
+            it "func add (...) : (...)" $
+                parse stmt_funcs "func add (a,_) : ((Int, Int) -> Int)"
+                `shouldBe` Left "(line 1, column 37):\nunexpected end of input\nexpecting \"do\""
+            it "func add : (...)" $
+                parse stmt_funcs "func add : ((Int, Int) -> Int)"
+                `shouldBe` Right (Var annz{source=("",1,1)} "add" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")))
+            it "func (_,_,_) : (_,_)" $
+                parse stmt_funcs "func add (_,_,_) : ((Int, Int) -> Int) do end"
+                `shouldBe` Left "(line 1, column 40):\nunexpected \"d\"\narity mismatch"
+            it "func (a,b,c) : (x,y)" $
+                parse expr_func "func (_,_,_) : ((Int, Int) -> Int) do end"
+                `shouldBe` Left "(line 1, column 36):\nunexpected \"d\"\narity mismatch"
+            it "func add" $
+                parse stmt_funcs "func add : ((Int, Int) -> Int) do end"
+                `shouldBe` Left "(line 1, column 32):\nunexpected 'd'\nexpecting end of input"
+            it "func add" $
+                parse expr_func "func ((Int, Int) -> Int) do end"
+                `shouldBe` Left "(line 1, column 8):\nunexpected \"I\"\nexpecting \"_\" or \"(\""
 
         describe "seq:" $ do
             it "x <- k k <- 1" $

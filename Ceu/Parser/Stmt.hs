@@ -2,7 +2,6 @@ module Ceu.Parser.Stmt where
 
 import Debug.Trace
 import Data.Maybe                (fromJust)
-import Control.Monad             (guard)
 
 import Text.Parsec.Prim          ((<|>), try, getPosition, many)
 import Text.Parsec.Char          (char, anyChar)
@@ -52,7 +51,7 @@ stmt_var = do
     tp   <- pType
     s    <- option (Nop $ annz{source=pos})
                    (try (attr_exp loc (tk_str "<-")))
-    s'   <- case (dcls pos loc tp) of
+    s'   <- case (matchLocType pos loc tp) of
                 Nothing -> do { fail "arity mismatch" }
                 Just v  -> return $ Seq annz{source=pos} v s
     return s'
@@ -79,8 +78,8 @@ loc_ =  (try lany <|> try lvar <|> try ltuple)
                     locs <- list loc_
                     return (LTuple $ locs)
 
-dcls :: Source -> Loc -> Type -> Maybe Stmt
-dcls src loc tp = case (aux src loc tp) of
+matchLocType :: Source -> Loc -> Type -> Maybe Stmt
+matchLocType src loc tp = case (aux src loc tp) of
                         Nothing -> Nothing
                         Just v  -> Just $ foldr (Seq annz) (Nop annz) v
     where
@@ -131,8 +130,8 @@ stmt_loop = do
 
 stmt1 :: Parser Stmt
 stmt1 = do
-    s <- try stmt_var <|> try stmt_attr <|> try stmt_do <|>
-         try stmt_if  <|> try stmt_loop <|> try stmt_ret
+    s <- try stmt_var <|> try stmt_funcs <|> try stmt_attr <|> try stmt_do <|>
+         try stmt_if  <|> try stmt_loop  <|> try stmt_ret
     return s
 
 stmt_seq :: Source -> Parser Stmt
@@ -190,40 +189,54 @@ expr_prim = try expr_call_pre   <|>
 
 -------------------------------------------------------------------------------
 
-expr_func :: Parser Exp
-expr_func = do
-  pos  <- pos2src <$> getPosition
-  void <- tk_key "func"
-  loc  <- try loc_'
+func :: Source -> Parser (Type, Stmt)
+func pos = do
+  loc  <- try loc_
   void <- tk_str ":"
   tp   <- type_F
-  imp  <- do
-            void <- tk_key "do"
-            s    <- stmt
-            void <- tk_key "end"
-            return s
 
-  dcls' <- let (TypeF tp' _) = tp
-               dcls' = (dcls pos loc tp') in
-            case dcls' of
-              Nothing -> do { fail "arity mismatch" }
-              Just v' -> return $ Just v'
+  dcls <- let (TypeF tp' _) = tp
+              dcls = (matchLocType pos loc tp')
+          in
+            case dcls of
+              Nothing    -> do { fail "arity mismatch" }
+              Just dcls' -> return dcls'
 
-  ann   <- do { return annz{source=pos} }
+  void <- tk_key "do"
+  imp  <- stmt
+  void <- tk_key "end"
 
-  return $ Func ann tp
-            (Seq ann
-              (fromJust dcls')
-              (Seq ann
-                (Write ann loc (Arg ann))
-                imp))
+  ann  <- do { return annz{source=pos} }
 
-  where
-    --loc_' :: Parser Loc
-    loc_' = do
-      void <- tk_str ":"
-      loc  <- loc_
-      return loc
+  return $ (tp, Seq ann
+                  dcls
+                  (Seq ann
+                    (Write ann loc (Arg ann))
+                    imp))
+
+expr_func :: Parser Exp
+expr_func = do
+  pos      <- pos2src <$> getPosition
+  void     <- tk_key "func"
+  (tp,imp) <- func pos
+  return $ Func annz{source=pos} tp imp
+
+
+stmt_funcs :: Parser Stmt
+stmt_funcs = do
+  pos    <- pos2src <$> getPosition
+  void   <- tk_key "func"
+  f      <- tk_var
+  tp_imp <- optionMaybe $ try (func pos)
+  ann    <- do { return annz{source=pos} }
+  ret    <- case tp_imp of
+              Nothing -> do
+                void <- tk_str ":"
+                tp   <- pType
+                return $ Var ann f tp
+              Just (tp,imp) -> do
+                return $ FuncS ann f tp imp
+  return ret
 
 -------------------------------------------------------------------------------
 
