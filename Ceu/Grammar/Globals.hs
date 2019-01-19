@@ -4,7 +4,7 @@ type Errors = [String]
 
 type Source = (String, Int, Int)    -- filename, line, column
 
-data Loc = LAny | LVar ID_Var | LTuple [Loc]
+data Loc = LUnit | LAny | LVar ID_Var | LTuple [Loc]
     deriving (Eq, Show)
 
 type ID_Class = String   -- type identifier/constructor

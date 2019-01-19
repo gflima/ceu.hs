@@ -87,6 +87,30 @@ spec = do
 
 -------------------------------------------------------------------------------
 
+    describe "func:" $ do
+
+      it "f1 ; return f1 1" $
+        run True "func f1 () : (() -> Int) do return 1 end ; return f1()"
+        `shouldBe` Right (Number 1)
+
+      it "return 1+2" $
+        run True "return 1+2"
+        `shouldBe` Right (Number 3)
+
+      it "return '+(1,2)" $
+        run True "return '+(1,2)"
+        `shouldBe` Right (Number 3)
+
+      it "+ ; return 1+2" $
+        run False "func '+ : ((Int,Int)->Int) ; return 1+2"
+        `shouldBe` Right (Number 3)
+
+      it "+ ; return '+(1,2)" $
+        run False "func '+ : ((Int,Int)->Int) ; return '+(1,2)"
+        `shouldBe` Right (Number 3)
+
+-------------------------------------------------------------------------------
+
     describe "do-end:" $ do
         it "do return 1 end" $
             run True "do return 1; end"

@@ -132,6 +132,7 @@ stmt ids (Write z loc exp) = (es1 ++ es2, Write z loc exp')
                              where
                               (tps_loc, es1) = aux loc
                               aux :: Loc -> (Type, Errors)
+                              aux LUnit      = (Type0, [])
                               aux LAny       = (TypeT, [])
                               aux (LVar var) = case find (isVar $ (==)var) ids of
                                                 Nothing ->

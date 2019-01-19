@@ -66,8 +66,12 @@ stmt_attr = do
 
 -- (x, (y,_))
 loc_ :: Parser Loc
-loc_ =  (try lany <|> try lvar <|> try ltuple)
+loc_ =  (try lunit <|> try lany <|> try lvar <|> try ltuple)
     where
+        lunit  = do
+                    void <- tk_str "("
+                    void <- tk_str ")"
+                    return LUnit
         lany   = do
                     void <- tk_str "_"
                     return LAny
@@ -85,6 +89,7 @@ matchLocType src loc tp = case (aux src loc tp) of
     where
         aux :: Source -> Loc -> Type -> Maybe [Stmt]
         aux pos LAny              _                = Just []
+        aux pos LUnit             Type0            = Just []
         aux pos (LVar var)        tp               = Just [Var annz{source=pos} var tp]
         aux pos (LTuple [])       (TypeN [])       = Just []
         aux pos (LTuple [])       _                = Nothing
