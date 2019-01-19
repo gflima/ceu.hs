@@ -11,6 +11,7 @@ import Debug.Trace
 import Ceu.Grammar.Full.Full
 import qualified Ceu.Grammar.Full.Compile.Scope as Scope
 import qualified Ceu.Grammar.Full.Compile.Seq   as Seq
+import qualified Ceu.Grammar.Full.Compile.FuncS as FuncS
 
 prelude :: Ann -> Stmt -> Stmt
 prelude z p =
@@ -24,20 +25,14 @@ prelude z p =
     (Seq z (Var  z "*"      (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")))
            p))))))))
 
-compile :: Stmt -> (Errors, Stmt)
-compile p = --traceShowId $ 
-    comb Scope.compile    $
-    comb Seq.compile      $
-      ([], p)
-  where
-    comb :: (Stmt -> (Errors,Stmt)) -> (Errors,Stmt) -> (Errors,Stmt)
-    comb f (es,p) = (es++es',p') where (es',p') = f p
+compile :: Stmt -> Stmt
+compile p = Scope.compile $ Seq.compile $ FuncS.compile p
 
 compile' :: Stmt -> (Errors, B.Stmt)
-compile' p = (es1++es2++es3, p3)
+compile' p = (es3, p3)
   where
-    (es1,p1) = compile p
-    (es2,p2) = toBasic p1
+    p1       = compile p
+    p2       = toBasicStmt p1
     (es3,p3) = T.go p2
 
 go :: Stmt -> Either Errors E.Exp

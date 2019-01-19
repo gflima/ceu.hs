@@ -7,24 +7,56 @@ import Ceu.Grammar.Ann        (Ann, HasAnn(..), annz)
 import Ceu.Grammar.Type       (Type(..))
 import qualified Ceu.Grammar.Basic as B
 
--- Special events:
--- "BOOT"
--- "ASYNC"
+-------------------------------------------------------------------------------
 
--- Program (pg 5).
+data Exp
+    = Number Ann Int            -- 1
+    | Cons   Ann ID_Type        -- True
+    | Read   Ann ID_Var         -- a ; xs
+    | Arg    Ann
+    | Unit   Ann                -- ()
+    | Tuple  Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
+    | Func   Ann Type Stmt      -- function implementation
+    | Call   Ann Exp Exp        -- f a ; f(a) ; f(1,2)
+    deriving (Eq, Show)
+
+toBasicExp :: Exp -> B.Exp
+toBasicExp (Number z v)     = B.Number z v
+toBasicExp (Cons   z v)     = B.Cons   z v
+toBasicExp (Read   z v)     = B.Read   z v
+toBasicExp (Arg    z)       = B.Arg    z
+toBasicExp (Unit   z)       = B.Unit   z
+toBasicExp (Tuple  z es)    = B.Tuple  z (map toBasicExp es)
+toBasicExp (Func   z tp p)  = B.Func   z tp (toBasicStmt p)
+toBasicExp (Call   z e1 e2) = B.Call   z (toBasicExp e1) (toBasicExp e2)
+
+instance HasAnn Exp where
+    --getAnn :: Exp -> Ann
+    getAnn (Number z _)   = z
+    getAnn (Cons   z _)   = z
+    getAnn (Read   z _)   = z
+    getAnn (Arg    z)     = z
+    getAnn (Unit   z)     = z
+    getAnn (Tuple  z _)   = z
+    getAnn (Func   z _ _) = z
+    getAnn (Call   z _ _) = z
+
+-------------------------------------------------------------------------------
+
 data Stmt
   = Data     Ann ID_Type [ID_Var] [DataCons] Bool -- new type declaration
-  | Var      Ann ID_Var Type                    -- variable declaration
-  | Write    Ann Loc B.Exp                      -- assignment statement
-  | CallS    Ann B.Exp B.Exp                    -- call function
-  | If       Ann B.Exp Stmt Stmt                -- conditional
-  | Seq      Ann Stmt Stmt                      -- sequence
-  | Loop     Ann Stmt                           -- infinite loop
-  | Scope    Ann Stmt                           -- scope for local variables
+  | Var      Ann ID_Var Type                      -- variable declaration
+  | FuncS    Ann ID_Var Type Stmt                 -- function declaration
+  | Write    Ann Loc Exp                          -- assignment statement
+  | CallS    Ann Exp Exp                          -- call function
+  | If       Ann Exp Stmt Stmt                    -- conditional
+  | Seq      Ann Stmt Stmt                        -- sequence
+  | Loop     Ann Stmt                             -- infinite loop
+  | Scope    Ann Stmt                             -- scope for local variables
   | Data'    Ann ID_Type [ID_Var] [DataCons] Bool Stmt -- new type declaration w/ stmts in scope
-  | Var'     Ann ID_Var Type Stmt               -- variable declaration w/ stmts in scope
-  | Nop      Ann                                -- nop as in basic Grammar
-  | Ret      Ann B.Exp
+  | Var'     Ann ID_Var Type Stmt                 -- variable declaration w/ stmts in scope
+  | Nop      Ann                                  -- nop as in basic Grammar
+  | Ret      Ann Exp
   deriving (Eq, Show)
 
 sSeq a b = Seq annz a b
@@ -34,6 +66,7 @@ instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
     getAnn (Data     z _ _ _ _) = z
     getAnn (Var      z _ _)   = z
+    getAnn (FuncS    z _ _ _) = z
     getAnn (Write    z _ _  ) = z
     getAnn (If       z _ _ _) = z
     getAnn (Seq      z _ _  ) = z
@@ -44,27 +77,13 @@ instance HasAnn Stmt where
     getAnn (Nop      z      ) = z
     getAnn (Ret      z _    ) = z
 
-toBasic :: Stmt -> (Errors, B.Stmt)
-toBasic (Data' z tp vars cons abs p) = (es, B.Data z tp vars cons abs p')
-                                       where
-                                        (es,p') = toBasic p
-toBasic (Var' z var tp p)      = (es, B.Var z var tp p')
-                                 where
-                                   (es,p') = toBasic p
-toBasic (Write z var exp)      = ([], B.Write z var exp)
-toBasic (If z exp p1 p2)       = (es1++es2, B.If z exp p1' p2')
-                                 where
-                                   (es1,p1') = (toBasic p1)
-                                   (es2,p2') = (toBasic p2)
-toBasic (Seq z p1 p2)          = (es1++es2, B.Seq z p1' p2') --seq z p1' p2')
-                                 where
-                                    (es1,p1') = (toBasic p1)
-                                    (es2,p2') = (toBasic p2)
-                                    --seq z1 (B.Seq z2 a b) p2' = B.Seq z1 a (seq z2 b p2')
-                                    --seq z  p1'            p2' = B.Seq z p1' p2'
-toBasic (Loop z p)             = (es, B.Loop z p')
-                                 where
-                                   (es,p') = toBasic p
-toBasic (Nop z)                = ([], B.Nop z)
-toBasic (Ret z exp)            = ([], B.Ret z exp)
-toBasic p                      = error $ "toBasic: unexpected statement: " ++ (show p)
+toBasicStmt :: Stmt -> B.Stmt
+toBasicStmt (Data' z tp vars cons abs p) = B.Data z tp vars cons abs (toBasicStmt p)
+toBasicStmt (Var' z var tp p)  = B.Var z var tp (toBasicStmt p)
+toBasicStmt (Write z loc exp)  = B.Write z loc (toBasicExp exp)
+toBasicStmt (If z exp p1 p2)   = B.If z (toBasicExp exp) (toBasicStmt p1) (toBasicStmt p2)
+toBasicStmt (Seq z p1 p2)      = B.Seq z (toBasicStmt p1) (toBasicStmt p2)
+toBasicStmt (Loop z p)         = B.Loop z (toBasicStmt p)
+toBasicStmt (Nop z)            = B.Nop z
+toBasicStmt (Ret z exp)        = B.Ret z (toBasicExp exp)
+toBasicStmt p                  = error $ "toBasicStmt: unexpected statement: " ++ (show p)
