@@ -16,8 +16,7 @@ import Ceu.Parser.Type           (pType, type_F)
 import Ceu.Grammar.Globals       (Source, Loc(..), ID_Var)
 import Ceu.Grammar.Type          (Type(..))
 import Ceu.Grammar.Ann           (annz, source, getAnn, Ann(..))
-import Ceu.Grammar.Basic hiding  (Stmt(..))
-import Ceu.Grammar.Full.Stmt     (Stmt(..), toBasic)
+import Ceu.Grammar.Full.Full
 
 -------------------------------------------------------------------------------
 
@@ -52,7 +51,7 @@ stmt_var = do
     void <- tk_str ":"
     tp   <- pType
     s    <- option (Nop $ annz{source=pos})
-                   (try (attr_exp      loc (tk_str "<-")))
+                   (try (attr_exp loc (tk_str "<-")))
     s'   <- case (dcls pos loc tp) of
                 Nothing -> do { fail "arity mismatch" }
                 Just v  -> return $ Seq annz{source=pos} v s
@@ -212,12 +211,12 @@ expr_func = do
 
   ann   <- do { return annz{source=pos} }
 
-  return $ Func ann tp (snd $ toBasic $
+  return $ Func ann tp
             (Seq ann
               (fromJust dcls')
               (Seq ann
                 (Write ann loc (Arg ann))
-                imp)))
+                imp))
 
   where
     --loc_' :: Parser Loc

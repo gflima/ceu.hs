@@ -14,8 +14,7 @@ import Ceu.Parser.Stmt
 import Ceu.Grammar.Globals      (Loc(..))
 import Ceu.Grammar.Type         (Type(..))
 import Ceu.Grammar.Ann          (annz,source,type_)
-import Ceu.Grammar.Basic        (Exp(..))
-import Ceu.Grammar.Full.Stmt    (Stmt(..))
+import Ceu.Grammar.Full.Full    (Stmt(..), Exp(..))
 
 main :: IO ()
 main = hspec spec
@@ -376,14 +375,14 @@ spec = do
 
 -------------------------------------------------------------------------------
 
-{-
         describe "func:" $ do
-            it "func add" $
-                parse stmt_func "func add : ((Int, Int) -> Int)"
-                `shouldBe` Right (Func (annz{source = ("",1,1)}) "add" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")))
-            it "func add : i" $
-                parse stmt_func "func add : (a,_) : ((Int, Int) -> Int)"
-                `shouldBe` Right (Func (annz{source = ("",1,1)}) "add" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")))
+            it "var add : ..." $
+                parse stmt "var add : ((Int, Int) -> Int)"
+                `shouldBe` Right (Seq annz{source = ("",1,1)} (Seq annz (Var annz{source = ("",1,1)} "add" (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int"))) (Nop annz)) (Nop annz{source = ("",1,1)}))
+{-
+            it "func (...) : (...) do end" $
+                parse expr_func "func (a,_) : ((Int, Int) -> Int) do end"
+                `shouldBe` Right (Func annz (TypeF (TypeN [Type1 "Int",Type1 "Int"]) (Type1 "Int")) (Nop annz))
             it "func add : i" $
                 parse stmt_func "func add : (_,_,_) : ((Int, Int) -> Int)"
                 `shouldBe` Left "(line 1, column 41):\nunexpected end of input\nexpecting \"do\"\narity mismatch"
