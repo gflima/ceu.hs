@@ -42,6 +42,13 @@ stmt_ret = do
 
 -------------------------------------------------------------------------------
 
+stmt_data :: Parser Stmt
+stmt_data = do
+  pos  <- pos2src <$> getPosition
+  void <- tk_key "data"
+  tp   <- tk_type
+  return $ Data annz{source=pos} tp [] [] False
+
 stmt_var :: Parser Stmt
 stmt_var = do
   pos  <- pos2src <$> getPosition
@@ -136,8 +143,8 @@ stmt_loop = do
 
 stmt1 :: Parser Stmt
 stmt1 = do
-  s <- try stmt_var <|> try stmt_funcs <|> try stmt_attr <|> try stmt_do <|>
-       try stmt_if  <|> try stmt_loop  <|> try stmt_ret
+  s <- try stmt_data <|> try stmt_var <|> try stmt_funcs <|> try stmt_attr <|>
+       try stmt_do   <|> try stmt_if  <|> try stmt_loop  <|> try stmt_ret
   return s
 
 stmt_seq :: Source -> Parser Stmt

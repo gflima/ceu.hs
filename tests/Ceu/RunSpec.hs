@@ -101,12 +101,12 @@ spec = do
         run True "return +(1,2)"
         `shouldBe` Right (Number 3)
 
-      it "+ ; return 1+2" $
-        run False "func + : ((Int,Int)->Int) ; return 1+2"
+      it "Int ; + ; return 1+2" $
+        run False "data Int ; func + : ((Int,Int)->Int) ; return 1+2"
         `shouldBe` Right (Number 3)
 
-      it "+ ; return +(1,2)" $
-        run False "func + : ((Int,Int)->Int) ; return +(1,2)"
+      it "Int ; + ; return +(1,2)" $
+        run False "data Int ; func + : ((Int,Int)->Int) ; return +(1,2)"
         `shouldBe` Right (Number 3)
 
 -------------------------------------------------------------------------------

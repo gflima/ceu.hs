@@ -13,6 +13,7 @@ types = [
   ]
 
 keywords = [
+    "data",
     "do",
     "else",
     "else/if",
