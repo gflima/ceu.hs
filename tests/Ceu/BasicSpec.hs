@@ -7,7 +7,8 @@ import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann    (annz, Ann(..))
 import Ceu.Grammar.Type   (Type(..))
 import Ceu.Grammar.Basic
-import qualified Ceu.Grammar.TypeSys as TypeSys
+import qualified Ceu.Grammar.Simplify as Simplify
+import qualified Ceu.Grammar.TypeSys  as TypeSys
 
 main :: IO ()
 main = hspec spec
@@ -125,7 +126,7 @@ spec = do
         `shouldBe` []
 
     it "Int ; X a ; inst X Int ; return fff 1" $
-      (fst $ TypeSys.go
+      (fst $ TypeSys.go $ Simplify.go
         (Data annz "Int" [] [] False
         (Class annz "X" ["a"]
             (Var annz "fff" (TypeF (TypeV "a") (Type1 "Int")) (Nop annz))

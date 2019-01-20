@@ -3,8 +3,9 @@ module Ceu.Grammar.Full.Eval where
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann      (Ann, getAnn)
 import Ceu.Grammar.Type     (Type(..))
-import qualified Ceu.Grammar.Basic   as B
-import qualified Ceu.Grammar.TypeSys as T
+import qualified Ceu.Grammar.Basic    as B
+import qualified Ceu.Grammar.TypeSys  as T
+import qualified Ceu.Grammar.Simplify as S
 import qualified Ceu.Eval as E
 import Debug.Trace
 
@@ -29,11 +30,12 @@ compile :: Stmt -> Stmt
 compile p = Scope.compile $ Seq.compile $ FuncS.compile p
 
 compile' :: Stmt -> (Errors, B.Stmt)
-compile' p = (es3, p3)
+compile' p = (es4, p4)
   where
     p1       = compile p
     p2       = toBasicStmt p1
-    (es3,p3) = T.go p2
+    p3       = S.go p2
+    (es4,p4) = T.go p3
 
 go :: Stmt -> Either Errors E.Exp
 go p =
