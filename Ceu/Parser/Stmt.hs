@@ -1,20 +1,20 @@
 module Ceu.Parser.Stmt where
 
 import Debug.Trace
-import Data.Maybe               (fromJust)
+import Data.Maybe             (fromJust)
 
-import Text.Parsec.Prim         ((<|>), try, getPosition, many)
-import Text.Parsec.Char         (char, anyChar)
-import Text.Parsec.String       (Parser)
-import Text.Parsec.Combinator   (many1, chainl, chainl1, chainr1, option, optionMaybe, optional)
+import Text.Parsec.Prim       ((<|>), try, getPosition, many)
+import Text.Parsec.Char       (char, anyChar)
+import Text.Parsec.String     (Parser)
+import Text.Parsec.Combinator (many1, chainl, chainl1, chainr1, option, optionMaybe, optional)
 
 import Ceu.Parser.Common
 import Ceu.Parser.Token
-import Ceu.Parser.Type          (pType, type_F)
+import Ceu.Parser.Type        (pType, type_F)
 
-import Ceu.Grammar.Globals      (Source, Loc(..), ID_Var)
-import Ceu.Grammar.Type         (Type(..))
-import Ceu.Grammar.Ann          (annz, source, getAnn, Ann(..))
+import Ceu.Grammar.Globals    (Source, Loc(..), ID_Var)
+import Ceu.Grammar.Type       (Type(..))
+import Ceu.Grammar.Ann        (annz, source, getAnn, Ann(..))
 import Ceu.Grammar.Full.Full
 
 -------------------------------------------------------------------------------
@@ -23,7 +23,7 @@ attr_exp :: Loc -> Parser a -> Parser Stmt
 attr_exp loc op = do
   pos  <- pos2src <$> getPosition
   void <- op
-  exp  <- expr False
+  exp  <- expr
   return $ Write annz{source=pos} loc exp
 
 -------------------------------------------------------------------------------
@@ -37,7 +37,7 @@ stmt_ret :: Parser Stmt
 stmt_ret = do
   pos  <- pos2src <$> getPosition
   void <- tk_key "return"
-  e  <- expr False
+  e  <- expr
   return $ Ret annz{source=pos} e
 
 -------------------------------------------------------------------------------
@@ -61,7 +61,7 @@ stmt_attr = do
   --pos  <- pos2src <$> getPosition
   void <- tk_str "set"
   loc  <- loc_
-  s    <- try (attr_exp loc (tk_str "<-"))
+  s    <- try (attr_exp    loc (tk_str "<-"))
   return $ s
 
 -- (x, (y,_))
@@ -84,8 +84,8 @@ loc_ =  (try lunit <|> try lany <|> try lvar <|> try ltuple)
 
 matchLocType :: Source -> Loc -> Type -> Maybe Stmt
 matchLocType src loc tp = case (aux src loc tp) of
-            Nothing -> Nothing
-            Just v  -> Just $ foldr (Seq annz) (Nop annz) v
+                            Nothing -> Nothing
+                            Just v  -> Just $ foldr (Seq annz) (Nop annz) v
   where
     aux :: Source -> Loc -> Type -> Maybe [Stmt]
     aux pos LAny        _          = Just []
@@ -104,7 +104,7 @@ stmt_do :: Parser Stmt
 stmt_do = do
   pos  <- pos2src <$> getPosition
   void <- tk_key "do"
-  s  <- stmt
+  s    <- stmt
   void <- tk_key "end"
   return $ Scope annz{source=pos} s
 
@@ -112,11 +112,11 @@ stmt_if :: Parser Stmt
 stmt_if = do
   pos1 <- pos2src <$> getPosition
   void <- tk_key "if"
-  cnd  <- expr False
+  cnd  <- expr
   void <- tk_key "then"
   s1   <- stmt
   ss   <- many $ (try $ (,,) <$> pos2src <$> getPosition <*>
-                  (tk_key "else/if" *> expr False) <*> (tk_key "then" *> stmt))
+                 (tk_key "else/if" *> expr) <*> (tk_key "then" *> stmt))
   pos2 <- pos2src <$> getPosition
   s2   <- option (Nop annz{source=pos2}) (try $ tk_key "else" *> stmt)
   void <- tk_key "end"
@@ -141,7 +141,8 @@ stmt1 = do
   return s
 
 stmt_seq :: Source -> Parser Stmt
-stmt_seq src = option (Nop annz{source=src}) (chainr1 stmt1 (do return (\a b->Seq annz{source=src} a b)))
+stmt_seq src = option (Nop annz{source=src})
+                      (chainr1 stmt1 (do return (\a b->Seq annz{source=src} a b)))
 
 stmt :: Parser Stmt
 stmt = do
@@ -158,11 +159,10 @@ expr_number = do
   num <- tk_num
   return $ Number annz{source=pos} num
 
-expr_read :: Bool -> Parser Exp
-expr_read isMid = do
+expr_read :: Parser Exp
+expr_read = do
   pos <- pos2src <$> getPosition
-  str <- if isMid then try tk_op  <|> char '(' *> (tk_var <* char ')')
-                  else try tk_var <|> char '(' *> (tk_op  <* char ')')
+  str <- tk_var
   return $ Read annz{source=pos} str
 
 expr_unit :: Parser Exp
@@ -175,24 +175,25 @@ expr_unit = do
 expr_parens :: Parser Exp
 expr_parens = do
   void <- tk_str "("
-  exp  <- expr False
+  exp  <- expr
   void <- tk_str ")"
   return exp
 
 expr_tuple :: Parser Exp
 expr_tuple = do
   pos  <- pos2src <$> getPosition
-  exps <- list $ expr False
+  exps <- list expr
   return $ Tuple annz{source=pos} exps
 
-expr_prim :: Bool -> Parser Exp
-expr_prim isMid = try expr_call_pre <|>
-          try expr_number           <|>
-          try (expr_read isMid)     <|>
-          try expr_unit             <|>
-          try expr_parens           <|>
-          try expr_tuple            <|>
-          try expr_func
+expr_prim :: Parser Exp
+expr_prim =
+  try expr_call_pre <|>
+  try expr_number   <|>
+  try expr_read     <|>
+  try expr_unit     <|>
+  try expr_parens   <|>
+  try expr_tuple    <|>
+  try expr_func
 
 -------------------------------------------------------------------------------
 
@@ -203,7 +204,7 @@ func pos = do
   tp   <- type_F
 
   dcls <- let (TypeF tp' _) = tp
-            dcls = (matchLocType pos loc tp')
+              dcls = (matchLocType pos loc tp')
           in
             case dcls of
               Nothing  -> do { fail "arity mismatch" }
@@ -233,47 +234,48 @@ stmt_funcs :: Parser Stmt
 stmt_funcs = do
   pos    <- pos2src <$> getPosition
   void   <- tk_key "func"
-  f      <- try (char '(' *> (tk_op <* char ')')) <|> try tk_var
+  f      <- try (char '\'' *> tk_op) <|> try tk_var
   tp_imp <- optionMaybe $ try (func pos)
-  ann    <- do { return annz{source=pos} }
-  ret    <- case tp_imp of
-              Nothing -> do
-              void <- tk_str ":"
-              tp   <- pType
-              return $ Var ann f tp
-              Just (tp,imp) -> do
-              return $ FuncS ann f tp imp
+  ann  <- do { return annz{source=pos} }
+  ret  <- case tp_imp of
+            Nothing -> do
+                void <- tk_str ":"
+                tp   <- pType
+                return $ Var ann f tp
+            Just (tp,imp) -> do
+                return $ FuncS ann f tp imp
   return ret
 
 -------------------------------------------------------------------------------
 
 expr_call_pre :: Parser Exp
-expr_call_pre = expr_prim isMid `chainl1` f where do
+expr_call_pre = do
   pos  <- pos2src <$> getPosition
-  exp  <- do { try (tk_str "-") ; return (Read annz{source=pos} "negate") } <|>
-          try (expr False)
+  f    <- try (char '\'' *> tk_op)          <|>
+          do { try (tk_str "-") ; return "negate" } <|> -- unary minus exception
+          try tk_func
+  exp  <- expr
+  return $ Call annz{source=pos} (Read annz{source=pos} f) exp
 
-  exp  <- expr False
-  return $ Call annz{source=pos} f exp
-
-expr_call_pos :: Bool -> Parser Exp
-expr_call_pos isMid = do
+expr_call_pos :: Parser Exp
+expr_call_pos = do
   pos <- pos2src <$> getPosition
-  e1  <- expr_call_mid isMid
-  ops <- many $ expr True
-  return $ foldl (\e op -> Call annz{source=pos} op e)
-           e1 ops
+  e1  <- expr_call_mid
+  ops <- many (try tk_op <|> try (char '\'' *> tk_func))
+  return $ foldl (\e op -> Call annz{source=pos} (Read annz{source=pos} op) e)
+                 e1 ops
 
-expr_call_mid :: Bool -> Parser Exp
-expr_call_mid isMid = expr_prim isMid `chainl1` f where
+expr_call_mid :: Parser Exp
+expr_call_mid = expr_prim `chainl1` f where
   f = do
     pos <- pos2src <$> getPosition
-    op  <- expr True
-    return (\a b -> Call annz{source=pos} op (Tuple annz{source=pos} [a,b]))
+    op  <- try tk_op <|> try (char '\'' *> (tk_func <* char '\''))
+    return (\a b -> Call annz{source=pos} (Read annz{source=pos} op)
+                                          (Tuple annz{source=pos} [a,b]))
 
 -------------------------------------------------------------------------------
 
-expr :: Bool -> Parser Exp
-expr isMid = do
-  e <- expr_call_pos isMid
+expr :: Parser Exp
+expr = do
+  e <- expr_call_pos
   return e
