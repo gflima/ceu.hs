@@ -160,6 +160,48 @@ spec = do
           ])
         `shouldBe` Right (Number 10)
 
+      it "Int ; Bool ; F2able a ; inst F2able Bool/Int ; return f2 1" $
+        (run True $
+          unlines [
+            "typeclass F2able for a with"       ,
+            " var f2 : (a -> Int)"              ,
+            "end"                               ,
+            "instance of F2able for Bool with"  ,
+            " func f2 (v) : (Bool -> Int) do"   ,
+            "   return 0"                       ,
+            " end"                              ,
+            "end"                               ,
+            "instance of F2able for Int with"   ,
+            " func f2 (v) : (Int -> Int) do"    ,
+            "   return v+1"                     ,
+            " end"                              ,
+            "end"                               ,
+            "var ret : Int <- f2(1)"            ,
+            "return ret"
+          ])
+        `shouldBe` Right (Number 2)
+
+      it "Int ; Bool ; F2able a ; inst F2able Bool/Int ; return f2 1" $
+        (run True $
+          unlines [
+            "typeclass F2able for a with"       ,
+            " var f2 : (a -> Int)"              ,
+            "end"                               ,
+            "instance of F2able for Int with"   ,
+            " func f2 (v) : (Int -> Int) do"    ,
+            "   return v+1"                     ,
+            " end"                              ,
+            "end"                               ,
+            "instance of F2able for Bool with"  ,
+            " func f2 (v) : (Bool -> Int) do"   ,
+            "   return 0"                       ,
+            " end"                              ,
+            "end"                               ,
+            "var ret : Int <- f2(1)"            ,
+            "return ret"
+          ])
+        `shouldBe` Right (Number 2)
+
 -------------------------------------------------------------------------------
 
     describe "do-end:" $ do

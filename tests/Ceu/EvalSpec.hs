@@ -331,14 +331,6 @@ spec = do
           (B.Data annz "Bool" [] [] False
           (B.Class annz "X" ["a"]
             (B.Var annz "f4" (TypeF (TypeV "a") (Type1 "Int")) (B.Nop annz))
-          (B.Inst annz "X" [Type1 "Bool"]
-            (B.Var annz "f4" (TypeF (Type1 "Bool") (Type1 "Int"))
-            (B.Seq annz
-            (B.Write annz
-              (LVar "f4")
-              (B.Func annz (TypeF (Type1 "Bool") (Type1 "Int"))
-                (B.Ret annz (B.Number annz 0))))
-            (B.Nop annz)))
           (B.Inst annz "X" [Type1 "Int"]
             (B.Var annz "f4" (TypeF (Type1 "Int") (Type1 "Int"))
             (B.Seq annz
@@ -350,6 +342,14 @@ spec = do
                     (B.Read annz "+")
                     (B.Tuple annz [B.Arg annz, B.Number annz 1])))))
               (B.Nop annz)))
+          (B.Inst annz "X" [Type1 "Bool"]
+            (B.Var annz "f4" (TypeF (Type1 "Bool") (Type1 "Int"))
+            (B.Seq annz
+            (B.Write annz
+              (LVar "f4")
+              (B.Func annz (TypeF (Type1 "Bool") (Type1 "Int"))
+                (B.Ret annz (B.Number annz 0))))
+            (B.Nop annz)))
           (B.Ret annz (B.Call annz (B.Read annz "f4") (B.Number annz 1)))))))))
         `shouldBe` (Number 2)
 
