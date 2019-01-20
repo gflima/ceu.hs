@@ -50,7 +50,7 @@ fromExp (B.Read   z id)   = Read id' where
                                 otherwise      -> id
 
 fromStmt :: B.Stmt -> Stmt
-fromStmt (B.Class  _ _ _ _ p)          = fromStmt p
+fromStmt (B.Class  _ _ _ _   p)        = fromStmt p
 fromStmt (B.Data   _ _ _ _ _ p)        = fromStmt p
 fromStmt (B.Var _ id tp@(TypeF _ _) p) = Var (id++"__"++Type.show' tp, Nothing) (fromStmt p)
 fromStmt (B.Var _ id _ p)              = Var (id,Nothing) (fromStmt p)
@@ -73,9 +73,10 @@ fromStmt (B.Write  _ loc e)            = Write (aux loc (type_ $ getAnn e)) (fro
 
 fromStmt (B.Inst   _ _ _ imp p)        = aux (fromStmt imp) (fromStmt p)
   where
-    aux Nop                p = p
     aux (Var vv (Seq x y)) p = Var vv (Seq x (aux y p))
-    aux x p = error $ show (x,p)
+    aux (Var vv xy)        p = Var vv (Seq xy p)
+    aux _                  p = p
+    --aux x p = error $ show (x,p)
 
 ----------------------------------------------------------------------------
 
