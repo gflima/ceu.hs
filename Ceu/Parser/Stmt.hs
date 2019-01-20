@@ -264,7 +264,7 @@ stmt_funcs :: Parser Stmt
 stmt_funcs = do
   pos    <- pos2src <$> getPosition
   void   <- tk_key "func"
-  f      <- try (char '\'' *> tk_op) <|> try tk_var
+  f      <- try tk_op <|> try tk_var
   tp_imp <- optionMaybe $ try (func pos)
   ann  <- do { return annz{source=pos} }
   ret  <- case tp_imp of

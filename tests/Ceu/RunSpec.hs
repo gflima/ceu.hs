@@ -31,11 +31,11 @@ spec = do
         it "return -1" $
             run True "return -1"
             `shouldBe` Right (Number (-1))
-        it "return - -1" $
-            run True "return - -1"
+        it "return - (-1)" $
+            run True "return - (-1)"
             `shouldBe` Right (Number 1)
-        it "return - - 1" $
-            run True "return - - 1"
+        it "return -( - 1)" $
+            run True "return -(-  1)"
             `shouldBe` Right (Number 1)
         it "return ((1))" $
             run True "return ((1))"
@@ -43,20 +43,20 @@ spec = do
         it "return ((-9999))" $
             run True "return ((-9999))"
             `shouldBe` Right (Number (-9999))
-        it "1+2*3" $
-            run True "return 1+2*3"
+        it "(1+2)*3" $
+            run True "return (1+2)*3"
             `shouldBe` Right (Number 9)
         it "(1+2)*3" $
             run True "return (1+2)*3"
             `shouldBe` Right (Number 9)
-        it "1+2-3" $
-            run True "return 1+2-3"
+        it "(1+2)-3" $
+            run True "return (1+2)-3"
             `shouldBe` Right (Number 0)
-        it "1+2*3/4" $
-            run True "return 1+2*3/4"
+        it "((1+2)*3)/4" $
+            run True "return ((1+2)*3)/4"
             `shouldBe` Right (Number 2)
         it "+ (1 2)" $
-            run True "return '+ (1,2)"
+            run True "return + (1,2)"
             `shouldBe` Right (Number 3)
 
     describe "vars:" $ do
@@ -82,7 +82,7 @@ spec = do
             run True "var x:(Int,()) <- (1,()) ; var y:(Int,()) <- x ; return 1"
             `shouldBe` Right (Number 1)
         it "var x:(Int,Int) <- (1,2) ; return '+ x | (TODO: no RT support for tuples)" $
-            run True "var x:(Int,Int) <- (1,2) ; return '+ x"
+            run True "var x:(Int,Int) <- (1,2) ; return + x"
             `shouldBe` Right (Number 3)
 
 -------------------------------------------------------------------------------
@@ -97,16 +97,16 @@ spec = do
         run True "return 1+2"
         `shouldBe` Right (Number 3)
 
-      it "return '+(1,2)" $
-        run True "return '+(1,2)"
+      it "return +(1,2)" $
+        run True "return +(1,2)"
         `shouldBe` Right (Number 3)
 
       it "+ ; return 1+2" $
-        run False "func '+ : ((Int,Int)->Int) ; return 1+2"
+        run False "func + : ((Int,Int)->Int) ; return 1+2"
         `shouldBe` Right (Number 3)
 
-      it "+ ; return '+(1,2)" $
-        run False "func '+ : ((Int,Int)->Int) ; return '+(1,2)"
+      it "+ ; return +(1,2)" $
+        run False "func + : ((Int,Int)->Int) ; return +(1,2)"
         `shouldBe` Right (Number 3)
 
 -------------------------------------------------------------------------------
