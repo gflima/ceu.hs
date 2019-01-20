@@ -1,4 +1,4 @@
-module Test.RunSpec (main, spec) where
+module Ceu.RunSpec (main, spec) where
 
 import Test.Hspec
 

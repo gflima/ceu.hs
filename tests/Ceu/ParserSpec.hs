@@ -1,4 +1,4 @@
-module Test.ParserSpec (main, spec) where
+module Ceu.ParserSpec (main, spec) where
 
 import Test.Hspec
 
@@ -414,23 +414,23 @@ spec = do
                   "return f3(10)"
                 ])
               `shouldBe` Right
-                (Seq annz
-                (Class annz "F3able" ["a"]
-                  (Seq annz
-                  (Seq annz
-                  (Var annz "f3" (TypeF (TypeV "a") (Type1 "Int")))
-                  (Nop annz))
-                  (Nop annz)))
-                (Seq annz
-                (Inst annz "F3able" [Type1 "Int"]
-                  (FuncS annz "f3" (TypeF (TypeV "a") (Type1 "Int"))
-                    (Seq annz
-                    (Seq annz
-                    (Var annz "v" (TypeV "a"))
-                    (Nop annz))
-                    (Seq annz
-                    (Write annz (LVar "v") (Arg annz)) (Ret annz (Read annz "v"))))))
-                (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
+                (Seq annz{source=("",1,1)}
+                (Class annz{source=("",1,1)} "F3able" ["a"]
+                  (Seq annz{source=("",2,2)}
+                  (Seq annz{source=("",0,0)}
+                  (Var annz{source=("",2,2)} "f3" (TypeF (TypeV "a") (Type1 "Int")))
+                  (Nop annz{source=("",0,0)}))
+                  (Nop annz{source=("",2,2)})))
+                (Seq annz{source=("",1,1)}
+                (Inst annz{source=("",4,1)} "F3able" [Type1 "Int"]
+                  (FuncS annz{source=("",5,2)} "f3" (TypeF (TypeV "a") (Type1 "Int"))
+                    (Seq annz{source=("",5,2)}
+                    (Seq annz{source=("",0,0)}
+                    (Var annz{source=("",5,2)} "v" (TypeV "a"))
+                    (Nop annz{source=("",0,0)}))
+                    (Seq annz{source=("",5,2)}
+                    (Write annz{source=("",5,2)} (LVar "v") (Arg annz{source=("",5,2)})) (Ret annz{source=("",6,4)} (Read annz{source=("",6,11)} "v"))))))
+                (Ret annz{source=("",9,1)} (Call annz{source=("",9,8)} (Read annz{source=("",9,8)} "f3") (Number annz{source=("",9,11)} 10)))))
 
         describe "seq:" $ do
             it "x <- k k <- 1" $

@@ -1,4 +1,4 @@
-module Ceu.FullGrammarSpec (main, spec) where
+module Ceu.FullSpec (main, spec) where
 
 import Test.Hspec
 import Text.Printf
