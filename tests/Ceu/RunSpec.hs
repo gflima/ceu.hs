@@ -157,6 +157,12 @@ spec = do
            ])
         `shouldBe` Right (Number 120)
 
+    describe "data:" $ do
+
+      it "type Xxx" $
+        (run False "type Xxx ; var x:Xxx <- Xxx ; return x")
+        `shouldBe` Right (Cons "Xxx")
+
     describe "typeclass:" $ do
 
       it "Int ; F3able a ; inst F3able Int ; return f3 1" $

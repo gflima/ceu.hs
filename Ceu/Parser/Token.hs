@@ -8,10 +8,6 @@ import Text.Parsec.String     (Parser)
 import Text.Parsec.Char       (char, oneOf, digit, satisfy, string, letter, anyChar, newline)
 import Text.Parsec.Combinator (many1, notFollowedBy, manyTill, eof)
 
-types = [
-    "Int"
-  ]
-
 keywords = [
     "do",
     "else",

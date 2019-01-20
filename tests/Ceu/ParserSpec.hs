@@ -16,6 +16,30 @@ import Ceu.Grammar.Type         (Type(..))
 import Ceu.Grammar.Ann          (annz,source,type_)
 import Ceu.Grammar.Full.Full    (Stmt(..), Exp(..))
 
+clearStmt :: Stmt -> Stmt
+clearStmt (Class _ cls vars ifc)    = Class  annz cls vars (clearStmt ifc)
+clearStmt (Inst  _ cls tps  imp)    = Inst   annz cls tps  (clearStmt imp)
+clearStmt (Data _ tp vars cons abs) = Data   annz tp  vars cons abs
+clearStmt (Var _ var tp)            = Var    annz var tp
+clearStmt (Write _ loc exp)         = Write  annz loc (clearExp exp)
+clearStmt (If _ exp p1 p2)          = If     annz (clearExp exp) (clearStmt p1) (clearStmt p2)
+clearStmt (Seq _ p1 p2)             = Seq    annz (clearStmt p1) (clearStmt p2)
+clearStmt (Loop _ p)                = Loop   annz (clearStmt p)
+clearStmt (Nop _)                   = Nop    annz
+clearStmt (Ret _ exp)               = Ret    annz (clearExp exp)
+clearStmt p                         = error $ "clearStmt: unexpected statement: " ++ (show p)
+
+clearExp :: Exp -> Exp
+clearExp (Number _ v)     = Number annz v
+clearExp (Cons   _ v)     = Cons   annz v
+clearExp (Read   _ v)     = Read   annz v
+clearExp (Arg    _)       = Arg    annz
+clearExp (Unit   _)       = Unit   annz
+clearExp (Tuple  _ es)    = Tuple  annz (map clearExp es)
+clearExp (Func   _ tp p)  = Func   annz tp (clearStmt p)
+clearExp (Call   _ e1 e2) = Call   annz (clearExp e1) (clearExp e2)
+
+
 main :: IO ()
 main = hspec spec
 
@@ -398,6 +422,15 @@ spec = do
                 parse expr_func "func ((Int, Int) -> Int) do end"
                 `shouldBe` Left "(line 1, column 8):\nunexpected \"I\"\nexpecting \")\", \"(\" or \"_\""
 
+        describe "data" $ do
+
+            it "type Xxx" $
+              (parse stmt "type Xxx")
+              `shouldBe` Right (Data annz{source=("",1,1)} "Xxx" [] [] False)
+            it "type Xxx ; var x = Xxx" $
+              (parse' stmt "type Xxx ; var x:Xxx <- Xxx")
+              `shouldBe` Right (Seq annz (Data annz "Xxx" [] [] False) (Seq annz (Seq annz (Var annz "x" (Type1 "Xxx")) (Nop annz)) (Write annz (LVar "x") (Cons annz "Xxx"))))
+
         describe "typeclass:" $ do
 
             it "Int ; F3able a ; inst F3able Int ; return f3 1" $
@@ -473,3 +506,10 @@ spec = do
                 case v of
                     (Right v') -> Right v'
                     (Left  v') -> Left (show v')
+
+        --parse' :: Parser Stmt -> String -> Either P.ParseError Stmt
+        parse' rule src = case parse rule src of
+                            Left  err  -> Left err
+                            Right stmt -> Right $ clearStmt stmt
+
+

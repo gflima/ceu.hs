@@ -200,6 +200,12 @@ expr_number = do
   num <- tk_num
   return $ Number annz{source=pos} num
 
+expr_cons :: Parser Exp
+expr_cons = do
+  pos  <- pos2src <$> getPosition
+  cons <- tk_type
+  return $ Cons annz{source=pos} cons
+
 expr_read :: Parser Exp
 expr_read = do
   pos <- pos2src <$> getPosition
@@ -229,6 +235,7 @@ expr_tuple = do
 expr_prim :: Parser Exp
 expr_prim =
   try expr_number   <|>
+  try expr_cons     <|>
   try expr_read     <|>
   try expr_unit     <|>
   try expr_parens   <|>
