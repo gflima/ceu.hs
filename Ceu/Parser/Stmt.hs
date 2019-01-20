@@ -70,7 +70,7 @@ stmt_inst = do
 stmt_data :: Parser Stmt
 stmt_data = do
   pos  <- pos2src <$> getPosition
-  void <- tk_key "data"
+  void <- tk_key "type"
   tp   <- tk_type
   return $ Data annz{source=pos} tp [] [] False
 

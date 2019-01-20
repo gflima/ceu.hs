@@ -13,7 +13,6 @@ types = [
   ]
 
 keywords = [
-    "data",
     "do",
     "else",
     "else/if",
@@ -28,6 +27,7 @@ keywords = [
     "then",
     "var",
     "return",
+    "type",
     "typeclass",
     "with"
   ]

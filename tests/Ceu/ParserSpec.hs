@@ -330,11 +330,11 @@ spec = do
         describe "if-then-else/if-else" $ do
             it "if 0 then return ()" $
                 parse stmt_if "if 0 then return ()"
-                `shouldBe` Left "(line 1, column 20):\nunexpected end of input\nexpecting \"typeclass\", \"instance\", \"data\", \"var\", \"func\", \"set\", \"do\", \"if\", \"loop\", \"return\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 20):\nunexpected end of input\nexpecting \"typeclass\", \"instance\", \"type\", \"var\", \"func\", \"set\", \"do\", \"if\", \"loop\", \"return\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 then return 0" $
                 parse stmt_if "if 0 then return 0"
-                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"typeclass\", \"instance\", \"data\", \"var\", \"func\", \"set\", \"do\", \"if\", \"loop\", \"return\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"typeclass\", \"instance\", \"type\", \"var\", \"func\", \"set\", \"do\", \"if\", \"loop\", \"return\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 return 0 end" $
                 parse stmt_if "if 0 return 0 end"
