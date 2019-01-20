@@ -120,6 +120,29 @@ spec = do
            ])
         `shouldBe` Right (Number 3)
 
+      it "glb <- 1 ; f () -> glb ; ret glb" $
+        (run True $
+          unlines [
+            "var glb : Int",
+            "set glb <- 1",
+            "func f () : (() -> Int) do",
+            "   return glb",
+            "end",
+            "return f()"
+          ])
+        `shouldBe` Right (Number 1)
+
+      it "glb <- 1 ; f() -> g() -> glb ; ret f()()" $
+        (run True $
+          unlines [
+            "var glb : Int <- 1",
+            "func f () : (() -> (() -> Int)) do",
+            " return func () : (()->Int) do return glb end",
+            "end",
+            "return (f())()"
+          ])
+        `shouldBe` Right (Number 1)
+
 -------------------------------------------------------------------------------
 
     describe "do-end:" $ do
