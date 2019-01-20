@@ -143,6 +143,20 @@ spec = do
           ])
         `shouldBe` Right (Number 1)
 
+      it "recursion" $
+        (run True $
+          unlines [
+            "func fat (v) : (Int -> Int) do",
+            "   if v == 1 then",
+            "     return 1",
+            "   else",
+            "     return v * (fat (v-1))",
+            "   end",
+            "end",
+            "return fat 5"
+           ])
+        `shouldBe` Right (Number 120)
+
     describe "typeclass:" $ do
 
       it "Int ; F3able a ; inst F3able Int ; return f3 1" $
