@@ -162,7 +162,7 @@ expr_number = do
 expr_read :: Parser Exp
 expr_read = do
   pos <- pos2src <$> getPosition
-  str <- tk_var
+  str <- try tk_var <|> try tk_op
   return $ Read annz{source=pos} str
 
 expr_unit :: Parser Exp
@@ -187,13 +187,30 @@ expr_tuple = do
 
 expr_prim :: Parser Exp
 expr_prim =
-  try expr_call_pre <|>
   try expr_number   <|>
   try expr_read     <|>
   try expr_unit     <|>
   try expr_parens   <|>
   try expr_tuple    <|>
   try expr_func
+
+-------------------------------------------------------------------------------
+
+expr :: Parser Exp
+expr = do
+  pos <- pos2src <$> getPosition
+  e1  <- expr_prim
+  e2' <- optionMaybe expr_prim
+  e3' <- optionMaybe expr_prim
+  ann <- do { return annz{source=pos} }
+  return $
+    case e2' of
+      Nothing -> e1
+      Just e2 -> case e3' of
+        Nothing -> case e1 of
+          (Read _ "-") -> Call ann (Read ann "negate") e2
+          otherwise    -> Call ann e1 e2
+        Just e3 -> Call (getAnn e2) e2 (Tuple ann [e1,e3])
 
 -------------------------------------------------------------------------------
 
@@ -245,37 +262,3 @@ stmt_funcs = do
             Just (tp,imp) -> do
                 return $ FuncS ann f tp imp
   return ret
-
--------------------------------------------------------------------------------
-
-expr_call_pre :: Parser Exp
-expr_call_pre = do
-  pos  <- pos2src <$> getPosition
-  f    <- try (char '\'' *> tk_op)          <|>
-          do { try (tk_str "-") ; return "negate" } <|> -- unary minus exception
-          try tk_func
-  exp  <- expr
-  return $ Call annz{source=pos} (Read annz{source=pos} f) exp
-
-expr_call_pos :: Parser Exp
-expr_call_pos = do
-  pos <- pos2src <$> getPosition
-  e1  <- expr_call_mid
-  ops <- many (try tk_op <|> try (char '\'' *> tk_func))
-  return $ foldl (\e op -> Call annz{source=pos} (Read annz{source=pos} op) e)
-                 e1 ops
-
-expr_call_mid :: Parser Exp
-expr_call_mid = expr_prim `chainl1` f where
-  f = do
-    pos <- pos2src <$> getPosition
-    op  <- try tk_op <|> try (char '\'' *> (tk_func <* char '\''))
-    return (\a b -> Call annz{source=pos} (Read annz{source=pos} op)
-                                          (Tuple annz{source=pos} [a,b]))
-
--------------------------------------------------------------------------------
-
-expr :: Parser Exp
-expr = do
-  e <- expr_call_pos
-  return e
