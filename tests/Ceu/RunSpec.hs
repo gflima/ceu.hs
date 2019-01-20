@@ -143,6 +143,23 @@ spec = do
           ])
         `shouldBe` Right (Number 1)
 
+    describe "typeclass:" $ do
+
+      it "Int ; F3able a ; inst F3able Int ; return f3 1" $
+        (run True $
+          unlines [
+            "typeclass F3able for a with"       ,
+            " var f3 : (a -> Int)"              ,
+            "end"                               ,
+            "instance of F3able for Int with"   ,
+            " func f3 (v) : (Int -> Int) do"    ,
+            "   return v"                       ,
+            " end"                              ,
+            "end"                               ,
+            "return f3(10)"
+          ])
+        `shouldBe` Right (Number 10)
+
 -------------------------------------------------------------------------------
 
     describe "do-end:" $ do

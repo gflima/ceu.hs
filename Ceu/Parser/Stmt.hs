@@ -42,6 +42,31 @@ stmt_ret = do
 
 -------------------------------------------------------------------------------
 
+stmt_class :: Parser Stmt
+stmt_class = do
+  pos  <- pos2src <$> getPosition
+  void <- tk_key "typeclass"
+  cls  <- tk_type
+  void <- tk_key "for"
+  var  <- try tk_var      -- TODO: list of vars
+  void <- tk_key "with"
+  ifc  <- stmt
+  void <- tk_key "end"
+  return $ Class annz{source=pos} cls [var] ifc
+
+stmt_inst :: Parser Stmt
+stmt_inst = do
+  pos  <- pos2src <$> getPosition
+  void <- tk_key "instance"
+  void <- tk_key "of"
+  cls  <- tk_type
+  void <- tk_key "for"
+  tp   <- try pType       -- TODO: list of types
+  void <- tk_key "with"
+  imp  <- stmt
+  void <- tk_key "end"
+  return $ Inst annz{source=pos} cls [tp] imp
+
 stmt_data :: Parser Stmt
 stmt_data = do
   pos  <- pos2src <$> getPosition
@@ -144,8 +169,16 @@ stmt_loop = do
 
 stmt1 :: Parser Stmt
 stmt1 = do
-  s <- try stmt_data <|> try stmt_var <|> try stmt_funcs <|> try stmt_attr <|>
-       try stmt_do   <|> try stmt_if  <|> try stmt_loop  <|> try stmt_ret
+  s <- try stmt_class   <|>
+       try stmt_inst    <|>
+       try stmt_data    <|>
+       try stmt_var     <|>
+       try stmt_funcs   <|>
+       try stmt_attr    <|>
+       try stmt_do      <|>
+       try stmt_if      <|>
+       try stmt_loop    <|>
+       try stmt_ret
   return s
 
 stmt_seq :: Source -> Parser Stmt

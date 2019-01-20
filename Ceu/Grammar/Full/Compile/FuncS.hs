@@ -9,9 +9,11 @@ compile :: Stmt -> Stmt
 compile p = stmt p
 
 stmt :: Stmt -> Stmt
+stmt (Class z cls vars ifc)     = Class z cls vars (stmt ifc)
+stmt (Inst  z cls tps  imp)     = Inst  z cls tps  (stmt imp)
 stmt (FuncS z id tp imp)        = Seq z (Var z id tp)
-                                       (Write z (LVar id)
-                                        (Func z tp imp))
+                                        (Write z (LVar id)
+                                          (Func z tp imp))
 stmt (Write z loc exp)          = Write z loc (expr exp)
 stmt (CallS z exp1 exp2)        = CallS z (expr exp1) (expr exp2)
 stmt (If z exp p1 p2)           = If z (expr exp) (stmt p1) (stmt p2)

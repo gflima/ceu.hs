@@ -275,6 +275,22 @@ spec = do
 
     describe "class" $ do
 
+      it "Int ; X a ; inst X Int ; return f3 1" $
+        go
+          (B.Data annz "Int" [] [] False
+          (B.Class annz "X" ["a"]
+            (B.Var annz "f3" (TypeF (TypeV "a") (Type1 "Int")) (B.Nop annz))
+          (B.Inst annz "X" [Type1 "Int"]
+            (B.Var annz "f3" (TypeF (Type1 "Int") (Type1 "Int"))
+            (B.Seq annz
+            (B.Write annz
+              (LVar "f3")
+              (B.Func annz (TypeF (Type1 "Int") (Type1 "Int"))
+                (B.Ret annz (B.Number annz 1))))
+            (B.Nop annz)))
+          (B.Ret annz (B.Call annz (B.Read annz "f3") (B.Number annz 1))))))
+        `shouldBe` (Number 1)
+
       it "Int ; Bool ; X a ; inst X Bool/Int ; return f2 1" $
         go
           (B.Data annz "Int" [] [] False
@@ -307,22 +323,6 @@ spec = do
             (B.Call annz (B.Read annz "f2") (B.Number annz 1)))
           (B.Ret annz (B.Read annz "ret"))))))))))
         `shouldBe` (Number 2)
-
-      it "Int ; X a ; inst X Int ; return f3 1" $
-        go
-          (B.Data annz "Int" [] [] False
-          (B.Class annz "X" ["a"]
-            (B.Var annz "f3" (TypeF (TypeV "a") (Type1 "Int")) (B.Nop annz))
-          (B.Inst annz "X" [Type1 "Int"]
-            (B.Var annz "f3" (TypeF (Type1 "Int") (Type1 "Int"))
-            (B.Seq annz
-            (B.Write annz
-              (LVar "f3")
-              (B.Func annz (TypeF (Type1 "Int") (Type1 "Int"))
-                (B.Ret annz (B.Number annz 1))))
-            (B.Nop annz)))
-          (B.Ret annz (B.Call annz (B.Read annz "f3") (B.Number annz 1))))))
-        `shouldBe` (Number 1)
 
       it "Int ; Bool ; X a ; inst X Bool/Int ; return f4 1" $
         go

@@ -18,13 +18,18 @@ keywords = [
     "else",
     "else/if",
     "end",
+    "for",
     "func",
     "if",
+    "instance",
     "loop",
+    "of",
     "set",
     "then",
     "var",
-    "return"
+    "return",
+    "typeclass",
+    "with"
   ]
 tk_reserved :: Parser ()
 tk_reserved = do

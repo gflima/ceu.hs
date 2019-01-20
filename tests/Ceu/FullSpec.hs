@@ -68,6 +68,41 @@ spec = do
       compile' (Var' annz "x" (Type1 "Int") (Write annz (LVar "x") (Number annz 1)))
       `shouldBe` (["type 'Int' is not declared"], (B.Var annz "x" (Type1 "Int") (B.Write annz (LVar "x") (B.Number annz{type_=Type1 "Int"} 1))))
 
+    it "class/inst" $ do
+      compile (Seq annz
+                (Class annz "F3able" ["a"]
+                  (Seq annz
+                  (Seq annz
+                  (Var annz "f3" (TypeF (TypeV "a") (Type1 "Int")))
+                  (Nop annz))
+                  (Nop annz)))
+                (Seq annz
+                (Inst annz "F3able" [Type1 "Int"]
+                  (FuncS annz "f3" (TypeF (TypeV "a") (Type1 "Int"))
+                    (Seq annz
+                    (Seq annz
+                    (Var annz "v" (TypeV "a"))
+                    (Nop annz))
+                    (Seq annz
+                    (Write annz (LVar "v") (Arg annz)) (Ret annz (Read annz "v"))))))
+                (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
+      `shouldBe`
+        (Class' annz "F3able" ["a"]
+          (Var' annz "f3" (TypeF (TypeV "a") (Type1 "Int"))
+          (Seq annz (Nop annz) (Nop annz)))
+        (Inst' annz "F3able" [Type1 "Int"]
+          (Var' annz "f3" (TypeF (TypeV "a") (Type1 "Int"))
+          (Write annz
+            (LVar "f3")
+            (Func annz (TypeF (TypeV "a") (Type1 "Int"))
+              (Var' annz "v" (TypeV "a")
+              (Seq annz
+              (Nop annz)
+              (Seq annz
+              (Write annz (LVar "v") (Arg annz))
+              (Ret annz (Read annz "v"))))))))
+        (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
+
   --------------------------------------------------------------------------
 
   describe "go" $ do

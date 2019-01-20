@@ -285,7 +285,7 @@ spec = do
 
         describe "var-tuples:" $ do
             it "((_,x,),_)" $ do
-                parse loc_ "((_,x,),_)"
+                parse pLoc "((_,x,),_)"
                 `shouldBe` Right (LTuple [LTuple [LAny,LVar "x"],LAny])
             it "var (x,y) : (Int,Int) <- (1, 2); return x+y" $
                 parse stmt_var "var (x,y) : (Int,Int) <- (1, 2)"
@@ -330,11 +330,11 @@ spec = do
         describe "if-then-else/if-else" $ do
             it "if 0 then return ()" $
                 parse stmt_if "if 0 then return ()"
-                `shouldBe` Left "(line 1, column 20):\nunexpected end of input\nexpecting \"data\", \"var\", \"func\", \"set\", \"do\", \"if\", \"loop\", \"return\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 20):\nunexpected end of input\nexpecting \"typeclass\", \"instance\", \"data\", \"var\", \"func\", \"set\", \"do\", \"if\", \"loop\", \"return\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 then return 0" $
                 parse stmt_if "if 0 then return 0"
-                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"data\", \"var\", \"func\", \"set\", \"do\", \"if\", \"loop\", \"return\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"typeclass\", \"instance\", \"data\", \"var\", \"func\", \"set\", \"do\", \"if\", \"loop\", \"return\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 return 0 end" $
                 parse stmt_if "if 0 return 0 end"
@@ -397,6 +397,40 @@ spec = do
             it "func add" $
                 parse expr_func "func ((Int, Int) -> Int) do end"
                 `shouldBe` Left "(line 1, column 8):\nunexpected \"I\"\nexpecting \")\", \"(\" or \"_\""
+
+        describe "typeclass:" $ do
+
+            it "Int ; F3able a ; inst F3able Int ; return f3 1" $
+              (parse stmt $
+                unlines [
+                  "typeclass F3able for a with"        ,
+                  " var f3 : (a -> Int)"          ,
+                  "end"                           ,
+                  "instance of F3able for Int with"    ,
+                  " func f3 (v) : (a -> Int) do"  ,
+                  "   return v"                   ,
+                  " end"                          ,
+                  "end"                           ,
+                  "return f3(10)"
+                ])
+              `shouldBe` Right
+                (Seq annz
+                (Class annz "F3able" ["a"]
+                  (Seq annz
+                  (Seq annz
+                  (Var annz "f3" (TypeF (TypeV "a") (Type1 "Int")))
+                  (Nop annz))
+                  (Nop annz)))
+                (Seq annz
+                (Inst annz "F3able" [Type1 "Int"]
+                  (FuncS annz "f3" (TypeF (TypeV "a") (Type1 "Int"))
+                    (Seq annz
+                    (Seq annz
+                    (Var annz "v" (TypeV "a"))
+                    (Nop annz))
+                    (Seq annz
+                    (Write annz (LVar "v") (Arg annz)) (Ret annz (Read annz "v"))))))
+                (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
 
         describe "seq:" $ do
             it "x <- k k <- 1" $
