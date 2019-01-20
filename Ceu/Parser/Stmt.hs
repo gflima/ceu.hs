@@ -6,7 +6,7 @@ import Data.Maybe             (fromJust)
 import Text.Parsec.Prim       ((<|>), try, getPosition, many)
 import Text.Parsec.Char       (char, anyChar)
 import Text.Parsec.String     (Parser)
-import Text.Parsec.Combinator (many1, chainl, chainl1, chainr1, option, optionMaybe, optional)
+import Text.Parsec.Combinator (notFollowedBy, many1, chainl, chainl1, chainr1, option, optionMaybe, optional)
 
 import Ceu.Parser.Common
 import Ceu.Parser.Token
@@ -196,21 +196,34 @@ expr_prim =
 
 -------------------------------------------------------------------------------
 
+expr_infix :: Parser Exp
+expr_infix = do
+  void <- notFollowedBy tk_op
+  e1   <- expr_prim
+  pos  <- pos2src <$> getPosition
+  op   <- try tk_op <|> try tk_var
+  void <- notFollowedBy tk_op
+  e2   <- expr_prim
+  return $ Call annz{source=pos} (Read annz{source=pos} op) (Tuple (getAnn e1) [e1,e2])
+
+expr_prefix :: Parser Exp
+expr_prefix = do
+  op   <- expr_prim
+  void <- notFollowedBy tk_op
+  e    <- expr_prim
+  return $ case op of
+            (Read _ "-") -> Call (getAnn op) (Read (getAnn op) "negate") e
+            otherwise    -> Call (getAnn op) op e
+
+expr_posfix :: Parser Exp
+expr_posfix = do
+  void <- notFollowedBy tk_op
+  e    <- expr_prim
+  op   <- expr_prim
+  return $ Call (getAnn e) op e
+
 expr :: Parser Exp
-expr = do
-  pos <- pos2src <$> getPosition
-  e1  <- expr_prim
-  e2' <- optionMaybe expr_prim
-  e3' <- optionMaybe expr_prim
-  ann <- do { return annz{source=pos} }
-  return $
-    case e2' of
-      Nothing -> e1
-      Just e2 -> case e3' of
-        Nothing -> case e1 of
-          (Read _ "-") -> Call ann (Read ann "negate") e2
-          otherwise    -> Call ann e1 e2
-        Just e3 -> Call (getAnn e2) e2 (Tuple ann [e1,e3])
+expr = try expr_infix <|> try expr_prefix <|> try expr_posfix <|> try expr_prim
 
 -------------------------------------------------------------------------------
 

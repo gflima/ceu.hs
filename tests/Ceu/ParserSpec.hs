@@ -193,22 +193,19 @@ spec = do
             it "`-1" $
                 parse expr "-1"
                 `shouldBe` Right (Call annz{source=("",1,1)} (Read annz{source=("",1,1)} "negate") (Number annz{source=("",1,2)} 1))
-            it "'--1" $
-                parse expr "'--1"
-                `shouldBe` Right (Call annz{source=("",1,1)} (Read annz{source=("",1,1)} "--") (Number annz{source=("",1,4)} 1))
             it "--1" $
                 parse expr "--1"
-                `shouldBe` Right (Call (annz{source = ("",1,1)}) (Read annz{source=("",1,1)} "negate") (Call (annz{source = ("",1,2)}) (Read annz{source=("",1,2)} "negate") (Number (annz{source = ("",1,3)}) 1)))
+                `shouldBe` Right (Call annz{source=("",1,1)} (Read annz{source=("",1,1)} "--") (Number annz{source=("",1,3)} 1))
         describe "parens:" $ do
             it "(1)" $
                 parse expr_parens "(1)"
                 `shouldBe` Right (Number annz{source=("",1,2)} 1)
-            it "((--1))" $
-                parse expr_parens "((--1))"
-                `shouldBe` Right (Call (annz{source = ("",1,3)}) (Read annz{source=("",1,3)} "negate") (Call (annz{source = ("",1,4)}) (Read annz{source=("",1,4)} "negate") (Number (annz{source = ("",1,5)}) 1)))
             it "((- -1))" $
                 parse expr_parens "((- -1))"
-                `shouldBe` Right (Call annz{source=("",1,3)} (Read annz{source=("",1,3)} "negate") (Call annz{source=("",1,5)} (Read annz{source=("",1,5)} "negate") (Number annz{source=("",1,6)} 1)))
+                `shouldBe` Left "(line 1, column 5):\nunexpected \"-\"\nexpecting \")\" or \",\""
+            it "((- -1))" $
+                parse expr_parens "(- (-1))"
+                `shouldBe` Right (Call annz{source=("",1,2)} (Read annz{source=("",1,2)} "negate") (Call annz{source=("",1,5)} (Read annz{source=("",1,5)} "negate") (Number annz{source=("",1,6)} 1)))
         describe "add_sub:" $ do
             it "1+1" $
                 parse expr "1+1"
@@ -219,7 +216,7 @@ spec = do
                 `shouldBe` Right (Call annz{source=("",1,2)} (Read annz{source=("",1,2)} "*") (Tuple annz{source=("",1,1)} [(Number annz{source=("",1,1)} 1),(Number annz{source=("",1,3)} 1)]))
             it "(1*2)*3" $
                 parse expr "(1 * 2)*3"
-                `shouldBe` Right (Call annz{source=("",1,8)} (Read annz{source=("",1,8)} "*") (Tuple annz{source=("",1,1)} [(Call annz{source=("",1,4)} (Read annz{source=("",1,4)} "*") (Tuple annz{source=("",1,2)} [(Number annz{source=("",1,2)} 1),(Number annz{source=("",1,6)} 2)])),(Number annz{source=("",1,9)} 3)]))
+                `shouldBe` Right (Call annz{source=("",1,8)} (Read annz{source=("",1,8)} "*") (Tuple annz{source=("",1,4)} [(Call annz{source=("",1,4)} (Read annz{source=("",1,4)} "*") (Tuple annz{source=("",1,2)} [(Number annz{source=("",1,2)} 1),(Number annz{source=("",1,6)} 2)])),(Number annz{source=("",1,9)} 3)]))
 
         describe "call:" $ do
             it "f 1" $
@@ -252,16 +249,16 @@ spec = do
                 `shouldBe` Right (Read annz{source=("",1,3)} "aaa")
             it "(1+2)-3" $
                 parse expr "(1+2)-3"
-                `shouldBe` Right (Call annz{source=("",1,6)} (Read annz{source=("",1,6)} "-") (Tuple annz{source=("",1,1)} [(Call annz{source=("",1,3)} (Read annz{source=("",1,3)} "+") (Tuple annz{source=("",1,2)} [(Number annz{source=("",1,2)} 1),(Number annz{source=("",1,4)} 2)])),(Number annz{source=("",1,7)} 3)]))
+                `shouldBe` Right (Call annz{source=("",1,6)} (Read annz{source=("",1,6)} "-") (Tuple annz{source=("",1,3)} [(Call annz{source=("",1,3)} (Read annz{source=("",1,3)} "+") (Tuple annz{source=("",1,2)} [(Number annz{source=("",1,2)} 1),(Number annz{source=("",1,4)} 2)])),(Number annz{source=("",1,7)} 3)]))
             it "(1+2)*3" $
                 parse expr "(1+2)*3"
-                `shouldBe` Right (Call annz{source=("",1,6)} (Read annz{source=("",1,6)} "*") (Tuple annz{source=("",1,1)} [Call annz{source=("",1,3)} (Read annz{source=("",1,3)} "+") (Tuple annz{source=("",1,2)} [Number annz{source=("",1,2)} 1,Number annz{source=("",1,4)} 2]),Number annz{source=("",1,7)} 3]))
+                `shouldBe` Right (Call annz{source=("",1,6)} (Read annz{source=("",1,6)} "*") (Tuple annz{source=("",1,3)} [Call annz{source=("",1,3)} (Read annz{source=("",1,3)} "+") (Tuple annz{source=("",1,2)} [Number annz{source=("",1,2)} 1,Number annz{source=("",1,4)} 2]),Number annz{source=("",1,7)} 3]))
             it "((1+2)*3)/4" $
                 parse expr "((1+2)*3)/4"
-                `shouldBe` Right (Call annz{source=("",1,10)} (Read annz{source=("",1,10)} "/") (Tuple annz{source=("",1,1)} [Call annz{source=("",1,7)} (Read annz{source=("",1,7)} "*") (Tuple annz{source=("",1,2)} [Call annz{source=("",1,4)} (Read annz{source=("",1,4)} "+") (Tuple annz{source=("",1,3)} [Number annz{source=("",1,3)} 1,Number annz{source=("",1,5)} 2]),Number annz{source=("",1,8)} 3]),Number annz{source=("",1,11)} 4]))
+                `shouldBe` Right (Call annz{source=("",1,10)} (Read annz{source=("",1,10)} "/") (Tuple annz{source=("",1,7)} [Call annz{source=("",1,7)} (Read annz{source=("",1,7)} "*") (Tuple annz{source=("",1,4)} [Call annz{source=("",1,4)} (Read annz{source=("",1,4)} "+") (Tuple annz{source=("",1,3)} [Number annz{source=("",1,3)} 1,Number annz{source=("",1,5)} 2]),Number annz{source=("",1,8)} 3]),Number annz{source=("",1,11)} 4]))
             it "(1+2)*3" $
                 parse expr "(1+2)*3"
-                `shouldBe` Right (Call annz{source=("",1,6)} (Read annz{source=("",1,6)} "*") (Tuple annz{source=("",1,1)} [(Call annz{source=("",1,3)} (Read annz{source=("",1,3)} "+") (Tuple annz{source=("",1,2)} [(Number annz{source=("",1,2)} 1),(Number annz{source=("",1,4)} 2)])),(Number annz{source=("",1,7)} 3)]))
+                `shouldBe` Right (Call annz{source=("",1,6)} (Read annz{source=("",1,6)} "*") (Tuple annz{source=("",1,3)} [(Call annz{source=("",1,3)} (Read annz{source=("",1,3)} "+") (Tuple annz{source=("",1,2)} [(Number annz{source=("",1,2)} 1),(Number annz{source=("",1,4)} 2)])),(Number annz{source=("",1,7)} 3)]))
 
     describe "stmt:" $ do
         describe "nop:" $ do
@@ -333,15 +330,15 @@ spec = do
         describe "if-then-else/if-else" $ do
             it "if 0 then return ()" $
                 parse stmt_if "if 0 then return ()"
-                `shouldBe` Left "(line 1, column 20):\nunexpected end of input\nexpecting digit, \"(\", \"func\", \"var\", \"set\", \"do\", \"if\", \"loop\", \"return\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 20):\nunexpected end of input\nexpecting \"var\", \"func\", \"set\", \"do\", \"if\", \"loop\", \"return\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 then return 0" $
                 parse stmt_if "if 0 then return 0"
-                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"(\", \"func\", \"var\", \"set\", \"do\", \"if\", \"loop\", \"return\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"var\", \"func\", \"set\", \"do\", \"if\", \"loop\", \"return\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 return 0 end" $
                 parse stmt_if "if 0 return 0 end"
-                `shouldBe` Left "(line 1, column 12):\nunexpected \" \"\nexpecting digit, letter or \"_\""
+                `shouldBe` Left "(line 1, column 6):\nunexpected \"r\"\nexpecting \"then\""
 
             it "if 0 then return 0 else return 1 end" $
                 parse stmt_if "if 0 then return 0 else return 1 end"
