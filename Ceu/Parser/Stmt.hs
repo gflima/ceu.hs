@@ -53,7 +53,7 @@ stmt_var :: Parser Stmt
 stmt_var = do
   pos  <- pos2src <$> getPosition
   void <- tk_key "var"
-  loc  <- loc_
+  loc  <- pLoc
   void <- tk_str ":"
   tp   <- pType
   s    <- option (Nop $ annz{source=pos})
@@ -67,13 +67,13 @@ stmt_attr :: Parser Stmt
 stmt_attr = do
   --pos  <- pos2src <$> getPosition
   void <- tk_str "set"
-  loc  <- loc_
+  loc  <- pLoc
   s    <- try (attr_exp    loc (tk_str "<-"))
   return $ s
 
 -- (x, (y,_))
-loc_ :: Parser Loc
-loc_ =  (try lunit <|> try lany <|> try lvar <|> try ltuple)
+pLoc :: Parser Loc
+pLoc =  (try lunit <|> try lany <|> try lvar <|> try ltuple)
   where
     lunit  = do
               void <- tk_str "("
@@ -83,10 +83,11 @@ loc_ =  (try lunit <|> try lany <|> try lvar <|> try ltuple)
               void <- tk_str "_"
               return LAny
     lvar   = do
-              var <- tk_var
+              var <- try (tk_str "(" *> (tk_var <* tk_str ")")) <|>
+                     try tk_var
               return $ LVar var
     ltuple = do
-              locs <- list loc_
+              locs <- list pLoc
               return (LTuple $ locs)
 
 matchLocType :: Source -> Loc -> Type -> Maybe Stmt
@@ -236,7 +237,7 @@ expr = try expr_infix <|> try expr_prefix <|> try expr_posfix <|> try expr_prim
 
 func :: Source -> Parser (Type, Stmt)
 func pos = do
-  loc  <- try loc_
+  loc  <- try pLoc
   void <- tk_str ":"
   tp   <- type_F
 

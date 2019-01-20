@@ -109,6 +109,17 @@ spec = do
         run False "data Int ; func + : ((Int,Int)->Int) ; return +(1,2)"
         `shouldBe` Right (Number 3)
 
+      it "(f,g) <- (+,c) ; return f(g 1, g 2)" $
+        (run True $
+          unlines [
+            "func c (v) : (Int -> Int) do return v end",
+            "var f : ((Int,Int) -> Int)",
+            "var g : (Int -> Int)",
+            "set (f,g) <- (+,c)",
+            "return f (g 1, g 2)"
+           ])
+        `shouldBe` Right (Number 3)
+
 -------------------------------------------------------------------------------
 
     describe "do-end:" $ do
