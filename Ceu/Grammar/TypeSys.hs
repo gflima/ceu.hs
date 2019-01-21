@@ -1,7 +1,7 @@
 module Ceu.Grammar.TypeSys where
 
 import Debug.Trace
-import Data.List (find, intercalate)
+import Data.List (find, intercalate, unfoldr)
 import Data.Maybe (isJust, fromJust)
 import Data.Bool (bool)
 
@@ -14,6 +14,10 @@ go :: Stmt -> (Errors, Stmt)
 go p = stmt [] p
 
 -------------------------------------------------------------------------------
+
+splitOn :: Eq a => a -> [a] -> [[a]]
+splitOn d [] = []
+splitOn d s = x : splitOn d (drop 1 y) where (x,y) = span (/= d) s
 
 isClass f (Class _ id _ _ _)   = f id
 isClass _  _                   = False
@@ -47,8 +51,8 @@ errDeclared z str id ids =
             Nothing  -> []
             (Just _) -> [toError z str ++ " '" ++ id ++ "' is already declared"]
 
-getErrsTypesDeclared :: Ann -> Type -> [Stmt] -> Errors
-getErrsTypesDeclared z tp ids = concatMap aux $ map (\id->(id, find (isData $ (==)id) ids)) $ Type.get1s tp
+getErrsTypesDeclared :: Ann -> [Stmt] -> Type -> Errors
+getErrsTypesDeclared z ids tp = concatMap aux $ map (\id->(id, find (isData $ (==)id) ids)) $ Type.get1s tp
     where
         aux (id, Nothing) = [toError z "type '" ++ id ++ "' is not declared"]
         aux (_,  Just _)  = []
@@ -121,13 +125,18 @@ stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] im
 
 stmt ids (Inst _ _ tps _ _) = error "not implemented: multiple types"
 
-stmt ids s@(Data z id [] cons abs p) = ((errDeclared z "type" id ids) ++ es, Data z id [] cons abs p')
-                                       where (es,p') = stmt (s:ids) p
+stmt ids s@(Data z id [] cons abs p) = (es_dcl ++ (errDeclared z "type" id ids) ++ es,
+                                        Data z id [] cons abs p')
+  where
+    (es,p') = stmt (s:ids) p
+    es_dcl  = concatMap (getErrsTypesDeclared z ids)
+                        (map Type1 $ scanl1 (\a b->a++"."++b) $ init $ splitOn '.' id)
+
 stmt ids s@(Data z id vars cons abs p) = error "not implemented"
 
 stmt ids s@(Var  z id tp p) = (es_data ++ es_dcl ++ es_id ++ es, Var z id tp p')
                               where
-                                es_data = getErrsTypesDeclared z tp ids
+                                es_data = getErrsTypesDeclared z ids tp
                                 es_id   = errDeclared z "variable" id ids
                                 (es,p') = stmt (s:ids) p
                                 es_dcl = errDeclared z "variable" id ids'

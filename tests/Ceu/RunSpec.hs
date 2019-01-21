@@ -163,6 +163,14 @@ spec = do
         (run False "type Xxx ; var x:Xxx <- Xxx ; return x")
         `shouldBe` Right (Cons "Xxx")
 
+      it "type Xxx.Yyy" $
+        (run False "type Xxx ; type Xxx.Yyy ; var x:Xxx.Yyy <- Xxx.Yyy ; return x")
+        `shouldBe` Right (Cons "Xxx.Yyy")
+
+      it "type Xxx.Yyy" $
+        (run False "type Xxx ; type Xxx.Yyy ; var x:Xxx <- Xxx.Yyy ; return x")
+        `shouldBe` Right (Cons "Xxx.Yyy")
+
     describe "typeclass:" $ do
 
       it "Int ; F3able a ; inst F3able Int ; return f3 1" $

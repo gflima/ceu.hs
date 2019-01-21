@@ -4,7 +4,7 @@ import Text.Parsec.Prim         ((<|>), try)
 import Text.Parsec.String       (Parser)
 
 import Ceu.Parser.Common
-import Ceu.Parser.Token         (tk_str, tk_type, tk_var)
+import Ceu.Parser.Token         (tk_str, tk_types, tk_var)
 
 import Ceu.Grammar.Type         (Type(..))
 
@@ -16,7 +16,7 @@ type_0 = do
 
 type_1 :: Parser Type
 type_1 = do
-    tp <- tk_type
+    tp <- tk_types
     return $ Type1 tp
 
 type_N :: Parser Type

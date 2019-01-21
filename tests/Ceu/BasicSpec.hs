@@ -167,21 +167,34 @@ spec = do
   --------------------------------------------------------------------------
 
   describe "new types" $ do
-    describe "bool:" $ do
-    it "Bool/Int" $
+
+    it "Bool/True/False/Int" $
       (fst $ TypeSys.go
         (Data annz "Bool" [] [] True
         (Data annz "Bool.True" [] [] False
         (Data annz "Bool.False" [] [] False
-          (Data annz "Int" [] [] False
-            (Nop annz))))))
+        (Data annz "Int" [] [] False
+        (Nop annz))))))
       `shouldBe` []
+
+    it "Bool.True (w/o Bool)" $
+      (fst $ TypeSys.go
+        (Data annz "Bool.True" [] [] False
+        (Data annz "Bool" [] [] True
+        (Data annz "Bool.False" [] [] False
+        (Nop annz)))))
+      `shouldBe` ["type 'Bool' is not declared"]
+
+    it "Bool.True (w/o Bool)" $
+      (fst $ TypeSys.go
+        (Data annz "Bool.True.Xxx" [] [] False (Nop annz)))
+      `shouldBe` ["type 'Bool' is not declared","type 'Bool.True' is not declared"]
 
     it "Int/Int" $
       (fst $ TypeSys.go
         (Data annz "Int" [] [] False
-          (Data annz "Int" [] [] False
-            (Nop annz))))
+        (Data annz "Int" [] [] False
+        (Nop annz))))
       `shouldBe` ["type 'Int' is already declared"]
 
     it "~Int / x::Int" $

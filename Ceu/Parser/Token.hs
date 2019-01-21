@@ -1,7 +1,8 @@
 module Ceu.Parser.Token where
 
-import Control.Monad (void, guard)
-import Data.Char (isLower, isUpper)
+import Control.Monad          (void, guard)
+import Data.Char              (isLower, isUpper)
+import Data.List              (intercalate)
 
 import Text.Parsec.Prim       (many, (<|>), (<?>), try)
 import Text.Parsec.String     (Parser)
@@ -68,6 +69,11 @@ tk_var = do
     return (first:rest)
 
 tk_func = tk_var
+
+tk_types :: Parser String
+tk_types = do
+  v <- (:) <$> tk_type <*> many (try $ tk_str "." *> tk_type)
+  return $ intercalate "." v
 
 tk_type :: Parser String    -- Int, Int_0   // I, II, int, _Int
 tk_type = do

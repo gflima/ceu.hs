@@ -430,6 +430,9 @@ spec = do
             it "type Xxx ; var x = Xxx" $
               (parse' stmt "type Xxx ; var x:Xxx <- Xxx")
               `shouldBe` Right (Seq annz (Data annz "Xxx" [] [] False) (Seq annz (Seq annz (Var annz "x" (Type1 "Xxx")) (Nop annz)) (Write annz (LVar "x") (Cons annz "Xxx"))))
+            it "type Xxx.Yyy" $
+              (parse stmt "type Xxx.Yyy")
+              `shouldBe` Right (Data annz{source=("",1,1)} "Xxx.Yyy" [] [] False)
 
         describe "typeclass:" $ do
 

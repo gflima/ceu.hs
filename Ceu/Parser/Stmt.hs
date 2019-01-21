@@ -46,7 +46,7 @@ stmt_class :: Parser Stmt
 stmt_class = do
   pos  <- pos2src <$> getPosition
   void <- tk_key "typeclass"
-  cls  <- tk_type
+  cls  <- tk_types
   void <- tk_key "for"
   var  <- try tk_var      -- TODO: list of vars
   void <- tk_key "with"
@@ -59,7 +59,7 @@ stmt_inst = do
   pos  <- pos2src <$> getPosition
   void <- tk_key "instance"
   void <- tk_key "of"
-  cls  <- tk_type
+  cls  <- tk_types
   void <- tk_key "for"
   tp   <- try pType       -- TODO: list of types
   void <- tk_key "with"
@@ -71,7 +71,7 @@ stmt_data :: Parser Stmt
 stmt_data = do
   pos  <- pos2src <$> getPosition
   void <- tk_key "type"
-  tp   <- tk_type
+  tp   <- tk_types
   return $ Data annz{source=pos} tp [] [] False
 
 stmt_var :: Parser Stmt
@@ -203,7 +203,7 @@ expr_number = do
 expr_cons :: Parser Exp
 expr_cons = do
   pos  <- pos2src <$> getPosition
-  cons <- tk_type
+  cons <- tk_types
   return $ Cons annz{source=pos} cons
 
 expr_read :: Parser Exp
