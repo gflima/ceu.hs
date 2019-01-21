@@ -174,7 +174,7 @@ spec = do
 
       it "(a,b) <- (1,2)" $
         go
-          (B.Data annz "Int" [] [] False
+          (B.Data annz "Int" [] Type0 False
           (B.Var annz "a" TypeT
           (B.Var annz "b" TypeT
           (B.Seq annz
@@ -186,7 +186,7 @@ spec = do
 
       it "Int ; f1 ; return f1 1" $
         go
-          (B.Data annz "Int" [] [] False
+          (B.Data annz "Int" [] Type0 False
           (B.Var annz "f1" (TypeF Type0 (Type1 "Int"))
           (B.Seq annz
           (B.Write annz
@@ -198,7 +198,7 @@ spec = do
 
       it "(f,g) <- (+,c) ; return f(g 1, g 2)" $
         go
-          (B.Data annz "Int" [] [] False
+          (B.Data annz "Int" [] Type0 False
           (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
           (B.Var annz "c" (TypeF (Type1 "Int") (Type1 "Int"))
           (B.Seq annz
@@ -220,7 +220,7 @@ spec = do
 
       it "glb <- 1 ; f () -> glb ; ret glb" $
         go
-          (B.Data  annz "Int" [] [] False
+          (B.Data  annz "Int" [] Type0 False
           (B.Var   annz "glb" (Type1 "Int")
           (B.Seq   annz
           (B.Write annz (LVar "glb") (B.Number annz 1))
@@ -235,7 +235,7 @@ spec = do
 
       it "glb <- 1 ; f() -> g() -> glb ; ret f()()" $
         go
-          (B.Data  annz "Int" [] [] False
+          (B.Data  annz "Int" [] Type0 False
           (B.Var   annz "glb" (Type1 "Int")
           (B.Seq   annz
           (B.Write annz (LVar "glb") (B.Number annz 1))
@@ -254,7 +254,7 @@ spec = do
 
       it "(TODO: loc lifetime) g' <- nil ; { loc <- 1 ; f() -> g() -> glb ; g' <- f() } ; ret g'()" $
         go
-          (B.Data  annz "Int" [] [] False
+          (B.Data  annz "Int" [] Type0 False
           (B.Var   annz "g'" (TypeF Type0 (Type1 "Int"))
           (B.Seq   annz
           (B.Var   annz "loc" (Type1 "Int")
@@ -277,7 +277,7 @@ spec = do
 
       it "Int ; X a ; inst X Int ; return f3 1" $
         go
-          (B.Data annz "Int" [] [] False
+          (B.Data annz "Int" [] Type0 False
           (B.Class annz "X" ["a"]
             (B.Var annz "f3" (TypeF (TypeV "a") (Type1 "Int")) (B.Nop annz))
           (B.Inst annz "X" [Type1 "Int"]
@@ -293,9 +293,9 @@ spec = do
 
       it "Int ; Bool ; X a ; inst X Bool/Int ; return f2 1" $
         go
-          (B.Data annz "Int" [] [] False
+          (B.Data annz "Int" [] Type0 False
           (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
-          (B.Data annz "Bool" [] [] False
+          (B.Data annz "Bool" [] Type0 False
           (B.Class annz "X" ["a"]
             (B.Var annz "f2" (TypeF (TypeV "a") (Type1 "Int")) (B.Nop annz))
           (B.Inst annz "X" [Type1 "Bool"]
@@ -326,9 +326,9 @@ spec = do
 
       it "Int ; Bool ; X a ; inst X Bool/Int ; return f4 1" $
         go
-          (B.Data annz "Int" [] [] False
+          (B.Data annz "Int" [] Type0 False
           (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
-          (B.Data annz "Bool" [] [] False
+          (B.Data annz "Bool" [] Type0 False
           (B.Class annz "X" ["a"]
             (B.Var annz "f4" (TypeF (TypeV "a") (Type1 "Int")) (B.Nop annz))
           (B.Inst annz "X" [Type1 "Int"]

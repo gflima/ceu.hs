@@ -16,8 +16,8 @@ import qualified Ceu.Grammar.Full.Compile.FuncS as FuncS
 
 prelude :: Ann -> Stmt -> Stmt
 prelude z p =
-    (Seq z (Data z "Int"  [] [] False)
-    (Seq z (Data z "Bool" [] [] False)
+    (Seq z (Data z "Int"  [] Type0 False)
+    (Seq z (Data z "Bool" [] Type0 False)
     (Seq z (Var  z "negate" (TypeF (Type1 "Int")                      (Type1 "Int")))
     (Seq z (Var  z "=="     (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Bool")))
     (Seq z (Var  z "+"      (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int")))

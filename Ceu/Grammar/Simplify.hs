@@ -22,10 +22,10 @@ stmt (Inst z id vars imp p) =
     otherwise   -> Inst z id vars (stmt imp) p'
   where p' = stmt p
 
-stmt (Data z id vars cons abs p) =
+stmt (Data z id vars flds abs p) =
   case p' of
     Nop z'   -> Nop z'
-    otherwise   -> Data z id vars cons abs p'
+    otherwise   -> Data z id vars flds abs p'
   where p' = stmt p
 
 stmt (Var z id tp p) =

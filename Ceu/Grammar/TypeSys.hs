@@ -125,14 +125,14 @@ stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] im
 
 stmt ids (Inst _ _ tps _ _) = error "not implemented: multiple types"
 
-stmt ids s@(Data z id [] cons abs p) = (es_dcl ++ (errDeclared z "type" id ids) ++ es,
-                                        Data z id [] cons abs p')
+stmt ids s@(Data z id [] flds abs p) = (es_dcl ++ (errDeclared z "type" id ids) ++ es,
+                                        Data z id [] flds abs p')
   where
     (es,p') = stmt (s:ids) p
     es_dcl  = concatMap (getErrsTypesDeclared z ids)
                         (map Type1 $ scanl1 (\a b->a++"."++b) $ init $ splitOn '.' id)
 
-stmt ids s@(Data z id vars cons abs p) = error "not implemented"
+stmt ids s@(Data z id vars flds abs p) = error "not implemented"
 
 stmt ids s@(Var  z id tp p) = (es_data ++ es_dcl ++ es_id ++ es, Var z id tp p')
                               where

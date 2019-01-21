@@ -46,7 +46,7 @@ instance HasAnn Exp where
 data Stmt
   = Class    Ann ID_Class [ID_Var] Stmt           -- new class declaration
   | Inst     Ann ID_Class [Type]   Stmt           -- new class instance
-  | Data     Ann ID_Type [ID_Var] [DataCons] Bool -- new type declaration
+  | Data     Ann ID_Type [ID_Var] Type Bool       -- new type declaration
   | Var      Ann ID_Var Type                      -- variable declaration
   | FuncS    Ann ID_Var Type Stmt                 -- function declaration
   | Write    Ann Loc Exp                          -- assignment statement
@@ -57,7 +57,7 @@ data Stmt
   | Scope    Ann Stmt                             -- scope for local variables
   | Class'   Ann ID_Class [ID_Var] Stmt Stmt      -- new class declaration
   | Inst'    Ann ID_Class [Type]   Stmt Stmt      -- new class instance
-  | Data'    Ann ID_Type [ID_Var] [DataCons] Bool Stmt -- new type declaration w/ stmts in scope
+  | Data'    Ann ID_Type [ID_Var] Type Bool Stmt  -- new type declaration w/ stmts in scope
   | Var'     Ann ID_Var Type Stmt                 -- variable declaration w/ stmts in scope
   | Nop      Ann                                  -- nop as in basic Grammar
   | Ret      Ann Exp
@@ -86,7 +86,7 @@ instance HasAnn Stmt where
 toBasicStmt :: Stmt -> B.Stmt
 toBasicStmt (Class' z cls vars ifc p)    = B.Class z cls vars (toBasicStmt ifc) (toBasicStmt p)
 toBasicStmt (Inst'  z cls tps  imp p)    = B.Inst  z cls tps  (toBasicStmt imp) (toBasicStmt p)
-toBasicStmt (Data' z tp vars cons abs p) = B.Data  z tp  vars cons abs (toBasicStmt p)
+toBasicStmt (Data' z tp vars flds abs p) = B.Data  z tp  vars flds abs (toBasicStmt p)
 toBasicStmt (Var' z var tp p)  = B.Var z var tp (toBasicStmt p)
 toBasicStmt (Write z loc exp)  = B.Write z loc (toBasicExp exp)
 toBasicStmt (If z exp p1 p2)   = B.If z (toBasicExp exp) (toBasicStmt p1) (toBasicStmt p2)

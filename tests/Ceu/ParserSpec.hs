@@ -19,7 +19,7 @@ import Ceu.Grammar.Full.Full    (Stmt(..), Exp(..))
 clearStmt :: Stmt -> Stmt
 clearStmt (Class _ cls vars ifc)    = Class  annz cls vars (clearStmt ifc)
 clearStmt (Inst  _ cls tps  imp)    = Inst   annz cls tps  (clearStmt imp)
-clearStmt (Data _ tp vars cons abs) = Data   annz tp  vars cons abs
+clearStmt (Data _ tp vars flds abs) = Data   annz tp  vars flds abs
 clearStmt (Var _ var tp)            = Var    annz var tp
 clearStmt (Write _ loc exp)         = Write  annz loc (clearExp exp)
 clearStmt (If _ exp p1 p2)          = If     annz (clearExp exp) (clearStmt p1) (clearStmt p2)
@@ -163,7 +163,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 2):\nunexpected \")\"\nexpecting \"(\""
             it "(Int)" $
                 parse type_N "(Int)"
-                `shouldBe` Left "(line 1, column 5):\nunexpected \")\"\nexpecting digit, letter, \"_\" or \",\""
+                `shouldBe` Left "(line 1, column 5):\nunexpected \")\"\nexpecting digit, letter, \"_\", \".\" or \",\""
             it "(Int,Int)" $
                 parse type_N "(Int,Int)"
                 `shouldBe` Right (TypeN [Type1 "Int", Type1 "Int"])
@@ -325,7 +325,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 22):\nunexpected end of input\nexpecting \"<-\"\narity mismatch"
             it "var (_,_)):Int" $
                 parse stmt "var (_,_):Int"
-                `shouldBe` Left "(line 1, column 14):\nunexpected end of input\nexpecting digit, letter, \"_\" or \"<-\"\narity mismatch"
+                `shouldBe` Left "(line 1, column 14):\nunexpected end of input\nexpecting digit, letter, \"_\", \".\" or \"<-\"\narity mismatch"
 
         describe "write:" $ do
             it "x <- 1" $
@@ -426,13 +426,13 @@ spec = do
 
             it "type Xxx" $
               (parse stmt "type Xxx")
-              `shouldBe` Right (Data annz{source=("",1,1)} "Xxx" [] [] False)
+              `shouldBe` Right (Data annz{source=("",1,1)} "Xxx" [] Type0 False)
             it "type Xxx ; var x = Xxx" $
               (parse' stmt "type Xxx ; var x:Xxx <- Xxx")
-              `shouldBe` Right (Seq annz (Data annz "Xxx" [] [] False) (Seq annz (Seq annz (Var annz "x" (Type1 "Xxx")) (Nop annz)) (Write annz (LVar "x") (Cons annz "Xxx"))))
+              `shouldBe` Right (Seq annz (Data annz "Xxx" [] Type0 False) (Seq annz (Seq annz (Var annz "x" (Type1 "Xxx")) (Nop annz)) (Write annz (LVar "x") (Cons annz "Xxx"))))
             it "type Xxx.Yyy" $
               (parse stmt "type Xxx.Yyy")
-              `shouldBe` Right (Data annz{source=("",1,1)} "Xxx.Yyy" [] [] False)
+              `shouldBe` Right (Data annz{source=("",1,1)} "Xxx.Yyy" [] Type0 False)
 
         describe "typeclass:" $ do
 
