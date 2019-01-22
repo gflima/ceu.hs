@@ -167,6 +167,16 @@ spec = do
                   (Tuple annz [Read annz "y", Number annz 1])))))
       `shouldBe` ([],Data annz "Int" [] Type0 False (Var (annz{type_ = TypeB}) "x" (Type1 "Int") (Var (annz{type_ = TypeB}) "y" (TypeN [Type0,Type1 "Int"]) (Write (annz{type_ = TypeB}) (LTuple [LTuple [LAny,LVar "x"],LAny]) (Tuple (annz{type_ = TypeN [TypeN [Type0,Type1 "Int"],Type1 "Int"]}) [Read (annz{type_ = TypeN [Type0,Type1 "Int"]}) "y",Number annz{type_ = Type1 "Int"} 1])))))
 
+    it "`a` = 1" $
+      TypeSys.go (prelude annz
+        (Var annz "a" (Type1 "Int") (Write annz (LRead "a") (Number annz 1))))
+      `shouldBe` ([],Data annz "Int" [] Type0 False (Var annz "a" (Type1 "Int") (Write annz (LRead "a") (Number annz{type_=Type1 "Int"} 1))))
+
+    it "`a` = 1" $
+      TypeSys.go (prelude annz
+        (Var annz "a" Type0 (Write annz (LRead "a") (Number annz 1))))
+      `shouldBe` (["types do not match : expected '()' : found 'Int'"],Data annz "Int" [] Type0 False (Var annz "a" Type0 (Write annz (LRead "a") (Number annz{type_=Type1 "Int"} 1))))
+
   --------------------------------------------------------------------------
 
   describe "new types" $ do

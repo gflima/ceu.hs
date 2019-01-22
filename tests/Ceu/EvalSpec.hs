@@ -208,6 +208,28 @@ spec = do
           (B.Ret annz (B.Number annz 2))))
           `shouldBe` (Number 2)
 
+      it "a <- ; `a` <- 1" $
+        go
+          (B.Data  annz "Int" [] Type0 False
+          (B.Var   annz "a" (Type1 "Int")
+          (B.Seq   annz
+          (B.Write annz (LVar "a") (B.Number annz 1))
+          (B.Seq   annz
+          (B.Write annz (LRead "a") (B.Number annz 1))
+          (B.Ret   annz (B.Read annz "a"))))))
+        `shouldBe` (Number 1)
+
+      it "OK: a <- 1 ; `a` <- 2" $
+        go
+          (B.Data  annz "Int" [] Type0 False
+          (B.Var   annz "a" (Type1 "Int")
+          (B.Seq   annz
+          (B.Write annz (LVar "a") (B.Number annz 1))
+          (B.Seq   annz
+          (B.Write annz (LRead "a") (B.Number annz 2))
+          (B.Ret   annz (B.Read annz "a"))))))
+        `shouldBe` (Number 1)
+
     describe "func" $ do
 
       it "Int ; f1 ; return f1 1" $

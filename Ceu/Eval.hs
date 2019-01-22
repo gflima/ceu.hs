@@ -122,20 +122,22 @@ step (Var _  Nop,     vars)  = (Nop,        vars)
 step (Var vv (Ret e), vars)  = (Ret e,      vv:vars)
 step (Var vv p,       vars)  = (Var vv' p', vars') where (p',vv':vars') = step (p,vv:vars)
 
-step (Write loc e,    vars)  = traceShowId $ (Nop, aux vars loc e)
+step (Write loc e,    vars)  = (Nop, aux vars loc (envEval vars e))
   where
     aux vars LAny          _          = vars
-    aux vars (LVar var)    e          = envWrite vars var (envEval vars e)
+    aux vars (LVar id)     e          = envWrite vars id e
     aux vars LUnit         _          = vars
-    aux vars (LNumber x)   e          =
-      case traceShowId $ envEval vars e of
-        (Number y) | x == y -> traceShow (x,y) vars
-        e'                  -> error $ "assignment does not match : expected '"
-                                       ++ show x ++ "' : found '"
-                                       ++ show e' ++ "'"
+    aux vars (LNumber x)   e          = case e of
+                                          (Number y) | x == y -> vars
+                                          _                   -> err x e
+    aux vars (LRead id)    e          = let v = envEval vars (Read id) in
+                                          if v == e then vars
+                                                    else err v e
     aux vars (LTuple locs) (Tuple es) = foldr (\(loc,e) vars' -> aux vars' loc e)
                                               vars
                                               (zip locs (map (envEval vars) es))
+    err xp got = error $ "assignment does not match : expected '" ++ show xp ++
+                                                 "' : found '"    ++ show got ++ "'"
 
 step (Seq Nop     q,  vars)  = (q,          vars)
 step (Seq (Ret e) q,  vars)  = (Ret e,      vars)

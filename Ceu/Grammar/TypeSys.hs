@@ -65,6 +65,43 @@ call z tp_xp ids f exp = (bool es_exp es_f (null es_exp), out, f', exp')
       otherwise       -> (TypeV "?", TypeV "?")
     --xx = traceShow $ [tp_xp,(type_$getAnn$exp')]
 
+read' :: Ann -> Type -> [Stmt] -> ID_Var -> (Errors, Type)
+read' z tp_xp ids id = if id == "_INPUT" then ([], Type1 "Int")
+                                         else (es, tp_ret)
+  where
+    -- find in top-level ids | id : a
+    (tp_ret,es) =
+      case find (isVar $ (==)id) ids of
+        Just (Var _ _ tp _) -> (tp, [])   -- found
+        Nothing             ->            -- not found
+          -- find in classes | class X a with id : a
+          case find (\(_,var) -> isJust var)            -- Just (clsI, Just (Var ...))
+               $ map (\(cls,ids) -> (cls, find (isVar $ (==)id) ids)) -- [(cls1,Just (Var .)), .]
+               $ map (\cls -> (cls, classinst2ids cls)) -- [(cls1,ids1), ...]
+               $ filter (isClass $ const True) ids              -- [cls1,cls2, ...]
+            of
+            -- not found
+            Nothing -> (TypeV "?", [toError z "variable '" ++ id ++ "' is not declared"])
+
+            -- find matching instance | id : a=<tp_xp>
+            Just (Class _ cls [var] _ _, Just (Var _ id tp_var _)) ->
+              case tp_xp `supOf` tp_var of
+                Left  es        -> (TypeV "?", map (toError z) es)
+                Right (_,insts) ->
+                  let tp = Type.instantiate insts (TypeV var) in
+                    case find (isSubOf tp . getTP) $ filter (isInst $ (==cls)) (sort' ids) of
+                      Nothing   -> (TypeV "?",
+                                    [toError z "variable '" ++ id ++
+                                     "' has no associated instance for type '" ++
+                                     Type.show' tp_xp ++ "' in class '" ++ cls ++ "'"])
+                      Just inst -> (getTP $ fromJust
+                                          $ find (isVar $ (==)id) (classinst2ids inst),
+                                    [])
+
+    getTP (Inst _ _ [tp] _ _) = tp
+    getTP (Var  _ _ tp _)     = tp
+    sort' ids = ids -- TODO: sort by subtyping (topological order)
+
 -------------------------------------------------------------------------------
 
 stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
@@ -159,6 +196,9 @@ stmt ids (Write z loc exp) = (es1 ++ es2, Write z loc exp')
                                                   (tp,    [])
                               aux LUnit      = (Type0, [])
                               aux (LNumber v)= (Type1 "Int", [])
+                              aux (LRead id) = (tp_ret, es) where
+                                                (es, tp_ret) = read' z tp_xp ids id
+                                                tp_xp        = type_ $ getAnn exp
                               aux (LTuple l) = (TypeN tps, es) where
                                                 l' :: [(Type,Errors)]
                                                 l' = map aux l
@@ -237,44 +277,9 @@ expr' _ ids (Tuple z exps)   = (es, Tuple z{type_=tps'} exps')
                                 exps' = map snd rets
                                 tps'  = TypeN (map (type_.getAnn) exps')
 
-expr' tp_xp ids (Read z id)  = if id == "_INPUT" then
-                                ([], Read z{type_=Type1 "Int"} id)
-                               else
-                                (es, Read z{type_=tp_ret} id)
-  where
-    -- find in top-level ids | id : a
-    (tp_ret,es) =
-      case find (isVar $ (==)id) ids of
-        Just (Var _ _ tp _) -> (tp, [])   -- found
-        Nothing             ->            -- not found
-          -- find in classes | class X a with id : a
-          case find (\(_,var) -> isJust var)            -- Just (clsI, Just (Var ...))
-               $ map (\(cls,ids) -> (cls, find (isVar $ (==)id) ids)) -- [(cls1,Just (Var .)), .]
-               $ map (\cls -> (cls, classinst2ids cls)) -- [(cls1,ids1), ...]
-               $ filter (isClass $ const True) ids              -- [cls1,cls2, ...]
-            of
-            -- not found
-            Nothing -> (TypeV "?", [toError z "variable '" ++ id ++ "' is not declared"])
+expr' tp_xp ids (Read z id)  = (es, Read z{type_=tp} id) where
+                               (es, tp) = read' z tp_xp ids id
 
-            -- find matching instance | id : a=<tp_xp>
-            Just (Class _ cls [var] _ _, Just (Var _ id tp_var _)) ->
-              case tp_xp `supOf` tp_var of
-                Left  es        -> (TypeV "?", map (toError z) es)
-                Right (_,insts) ->
-                  let tp = Type.instantiate insts (TypeV var) in
-                    case find (isSubOf tp . getTP) $ filter (isInst $ (==cls)) (sort' ids) of
-                      Nothing   -> (TypeV "?",
-                                    [toError z "variable '" ++ id ++
-                                     "' has no associated instance for type '" ++
-                                     Type.show' tp_xp ++ "' in class '" ++ cls ++ "'"])
-                      Just inst -> (getTP $ fromJust
-                                          $ find (isVar $ (==)id) (classinst2ids inst),
-                                    [])
-
-    getTP (Inst _ _ [tp] _ _) = tp
-    getTP (Var  _ _ tp _)     = tp
-    sort' ids = ids -- TODO: sort by subtyping (topological order)
-
-expr' xp ids (Call z f exp) = (es, Call z{type_=out} f' exp')
-                                 where
-                                  (es, out, f', exp') = call z xp ids f exp
+expr' xp ids (Call z f exp)  = (es, Call z{type_=out} f' exp')
+                               where
+                                (es, out, f', exp') = call z xp ids f exp
