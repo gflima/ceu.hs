@@ -433,6 +433,21 @@ spec = do
             it "type Xxx.Yyy" $
               (parse stmt "type Xxx.Yyy")
               `shouldBe` Right (Data annz{source=("",1,1)} "Xxx.Yyy" [] Type0 False)
+            it "type Xxx.Yyy" $
+              (parse stmt "type Xxx.Yyy")
+              `shouldBe` Right (Data annz{source=("",1,1)} "Xxx.Yyy" [] Type0 False)
+
+            it "type Xxx with ()" $
+              (parse stmt "type Xxx with ()")
+              `shouldBe` Right (Data annz{source=("",1,1)} "Xxx" [] Type0 False)
+
+            it "type Xxx with (Int,Int)" $
+              (parse stmt "type Xxx with (Int,Int)")
+              `shouldBe` Right (Data annz{source=("",1,1)} "Xxx" [] (TypeN [Type1 "Int",Type1 "Int"]) False)
+
+            it "TODO: type Xxx with (x,y) : (Int,Int)" $
+              (parse stmt "type Xxx with (x,y) : (Int,Int)")
+              `shouldBe` Right (Data annz{source=("",1,1)} "Xxx" [] Type0 False)
 
         describe "typeclass:" $ do
 

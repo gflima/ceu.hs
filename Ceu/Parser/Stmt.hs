@@ -71,8 +71,9 @@ stmt_data :: Parser Stmt
 stmt_data = do
   pos  <- pos2src <$> getPosition
   void <- tk_key "type"
-  tp   <- tk_types
-  return $ Data annz{source=pos} tp [] Type0 False
+  id   <- tk_types
+  with <- option Type0 (tk_key "with" *> pType)
+  return $ Data annz{source=pos} id [] with False
 
 stmt_var :: Parser Stmt
 stmt_var = do
