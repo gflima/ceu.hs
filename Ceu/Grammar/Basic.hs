@@ -7,11 +7,11 @@ import Ceu.Grammar.Type     (Type(..))
 -------------------------------------------------------------------------------
 
 data Exp
-    = Number Ann Int            -- 1
+    = Unit   Ann                -- ()
+    | Number Ann Int            -- 1
     | Cons   Ann ID_Type Exp    -- True
     | Read   Ann ID_Var         -- a ; xs
     | Arg    Ann
-    | Unit   Ann                -- ()
     | Tuple  Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
     | Func   Ann Type Stmt      -- function implementation
     | Call   Ann Exp Exp        -- f a ; f(a) ; f(1,2)

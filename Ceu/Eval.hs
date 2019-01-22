@@ -63,13 +63,13 @@ fromStmt (B.Nop    _)                  = Nop
 
 fromStmt (B.Write  _ loc e)            = Write (aux loc (type_ $ getAnn e)) (fromExp e)
   where
-    aux LUnit          _          = LUnit
     aux LAny           _          = LAny
-    aux (LTuple locs) (TypeN tps) = LTuple $ zipWith aux locs tps
     aux (LVar id)      tp         =
       case tp of
-        tp@(TypeF _ _) -> LVar $ id ++ "__" ++ Type.show' tp
-        otherwise      -> LVar $ id
+        tp@(TypeF _ _)           -> LVar $ id ++ "__" ++ Type.show' tp
+        otherwise                -> LVar $ id
+    aux (LTuple locs) (TypeN tps) = LTuple $ zipWith aux locs tps
+    aux loc            _          = loc
 
 fromStmt (B.Inst   _ _ _ imp p)        = aux (fromStmt imp) (fromStmt p)
   where
@@ -122,11 +122,17 @@ step (Var _  Nop,     vars)  = (Nop,        vars)
 step (Var vv (Ret e), vars)  = (Ret e,      vv:vars)
 step (Var vv p,       vars)  = (Var vv' p', vars') where (p',vv':vars') = step (p,vv:vars)
 
-step (Write loc e,    vars)  = (Nop, aux vars loc e)
+step (Write loc e,    vars)  = traceShowId $ (Nop, aux vars loc e)
   where
-    aux vars LUnit         _          = vars
     aux vars LAny          _          = vars
     aux vars (LVar var)    e          = envWrite vars var (envEval vars e)
+    aux vars LUnit         _          = vars
+    aux vars (LNumber x)   e          =
+      case traceShowId $ envEval vars e of
+        (Number y) | x == y -> traceShow (x,y) vars
+        e'                  -> error $ "assignment does not match : expected '"
+                                       ++ show x ++ "' : found '"
+                                       ++ show e' ++ "'"
     aux vars (LTuple locs) (Tuple es) = foldr (\(loc,e) vars' -> aux vars' loc e)
                                               vars
                                               (zip locs (map (envEval vars) es))

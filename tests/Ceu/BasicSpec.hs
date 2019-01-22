@@ -142,6 +142,9 @@ spec = do
       `shouldBe` []
 
   describe "pattern matching" $ do
+    it "2 = 1" $
+      TypeSys.go (Write annz (LNumber 1) (Number annz 1))
+      `shouldBe` ([],Write annz{type_=TypeB} (LNumber 1) (Number annz{type_=Type1 "Int"} 1))
     it "_ = 1" $
       TypeSys.go (Write annz LAny (Number annz 1))
       `shouldBe` ([],Write annz{type_=TypeB} LAny (Number annz{type_=Type1 "Int"} 1))

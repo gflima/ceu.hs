@@ -18,14 +18,14 @@ stmt (Class z id vars ifc p) =
 
 stmt (Inst z id vars imp p) =
   case p' of
-    Nop z'   -> Nop z'
-    otherwise   -> Inst z id vars (stmt imp) p'
+    Nop z'    -> Nop z'
+    otherwise -> Inst z id vars (stmt imp) p'
   where p' = stmt p
 
 stmt (Data z id vars flds abs p) =
   case p' of
-    Nop z'   -> Nop z'
-    otherwise   -> Data z id vars flds abs p'
+    Nop z'    -> Nop z'
+    otherwise -> Data z id vars flds abs p'
   where p' = stmt p
 
 stmt (Var z id tp p) =
@@ -34,7 +34,7 @@ stmt (Var z id tp p) =
     _ -> Var z id tp p'
   where p' = stmt p
 
-stmt (Write z _ (Unit _)) = Nop z
+--stmt (Write z _ (Unit _)) = Nop z
 
 stmt (If z exp p q) =
   if p' == q' then p' else (If z exp p' q')
