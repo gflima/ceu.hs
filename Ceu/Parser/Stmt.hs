@@ -203,9 +203,11 @@ expr_number = do
 
 expr_cons :: Parser Exp
 expr_cons = do
-  pos  <- pos2src <$> getPosition
+  pos1 <- pos2src <$> getPosition
   cons <- tk_types
-  return $ Cons annz{source=pos} cons
+  pos2 <- pos2src <$> getPosition
+  exp  <- option (Unit annz{source=pos2}) expr
+  return $ Cons annz{source=pos1} cons exp
 
 expr_read :: Parser Exp
 expr_read = do

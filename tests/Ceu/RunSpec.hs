@@ -161,15 +161,15 @@ spec = do
 
       it "type Xxx" $
         (run False "type Xxx ; var x:Xxx <- Xxx ; return x")
-        `shouldBe` Right (Cons "Xxx")
+        `shouldBe` Right (Cons "Xxx" Unit)
 
       it "type Xxx.Yyy" $
         (run False "type Xxx ; type Xxx.Yyy ; var x:Xxx.Yyy <- Xxx.Yyy ; return x")
-        `shouldBe` Right (Cons "Xxx.Yyy")
+        `shouldBe` Right (Cons "Xxx.Yyy" Unit)
 
       it "type Xxx.Yyy" $
         (run False "type Xxx ; type Xxx.Yyy ; var x:Xxx <- Xxx.Yyy ; return x")
-        `shouldBe` Right (Cons "Xxx.Yyy")
+        `shouldBe` Right (Cons "Xxx.Yyy" Unit)
 
     describe "typeclass:" $ do
 

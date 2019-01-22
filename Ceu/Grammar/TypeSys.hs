@@ -205,31 +205,35 @@ expr z tp_xp ids exp = (es1++es2, exp') where
 
 expr' :: Type -> [Stmt] -> Exp -> (Errors, Exp)
 
-expr' _ _   (Number z val)  = ([], Number z{type_=Type1 "Int"} val)
-expr' _ _   (Unit   z)      = ([], Unit   z{type_=Type0})
-expr' _ _   (Arg    z)      = ([], Arg    z{type_=TypeB})
-expr' _ ids (Func   z tp p) = (es, Func   z{type_=tp} tp p')
-                              where
+expr' _ _   (Number z val)   = ([], Number z{type_=Type1 "Int"} val)
+expr' _ _   (Unit   z)       = ([], Unit   z{type_=Type0})
+expr' _ _   (Arg    z)       = ([], Arg    z{type_=TypeB})
+expr' _ ids (Func   z tp p)  = (es, Func   z{type_=tp} tp p')
+                               where
                                 (es,p') = stmt ids p
 
-expr' _ ids (Cons  z id)    = (es, Cons  z{type_=(Type1 id)} id)
+expr' _ ids (Cons  z id exp) = (es++es_exp, Cons z{type_=(Type1 id)} id exp')
     where
-        es = case find (isData $ (==)id) ids of
-            Nothing                    -> [toError z "type '" ++ id ++ "' is not declared"]
-            Just (Data _ _ _ _ True _) -> [toError z "type '" ++ id ++ "' is abstract"]
-            otherwise                  -> []
+        (tp,es) = case find (isData $ (==)id) ids of
+            Nothing                      ->
+              (TypeV "?", [toError z "type '" ++ id ++ "' is not declared"])
+            Just (Data _ _ _ tp True  _) ->
+              (tp,        [toError z "type '" ++ id ++ "' is abstract"])
+            Just (Data _ _ _ tp False _) ->
+              (tp,        [])
+        (es_exp, exp') = expr z tp ids exp
 
-expr' _ ids (Tuple z exps)  = (es, Tuple z{type_=tps'} exps')
-                              where
+expr' _ ids (Tuple z exps)   = (es, Tuple z{type_=tps'} exps')
+                               where
                                 rets :: [(Errors,Exp)]
                                 rets  = map (\e -> expr z TypeT ids e) exps
                                 es    = concat $ map fst rets
                                 exps' = map snd rets
                                 tps'  = TypeN (map (type_.getAnn) exps')
 
-expr' tp_xp ids (Read z id) = if id == "_INPUT" then
+expr' tp_xp ids (Read z id)  = if id == "_INPUT" then
                                 ([], Read z{type_=Type1 "Int"} id)
-                              else
+                               else
                                 (es, Read z{type_=tp_ret} id)
   where
     -- find in top-level ids | id : a

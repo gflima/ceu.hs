@@ -11,7 +11,7 @@ import qualified Ceu.Grammar.Basic as B
 
 data Exp
     = Number Ann Int            -- 1
-    | Cons   Ann ID_Type        -- True
+    | Cons   Ann ID_Type Exp    -- True
     | Read   Ann ID_Var         -- a ; xs
     | Arg    Ann
     | Unit   Ann                -- ()
@@ -22,7 +22,7 @@ data Exp
 
 toBasicExp :: Exp -> B.Exp
 toBasicExp (Number z v)     = B.Number z v
-toBasicExp (Cons   z v)     = B.Cons   z v
+toBasicExp (Cons   z v e)   = B.Cons   z v (toBasicExp e)
 toBasicExp (Read   z v)     = B.Read   z v
 toBasicExp (Arg    z)       = B.Arg    z
 toBasicExp (Unit   z)       = B.Unit   z
@@ -33,7 +33,7 @@ toBasicExp (Call   z e1 e2) = B.Call   z (toBasicExp e1) (toBasicExp e2)
 instance HasAnn Exp where
     --getAnn :: Exp -> Ann
     getAnn (Number z _)   = z
-    getAnn (Cons   z _)   = z
+    getAnn (Cons   z _ _) = z
     getAnn (Read   z _)   = z
     getAnn (Arg    z)     = z
     getAnn (Unit   z)     = z

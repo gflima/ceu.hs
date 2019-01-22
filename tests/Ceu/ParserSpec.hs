@@ -31,7 +31,7 @@ clearStmt p                         = error $ "clearStmt: unexpected statement: 
 
 clearExp :: Exp -> Exp
 clearExp (Number _ v)     = Number annz v
-clearExp (Cons   _ v)     = Cons   annz v
+clearExp (Cons   _ v e)   = Cons   annz v (clearExp e)
 clearExp (Read   _ v)     = Read   annz v
 clearExp (Arg    _)       = Arg    annz
 clearExp (Unit   _)       = Unit   annz
@@ -429,7 +429,7 @@ spec = do
               `shouldBe` Right (Data annz{source=("",1,1)} "Xxx" [] Type0 False)
             it "type Xxx ; var x = Xxx" $
               (parse' stmt "type Xxx ; var x:Xxx <- Xxx")
-              `shouldBe` Right (Seq annz (Data annz "Xxx" [] Type0 False) (Seq annz (Seq annz (Var annz "x" (Type1 "Xxx")) (Nop annz)) (Write annz (LVar "x") (Cons annz "Xxx"))))
+              `shouldBe` Right (Seq annz (Data annz "Xxx" [] Type0 False) (Seq annz (Seq annz (Var annz "x" (Type1 "Xxx")) (Nop annz)) (Write annz (LVar "x") (Cons annz "Xxx" (Unit annz)))))
             it "type Xxx.Yyy" $
               (parse stmt "type Xxx.Yyy")
               `shouldBe` Right (Data annz{source=("",1,1)} "Xxx.Yyy" [] Type0 False)
@@ -444,6 +444,14 @@ spec = do
             it "type Xxx with (Int,Int)" $
               (parse stmt "type Xxx with (Int,Int)")
               `shouldBe` Right (Data annz{source=("",1,1)} "Xxx" [] (TypeN [Type1 "Int",Type1 "Int"]) False)
+
+            it "type Xxx with (Int)" $
+              (parse stmt "type Xxx with (Int)")
+              `shouldBe` Left "(line 1, column 19):\nunexpected \")\"\nexpecting digit, letter, \"_\", \".\", \",\" or \"->\""
+
+            it "type Xxx with Int ; x<-Xxx(1,1)" $
+              (parse' stmt "type Xxx with Int ; var x:Xxx <- Xxx 1")
+              `shouldBe` Right (Seq annz (Data annz "Xxx" [] (Type1 "Int") False) (Seq annz (Seq annz (Var annz "x" (Type1 "Xxx")) (Nop annz)) (Write annz (LVar "x") (Cons annz "Xxx" (Number annz 1)))))
 
             it "TODO: type Xxx with (x,y) : (Int,Int)" $
               (parse stmt "type Xxx with (x,y) : (Int,Int)")

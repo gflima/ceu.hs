@@ -15,7 +15,7 @@ type Desc = (Stmt, Vars)
 
 data Exp
     = Number Int            -- 1
-    | Cons   ID_Type        -- True
+    | Cons   ID_Type Exp    -- True
     | Read   ID_Var         -- a ; xs
     | Unit                  -- ()
     | Tuple  [Exp]          -- (1,2) ; ((1),2) ; ((1,2),3) ; ((),()) // (len >= 2)
@@ -38,7 +38,7 @@ infixr 1 `Seq`
 
 fromExp :: B.Exp -> Exp
 fromExp (B.Number _ v)    = Number v
-fromExp (B.Cons   _ id)   = Cons id
+fromExp (B.Cons   _ id e) = Cons id (fromExp e)
 fromExp (B.Arg    _)      = Read "_arg"
 fromExp (B.Unit   _)      = Unit
 fromExp (B.Tuple  _ vs)   = Tuple (map fromExp vs)
@@ -107,7 +107,7 @@ envEval vars e = case e of
         (Read "-__((Int,Int) -> Int)",   Tuple [Number x, Number y]) -> Number (x-y)
         (Read "*__((Int,Int) -> Int)",   Tuple [Number x, Number y]) -> Number (x*y)
         (Read "/__((Int,Int) -> Int)",   Tuple [Number x, Number y]) -> Number (x `div` y)
-        (Read "==__((Int,Int) -> Bool)", Tuple [Number x, Number y]) -> Cons (bool "Bool.False" "Bool.True" (x == y))
+        (Read "==__((Int,Int) -> Bool)", Tuple [Number x, Number y]) -> Cons (bool "Bool.False" "Bool.True" (x == y)) Unit
         (Func p,        arg)                                        -> steps (p, ("_arg",Just arg):vars)
         otherwise -> error $ show (f,e')
 
@@ -136,8 +136,8 @@ step (Seq p       q,  vars)  = (Seq p' q,   vars') where (p',vars') = step (p,va
 
 step (If exp p q,     vars)  =
     case envEval vars exp of
-        (Cons "Bool.True")  -> (p,          vars)
-        otherwise           -> (q,          vars)
+        (Cons "Bool.True" _) -> (p,          vars)
+        otherwise            -> (q,          vars)
 
 step (Loop' Nop     q, vars) = (Loop' q q,  vars)
 step (Loop' (Ret e) q, vars) = (Ret e,      vars)
