@@ -273,6 +273,40 @@ spec = do
             (B.Call annz (B.Read annz "g'") (B.Unit annz))))))
           `shouldBe` (Number 1)
 
+    describe "data" $ do
+
+      it "data X with Int ; x <- X 1 ; return x" $
+        go
+          (B.Data annz "Int" [] Type0 False
+          (B.Data annz "X" [] (Type1 "Int") False
+          (B.Var annz "x" (Type1 "X")
+          (B.Seq annz
+          (B.Write annz (LVar "x") (B.Cons annz "X" (B.Number annz 1)))
+          (B.Ret annz (B.Read annz "x"))))))
+        `shouldBe` (Cons "X" (Number 1))
+
+      it "data X with (Int,Int) ; x <- X (1,2) ; return +x" $
+        go
+          (B.Data annz "Int" [] Type0 False
+          (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
+          (B.Data annz "X" [] (TypeN [Type1 "Int", Type1 "Int"]) False
+          (B.Var annz "x" (Type1 "X")
+          (B.Seq annz
+          (B.Write annz (LVar "x") (B.Cons annz "X" (B.Tuple annz [B.Call annz (B.Read annz "+") (B.Tuple annz [B.Number annz 1,B.Number annz 2]), B.Number annz 3])))
+          (B.Ret annz (B.Read annz "x")))))))
+        `shouldBe` (Cons "X" (Tuple [Number 3,Number 3]))
+
+      it "data X with (Int,Int) ; x <- X (1,2) ; return +x" $
+        go
+          (B.Data annz "Int" [] Type0 False
+          (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))
+          (B.Data annz "X" [] (TypeN [Type1 "Int", Type1 "Int"]) False
+          (B.Var annz "x" (Type1 "X")
+          (B.Seq annz
+          (B.Write annz (LVar "x") (B.Cons annz "X" (B.Tuple annz [B.Number annz 1,B.Number annz 2])))
+          (B.Ret annz (B.Call annz (B.Read annz "+") (B.Read annz "x"))))))))
+        `shouldBe` (Cons "X" (Number 1))
+
     describe "class" $ do
 
       it "Int ; X a ; inst X Int ; return f3 1" $

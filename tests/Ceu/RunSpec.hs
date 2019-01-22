@@ -171,6 +171,10 @@ spec = do
         (run False "type Xxx ; type Xxx.Yyy ; var x:Xxx <- Xxx.Yyy ; return x")
         `shouldBe` Right (Cons "Xxx.Yyy" Unit)
 
+      it "type Xxx with (Int,Int)" $
+        (run True "type Xxx with (Int,Int) ; var x:Xxx <- Xxx (1+1,2+2) ; return x")
+        `shouldBe` Right (Cons "Xxx" (Tuple [Number 2, Number 4]))
+
     describe "typeclass:" $ do
 
       it "Int ; F3able a ; inst F3able Int ; return f3 1" $

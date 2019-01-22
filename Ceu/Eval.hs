@@ -98,9 +98,10 @@ envRead vars var =
 
 envEval :: Vars -> Exp -> Exp
 envEval vars e = case e of
-    Read var  -> envRead vars var
-    Tuple es' -> Tuple $ map (envEval vars) es'
-    Call f e' ->
+    Cons  id e' -> Cons id (envEval vars e')
+    Read  var   -> envRead vars var
+    Tuple es    -> Tuple $ map (envEval vars) es
+    Call  f e'  ->
       case (envEval vars f, envEval vars e') of
         (Read "negate__(Int -> Int)",    Number x)                   -> Number (-x)
         (Read "+__((Int,Int) -> Int)",   Tuple [Number x, Number y]) -> Number (x+y)
