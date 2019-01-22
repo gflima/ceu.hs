@@ -6,7 +6,7 @@ import Data.Maybe (isJust, fromJust)
 import Data.Bool (bool)
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Type as Type (Type(..), show', supOf, isSubOf, supOfErrors, instantiate, get1s)
+import Ceu.Grammar.Type as Type (Type(..), show', supOf, isSubOf, supOfErrors, instantiate, get1s, getSuper, cat)
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
 
@@ -14,10 +14,6 @@ go :: Stmt -> (Errors, Stmt)
 go p = stmt [] p
 
 -------------------------------------------------------------------------------
-
-splitOn :: Eq a => a -> [a] -> [[a]]
-splitOn d [] = []
-splitOn d s = x : splitOn d (drop 1 y) where (x,y) = span (/= d) s
 
 isClass f (Class _ id _ _ _)   = f id
 isClass _  _                   = False
@@ -126,11 +122,19 @@ stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] im
 stmt ids (Inst _ _ tps _ _) = error "not implemented: multiple types"
 
 stmt ids s@(Data z id [] flds abs p) = (es_dcl ++ (errDeclared z "type" id ids) ++ es,
-                                        Data z id [] flds abs p')
+                                        Data z id [] flds' abs p')
   where
-    (es,p') = stmt (s:ids) p
-    es_dcl  = concatMap (getErrsTypesDeclared z ids)
-                        (map Type1 $ scanl1 (\a b->a++"."++b) $ init $ splitOn '.' id)
+    (es,p')        = stmt (s:ids) p
+    (flds',es_dcl) =
+      case Type.getSuper (Type1 id) of
+        Nothing          -> (flds, [])
+        Just (Type1 sup) -> (Type.cat sups flds,
+                             (getErrsTypesDeclared z ids (Type1 sup)) ++
+                             (getErrsTypesDeclared z ids flds))
+                            where
+                              sups = case find (isData $ (==)sup) ids of
+                                      Nothing                     -> Type0
+                                      Just (Data _ _ _ sups' _ _) -> sups'
 
 stmt ids s@(Data z id vars flds abs p) = error "not implemented"
 

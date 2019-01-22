@@ -296,7 +296,7 @@ spec = do
           (B.Ret annz (B.Read annz "x")))))))
         `shouldBe` (Cons "X" (Tuple [Number 3,Number 3]))
 
-      it "data X with (Int,Int) ; x <- X (1,2) ; return +x" $
+      it "TODO (coerse): data X with (Int,Int) ; x <- X (1,2) ; return +x" $
         go
           (B.Data annz "Int" [] Type0 False
           (B.Var annz "+" (TypeF (TypeN [Type1 "Int", Type1 "Int"]) (Type1 "Int"))

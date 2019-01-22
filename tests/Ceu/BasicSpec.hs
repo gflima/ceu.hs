@@ -188,7 +188,7 @@ spec = do
     it "Bool.True (w/o Bool)" $
       (fst $ TypeSys.go
         (Data annz "Bool.True.Xxx" [] Type0 False (Nop annz)))
-      `shouldBe` ["type 'Bool' is not declared","type 'Bool.True' is not declared"]
+      `shouldBe` ["type 'Bool.True' is not declared"]
 
     it "Int/Int" $
       (fst $ TypeSys.go
@@ -255,19 +255,27 @@ spec = do
           (Write annz (LVar "x") (Cons annz{type_=(Type1 "Bool")} "Bool.True" (Unit annz)))))
       `shouldBe` ["type 'Bool' is not declared","type 'Bool.True' is not declared"]
 
-    it "data X with Int)" $
+    it "data X with Int" $
       (fst $ TypeSys.go
         (Data annz "X" [] (Type1 "Int") False
         (Var annz "x" (Type1 "X")
           (Write annz (LVar "x") (Cons annz "X" (Unit annz))))))
       `shouldBe` ["types do not match : expected 'Int' : found '()'"]
 
-    it "data X with Int)" $
+    it "data X with Int" $
       (fst $ TypeSys.go
         (Data annz "X" [] (Type1 "Int") False
         (Var annz "x" (Type1 "X")
           (Write annz (LVar "x") (Cons annz "X" (Number annz 1))))))
       `shouldBe` []
+
+    it "data X with Int ; data X.Y with Int" $
+      (TypeSys.go
+        (Data annz "Int" [] Type0 False
+        (Data annz "X"   [] (Type1 "Int") False
+        (Data annz "X.Y" [] (Type1 "Int") False
+        (Nop annz)))))
+      `shouldBe` ([],Data annz "Int" [] Type0 False (Data annz "X" [] (Type1 "Int") False (Data annz "X.Y" [] (TypeN [Type1 "Int",Type1 "Int"]) False (Nop annz))))
 
     it "data X with (Int,Int))" $
       (fst $ TypeSys.go
