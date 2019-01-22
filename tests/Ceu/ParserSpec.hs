@@ -15,6 +15,8 @@ import Ceu.Grammar.Globals      (Loc(..))
 import Ceu.Grammar.Type         (Type(..))
 import Ceu.Grammar.Ann          (annz,source,type_)
 import Ceu.Grammar.Full.Full    (Stmt(..), Exp(..))
+import Ceu.Grammar.Full.Eval    (prelude, compile')
+import qualified Ceu.Grammar.Basic as B
 
 clearStmt :: Stmt -> Stmt
 clearStmt (Class _ cls vars ifc)    = Class  annz cls vars (clearStmt ifc)
@@ -39,6 +41,8 @@ clearExp (Tuple  _ es)    = Tuple  annz (map clearExp es)
 clearExp (Func   _ tp p)  = Func   annz tp (clearStmt p)
 clearExp (Call   _ e1 e2) = Call   annz (clearExp e1) (clearExp e2)
 
+fromRight' :: Either a b -> b
+fromRight' (Right x) = x
 
 main :: IO ()
 main = hspec spec
@@ -457,6 +461,10 @@ spec = do
               (parse stmt "type Xxx with (x,y) : (Int,Int)")
               `shouldBe` Right (Data annz{source=("",1,1)} "Xxx" [] Type0 False)
 
+            it "Xxx.Yyy" $
+              (compile' $ fromRight' $ parse' stmt "type Int ; type Xxx with Int ; type Xxx.Yyy with Int ; var y:Xxx.Yyy <- Xxx.Yyy (1,2)")
+              `shouldBe` ([],B.Data annz "Int" [] Type0 False (B.Data annz "Xxx" [] (Type1 "Int") False (B.Data annz "Xxx.Yyy" [] (TypeN [Type1 "Int",Type1 "Int"]) False (B.Var annz "y" (Type1 "Xxx.Yyy") (B.Write annz (LVar "y") (B.Cons annz{type_=Type1 "Xxx.Yyy"} "Xxx.Yyy" (B.Tuple annz{type_=TypeN [Type1 "Int",Type1 "Int"]} [B.Number annz{type_=Type1 "Int"} 1,B.Number annz{type_=Type1 "Int"} 2])))))))
+
         describe "typeclass:" $ do
 
             it "Int ; F3able a ; inst F3able Int ; return f3 1" $
@@ -537,5 +545,3 @@ spec = do
         parse' rule src = case parse rule src of
                             Left  err  -> Left err
                             Right stmt -> Right $ clearStmt stmt
-
-

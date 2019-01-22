@@ -122,9 +122,10 @@ stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] im
 stmt ids (Inst _ _ tps _ _) = error "not implemented: multiple types"
 
 stmt ids s@(Data z id [] flds abs p) = (es_dcl ++ (errDeclared z "type" id ids) ++ es,
-                                        Data z id [] flds' abs p')
+                                        s')
   where
-    (es,p')        = stmt (s:ids) p
+    s'             = Data z id [] flds' abs p'
+    (es,p')        = stmt (s':ids) p
     (flds',es_dcl) =
       case Type.getSuper (Type1 id) of
         Nothing          -> (flds, [])

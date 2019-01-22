@@ -1,8 +1,8 @@
 module Ceu.RunSpec (main, spec) where
 
 import Test.Hspec
-
 import Data.Bool             (bool)
+import Debug.Trace
 import Text.Parsec           (eof, parse)
 
 import Ceu.Eval              (Exp(..))
@@ -175,6 +175,10 @@ spec = do
         (run True "type Xxx with (Int,Int) ; var x:Xxx <- Xxx (1+1,2+2) ; return x")
         `shouldBe` Right (Cons "Xxx" (Tuple [Number 2, Number 4]))
 
+      it "type Xxx(Int), Xxx.Yyy(Int), y=Yyy(1,2)" $
+        (run True "type Xxx with Int ; type Xxx.Yyy with Int ; var y:Xxx.Yyy <- Xxx.Yyy (1,2) ; return y")
+        `shouldBe` Right (Cons "Xxx.Yyy" (Tuple [Number 1,Number 2]))
+
     describe "typeclass:" $ do
 
       it "Int ; F3able a ; inst F3able Int ; return f3 1" $
@@ -285,4 +289,3 @@ spec = do
                         (Left errs) -> Left $ concatMap (\s->s++"\n") errs
                         (Right exp) -> Right exp
                     (Left  v') -> Left (show v')
-                
