@@ -185,28 +185,28 @@ stmt ids s@(Var  z id tp p) = (es_data ++ es_dcl ++ es_id ++ es, Var z id tp p')
                                 ids' = concatMap classinst2ids $ filter (isClass $ const True) ids
 
 stmt ids (Write z loc exp) = (es1 ++ es2, Write z loc exp')
-                             where
-                              (tps_loc, es1) = aux loc
-                              aux :: Loc -> (Type, Errors)
-                              aux LAny       = (TypeT, [])
-                              aux (LVar var) = case find (isVar $ (==)var) ids of
-                                                Nothing ->
-                                                  (TypeT, [toError z "variable '" ++ var ++ "' is not declared"])
-                                                Just (Var _ _ tp _) ->
-                                                  (tp,    [])
-                              aux LUnit      = (Type0, [])
-                              aux (LNumber v)= (Type1 "Int", [])
-                              aux (LRead id) = (tp_ret, es) where
-                                                (es, tp_ret) = read' z tp_xp ids id
-                                                tp_xp        = type_ $ getAnn exp
-                              aux (LTuple l) = (TypeN tps, es) where
-                                                l' :: [(Type,Errors)]
-                                                l' = map aux l
-                                                (tps,es) = foldr cat ([],[]) l'
-                                                cat (tp,es1) (tps,es2) = (tp:tps, es1++es2)
+  where
+    (tps_loc, es1) = aux loc
 
-                              (es2,exp') = expr z tps_loc ids exp
-                                -- VAR: I expect exp.type to be a subtype of tps_loc
+    aux :: Loc -> (Type, Errors)
+    aux LAny          = (TypeT, [])
+    aux (LVar var)    = case find (isVar $ (==)var) ids of
+                          Nothing -> (TypeT, [toError z "variable '" ++ var ++ "' is not declared"])
+                          Just (Var _ _ tp _) -> (tp,    [])
+    aux LUnit         = (Type0, [])
+    aux (LNumber v)   = (Type1 "Int", [])
+    aux (LRead id)    = (tp_ret, es) where
+                        (es, tp_ret) = read' z tp_xp ids id
+                        tp_xp        = type_ $ getAnn exp
+    aux (LCons id l)  = (Type1 id, snd $ aux l)
+    aux (LTuple l)    = (TypeN tps, es) where
+                        l' :: [(Type,Errors)]
+                        l' = map aux l
+                        (tps,es) = foldr cat ([],[]) l'
+                        cat (tp,es1) (tps,es2) = (tp:tps, es1++es2)
+
+    (es2,exp') = expr z tps_loc ids exp
+      -- VAR: I expect exp.type to be a subtype of tps_loc
 
 stmt ids (CallS z f exp)   = (es, CallS z f' exp')
                              where

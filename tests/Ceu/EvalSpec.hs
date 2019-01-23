@@ -355,6 +355,26 @@ spec = do
           (B.Ret annz (B.Call annz (B.Read annz "+") (B.Read annz "x"))))))))
         `shouldBe` (Cons "X" (Number 1))
 
+      it "data X with Int ; x:Int ; X x <- X 1" $
+        go
+          (B.Data  annz "Int" [] Type0 False
+          (B.Data  annz "X" [] (Type1 "Int") False
+          (B.Var   annz "x" (Type1 "Int")
+          (B.Seq   annz
+          (B.Write annz (LCons "X" (LVar "x")) (B.Cons annz "X" (B.Number annz 1)))
+          (B.Ret   annz (B.Read annz "x"))))))
+        `shouldBe` (Number 1)
+
+      it "OK: data X with Int ; x:Int ; X x <- X ()" $
+        go
+          (B.Data  annz "Int" [] Type0 False
+          (B.Data  annz "X" [] (Type1 "Int") False
+          (B.Var   annz "x" (Type1 "Int")
+          (B.Seq   annz
+          (B.Write annz (LCons "X" (LVar "x")) (B.Cons annz "X" (B.Unit annz)))
+          (B.Ret   annz (B.Read annz "x"))))))
+        `shouldBe` (Number 1)
+
     describe "class" $ do
 
       it "Int ; X a ; inst X Int ; return f3 1" $

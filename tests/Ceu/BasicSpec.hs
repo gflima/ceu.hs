@@ -171,7 +171,6 @@ spec = do
       TypeSys.go (prelude annz
         (Var annz "a" (Type1 "Int") (Write annz (LRead "a") (Number annz 1))))
       `shouldBe` ([],Data annz "Int" [] Type0 False (Var annz "a" (Type1 "Int") (Write annz (LRead "a") (Number annz{type_=Type1 "Int"} 1))))
-
     it "`a` = 1" $
       TypeSys.go (prelude annz
         (Var annz "a" Type0 (Write annz (LRead "a") (Number annz 1))))
@@ -290,12 +289,30 @@ spec = do
         (Nop annz)))))
       `shouldBe` ([],Data annz "Int" [] Type0 False (Data annz "X" [] (Type1 "Int") False (Data annz "X.Y" [] (TypeN [Type1 "Int",Type1 "Int"]) False (Nop annz))))
 
-    it "data X with (Int,Int))" $
+    it "data X with (Int,Int)" $
       (fst $ TypeSys.go
         (Data annz "X" [] (TypeN [Type1 "Int", Type1 "Int"]) False
         (Var annz "x" (Type1 "X")
           (Write annz (LVar "x") (Cons annz "X" (Tuple annz [Number annz 1, Number annz 2]))))))
       `shouldBe` []
+
+    describe "pattern matching" $ do
+
+      it "data X with Int ; x:Int ; X x <- X 1" $
+        (fst $ TypeSys.go
+          (Data annz "Int" [] Type0 False
+          (Data annz "X" [] (Type1 "Int") False
+          (Var annz "x" (Type1 "Int")
+          (Write annz (LCons "X" (LVar "x")) (Cons annz "X" (Number annz 1)))))))
+        `shouldBe` []
+
+      it "data X with Int ; x:Int ; X x <- X 1" $
+        (fst $ TypeSys.go
+          (Data annz "Int" [] Type0 False
+          (Data annz "X" [] (Type1 "Int") False
+          (Var annz "x" (Type1 "Int")
+          (Write annz (LCons "X" (LVar "x")) (Cons annz "X" (Unit annz)))))))
+        `shouldBe` ["types do not match : expected 'Int' : found '()'"]
 
   --------------------------------------------------------------------------
 

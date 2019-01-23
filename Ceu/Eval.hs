@@ -124,18 +124,19 @@ step (Var vv p,       vars)  = (Var vv' p', vars') where (p',vv':vars') = step (
 
 step (Write loc e,    vars)  = (Nop, aux vars loc (envEval vars e))
   where
-    aux vars LAny          _          = vars
-    aux vars (LVar id)     e          = envWrite vars id e
-    aux vars LUnit         _          = vars
-    aux vars (LNumber x)   e          = case e of
-                                          (Number y) | x == y -> vars
-                                          _                   -> err x e
-    aux vars (LRead id)    e          = let v = envEval vars (Read id) in
-                                          if v == e then vars
-                                                    else err v e
-    aux vars (LTuple locs) (Tuple es) = foldr (\(loc,e) vars' -> aux vars' loc e)
-                                              vars
-                                              (zip locs (map (envEval vars) es))
+    aux vars LAny          _ = vars
+    aux vars (LVar id)     e = envWrite vars id e
+    aux vars LUnit         _ = vars
+    aux vars (LNumber x)   e = case e of
+                                 (Number y) | x == y -> vars
+                                 _                   -> err x e
+    aux vars (LRead id)    e = let v = envEval vars (Read id) in
+                                 if v == e then vars
+                                           else err v e
+    aux vars (LCons id l) (Cons id' e) | id==id' = aux vars l e
+    aux vars (LTuple ls)  (Tuple es) = foldr (\(loc,e) vars' -> aux vars' loc e)
+                                            vars
+                                            (zip ls (map (envEval vars) es))
     err xp got = error $ "assignment does not match : expected '" ++ show xp ++
                                                  "' : found '"    ++ show got ++ "'"
 
