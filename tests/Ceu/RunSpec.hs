@@ -161,23 +161,36 @@ spec = do
 
       it "type Xxx" $
         (run False "type Xxx ; var x:Xxx <- Xxx ; return x")
-        `shouldBe` Right (Cons "Xxx" Unit)
+        `shouldBe` Right (Cons ["Xxx"] Unit)
 
       it "type Xxx.Yyy" $
         (run False "type Xxx ; type Xxx.Yyy ; var x:Xxx.Yyy <- Xxx.Yyy ; return x")
-        `shouldBe` Right (Cons "Xxx.Yyy" Unit)
+        `shouldBe` Right (Cons ["Xxx","Yyy"] Unit)
 
       it "type Xxx.Yyy" $
         (run False "type Xxx ; type Xxx.Yyy ; var x:Xxx <- Xxx.Yyy ; return x")
-        `shouldBe` Right (Cons "Xxx.Yyy" Unit)
+        `shouldBe` Right (Cons ["Xxx","Yyy"] Unit)
 
       it "type Xxx with (Int,Int)" $
         (run True "type Xxx with (Int,Int) ; var x:Xxx <- Xxx (1+1,2+2) ; return x")
-        `shouldBe` Right (Cons "Xxx" (Tuple [Number 2, Number 4]))
+        `shouldBe` Right (Cons ["Xxx"] (Tuple [Number 2, Number 4]))
 
       it "type Xxx(Int), Xxx.Yyy(Int), y=Yyy(1,2)" $
         (run True "type Xxx with Int ; type Xxx.Yyy with Int ; var y:Xxx.Yyy <- Xxx.Yyy (1,2) ; return y")
-        `shouldBe` Right (Cons "Xxx.Yyy" (Tuple [Number 1,Number 2]))
+        `shouldBe` Right (Cons ["Xxx","Yyy"] (Tuple [Number 1,Number 2]))
+
+      it "List" $
+        (run True $
+          unlines [
+            "type List",
+            "type List.Empty",
+            "type List.Pair with (Int,List)",
+            "var l1 : List <- List.Pair(1, List.Empty)",
+            "var x1 : Int",
+            "set List.Pair(x1,_) <- l1",
+            "return x1"
+          ])
+        `shouldBe` Right (Number 1)
 
     describe "assignment:" $ do
 

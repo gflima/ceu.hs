@@ -2,11 +2,18 @@ module Ceu.Parser.Type where
 
 import Text.Parsec.Prim         ((<|>), try)
 import Text.Parsec.String       (Parser)
+import Text.Parsec.Prim         (many)
 
 import Ceu.Parser.Common
-import Ceu.Parser.Token         (tk_str, tk_types, tk_var)
+import Ceu.Parser.Token         (tk_str, tk_var, tk_type)
 
+import Ceu.Grammar.Globals      (ID_Type)
 import Ceu.Grammar.Type         (Type(..))
+
+tk_types :: Parser [ID_Type]
+tk_types = do
+  v <- (:) <$> tk_type <*> many (try $ tk_str "." *> tk_type)
+  return v
 
 type_0 :: Parser Type
 type_0 = do

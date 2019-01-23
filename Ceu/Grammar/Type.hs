@@ -9,7 +9,7 @@ import Ceu.Grammar.Globals
 data Type = TypeB
           | TypeT
           | Type0
-          | Type1 ID_Type
+          | Type1 [ID_Type]
           | TypeN [Type]    -- (len >= 2)
           | TypeF Type Type
           | TypeV ID_Var
@@ -17,12 +17,14 @@ data Type = TypeB
 
 -------------------------------------------------------------------------------
 
+hier2str = intercalate "."
+
 show' :: Type -> String
 show' (TypeV id)      = id
 show' TypeT           = "top"
 show' TypeB           = "bot"
 show' Type0           = "()"
-show' (Type1 id)      = id
+show' (Type1 hier)    = hier2str hier
 show' (TypeF inp out) = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
 show' (TypeN tps)     = "(" ++ intercalate "," (map show' tps) ++ ")"
 
@@ -34,17 +36,16 @@ get1s (TypeV _)       = []
 get1s TypeT           = []
 get1s TypeB           = []
 get1s Type0           = []
-get1s (Type1 v)       = [v]
+get1s (Type1 hier)    = [hier2str hier]
 get1s (TypeF inp out) = get1s inp ++ get1s out
 get1s (TypeN ts)      = concatMap get1s ts
 
 -------------------------------------------------------------------------------
 
 getSuper :: Type -> Maybe Type
-getSuper (Type1 id) = case init $ splitOn '.' id of
-                        [] -> Nothing
-                        l  -> Just $ Type1 (intercalate "." l)
-getSuper _          = error "bug found : expecting `Type1`"
+getSuper (Type1 [_])  = Nothing
+getSuper (Type1 hier) = Just $ Type1 (init hier)
+getSuper _            = error "bug found : expecting `Type1`"
 
 splitOn :: Eq a => a -> [a] -> [[a]]
 splitOn d [] = []

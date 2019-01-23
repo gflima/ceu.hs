@@ -70,11 +70,6 @@ tk_var = do
 
 tk_func = tk_var
 
-tk_types :: Parser String
-tk_types = do
-  v <- (:) <$> tk_type <*> many (try $ tk_str "." *> tk_type)
-  return $ intercalate "." v
-
 tk_type :: Parser String    -- Int, Int_0   // I, II, int, _Int
 tk_type = do
     first <- satisfy isUpper

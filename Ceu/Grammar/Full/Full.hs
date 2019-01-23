@@ -11,7 +11,7 @@ import qualified Ceu.Grammar.Basic as B
 
 data Exp
     = Number Ann Int            -- 1
-    | Cons   Ann ID_Type Exp    -- True
+    | Cons   Ann [ID_Type] Exp  -- True
     | Read   Ann ID_Var         -- a ; xs
     | Arg    Ann
     | Unit   Ann                -- ()
@@ -46,7 +46,7 @@ instance HasAnn Exp where
 data Stmt
   = Class    Ann ID_Class [ID_Var] Stmt           -- new class declaration
   | Inst     Ann ID_Class [Type]   Stmt           -- new class instance
-  | Data     Ann ID_Type [ID_Var] Type Bool       -- new type declaration
+  | Data     Ann [ID_Type] [ID_Var] Type Bool     -- new type declaration
   | Var      Ann ID_Var Type                      -- variable declaration
   | FuncS    Ann ID_Var Type Stmt                 -- function declaration
   | Write    Ann Loc Exp                          -- assignment statement
@@ -57,7 +57,7 @@ data Stmt
   | Scope    Ann Stmt                             -- scope for local variables
   | Class'   Ann ID_Class [ID_Var] Stmt Stmt      -- new class declaration
   | Inst'    Ann ID_Class [Type]   Stmt Stmt      -- new class instance
-  | Data'    Ann ID_Type [ID_Var] Type Bool Stmt  -- new type declaration w/ stmts in scope
+  | Data'    Ann [ID_Type] [ID_Var] Type Bool Stmt -- new type declaration w/ stmts in scope
   | Var'     Ann ID_Var Type Stmt                 -- variable declaration w/ stmts in scope
   | Nop      Ann                                  -- nop as in basic Grammar
   | Ret      Ann Exp

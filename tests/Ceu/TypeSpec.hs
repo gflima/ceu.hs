@@ -15,33 +15,34 @@ spec = do
   describe "supOf'" $ do
 
     it "Int > BOT" $
-      Type1 "Int" `supOf'` TypeB       `shouldBe` (True,  TypeB,       [])
+      Type1 ["Int"] `supOf'` TypeB       `shouldBe` (True,  TypeB,       [])
     it "BOT > Int" $
-      TypeB       `supOf'` Type1 "Int" `shouldBe` (False, TypeB,       [])
+      TypeB       `supOf'` Type1 ["Int"] `shouldBe` (False, TypeB,       [])
     it "a > Int" $
-      TypeV "a"   `supOf'` Type1 "Int" `shouldBe` (True,  Type1 "Int", [("a",Type1 "Int")])
+      TypeV "a"   `supOf'` Type1 ["Int"] `shouldBe` (True,  Type1 ["Int"], [("a",Type1 ["Int"])])
     it "a > b" $
       TypeV "a"   `supOf'` TypeV "b"   `shouldBe` (True,  TypeV "b",   [("a",TypeV "b"),("b",TypeV "a")])
 
   describe "supOf" $ do
 
     it "(a -> a) > (Int -> Int)" $
-      TypeF (TypeV "a") (TypeV "a") `supOf` TypeF (Type1 "Int") (Type1 "Int")
-      `shouldBe` Right ((TypeF (Type1 "Int") (Type1 "Int")), [("a", Type1 "Int")])
+      TypeF (TypeV "a") (TypeV "a") `supOf` TypeF (Type1 ["Int"]) (Type1 ["Int"])
+      `shouldBe` Right ((TypeF (Type1 ["Int"]) (Type1 ["Int"])), [("a", Type1 ["Int"])])
 
     it "(a -> b) > (A -> B)" $
-      TypeF (TypeV "a") (TypeV "b") `supOf` TypeF (Type1 "A") (Type1 "B")
-      `shouldBe` Right ((TypeF (Type1 "A") (Type1 "B")), [("a", Type1 "A"), ("b", Type1 "B")])
+      TypeF (TypeV "a") (TypeV "b") `supOf` TypeF (Type1 ["A"]) (Type1 ["B"])
+      `shouldBe` Right ((TypeF (Type1 ["A"]) (Type1 ["B"])), [("a", Type1 ["A"]), ("b", Type1 ["B"])])
 
     it "(a -> a) > (Int -> ())" $
-      TypeF (TypeV "a") (TypeV "a") `supOf` TypeF (Type1 "Int") Type0
+      TypeF (TypeV "a") (TypeV "a") `supOf` TypeF (Type1 ["Int"]) Type0
       `shouldBe` Left ["types do not match : expected '(a -> a)' : found '(Int -> ())'","ambigous instances for 'a' : 'Int', '()'"]
 
     it "(a,b) > (Int,())" $
-      TypeN [(TypeV "a"),(TypeV "b")] `supOf` TypeN [(Type1 "Int"),Type0]
-      `shouldBe` Right (TypeN [Type1 "Int",Type0],[("a",Type1 "Int"),("b",Type0)])
+      TypeN [(TypeV "a"),(TypeV "b")] `supOf` TypeN [(Type1 ["Int"]),Type0]
+      `shouldBe` Right (TypeN [Type1 ["Int"],Type0],[("a",Type1 ["Int"]),("b",Type0)])
 
   describe "isSupOf / isSubOf" $ do
+
     it "(bot -> top) > (bot -> top)" $
       TypeF TypeB TypeT `isSupOf` TypeF TypeB TypeT
       `shouldBe` True
@@ -57,61 +58,65 @@ spec = do
       `shouldBe` False
 
     it "top > Int" $
-      TypeT `isSupOf` (Type1 "Int")
+      TypeT `isSupOf` (Type1 ["Int"])
       `shouldBe` True
     it "(() -> top) > (() -> Int)" $
-      TypeF Type0 TypeT `isSupOf` TypeF Type0 (Type1 "Int")
+      TypeF Type0 TypeT `isSupOf` TypeF Type0 (Type1 ["Int"])
+      `shouldBe` True
+
+    it "Bool > Bool.True" $
+      (Type1 ["Bool"] `isSupOf` Type1 ["Bool", "True"])
       `shouldBe` True
 
   describe "instantiate" $ do
 
     it "A in [...] ~> A" $
-      instantiate [("a",Type1 "A"), ("b",Type1 "B")] (Type1 "A")
-      `shouldBe` (Type1 "A")
+      instantiate [("a",Type1 ["A"]), ("b",Type1 ["B"])] (Type1 ["A"])
+      `shouldBe` (Type1 ["A"])
 
     it "(a,b) in [(a,A),(b,B)] ~> (A,B)" $
-      instantiate [("a",Type1 "A"), ("b",Type1 "B")] (TypeN [TypeV "a", TypeV "b"])
-      `shouldBe` (TypeN [Type1 "A", Type1 "B"])
+      instantiate [("a",Type1 ["A"]), ("b",Type1 ["B"])] (TypeN [TypeV "a", TypeV "b"])
+      `shouldBe` (TypeN [Type1 ["A"], Type1 ["B"]])
 
     it "(a->C) in [(a,A),(b,B)] ~> (A->C)" $
-      instantiate [("a",Type1 "A"), ("b",Type1 "B")] (TypeF (TypeV "a") (Type1 "C"))
-      `shouldBe` (TypeF (Type1 "A") (Type1 "C"))
+      instantiate [("a",Type1 ["A"]), ("b",Type1 ["B"])] (TypeF (TypeV "a") (Type1 ["C"]))
+      `shouldBe` (TypeF (Type1 ["A"]) (Type1 ["C"]))
 
     it "Int : (Int ~ Int) ~> Int" $
-      inst' (Type1 "Int") (Type1 "Int", Type1 "Int")
-      `shouldBe` (Type1 "Int")
+      inst' (Type1 ["Int"]) (Type1 ["Int"], Type1 ["Int"])
+      `shouldBe` (Type1 ["Int"])
 
     it "Int : (a ~ Int) ~> Int" $
-      inst' (Type1 "Int") (TypeV "a", Type1 "Int")
-      `shouldBe` (Type1 "Int")
+      inst' (Type1 ["Int"]) (TypeV "a", Type1 ["Int"])
+      `shouldBe` (Type1 ["Int"])
 
     it "a : (a ~ Int) ~> Int" $
-      inst' (TypeV "a") (TypeV "a", Type1 "Int")
-      `shouldBe` (Type1 "Int")
+      inst' (TypeV "a") (TypeV "a", Type1 ["Int"])
+      `shouldBe` (Type1 ["Int"])
 
     it "a : ((Int,a) ~ (Int,Int)) ~> Int" $
-      inst' (TypeV "a") (TypeN [Type1 "Int",TypeV "a"], TypeN [Type1 "Int",Type1 "Int"])
-      `shouldBe` (Type1 "Int")
+      inst' (TypeV "a") (TypeN [Type1 ["Int"],TypeV "a"], TypeN [Type1 ["Int"],Type1 ["Int"]])
+      `shouldBe` (Type1 ["Int"])
 
     it "a : ((a,Int) ~ (Int,Int)) ~> Int" $
-      inst' (TypeV "a") (TypeN [TypeV "a",Type1 "Int"], TypeN [Type1 "Int",Type1 "Int"])
-      `shouldBe` (Type1 "Int")
+      inst' (TypeV "a") (TypeN [TypeV "a",Type1 ["Int"]], TypeN [Type1 ["Int"],Type1 ["Int"]])
+      `shouldBe` (Type1 ["Int"])
 
     it "a : ((a,a) ~ (Int,Int)) ~> Int" $
-      inst' (TypeV "a") (TypeN [TypeV "a",TypeV "a"], TypeN [Type1 "Int",Type1 "Int"])
-      `shouldBe` (Type1 "Int")
+      inst' (TypeV "a") (TypeN [TypeV "a",TypeV "a"], TypeN [Type1 ["Int"],Type1 ["Int"]])
+      `shouldBe` (Type1 ["Int"])
 
     it "a : ((a,a) ~ (Int,Bool)) ~> ERROR" $
-      inst' (TypeV "a") (TypeN [TypeV "a",TypeV "a"], TypeN [Type1 "Int",Type1 "Bool"])
+      inst' (TypeV "a") (TypeN [TypeV "a",TypeV "a"], TypeN [Type1 ["Int"],Type1 ["Bool"]])
       `shouldBe` TypeT
 
     it "a : ((a,b) ~ (Int,Bool)) ~> Int" $
-      inst' (TypeV "a") (TypeN [TypeV "a",TypeV "b"], TypeN [Type1 "Int",Type1 "Bool"])
-      `shouldBe` (Type1 "Int")
+      inst' (TypeV "a") (TypeN [TypeV "a",TypeV "b"], TypeN [Type1 ["Int"],Type1 ["Bool"]])
+      `shouldBe` (Type1 ["Int"])
 
     it "b : ((a,b) ~ (Int,Bool)) ~> Bool" $
-      inst' (TypeV "b") (TypeN [TypeV "a",TypeV "b"], TypeN [Type1 "Int",Type1 "Bool"])
-      `shouldBe` (Type1 "Bool")
+      inst' (TypeV "b") (TypeN [TypeV "a",TypeV "b"], TypeN [Type1 ["Int"],Type1 ["Bool"]])
+      `shouldBe` (Type1 ["Bool"])
 
   where
     inst' :: Type -> (Type,Type) -> Type

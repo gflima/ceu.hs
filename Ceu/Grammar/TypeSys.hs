@@ -6,7 +6,7 @@ import Data.Maybe (isJust, fromJust)
 import Data.Bool (bool)
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Type as Type (Type(..), show', supOf, isSubOf, supOfErrors, instantiate, get1s, getSuper, cat)
+import Ceu.Grammar.Type as Type (Type(..), show', supOf, isSubOf, supOfErrors, instantiate, get1s, getSuper, cat, hier2str)
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
 
@@ -21,12 +21,13 @@ isClass _  _                   = False
 isInst  f (Inst  _ id _ _ _)   = f id
 isInst  _  _                   = False
 
-isData  f (Data  _ id _ _ _ _) = f id
+isData  f (Data  _ hr _ _ _ _) = f (Type.hier2str hr)
 isData  _  _                   = False
 
 isVar   f (Var   _ id _ _)     = f id
 isVar   _  _                   = False
 
+isAny :: (String -> Bool) -> Stmt -> Bool
 isAny f s = isClass f s || isData f s || isVar  f s
 
 classinst2ids :: Stmt -> [Stmt]
@@ -66,7 +67,7 @@ call z tp_xp ids f exp = (bool es_exp es_f (null es_exp), out, f', exp')
     --xx = traceShow $ [tp_xp,(type_$getAnn$exp')]
 
 read' :: Ann -> Type -> [Stmt] -> ID_Var -> (Errors, Type)
-read' z tp_xp ids id = if id == "_INPUT" then ([], Type1 "Int")
+read' z tp_xp ids id = if id == "_INPUT" then ([], Type1 ["Int"])
                                          else (es, tp_ret)
   where
     -- find in top-level ids | id : a
@@ -158,23 +159,23 @@ stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] im
 
 stmt ids (Inst _ _ tps _ _) = error "not implemented: multiple types"
 
-stmt ids s@(Data z id [] flds abs p) = (es_dcl ++ (errDeclared z "type" id ids) ++ es,
+stmt ids s@(Data z hr [] flds abs p) = (es_dcl ++ (errDeclared z "type" (Type.hier2str hr) ids) ++ es,
                                         s')
   where
-    s'             = Data z id [] flds' abs p'
+    s'             = Data z hr [] flds' abs p'
     (es,p')        = stmt (s':ids) p
     (flds',es_dcl) =
-      case Type.getSuper (Type1 id) of
+      case Type.getSuper (Type1 hr) of
         Nothing          -> (flds, [])
         Just (Type1 sup) -> (Type.cat sups flds,
                              (getErrsTypesDeclared z ids (Type1 sup)) ++
                              (getErrsTypesDeclared z ids flds))
                             where
-                              sups = case find (isData $ (==)sup) ids of
+                              sups = case find (isData $ (==)(Type.hier2str sup)) ids of
                                       Nothing                     -> Type0
                                       Just (Data _ _ _ sups' _ _) -> sups'
 
-stmt ids s@(Data z id vars flds abs p) = error "not implemented"
+stmt ids s@(Data z hr vars flds abs p) = error "not implemented"
 
 stmt ids s@(Var  z id tp p) = (es_data ++ es_dcl ++ es_id ++ es, Var z id tp p')
                               where
@@ -194,11 +195,11 @@ stmt ids (Write z loc exp) = (es1 ++ es2, Write z loc exp')
                           Nothing -> (TypeT, [toError z "variable '" ++ var ++ "' is not declared"])
                           Just (Var _ _ tp _) -> (tp,    [])
     aux LUnit         = (Type0, [])
-    aux (LNumber v)   = (Type1 "Int", [])
+    aux (LNumber v)   = (Type1 ["Int"], [])
     aux (LRead id)    = (tp_ret, es) where
                         (es, tp_ret) = read' z tp_xp ids id
                         tp_xp        = type_ $ getAnn exp
-    aux (LCons id l)  = (Type1 id, snd $ aux l)
+    aux (LCons hr l)  = (Type1 hr, snd $ aux l)
     aux (LTuple l)    = (TypeN tps, es) where
                         l' :: [(Type,Errors)]
                         l' = map aux l
@@ -217,7 +218,7 @@ stmt ids (CallS z f exp)   = (es, CallS z f' exp')
 
 stmt ids (If z exp p1 p2)   = (ese ++ es1 ++ es2, If z exp' p1' p2')
                               where
-                                (ese,exp') = expr z (Type1 "Bool") ids exp
+                                (ese,exp') = expr z (Type1 ["Bool"]) ids exp
                                   -- VAR: I expect exp.type to be a subtype of Bool
                                 (es1,p1') = stmt ids p1
                                 (es2,p2') = stmt ids p2
@@ -251,20 +252,21 @@ expr z tp_xp ids exp = (es1++es2, exp') where
 
 expr' :: Type -> [Stmt] -> Exp -> (Errors, Exp)
 
-expr' _ _   (Number z val)   = ([], Number z{type_=Type1 "Int"} val)
+expr' _ _   (Number z val)   = ([], Number z{type_=Type1 ["Int"]} val)
 expr' _ _   (Unit   z)       = ([], Unit   z{type_=Type0})
 expr' _ _   (Arg    z)       = ([], Arg    z{type_=TypeB})
 expr' _ ids (Func   z tp p)  = (es, Func   z{type_=tp} tp p')
                                where
                                 (es,p') = stmt ids p
 
-expr' _ ids (Cons  z id exp) = (es++es_exp, Cons z{type_=(Type1 id)} id exp')
+expr' _ ids (Cons  z hr exp) = (es++es_exp, Cons z{type_=(Type1 hr)} hr exp')
     where
-        (tp,es) = case find (isData $ (==)id) ids of
+        hr_str = Type.hier2str hr
+        (tp,es) = case find (isData $ (==)hr_str) ids of
             Nothing                      ->
-              (TypeV "?", [toError z "type '" ++ id ++ "' is not declared"])
+              (TypeV "?", [toError z "type '" ++ hr_str ++ "' is not declared"])
             Just (Data _ _ _ tp True  _) ->
-              (tp,        [toError z "type '" ++ id ++ "' is abstract"])
+              (tp,        [toError z "type '" ++ hr_str ++ "' is abstract"])
             Just (Data _ _ _ tp False _) ->
               (tp,        [])
         (es_exp, exp') = expr z tp ids exp

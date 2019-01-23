@@ -45,16 +45,16 @@ spec = do
         `shouldBe` (Var' annz "x" Type0 (Nop annz))
 
       it "var x <- 1 ; (Nop annz)" $ do
-        Scope.compile (Seq annz (Var annz "x" (Type1 "Int")) (Seq annz (Write annz (LVar "x") (Number annz 1)) (Nop annz)))
-        `shouldBe` (Var' annz "x" (Type1 "Int") (Seq annz (Write annz (LVar "x") (Number annz 1)) (Nop annz)))
+        Scope.compile (Seq annz (Var annz "x" (Type1 ["Int"])) (Seq annz (Write annz (LVar "x") (Number annz 1)) (Nop annz)))
+        `shouldBe` (Var' annz "x" (Type1 ["Int"]) (Seq annz (Write annz (LVar "x") (Number annz 1)) (Nop annz)))
 
       it "scope var x end ; var y" $ do
         Scope.compile (Seq annz (Scope annz (Var annz "x" Type0)) (Var annz "y" Type0))
         `shouldBe` Seq annz (Var' annz "x" Type0 (Nop annz)) (Var' annz "y" Type0 (Nop annz))
 
       it "scope var x end ; x=1" $ do
-        compile' (Seq annz (Scope annz (Var annz "x" (Type1 "Int"))) (Write annz (LVar "x") (Number annz 1)))
-        `shouldBe` (["type 'Int' is not declared","variable 'x' is not declared"], B.Seq annz (B.Var annz "x" (Type1 "Int") (B.Nop annz)) (B.Write annz (LVar "x") (B.Number (annz{type_=Type1 "Int"}) 1)))
+        compile' (Seq annz (Scope annz (Var annz "x" (Type1 ["Int"]))) (Write annz (LVar "x") (Number annz 1)))
+        `shouldBe` (["type 'Int' is not declared","variable 'x' is not declared"], B.Seq annz (B.Var annz "x" (Type1 ["Int"]) (B.Nop annz)) (B.Write annz (LVar "x") (B.Number (annz{type_=Type1 ["Int"]}) 1)))
 
   --------------------------------------------------------------------------
 
@@ -65,20 +65,20 @@ spec = do
       `shouldBe` ([], (B.Var annz "x" Type0 (B.Nop annz)))
 
     it "do var x; x = 1 end" $ do
-      compile' (Var' annz "x" (Type1 "Int") (Write annz (LVar "x") (Number annz 1)))
-      `shouldBe` (["type 'Int' is not declared"], (B.Var annz "x" (Type1 "Int") (B.Write annz (LVar "x") (B.Number annz{type_=Type1 "Int"} 1))))
+      compile' (Var' annz "x" (Type1 ["Int"]) (Write annz (LVar "x") (Number annz 1)))
+      `shouldBe` (["type 'Int' is not declared"], (B.Var annz "x" (Type1 ["Int"]) (B.Write annz (LVar "x") (B.Number annz{type_=Type1 ["Int"]} 1))))
 
     it "class/inst" $ do
       compile (Seq annz
                 (Class annz "F3able" ["a"]
                   (Seq annz
                   (Seq annz
-                  (Var annz "f3" (TypeF (TypeV "a") (Type1 "Int")))
+                  (Var annz "f3" (TypeF (TypeV "a") (Type1 ["Int"])))
                   (Nop annz))
                   (Nop annz)))
                 (Seq annz
-                (Inst annz "F3able" [Type1 "Int"]
-                  (FuncS annz "f3" (TypeF (TypeV "a") (Type1 "Int"))
+                (Inst annz "F3able" [Type1 ["Int"]]
+                  (FuncS annz "f3" (TypeF (TypeV "a") (Type1 ["Int"]))
                     (Seq annz
                     (Seq annz
                     (Var annz "v" (TypeV "a"))
@@ -88,13 +88,13 @@ spec = do
                 (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
       `shouldBe`
         (Class' annz "F3able" ["a"]
-          (Var' annz "f3" (TypeF (TypeV "a") (Type1 "Int"))
+          (Var' annz "f3" (TypeF (TypeV "a") (Type1 ["Int"]))
           (Seq annz (Nop annz) (Nop annz)))
-        (Inst' annz "F3able" [Type1 "Int"]
-          (Var' annz "f3" (TypeF (TypeV "a") (Type1 "Int"))
+        (Inst' annz "F3able" [Type1 ["Int"]]
+          (Var' annz "f3" (TypeF (TypeV "a") (Type1 ["Int"]))
           (Write annz
             (LVar "f3")
-            (Func annz (TypeF (TypeV "a") (Type1 "Int"))
+            (Func annz (TypeF (TypeV "a") (Type1 ["Int"]))
               (Var' annz "v" (TypeV "a")
               (Seq annz
               (Nop annz)

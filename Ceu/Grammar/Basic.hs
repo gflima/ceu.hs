@@ -9,7 +9,7 @@ import Ceu.Grammar.Type     (Type(..))
 data Exp
     = Unit   Ann                -- ()
     | Number Ann Int            -- 1
-    | Cons   Ann ID_Type Exp    -- True
+    | Cons   Ann [ID_Type] Exp  -- True
     | Read   Ann ID_Var         -- a ; xs
     | Arg    Ann
     | Tuple  Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
@@ -33,7 +33,7 @@ instance HasAnn Exp where
 data Stmt
     = Class  Ann ID_Class [ID_Var] Stmt Stmt  -- new class declaration
     | Inst   Ann ID_Class [Type] Stmt Stmt    -- new class instance
-    | Data   Ann ID_Type [ID_Var] Type Bool Stmt -- new type declaration
+    | Data   Ann [ID_Type] [ID_Var] Type Bool Stmt -- new type declaration
     | Var    Ann ID_Var  Type Stmt            -- variable declaration
     | Write  Ann Loc Exp                      -- assignment statement
     | CallS  Ann Exp Exp                      -- call function
@@ -91,4 +91,4 @@ instance HasAnn Stmt where
     getAnn (Ret    z _)         = z
     getAnn (Nop    z)           = z
 
-prelude z p = (Data z "Int" [] Type0 False p)
+prelude z p = (Data z ["Int"] [] Type0 False p)

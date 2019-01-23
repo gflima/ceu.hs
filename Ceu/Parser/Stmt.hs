@@ -10,7 +10,7 @@ import Text.Parsec.Combinator (notFollowedBy, many1, chainl, chainl1, chainr1, o
 
 import Ceu.Parser.Common
 import Ceu.Parser.Token
-import Ceu.Parser.Type        (pType, type_F)
+import Ceu.Parser.Type        (pType, type_F, tk_types)
 
 import Ceu.Grammar.Globals    (Source, Loc(..), ID_Var)
 import Ceu.Grammar.Type       (Type(..))
@@ -46,7 +46,7 @@ stmt_class :: Parser Stmt
 stmt_class = do
   pos  <- pos2src <$> getPosition
   void <- tk_key "typeclass"
-  cls  <- tk_types
+  cls  <- tk_type
   void <- tk_key "for"
   var  <- try tk_var      -- TODO: list of vars
   void <- tk_key "with"
@@ -59,7 +59,7 @@ stmt_inst = do
   pos  <- pos2src <$> getPosition
   void <- tk_key "instance"
   void <- tk_key "of"
-  cls  <- tk_types
+  cls  <- tk_type
   void <- tk_key "for"
   tp   <- try pType       -- TODO: list of types
   void <- tk_key "with"
