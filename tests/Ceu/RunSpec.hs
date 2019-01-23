@@ -179,6 +179,22 @@ spec = do
         (run True "type Xxx with Int ; type Xxx.Yyy with Int ; var y:Xxx.Yyy <- Xxx.Yyy (1,2) ; return y")
         `shouldBe` Right (Cons "Xxx.Yyy" (Tuple [Number 1,Number 2]))
 
+    describe "assignment:" $ do
+
+      it "1 <- 1" $
+        (run True "set 1 <- 1 ; return 1")
+        `shouldBe` Right (Number 1)
+      it "OK: 1 <- 2" $
+        (run True "set 1 <- 2 ; return 2")
+        `shouldBe` Right (Number 2)
+
+      it "x1 <- 1" $
+        (run True "var x:Int <- 1 ; set `x` <- 1 ; return 1")
+        `shouldBe` Right (Number 1)
+      it "OK: x1 <- 2" $
+        (run True "var x:Int <- 1 ; set `x` <- 2 ; return 2")
+        `shouldBe` Right (Number 2)
+
       it "data X with Int ; x:Int ; X x <- X 1" $
         (run True "type Xxx with Int ; var x:Int ; set Xxx x <- Xxx 1 ; return x")
         `shouldBe` Right (Number 1)

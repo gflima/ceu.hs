@@ -117,7 +117,8 @@ pLoc =  (try lany  <|> try lvar  <|> try lunit <|> try lnumber <|>
                 num <- tk_num
                 return $ LNumber num
     lread   = do
-                str <- try tk_var <|> try tk_op
+                str <- try (tk_str "`" *> (tk_var <* tk_str "`")) <|>
+                       try (tk_str "`" *> (tk_op  <* tk_str "`"))
                 return $ LRead str
     lcons   = do
                 cons <- tk_types
