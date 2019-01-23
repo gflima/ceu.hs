@@ -99,22 +99,33 @@ stmt_attr = do
 
 -- (x, (y,_))
 pLoc :: Parser Loc
-pLoc =  (try lunit <|> try lany <|> try lvar <|> try ltuple)
+pLoc =  (try lany  <|> try lvar  <|> try lunit <|> try lnumber <|>
+         try lread <|> try lcons <|> try ltuple)
   where
-    lunit  = do
-              void <- tk_str "("
-              void <- tk_str ")"
-              return LUnit
-    lany   = do
-              void <- tk_str "_"
-              return LAny
-    lvar   = do
-              var <- try (tk_str "(" *> (tk_var <* tk_str ")")) <|>
-                     try tk_var
-              return $ LVar var
-    ltuple = do
-              locs <- list pLoc
-              return (LTuple $ locs)
+    lany    = do
+                void <- tk_str "_"
+                return LAny
+    lvar    = do
+                var <- try (tk_str "(" *> (tk_var <* tk_str ")")) <|>
+                       try tk_var
+                return $ LVar var
+    lunit   = do
+                void <- tk_str "("
+                void <- tk_str ")"
+                return LUnit
+    lnumber = do
+                num <- tk_num
+                return $ LNumber num
+    lread   = do
+                str <- try tk_var <|> try tk_op
+                return $ LRead str
+    lcons   = do
+                cons <- tk_types
+                loc  <- pLoc
+                return $ LCons cons loc
+    ltuple  = do
+                locs <- list pLoc
+                return (LTuple $ locs)
 
 matchLocType :: Source -> Loc -> Type -> Maybe Stmt
 matchLocType src loc tp = case (aux src loc tp) of

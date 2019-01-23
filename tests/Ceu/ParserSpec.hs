@@ -424,7 +424,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 32):\nunexpected 'd'\nexpecting end of input"
             it "func add" $
                 parse expr_func "func ((Int, Int) -> Int) do end"
-                `shouldBe` Left "(line 1, column 8):\nunexpected \"I\"\nexpecting \")\", \"(\" or \"_\""
+                `shouldBe` Left "(line 1, column 11):\nunexpected \",\"\nexpecting digit, letter, \"_\", \".\" or \"(\""
 
         describe "data" $ do
 
@@ -464,6 +464,16 @@ spec = do
             it "Xxx.Yyy" $
               (compile' $ fromRight' $ parse' stmt "type Int ; type Xxx with Int ; type Xxx.Yyy with Int ; var y:Xxx.Yyy <- Xxx.Yyy (1,2)")
               `shouldBe` ([],B.Data annz "Int" [] Type0 False (B.Data annz "Xxx" [] (Type1 "Int") False (B.Data annz "Xxx.Yyy" [] (TypeN [Type1 "Int",Type1 "Int"]) False (B.Var annz "y" (Type1 "Xxx.Yyy") (B.Write annz (LVar "y") (B.Cons annz{type_=Type1 "Xxx.Yyy"} "Xxx.Yyy" (B.Tuple annz{type_=TypeN [Type1 "Int",Type1 "Int"]} [B.Number annz{type_=Type1 "Int"} 1,B.Number annz{type_=Type1 "Int"} 2])))))))
+
+            it "data X with Int ; x:Int ; X x <- X 1" $
+              (parse' stmt "type Xxx with Int ; var x:Int ; set Xxx x <- Xxx 1 ; return x")
+              `shouldBe` Right (Seq annz (Data annz "Xxx" [] (Type1 "Int") False) (Seq annz (Seq annz (Seq annz (Var annz "x" (Type1 "Int")) (Nop annz)) (Nop annz)) (Seq annz (Write annz (LCons "Xxx" (LVar "x")) (Cons annz "Xxx" (Number annz 1))) (Ret annz (Read annz "x")))))
+            it "data X with Int ; X 1 <- X 1 ; return 1" $
+              (parse' stmt "type Xxx with Int ; set Xxx 1 <- Xxx 1 ; return 1")
+              `shouldBe` Right (Seq annz (Data annz "Xxx" [] (Type1 "Int") False) (Seq annz (Write annz (LCons "Xxx" (LNumber 1)) (Cons annz "Xxx" (Number annz 1))) (Ret annz (Number annz 1))))
+            it "data X with Int ; x:Int ; X 1 <- X 2" $
+              (parse' stmt "type Xxx with Int ; set Xxx 1 <- Xxx 2 ; return 2")
+              `shouldBe` Right (Seq annz (Data annz "Xxx" [] (Type1 "Int") False) (Seq annz (Write annz (LCons "Xxx" (LNumber 1)) (Cons annz "Xxx" (Number annz 2))) (Ret annz (Number annz 2))))
 
         describe "typeclass:" $ do
 

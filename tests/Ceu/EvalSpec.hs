@@ -371,7 +371,7 @@ spec = do
           (B.Data  annz "X" [] (Type1 "Int") False
           (B.Var   annz "x" (Type1 "Int")
           (B.Seq   annz
-          (B.Write annz (LCons "X" (LVar "x")) (B.Cons annz "X" (B.Unit annz)))
+          (B.Write annz (LCons "X" (LNumber 1)) (B.Cons annz "X" (B.Number annz 2)))
           (B.Ret   annz (B.Read annz "x"))))))
         `shouldBe` (Number 1)
 
