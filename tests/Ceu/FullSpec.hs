@@ -54,7 +54,7 @@ spec = do
 
       it "scope var x end ; x=1" $ do
         compile' (Seq annz (Scope annz (Var annz "x" (Type1 ["Int"]))) (Write annz (LVar "x") (Number annz 1)))
-        `shouldBe` (["type 'Int' is not declared","variable 'x' is not declared"], B.Seq annz (B.Var annz "x" (Type1 ["Int"]) (B.Nop annz)) (B.Write annz (LVar "x") (B.Number (annz{type_=Type1 ["Int"]}) 1)))
+        `shouldBe` (["type 'Int' is not declared","variable 'x' is not declared"], B.Seq annz (B.Var annz "x" (Type1 ["Int"]) (B.Nop annz)) (B.Write annz (LVar "x") (B.Number (annz{type_=Type1 ["Int","1"]}) 1)))
 
   --------------------------------------------------------------------------
 
@@ -66,7 +66,7 @@ spec = do
 
     it "do var x; x = 1 end" $ do
       compile' (Var' annz "x" (Type1 ["Int"]) (Write annz (LVar "x") (Number annz 1)))
-      `shouldBe` (["type 'Int' is not declared"], (B.Var annz "x" (Type1 ["Int"]) (B.Write annz (LVar "x") (B.Number annz{type_=Type1 ["Int"]} 1))))
+      `shouldBe` (["type 'Int' is not declared"], (B.Var annz "x" (Type1 ["Int"]) (B.Write annz (LVar "x") (B.Number annz{type_=Type1 ["Int","1"]} 1))))
 
     it "class/inst" $ do
       compile (Seq annz
@@ -109,3 +109,8 @@ spec = do
     it "ret 1" $ do
       go (Ret annz (Number annz 1))
       `shouldBe` Right (E.Number 1)
+
+    it "data X with Int ; x:Int ; X 1 <- X 2" $ do
+      go (Seq annz (Data annz ["Xxx"] [] (Type1 ["Int"]) False) (Seq annz (Write annz (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 2))) (Ret annz (Number annz 2))))
+      `shouldBe`
+        Left ["types do not match : expected 'Int.1' : found 'Int.2'"]

@@ -197,9 +197,9 @@ spec = do
       it "1 <- 1" $
         (run True "set 1 <- 1 ; return 1")
         `shouldBe` Right (Number 1)
-      it "OK: 1 <- 2" $
+      it "1 <- 2" $
         (run True "set 1 <- 2 ; return 2")
-        `shouldBe` Right (Number 2)
+        `shouldBe` Left "(line 1, column 7):\ntypes do not match : expected 'Int.1' : found 'Int.2'\n"
 
       it "x1 <- 1" $
         (run True "var x:Int <- 1 ; set `x` <- 1 ; return 1")
@@ -214,9 +214,9 @@ spec = do
       it "data X with Int ; X 1 <- X 1" $
         (run True "type Xxx with Int ; set Xxx 1 <- Xxx 1 ; return 1")
         `shouldBe` Right (Number 1)
-      it "OK: data X with Int ; X 2 <- X 1" $
+      it "data X with Int ; X 2 <- X 1" $
         (run True "type Xxx with Int ; set Xxx 2 <- Xxx 1 ; return 1")
-        `shouldBe` Right (Number 2)
+        `shouldBe` Left "(line 1, column 31):\ntypes do not match : expected 'Int.2' : found 'Int.1'\n"
 
     describe "typeclass:" $ do
 
@@ -299,7 +299,7 @@ spec = do
     describe "if-then-else/if-else" $ do
         it "if 0 then return 0 else return 1 end" $
             run True "if 0 then return 0 else return 1 end"
-            `shouldBe` Left "(line 1, column 1):\ntypes do not match : expected 'Bool' : found 'Int'\n"
+            `shouldBe` Left "(line 1, column 1):\ntypes do not match : expected 'Bool' : found 'Int.0'\n"
         it "if 0==1 then return 0 else return 1 end" $
             run True "if 0==1 then return 0 else return 1 end"
             `shouldBe` Right (Number 1)

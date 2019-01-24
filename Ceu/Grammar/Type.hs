@@ -1,6 +1,7 @@
 module Ceu.Grammar.Type where
 
 import Debug.Trace
+import Data.Bool   (bool)
 import Data.Maybe  (fromJust)
 import Data.Either (isRight)
 import Data.List   (sortBy, groupBy, find, intercalate, isPrefixOf)
@@ -75,33 +76,56 @@ instantiate _    tp              = tp
 -------------------------------------------------------------------------------
 
 isSupOf :: Type -> Type -> Bool
-isSupOf sup sub = isRight $ sup `supOf` sub
+isSupOf sup sub = b where (b,_,_) = sup `supOf'` sub
 
 isSubOf :: Type -> Type -> Bool
-isSubOf sub sup = isRight $ sup `supOf` sub
+isSubOf sub sup = b where (b,_,_) = sup `supOf'` sub
 
 supOfErrors :: Type -> Type -> Errors
 supOfErrors sup sub = either id (const []) (sup `supOf` sub)
 
 supOf :: Type -> Type -> Either Errors (Type, [(ID_Var,Type)])
 supOf sup sub =
-  if ret && null es_inst
-    then Right (tp, singles)
-    else Left $ es_tps ++ es_inst
+  if ret && null es_inst then Right (tp, singles)
+                         else Left $ es_tps ++ es_inst
   where
     (ret, tp, insts) = sup `supOf'` sub
 
     es_tps = ["types do not match : expected '" ++ show' sup ++
               "' : found '" ++ show' sub ++ "'"]
 
-    sorted  = sortBy (\(a,_)(b,_) -> compare a b) insts -- [("a",A),("a",A),("b",B)]
-    grouped = groupBy (\(x,_)(y,_)->x==y) sorted        -- [[("a",A),("a",A)], [("b",B)]]
+    sorted  = sortBy (\(a,_,_)(b,_,_) -> compare a b) insts -- [("a",A,>),("a",A,<),("b",B,>)]
+    grouped = groupBy (\(x,_,_)(y,_,_)->x==y) sorted        -- [[("a",A,>),("a",A,<)], [("b",B,>)]]
     es_inst = concatMap f grouped
-    f l@((var,tp):m) = if all (== (var,tp)) m then [] else
-                        ["ambigous instances for '" ++ var ++ "' : " ++
-                         intercalate ", " (map (quote.show'.snd) l)]
-    singles = map head grouped                    -- [("a",A), ("b",B)]
+
+    f l@((var,_,_):_) =
+      let sups    = map gettp $ filter isSup       l
+          subs    = map gettp $ filter (not.isSup) l
+          min_tp  = min sups
+          max_tp  = max subs
+          sups_ok = sups==[] || all (isSupOf min_tp) sups
+          subs_ok = subs==[] || all (isSubOf max_tp) subs
+          ok      = sups_ok && subs_ok &&
+                    (sups==[] || subs==[] || max_tp `isSupOf` min_tp)
+      in
+        if ok then [] else
+          if sups_ok && subs_ok && sups/=[] && subs/=[] && (max_tp `isSubOf` min_tp) then
+            ["type variance does not match : '" ++ show' max_tp ++
+                   "' should be supertype of '" ++ show' min_tp ++ "'"]
+          else
+            ["ambigous instances for '" ++ var ++ "' : " ++
+             intercalate ", " (map (quote.show'.gettp) l)]
+
+    gettp (_,tp,_) = tp
+    isSup (_, _,v) = v
+
+    singles = map ((\(var,tp,_)->(var,tp)).head) grouped    -- [("a",A), ("b",B)]
     quote x = "'" ++ x ++ "'"
+
+    -- the types have no total order but there should be a min
+    --sort' :: Bool -> [Type] -> Type
+    max tps = head $ sortBy (\t1 t2 -> bool LT GT (t1 `isSupOf` t2)) tps
+    min tps = head $ sortBy (\t1 t2 -> bool LT GT (t1 `isSubOf` t2)) tps
 
 -------------------------------------------------------------------------------
 
@@ -110,15 +134,17 @@ supOf sup sub =
 --  * Type: most specific type between the two (second argument on success, first otherwise)
 --  * list: all instantiations of parametric types [(a,X),(b,Y),(a,X),...]
 
-supOf' :: Type -> Type -> (Bool, Type, [(ID_Var,Type)])
+supOf' :: Type -> Type -> (Bool, Type, [(ID_Var,Type,Bool)])
+                                        -- "a" >= tp (True)
+                                        -- "a" <= tp (False)
 
 supOf' _                 TypeB             = (True,  TypeB, [])
 supOf' TypeB             _                 = (False, TypeB, [])
 
 supOf' TypeT             sub               = (True,  sub,   [])
-supOf' sup@(TypeV a1)    sub@(TypeV a2)    = (True,  sub,   [(a1,sub),(a2,sup)])
-supOf' (TypeV a1)        sub               = (True,  sub,   [(a1,sub)])
-supOf' sup               sub@(TypeV a2)    = (True,  sub,   [(a2,sup)])
+supOf' sup@(TypeV a1)    sub@(TypeV a2)    = (True,  sub,   [(a1,sub,True),(a2,sup,False)])
+supOf' (TypeV a1)        sub               = (True,  sub,   [(a1,sub,True)])
+supOf' sup               sub@(TypeV a2)    = (True,  sub,   [(a2,sup,False)])
 supOf' sup               TypeT             = (False, sup,   [])
 
 supOf' Type0             Type0             = (True,  Type0, [])

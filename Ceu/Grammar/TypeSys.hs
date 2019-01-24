@@ -57,14 +57,16 @@ getErrsTypesDeclared z ids tp = concatMap aux $ map (\id->(id, find (isData $ (=
 -------------------------------------------------------------------------------
 
 call :: Ann -> Type -> [Stmt] -> Exp -> Exp -> (Errors, Type, Exp, Exp)
-call z tp_xp ids f exp = (bool es_exp es_f (null es_exp), out, f', exp')
+call z tp_xp ids f exp = (bool es_exp es_f (null es_exp), tp_xp, f', exp')
   where
+    (es_exp, exp') = expr z (TypeV "?") ids exp
     (es_f,   f')   = expr z (TypeF (type_$getAnn$exp') tp_xp) ids f
-    (es_exp, exp') = expr z inp ids exp
+{-
     (inp,out) = case type_ $ getAnn f' of
       TypeF inp' out' -> (inp',out')
       otherwise       -> (TypeV "?", TypeV "?")
     --xx = traceShow $ [tp_xp,(type_$getAnn$exp')]
+-}
 
 read' :: Ann -> Type -> [Stmt] -> ID_Var -> (Errors, Type)
 read' z tp_xp ids id = if id == "_INPUT" then ([], Type1 ["Int"])
@@ -185,29 +187,39 @@ stmt ids s@(Var  z id tp p) = (es_data ++ es_dcl ++ es_id ++ es, Var z id tp p')
                                 es_dcl = errDeclared z "variable" id ids'
                                 ids' = concatMap classinst2ids $ filter (isClass $ const True) ids
 
-stmt ids (Write z loc exp) = (es1 ++ es2, Write z loc exp')
+stmt ids (Write z loc exp) = (es, Write z loc (fromJust exp'))
   where
-    (tps_loc, es1) = aux loc
+    (es, exp', _) = aux loc (Just exp)
 
-    aux :: Loc -> (Type, Errors)
-    aux LAny          = (TypeT, [])
-    aux (LVar var)    = case find (isVar $ (==)var) ids of
-                          Nothing -> (TypeT, [toError z "variable '" ++ var ++ "' is not declared"])
-                          Just (Var _ _ tp _) -> (tp,    [])
-    aux LUnit         = (Type0, [])
-    aux (LNumber v)   = (Type1 ["Int"], [])
-    aux (LRead id)    = (tp_ret, es) where
-                        (es, tp_ret) = read' z tp_xp ids id
-                        tp_xp        = type_ $ getAnn exp
-    aux (LCons hr l)  = (Type1 hr, snd $ aux l)
-    aux (LTuple l)    = (TypeN tps, es) where
-                        l' :: [(Type,Errors)]
-                        l' = map aux l
-                        (tps,es) = foldr cat ([],[]) l'
-                        cat (tp,es1) (tps,es2) = (tp:tps, es1++es2)
+    aux :: Loc -> (Maybe Exp) -> (Errors, Maybe Exp, Type)
+    aux loc exp = (es1++es2, exp', tp) where
+      (es2, exp') = case exp of
+                      Just exp' -> let (x,y) = expr z tp ids exp' in -- VAR: I expect exp.type to be a subtype of tp
+                                    (x, Just y)
+                      otherwise -> ([], Nothing)
 
-    (es2,exp') = expr z tps_loc ids exp
-      -- VAR: I expect exp.type to be a subtype of tps_loc
+      (tp, es1)   = case loc of
+        LAny         -> (TypeT, [])
+        (LVar var)   -> case find (isVar $ (==)var) ids of
+                            Nothing -> (TypeT, [toError z "variable '" ++ var ++ "' is not declared"])
+                            Just (Var _ _ tp _) -> (tp,    [])
+        LUnit        -> (Type0, [])
+        (LNumber v)  -> (Type1 ["Int",show v], [])
+        (LRead id)   -> (tp_ret, es) where
+                          (es, tp_ret) = read' z tp_xp ids id
+                          tp_xp        = type_ $ getAnn $ fromJust exp
+        (LCons hr l) -> (Type1 hr, es) where
+                          (es,_,_) = aux l e
+                          e = case exp of
+                                Just (Cons _ _ e') -> Just e'
+                                otherwise          -> Nothing
+        (LTuple ls)  -> (TypeN tps, es) where
+                          rets = zipWith aux ls exps
+                          exps = case exp of
+                                  Just (Tuple _ es) -> map Just es
+                                  otherwise         -> replicate (length ls) Nothing
+                          tps  = map (\(_,_,tp)->tp) rets
+                          es   = concatMap (\(es,_,_)->es) rets
 
 stmt ids (CallS z f exp)   = (es, CallS z f' exp')
                              where
@@ -252,7 +264,7 @@ expr z tp_xp ids exp = (es1++es2, exp') where
 
 expr' :: Type -> [Stmt] -> Exp -> (Errors, Exp)
 
-expr' _ _   (Number z val)   = ([], Number z{type_=Type1 ["Int"]} val)
+expr' _ _   (Number z v)     = ([], Number z{type_=Type1 ["Int",show v]} v)
 expr' _ _   (Unit   z)       = ([], Unit   z{type_=Type0})
 expr' _ _   (Arg    z)       = ([], Arg    z{type_=TypeB})
 expr' _ ids (Func   z tp p)  = (es, Func   z{type_=tp} tp p')
@@ -274,7 +286,7 @@ expr' _ ids (Cons  z hr exp) = (es++es_exp, Cons z{type_=(Type1 hr)} hr exp')
 expr' _ ids (Tuple z exps)   = (es, Tuple z{type_=tps'} exps')
                                where
                                 rets :: [(Errors,Exp)]
-                                rets  = map (\e -> expr z TypeT ids e) exps
+                                rets  = map (\e -> expr z (TypeV "?") ids e) exps
                                 es    = concat $ map fst rets
                                 exps' = map snd rets
                                 tps'  = TypeN (map (type_.getAnn) exps')
@@ -282,6 +294,6 @@ expr' _ ids (Tuple z exps)   = (es, Tuple z{type_=tps'} exps')
 expr' tp_xp ids (Read z id)  = (es, Read z{type_=tp} id) where
                                (es, tp) = read' z tp_xp ids id
 
-expr' xp ids (Call z f exp)  = (es, Call z{type_=out} f' exp')
-                               where
-                                (es, out, f', exp') = call z xp ids f exp
+expr' tp_xp ids (Call z f exp) = (es, Call z{type_=out} f' exp')
+                                 where
+                                  (es, out, f', exp') = call z tp_xp ids f exp
