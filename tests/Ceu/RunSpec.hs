@@ -198,6 +198,22 @@ spec = do
             "type List",
             "type List.Empty",
             "type List.Pair with (Int,List)",
+            "var l1 : List      <- List",
+            "var l2 : List.Pair <- List.Pair(1, List.Empty)",
+            "set l1   <- l2",
+            "set List <- l2",
+            "var x:Int",
+            "set List.Pair (x,_) <- l2",
+            "return x"
+          ])
+        `shouldBe` Right (Number 1)
+
+      it "List" $
+        (run True $
+          unlines [
+            "type List",
+            "type List.Empty",
+            "type List.Pair with (Int,List)",
             "var l1 : List <- List.Pair(1, List.Empty)",
             "var x1 : Int",
             "set List.Pair(x1,_) <- l1",

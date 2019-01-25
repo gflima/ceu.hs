@@ -122,7 +122,7 @@ pLoc =  (try lany  <|> try lvar  <|> try lunit <|> try lnumber <|>
                 return $ LRead str
     lcons   = do
                 cons <- tk_types
-                loc  <- pLoc
+                loc  <- option LUnit pLoc
                 return $ LCons cons loc
     ltuple  = do
                 locs <- list pLoc
