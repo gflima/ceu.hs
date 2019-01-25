@@ -103,10 +103,6 @@ spec = do
               (Ret annz (Read annz "v"))))))))
         (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
 
-    it "Aa <- Aa.Bb" $ do
-      compile' (Seq annz (Data annz ["Int"] [] Type0 False) (Seq annz (Data annz ["Aa"] [] (Type1 ["Int"]) False) (Seq annz (Data annz ["Aa","Bb"] [] Type0 False) (Seq annz (Seq annz (Seq annz (Var annz "b" (Type1 ["Aa","Bb"])) (Nop annz)) (Write annz (LVar "b") (Cons annz ["Aa","Bb"] (Number annz 1)))) (Seq annz (Seq annz (Seq annz (Var annz "a" (Type1 ["Aa"])) (Nop annz)) (Write annz (LVar "a") (Read annz "b"))) (Seq annz (Seq annz (Seq annz (Var annz "v" (Type1 ["Int"])) (Nop annz)) (Nop annz)) (Seq annz (Write annz (LCons ["Aa"] (LVar "v")) (Read annz "b")) (Ret annz (Read annz "v")))))))))
-      `shouldBe` ([],Data annz ["Int"] [] Type0 False (Data annz ["Aa"] [] (Type1 ["Int"]) False (Data annz ["Aa","Bb"] [] (Type1 ["Int"]) False (Var annz "b" (Type1 ["Aa","Bb"]) (Seq annz (Write annz (LVar "b") (Cons annz{type_ = Type1 ["Aa","Bb"]} ["Aa","Bb"] (Number annz{type_ = Type1 ["Int","1"]} 1))) (Var annz "a" (Type1 ["Aa"]) (Seq annz (Write annz (LVar "a") (Read annz{type_ = Type1 ["Aa","Bb"]} "b")) (Var annz "v" (Type1 ["Int"]) (Seq annz (Write annz (LCons ["Aa"] (LVar "v")) (Read annz{type_ = Type1 ["Aa","Bb"]} "b")) (Ret annz (Read annz{type_ = Type1 ["Int"]} "v")))))))))))
-
   --------------------------------------------------------------------------
 
   describe "go" $ do

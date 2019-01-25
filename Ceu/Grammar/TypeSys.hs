@@ -201,7 +201,7 @@ stmt ids (Write z loc exp) = (es, Write z loc (fromJust exp'))
       (tp, es1)   = case loc of
         LAny         -> (TypeT, [])
         (LVar var)   -> case find (isVar $ (==)var) ids of
-                            Nothing -> (TypeT, [toError z "variable '" ++ var ++ "' is not declared"])
+                            Nothing -> (TypeV "?", [toError z "variable '" ++ var ++ "' is not declared"])
                             Just (Var _ _ tp _) -> (tp,    [])
         LUnit        -> (Type0, [])
         (LNumber v)  -> (Type1 ["Int",show v], [])
