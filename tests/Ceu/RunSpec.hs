@@ -179,6 +179,19 @@ spec = do
         (run True "type Xxx with Int ; type Xxx.Yyy with Int ; var y:Xxx.Yyy <- Xxx.Yyy (1,2) ; return y")
         `shouldBe` Right (Cons ["Xxx","Yyy"] (Tuple [Number 1,Number 2]))
 
+      it "Aa <- Aa.Bb" $
+        (run True $
+          unlines [
+            "type Aa with Int",
+            "type Aa.Bb",
+            "var b : Aa.Bb <- Aa.Bb 1",
+            "var a : Aa <- b",
+            "var v : Int",
+            "set (Aa v) <- b",
+            "return v"
+          ])
+        `shouldBe` Right (Number 1)
+
       it "List" $
         (run True $
           unlines [

@@ -100,14 +100,14 @@ stmt_attr = do
 -- (x, (y,_))
 pLoc :: Parser Loc
 pLoc =  (try lany  <|> try lvar  <|> try lunit <|> try lnumber <|>
-         try lread <|> try lcons <|> try ltuple)
+         try lread <|> try lcons <|> try ltuple) <|>
+         try (tk_str "(" *> ((pLoc <* tk_str ")")))
   where
     lany    = do
                 void <- tk_str "_"
                 return LAny
     lvar    = do
-                var <- try (tk_str "(" *> (tk_var <* tk_str ")")) <|>
-                       try tk_var
+                var <- tk_var
                 return $ LVar var
     lunit   = do
                 void <- tk_str "("
