@@ -40,5 +40,5 @@ compile' p = (es4, p4)
 go :: Stmt -> Either Errors E.Exp
 go p =
   case compile' p of
-    ([], p') -> Right (E.go p')
+    ([], p') -> Right (E.go' p')
     (es, _)  -> Left  es

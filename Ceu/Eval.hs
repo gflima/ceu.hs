@@ -6,7 +6,7 @@ import Debug.Trace
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann          (type_, getAnn)
-import Ceu.Grammar.Type as Type (Type(..), show')
+import Ceu.Grammar.Type as Type (Type(..), show', isSupOf)
 import qualified Ceu.Grammar.Basic   as B
 import qualified Ceu.Grammar.TypeSys as T
 
@@ -133,7 +133,7 @@ step (Write loc e,    vars)  = (Nop, aux vars loc (envEval vars e))
     aux vars (LRead id)    e = let v = envEval vars (Read id) in
                                  if v == e then vars
                                            else err v e
-    aux vars (LCons id l) (Cons id' e) | id==id' = aux vars l e
+    aux vars (LCons id l) (Cons id' e) | Type1 id `isSupOf` Type1 id' = aux vars l e
     aux vars (LTuple ls)  (Tuple es) = foldr (\(loc,e) vars' -> aux vars' loc e)
                                             vars
                                             (zip ls (map (envEval vars) es))
@@ -163,5 +163,8 @@ steps d             = steps (step d)
 
 go :: B.Stmt -> Exp
 go p = case T.go p of
-    ([], p) -> steps (fromStmt p, [])
+    ([], p) -> go' p
     (es, _) -> error $ "compile error : " ++ show es
+
+go' :: B.Stmt -> Exp
+go' p = steps (fromStmt p, [])

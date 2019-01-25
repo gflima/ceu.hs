@@ -475,6 +475,19 @@ spec = do
               (parse' stmt "type Xxx with Int ; set Xxx 1 <- Xxx 2 ; return 2")
               `shouldBe` Right (Seq annz (Data annz ["Xxx"] [] (Type1 ["Int"]) False) (Seq annz (Write annz (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 2))) (Ret annz (Number annz 2))))
 
+            it "Aa <- Aa.Bb" $
+              (parse' stmt $
+                unlines [
+                  "type Aa with Int",
+                  "type Aa.Bb",
+                  "var b : Aa.Bb <- Aa.Bb 1",
+                  "var a : Aa <- b",
+                  "var v : Int",
+                  "set (Aa v) <- b",
+                  "return v"
+                ])
+              `shouldBe` Right (Seq annz (Data annz ["Aa"] [] (Type1 ["Int"]) False) (Seq annz (Data annz ["Aa","Bb"] [] Type0 False) (Seq annz (Seq annz (Seq annz (Var annz "b" (Type1 ["Aa","Bb"])) (Nop annz)) (Write annz (LVar "b") (Cons annz ["Aa","Bb"] (Number annz 1)))) (Seq annz (Seq annz (Seq annz (Var annz "a" (Type1 ["Aa"])) (Nop annz)) (Write annz (LVar "a") (Read annz "b"))) (Seq annz (Seq annz (Seq annz (Var annz "v" (Type1 ["Int"])) (Nop annz)) (Nop annz)) (Seq annz (Write annz (LCons ["Aa"] (LVar "v")) (Read annz "b")) (Ret annz (Read annz "v"))))))))
+
         describe "typeclass:" $ do
 
             it "Int ; F3able a ; inst F3able Int ; return f3 1" $
