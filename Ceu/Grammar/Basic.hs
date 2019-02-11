@@ -47,6 +47,7 @@ data Stmt
     | Data   Ann [ID_Type] [ID_Var] Type Bool Stmt -- new type declaration
     | Var    Ann ID_Var  Type Stmt            -- variable declaration
     | Write  Ann Loc Exp                      -- assignment statement
+    | Write' Ann Loc Exp                      -- assignment statement
     | CallS  Ann Exp Exp                      -- call function
     | If     Ann Exp Stmt Stmt                -- conditional
     | Seq    Ann Stmt Stmt                    -- sequence
@@ -95,6 +96,7 @@ instance HasAnn Stmt where
     getAnn (Data   z _ _ _ _ _) = z
     getAnn (Var    z _ _ _)     = z
     getAnn (Write  z _ _)       = z
+    getAnn (Write' z _ _)       = z
     getAnn (CallS  z _ _)       = z
     getAnn (If     z _ _ _)     = z
     getAnn (Seq    z _ _)       = z

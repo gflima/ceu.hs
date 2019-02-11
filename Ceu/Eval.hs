@@ -89,6 +89,17 @@ fromStmt (B.Write  _ loc e)            = Write (aux (fromLoc loc) (type_ $ getAn
     --aux (LExp x)      tp          = LExp (fromExp x)
     aux loc            _          = loc
 
+fromStmt (B.Write' _ loc e)            = Write (aux (fromLoc loc) (type_ $ getAnn e)) (fromExp e)
+  where
+    aux LAny           _          = LAny
+    aux (LVar id)      tp         =
+      case tp of
+        tp@(TypeF _ _)           -> LVar $ id ++ "__" ++ Type.show' tp
+        otherwise                -> LVar $ id
+    aux (LTuple locs) (TypeN tps) = LTuple $ zipWith aux locs tps
+    --aux (LExp x)      tp          = LExp (fromExp x)
+    aux loc            _          = loc
+
 fromStmt (B.Inst   _ _ _ imp p)        = aux (fromStmt imp) (fromStmt p)
   where
     aux (Var vv (Seq x y)) p = Var vv (Seq x (aux y p))

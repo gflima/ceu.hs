@@ -80,15 +80,13 @@ spec = do
         (Write annz (LVar "ret") (Call annz (Read annz "f") (Unit annz)))))))
         `shouldBe` []
 
-{-
   describe "write!" $ do
     it "1 <- ret" $
       (fst $ TypeSys.go
         (Data annz ["Int"] [] Type0 False
         (Var annz "ret" TypeT
-        (Write' annz (Number annz 1) (Read "ret")))))
+        (Write' annz (LNumber 1) (Read annz "ret")))))
         `shouldBe` []
--}
 
   describe "functions" $ do
     it "func ~Int" $
