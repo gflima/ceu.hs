@@ -11,10 +11,10 @@ import Ceu.Parser.Type
 --import Ceu.Parser.Exp
 import Ceu.Parser.Stmt
 --import Ceu.Grammar.Ann
-import Ceu.Grammar.Globals      (Loc(..))
+import Ceu.Grammar.Globals
 import Ceu.Grammar.Type         (Type(..))
 import Ceu.Grammar.Ann          (annz,source,type_)
-import Ceu.Grammar.Full.Full    (Stmt(..), Exp(..))
+import Ceu.Grammar.Full.Full    (Stmt(..), Exp(..), Loc(..))
 import Ceu.Grammar.Full.Eval    (prelude, compile')
 import qualified Ceu.Grammar.Basic as B
 
@@ -424,7 +424,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 32):\nunexpected 'd'\nexpecting end of input"
             it "func add" $
                 parse expr_func "func ((Int, Int) -> Int) do end"
-                `shouldBe`  Left "(line 1, column 11):\nunexpected \",\"\nexpecting digit, letter, \"_\", \".\", \"(\" or \"`\""
+                `shouldBe` Left "(line 1, column 18):\nunexpected \"-\"\nexpecting \",\" or \")\""
 
         describe "data" $ do
 
@@ -463,7 +463,7 @@ spec = do
 
             it "Xxx.Yyy" $
               (compile' $ fromRight' $ parse' stmt "type Int ; type Xxx with Int ; type Xxx.Yyy with Int ; var y:Xxx.Yyy <- Xxx.Yyy (1,2)")
-              `shouldBe` ([],B.Data annz ["Int"] [] Type0 False (B.Data annz ["Xxx"] [] (Type1 ["Int"]) False (B.Data annz ["Xxx","Yyy"] [] (TypeN [Type1 ["Int"],Type1 ["Int"]]) False (B.Var annz "y" (Type1 ["Xxx","Yyy"]) (B.Write annz (LVar "y") (B.Cons annz{type_=Type1 ["Xxx","Yyy"]} ["Xxx","Yyy"] (B.Tuple annz{type_=TypeN [Type1 ["Int","1"],Type1 ["Int","2"]]} [B.Number annz{type_=Type1 ["Int","1"]} 1,B.Number annz{type_=Type1 ["Int","2"]} 2])))))))
+              `shouldBe` ([],B.Data annz ["Int"] [] Type0 False (B.Data annz ["Xxx"] [] (Type1 ["Int"]) False (B.Data annz ["Xxx","Yyy"] [] (TypeN [Type1 ["Int"],Type1 ["Int"]]) False (B.Var annz "y" (Type1 ["Xxx","Yyy"]) (B.Write annz (B.LVar "y") (B.Cons annz{type_=Type1 ["Xxx","Yyy"]} ["Xxx","Yyy"] (B.Tuple annz{type_=TypeN [Type1 ["Int","1"],Type1 ["Int","2"]]} [B.Number annz{type_=Type1 ["Int","1"]} 1,B.Number annz{type_=Type1 ["Int","2"]} 2])))))))
 
             it "data X with Int ; x:Int ; X x <- X 1" $
               (parse' stmt "type Xxx with Int ; var x:Int ; set Xxx x <- Xxx 1 ; return x")

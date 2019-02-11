@@ -205,9 +205,6 @@ stmt ids (Write z loc exp) = (es, Write z loc (fromJust exp'))
                             Just (Var _ _ tp _) -> (tp,    [])
         LUnit        -> (Type0, [])
         (LNumber v)  -> (Type1 ["Int",show v], [])
-        (LRead id)   -> (tp_ret, es) where
-                          (es, tp_ret) = read' z tp_xp ids id
-                          tp_xp        = type_ $ getAnn $ fromJust exp
         (LCons hr l) -> (Type1 hr, es) where
                           (es,_,_) = aux l e
                           e = case exp of
@@ -220,6 +217,9 @@ stmt ids (Write z loc exp) = (es, Write z loc (fromJust exp'))
                                   otherwise         -> replicate (length ls) Nothing
                           tps  = map (\(_,_,tp)->tp) rets
                           es   = concatMap (\(es,_,_)->es) rets
+        (LExp exp)   -> (tp, es) where
+                          (es,exp') = expr z (TypeV "?") ids exp
+                          tp = type_ $ getAnn exp'
 
 stmt ids (CallS z f exp)   = (es, CallS z f' exp')
                              where

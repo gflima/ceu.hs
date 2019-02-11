@@ -23,6 +23,15 @@ data Exp
     | Call   Exp Exp        -- f a ; f(a) ; f(1,2)
     deriving (Eq, Show)
 
+data Loc = LAny
+         | LVar ID_Var
+         | LUnit
+         | LNumber Int
+         | LCons [ID_Type] Loc
+         | LTuple [Loc]
+         | LExp Exp
+  deriving (Eq, Show)
+
 data Stmt
     = Var    (ID_Var,Maybe Exp) Stmt    -- block with environment store
     | Write  Loc Exp                    -- assignment statement
@@ -49,6 +58,14 @@ fromExp (B.Read   z id)   = Read id' where
                                 tp@(TypeF _ _) -> id ++ "__" ++ Type.show' tp
                                 otherwise      -> id
 
+fromLoc B.LAny             = LAny
+fromLoc (B.LVar   id)      = LVar id
+fromLoc B.LUnit            = LUnit
+fromLoc (B.LNumber n)      = LNumber n
+fromLoc (B.LCons  tps loc) = LCons tps (fromLoc loc)
+fromLoc (B.LTuple locs)    = LTuple $ map fromLoc locs
+fromLoc (B.LExp   exp)     = LExp (fromExp exp)
+
 fromStmt :: B.Stmt -> Stmt
 fromStmt (B.Class  _ _ _ _   p)        = fromStmt p
 fromStmt (B.Data   _ _ _ _ _ p)        = fromStmt p
@@ -61,7 +78,7 @@ fromStmt (B.Loop   _ p)                = Loop' (fromStmt p) (fromStmt p)
 fromStmt (B.Ret    _ e)                = Ret (fromExp e)
 fromStmt (B.Nop    _)                  = Nop
 
-fromStmt (B.Write  _ loc e)            = Write (aux loc (type_ $ getAnn e)) (fromExp e)
+fromStmt (B.Write  _ loc e)            = Write (aux (fromLoc loc) (type_ $ getAnn e)) (fromExp e)
   where
     aux LAny           _          = LAny
     aux (LVar id)      tp         =
@@ -69,6 +86,7 @@ fromStmt (B.Write  _ loc e)            = Write (aux loc (type_ $ getAnn e)) (fro
         tp@(TypeF _ _)           -> LVar $ id ++ "__" ++ Type.show' tp
         otherwise                -> LVar $ id
     aux (LTuple locs) (TypeN tps) = LTuple $ zipWith aux locs tps
+    --aux (LExp x)      tp          = LExp (fromExp x)
     aux loc            _          = loc
 
 fromStmt (B.Inst   _ _ _ imp p)        = aux (fromStmt imp) (fromStmt p)
@@ -130,13 +148,16 @@ step (Write loc e,    vars)  = (Nop, aux vars loc (envEval vars e))
     aux vars (LNumber x)   e = case e of
                                  (Number y) | x == y -> vars
                                  _                   -> err x e
-    aux vars (LRead id)    e = let v = envEval vars (Read id) in
-                                 if v == e then vars
-                                           else err v e
     aux vars (LCons id l) (Cons id' e) | Type1 id `isSupOf` Type1 id' = aux vars l e
     aux vars (LTuple ls)  (Tuple es) = foldr (\(loc,e) vars' -> aux vars' loc e)
-                                            vars
-                                            (zip ls (map (envEval vars) es))
+                                             vars
+                                             (zip ls (map (envEval vars) es))
+    aux vars (LExp x)      e = let x' = (envEval vars x) in
+                                if x' == e then
+                                  vars
+                                else
+                                  err (show x') (show e)
+
     err xp got = error $ "assignment does not match : expected '" ++ show xp ++
                                                  "' : found '"    ++ show got ++ "'"
 

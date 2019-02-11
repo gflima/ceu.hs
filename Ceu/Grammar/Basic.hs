@@ -30,6 +30,17 @@ instance HasAnn Exp where
 
 -------------------------------------------------------------------------------
 
+data Loc = LAny
+         | LVar ID_Var
+         | LUnit
+         | LNumber Int
+         | LCons [ID_Type] Loc
+         | LTuple [Loc]
+         | LExp Exp
+  deriving (Eq, Show)
+
+-------------------------------------------------------------------------------
+
 data Stmt
     = Class  Ann ID_Class [ID_Var] Stmt Stmt  -- new class declaration
     | Inst   Ann ID_Class [Type] Stmt Stmt    -- new class instance

@@ -208,7 +208,7 @@ spec = do
           ])
         `shouldBe` Right (Number 1)
 
-      it "List" $
+      it "TODO: List" $
         (run True $
           unlines [
             "type List",
@@ -236,6 +236,9 @@ spec = do
       it "OK: x1 <- 2" $
         (run True "var x:Int <- 1 ; set `x` <- 2 ; return 2")
         `shouldBe` Right (Number 2)
+      it "TODO: 1 <- x" $
+        (run True "var x:Int <- 1 ; set 1 <- x ; return x")
+        `shouldBe` Right (Number 1)
 
       it "data X with Int ; x:Int ; X x <- X 1" $
         (run True "type Xxx with Int ; var x:Int ; set Xxx x <- Xxx 1 ; return x")

@@ -43,6 +43,25 @@ instance HasAnn Exp where
 
 -------------------------------------------------------------------------------
 
+data Loc = LAny
+         | LVar ID_Var
+         | LUnit
+         | LNumber Int
+         | LCons [ID_Type] Loc
+         | LTuple [Loc]
+         | LExp Exp
+  deriving (Eq, Show)
+
+toBasicLoc LAny             = B.LAny
+toBasicLoc (LVar   id)      = B.LVar id
+toBasicLoc LUnit            = B.LUnit
+toBasicLoc (LNumber n)      = B.LNumber n
+toBasicLoc (LCons  tps loc) = B.LCons tps (toBasicLoc loc)
+toBasicLoc (LTuple locs)    = B.LTuple $ map toBasicLoc locs
+toBasicLoc (LExp   exp)     = B.LExp (toBasicExp exp)
+
+-------------------------------------------------------------------------------
+
 data Stmt
   = Class    Ann ID_Class [ID_Var] Stmt           -- new class declaration
   | Inst     Ann ID_Class [Type]   Stmt           -- new class instance
@@ -88,7 +107,7 @@ toBasicStmt (Class' z cls vars ifc p)    = B.Class z cls vars (toBasicStmt ifc) 
 toBasicStmt (Inst'  z cls tps  imp p)    = B.Inst  z cls tps  (toBasicStmt imp) (toBasicStmt p)
 toBasicStmt (Data' z tp vars flds abs p) = B.Data  z tp  vars flds abs (toBasicStmt p)
 toBasicStmt (Var' z var tp p)  = B.Var z var tp (toBasicStmt p)
-toBasicStmt (Write z loc exp)  = B.Write z loc (toBasicExp exp)
+toBasicStmt (Write z loc exp)  = B.Write z (toBasicLoc loc) (toBasicExp exp)
 toBasicStmt (If z exp p1 p2)   = B.If z (toBasicExp exp) (toBasicStmt p1) (toBasicStmt p2)
 toBasicStmt (Seq z p1 p2)      = B.Seq z (toBasicStmt p1) (toBasicStmt p2)
 toBasicStmt (Loop z p)         = B.Loop z (toBasicStmt p)

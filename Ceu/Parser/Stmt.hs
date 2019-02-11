@@ -12,7 +12,7 @@ import Ceu.Parser.Common
 import Ceu.Parser.Token
 import Ceu.Parser.Type        (pType, type_F, tk_types)
 
-import Ceu.Grammar.Globals    (Source, Loc(..), ID_Var)
+import Ceu.Grammar.Globals    (Source, ID_Var)
 import Ceu.Grammar.Type       (Type(..))
 import Ceu.Grammar.Ann        (annz, source, getAnn, Ann(..))
 import Ceu.Grammar.Full.Full
@@ -99,8 +99,8 @@ stmt_attr = do
 
 -- (x, (y,_))
 pLoc :: Parser Loc
-pLoc =  (try lany  <|> try lvar  <|> try lunit <|> try lnumber <|>
-         try lread <|> try lcons <|> try ltuple) <|>
+pLoc =  (try lany  <|> try lvar   <|> try lunit  <|> try lnumber <|>
+         try lcons <|> try ltuple <|> try lexp) <|>
          try (tk_str "(" *> ((pLoc <* tk_str ")")))
   where
     lany    = do
@@ -116,10 +116,6 @@ pLoc =  (try lany  <|> try lvar  <|> try lunit <|> try lnumber <|>
     lnumber = do
                 num <- tk_num
                 return $ LNumber num
-    lread   = do
-                str <- try (tk_str "`" *> (tk_var <* tk_str "`")) <|>
-                       try (tk_str "`" *> (tk_op  <* tk_str "`"))
-                return $ LRead str
     lcons   = do
                 cons <- tk_types
                 loc  <- option LUnit pLoc
@@ -127,6 +123,9 @@ pLoc =  (try lany  <|> try lvar  <|> try lunit <|> try lnumber <|>
     ltuple  = do
                 locs <- list pLoc
                 return (LTuple $ locs)
+    lexp    = do
+                exp <- tk_str "`" *> expr <* tk_str "`"
+                return $ LExp exp
 
 matchLocType :: Source -> Loc -> Type -> Maybe Stmt
 matchLocType src loc tp = case (aux src loc tp) of
@@ -292,7 +291,7 @@ expr = try expr_infix <|> try expr_prefix <|> try expr_posfix <|> try expr_prim
 
 func :: Source -> Parser (Type, Stmt)
 func pos = do
-  loc  <- try pLoc
+  loc  <- pLoc
   void <- tk_str ":"
   tp   <- type_F
 

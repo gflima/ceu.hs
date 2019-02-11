@@ -80,6 +80,16 @@ spec = do
         (Write annz (LVar "ret") (Call annz (Read annz "f") (Unit annz)))))))
         `shouldBe` []
 
+{-
+  describe "write!" $ do
+    it "1 <- ret" $
+      (fst $ TypeSys.go
+        (Data annz ["Int"] [] Type0 False
+        (Var annz "ret" TypeT
+        (Write' annz (Number annz 1) (Read "ret")))))
+        `shouldBe` []
+-}
+
   describe "functions" $ do
     it "func ~Int" $
       (fst $ TypeSys.go (Var annz "f" (TypeF Type0 (Type1 ["Int"])) (Nop annz)))
@@ -173,12 +183,12 @@ spec = do
 
     it "`a` = 1" $
       TypeSys.go (prelude annz
-        (Var annz "a" (Type1 ["Int"]) (Write annz (LRead "a") (Number annz 1))))
-      `shouldBe` ([],Data annz ["Int"] [] Type0 False (Var annz "a" (Type1 ["Int"]) (Write annz (LRead "a") (Number annz{type_=Type1 ["Int","1"]} 1))))
+        (Var annz "a" (Type1 ["Int"]) (Write annz (LExp $ Read annz "a") (Number annz 1))))
+      `shouldBe` ([],Data annz ["Int"] [] Type0 False (Var annz "a" (Type1 ["Int"]) (Write annz (LExp $ Read annz "a") (Number annz{type_=Type1 ["Int","1"]} 1))))
     it "`a` = 1" $
       TypeSys.go (prelude annz
-        (Var annz "a" Type0 (Write annz (LRead "a") (Number annz 1))))
-      `shouldBe` (["types do not match : expected '()' : found 'Int.1'"],Data annz ["Int"] [] Type0 False (Var annz "a" Type0 (Write annz (LRead "a") (Number annz{type_=Type1 ["Int","1"]} 1))))
+        (Var annz "a" Type0 (Write annz (LExp $ Read annz "a") (Number annz 1))))
+      `shouldBe` (["types do not match : expected '()' : found 'Int.1'"],Data annz ["Int"] [] Type0 False (Var annz "a" Type0 (Write annz (LExp $ Read annz "a") (Number annz{type_=Type1 ["Int","1"]} 1))))
 
     it "data X with Int ; x:Int ; X 1 <- X 2" $
       (fst $ TypeSys.go (prelude annz

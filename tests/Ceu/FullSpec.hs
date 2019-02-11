@@ -4,7 +4,6 @@ import Test.Hspec
 import Text.Printf
 import Debug.Trace
 
-import Ceu.Grammar.Globals  (Loc(..))
 import Ceu.Grammar.Type     (Type(..))
 import Ceu.Grammar.Ann      (Ann(type_),annz)
 
@@ -54,7 +53,7 @@ spec = do
 
       it "scope var x end ; x=1" $ do
         compile' (Seq annz (Scope annz (Var annz "x" (Type1 ["Int"]))) (Write annz (LVar "x") (Number annz 1)))
-        `shouldBe` (["type 'Int' is not declared","variable 'x' is not declared"], B.Seq annz (B.Var annz "x" (Type1 ["Int"]) (B.Nop annz)) (B.Write annz (LVar "x") (B.Number (annz{type_=Type1 ["Int","1"]}) 1)))
+        `shouldBe` (["type 'Int' is not declared","variable 'x' is not declared"], B.Seq annz (B.Var annz "x" (Type1 ["Int"]) (B.Nop annz)) (B.Write annz (B.LVar "x") (B.Number (annz{type_=Type1 ["Int","1"]}) 1)))
 
   --------------------------------------------------------------------------
 
@@ -66,7 +65,7 @@ spec = do
 
     it "do var x; x = 1 end" $ do
       compile' (Var' annz "x" (Type1 ["Int"]) (Write annz (LVar "x") (Number annz 1)))
-      `shouldBe` (["type 'Int' is not declared"], (B.Var annz "x" (Type1 ["Int"]) (B.Write annz (LVar "x") (B.Number annz{type_=Type1 ["Int","1"]} 1))))
+      `shouldBe` (["type 'Int' is not declared"], (B.Var annz "x" (Type1 ["Int"]) (B.Write annz (B.LVar "x") (B.Number annz{type_=Type1 ["Int","1"]} 1))))
 
     it "class/inst" $ do
       compile (Seq annz
