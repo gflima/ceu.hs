@@ -186,26 +186,43 @@ stmt ids s@(Var  z id tp p) = (es_data ++ es_dcl ++ es_id ++ es, Var z id tp p')
                                 es_dcl = errDeclared z "variable" id ids'
                                 ids' = concatMap classinst2ids $ filter (isClass $ const True) ids
 
-stmt ids (Match z loc exp p1 p2) = (es++esE++es1++es2, Match z loc' exp' p1' p2')
+stmt ids (Match z loc exp p1 p2) = (es++es1++es2, Match z loc' (fromJust exp') p1' p2')
   where
-    (es1, p1')  = stmt ids p1
-    (es2, p2')  = stmt ids p2
-    (esE, exp') = expr z (TypeV "?") ids exp
-    (loc', es)  = aux ids z loc (type_ $ getAnn exp')
+    (es1, p1') = stmt ids p1
+    (es2, p2') = stmt ids p2
+    (es, loc', exp') = aux ids z loc (Just exp)
 
-    aux :: [Stmt] -> Ann -> Loc -> Type -> (Loc, Errors)
-    aux ids z loc tp =
+    f :: Type -> Maybe Exp -> (Errors, Maybe Exp)
+    f tp mexp =
+      case mexp of
+        Nothing  -> ([], Nothing)
+        Just exp -> (es, Just exp') where (es,exp') = expr z tp ids exp
+
+    aux :: [Stmt] -> Ann -> Loc -> Maybe Exp -> (Errors, Loc, Maybe Exp)
+    aux ids z loc mexp =
       case loc of
-        LAny         -> (loc, [])
-        (LVar var)   -> (loc, es) where
-                        es = case find (isVar $ (==)var) ids of
-                          (Just (Var _ _ tp' _)) -> supOfErrors tp' tp
-                          Nothing                -> [toError z "variable '" ++ var ++ "' is not declared"]
-        LUnit        -> (loc, supOfErrors tp Type0)
-        (LNumber v)  -> (loc, supOfErrors tp (Type1 ["Int",show v]))
-        (LCons hr l) -> (LCons hr l', supsubOfErrors tp (Type1 hr) ++ es) where
-                        (l', es) = aux ids z l Type0
-        (LTuple ls)  -> (LTuple ls'', esA++concat es) where
+        LAny         -> (ese, loc, exp') where (ese,exp') = f TypeT mexp
+        LUnit        -> (ese, loc, exp') where (ese,exp') = f Type0 mexp
+        (LNumber v)  -> (ese, loc, exp') where (ese,exp') = f (Type1 ["Int",show v]) mexp
+        (LVar var)   -> (esl++ese, loc, exp') where
+                          (ese,exp') = f tpl mexp
+                          (tpl,esl)  = case find (isVar $ (==)var) ids of
+                            (Just (Var _ _ tp _)) -> (tp, [])
+                            Nothing               -> (TypeT, [toError z "variable '" ++ var ++ "' is not declared"])
+
+
+{-
+        (LCons hr l) -> (es_hr++es_l, LCons hr l', exp') where
+                          es_hr = supOfErrors (type_ $ getAnn exp') (Type1 hr)
+                          (es_l, l', exp') = case exp of
+                            (Cons _ x) -> aux ids z l x
+                            otherwise  -> (es1++es2,ll,ee) where
+                                            (es1,ll,_) = aux ids z l ?
+                                            (es2,ee)   = expr z TypeB ids exp
+
+        (LTuple ls)  -> (es, LTuple ls', exp') where
+
+
                         (ls'', es) = unzip $ zipWith (aux ids z) ls' tps'
                         tps' = tps ++ replicate (length ls  - length tps) (TypeV "?")
                         ls'  = ls  ++ replicate (length tps - length ls)  LAny
@@ -215,8 +232,13 @@ stmt ids (Match z loc exp p1 p2) = (es++esE++es1++es2, Match z loc' exp' p1' p2'
                                 (TypeN tps) -> tps
                                 otherwise   -> []
 
-        (LExp e)     -> (LExp e', es ++ (traceShow (tp,type_ $ getAnn e') (supsubOfErrors tp (type_ $ getAnn e')))) where
-                        (es, e') = expr z (TypeV "?") ids e
+                        case exp of
+                          (Tuple exps) -> exps
+-}
+
+        (LExp e)     -> (es++ese, LExp e', exp') where
+                          (ese,exp') = f (type_ $ getAnn e') mexp
+                          (es, e')   = expr z TypeT ids e
 
 stmt ids (CallS z f exp) = (es, CallS z f' exp') where
                            (es, _, f', exp') = call z (TypeV "?") ids f exp
