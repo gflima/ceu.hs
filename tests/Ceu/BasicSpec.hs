@@ -24,14 +24,19 @@ spec = do
 
   describe "checkTypeSys -- declarations" $ do
 
-  checkCheckIt (Nop annz)                  []
-  checkCheckIt (Var annz "a" Type0 (Nop annz))          []
-  checkCheckIt (prelude annz (Var annz "a" (Type1 ["Int"]) (Match annz (LVar "a") (Number annz 1) (Nop annz) (Nop annz)))) []
-  checkCheckIt (prelude annz (Var annz "a" (TypeN [Type1 ["Int"],Type1 ["Int"]]) (Match annz (LVar "a") (Number annz 1) (Nop annz) (Nop annz)))) ["types do not match : expected '(Int,Int)' : found 'Int.1'"]
-  --checkCheckIt (Var annz "a" Type0 (Match annz (LVar "a") (Number annz 1) (Nop annz) (Nop annz))) ["types do not match"]
-  checkCheckIt (Var annz "a" Type0 (Match annz (LVar "a") (Number annz 1) (Nop annz) (Nop annz))) ["types do not match : expected '()' : found 'Int.1'"]
-  checkCheckIt (Var annz "a" Type0 (Match annz (LCons ["Bool","True"] LUnit) (Read annz "a") (Nop annz) (Nop annz))) ["types do not match : expected '()' : found 'Bool.True'"]
-  checkCheckIt (prelude annz (Var annz "a" (Type1 ["Int"]) (Match annz (LCons ["Bool","True"] LUnit) (Read annz "a") (Nop annz) (Nop annz)))) ["types do not match : expected 'Int' : found 'Bool.True'"]
+    checkCheckIt (Nop annz)                  []
+    checkCheckIt (Var annz "a" Type0 (Nop annz))          []
+    checkCheckIt (prelude annz (Var annz "a" (Type1 ["Int"]) (Match annz (LVar "a") (Number annz 1) (Nop annz) (Nop annz)))) []
+    checkCheckIt (prelude annz (Var annz "a" (TypeN [Type1 ["Int"],Type1 ["Int"]]) (Match annz (LVar "a") (Number annz 1) (Nop annz) (Nop annz)))) ["types do not match : expected '(Int,Int)' : found 'Int.1'"]
+    --checkCheckIt (Var annz "a" Type0 (Match annz (LVar "a") (Number annz 1) (Nop annz) (Nop annz))) ["types do not match"]
+    checkCheckIt (Var annz "a" Type0 (Match annz (LVar "a") (Number annz 1) (Nop annz) (Nop annz))) ["types do not match : expected '()' : found 'Int.1'"]
+
+    it "a:() ; True <- a" $
+      (fst $ TypeSys.go (Var annz "a" Type0 (Match annz (LCons ["Bool","True"] LUnit) (Read annz "a") (Nop annz) (Nop annz))))
+        `shouldBe` ["types do not match : expected 'Bool.True' : found '()'"]
+    it "a:Int ; True <- a" $
+      (fst $ TypeSys.go (prelude annz (Var annz "a" (Type1 ["Int"]) (Match annz (LCons ["Bool","True"] LUnit) (Read annz "a") (Nop annz) (Nop annz)))))
+        `shouldBe` ["types do not match : expected 'Bool.True' : found 'Int'"]
   checkCheckIt (Data annz ["Bool"] [] Type0 False (Var annz "a" (Type1 ["Bool"]) (Match annz (LCons ["Bool","True"] LUnit) (Read annz "a") (Nop annz) (Nop annz)))) []
   checkCheckIt (Var annz "a" Type0 (Var annz "a" Type0 (Nop annz)))  ["variable 'a' is already declared"]
   checkCheckIt (Match annz (LVar "a") (Number annz 1) (Nop annz) (Nop annz))        ["variable 'a' is not declared"]
@@ -99,7 +104,7 @@ spec = do
     it "1 <- ret" $
       (fst $ TypeSys.go
         (Data annz ["Int"] [] Type0 False
-        (Var annz "ret" TypeT
+        (Var annz "ret" (Type1 ["Int"])
         (Match annz (LNumber 1) (Read annz "ret") (Nop annz) (Nop annz)))))
         `shouldBe` []
 
@@ -120,11 +125,11 @@ spec = do
       TypeSys.go (Var annz "f" (TypeF Type0 Type0) (Var annz "f" (TypeF Type0 TypeT) (Nop annz)))
         `shouldBe` (["variable 'f' is already declared"],Var annz "f" (TypeF Type0 Type0) (Var annz "f" (TypeF Type0 TypeT) (Nop annz)))
 
-    -- func first :: (a,a)->a ; var a::Int ; a = first((),1)
-    checkCheckIt
-      (prelude annz (Var annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 ["Int"]) (Match annz (LVar "a") (Call annz (Read annz "first") (Tuple annz [(Unit annz),(Number annz 1)])) (Nop annz) (Nop annz)))))
+    it "func first :: (a,a)->a ; var a::Int ; a = first((),1)" $
+      (fst $ TypeSys.go (prelude annz (Var annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 ["Int"]) (Match annz (LVar "a") (Call annz (Read annz "first") (Tuple annz [(Unit annz),(Number annz 1)])) (Nop annz) (Nop annz))))))
+        `shouldBe`
       --["types do not match : expected '(a,a)' : found '((),Int)'","ambigous instances for 'a' : '()', 'Int'"]
-      ["types do not match : expected '(((),Int.1) -> Int)' : found '((a,a) -> a)'","ambigous instances for 'a' : '()', 'Int.1', 'Int'"]
+          ["types do not match : expected '(((),Int.1) -> Int)' : found '((a,a) -> a)'","ambigous instances for 'a' : '()', 'Int.1', 'Int'"]
 
     checkCheckIt (prelude annz (Var annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (Type1 ["Int"]) (Match annz (LVar "a") (Call annz (Read annz "first") (Tuple annz [(Number annz 1),(Number annz 1)])) (Nop annz) (Nop annz))))) []
 
@@ -203,11 +208,11 @@ spec = do
     it "`a` = 1" $
       TypeSys.go (prelude annz
         (Var annz "a" (Type1 ["Int"]) (Match annz (LExp $ Read annz "a") (Number annz 1) (Nop annz) (Nop annz))))
-      `shouldBe` ([],Data annz ["Int"] [] Type0 False (Var annz "a" (Type1 ["Int"]) (Match annz (LExp $ Read annz "a") (Number annz{type_=Type1 ["Int","1"]} 1) (Nop annz) (Nop annz))))
+      `shouldBe` ([],Data annz ["Int"] [] Type0 False (Var annz "a" (Type1 ["Int"]) (Match annz (LExp $ Read annz{type_ = Type1 ["Int"]} "a") (Number annz{type_=Type1 ["Int","1"]} 1) (Nop annz) (Nop annz))))
     it "`a` = 1" $
       TypeSys.go (prelude annz
         (Var annz "a" Type0 (Match annz (LExp $ Read annz "a") (Number annz 1) (Nop annz) (Nop annz))))
-      `shouldBe` (["types do not match : expected 'Int.1' : found '()'"],Data annz ["Int"] [] Type0 False (Var annz "a" Type0 (Match annz (LExp $ Read annz "a") (Number annz{type_=Type1 ["Int","1"]} 1) (Nop annz) (Nop annz))))
+      `shouldBe` (["types do not match : expected '()' : found 'Int.1'"],Data annz ["Int"] [] Type0 False (Var annz "a" Type0 (Match annz (LExp $ Read annz{type_ = Type0} "a") (Number annz{type_=Type1 ["Int","1"]} 1) (Nop annz) (Nop annz))))
 
     it "data X with Int ; x:Int ; X 1 <- X 2" $
       (fst $ TypeSys.go (prelude annz

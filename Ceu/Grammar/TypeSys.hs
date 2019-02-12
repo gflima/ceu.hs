@@ -6,7 +6,8 @@ import Data.Maybe (isJust, fromJust)
 import Data.Bool (bool)
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Type as Type (Type(..), show', supOf, isSubOf, supOfErrors, instantiate, get1s, getSuper, cat, hier2str)
+import Ceu.Grammar.Type as Type (Type(..), show', supOf, isSubOf, supOfErrors,
+                                 supsubOfErrors, instantiate, get1s, getSuper, cat, hier2str)
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
 
@@ -185,36 +186,40 @@ stmt ids s@(Var  z id tp p) = (es_data ++ es_dcl ++ es_id ++ es, Var z id tp p')
                                 es_dcl = errDeclared z "variable" id ids'
                                 ids' = concatMap classinst2ids $ filter (isClass $ const True) ids
 
-stmt ids (Match z loc exp p1 p2) = (es++esE++es1++es2, Match z loc exp' p1' p2')
+stmt ids (Match z loc exp p1 p2) = (es++esE++es1++es2, Match z loc' exp' p1' p2')
   where
     (es1, p1')  = stmt ids p1
     (es2, p2')  = stmt ids p2
     (esE, exp') = expr z (TypeV "?") ids exp
-    es          = aux ids z loc (type_ $ getAnn exp')
+    (loc', es)  = aux ids z loc (type_ $ getAnn exp')
 
-    aux :: [Stmt] -> Ann -> Loc -> Type -> Errors
+    aux :: [Stmt] -> Ann -> Loc -> Type -> (Loc, Errors)
     aux ids z loc tp =
       case loc of
-        LAny         -> []
-        (LVar var)   -> case find (isVar $ (==)var) ids of
+        LAny         -> (loc, [])
+        (LVar var)   -> (loc, es) where
+                        es = case find (isVar $ (==)var) ids of
                           (Just (Var _ _ tp' _)) -> supOfErrors tp' tp
                           Nothing                -> [toError z "variable '" ++ var ++ "' is not declared"]
-        LUnit        -> supOfErrors tp Type0
-        (LNumber v)  -> supOfErrors tp (Type1 ["Int",show v])
-        (LCons hr l) -> supOfErrors tp (Type1 hr) ++
-                        case tp of
-                          (Type1 _) -> aux ids z l Type0
-                          otherwise -> []
-        (LTuple ls)  -> case tp of
-                          (TypeN tps) -> concat (zipWith (aux ids z) ls tps) ++
-                                         bool [] [toError z "arity mismatch"]
-                                              (length ls /= length tps)
-                          otherwise   -> [toError z "arity mismatch"]
-        (LExp exp)   -> supOfErrors tp (type_ $ getAnn exp)
+        LUnit        -> (loc, supOfErrors tp Type0)
+        (LNumber v)  -> (loc, supOfErrors tp (Type1 ["Int",show v]))
+        (LCons hr l) -> (LCons hr l', supsubOfErrors tp (Type1 hr) ++ es) where
+                        (l', es) = aux ids z l Type0
+        (LTuple ls)  -> (LTuple ls'', esA++concat es) where
+                        (ls'', es) = unzip $ zipWith (aux ids z) ls' tps'
+                        tps' = tps ++ replicate (length ls  - length tps) (TypeV "?")
+                        ls'  = ls  ++ replicate (length tps - length ls)  LAny
+                        esA  = bool [] [toError z "arity mismatch"]
+                                    (length ls /= length tps)
+                        tps  = case tp of
+                                (TypeN tps) -> tps
+                                otherwise   -> []
 
-stmt ids (CallS z f exp)   = (es, CallS z f' exp')
-                             where
-                              (es, _, f', exp') = call z (TypeV "?") ids f exp
+        (LExp e)     -> (LExp e', es ++ (traceShow (tp,type_ $ getAnn e') (supsubOfErrors tp (type_ $ getAnn e')))) where
+                        (es, e') = expr z (TypeV "?") ids e
+
+stmt ids (CallS z f exp) = (es, CallS z f' exp') where
+                           (es, _, f', exp') = call z (TypeV "?") ids f exp
 
 -------------------------------------------------------------------------------
 

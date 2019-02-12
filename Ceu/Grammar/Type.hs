@@ -84,6 +84,12 @@ isSubOf sub sup = b where (b,_,_) = sup `supOf'` sub
 supOfErrors :: Type -> Type -> Errors
 supOfErrors sup sub = either id (const []) (sup `supOf` sub)
 
+supsubOfErrors :: Type -> Type -> Errors
+supsubOfErrors tp1 tp2 =
+  let es = supOfErrors tp1 tp2 in
+    if null es then [] else
+      supOfErrors tp2 tp1
+
 supOf :: Type -> Type -> Either Errors (Type, [(ID_Var,Type)])
 supOf sup sub =
   if ret && null es_inst then Right (tp, singles)
