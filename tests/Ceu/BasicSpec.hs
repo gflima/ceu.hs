@@ -194,11 +194,13 @@ spec = do
             (Var annz "x" (Type1 ["Int"])
               (Match annz (LTuple [LVar "x", LAny]) (Number annz 1) (Nop annz) (Nop annz))))
       `shouldBe` (["arity mismatch"],Data annz ["Int"] [] Type0 False (Var annz{type_=TypeB} "x" (Type1 ["Int"]) (Match annz{type_=TypeB} (LTuple [LVar "x",LAny]) (Number annz{type_=Type1 ["Int","1"]} 1) (Nop annz) (Nop annz))))
+
     it "(x,_) = (1,1)" $
       TypeSys.go (prelude annz
             (Var annz "x" (Type1 ["Int"])
               (Match annz (LTuple [LVar "x", LAny]) (Tuple annz [Number annz 1, Number annz 1]) (Nop annz) (Nop annz))))
       `shouldBe` ([],Data annz ["Int"] [] Type0 False (Var (annz{type_ = TypeB}) "x" (Type1 ["Int"]) (Match (annz{type_ = TypeB}) (LTuple [LVar "x",LAny]) (Tuple (annz{type_ = TypeN [Type1 ["Int","1"],Type1 ["Int","1"]]}) [Number (annz{type_ = Type1 ["Int","1"]}) 1,Number (annz{type_ = Type1 ["Int","1"]}) 1]) (Nop annz) (Nop annz))))
+
     it "((_,x),_) = (y,1)" $
       TypeSys.go (prelude annz
             (Var annz "x" (Type1 ["Int"])
