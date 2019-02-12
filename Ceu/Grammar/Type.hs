@@ -138,14 +138,16 @@ supOf' :: Type -> Type -> (Bool, Type, [(ID_Var,Type,Bool)])
                                         -- "a" >= tp (True)
                                         -- "a" <= tp (False)
 
+supOf' TypeT             TypeT             = (True,  TypeT, [])
+supOf' sup               TypeT             = (False, sup,   [])
+supOf' TypeT             sub               = (True,  sub,   [])
+
 supOf' _                 TypeB             = (True,  TypeB, [])
 supOf' TypeB             _                 = (False, TypeB, [])
 
-supOf' TypeT             sub               = (True,  sub,   [])
 supOf' sup@(TypeV a1)    sub@(TypeV a2)    = (True,  sub,   [(a1,sub,True),(a2,sup,False)])
 supOf' (TypeV a1)        sub               = (True,  sub,   [(a1,sub,True)])
 supOf' sup               sub@(TypeV a2)    = (True,  sub,   [(a2,sup,False)])
-supOf' sup               TypeT             = (False, sup,   [])
 
 supOf' Type0             Type0             = (True,  Type0, [])
 supOf' Type0             _                 = (False, Type0, [])
@@ -168,8 +170,10 @@ supOf' sup@(TypeF _ _)   _                 = (False, sup,   [])
 supOf' sup               (TypeF _ _)       = (False, sup,   [])
 
 supOf' (TypeN sups)      (TypeN subs)      = foldr f (True, TypeN [], []) $
-                                              zipWith supOf' sups subs
+                                              zipWith supOf' (sups++bots) (subs++tops)
   where
+    bots = replicate (length subs - length sups) TypeB
+    tops = replicate (length sups - length subs) TypeT
     f (ret, tp, insts) (ret', TypeN tps', insts') =
       (ret&&ret', TypeN (tp:tps'), insts++insts')
 

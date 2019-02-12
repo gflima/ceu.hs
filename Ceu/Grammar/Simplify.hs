@@ -36,10 +36,12 @@ stmt (Var z id tp p) =
 
 --stmt (Write z _ (Unit _)) = Nop z
 
+{-
 stmt (If z exp p q) =
   if p' == q' then p' else (If z exp p' q')
   where p' = stmt p
         q' = stmt q
+-}
 
 -- normal form: (Seq x (Seq y (Seq z ...)))
 stmt (Seq z1 (Seq z2 p1 p2) p3) = stmt $ Seq z1 p1 (Seq z2 p2 p3)

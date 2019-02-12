@@ -47,6 +47,14 @@ spec = do
       TypeN [(TypeV "a"),(TypeV "b")] `supOf` TypeN [(Type1 ["Int"]),Type0]
       `shouldBe` Right (TypeN [Type1 ["Int"],Type0],[("a",Type1 ["Int"]),("b",Type0)])
 
+    it "(a,b,c) /> (Int,())" $
+      TypeN [(TypeV "a"),(TypeV "b"),(TypeV "c")] `supOf` TypeN [(Type1 ["Int"]),Type0]
+      `shouldBe` Left ["types do not match : expected '(a,b,c)' : found '(Int,())'"]
+
+    it "(a,b) /> (Int,(),Int)" $
+      TypeN [(TypeV "a"),(TypeV "b")] `supOf` TypeN [(Type1 ["Int"]),Type0,(Type1 ["Int"])]
+      `shouldBe` Left ["types do not match : expected '(a,b)' : found '(Int,(),Int)'"]
+
     it "(a -> a) > (Int -> Int.1)" $
       TypeF (TypeV "a") (TypeV "a") `supOf` TypeF (Type1 ["Int"]) (Type1 ["Int","1"])
       `shouldBe` Right ((TypeF (Type1 ["Int"]) (Type1 ["Int","1"])), [("a", Type1 ["Int"])])

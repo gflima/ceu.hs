@@ -46,10 +46,8 @@ data Stmt
     | Inst   Ann ID_Class [Type] Stmt Stmt    -- new class instance
     | Data   Ann [ID_Type] [ID_Var] Type Bool Stmt -- new type declaration
     | Var    Ann ID_Var  Type Stmt            -- variable declaration
-    | Write  Ann Loc Exp                      -- assignment statement
-    | Write' Ann Loc Exp                      -- assignment statement
+    | Match  Ann Loc Exp Stmt Stmt            -- match/assignment/if statement
     | CallS  Ann Exp Exp                      -- call function
-    | If     Ann Exp Stmt Stmt                -- conditional
     | Seq    Ann Stmt Stmt                    -- sequence
     | Loop   Ann Stmt                         -- infinite loop
     | Ret    Ann Exp                          -- terminate program with Ret
@@ -91,17 +89,15 @@ infixr 1 `sSeq`
 
 instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
-    getAnn (Class  z _ _ _ _)   = z
-    getAnn (Inst   z _ _ _ _)   = z
-    getAnn (Data   z _ _ _ _ _) = z
-    getAnn (Var    z _ _ _)     = z
-    getAnn (Write  z _ _)       = z
-    getAnn (Write' z _ _)       = z
-    getAnn (CallS  z _ _)       = z
-    getAnn (If     z _ _ _)     = z
-    getAnn (Seq    z _ _)       = z
-    getAnn (Loop   z _)         = z
-    getAnn (Ret    z _)         = z
-    getAnn (Nop    z)           = z
+    getAnn (Class z _ _ _ _)   = z
+    getAnn (Inst  z _ _ _ _)   = z
+    getAnn (Data  z _ _ _ _ _) = z
+    getAnn (Var   z _ _ _)     = z
+    getAnn (Match z _ _ _ _)   = z
+    getAnn (CallS z _ _)       = z
+    getAnn (Seq   z _ _)       = z
+    getAnn (Loop  z _)         = z
+    getAnn (Ret   z _)         = z
+    getAnn (Nop   z)           = z
 
 prelude z p = (Data z ["Int"] [] Type0 False p)
