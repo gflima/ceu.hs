@@ -84,6 +84,9 @@ isSubOf sub sup = b where (b,_,_) = sup `supOf'` sub
 supOfErrors :: Type -> Type -> Errors
 supOfErrors sup sub = either id (const []) (sup `supOf` sub)
 
+subOfErrors :: Type -> Type -> Errors
+subOfErrors sub sup = either id (const []) (sup `supOf` sub)
+
 supsubOfErrors :: Type -> Type -> Errors
 supsubOfErrors tp1 tp2 =
   let es = supOfErrors tp1 tp2 in
