@@ -234,7 +234,10 @@ stmt ids (Match z loc exp p1 p2) = (es++es1++es2, Match z loc' (fromJust mexp) p
 
 --ACEITAR True <- a
             (ese, l', mexp) = case tpexp of
-              Right exp ->
+              Right exp -> (esl++ese, l'', mexp'') where
+                            (ese,mexp')      = f (True,Type1 hr) tpexp
+                            (esl,l'',mexp'') = aux ids z l (Left tpd)
+{-
                 case exp of
                   -- (A a) <- (X x)
                   (Cons z' hr' e) -> (esl++ese, l'', mexp'') where
@@ -247,17 +250,19 @@ stmt ids (Match z loc exp p1 p2) = (es++es1++es2, Match z loc' (fromJust mexp) p
                   otherwise    -> (esl++ese, l'', mexp'') where
                     (ese,mexp')      = f (True,Type1 hr) tpexp
                     (esl,l'',mexp'') = aux ids z l (Left tpd)
+-}
 
               otherwise -> aux ids z l (Left tpd)
 
-        (LTuple ls)  -> (concat esl ++ es, LTuple ls', toexp mexps'')
+        (LTuple ls)  -> (concat esl ++ ese, LTuple ls', toexp mexps'')
           where
+            (ese,mexp) = f (False,TypeN $ map (const$TypeV "?") ls) tpexp
             (esl, ls'', mexps'') = unzip3 $ zipWith (aux ids z) ls' mexps'
-            (es, ls', mexps', toexp) = case tpexp of
+            (ls', mexps', toexp) = case tpexp of
               Right exp ->
                 case exp of
                   -- (a,b,c) <- (x,y,z)
-                  (Tuple z' exps) -> (ese, ls', exps', toexp) where
+                  (Tuple z' exps) -> (ls', exps', toexp) where
                     toexp :: [Maybe Exp] -> Maybe Exp
                     toexp exps = Just $ Tuple z'{type_=TypeN (map (type_.getAnn) exps')} exps'
                                  where
@@ -265,11 +270,9 @@ stmt ids (Match z loc exp p1 p2) = (es++es1++es2, Match z loc' (fromJust mexp) p
                     exps' = map Right exps ++
                             replicate (length ls - length exps) (Left $ TypeV "?")
                     ls'   = ls ++ replicate (length exps - length ls) LAny
-                    (ese,_) = f (False,TypeN $ map (const$TypeV "?") ls) tpexp
 
                   -- (a,b,c) <- x
-                  otherwise -> (ese, ls', tps', \_->mexp) where
-                    (ese,mexp) = f (False,TypeN $ map (const$TypeV "?") ls) tpexp
+                  otherwise -> (ls', tps', \_->mexp) where
                     tps' = map Left tps ++
                            replicate (length ls - length tps) (Left $ TypeV "?")
                     ls'  = ls ++ replicate (length tps - length ls) LAny
@@ -278,8 +281,7 @@ stmt ids (Match z loc exp p1 p2) = (es++es1++es2, Match z loc' (fromJust mexp) p
                       x         -> [x]
 
               -- (k, (a,b,c)) <- x
-              Left tp -> (ese, ls', tps', \_->Nothing) where
-                (ese,_) = f (False,TypeN $ map (const$TypeV "?") ls) tpexp
+              Left tp -> (ls', tps', \_->Nothing) where
                 tps' = map Left tps ++
                        replicate (length ls - length tps) (Left $ TypeV "?")
                 ls'  = ls ++ replicate (length tps - length ls) LAny
