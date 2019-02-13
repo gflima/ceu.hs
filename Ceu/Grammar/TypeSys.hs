@@ -197,7 +197,7 @@ stmt ids (Match z loc exp p1 p2) = (es++es1++es2, Match z loc' (fromJust mexp) p
     f (rel,txp) tpexp =
       case tpexp of
         Left  tp  -> (map (toError z) (relatesErrors rel txp tp), Nothing)
-        Right exp -> (es, Just exp') where (es,exp') = traceShow (rel,txp,exp) $ expr z (rel,txp) ids exp
+        Right exp -> (es, Just exp') where (es,exp') = expr z (rel,txp) ids exp
 
     -- Match must be covariant on variables and contravariant on constants:
     --  LVar    a     <- x      # assign # a     SUP x
@@ -315,7 +315,8 @@ stmt _   (Nop z)            = ([], Nop z)
 
 expr :: Ann -> (Relation,Type) -> [Stmt] -> Exp -> (Errors, Exp)
 expr z (rel,txp) ids exp = (es1++es2, exp') where
-  (es1, exp') = expr' (rel,txp) ids exp
+  (es1, exp') = expr' (rel,bool (TypeV "?") txp (rel==SUP)) ids exp
+                           -- only force expected type on SUP
   es2 = if not.null $ es1 then [] else
           map (toError z) (relatesErrors rel txp (type_ $ getAnn exp'))
 

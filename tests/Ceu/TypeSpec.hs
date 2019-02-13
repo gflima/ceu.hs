@@ -67,6 +67,14 @@ spec = do
       relates SUP (TypeF (TypeV "a") (TypeV "a")) (TypeF (Type1 ["Int","1"]) (Type1 ["Int"]))
       `shouldBe` Left ["types do not match : expected '(a -> a)' : found '(Int.1 -> Int)'","type variance does not match : 'Int.1' should be supertype of 'Int'"]
 
+    it "(True -> Bool) > (Bool -> Bool)" $
+      relates SUP (TypeF (Type1 ["Bool","True"]) (Type1 ["Bool"])) (TypeF (Type1 ["Bool"]) (Type1 ["Bool"]))
+      `shouldBe` Right (TypeF (Type1 ["Bool"]) (Type1 ["Bool"]),[])
+
+    it "(True -> Bool) > (Bool -> True)" $
+      relates SUP (TypeF (Type1 ["Bool","True"]) (Type1 ["Bool"])) (TypeF (Type1 ["Bool"]) (Type1 ["Bool","True"]))
+      `shouldBe` Right (TypeF (Type1 ["Bool"]) (Type1 ["Bool","True"]),[])
+
     it "((a,a) -> ()) > ((X,X.A) -> ()" $
       relates SUP
       (TypeF (TypeN [TypeV "a", TypeV "a"])

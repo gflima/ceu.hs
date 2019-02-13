@@ -18,7 +18,7 @@ spec = do
 
   describe "declarations" $ do
 
-    it "Bool ; True <- (True == False)" $
+    it "Bool ; (True == False)" $
       (fst $ TypeSys.go
         (Data annz ["Bool"] [] Type0 True
         (Data annz ["Bool","True"] [] Type0 False
@@ -46,7 +46,6 @@ spec = do
             (Nop annz)))))))
       `shouldBe` []
 
-{-
   checkCheckIt (Match annz (LVar "x") (Number annz 0) (Nop annz) (Nop annz)) ["variable 'x' is not declared"]
 
   --------------------------------------------------------------------------
@@ -359,6 +358,18 @@ spec = do
             (Match annz (LVar "x") (Cons annz ["Bool","True"] (Unit annz)) (Nop annz) (Nop annz)))))))
       `shouldBe` []
 
+    it "Bool ; (True == False)" $
+      (fst $ TypeSys.go
+        (Data annz ["Bool"] [] Type0 True
+        (Data annz ["Bool","True"] [] Type0 False
+        (Data annz ["Bool","False"] [] Type0 False
+        (Var annz "==" (TypeF (TypeN [(Type1 ["Bool"]),(Type1 ["Bool"])]) (Type1 ["Bool"]))
+            (CallS annz (Read annz "==")
+              (Tuple annz
+                [Cons annz ["Bool","True"] (Unit annz),
+                 Cons annz ["Bool","False"] (Unit annz)])))))))
+      `shouldBe` []
+
     it "Bool ; True <- (True == False)" $
       (fst $ TypeSys.go
         (Data annz ["Bool"] [] Type0 True
@@ -375,7 +386,7 @@ spec = do
             (Nop annz)))))))
       `shouldBe` []
 
-    it "Int ; Bool.* ; Int==Int ; True==False" $
+    it "Int ; Bool.* ; True <- True==False" $
       (fst $ TypeSys.go
         (Data annz ["Int"] [] Type0 True
         (Data annz ["Bool"] [] Type0 True
@@ -391,8 +402,7 @@ spec = do
             (Nop annz)
             (Nop annz))))))))
       `shouldBe`
-        --["types do not match : expected '(Int,Int)' : found '(Bool.True,Bool.False)'"]
-        ["types do not match : expected '((Bool.True,Bool.False) -> Bool.True)' : found '((Int,Int) -> Bool)'"]
+        ["types do not match : expected '((Bool.True,Bool.False) -> ?)' : found '((Int,Int) -> Bool)'"]
 
     it "~Bool ; x=True" $
       (fst $ TypeSys.go
@@ -787,4 +797,3 @@ spec = do
       (ck p) `shouldBe` b)
     checkCheckIt :: Stmt -> Errors -> Spec
     checkCheckIt p b = checkIt' (fst . (TypeSys.go)) p b
--}
