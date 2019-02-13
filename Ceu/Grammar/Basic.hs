@@ -100,4 +100,7 @@ instance HasAnn Stmt where
     getAnn (Ret   z _)         = z
     getAnn (Nop   z)           = z
 
-prelude z p = (Data z ["Int"] [] Type0 False p)
+prelude z p = (Data z ["Int"]        [] Type0 False
+              (Data z ["Bool"]       [] Type0 False
+              (Data z ["Bool.True"]  [] Type0 False
+              (Data z ["Bool.False"] [] Type0 False p))))

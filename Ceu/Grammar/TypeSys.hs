@@ -205,26 +205,37 @@ stmt ids (Match z loc exp p1 p2) = (es++es1++es2, Match z loc' (fromJust mexp) p
         LUnit        -> (ese, loc, mexp) where (ese,mexp) = f (False,Type0) tpexp
         (LNumber v)  -> (ese, loc, mexp) where (ese,mexp) = f (False,Type1 ["Int",show v]) tpexp
         (LVar var)   -> (esl++ese, loc, mexp) where
-                          (ese,mexp) = f (True,tpl) tpexp
                           (tpl,esl)  = case find (isVar $ (==)var) ids of
-                            (Just (Var _ _ tp _)) -> (tp, [])
+                            (Just (Var _ _ tp _)) -> (tp,    [])
                             Nothing               -> (TypeT, [toError z "variable '" ++ var ++ "' is not declared"])
+                          (ese,mexp) = f (True,tpl) tpexp
 
+        (LCons hr l) -> (esd++ese, LCons hr l', mexp) where
+                          str       = Type.hier2str hr
+                          (tpd,esd) = case find (isData $ (==)str) ids of
+                            Just (Data _ _ _ tp _ _) -> (tp,    [])
+                            Nothing                  -> (TypeT, [toError z "type '" ++ str ++ "' is not declared"])
 
-{-
-tem que pegar o Data
-        (LCons hr l) -> (es_hr++es_l, LCons hr l', exp') where
-                          es_hr = supOfErrors (type_ $ getAnn exp') (Type1 hr)
-                          (es_l, l', exp') = case exp of
-                            (Cons _ x) -> aux ids z l x
-                            otherwise  -> (es1++es2,ll,ee) where
-                                            (es1,ll,_) = aux ids z l ?
-                                            (es2,ee)   = expr z TypeB ids exp
--}
+                          (ese, l', mexp) = case tpexp of
+                            Right exp ->
+                              case exp of
+                                -- (A a) <- (X x)
+                                (Cons z' hr' e) -> (esl++ese, l'', mexp'') where
+                                  (esl,l'',mexp') = aux ids z l (Right e)
+                                  (ese,mexp'')    = f (True,Type1 hr)
+                                                      --tpexp
+                                                      (Right $ Cons z' hr' (fromJust mexp'))
 
-        (LTuple ls)  -> (concat esl ++ es, LTuple ls', toexp exps'') where
-                        (esl, ls'', exps'') = unzip3 $ zipWith (aux ids z) ls' exps'
-                        (es, ls', exps', toexp) = case tpexp of
+                                -- (A a) <- x
+                                otherwise    -> (esl++ese, l'', mexp'') where
+                                  (ese,mexp')      = f (True,Type1 hr) tpexp
+                                  (esl,l'',mexp'') = aux ids z l (Left tpd)
+
+                            otherwise -> aux ids z l (Left tpd)
+
+        (LTuple ls)  -> (concat esl ++ es, LTuple ls', toexp mexps'') where
+                        (esl, ls'', mexps'') = unzip3 $ zipWith (aux ids z) ls' mexps'
+                        (es, ls', mexps', toexp) = case tpexp of
                           Right exp ->
                             case exp of
                               -- (a,b,c) <- (x,y,z)
@@ -239,6 +250,7 @@ tem que pegar o Data
                                 esa   = bool [] [toError z "arity mismatch"]
                                            (length ls /= length exps)
 
+--ACEITAR True <- a
                               -- (a,b,c) <- x
                               otherwise -> (ese++esa, ls', tps', \_->mexp) where
                                 (ese,mexp) = f (True,TypeT) tpexp

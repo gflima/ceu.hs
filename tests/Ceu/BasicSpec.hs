@@ -32,13 +32,16 @@ spec = do
     checkCheckIt (Var annz "a" Type0 (Match annz (LVar "a") (Number annz 1) (Nop annz) (Nop annz))) ["types do not match : expected '()' : found 'Int.1'"]
 
     it "a:() ; True <- a" $
-      (fst $ TypeSys.go (Var annz "a" Type0 (Match annz (LCons ["Bool","True"] LUnit) (Read annz "a") (Nop annz) (Nop annz))))
+      (fst $ TypeSys.go (prelude annz (Var annz "a" Type0 (Match annz (LCons ["Bool","True"] LUnit) (Read annz "a") (Nop annz) (Nop annz)))))
         `shouldBe` ["types do not match : expected 'Bool.True' : found '()'"]
     it "a:Int ; True <- a" $
       (fst $ TypeSys.go (prelude annz (Var annz "a" (Type1 ["Int"]) (Match annz (LCons ["Bool","True"] LUnit) (Read annz "a") (Nop annz) (Nop annz)))))
         `shouldBe` ["types do not match : expected 'Bool.True' : found 'Int'"]
 
-    checkCheckIt (Data annz ["Bool"] [] Type0 False (Var annz "a" (Type1 ["Bool"]) (Match annz (LCons ["Bool","True"] LUnit) (Read annz "a") (Nop annz) (Nop annz)))) []
+    it "a:Bool ; True <- a" $
+      (fst $ TypeSys.go (prelude annz (Var annz "a" (Type1 ["Bool"]) (Match annz (LCons ["Bool","True"] LUnit) (Read annz "a") (Nop annz) (Nop annz)))))
+        `shouldBe` []
+
     checkCheckIt (Var annz "a" Type0 (Var annz "a" Type0 (Nop annz)))  ["variable 'a' is already declared"]
     checkCheckIt (Match annz (LVar "a") (Number annz 1) (Nop annz) (Nop annz))        ["variable 'a' is not declared"]
 
@@ -225,6 +228,53 @@ spec = do
       (fst $ TypeSys.go (prelude annz
         (Data annz ["Xxx"] [] (Type1 ["Int"]) False (Match annz (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 2)) (Ret annz (Number annz 2)) (Nop annz)))))
       `shouldBe` ["types do not match : expected 'Int.2' : found 'Int.1'"]
+
+    it "A <- 1" $
+      (fst $ TypeSys.go (Match annz (LCons ["A"] LUnit) (Number annz 1) (Nop annz) (Nop annz)))
+      `shouldBe` ["type 'A' is not declared","types do not match : expected 'A' : found 'Int.1'"]
+
+    it "A ; A.B ; A <- A.B" $
+      (fst $ TypeSys.go
+        (Data annz ["A"]     [] Type0 True
+        (Data annz ["A","B"] [] Type0 False
+        (Match annz (LCons ["A"] LAny) (Cons annz ["A","B"] (Unit annz)) (Nop annz) (Nop annz)))))
+      `shouldBe` []
+
+    it "A ; A.B ; x:A.B ; A <- x" $
+      (fst $ TypeSys.go
+        (Data annz ["A"]     [] Type0 True
+        (Data annz ["A","B"] [] Type0 False
+        (Var  annz "x" (Type1 ["A","B"])
+        (Match annz (LCons ["A"] LAny) (Cons annz ["A","B"] (Unit annz)) (Nop annz) (Nop annz))))))
+      `shouldBe` []
+
+    it "A ; A.B ; A.B <- A" $
+      (fst $ TypeSys.go
+        (Data annz ["A"]     [] Type0 False
+        (Data annz ["A","B"] [] Type0 True
+        (Match annz (LCons ["A","B"] LAny) (Cons annz ["A"] (Unit annz)) (Nop annz) (Nop annz)))))
+      `shouldBe` ["types do not match : expected 'A.B' : found 'A'"]
+
+    it "A ; A <- 1" $
+      (fst $ TypeSys.go (Data annz ["A"] [] Type0 True (Match annz (LCons ["A"] LUnit) (Number annz 1) (Nop annz) (Nop annz))))
+      `shouldBe` ["types do not match : expected 'A' : found 'Int.1'"]
+
+    it "A ; A <- A 1" $
+      (fst $ TypeSys.go (Data annz ["A"] [] Type0 False (Match annz (LCons ["A"] LUnit) (Cons annz ["A"] (Number annz 1)) (Nop annz) (Nop annz))))
+      `shouldBe` ["types do not match : expected 'Int.1' : found '()'","types do not match : expected '()' : found 'Int.1'"]
+
+    it "A ; A 1 <- A" $
+      (fst $ TypeSys.go (Data annz ["A"] [] Type0 False (Match annz (LCons ["A"] (LNumber 1)) (Cons annz ["A"] (Unit annz)) (Nop annz) (Nop annz))))
+      `shouldBe` ["types do not match : expected '()' : found 'Int.1'"]
+
+    it "A ; A.B ; x:(Int,A.B) ; (1,A) <- x" $
+      (fst $ TypeSys.go
+        (Data annz ["Int"]   [] Type0 False
+        (Data annz ["A"]     [] Type0 True
+        (Data annz ["A","B"] [] Type0 False
+        (Var  annz "x" (TypeN [Type1 ["Int"], Type1 ["A","B"]])
+        (Match annz (LTuple [LNumber 1, LCons ["A"] LUnit]) (Read annz "x") (Nop annz) (Nop annz)))))))
+      `shouldBe` []
 
   --------------------------------------------------------------------------
 
