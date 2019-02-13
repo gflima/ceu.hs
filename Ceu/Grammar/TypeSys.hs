@@ -214,82 +214,86 @@ stmt ids (Match z loc exp p1 p2) = (es++es1++es2, Match z loc' (fromJust mexp) p
         LAny         -> (ese, loc, mexp) where (ese,mexp) = f (False,TypeB) tpexp
         LUnit        -> (ese, loc, mexp) where (ese,mexp) = f (False,Type0) tpexp
         (LNumber v)  -> (ese, loc, mexp) where (ese,mexp) = f (False,Type1 ["Int",show v]) tpexp
-        (LVar var)   -> (esl++ese, loc, mexp) where
-                          (tpl,esl)  = case find (isVar $ (==)var) ids of
-                            (Just (Var _ _ tp _)) -> (tp,    [])
-                            Nothing               -> (TypeT, [toError z "variable '" ++ var ++ "' is not declared"])
-                          (ese,mexp) = f (True,tpl) tpexp
-        (LExp e)     -> (es++ese, LExp e', mexp) where
-                          (ese,mexp) = f (True, type_ $ getAnn e') tpexp
-                          (es, e')   = expr z (True,TypeT) ids e
+        (LVar var)   -> (esl++ese, loc, mexp)
+          where
+            (tpl,esl)  = case find (isVar $ (==)var) ids of
+              (Just (Var _ _ tp _)) -> (tp,    [])
+              Nothing               -> (TypeT, [toError z "variable '" ++ var ++ "' is not declared"])
+            (ese,mexp) = f (True,tpl) tpexp
+        (LExp e)     -> (es++ese, LExp e', mexp)
+          where
+            (ese,mexp) = f (True, type_ $ getAnn e') tpexp
+            (es, e')   = expr z (True,TypeT) ids e
 
-        (LCons hr l) -> (esd++ese, LCons hr l', mexp) where
-                          str       = Type.hier2str hr
-                          (tpd,esd) = case find (isData $ (==)str) ids of
-                            Just (Data _ _ _ tp _ _) -> (tp,    [])
-                            Nothing                  -> (TypeT, [toError z "type '" ++ str ++ "' is not declared"])
+        (LCons hr l) -> (esd++ese, LCons hr l', mexp)
+          where
+            str       = Type.hier2str hr
+            (tpd,esd) = case find (isData $ (==)str) ids of
+              Just (Data _ _ _ tp _ _) -> (tp,    [])
+              Nothing                  -> (TypeT, [toError z "type '" ++ str ++ "' is not declared"])
 
 --ACEITAR True <- a
-                          (ese, l', mexp) = case tpexp of
-                            Right exp ->
-                              case exp of
-                                -- (A a) <- (X x)
-                                (Cons z' hr' e) -> (esl++ese, l'', mexp'') where
-                                  (esl,l'',mexp') = aux ids z l (Right e)
-                                  (ese,mexp'')    = f (True,Type1 hr)
-                                                      --tpexp
-                                                      (Right $ Cons z' hr' (fromJust mexp'))
+            (ese, l', mexp) = case tpexp of
+              Right exp ->
+                case exp of
+                  -- (A a) <- (X x)
+                  (Cons z' hr' e) -> (esl++ese, l'', mexp'') where
+                    (esl,l'',mexp') = aux ids z l (Right e)
+                    (ese,mexp'')    = f (True,Type1 hr)
+                                        --tpexp
+                                        (Right $ Cons z' hr' (fromJust mexp'))
 
-                                -- (A a) <- x
-                                otherwise    -> (esl++ese, l'', mexp'') where
-                                  (ese,mexp')      = f (True,Type1 hr) tpexp
-                                  (esl,l'',mexp'') = aux ids z l (Left tpd)
+                  -- (A a) <- x
+                  otherwise    -> (esl++ese, l'', mexp'') where
+                    (ese,mexp')      = f (True,Type1 hr) tpexp
+                    (esl,l'',mexp'') = aux ids z l (Left tpd)
 
-                            otherwise -> aux ids z l (Left tpd)
+              otherwise -> aux ids z l (Left tpd)
 
-        (LTuple ls)  -> (concat esl ++ es, LTuple ls', toexp mexps'') where
-                        (esl, ls'', mexps'') = unzip3 $ zipWith (aux ids z) ls' mexps'
-                        (es, ls', mexps', toexp) = case tpexp of
-                          Right exp ->
-                            case exp of
-                              -- (a,b,c) <- (x,y,z)
-                              (Tuple z' exps) -> (esa, ls', exps', toexp) where
-                                toexp :: [Maybe Exp] -> Maybe Exp
-                                toexp exps = Just $ Tuple z'{type_=TypeN (map (type_.getAnn) exps')} exps'
-                                             where
-                                              exps' = map fromJust exps
-                                exps' = map Right exps ++
-                                        replicate (length ls - length exps) (Left $ TypeV "?")
-                                ls'   = ls ++ replicate (length exps - length ls) LAny
-                                esa   = bool [] [toError z "arity mismatch"]
-                                           (length ls /= length exps)
+        (LTuple ls)  -> (concat esl ++ es, LTuple ls', toexp mexps'')
+          where
+            (esl, ls'', mexps'') = unzip3 $ zipWith (aux ids z) ls' mexps'
+            (es, ls', mexps', toexp) = case tpexp of
+              Right exp ->
+                case exp of
+                  -- (a,b,c) <- (x,y,z)
+                  (Tuple z' exps) -> (esa, ls', exps', toexp) where
+                    toexp :: [Maybe Exp] -> Maybe Exp
+                    toexp exps = Just $ Tuple z'{type_=TypeN (map (type_.getAnn) exps')} exps'
+                                 where
+                                  exps' = map fromJust exps
+                    exps' = map Right exps ++
+                            replicate (length ls - length exps) (Left $ TypeV "?")
+                    ls'   = ls ++ replicate (length exps - length ls) LAny
+                    esa   = bool [] [toError z "arity mismatch"]
+                               (length ls /= length exps)
 
-                              -- (a,b,c) <- x
-                              otherwise -> (ese, ls', tps', \_->mexp) where
-                                (ese,mexp) = f (False,TypeN $ map (const$TypeV "?") ls) tpexp
+                  -- (a,b,c) <- x
+                  otherwise -> (ese, ls', tps', \_->mexp) where
+                    (ese,mexp) = f (False,TypeN $ map (const$TypeV "?") ls) tpexp
 
-                                tps' = map Left tps ++
-                                       replicate (length ls - length tps) (Left $ TypeV "?")
-                                ls'  = ls ++ replicate (length tps - length ls) LAny
+                    tps' = map Left tps ++
+                           replicate (length ls - length tps) (Left $ TypeV "?")
+                    ls'  = ls ++ replicate (length tps - length ls) LAny
 
-                                tps = case type_ $ getAnn $ fromJust mexp of
-                                  (TypeN x) -> x
-                                  x         -> [x]
+                    tps = case type_ $ getAnn $ fromJust mexp of
+                      (TypeN x) -> x
+                      x         -> [x]
 
-                          -- (k, (a,b,c)) <- x
-                          Left tp -> (ese++esa, ls', tps', \_->Nothing) where
-                            (ese,_) = f (True,TypeT) tpexp
+              -- (k, (a,b,c)) <- x
+              Left tp -> (ese++esa, ls', tps', \_->Nothing) where
+                (ese,_) = f (True,TypeT) tpexp
 
-                            tps' = map Left tps ++
-                                   replicate (length ls - length tps) (Left $ TypeV "?")
-                            ls'  = ls ++ replicate (length tps - length ls) LAny
+                tps' = map Left tps ++
+                       replicate (length ls - length tps) (Left $ TypeV "?")
+                ls'  = ls ++ replicate (length tps - length ls) LAny
 
-                            (tps,esa)  = case fromLeft tpexp of
-                              (TypeN x) -> (x, bool [] [toError z "arity mismatch"]
-                                                    (length ls /= length x))
-                              x         -> ([x], [toError z "arity mismatch"])
+                (tps,esa)  = case fromLeft tpexp of
+                  (TypeN x) -> (x, bool [] [toError z "arity mismatch"]
+                                        (length ls /= length x))
+                  x         -> ([x], [toError z "arity mismatch"])
 
-                            fromLeft (Left v) = v
+                fromLeft (Left v) = v
 
 stmt ids (CallS z f exp) = (es, CallS z f' exp') where
                            (es, _, f', exp') = call z (True,TypeV "?") ids f exp
