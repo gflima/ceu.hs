@@ -18,6 +18,35 @@ spec = do
 
   describe "declarations" $ do
 
+    it "Bool ; True <- (True == False)" $
+      (fst $ TypeSys.go
+        (Data annz ["Bool"] [] Type0 True
+        (Data annz ["Bool","True"] [] Type0 False
+        (Data annz ["Bool","False"] [] Type0 False
+        (Var annz "==" (TypeF (TypeN [(Type1 ["Bool"]),(Type1 ["Bool"])]) (Type1 ["Bool"]))
+            (CallS annz (Read annz "==")
+              (Tuple annz
+                [Cons annz ["Bool","True"] (Unit annz),
+                 Cons annz ["Bool","False"] (Unit annz)])))))))
+      `shouldBe` []
+
+    it "Bool ; True <- (True == False)" $
+      (fst $ TypeSys.go
+        (Data annz ["Bool"] [] Type0 True
+        (Data annz ["Bool","True"] [] Type0 False
+        (Data annz ["Bool","False"] [] Type0 False
+        (Var annz "==" (TypeF (TypeN [(Type1 ["Bool"]),(Type1 ["Bool"])]) (Type1 ["Bool"]))
+          (Match annz
+            (LCons ["Bool","True"] LUnit)
+            (Call annz (Read annz "==")
+              (Tuple annz
+                [Cons annz ["Bool","True"] (Unit annz),
+                 Cons annz ["Bool","False"] (Unit annz)]))
+            (Nop annz)
+            (Nop annz)))))))
+      `shouldBe` []
+
+{-
   checkCheckIt (Match annz (LVar "x") (Number annz 0) (Nop annz) (Nop annz)) ["variable 'x' is not declared"]
 
   --------------------------------------------------------------------------
@@ -213,7 +242,7 @@ spec = do
                   (Tuple annz [Read annz "y", Number annz 1])
                   (Nop annz)
                   (Nop annz)))))
-      `shouldBe` ([],Data annz ["Int"] [] Type0 False (Var (annz{type_ = TypeB}) "x" (Type1 ["Int"]) (Var (annz{type_ = TypeB}) "y" (TypeN [Type0,Type1 ["Int"]]) (Match (annz{type_ = TypeB}) (LTuple [LTuple [LAny,LVar "x"],LAny]) (Tuple (annz{type_ = TypeN [TypeN [Type0,Type1 ["Int"]],Type1 ["Int","1"]]}) [Read (annz{type_ = TypeN [Type0,Type1 ["Int"]]}) "y",Number annz{type_ = Type1 ["Int","1"]} 1]) (Nop annz) (Nop annz)))))
+      `shouldBe` ([],Data annz ["Int"] [] Type0 False (Data annz ["Bool"] [] Type0 False (Data annz ["Bool.True"] [] Type0 False (Data annz ["Bool.False"] [] Type0 False (Var (annz{type_ = TypeB}) "x" (Type1 ["Int"]) (Var (annz{type_ = TypeB}) "y" (TypeN [Type0,Type1 ["Int"]]) (Match (annz{type_ = TypeB}) (LTuple [LTuple [LAny,LVar "x"],LAny]) (Tuple (annz{type_ = TypeN [TypeN [Type0,Type1 ["Int"]],Type1 ["Int","1"]]}) [Read (annz{type_ = TypeN [Type0,Type1 ["Int"]]}) "y",Number annz{type_ = Type1 ["Int","1"]} 1]) (Nop annz) (Nop annz))))))))
 
     it "`a` = 1" $
       TypeSys.go (prelude annz
@@ -227,7 +256,7 @@ spec = do
     it "data X with Int ; x:Int ; X 1 <- X 2" $
       (fst $ TypeSys.go (prelude annz
         (Data annz ["Xxx"] [] (Type1 ["Int"]) False (Match annz (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 2)) (Ret annz (Number annz 2)) (Nop annz)))))
-      `shouldBe` ["types do not match : expected 'Int.2' : found 'Int.1'"]
+      `shouldBe` ["types do not match : expected 'Int.1' : found 'Int.2'"]
 
     it "A <- 1" $
       (fst $ TypeSys.go (Match annz (LCons ["A"] LUnit) (Number annz 1) (Nop annz) (Nop annz)))
@@ -261,7 +290,7 @@ spec = do
 
     it "A ; A <- A 1" $
       (fst $ TypeSys.go (Data annz ["A"] [] Type0 False (Match annz (LCons ["A"] LUnit) (Cons annz ["A"] (Number annz 1)) (Nop annz) (Nop annz))))
-      `shouldBe` ["types do not match : expected 'Int.1' : found '()'","types do not match : expected '()' : found 'Int.1'"]
+      `shouldBe` ["types do not match : expected '()' : found 'Int.1'"]
 
     it "A ; A 1 <- A" $
       (fst $ TypeSys.go (Data annz ["A"] [] Type0 False (Match annz (LCons ["A"] (LNumber 1)) (Cons annz ["A"] (Unit annz)) (Nop annz) (Nop annz))))
@@ -417,7 +446,7 @@ spec = do
           (Data annz ["X"] [] (Type1 ["Int"]) False
           (Var annz "x" (Type1 ["Int"])
           (Match annz (LCons ["X"] (LVar "x")) (Cons annz ["X"] (Unit annz)) (Nop annz) (Nop annz))))))
-        `shouldBe` ["types do not match : expected 'Int' : found '()'","types do not match : expected 'Int' : found '()'"]
+        `shouldBe` ["types do not match : expected 'Int' : found '()'"]
 
   --------------------------------------------------------------------------
 
@@ -758,3 +787,4 @@ spec = do
       (ck p) `shouldBe` b)
     checkCheckIt :: Stmt -> Errors -> Spec
     checkCheckIt p b = checkIt' (fst . (TypeSys.go)) p b
+-}

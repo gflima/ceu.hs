@@ -16,7 +16,7 @@ data Type = TypeB
           | TypeV ID_Var
     deriving (Eq,Show)
 
-data Relation = SUP | SUB | ANY | NONE deriving (Eq)
+data Relation = SUP | SUB | ANY | NONE deriving (Eq, Show)
 
 -------------------------------------------------------------------------------
 
@@ -88,11 +88,12 @@ relates rel tp1 tp2 =
   if ret && null es_inst then Right (tp, singles)
                          else Left $ es_tps ++ es_inst
   where
-    (sup,sub) = case rel of
-                  SUP -> (tp1,tp2)
-                  SUB -> (tp2,tp1)
-
-    (ret, tp, insts) = sup `supOf` sub
+    (ret, tp, insts) = case rel of
+                        SUP -> tp1 `supOf` tp2
+                        SUB -> tp2 `supOf` tp1
+                        ANY -> let (a,b,c) = tp1 `supOf` tp2
+                                   (x,y,z) = tp2 `supOf` tp1 in
+                                bool (a,b,c) (x,y,z) x
 
     es_tps = ["types do not match : expected '" ++ show' tp1 ++
               "' : found '" ++ show' tp2 ++ "'"]

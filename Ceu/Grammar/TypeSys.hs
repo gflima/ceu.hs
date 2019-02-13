@@ -59,17 +59,17 @@ getErrsTypesDeclared z ids tp = concatMap aux $ map (\id->(id, find (isData $ (=
 -------------------------------------------------------------------------------
 
 call :: Ann -> (Relation,Type) -> [Stmt] -> Exp -> Exp -> (Errors, Type, Exp, Exp)
-call z (SUP,txp) ids f exp = (bool es_exp es_f (null es_exp), tp_out, f', exp')
+call z (rel,txp) ids f exp = (bool es_exp es_f (null es_exp), tp_out, f', exp')
   where
-    (es_exp, exp') = expr z (SUP,TypeV "?") ids exp
-    (es_f,   f')   = expr z (SUP,TypeF (type_$getAnn$exp') txp) ids f
+    (es_exp, exp') = expr z (rel,TypeV "?") ids exp
+    (es_f,   f')   = expr z (rel,TypeF (type_$getAnn$exp') txp) ids f
 
     tp_out = case type_ $ getAnn f' of
       TypeF _ out -> out
       otherwise   -> txp
 
 read' :: Ann -> (Relation,Type) -> [Stmt] -> ID_Var -> (Errors, Type)
-read' z (SUP,txp) ids id = if id == "_INPUT" then ([], Type1 ["Int"])
+read' z (rel,txp) ids id = if id == "_INPUT" then ([], Type1 ["Int"])
                                          else (es, tp_ret)
   where
     -- find in top-level ids | id : a
@@ -88,7 +88,7 @@ read' z (SUP,txp) ids id = if id == "_INPUT" then ([], Type1 ["Int"])
 
             -- find matching instance | id : a=<txp>
             Just (Class _ cls [var] _ _, Just (Var _ id tp_var _)) ->
-              case (relates SUP txp tp_var) of
+              case (relates rel txp tp_var) of
                 Left  es        -> (TypeV "?", map (toError z) es)
                 Right (_,insts) ->
                   let tp = Type.instantiate insts (TypeV var) in
@@ -197,17 +197,18 @@ stmt ids (Match z loc exp p1 p2) = (es++es1++es2, Match z loc' (fromJust mexp) p
     f (rel,txp) tpexp =
       case tpexp of
         Left  tp  -> (map (toError z) (relatesErrors rel txp tp), Nothing)
-        Right exp -> (es, Just exp') where (es,exp') = expr z (rel,txp) ids exp
+        Right exp -> (es, Just exp') where (es,exp') = traceShow (rel,txp,exp) $ expr z (rel,txp) ids exp
 
     -- Match must be covariant on variables and contravariant on constants:
-    --  LVar    a     <- x     # assign # a     SUP x
-    --  LExp    a     <- x     # match  # a     SUP x
-    --  LAny          <- x     # match  # BOT   SUB x
-    --  LUnit         <- x     # match  # unit  SUB x
-    --  LNumber a     <- x     # match  # Int.X SUB x
-    --  LCons   a b   <- x     # match  # a     ANY x     | b match x
-    --  LTuple  (a,b) <- (x,y) # match  # (B,B) SUB (x,y) | a match x,  b match y
-    --  LTuple  (a,b) <- x     # match  # (B,B) SUB x     | a match x1, b match x2
+    --  LVar    a     <- x      # assign # a     SUP x
+    --  LExp    a     <- x      # match  # a     SUP x
+    --  LAny          <- x      # match  # BOT   SUB x
+    --  LUnit         <- x      # match  # unit  SUB x
+    --  LNumber a     <- x      # match  # Int.X SUB x
+    --  LCons   a b   <- Cons x # match  # a     SUP Cons x | b match x
+    --  LCons   a b   <- x      # match  # a     ANY x      | b match x
+    --  LTuple  (a,b) <- (x,y)  # match  # (B,B) SUB (x,y)  | a match x,  b match y
+    --  LTuple  (a,b) <- x      # match  # (B,B) SUB x      | a match x1, b match x2
 
     aux :: [Stmt] -> Ann -> Loc -> Either Type Exp -> (Errors, Loc, Maybe Exp)
     aux ids z loc tpexp =
@@ -226,34 +227,22 @@ stmt ids (Match z loc exp p1 p2) = (es++es1++es2, Match z loc' (fromJust mexp) p
             (ese,mexp) = f (SUP, type_ $ getAnn e') tpexp
             (es, e')   = expr z (SUP,TypeT) ids e
 
-        (LCons hr l) -> (esd++ese, LCons hr l', mexp)
+        (LCons hr l) -> (esd++esl++es'++ese, LCons hr l', mexp)
           where
             str       = Type.hier2str hr
             (tpd,esd) = case find (isData $ (==)str) ids of
               Just (Data _ _ _ tp _ _) -> (tp,    [])
               Nothing                  -> (TypeT, [toError z "type '" ++ str ++ "' is not declared"])
+            (rel,es') = case tpexp of
+              Right (Cons _ _ e) -> (SUP,es) where
+                es = if null esl && null ese then
+                      let (es',_,_) = aux ids z l (Right e) in es'
+                     else
+                      []
+              otherwise          -> (ANY,[])
 
---ACEITAR True <- a
-            (ese, l', mexp) = case tpexp of
-              Right exp -> (esl++ese, l'', mexp'') where
-                            (ese,mexp')      = f (SUP,Type1 hr) tpexp
-                            (esl,l'',mexp'') = aux ids z l (Left tpd)
-{-
-                case exp of
-                  -- (A a) <- (X x)
-                  (Cons z' hr' e) -> (esl++ese, l'', mexp'') where
-                    (esl,l'',mexp') = aux ids z l (Right e)
-                    (ese,mexp'')    = f (SUP,Type1 hr)
-                                        --tpexp
-                                        (Right $ Cons z' hr' (fromJust mexp'))
-
-                  -- (A a) <- x
-                  otherwise    -> (esl++ese, l'', mexp'') where
-                    (ese,mexp')      = f (SUP,Type1 hr) tpexp
-                    (esl,l'',mexp'') = aux ids z l (Left tpd)
--}
-
-              otherwise -> aux ids z l (Left tpd)
+            (ese,mexp) = f (rel,Type1 hr) tpexp
+            (esl, l', _) = aux ids z l (Left tpd)
 
         (LTuple ls)  -> (concat esl ++ ese, LTuple ls', toexp mexps'')
           where
