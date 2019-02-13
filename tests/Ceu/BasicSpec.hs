@@ -196,13 +196,13 @@ spec = do
       TypeSys.go (prelude annz
             (Var annz "x" (Type1 ["Int"])
               (Match annz (LTuple [LVar "x", LAny]) (Number annz 1) (Nop annz) (Nop annz))))
-      `shouldBe` (["arity mismatch"],Data annz ["Int"] [] Type0 False (Var annz{type_=TypeB} "x" (Type1 ["Int"]) (Match annz{type_=TypeB} (LTuple [LVar "x",LAny]) (Number annz{type_=Type1 ["Int","1"]} 1) (Nop annz) (Nop annz))))
+      `shouldBe` (["types do not match : expected 'Int.1' : found '(?,?)'"],Data annz ["Int"] [] Type0 False (Data annz ["Bool"] [] Type0 False (Data annz ["Bool.True"] [] Type0 False (Data annz ["Bool.False"] [] Type0 False (Var annz{type_=TypeB} "x" (Type1 ["Int"]) (Match annz{type_=TypeB} (LTuple [LVar "x",LAny]) (Number annz{type_=Type1 ["Int","1"]} 1) (Nop annz) (Nop annz)))))))
 
     it "(x,_) = (1,1)" $
       TypeSys.go (prelude annz
             (Var annz "x" (Type1 ["Int"])
               (Match annz (LTuple [LVar "x", LAny]) (Tuple annz [Number annz 1, Number annz 1]) (Nop annz) (Nop annz))))
-      `shouldBe` ([],Data annz ["Int"] [] Type0 False (Var (annz{type_ = TypeB}) "x" (Type1 ["Int"]) (Match (annz{type_ = TypeB}) (LTuple [LVar "x",LAny]) (Tuple (annz{type_ = TypeN [Type1 ["Int","1"],Type1 ["Int","1"]]}) [Number (annz{type_ = Type1 ["Int","1"]}) 1,Number (annz{type_ = Type1 ["Int","1"]}) 1]) (Nop annz) (Nop annz))))
+      `shouldBe` ([],Data annz ["Int"] [] Type0 False (Data annz ["Bool"] [] Type0 False (Data annz ["Bool.True"] [] Type0 False (Data annz ["Bool.False"] [] Type0 False (Var (annz{type_ = TypeB}) "x" (Type1 ["Int"]) (Match (annz{type_ = TypeB}) (LTuple [LVar "x",LAny]) (Tuple (annz{type_ = TypeN [Type1 ["Int","1"],Type1 ["Int","1"]]}) [Number (annz{type_ = Type1 ["Int","1"]}) 1,Number (annz{type_ = Type1 ["Int","1"]}) 1]) (Nop annz) (Nop annz)))))))
 
     it "((_,x),_) = (y,1)" $
       TypeSys.go (prelude annz
@@ -218,11 +218,11 @@ spec = do
     it "`a` = 1" $
       TypeSys.go (prelude annz
         (Var annz "a" (Type1 ["Int"]) (Match annz (LExp $ Read annz "a") (Number annz 1) (Nop annz) (Nop annz))))
-      `shouldBe` ([],Data annz ["Int"] [] Type0 False (Var annz "a" (Type1 ["Int"]) (Match annz (LExp $ Read annz{type_ = Type1 ["Int"]} "a") (Number annz{type_=Type1 ["Int","1"]} 1) (Nop annz) (Nop annz))))
+      `shouldBe` ([],Data annz ["Int"] [] Type0 False (Data annz ["Bool"] [] Type0 False (Data annz ["Bool.True"] [] Type0 False (Data annz ["Bool.False"] [] Type0 False (Var annz "a" (Type1 ["Int"]) (Match annz (LExp $ Read annz{type_ = Type1 ["Int"]} "a") (Number annz{type_=Type1 ["Int","1"]} 1) (Nop annz) (Nop annz)))))))
     it "`a` = 1" $
       TypeSys.go (prelude annz
         (Var annz "a" Type0 (Match annz (LExp $ Read annz "a") (Number annz 1) (Nop annz) (Nop annz))))
-      `shouldBe` (["types do not match : expected '()' : found 'Int.1'"],Data annz ["Int"] [] Type0 False (Var annz "a" Type0 (Match annz (LExp $ Read annz{type_ = Type0} "a") (Number annz{type_=Type1 ["Int","1"]} 1) (Nop annz) (Nop annz))))
+      `shouldBe` (["types do not match : expected '()' : found 'Int.1'"],Data annz ["Int"] [] Type0 False (Data annz ["Bool"] [] Type0 False (Data annz ["Bool.True"] [] Type0 False (Data annz ["Bool.False"] [] Type0 False (Var annz "a" Type0 (Match annz (LExp $ Read annz{type_ = Type0} "a") (Number annz{type_=Type1 ["Int","1"]} 1) (Nop annz) (Nop annz)))))))
 
     it "data X with Int ; x:Int ; X 1 <- X 2" $
       (fst $ TypeSys.go (prelude annz
@@ -330,7 +330,7 @@ spec = do
             (Match annz (LVar "x") (Cons annz ["Bool","True"] (Unit annz)) (Nop annz) (Nop annz)))))))
       `shouldBe` []
 
-    it "Bool ; x=True" $
+    it "Bool ; True <- (True == False)" $
       (fst $ TypeSys.go
         (Data annz ["Bool"] [] Type0 True
         (Data annz ["Bool","True"] [] Type0 False
@@ -363,7 +363,7 @@ spec = do
             (Nop annz))))))))
       `shouldBe`
         --["types do not match : expected '(Int,Int)' : found '(Bool.True,Bool.False)'"]
-        ["types do not match : expected '((Bool.True,Bool.False) -> Bool)' : found '((Int,Int) -> Bool)'"]
+        ["types do not match : expected '((Bool.True,Bool.False) -> Bool.True)' : found '((Int,Int) -> Bool)'"]
 
     it "~Bool ; x=True" $
       (fst $ TypeSys.go

@@ -198,10 +198,20 @@ stmt ids (Match z loc exp p1 p2) = (es++es1++es2, Match z loc' (fromJust mexp) p
         Left  tp  -> (map (toError z) ((bool subOfErrors supOfErrors sup) txp tp), Nothing)
         Right exp -> (es, Just exp') where (es,exp') = expr z (sup,txp) ids exp
 
+    -- Match must be covariant on variables and contravariant on constants:
+    --  LVar    a     <- x     # assign # a     supOf x
+    --  LExp    a     <- x     # match  # a     supOf x
+    --  LAny          <- x     # match  # BOT   subOf x
+    --  LUnit         <- x     # match  # unit  subOf x
+    --  LNumber a     <- x     # match  # Int.X subOf x
+    --  LCons   a b   <- x     # match  # a     anyOf x     | b match x
+    --  LTuple  (a,b) <- (x,y) # match  # (B,B) subOf (x,y) | a match x,  b match y
+    --  LTuple  (a,b) <- x     # match  # (B,B) subOf x     | a match x1, b match x2
+
     aux :: [Stmt] -> Ann -> Loc -> Either Type Exp -> (Errors, Loc, Maybe Exp)
     aux ids z loc tpexp =
       case loc of
-        LAny         -> (ese, loc, mexp) where (ese,mexp) = f (True,TypeT) tpexp
+        LAny         -> (ese, loc, mexp) where (ese,mexp) = f (False,TypeB) tpexp
         LUnit        -> (ese, loc, mexp) where (ese,mexp) = f (False,Type0) tpexp
         (LNumber v)  -> (ese, loc, mexp) where (ese,mexp) = f (False,Type1 ["Int",show v]) tpexp
         (LVar var)   -> (esl++ese, loc, mexp) where
@@ -209,6 +219,9 @@ stmt ids (Match z loc exp p1 p2) = (es++es1++es2, Match z loc' (fromJust mexp) p
                             (Just (Var _ _ tp _)) -> (tp,    [])
                             Nothing               -> (TypeT, [toError z "variable '" ++ var ++ "' is not declared"])
                           (ese,mexp) = f (True,tpl) tpexp
+        (LExp e)     -> (es++ese, LExp e', mexp) where
+                          (ese,mexp) = f (True, type_ $ getAnn e') tpexp
+                          (es, e')   = expr z (True,TypeT) ids e
 
         (LCons hr l) -> (esd++ese, LCons hr l', mexp) where
                           str       = Type.hier2str hr
@@ -216,6 +229,7 @@ stmt ids (Match z loc exp p1 p2) = (es++es1++es2, Match z loc' (fromJust mexp) p
                             Just (Data _ _ _ tp _ _) -> (tp,    [])
                             Nothing                  -> (TypeT, [toError z "type '" ++ str ++ "' is not declared"])
 
+--ACEITAR True <- a
                           (ese, l', mexp) = case tpexp of
                             Right exp ->
                               case exp of
@@ -250,19 +264,17 @@ stmt ids (Match z loc exp p1 p2) = (es++es1++es2, Match z loc' (fromJust mexp) p
                                 esa   = bool [] [toError z "arity mismatch"]
                                            (length ls /= length exps)
 
---ACEITAR True <- a
                               -- (a,b,c) <- x
-                              otherwise -> (ese++esa, ls', tps', \_->mexp) where
-                                (ese,mexp) = f (True,TypeT) tpexp
+                              otherwise -> (ese, ls', tps', \_->mexp) where
+                                (ese,mexp) = f (False,TypeN $ map (const$TypeV "?") ls) tpexp
 
                                 tps' = map Left tps ++
                                        replicate (length ls - length tps) (Left $ TypeV "?")
                                 ls'  = ls ++ replicate (length tps - length ls) LAny
 
-                                (tps,esa) = case type_ $ getAnn $ fromJust mexp of
-                                  (TypeN x) -> (x, bool [] [toError z "arity mismatch"]
-                                                        (length ls /= length x))
-                                  x         -> ([x], [toError z "arity mismatch"])
+                                tps = case type_ $ getAnn $ fromJust mexp of
+                                  (TypeN x) -> x
+                                  x         -> [x]
 
                           -- (k, (a,b,c)) <- x
                           Left tp -> (ese++esa, ls', tps', \_->Nothing) where
@@ -278,11 +290,6 @@ stmt ids (Match z loc exp p1 p2) = (es++es1++es2, Match z loc' (fromJust mexp) p
                               x         -> ([x], [toError z "arity mismatch"])
 
                             fromLeft (Left v) = v
-
-
-        (LExp e)     -> (es++ese, LExp e', mexp) where
-                          (ese,mexp) = f (True, type_ $ getAnn e') tpexp
-                          (es, e')   = expr z (True,TypeT) ids e
 
 stmt ids (CallS z f exp) = (es, CallS z f' exp') where
                            (es, _, f', exp') = call z (True,TypeV "?") ids f exp
