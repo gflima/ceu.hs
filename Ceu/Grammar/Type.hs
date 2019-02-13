@@ -103,8 +103,8 @@ supOf sup sub =
     es_tps = ["types do not match : expected '" ++ show' sup ++
               "' : found '" ++ show' sub ++ "'"]
 
-    sorted  = sortBy (\(a,_,_)(b,_,_) -> compare a b) insts -- [("a",A,>),("a",A,<),("b",B,>)]
-    grouped = groupBy (\(x,_,_)(y,_,_)->x==y) sorted        -- [[("a",A,>),("a",A,<)], [("b",B,>)]]
+    sorted  = sortBy (\(a,_,_)(b,_,_) -> compare a b) insts    -- [("a",A,>),("a",A,<),("b",B,>)]
+    grouped = groupBy (\(x,_,_)(y,_,_)->x==y && x/="?") sorted -- [[("a",A,>),("a",A,<)], [("b",B,>)]]
     es_inst = concatMap f grouped
 
     f l@((var,_,_):_) =

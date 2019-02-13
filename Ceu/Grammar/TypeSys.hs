@@ -257,7 +257,7 @@ stmt ids (Match z loc exp p1 p2) = (es++es1++es2, Match z loc' (fromJust mexp) p
               Right exp ->
                 case exp of
                   -- (a,b,c) <- (x,y,z)
-                  (Tuple z' exps) -> (esa, ls', exps', toexp) where
+                  (Tuple z' exps) -> (ese, ls', exps', toexp) where
                     toexp :: [Maybe Exp] -> Maybe Exp
                     toexp exps = Just $ Tuple z'{type_=TypeN (map (type_.getAnn) exps')} exps'
                                  where
@@ -265,33 +265,27 @@ stmt ids (Match z loc exp p1 p2) = (es++es1++es2, Match z loc' (fromJust mexp) p
                     exps' = map Right exps ++
                             replicate (length ls - length exps) (Left $ TypeV "?")
                     ls'   = ls ++ replicate (length exps - length ls) LAny
-                    esa   = bool [] [toError z "arity mismatch"]
-                               (length ls /= length exps)
+                    (ese,_) = f (False,TypeN $ map (const$TypeV "?") ls) tpexp
 
                   -- (a,b,c) <- x
                   otherwise -> (ese, ls', tps', \_->mexp) where
                     (ese,mexp) = f (False,TypeN $ map (const$TypeV "?") ls) tpexp
-
                     tps' = map Left tps ++
                            replicate (length ls - length tps) (Left $ TypeV "?")
                     ls'  = ls ++ replicate (length tps - length ls) LAny
-
-                    tps = case type_ $ getAnn $ fromJust mexp of
+                    tps  = case type_ $ getAnn $ fromJust mexp of
                       (TypeN x) -> x
                       x         -> [x]
 
               -- (k, (a,b,c)) <- x
-              Left tp -> (ese++esa, ls', tps', \_->Nothing) where
-                (ese,_) = f (True,TypeT) tpexp
-
+              Left tp -> (ese, ls', tps', \_->Nothing) where
+                (ese,_) = f (False,TypeN $ map (const$TypeV "?") ls) tpexp
                 tps' = map Left tps ++
                        replicate (length ls - length tps) (Left $ TypeV "?")
                 ls'  = ls ++ replicate (length tps - length ls) LAny
-
-                (tps,esa)  = case fromLeft tpexp of
-                  (TypeN x) -> (x, bool [] [toError z "arity mismatch"]
-                                        (length ls /= length x))
-                  x         -> ([x], [toError z "arity mismatch"])
+                tps  = case fromLeft tpexp of
+                  (TypeN x) -> x
+                  x         -> [x]
 
                 fromLeft (Left v) = v
 

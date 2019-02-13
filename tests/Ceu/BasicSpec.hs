@@ -91,7 +91,7 @@ spec = do
         (Var annz "a" TypeT
         (Var annz "b" TypeT
         (Match annz (LTuple [LVar "a",LVar "b"]) (Tuple annz [Number annz 1,Number annz 2,Number annz 3]) (Nop annz) (Nop annz))))))
-        `shouldBe` ["arity mismatch"]
+        `shouldBe` ["types do not match : expected '(Int.1,Int.2,Int.3)' : found '(?,?)'"]
     it "(a,b,c) = (1,2)" $
       (fst $ TypeSys.go
         (Data annz ["Int"] [] Type0 False
@@ -99,7 +99,7 @@ spec = do
         (Var annz "b" TypeT
         (Var annz "c" TypeT
         (Match annz (LTuple [LVar "a",LVar "b",LVar "c"]) (Tuple annz [Number annz 1,Number annz 2]) (Nop annz) (Nop annz)))))))
-        `shouldBe` ["arity mismatch"]
+        `shouldBe` ["types do not match : expected '(Int.1,Int.2)' : found '(?,?,?)'"]
     it "ret = f()" $
       (fst $ TypeSys.go
         (Data annz ["Int"] [] Type0 False
