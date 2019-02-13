@@ -16,6 +16,8 @@ data Type = TypeB
           | TypeV ID_Var
     deriving (Eq,Show)
 
+data Relation = SUP | SUB | ANY | NONE
+
 -------------------------------------------------------------------------------
 
 hier2str = intercalate "."
@@ -94,14 +96,24 @@ supsubOfErrors tp1 tp2 =
       supOfErrors tp2 tp1
 
 supOf :: Type -> Type -> Either Errors (Type, [(ID_Var,Type)])
-supOf sup sub =
+supOf sup sub = relates SUP sup sub
+
+relatesErrors :: Relation -> Type -> Type -> Errors
+relatesErrors rel tp1 tp2 = either id (const []) (relates rel tp1 tp2)
+
+relates :: Relation -> Type -> Type -> Either Errors (Type, [(ID_Var,Type)])
+relates rel tp1 tp2 =
   if ret && null es_inst then Right (tp, singles)
                          else Left $ es_tps ++ es_inst
   where
+    (sup,sub) = case rel of
+                  SUP -> (tp1,tp2)
+                  SUB -> (tp2,tp1)
+
     (ret, tp, insts) = sup `supOf'` sub
 
-    es_tps = ["types do not match : expected '" ++ show' sup ++
-              "' : found '" ++ show' sub ++ "'"]
+    es_tps = ["types do not match : expected '" ++ show' tp1 ++
+              "' : found '" ++ show' tp2 ++ "'"]
 
     sorted  = sortBy (\(a,_,_)(b,_,_) -> compare a b) insts    -- [("a",A,>),("a",A,<),("b",B,>)]
     grouped = groupBy (\(x,_,_)(y,_,_)->x==y && x/="?") sorted -- [[("a",A,>),("a",A,<)], [("b",B,>)]]

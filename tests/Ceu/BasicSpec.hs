@@ -91,7 +91,7 @@ spec = do
         (Var annz "a" TypeT
         (Var annz "b" TypeT
         (Match annz (LTuple [LVar "a",LVar "b"]) (Tuple annz [Number annz 1,Number annz 2,Number annz 3]) (Nop annz) (Nop annz))))))
-        `shouldBe` ["types do not match : expected '(Int.1,Int.2,Int.3)' : found '(?,?)'"]
+        `shouldBe` ["types do not match : expected '(?,?)' : found '(Int.1,Int.2,Int.3)'"]
     it "(a,b,c) = (1,2)" $
       (fst $ TypeSys.go
         (Data annz ["Int"] [] Type0 False
@@ -99,7 +99,7 @@ spec = do
         (Var annz "b" TypeT
         (Var annz "c" TypeT
         (Match annz (LTuple [LVar "a",LVar "b",LVar "c"]) (Tuple annz [Number annz 1,Number annz 2]) (Nop annz) (Nop annz)))))))
-        `shouldBe` ["types do not match : expected '(Int.1,Int.2)' : found '(?,?,?)'"]
+        `shouldBe` ["types do not match : expected '(?,?,?)' : found '(Int.1,Int.2)'"]
     it "ret = f()" $
       (fst $ TypeSys.go
         (Data annz ["Int"] [] Type0 False
@@ -186,9 +186,9 @@ spec = do
     it "1 = 1" $
       TypeSys.go (Match annz (LNumber 1) (Number annz 1) (Nop annz) (Nop annz))
       `shouldBe` ([],Match annz{type_=TypeB} (LNumber 1) (Number annz{type_=Type1 ["Int","1"]} 1) (Nop annz) (Nop annz))
-    it "2 = 1" $
+    it "1 <- 2" $
       TypeSys.go (Match annz (LNumber 1) (Number annz 2) (Nop annz) (Nop annz))
-      `shouldBe` (["types do not match : expected 'Int.2' : found 'Int.1'"],Match (Ann {type_ = TypeB, name = "", source = ("",0,0), nn = -1}) (LNumber 1) (Number (Ann {type_ = Type1 ["Int","2"], name = "", source = ("",0,0), nn = -1}) 2) (Nop annz) (Nop annz))
+      `shouldBe` (["types do not match : expected 'Int.1' : found 'Int.2'"],Match (Ann {type_ = TypeB, name = "", source = ("",0,0), nn = -1}) (LNumber 1) (Number (Ann {type_ = Type1 ["Int","2"], name = "", source = ("",0,0), nn = -1}) 2) (Nop annz) (Nop annz))
     it "_ = 1" $
       TypeSys.go (Match annz LAny (Number annz 1) (Nop annz) (Nop annz))
       `shouldBe` ([],Match annz{type_=TypeB} LAny (Number annz{type_=Type1 ["Int","1"]} 1) (Nop annz) (Nop annz))
@@ -196,7 +196,7 @@ spec = do
       TypeSys.go (prelude annz
             (Var annz "x" (Type1 ["Int"])
               (Match annz (LTuple [LVar "x", LAny]) (Number annz 1) (Nop annz) (Nop annz))))
-      `shouldBe` (["types do not match : expected 'Int.1' : found '(?,?)'"],Data annz ["Int"] [] Type0 False (Data annz ["Bool"] [] Type0 False (Data annz ["Bool.True"] [] Type0 False (Data annz ["Bool.False"] [] Type0 False (Var annz{type_=TypeB} "x" (Type1 ["Int"]) (Match annz{type_=TypeB} (LTuple [LVar "x",LAny]) (Number annz{type_=Type1 ["Int","1"]} 1) (Nop annz) (Nop annz)))))))
+      `shouldBe` (["types do not match : expected '(?,?)' : found 'Int.1'"],Data annz ["Int"] [] Type0 False (Data annz ["Bool"] [] Type0 False (Data annz ["Bool.True"] [] Type0 False (Data annz ["Bool.False"] [] Type0 False (Var annz{type_=TypeB} "x" (Type1 ["Int"]) (Match annz{type_=TypeB} (LTuple [LVar "x",LAny]) (Number annz{type_=Type1 ["Int","1"]} 1) (Nop annz) (Nop annz)))))))
 
     it "(x,_) = (1,1)" $
       TypeSys.go (prelude annz
@@ -265,7 +265,7 @@ spec = do
 
     it "A ; A 1 <- A" $
       (fst $ TypeSys.go (Data annz ["A"] [] Type0 False (Match annz (LCons ["A"] (LNumber 1)) (Cons annz ["A"] (Unit annz)) (Nop annz) (Nop annz))))
-      `shouldBe` ["types do not match : expected '()' : found 'Int.1'"]
+      `shouldBe` ["types do not match : expected 'Int.1' : found '()'"]
 
     it "A ; A.B ; x:(Int,A.B) ; (1,A) <- x" $
       (fst $ TypeSys.go
@@ -371,12 +371,13 @@ spec = do
           (Match annz (LVar "x") (Cons annz{type_=(Type1 ["Bool"])} ["Bool","True"] (Unit annz)) (Nop annz) (Nop annz))))
       `shouldBe` ["type 'Bool' is not declared","type 'Bool.True' is not declared"]
 
-    it "data X with Int" $
+    it "data X with Int ; x <- X ()" $
       (fst $ TypeSys.go
         (Data annz ["X"] [] (Type1 ["Int"]) False
         (Var annz "x" (Type1 ["X"])
           (Match annz (LVar "x") (Cons annz ["X"] (Unit annz)) (Nop annz) (Nop annz)))))
       `shouldBe` ["types do not match : expected 'Int' : found '()'"]
+      -- ["types do not match : 'Int' is not supertype of '()'"]
 
     it "data X with Int" $
       (fst $ TypeSys.go
