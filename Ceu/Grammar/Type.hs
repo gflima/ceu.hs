@@ -16,7 +16,7 @@ data Type = TypeB
           | TypeV ID_Var
     deriving (Eq,Show)
 
-data Relation = SUP | SUB | ANY | NONE
+data Relation = SUP | SUB | ANY | NONE deriving (Eq)
 
 -------------------------------------------------------------------------------
 
@@ -77,26 +77,8 @@ instantiate _    tp              = tp
 
 -------------------------------------------------------------------------------
 
-isSupOf :: Type -> Type -> Bool
-isSupOf sup sub = b where (b,_,_) = sup `supOf'` sub
-
-isSubOf :: Type -> Type -> Bool
-isSubOf sub sup = b where (b,_,_) = sup `supOf'` sub
-
-supOfErrors :: Type -> Type -> Errors
-supOfErrors sup sub = either id (const []) (sup `supOf` sub)
-
-subOfErrors :: Type -> Type -> Errors
-subOfErrors sub sup = either id (const []) (sup `supOf` sub)
-
-supsubOfErrors :: Type -> Type -> Errors
-supsubOfErrors tp1 tp2 =
-  let es = supOfErrors tp1 tp2 in
-    if null es then [] else
-      supOfErrors tp2 tp1
-
-supOf :: Type -> Type -> Either Errors (Type, [(ID_Var,Type)])
-supOf sup sub = relates SUP sup sub
+isRel :: Relation -> Type -> Type -> Bool
+isRel rel tp1 tp2 = either (const False) (const True) (relates rel tp1 tp2)
 
 relatesErrors :: Relation -> Type -> Type -> Errors
 relatesErrors rel tp1 tp2 = either id (const []) (relates rel tp1 tp2)
@@ -110,18 +92,18 @@ relates rel tp1 tp2 =
                   SUP -> (tp1,tp2)
                   SUB -> (tp2,tp1)
 
-    (ret, tp, insts) = sup `supOf'` sub
+    (ret, tp, insts) = sup `supOf` sub
 
     es_tps = ["types do not match : expected '" ++ show' tp1 ++
               "' : found '" ++ show' tp2 ++ "'"]
 
-    sorted  = sortBy (\(a,_,_)(b,_,_) -> compare a b) insts    -- [("a",A,>),("a",A,<),("b",B,>)]
-    grouped = groupBy (\(x,_,_)(y,_,_)->x==y && x/="?") sorted -- [[("a",A,>),("a",A,<)], [("b",B,>)]]
+    sorted  = sortBy (\(a,_,_)(b,_,_) -> compare a b) insts    -- [("a",A,SUP),("a",A,SUB),("b",B,SUP)]
+    grouped = groupBy (\(x,_,_)(y,_,_)->x==y && x/="?") sorted -- [[("a",A,SUP),("a",A,SUB)], [("b",B,SUP)]]
     es_inst = concatMap f grouped
 
     f l@((var,_,_):_) =
-      let sups    = map gettp $ filter isSup       l
-          subs    = map gettp $ filter (not.isSup) l
+      let sups    = map gettp $ filter isSUP       l
+          subs    = map gettp $ filter (not.isSUP) l
           min_tp  = min sups
           max_tp  = max subs
           sups_ok = sups==[] || all (isSupOf min_tp) sups
@@ -138,7 +120,7 @@ relates rel tp1 tp2 =
              intercalate ", " (map (quote.show'.gettp) l)]
 
     gettp (_,tp,_) = tp
-    isSup (_, _,v) = v
+    isSUP (_, _,v) = v == SUP
 
     singles = map ((\(var,tp,_)->(var,tp)).head) grouped    -- [("a",A), ("b",B)]
     quote x = "'" ++ x ++ "'"
@@ -150,48 +132,54 @@ relates rel tp1 tp2 =
 
 -------------------------------------------------------------------------------
 
+isSupOf :: Type -> Type -> Bool
+isSupOf sup sub = b where (b,_,_) = sup `supOf` sub
+
+isSubOf :: Type -> Type -> Bool
+isSubOf sub sup = b where (b,_,_) = sup `supOf` sub
+
 -- Is first argument a supertype of second argument?
 --  * Bool: whether it is or not
 --  * Type: most specific type between the two (second argument on success, first otherwise)
 --  * list: all instantiations of parametric types [(a,X),(b,Y),(a,X),...]
 
-supOf' :: Type -> Type -> (Bool, Type, [(ID_Var,Type,Bool)])
+supOf :: Type -> Type -> (Bool, Type, [(ID_Var,Type,Relation)])
                                         -- "a" >= tp (True)
                                         -- "a" <= tp (False)
 
-supOf' TypeT             TypeT             = (True,  TypeT, [])
-supOf' sup               TypeT             = (False, sup,   [])
-supOf' TypeT             sub               = (True,  sub,   [])
+supOf TypeT             TypeT             = (True,  TypeT, [])
+supOf sup               TypeT             = (False, sup,   [])
+supOf TypeT             sub               = (True,  sub,   [])
 
-supOf' _                 TypeB             = (True,  TypeB, [])
-supOf' TypeB             _                 = (False, TypeB, [])
+supOf _                 TypeB             = (True,  TypeB, [])
+supOf TypeB             _                 = (False, TypeB, [])
 
-supOf' sup@(TypeV a1)    sub@(TypeV a2)    = (True,  sub,   [(a1,sub,True),(a2,sup,False)])
-supOf' (TypeV a1)        sub               = (True,  sub,   [(a1,sub,True)])
-supOf' sup               sub@(TypeV a2)    = (True,  sub,   [(a2,sup,False)])
+supOf sup@(TypeV a1)    sub@(TypeV a2)    = (True,  sub,   [(a1,sub,SUP),(a2,sup,SUB)])
+supOf (TypeV a1)        sub               = (True,  sub,   [(a1,sub,SUP)])
+supOf sup               sub@(TypeV a2)    = (True,  sub,   [(a2,sup,SUB)])
 
-supOf' Type0             Type0             = (True,  Type0, [])
-supOf' Type0             _                 = (False, Type0, [])
-supOf' sup               Type0             = (False, sup,   [])
+supOf Type0             Type0             = (True,  Type0, [])
+supOf Type0             _                 = (False, Type0, [])
+supOf sup               Type0             = (False, sup,   [])
 
-supOf' sup@(Type1 x)     sub@(Type1 y)
+supOf sup@(Type1 x)     sub@(Type1 y)
   | x `isPrefixOf` y                       = (True,  sub,   [])
   | otherwise                              = (False, sup,   [])
 
-supOf' sup@(Type1 _)     _                 = (False, sup,   [])
-supOf' sup               (Type1 _)         = (False, sup,   [])
+supOf sup@(Type1 _)     _                 = (False, sup,   [])
+supOf sup               (Type1 _)         = (False, sup,   [])
 
-supOf' sup@(TypeF inp1 out1) sub@(TypeF inp2 out2) =
-  let (i,_,k) = inp2 `supOf'` inp1      -- contravariance on inputs
-      (x,_,z) = out1 `supOf'` out2 in
+supOf sup@(TypeF inp1 out1) sub@(TypeF inp2 out2) =
+  let (i,_,k) = inp2 `supOf` inp1      -- contravariance on inputs
+      (x,_,z) = out1 `supOf` out2 in
     if i && x then                           (True,  sub,   k++z)
               else                           (False, sup,   k++z)
 
-supOf' sup@(TypeF _ _)   _                 = (False, sup,   [])
-supOf' sup               (TypeF _ _)       = (False, sup,   [])
+supOf sup@(TypeF _ _)   _                 = (False, sup,   [])
+supOf sup               (TypeF _ _)       = (False, sup,   [])
 
-supOf' (TypeN sups)      (TypeN subs)      = foldr f (True, TypeN [], []) $
-                                              zipWith supOf' (sups++bots) (subs++tops)
+supOf (TypeN sups)      (TypeN subs)      = foldr f (True, TypeN [], []) $
+                                              zipWith supOf (sups++bots) (subs++tops)
   where
     bots = replicate (length subs - length sups) TypeB
     tops = replicate (length sups - length subs) TypeT

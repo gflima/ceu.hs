@@ -6,8 +6,9 @@ import Data.Maybe (isJust, fromJust)
 import Data.Bool (bool)
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Type as Type (Type(..), Relation(..), show', supOf, isSubOf, supOfErrors, subOfErrors,
-                                 relatesErrors, supsubOfErrors, instantiate, get1s, getSuper, cat, hier2str)
+import Ceu.Grammar.Type as Type (Type(..), show', instantiate, get1s, getSuper,
+                                 cat, hier2str,
+                                 Relation(..), relates, isRel, relatesErrors)
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
 
@@ -87,11 +88,11 @@ read' z (SUP,txp) ids id = if id == "_INPUT" then ([], Type1 ["Int"])
 
             -- find matching instance | id : a=<txp>
             Just (Class _ cls [var] _ _, Just (Var _ id tp_var _)) ->
-              case txp `supOf` tp_var of
+              case (relates SUP txp tp_var) of
                 Left  es        -> (TypeV "?", map (toError z) es)
                 Right (_,insts) ->
                   let tp = Type.instantiate insts (TypeV var) in
-                    case find (isSubOf tp . getTP) $ filter (isInst $ (==cls)) (sort' ids) of
+                    case find (isRel SUB tp . getTP) $ filter (isInst $ (==cls)) (sort' ids) of
                       Nothing   -> (TypeV "?",
                                     [toError z "variable '" ++ id ++
                                      "' has no associated instance for type '" ++
@@ -149,7 +150,7 @@ stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] im
                       | otherwise = [toError z "names do not match : expected '" ++ id1 ++ "' : found '" ++ id2 ++ "'"]
 
         -- check if (Inst tps) match (Class vars) in all functions
-        instOf var tp1 tp2 = case tp1 `supOf` tp2 of
+        instOf var tp1 tp2 = case (relates SUP tp1 tp2) of
                               Left es -> es
                               Right (_,insts) ->
                                 let tp' = Type.instantiate insts (TypeV var) in
@@ -199,14 +200,14 @@ stmt ids (Match z loc exp p1 p2) = (es++es1++es2, Match z loc' (fromJust mexp) p
         Right exp -> (es, Just exp') where (es,exp') = expr z (rel,txp) ids exp
 
     -- Match must be covariant on variables and contravariant on constants:
-    --  LVar    a     <- x     # assign # a     supOf x
-    --  LExp    a     <- x     # match  # a     supOf x
-    --  LAny          <- x     # match  # BOT   subOf x
-    --  LUnit         <- x     # match  # unit  subOf x
-    --  LNumber a     <- x     # match  # Int.X subOf x
-    --  LCons   a b   <- x     # match  # a     anyOf x     | b match x
-    --  LTuple  (a,b) <- (x,y) # match  # (B,B) subOf (x,y) | a match x,  b match y
-    --  LTuple  (a,b) <- x     # match  # (B,B) subOf x     | a match x1, b match x2
+    --  LVar    a     <- x     # assign # a     SUP x
+    --  LExp    a     <- x     # match  # a     SUP x
+    --  LAny          <- x     # match  # BOT   SUB x
+    --  LUnit         <- x     # match  # unit  SUB x
+    --  LNumber a     <- x     # match  # Int.X SUB x
+    --  LCons   a b   <- x     # match  # a     ANY x     | b match x
+    --  LTuple  (a,b) <- (x,y) # match  # (B,B) SUB (x,y) | a match x,  b match y
+    --  LTuple  (a,b) <- x     # match  # (B,B) SUB x     | a match x1, b match x2
 
     aux :: [Stmt] -> Ann -> Loc -> Either Type Exp -> (Errors, Loc, Maybe Exp)
     aux ids z loc tpexp =
