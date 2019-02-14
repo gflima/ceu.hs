@@ -6,7 +6,7 @@ import Debug.Trace
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann          (type_, getAnn)
-import Ceu.Grammar.Type as Type (Type(..), show', isSupOf)
+import Ceu.Grammar.Type as Type (Type(..), show', isRel, Relation(..))
 import qualified Ceu.Grammar.Basic   as B
 import qualified Ceu.Grammar.TypeSys as T
 
@@ -34,9 +34,8 @@ data Loc = LAny
 
 data Stmt
     = Var    (ID_Var,Maybe Exp) Stmt    -- block with environment store
-    | Write  Loc Exp                    -- assignment statement
+    | Match  Loc Exp Stmt Stmt          -- match/assignment/if statement
     | CallS  Exp Exp                    -- procedure call
-    | If     Exp Stmt Stmt              -- conditional
     | Seq    Stmt Stmt                  -- sequence
     | Nop                               -- dummy statement (internal)
     | Ret    Exp                        -- terminate program with exp
@@ -73,12 +72,12 @@ fromStmt (B.Var _ id tp@(TypeF _ _) p) = Var (id++"__"++Type.show' tp, Nothing) 
 fromStmt (B.Var _ id _ p)              = Var (id,Nothing) (fromStmt p)
 fromStmt (B.CallS  _ f e)              = CallS (fromExp f) (fromExp e)
 fromStmt (B.Seq    _ p1 p2)            = Seq (fromStmt p1) (fromStmt p2)
-fromStmt (B.If     _ e p1 p2)          = If (fromExp e) (fromStmt p1) (fromStmt p2)
 fromStmt (B.Loop   _ p)                = Loop' (fromStmt p) (fromStmt p)
 fromStmt (B.Ret    _ e)                = Ret (fromExp e)
 fromStmt (B.Nop    _)                  = Nop
 
-fromStmt (B.Write  _ loc e)            = Write (aux (fromLoc loc) (type_ $ getAnn e)) (fromExp e)
+fromStmt (B.Match  _ loc e p1 p2)      = Match (aux (fromLoc loc) (type_ $ getAnn e))
+                                               (fromExp e) (fromStmt p1) (fromStmt p2)
   where
     aux LAny           _          = LAny
     aux (LVar id)      tp         =
@@ -86,18 +85,7 @@ fromStmt (B.Write  _ loc e)            = Write (aux (fromLoc loc) (type_ $ getAn
         tp@(TypeF _ _)           -> LVar $ id ++ "__" ++ Type.show' tp
         otherwise                -> LVar $ id
     aux (LTuple locs) (TypeN tps) = LTuple $ zipWith aux locs tps
-    --aux (LExp x)      tp          = LExp (fromExp x)
-    aux loc            _          = loc
-
-fromStmt (B.Write' _ loc e)            = Write (aux (fromLoc loc) (type_ $ getAnn e)) (fromExp e)
-  where
-    aux LAny           _          = LAny
-    aux (LVar id)      tp         =
-      case tp of
-        tp@(TypeF _ _)           -> LVar $ id ++ "__" ++ Type.show' tp
-        otherwise                -> LVar $ id
-    aux (LTuple locs) (TypeN tps) = LTuple $ zipWith aux locs tps
-    --aux (LExp x)      tp          = LExp (fromExp x)
+    aux (LExp x)      tp          = LExp x
     aux loc            _          = loc
 
 fromStmt (B.Inst   _ _ _ imp p)        = aux (fromStmt imp) (fromStmt p)
@@ -151,35 +139,36 @@ step (Var _  Nop,     vars)  = (Nop,        vars)
 step (Var vv (Ret e), vars)  = (Ret e,      vv:vars)
 step (Var vv p,       vars)  = (Var vv' p', vars') where (p',vv':vars') = step (p,vv:vars)
 
-step (Write loc e,    vars)  = (Nop, aux vars loc (envEval vars e))
+step (Match loc e p q,vars)  = let (b, vars') = aux vars loc (envEval vars e) in
+                                if b then (p, vars') else (q, vars)
   where
-    aux vars LAny          _ = vars
-    aux vars (LVar id)     e = envWrite vars id e
-    aux vars LUnit         _ = vars
-    aux vars (LNumber x)   e = case e of
-                                 (Number y) | x == y -> vars
-                                 _                   -> err x e
-    aux vars (LCons id l) (Cons id' e) | Type1 id `isSupOf` Type1 id' = aux vars l e
-    aux vars (LTuple ls)  (Tuple es) = foldr (\(loc,e) vars' -> aux vars' loc e)
-                                             vars
-                                             (zip ls (map (envEval vars) es))
-    aux vars (LExp x)      e = let x' = (envEval vars x) in
-                                if x' == e then
-                                  vars
+    aux vars LAny         _ = (True,          vars)
+    aux vars (LVar id)    v = (True,          envWrite vars id v)
+    aux vars LUnit        v = (True,          vars)
+    aux vars (LNumber x)  v = (Number x == v, vars)
+    aux vars (LCons id l)
+             (Cons id' e)   = if isRel SUP (Type1 id) (Type1 id') then
+                                aux vars l (envEval vars e)
+                              else
+                                (False, vars)
+    aux vars (LTuple ls)
+             (Tuple es)     = foldr (\(loc,e) (b1,vars1) ->
+                                      if b1==False then (False,vars1) else
+                                        aux vars1 loc (envEval vars1 e))
+                                    (True, vars)
+                                    (zip ls es)
+    aux vars (LExp x)     v = let x' = (envEval vars x) in
+                                if x' == v then
+                                  (True, vars)
                                 else
-                                  err (show x') (show e)
+                                  (False, vars)
 
-    err xp got = error $ "assignment does not match : expected '" ++ show xp ++
-                                                 "' : found '"    ++ show got ++ "'"
+    --err xp got = error $ "assignment does not match : expected '" ++ show xp ++
+                                                 --"' : found '"    ++ show got ++ "'"
 
 step (Seq Nop     q,  vars)  = (q,          vars)
 step (Seq (Ret e) q,  vars)  = (Ret e,      vars)
 step (Seq p       q,  vars)  = (Seq p' q,   vars') where (p',vars') = step (p,vars)
-
-step (If exp p q,     vars)  =
-    case envEval vars exp of
-        (Cons ["Bool","True"] _) -> (p,          vars)
-        otherwise                -> (q,          vars)
 
 step (Loop' Nop     q, vars) = (Loop' q q,  vars)
 step (Loop' (Ret e) q, vars) = (Ret e,      vars)
