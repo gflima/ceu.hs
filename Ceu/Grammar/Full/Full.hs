@@ -22,6 +22,7 @@ data Exp
     deriving (Eq, Show)
 
 toBasicExp :: Exp -> B.Exp
+toBasicExp (Error  z v)     = B.Error  z v
 toBasicExp (Number z v)     = B.Number z v
 toBasicExp (Cons   z v e)   = B.Cons   z v (toBasicExp e)
 toBasicExp (Read   z v)     = B.Read   z v
@@ -33,6 +34,7 @@ toBasicExp (Call   z e1 e2) = B.Call   z (toBasicExp e1) (toBasicExp e2)
 
 instance HasAnn Exp where
     --getAnn :: Exp -> Ann
+    getAnn (Error  z _)   = z
     getAnn (Number z _)   = z
     getAnn (Cons   z _ _) = z
     getAnn (Read   z _)   = z
