@@ -53,7 +53,7 @@ spec = do
 
       it "scope var x end ; x=1" $ do
         compile' (Seq annz (Scope annz (Var annz "x" (Type1 ["Int"]))) (Write annz (LVar "x") (Number annz 1)))
-        `shouldBe` (["type 'Int' is not declared","variable 'x' is not declared"], B.Seq annz (B.Var annz "x" (Type1 ["Int"]) (B.Nop annz)) (B.Write annz (B.LVar "x") (B.Number (annz{type_=Type1 ["Int","1"]}) 1)))
+        `shouldBe` (["type 'Int' is not declared","variable 'x' is not declared"], B.Seq annz (B.Var annz "x" (Type1 ["Int"]) (B.Nop annz)) (B.Match annz (B.LVar "x") (B.Number (annz{type_=Type1 ["Int","1"]}) 1) (B.Nop annz) (B.Ret annz (B.Number annz{type_ = Type1 ["Int","-1"]} (-1)))))
 
   --------------------------------------------------------------------------
 
@@ -64,8 +64,8 @@ spec = do
       `shouldBe` ([], (B.Var annz "x" Type0 (B.Nop annz)))
 
     it "do var x; x = 1 end" $ do
-      compile' (Var' annz "x" (Type1 ["Int"]) (Write annz (LVar "x") (Number annz 1)))
-      `shouldBe` (["type 'Int' is not declared"], (B.Var annz "x" (Type1 ["Int"]) (B.Write annz (B.LVar "x") (B.Number annz{type_=Type1 ["Int","1"]} 1))))
+      compile' (Var' annz "x" (Type1 ["Int"]) (Match annz (LVar "x") (Number annz 1) (Nop annz) (Nop annz)))
+      `shouldBe` (["type 'Int' is not declared"], (B.Var annz "x" (Type1 ["Int"]) (B.Match annz (B.LVar "x") (B.Number annz{type_=Type1 ["Int","1"]} 1) (B.Nop annz) (B.Nop annz))))
 
     it "class/inst" $ do
       compile (Seq annz
@@ -83,7 +83,8 @@ spec = do
                     (Var annz "v" (TypeV "a"))
                     (Nop annz))
                     (Seq annz
-                    (Write annz (LVar "v") (Arg annz)) (Ret annz (Read annz "v"))))))
+                    (Write annz (LVar "v") (Arg annz))
+                    (Ret annz (Read annz "v"))))))
                 (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
       `shouldBe`
         (Class' annz "F3able" ["a"]
@@ -91,15 +92,16 @@ spec = do
           (Seq annz (Nop annz) (Nop annz)))
         (Inst' annz "F3able" [Type1 ["Int"]]
           (Var' annz "f3" (TypeF (TypeV "a") (Type1 ["Int"]))
-          (Write annz
+          (Match annz
             (LVar "f3")
             (Func annz (TypeF (TypeV "a") (Type1 ["Int"]))
               (Var' annz "v" (TypeV "a")
               (Seq annz
               (Nop annz)
               (Seq annz
-              (Write annz (LVar "v") (Arg annz))
-              (Ret annz (Read annz "v"))))))))
+              (Match annz (LVar "v") (Arg annz) (Nop annz) (Ret annz (Number annz (-1))))
+              (Ret annz (Read annz "v"))))))
+            (Nop annz) (Ret annz (Number annz (-1)))))
         (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
 
   --------------------------------------------------------------------------

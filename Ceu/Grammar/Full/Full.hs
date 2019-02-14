@@ -68,6 +68,7 @@ data Stmt
   | Data     Ann [ID_Type] [ID_Var] Type Bool     -- new type declaration
   | Var      Ann ID_Var Type                      -- variable declaration
   | FuncS    Ann ID_Var Type Stmt                 -- function declaration
+  | Match    Ann Loc Exp Stmt Stmt                -- match
   | Write    Ann Loc Exp                          -- assignment statement
   | CallS    Ann Exp Exp                          -- call function
   | If       Ann Exp Stmt Stmt                    -- conditional
@@ -92,8 +93,7 @@ instance HasAnn Stmt where
     getAnn (Data     z _ _ _ _) = z
     getAnn (Var      z _ _)   = z
     getAnn (FuncS    z _ _ _) = z
-    getAnn (Write    z _ _  ) = z
-    getAnn (If       z _ _ _) = z
+    getAnn (Match    z _ _ _ _) = z
     getAnn (Seq      z _ _  ) = z
     getAnn (Loop     z _    ) = z
     getAnn (Scope    z _    ) = z
@@ -106,11 +106,11 @@ toBasicStmt :: Stmt -> B.Stmt
 toBasicStmt (Class' z cls vars ifc p)    = B.Class z cls vars (toBasicStmt ifc) (toBasicStmt p)
 toBasicStmt (Inst'  z cls tps  imp p)    = B.Inst  z cls tps  (toBasicStmt imp) (toBasicStmt p)
 toBasicStmt (Data' z tp vars flds abs p) = B.Data  z tp  vars flds abs (toBasicStmt p)
-toBasicStmt (Var' z var tp p)  = B.Var z var tp (toBasicStmt p)
-toBasicStmt (Write z loc exp)  = B.Write z (toBasicLoc loc) (toBasicExp exp)
-toBasicStmt (If z exp p1 p2)   = B.If z (toBasicExp exp) (toBasicStmt p1) (toBasicStmt p2)
-toBasicStmt (Seq z p1 p2)      = B.Seq z (toBasicStmt p1) (toBasicStmt p2)
-toBasicStmt (Loop z p)         = B.Loop z (toBasicStmt p)
-toBasicStmt (Nop z)            = B.Nop z
-toBasicStmt (Ret z exp)        = B.Ret z (toBasicExp exp)
-toBasicStmt p                  = error $ "toBasicStmt: unexpected statement: " ++ (show p)
+toBasicStmt (Var' z var tp p)            = B.Var z var tp (toBasicStmt p)
+toBasicStmt (Match z loc exp p1 p2)      = B.Match z (toBasicLoc loc) (toBasicExp exp)
+                                                     (toBasicStmt p1) (toBasicStmt p2)
+toBasicStmt (Seq z p1 p2)                = B.Seq z (toBasicStmt p1) (toBasicStmt p2)
+toBasicStmt (Loop z p)                   = B.Loop z (toBasicStmt p)
+toBasicStmt (Nop z)                      = B.Nop z
+toBasicStmt (Ret z exp)                  = B.Ret z (toBasicExp exp)
+toBasicStmt p                            = error $ "toBasicStmt: unexpected statement: " ++ (show p)
