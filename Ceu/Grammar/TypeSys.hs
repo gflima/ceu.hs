@@ -327,6 +327,7 @@ expr z (rel,txp) ids exp = (es1++es2, exp') where
 
 expr' :: (Relation,Type) -> [Stmt] -> Exp -> (Errors, Exp)
 
+expr' _ _   (Error  z v)     = ([], Error  z{type_=TypeB} v)
 expr' _ _   (Number z v)     = ([], Number z{type_=Type1 ["Int",show v]} v)
 expr' _ _   (Unit   z)       = ([], Unit   z{type_=Type0})
 expr' _ _   (Arg    z)       = ([], Arg    z{type_=TypeB})

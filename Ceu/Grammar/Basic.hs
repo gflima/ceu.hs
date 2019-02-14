@@ -7,7 +7,8 @@ import Ceu.Grammar.Type     (Type(..))
 -------------------------------------------------------------------------------
 
 data Exp
-    = Unit   Ann                -- ()
+    = Error  Ann Int
+    | Unit   Ann                -- ()
     | Number Ann Int            -- 1
     | Cons   Ann [ID_Type] Exp  -- True
     | Read   Ann ID_Var         -- a ; xs
@@ -19,6 +20,7 @@ data Exp
 
 instance HasAnn Exp where
     --getAnn :: Exp -> Ann
+    getAnn (Error  z _)   = z
     getAnn (Number z _)   = z
     getAnn (Cons   z _ _) = z
     getAnn (Read   z _)   = z

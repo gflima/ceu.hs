@@ -14,7 +14,8 @@ type Vars = [(ID_Var, Maybe Exp)]
 type Desc = (Stmt, Vars)
 
 data Exp
-    = Number Int            -- 1
+    = Error  Int
+    | Number Int            -- 1
     | Cons   [ID_Type] Exp  -- True
     | Read   ID_Var         -- a ; xs
     | Unit                  -- ()
@@ -45,6 +46,7 @@ data Stmt
 infixr 1 `Seq`
 
 fromExp :: B.Exp -> Exp
+fromExp (B.Error  _ v)    = Error  v
 fromExp (B.Number _ v)    = Number v
 fromExp (B.Cons   _ id e) = Cons id (fromExp e)
 fromExp (B.Arg    _)      = Read "_arg"
@@ -115,11 +117,22 @@ envRead vars var =
 
 envEval :: Vars -> Exp -> Exp
 envEval vars e = case e of
-    Cons  id e' -> Cons id (envEval vars e')
+    Cons  id e' -> case envEval vars e' of
+                    Error x -> Error x
+                    e       -> Cons id e
     Read  var   -> envRead vars var
-    Tuple es    -> Tuple $ map (envEval vars) es
+    Tuple es    -> let exps = map (envEval vars) es in
+                    case find isError exps of
+                      Nothing  -> Tuple exps
+                      Just exp -> exp
+                    where
+                      isError (Error _) = True
+                      isError _         = False
+
     Call  f e'  ->
       case (envEval vars f, envEval vars e') of
+        (Error x, _) -> Error x
+        (_, Error x) -> Error x
         (Read "negate__(Int -> Int)",    Number x)                   -> Number (-x)
         (Read "+__((Int,Int) -> Int)",   Tuple [Number x, Number y]) -> Number (x+y)
         (Read "-__((Int,Int) -> Int)",   Tuple [Number x, Number y]) -> Number (x-y)
@@ -127,7 +140,7 @@ envEval vars e = case e of
         (Read "/__((Int,Int) -> Int)",   Tuple [Number x, Number y]) -> Number (x `div` y)
         (Read "==__((Int,Int) -> Bool)", Tuple [Number x, Number y]) -> Cons (bool ["Bool","False"] ["Bool","True"] (x == y)) Unit
         (Func p,        arg)                                         -> steps (p, ("_arg",Just arg):vars)
-        otherwise -> error $ show (f,e')
+        otherwise    -> error $ show (f,e')
 
     e         -> e
 
@@ -139,32 +152,45 @@ step (Var _  Nop,     vars)  = (Nop,        vars)
 step (Var vv (Ret e), vars)  = (Ret e,      vv:vars)
 step (Var vv p,       vars)  = (Var vv' p', vars') where (p',vv':vars') = step (p,vv:vars)
 
-step (Match loc e p q,vars)  = let (b, vars') = aux vars loc (envEval vars e) in
-                                if b then (p, vars') else (q, vars)
+step (CallS f e,      vars)  = (p,          vars) where
+                                ret = envEval vars (Call f e)
+                                p   = case ret of
+                                        Error v   -> Ret ret
+                                        otherwise -> Nop
+
+step (Match loc e p q,vars)  = case envEval vars e of
+                                Error x -> (Ret (Error x), vars)
+                                e'      -> f $ aux vars loc e'
   where
-    aux vars LAny         _ = (True,          vars)
-    aux vars (LVar id)    v = (True,          envWrite vars id v)
-    aux vars LUnit        v = (True,          vars)
-    aux vars (LNumber x)  v = (Number x == v, vars)
+    aux vars LAny         _ = (Right True,            vars)
+    aux vars (LVar id)    v = (Right True,            envWrite vars id v)
+    aux vars LUnit        v = (Right True,            vars)
+    aux vars (LNumber x)  v = (Right (Number x == v), vars)
     aux vars (LCons id l)
              (Cons id' e)   = if isRel SUP (Type1 id) (Type1 id') then
-                                aux vars l (envEval vars e)
+                                case envEval vars e of
+                                  Error x -> (Left $ Error x, vars)
+                                  e'      -> aux vars l e'
                               else
-                                (False, vars)
+                                (Right False, vars)
     aux vars (LTuple ls)
              (Tuple es)     = foldr (\(loc,e) (b1,vars1) ->
-                                      if b1==False then (False,vars1) else
-                                        aux vars1 loc (envEval vars1 e))
-                                    (True, vars)
+                                      if b1/=(Right True) then (b1,vars1) else
+                                        case envEval vars1 e of
+                                          Error x -> (Left $ Error x, vars)
+                                          e'      -> aux vars1 loc e')
+                                    (Right True, vars)
                                     (zip ls es)
-    aux vars (LExp x)     v = let x' = (envEval vars x) in
-                                if x' == v then
-                                  (True, vars)
-                                else
-                                  (False, vars)
+    aux vars (LExp x)     v = case envEval vars x of
+                                Error x -> (Left  $ Error x, vars)
+                                e'      -> (Right $ e' == v, vars)
 
     --err xp got = error $ "assignment does not match : expected '" ++ show xp ++
                                                  --"' : found '"    ++ show got ++ "'"
+
+    f (Right True,  vars) = (p,       vars)
+    f (Right False, vars) = (q,       vars)
+    f (Left  err,   vars) = (Ret err, vars)
 
 step (Seq Nop     q,  vars)  = (q,          vars)
 step (Seq (Ret e) q,  vars)  = (Ret e,      vars)

@@ -10,7 +10,8 @@ import qualified Ceu.Grammar.Basic as B
 -------------------------------------------------------------------------------
 
 data Exp
-    = Number Ann Int            -- 1
+    = Error  Ann Int            -- 1
+    | Number Ann Int            -- 1
     | Cons   Ann [ID_Type] Exp  -- True
     | Read   Ann ID_Var         -- a ; xs
     | Arg    Ann
