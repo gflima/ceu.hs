@@ -3,7 +3,7 @@ module Ceu.ParserSpec (main, spec) where
 import Test.Hspec
 
 import qualified Text.Parsec as P (eof, parse)
-import Text.Parsec.Prim
+import Text.Parsec.Prim hiding (Error)
 import Text.Parsec.String (Parser)
 
 import Ceu.Parser.Token
@@ -463,9 +463,9 @@ spec = do
 
             it "Xxx.Yyy" $
               (compile' $ fromRight' $ parse' stmt "type Int ; type Xxx with Int ; type Xxx.Yyy with Int ; var y:Xxx.Yyy <- Xxx.Yyy (1,2)")
-              `shouldBe` ([],B.Data annz ["Int"] [] Type0 False (B.Data annz ["Xxx"] [] (Type1 ["Int"]) False (B.Data annz ["Xxx","Yyy"] [] (TypeN [Type1 ["Int"],Type1 ["Int"]]) False (B.Var annz "y" (Type1 ["Xxx","Yyy"]) (B.Write annz (B.LVar "y") (B.Cons annz{type_=Type1 ["Xxx","Yyy"]} ["Xxx","Yyy"] (B.Tuple annz{type_=TypeN [Type1 ["Int","1"],Type1 ["Int","2"]]} [B.Number annz{type_=Type1 ["Int","1"]} 1,B.Number annz{type_=Type1 ["Int","2"]} 2])))))))
+              `shouldBe` ([],B.Data annz ["Int"] [] Type0 False (B.Data annz ["Xxx"] [] (Type1 ["Int"]) False (B.Data annz ["Xxx","Yyy"] [] (TypeN [Type1 ["Int"],Type1 ["Int"]]) False (B.Var annz "y" (Type1 ["Xxx","Yyy"]) (B.Match annz (B.LVar "y") (B.Cons annz{type_=Type1 ["Xxx","Yyy"]} ["Xxx","Yyy"] (B.Tuple annz{type_=TypeN [Type1 ["Int","1"],Type1 ["Int","2"]]} [B.Number annz{type_=Type1 ["Int","1"]} 1,B.Number annz{type_=Type1 ["Int","2"]} 2])) (B.Nop annz) (B.Ret annz (B.Error annz 1)))))))
 
-            it "data X with Int ; x:Int ; X x <- X 1" $
+            it "data X with Int ; x:Int ; X x <- X 1 ; ret x" $
               (parse' stmt "type Xxx with Int ; var x:Int ; set Xxx x <- Xxx 1 ; return x")
               `shouldBe` Right (Seq annz (Data annz ["Xxx"] [] (Type1 ["Int"]) False) (Seq annz (Seq annz (Seq annz (Var annz "x" (Type1 ["Int"])) (Nop annz)) (Nop annz)) (Seq annz (Write annz (LCons ["Xxx"] (LVar "x")) (Cons annz ["Xxx"] (Number annz 1))) (Ret annz (Read annz "x")))))
             it "data X with Int ; X 1 <- X 1 ; return 1" $
