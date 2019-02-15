@@ -24,7 +24,7 @@ attr_exp loc op = do
   pos  <- pos2src <$> getPosition
   void <- op
   exp  <- expr
-  return $ Write annz{source=pos} loc exp
+  return $ Set annz{source=pos} loc exp
 
 -------------------------------------------------------------------------------
 
@@ -311,7 +311,7 @@ func pos = do
   return $ (tp, Seq ann
                   dcls
                   (Seq ann
-                    (Write ann loc (Arg ann))
+                    (Set ann loc (Arg ann))
                     imp))
 
 expr_func :: Parser Exp
