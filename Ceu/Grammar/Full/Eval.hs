@@ -17,15 +17,17 @@ import qualified Ceu.Grammar.Full.Compile.FuncS as FuncS
 
 prelude :: Ann -> Stmt -> Stmt
 prelude z p =
-    (Seq z (Data z ["Int"]  [] Type0 False)
-    (Seq z (Data z ["Bool"] [] Type0 False)
+    (Seq z (Data z ["Int"]        [] Type0 True)
+    (Seq z (Data z ["Bool"]       [] Type0 True)
+    (Seq z (Data z ["Bool.True"]  [] Type0 False)
+    (Seq z (Data z ["Bool.False"] [] Type0 False)
     (Seq z (Var  z "negate" (TypeF (Type1 ["Int"])                        (Type1 ["Int"])))
     (Seq z (Var  z "=="     (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Bool"])))
     (Seq z (Var  z "+"      (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"])))
     (Seq z (Var  z "-"      (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"])))
     (Seq z (Var  z "/"      (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"])))
     (Seq z (Var  z "*"      (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"])))
-           p))))))))
+           p))))))))))
 
 compile :: Stmt -> Stmt
 compile p = Scope.compile $ Seq.compile $ Match.compile $ FuncS.compile p
