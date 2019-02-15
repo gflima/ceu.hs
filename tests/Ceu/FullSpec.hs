@@ -115,3 +115,18 @@ spec = do
       go (Seq annz (Data annz ["Xxx"] [] (Type1 ["Int"]) False) (Seq annz (Write annz (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 2))) (Ret annz (Number annz 2))))
       `shouldBe`
         Left ["types do not match : expected 'Int.1' : found 'Int.2'"]
+
+    it "call (func () : (() -> ()) do end)" $ do
+      go (Seq annz
+          (CallS annz (Func annz (TypeF Type0 Type0)
+                        (Ret annz (Unit annz))) (Unit annz))
+          (Ret annz (Number annz 10)))
+      `shouldBe` Right (E.Number 10)
+
+    it "ret (func () : (() -> Int) do ret 10 end) ()" $ do
+      go (Ret annz
+            (Call annz
+              (Func annz (TypeF Type0 (Type1 ["Int"]))
+                (Ret annz (Number annz 10)))
+              (Unit annz)))
+      `shouldBe` Right (E.Number 10)

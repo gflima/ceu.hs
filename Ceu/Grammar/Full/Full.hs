@@ -109,11 +109,12 @@ toBasicStmt :: Stmt -> B.Stmt
 toBasicStmt (Class' z cls vars ifc p)    = B.Class z cls vars (toBasicStmt ifc) (toBasicStmt p)
 toBasicStmt (Inst'  z cls tps  imp p)    = B.Inst  z cls tps  (toBasicStmt imp) (toBasicStmt p)
 toBasicStmt (Data' z tp vars flds abs p) = B.Data  z tp  vars flds abs (toBasicStmt p)
-toBasicStmt (Var' z var tp p)            = B.Var z var tp (toBasicStmt p)
+toBasicStmt (Var' z var tp p)            = B.Var   z var tp (toBasicStmt p)
 toBasicStmt (Match z loc exp p1 p2)      = B.Match z (toBasicLoc loc) (toBasicExp exp)
                                                      (toBasicStmt p1) (toBasicStmt p2)
-toBasicStmt (Seq z p1 p2)                = B.Seq z (toBasicStmt p1) (toBasicStmt p2)
-toBasicStmt (Loop z p)                   = B.Loop z (toBasicStmt p)
-toBasicStmt (Nop z)                      = B.Nop z
-toBasicStmt (Ret z exp)                  = B.Ret z (toBasicExp exp)
+toBasicStmt (CallS z f e)                = B.CallS z (toBasicExp f) (toBasicExp e)
+toBasicStmt (Seq z p1 p2)                = B.Seq   z (toBasicStmt p1) (toBasicStmt p2)
+toBasicStmt (Loop z p)                   = B.Loop  z (toBasicStmt p)
+toBasicStmt (Nop z)                      = B.Nop   z
+toBasicStmt (Ret z exp)                  = B.Ret   z (toBasicExp exp)
 toBasicStmt p                            = error $ "toBasicStmt: unexpected statement: " ++ (show p)
