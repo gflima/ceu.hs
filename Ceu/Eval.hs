@@ -139,6 +139,7 @@ envEval vars e = case e of
         (Read "*__((Int,Int) -> Int)",   Tuple [Number x, Number y]) -> Number (x*y)
         (Read "/__((Int,Int) -> Int)",   Tuple [Number x, Number y]) -> Number (x `div` y)
         (Read "==__((Int,Int) -> Bool)", Tuple [Number x, Number y]) -> Cons (bool ["Bool","False"] ["Bool","True"] (x == y)) Unit
+        (Read "<=__((Int,Int) -> Bool)", Tuple [Number x, Number y]) -> Cons (bool ["Bool","False"] ["Bool","True"] (x <= y)) Unit
         (Func p,        arg)                                         -> steps (p, ("_arg",Just arg):vars)
         otherwise    -> error $ show (f,e')
 
