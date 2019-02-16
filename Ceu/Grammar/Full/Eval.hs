@@ -21,13 +21,15 @@ prelude z p =
     (Seq z (Data z ["Bool"]       [] Type0 True)
     (Seq z (Data z ["Bool.True"]  [] Type0 False)
     (Seq z (Data z ["Bool.False"] [] Type0 False)
+    (Seq z (Var  z "_true"  (Type1 ["Bool"]))
+    (Seq z (Set  z False (LVar "_true") (Cons z ["Bool","True"] (Unit z)))
     (Seq z (Var  z "negate" (TypeF (Type1 ["Int"])                        (Type1 ["Int"])))
     (Seq z (Var  z "=="     (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Bool"])))
     (Seq z (Var  z "+"      (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"])))
     (Seq z (Var  z "-"      (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"])))
     (Seq z (Var  z "/"      (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"])))
     (Seq z (Var  z "*"      (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"])))
-           p))))))))))
+           p))))))))))))
 
 compile :: Stmt -> Stmt
 compile p = Scope.compile $ Seq.compile $ Match.compile $ FuncS.compile p

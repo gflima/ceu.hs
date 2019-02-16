@@ -340,7 +340,7 @@ spec = do
     describe "if-then-else/if-else" $ do
         it "if 0 then return 0 else return 1 end" $
             run True "if 0 then return 0 else return 1 end"
-            `shouldBe` Left "(line 1, column 1):\ntypes do not match : expected 'Bool.True' : found 'Int.0'\n"
+            `shouldBe` Left "(line 1, column 1):\ntypes do not match : expected 'Bool' : found 'Int.0'\n"
         it "if 0==1 then return 0 else return 1 end" $
             run True "if 0==1 then return 0 else return 1 end"
             `shouldBe` Right (Number 1)
