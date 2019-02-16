@@ -72,8 +72,7 @@ data Stmt
   | Var      Ann ID_Var Type                      -- variable declaration
   | FuncS    Ann ID_Var Type Stmt                 -- function declaration
   | Match    Ann Loc Exp Stmt Stmt                -- match
-  | Set      Ann Loc Exp                          -- assignment statement
-  | SetF     Ann Loc Exp                          -- assignment statement
+  | Set      Ann Bool Loc Exp                     -- assignment statement
   | CallS    Ann Exp Exp                          -- call function
   | If       Ann Exp Stmt Stmt                    -- conditional
   | Seq      Ann Stmt Stmt                        -- sequence
