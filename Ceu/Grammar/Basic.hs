@@ -48,7 +48,7 @@ data Stmt
     | Inst   Ann ID_Class [Type] Stmt Stmt    -- new class instance
     | Data   Ann [ID_Type] [ID_Var] Type Bool Stmt -- new type declaration
     | Var    Ann ID_Var  Type Stmt            -- variable declaration
-    | Match  Ann Loc Exp Stmt Stmt            -- match/assignment/if statement
+    | Match  Ann Bool Loc Exp Stmt Stmt       -- match/assignment/if statement
     | CallS  Ann Exp Exp                      -- call function
     | Seq    Ann Stmt Stmt                    -- sequence
     | Loop   Ann Stmt                         -- infinite loop
@@ -95,7 +95,7 @@ instance HasAnn Stmt where
     getAnn (Inst  z _ _ _ _)   = z
     getAnn (Data  z _ _ _ _ _) = z
     getAnn (Var   z _ _ _)     = z
-    getAnn (Match z _ _ _ _)   = z
+    getAnn (Match z _ _ _ _ _) = z
     getAnn (CallS z _ _)       = z
     getAnn (Seq   z _ _)       = z
     getAnn (Loop  z _)         = z
