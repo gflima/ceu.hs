@@ -155,8 +155,8 @@ stmt_do = do
 
 pMatch pos = option (LExp $ Read annz{source=pos} "_true") (try $ pLoc <* tk_str "<-")
 
-stmt_if :: Parser Stmt
-stmt_if = do
+stmt_match :: Parser Stmt
+stmt_match = do
   pos1 <- pos2src <$> getPosition
   void <- tk_key "if"
   loc  <- pMatch pos1
@@ -191,7 +191,7 @@ stmt1 = do
        try stmt_funcs   <|>
        try stmt_attr    <|>
        try stmt_do      <|>
-       try stmt_if      <|>
+       try stmt_match   <|>
        try stmt_loop    <|>
        try stmt_ret
   return s

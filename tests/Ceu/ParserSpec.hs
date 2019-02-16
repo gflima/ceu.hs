@@ -361,35 +361,35 @@ spec = do
 
         describe "if-then-else/if-else" $ do
             it "if 0 then return ()" $
-                parse stmt_if "if 0 then return ()"
+                parse stmt_match "if 0 then return ()"
                 `shouldBe` Left "(line 1, column 20):\nunexpected end of input\nexpecting \"typeclass\", \"instance\", \"type\", \"var\", \"func\", \"set!\", \"set\", \"do\", \"if\", \"loop\", \"return\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 then return 0" $
-                parse stmt_if "if 0 then return 0"
+                parse stmt_match "if 0 then return 0"
                 `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"typeclass\", \"instance\", \"type\", \"var\", \"func\", \"set!\", \"set\", \"do\", \"if\", \"loop\", \"return\", \"else/if\", \"else\" or \"end\""
 
             it "if 0 return 0 end" $
-                parse stmt_if "if 0 return 0 end"
+                parse stmt_match "if 0 return 0 end"
                 `shouldBe` Left "(line 1, column 6):\nunexpected \"r\"\nexpecting \"then\""
 
             it "if 0 then return 0 else return 1 end" $
-                parse stmt_if "if 0 then return 0 else return 1 end"
-                `shouldBe` Right (If annz{source=("",1,1)} (Number annz{source=("",1,4)} 0) (Ret annz{source=("",1,11)} (Number annz{source=("",1,18)} 0)) (Ret annz{source=("",1,25)} (Number annz{source=("",1,32)} 1)))
+                parse stmt_match "if 0 then return 0 else return 1 end"
+                `shouldBe` Right (Match annz{source=("",1,1)} (LExp (Read annz{source=("",1,1)} "_true")) (Number annz{source=("",1,4)} 0) (Ret annz{source=("",1,11)} (Number annz{source=("",1,18)} 0)) (Ret annz{source=("",1,25)} (Number annz{source=("",1,32)} 1)))
             it "if 1 then return 1 end" $
-                parse stmt_if "if 1 then return 1 end"
-                `shouldBe` Right (If annz{source=("",1,1)} (Number annz{source=("",1,4)} 1) (Ret annz{source=("",1,11)} (Number annz{source=("",1,18)} 1)) (Nop annz{source=("",1,20)}))
+                parse stmt_match "if 1 then return 1 end"
+                `shouldBe` Right (Match annz{source=("",1,1)} (LExp (Read annz{source=("",1,1)} "_true")) (Number annz{source=("",1,4)} 1) (Ret annz{source=("",1,11)} (Number annz{source=("",1,18)} 1)) (Nop annz{source=("",1,20)}))
             it "if then return 1 end" $
-                parse stmt_if "if then return 1 end"
+                parse stmt_match "if then return 1 end"
                 `shouldBe` Left "(line 1, column 8):\nunexpected \" \"\nexpecting digit, letter or \"_\""
             it "if then (if then else end) end" $
-                parse stmt_if "if 1 then ; if 0 then else return 1 end ; end"
-                `shouldBe` Right (If annz{source=("",1,1)} (Number annz{source=("",1,4)} 1) (If annz{source=("",1,13)} (Number annz{source=("",1,16)} 0) (Nop annz{source=("",1,23)}) (Ret annz{source=("",1,28)} (Number annz{source=("",1,35)} 1))) (Nop annz{source=("",1,43)}))
+                parse stmt_match "if 1 then ; if 0 then else return 1 end ; end"
+                `shouldBe` Right (Match annz{source=("",1,1)} (LExp (Read annz{source=("",1,1)} "_true")) (Number annz{source=("",1,4)} 1) (Match annz{source=("",1,13)} (LExp (Read annz{source=("",1,13)} "_true")) (Number annz{source=("",1,16)} 0) (Nop annz{source=("",1,23)}) (Ret annz{source=("",1,28)} (Number annz{source=("",1,35)} 1))) (Nop annz{source=("",1,43)}))
             it "if then (if then end) else end" $
-                parse stmt_if "if 0 then ; if 0 then end ; else return 1 end"
-                `shouldBe` Right (If annz{source=("",1,1)} (Number annz{source=("",1,4)} 0) (If annz{source=("",1,13)} (Number annz{source=("",1,16)} 0) (Nop annz{source=("",1,23)}) (Nop annz{source=("",1,23)})) (Ret annz{source=("",1,34)} (Number annz{source=("",1,41)} 1)))
+                parse stmt_match "if 0 then ; if 0 then end ; else return 1 end"
+                `shouldBe` Right (Match annz{source=("",1,1)} (LExp (Read annz{source=("",1,1)} "_true")) (Number annz{source=("",1,4)} 0) (Match annz{source=("",1,13)} (LExp (Read annz{source=("",1,13)} "_true")) (Number annz{source=("",1,16)} 0) (Nop annz{source=("",1,23)}) (Nop annz{source=("",1,23)})) (Ret annz{source=("",1,34)} (Number annz{source=("",1,41)} 1)))
             it "if 0 then . else/if 1 then return 1 else ." $
-                parse stmt_if "if 0 then return 0 else/if 1 then return 1 else return 0 end"
-                `shouldBe` Right (If annz{source=("",1,1)} (Number annz{source=("",1,4)} 0) (Ret annz{source=("",1,11)} (Number annz{source=("",1,18)} 0)) (If annz{source=("",1,20)} (Number annz{source=("",1,28)} 1) (Ret annz{source=("",1,35)} (Number annz{source=("",1,42)} 1)) (Ret annz{source=("",1,49)} (Number annz{source=("",1,56)} 0))))
+                parse stmt_match "if 0 then return 0 else/if 1 then return 1 else return 0 end"
+                `shouldBe` Right (Match annz{source=("",1,1)} (LExp (Read annz{source=("",1,1)} "_true")) (Number annz{source=("",1,4)} 0) (Ret annz{source=("",1,11)} (Number annz{source=("",1,18)} 0)) (Match annz{source=("",1,20)} (LExp (Read annz{source=("",1,1)} "_true")) (Number annz{source=("",1,28)} 1) (Ret annz{source=("",1,35)} (Number annz{source=("",1,42)} 1)) (Ret annz{source=("",1,49)} (Number annz{source=("",1,56)} 0))))
 
         describe "loop" $ do
             it "loop do end" $
