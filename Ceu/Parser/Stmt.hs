@@ -19,12 +19,58 @@ import Ceu.Grammar.Full.Full
 
 -------------------------------------------------------------------------------
 
-attr_exp :: Bool -> Loc -> Parser a -> Parser Stmt
-attr_exp chk loc op = do
+pSet :: Bool -> Loc -> Parser Stmt
+pSet chk loc = do
   pos  <- pos2src <$> getPosition
-  void <- op
+  void <- tk_str "<-"
   exp  <- expr
   return $ Set annz{source=pos} chk loc exp
+
+-- (x, (y,_))
+pLoc :: Parser Loc
+pLoc =  (try lany  <|> try lvar   <|> try lunit  <|> try lnumber <|>
+         try lcons <|> try ltuple <|> try lexp) <|>
+         try (tk_str "(" *> ((pLoc <* tk_str ")")))
+  where
+    lany    = do
+                void <- tk_str "_"
+                return LAny
+    lvar    = do
+                var <- tk_var
+                return $ LVar var
+    lunit   = do
+                void <- tk_str "("
+                void <- tk_str ")"
+                return LUnit
+    lnumber = do
+                num <- tk_num
+                return $ LNumber num
+    lcons   = do
+                cons <- tk_types
+                loc  <- option LUnit pLoc
+                return $ LCons cons loc
+    ltuple  = do
+                locs <- list pLoc
+                return (LTuple $ locs)
+    lexp    = do
+                exp <- tk_str "`" *> expr <* tk_str "`"
+                return $ LExp exp
+
+matchLocType :: Source -> Loc -> Type -> Maybe Stmt
+matchLocType src loc tp = case (aux src loc tp) of
+                            Nothing -> Nothing
+                            Just v  -> Just $ foldr (Seq annz) (Nop annz) v
+  where
+    aux :: Source -> Loc -> Type -> Maybe [Stmt]
+    aux pos LAny        _          = Just []
+    aux pos LUnit       Type0      = Just []
+    aux pos (LVar var)  tp         = Just [Var annz{source=pos} var tp]
+    aux pos (LTuple []) (TypeN []) = Just []
+    aux pos (LTuple []) _          = Nothing
+    aux pos (LTuple _)  (TypeN []) = Nothing
+    aux pos (LTuple (v1:vs1)) (TypeN (v2:vs2)) = (fmap (++) (aux pos v1 v2)) <*>
+                                                 (aux pos (LTuple vs1) (TypeN vs2))
+    aux pos (LTuple _)  _          = Nothing
 
 -------------------------------------------------------------------------------
 
@@ -83,7 +129,7 @@ stmt_var = do
   void <- tk_str ":"
   tp   <- pType
   s    <- option (Nop $ annz{source=pos})
-                 (try (attr_exp False loc (tk_str "<-")))
+                 (try $ pSet False loc)
   s'   <- case (matchLocType pos loc tp) of
             Nothing -> do { fail "arity mismatch" }
             Just v  -> return $ Seq annz{source=pos} v s
@@ -94,54 +140,8 @@ stmt_attr = do
   --pos  <- pos2src <$> getPosition
   set  <- try (tk_str' "set!") <|> try (tk_str' "set")
   loc  <- pLoc
-  s    <- try (attr_exp (set=="set!") loc (tk_str "<-"))
-  return $ s
-
--- (x, (y,_))
-pLoc :: Parser Loc
-pLoc =  (try lany  <|> try lvar   <|> try lunit  <|> try lnumber <|>
-         try lcons <|> try ltuple <|> try lexp) <|>
-         try (tk_str "(" *> ((pLoc <* tk_str ")")))
-  where
-    lany    = do
-                void <- tk_str "_"
-                return LAny
-    lvar    = do
-                var <- tk_var
-                return $ LVar var
-    lunit   = do
-                void <- tk_str "("
-                void <- tk_str ")"
-                return LUnit
-    lnumber = do
-                num <- tk_num
-                return $ LNumber num
-    lcons   = do
-                cons <- tk_types
-                loc  <- option LUnit pLoc
-                return $ LCons cons loc
-    ltuple  = do
-                locs <- list pLoc
-                return (LTuple $ locs)
-    lexp    = do
-                exp <- tk_str "`" *> expr <* tk_str "`"
-                return $ LExp exp
-
-matchLocType :: Source -> Loc -> Type -> Maybe Stmt
-matchLocType src loc tp = case (aux src loc tp) of
-                            Nothing -> Nothing
-                            Just v  -> Just $ foldr (Seq annz) (Nop annz) v
-  where
-    aux :: Source -> Loc -> Type -> Maybe [Stmt]
-    aux pos LAny        _          = Just []
-    aux pos LUnit       Type0      = Just []
-    aux pos (LVar var)  tp         = Just [Var annz{source=pos} var tp]
-    aux pos (LTuple []) (TypeN []) = Just []
-    aux pos (LTuple []) _          = Nothing
-    aux pos (LTuple _)  (TypeN []) = Nothing
-    aux pos (LTuple (v1:vs1)) (TypeN (v2:vs2)) = (fmap (++) (aux pos v1 v2)) <*>
-                                                 (aux pos (LTuple vs1) (TypeN vs2))
-    aux pos (LTuple _)  _          = Nothing
+  s    <- pSet (set=="set!") loc
+  return s
 
 -------------------------------------------------------------------------------
 

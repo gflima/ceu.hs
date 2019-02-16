@@ -50,8 +50,12 @@ main = hspec spec
 spec :: Spec
 spec = do
 
-    --describe "TODO:" $ do
-        --parse stmt "var x::Int; var yyy::(Int,Int) : (3,55); ((_,x),_)<:(yyy,1); return x"
+{-
+    describe "TODO:" $ do
+      it "TODO" $
+        parse stmt "var x:Int <- 1"
+        `shouldBe` Left []
+-}
 
     describe "tokens:" $ do
         describe "comm:" $ do

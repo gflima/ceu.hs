@@ -20,7 +20,14 @@ main = hspec spec
 
 spec :: Spec
 spec = do
-  --describe "TODO" $ do
+
+{-
+  describe "TODO" $ do
+    it "TODO" $
+      compile' (Seq annz (Data annz ["Int"] [] Type0 False) (Seq annz (Seq annz (Var annz "x" (Type1 ["Int"])) (Nop annz)) (Seq annz (Set annz False (LVar "x") (Number annz 1)) (Ret annz (Number annz 1)))))
+      `shouldBe` ([], (B.Var annz "x" Type0 (B.Nop annz)))
+-}
+
   --------------------------------------------------------------------------
 
   describe "Func.compile" $ do
