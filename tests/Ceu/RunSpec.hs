@@ -159,6 +159,21 @@ spec = do
            ])
         `shouldBe` Right (Number 120)
 
+      it "dynamic scope" $
+        (run True $
+          unlines [
+            "var a : Int <- 0",
+            "func f () : (() -> Int) do",
+            "   return a",
+            "end",
+            "func g () : (() -> Int) do",
+            "   var a : Int <-10",
+            "   return f()",        -- dynamic scope not possible b/c redefinitions are errors
+            "end",
+            "return g ()"
+           ])
+        `shouldBe` Left "(line 6, column 4):\nvariable 'a' is already declared\n"
+
     describe "data:" $ do
 
       it "type Xxx" $
