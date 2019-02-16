@@ -153,19 +153,22 @@ stmt_do = do
   void <- tk_key "end"
   return $ Scope annz{source=pos} s
 
+pMatch pos = option (LExp $ Read annz{source=pos} "_true") (try $ pLoc <* tk_str "<-")
+
 stmt_if :: Parser Stmt
 stmt_if = do
   pos1 <- pos2src <$> getPosition
   void <- tk_key "if"
-  cnd  <- expr
+  loc  <- pMatch pos1
+  exp  <- expr
   void <- tk_key "then"
   s1   <- stmt
-  ss   <- many $ (try $ (,,) <$> pos2src <$> getPosition <*>
-                 (tk_key "else/if" *> expr) <*> (tk_key "then" *> stmt))
+  ss   <- many $ (try $ (,,,) <$> pos2src <$> getPosition <*>
+                 (tk_key "else/if" *> pMatch pos1) <*> expr <*> (tk_key "then" *> stmt))
   pos2 <- pos2src <$> getPosition
   s2   <- option (Nop annz{source=pos2}) (try $ tk_key "else" *> stmt)
   void <- tk_key "end"
-  return $ foldr (\(p,c,s) acc -> If annz{source=p} c s acc) s2 ([(pos1,cnd,s1)] ++ ss)
+  return $ foldr (\(p,l,e,s) acc -> Match annz{source=p} l e s acc) s2 ([(pos1,loc,exp,s1)] ++ ss)
 
 stmt_loop :: Parser Stmt
 stmt_loop = do

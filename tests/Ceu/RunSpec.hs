@@ -223,7 +223,7 @@ spec = do
           ])
         `shouldBe` Right (Number 1)
 
-    describe "assignment:" $ do
+    describe "match:" $ do
 
       it "1 <- 1" $
         (run True "set 1 <- 1 ; return 1")
@@ -257,6 +257,20 @@ spec = do
 
       it "x <- (10,2) ; (i,2) <- x" $
         (run True "type Xxx with (Int,Int) ; var x : Xxx <- Xxx (10,2) ; var i : int ; set! Xxx (i,2) <- x ; return i")
+        `shouldBe` Right (Number 10)
+
+      it "match/if" $
+        (run True $
+          unlines [
+            "var x:Int <- 10",
+            "if x == 0 then",
+            "   return 0",
+            "else/if `x` <- 10 then",
+            "   return x",
+            "else",
+            "   return 0",
+            "end"
+          ])
         `shouldBe` Right (Number 10)
 
     describe "typeclass:" $ do
