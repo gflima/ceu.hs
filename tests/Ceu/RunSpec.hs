@@ -234,12 +234,15 @@ spec = do
 
       it "x1 <- 1" $
         (run True "var x:Int <- 1 ; set `x` <- 1 ; return 1")
+        `shouldBe` Left "match might fail\n"
+      it "x1 <- 1" $
+        (run True "var x:Int <- 1 ; set! `x` <- 1 ; return 1")
         `shouldBe` Right (Number 1)
       it "x1 <- 2" $
-        (run True "var x:Int <- 1 ; set `x` <- 2 ; return 2")
+        (run True "var x:Int <- 1 ; set! `x` <- 2 ; return 2")
         `shouldBe` Right (Error 1)
-      it "TODO: 1 <- x" $
-        (run True "var x:Int <- 1 ; set 1 <- x ; return x")
+      it "1 <- x" $
+        (run True "var x:Int <- 1 ; set! 1 <- x ; return x")
         `shouldBe` Right (Number 1)
 
       it "data X with Int ; x:Int ; X x <- X 1" $

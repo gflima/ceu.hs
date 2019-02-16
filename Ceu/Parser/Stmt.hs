@@ -19,12 +19,12 @@ import Ceu.Grammar.Full.Full
 
 -------------------------------------------------------------------------------
 
-attr_exp :: Loc -> Parser a -> Parser Stmt
-attr_exp loc op = do
+attr_exp :: Bool -> Loc -> Parser a -> Parser Stmt
+attr_exp chk loc op = do
   pos  <- pos2src <$> getPosition
   void <- op
   exp  <- expr
-  return $ Set annz{source=pos} loc exp
+  return $ Set annz{source=pos} chk loc exp
 
 -------------------------------------------------------------------------------
 
@@ -83,7 +83,7 @@ stmt_var = do
   void <- tk_str ":"
   tp   <- pType
   s    <- option (Nop $ annz{source=pos})
-                 (try (attr_exp loc (tk_str "<-")))
+                 (try (attr_exp False loc (tk_str "<-")))
   s'   <- case (matchLocType pos loc tp) of
             Nothing -> do { fail "arity mismatch" }
             Just v  -> return $ Seq annz{source=pos} v s
@@ -92,9 +92,9 @@ stmt_var = do
 stmt_attr :: Parser Stmt
 stmt_attr = do
   --pos  <- pos2src <$> getPosition
-  void <- tk_str "set"
+  set  <- try (tk_str' "set!") <|> try (tk_str' "set")
   loc  <- pLoc
-  s    <- try (attr_exp    loc (tk_str "<-"))
+  s    <- try (attr_exp (set=="set!") loc (tk_str "<-"))
   return $ s
 
 -- (x, (y,_))
@@ -311,7 +311,7 @@ func pos = do
   return $ (tp, Seq ann
                   dcls
                   (Seq ann
-                    (Set ann loc (Arg ann))
+                    (Set ann False loc (Arg ann))
                     imp))
 
 expr_func :: Parser Exp

@@ -45,6 +45,12 @@ tk_str str = do
     s
     return ()
 
+tk_str' :: String -> Parser String
+tk_str' str = do
+    n <- string str
+    s
+    return n
+
 tk_op :: Parser String
 tk_op = do
     --void <- notFollowedBy (tk_str "<-" <|> tk_str "->")
