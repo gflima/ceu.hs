@@ -210,7 +210,7 @@ spec = do
           ])
         `shouldBe` Right (Number 1)
 
-      it "TODO: List" $
+      it "List" $
         (run True $
           unlines [
             "type List",
@@ -218,7 +218,7 @@ spec = do
             "type List.Pair with (Int,List)",
             "var l1 : List <- List.Pair(1, List.Empty)",
             "var x1 : Int",
-            "set List.Pair(x1,_) <- l1",
+            "set! List.Pair(x1,_) <- l1",
             "return x1"
           ])
         `shouldBe` Right (Number 1)

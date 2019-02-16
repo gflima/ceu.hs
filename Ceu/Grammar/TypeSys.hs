@@ -247,23 +247,25 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
             (ese,mexp) = f (SUP, type_ $ getAnn e') tpexp
             (es, e')   = expr z (SUP,TypeT) ids e
 
-        (LCons hr l) -> (fchk txp mexp tpexp || chk1 || chk2, esd++esl++es'++ese, LCons hr l', mexp)
+        (LCons hr l) -> (fchk txp mexp tpexp || chk1, esd++esl++es'++ese, LCons hr l', mexp)
           where
             txp       = Type1 hr
             str       = Type.hier2str hr
             (tpd,esd) = case find (isData $ (==)str) ids of
               Just (Data _ _ _ tp _ _) -> (tp,    [])
               Nothing                  -> (TypeT, [toError z "type '" ++ str ++ "' is not declared"])
-            (rel,chk1,es') = case tpexp of
-              Right (Cons _ _ e) -> (SUP,chk,es) where
-                (chk,es) = if null esl && null ese then
-                            let (chk,es',_,_) = aux ids z l (Right e) in (chk,es')
-                           else
-                            (False,[])
-              otherwise          -> (ANY,False,[])
 
             (ese,mexp)      = f (rel,txp) tpexp
             (chk2,esl,l',_) = aux ids z l (Left tpd)
+
+            -- if any errors found, ignore all this
+            (rel,chk1,es') = case tpexp of
+              Right (Cons _ _ e) -> (SUP,chk,es) where
+                (chk,es) = if null esl && null ese then
+                            let (chk',es',_,_) = aux ids z l (Right e) in (chk',es')
+                           else
+                            (chk2,[]) -- use chk2 -> chk1
+              otherwise          -> (ANY,False,[])
 
         (LTuple ls)  -> (or chks, concat esls ++ ese, LTuple ls', toexp mexps'')
           where
