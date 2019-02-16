@@ -168,7 +168,7 @@ spec = do
         describe "typeN" $ do
             it "()" $
                 parse type_N "()"
-                `shouldBe` Left "(line 1, column 2):\nunexpected \")\"\nexpecting \"(\""
+                `shouldBe` Left "(line 1, column 2):\nunexpected \")\"\nexpecting type"
             it "(Int)" $
                 parse type_N "(Int)"
                 `shouldBe` Left "(line 1, column 5):\nunexpected \")\"\nexpecting digit, letter, \"_\", \".\" or \",\""
@@ -234,7 +234,7 @@ spec = do
                 `shouldBe` Right (Number annz{source=("",1,2)} 1)
             it "((- -1))" $
                 parse expr_parens "((- -1))"
-                `shouldBe` Left "(line 1, column 5):\nunexpected \"-\"\nexpecting \")\" or \",\""
+                `shouldBe` Left "(line 1, column 5):\nunexpected \"-\"\nexpecting primitive expression"
             it "((- -1))" $
                 parse expr_parens "(- (-1))"
                 `shouldBe` Right (Call annz{source=("",1,2)} (Read annz{source=("",1,2)} "negate") (Call annz{source=("",1,5)} (Read annz{source=("",1,5)} "negate") (Number annz{source=("",1,6)} 1)))
@@ -327,13 +327,13 @@ spec = do
                 `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (Type1 ["Int"])) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "y" (Type1 ["Int"])) (Nop (annz{source = ("",0,0)})))) (Set (annz{source = ("",1,32)}) False (LTuple [LVar "x",LTuple [LVar "y",LAny]]) (Tuple (annz{source = ("",1,35)}) [Number (annz{source = ("",1,36)}) 1,Tuple (annz{source = ("",1,39)}) [Number (annz{source = ("",1,40)}) 2,Number (annz{source = ("",1,42)}) 3]]))) (Ret (annz{source = ("",1,47)}) (Call (annz{source = ("",1,55)}) (Read annz{source=("",1,55)} "+") (Tuple (annz{source = ("",1,54)}) [Read (annz{source = ("",1,54)}) "x",Read (annz{source = ("",1,56)}) "y"]))))
             it "var (_,_):(Int,Int,Int)" $
                 parse stmt "var (_,_):(Int,Int,Int)"
-                `shouldBe` Left "(line 1, column 24):\nunexpected end of input\nexpecting \"<-\"\narity mismatch"
+                `shouldBe` Left "(line 1, column 24):\nunexpected arity mismatch"
             it "var (_,_,_):(Int,Int)" $
                 parse stmt "var (_,_,_):(Int,Int)"
-                `shouldBe` Left "(line 1, column 22):\nunexpected end of input\nexpecting \"<-\"\narity mismatch"
+                `shouldBe` Left "(line 1, column 22):\nunexpected arity mismatch"
             it "var (_,_)):Int" $
                 parse stmt "var (_,_):Int"
-                `shouldBe` Left "(line 1, column 14):\nunexpected end of input\nexpecting digit, letter, \"_\", \".\" or \"<-\"\narity mismatch"
+                `shouldBe` Left "(line 1, column 14):\nunexpected arity mismatch"
 
         describe "write:" $ do
             it "x <- 1" $
@@ -362,11 +362,11 @@ spec = do
         describe "if-then-else/if-else" $ do
             it "if 0 then return ()" $
                 parse stmt_match "if 0 then return ()"
-                `shouldBe` Left "(line 1, column 20):\nunexpected end of input\nexpecting \"typeclass\", \"instance\", \"type\", \"var\", \"func\", \"set!\", \"set\", \"do\", \"if\", \"loop\", \"return\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 20):\nunexpected end of input\nexpecting statement, \"else/if\", \"else\" or \"end\""
 
             it "if 0 then return 0" $
                 parse stmt_match "if 0 then return 0"
-                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, \"typeclass\", \"instance\", \"type\", \"var\", \"func\", \"set!\", \"set\", \"do\", \"if\", \"loop\", \"return\", \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, statement, \"else/if\", \"else\" or \"end\""
 
             it "if 0 return 0 end" $
                 parse stmt_match "if 0 return 0 end"
@@ -380,7 +380,7 @@ spec = do
                 `shouldBe` Right (Match annz{source=("",1,1)} (LExp (Read annz{source=("",1,1)} "_true")) (Number annz{source=("",1,4)} 1) (Ret annz{source=("",1,11)} (Number annz{source=("",1,18)} 1)) (Nop annz{source=("",1,20)}))
             it "if then return 1 end" $
                 parse stmt_match "if then return 1 end"
-                `shouldBe` Left "(line 1, column 8):\nunexpected \" \"\nexpecting digit, letter or \"_\""
+                `shouldBe` Left "(line 1, column 8):\nunexpected \" \"\nexpecting location or primitive expression"
             it "if then (if then else end) end" $
                 parse stmt_match "if 1 then ; if 0 then else return 1 end ; end"
                 `shouldBe` Right (Match annz{source=("",1,1)} (LExp (Read annz{source=("",1,1)} "_true")) (Number annz{source=("",1,4)} 1) (Match annz{source=("",1,13)} (LExp (Read annz{source=("",1,13)} "_true")) (Number annz{source=("",1,16)} 0) (Nop annz{source=("",1,23)}) (Ret annz{source=("",1,28)} (Number annz{source=("",1,35)} 1))) (Nop annz{source=("",1,43)}))
@@ -461,7 +461,7 @@ spec = do
               (parse' stmt "type Xxx with Int ; var x:Xxx <- Xxx 1")
               `shouldBe` Right (Seq annz (Data annz ["Xxx"] [] (Type1 ["Int"]) False) (Seq annz (Seq annz (Var annz "x" (Type1 ["Xxx"])) (Nop annz)) (Set annz False (LVar "x") (Cons annz ["Xxx"] (Number annz 1)))))
 
-            it "TODO: type Xxx with (x,y) : (Int,Int)" $
+            it "TODO-fields: type Xxx with (x,y) : (Int,Int)" $
               (parse stmt "type Xxx with (x,y) : (Int,Int)")
               `shouldBe` Right (Data annz{source=("",1,1)} ["Xxx"] [] Type0 False)
 

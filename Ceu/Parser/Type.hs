@@ -1,6 +1,6 @@
 module Ceu.Parser.Type where
 
-import Text.Parsec.Prim         ((<|>), try)
+import Text.Parsec.Prim         ((<|>), (<?>), try)
 import Text.Parsec.String       (Parser)
 import Text.Parsec.Prim         (many)
 
@@ -47,3 +47,4 @@ type_V = do
 
 pType :: Parser Type
 pType = try type_0 <|> try type_1 <|> try type_N <|> try type_F <|> try type_V
+        <?> "type"

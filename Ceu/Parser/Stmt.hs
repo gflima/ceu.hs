@@ -1,9 +1,10 @@
 module Ceu.Parser.Stmt where
 
 import Debug.Trace
-import Data.Maybe             (fromJust)
+import Data.Maybe             (isJust, isNothing, fromJust)
+import Control.Monad          (guard, when)
 
-import Text.Parsec.Prim       ((<|>), try, getPosition, many)
+import Text.Parsec.Prim       ((<|>), (<?>), try, getPosition, many, unexpected)
 import Text.Parsec.Char       (char, anyChar)
 import Text.Parsec.String     (Parser)
 import Text.Parsec.Combinator (notFollowedBy, many1, chainl, chainl1, chainr1, option, optionMaybe, optional)
@@ -29,8 +30,8 @@ pSet chk loc = do
 -- (x, (y,_))
 pLoc :: Parser Loc
 pLoc =  (try lany  <|> try lvar   <|> try lunit  <|> try lnumber <|>
-         try lcons <|> try ltuple <|> try lexp) <|>
-         try (tk_str "(" *> ((pLoc <* tk_str ")")))
+         try lcons <|> try ltuple <|> try lexp)  <|>
+         try (tk_str "(" *> ((pLoc <* tk_str ")"))) <?> "location"
   where
     lany    = do
                 void <- tk_str "_"
@@ -118,7 +119,7 @@ stmt_data = do
   pos  <- pos2src <$> getPosition
   void <- tk_key "type"
   id   <- tk_types
-  with <- option Type0 (tk_key "with" *> pType)
+  with <- option Type0 (try $ tk_key "with" *> pType)
   return $ Data annz{source=pos} id [] with False
 
 stmt_var :: Parser Stmt
@@ -128,12 +129,14 @@ stmt_var = do
   loc  <- pLoc
   void <- tk_str ":"
   tp   <- pType
+  --guard (isJust $ matchLocType pos loc tp) <?> "arity match"
+  when (isNothing $ matchLocType pos loc tp) $ unexpected "arity mismatch"
   s    <- option (Nop $ annz{source=pos})
                  (try $ pSet False loc)
-  s'   <- case (matchLocType pos loc tp) of
-            Nothing -> do { fail "arity mismatch" }
-            Just v  -> return $ Seq annz{source=pos} v s
-  return s'
+  --s'   <- fromJust $ matchLocType pos loc tp)
+            --Nothing -> do { fail "arity mismatch" }
+            --Just v  -> return $ Seq annz{source=pos} v s
+  return $ Seq annz{source=pos} (fromJust $ matchLocType pos loc tp) s
 
 stmt_attr :: Parser Stmt
 stmt_attr = do
@@ -193,7 +196,7 @@ stmt1 = do
        try stmt_do      <|>
        try stmt_match   <|>
        try stmt_loop    <|>
-       try stmt_ret
+       try stmt_ret     <?> "statement"
   return s
 
 stmt_seq :: Source -> Parser Stmt
@@ -257,7 +260,7 @@ expr_prim =
   try expr_unit     <|>
   try expr_parens   <|>
   try expr_tuple    <|>
-  try expr_func
+  try expr_func     <?> "primitive expression"
 
 -------------------------------------------------------------------------------
 
@@ -287,8 +290,11 @@ expr_posfix = do
   op   <- expr_prim
   return $ Call (getAnn e) op e
 
+expr_call :: Parser Exp
+expr_call = try expr_infix <|> try expr_prefix <|> try expr_posfix
+
 expr :: Parser Exp
-expr = try expr_infix <|> try expr_prefix <|> try expr_posfix <|> try expr_prim
+expr = try expr_call <|> try expr_prim
 
 -------------------------------------------------------------------------------
 
