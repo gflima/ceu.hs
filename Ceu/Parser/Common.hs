@@ -14,11 +14,11 @@ pos2src pos = (sourceName pos, sourceLine pos, sourceColumn pos)
 
 list :: Parser a -> Parser [a]
 list p = do
-    void <- tk_str "("
+    void <- tk_sym "("
     v    <- p
-    vs   <- many1 $ try (tk_str "," *> p)
-    void <- optional $ tk_str ","
-    void <- tk_str ")"
+    vs   <- many1 $ try (tk_sym "," *> p)
+    void <- optional $ tk_sym ","
+    void <- tk_sym ")"
     return (v:vs)
 
 

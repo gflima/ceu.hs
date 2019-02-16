@@ -5,20 +5,20 @@ import Text.Parsec.String       (Parser)
 import Text.Parsec.Prim         (many)
 
 import Ceu.Parser.Common
-import Ceu.Parser.Token         (tk_str, tk_var, tk_type)
+import Ceu.Parser.Token         (tk_sym, tk_var, tk_type)
 
 import Ceu.Grammar.Globals      (ID_Type)
 import Ceu.Grammar.Type         (Type(..))
 
 tk_types :: Parser [ID_Type]
 tk_types = do
-  v <- (:) <$> tk_type <*> many (try $ tk_str "." *> tk_type)
+  v <- (:) <$> tk_type <*> many (try $ tk_sym "." *> tk_type)
   return v
 
 type_0 :: Parser Type
 type_0 = do
-    void <- tk_str "("
-    void <- tk_str ")"
+    void <- tk_sym "("
+    void <- tk_sym ")"
     return Type0
 
 type_1 :: Parser Type
@@ -33,11 +33,11 @@ type_N = do
 
 type_F :: Parser Type
 type_F = do
-    void <- tk_str "("
+    void <- tk_sym "("
     inp   <- pType
-    void <- tk_str "->"
+    void <- tk_sym "->"
     out   <- pType
-    void <- tk_str ")"
+    void <- tk_sym ")"
     return $ TypeF inp out
 
 type_V :: Parser Type

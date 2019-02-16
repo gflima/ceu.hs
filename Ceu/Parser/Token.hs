@@ -1,15 +1,16 @@
 module Ceu.Parser.Token where
 
-import Control.Monad          (void, guard)
+import Control.Monad          (void, guard, when)
 import Data.Char              (isLower, isUpper)
 import Data.List              (intercalate)
 
-import Text.Parsec.Prim       (many, (<|>), (<?>), try)
+import Text.Parsec.Prim       (many, (<|>), (<?>), try, unexpected)
 import Text.Parsec.String     (Parser)
 import Text.Parsec.Char       (char, oneOf, digit, satisfy, string, letter, anyChar, newline)
 import Text.Parsec.Combinator (many1, notFollowedBy, manyTill, eof)
 
 keywords = [
+    "_",
     "do",
     "else",
     "else/if",
@@ -21,6 +22,7 @@ keywords = [
     "loop",
     "of",
     "set",
+    "set!",
     "then",
     "var",
     "return",
@@ -37,25 +39,20 @@ s :: Parser ()
 s = void $ many $ (void $ oneOf " ;\n\t") <|> comm
 
 comm :: Parser ()
-comm = void $ try $ (string "//" >> (manyTill anyChar (void newline<|>eof)) <?> "")
+comm = void $ ((try $ string "//") >> (manyTill anyChar (void newline<|>eof)) <?> "")
 
-tk_str :: String -> Parser ()
-tk_str str = do
-    n <- string str
+tk_sym :: String -> Parser ()
+tk_sym str = do
+    void <- string str
     s
     return ()
 
-tk_str' :: String -> Parser String
-tk_str' str = do
-    n <- string str
-    s
-    return n
-
 tk_op :: Parser String
 tk_op = do
-    --void <- notFollowedBy (tk_str "<-" <|> tk_str "->")
-    op   <- many1 $ oneOf "!@#$%&*-+=/?^~\\|<>"
-    guard $ op /= "<-" && op /= "->"
+    --void <- notFollowedBy (tk_sym "<-" <|> tk_sym "->")
+    op   <- many1 $ (oneOf "!@#$%&*-+=/?^~\\|<>" <?> "operator")
+    --guard $ op /= "<-" && op /= "->"
+    when (op == "<-" || op == "->") $ unexpected "arrow"
     s
     return $ op
 
@@ -69,8 +66,8 @@ tk_var :: Parser String     -- x, x_0       // Xx
 tk_var = do
     --void  <- notFollowedBy tk_reserved
     first <- satisfy isLower
-    rest  <- many $ (digit <|> letter <|> char '_')
-    guard $ not $ elem (first:rest) keywords
+    rest  <- many $ (digit <|> letter <|> oneOf "_'?" <?> "identifier")
+    when (elem (first:rest) keywords) $ unexpected $ "`" ++ (first:rest) ++ "`"
     s
     return (first:rest)
 
@@ -79,8 +76,9 @@ tk_func = tk_var
 tk_type :: Parser String    -- Int, Int_0   // I, II, int, _Int
 tk_type = do
     first <- satisfy isUpper
-    rest  <- many1 $ (digit <|> letter <|> char '_')
-    guard $ not $ null $ filter (\c -> isLower c) rest
+    rest  <- many1 $ (digit <|> letter <|> char '_' <?> "type identifier")
+    --guard $ not $ null $ filter (\c -> isLower c) rest
+    when (all isUpper rest) $ unexpected "uppercase identifier"
     s
     return (first:rest)
 

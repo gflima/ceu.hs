@@ -53,8 +53,8 @@ spec = do
 {-
     describe "TODO:" $ do
       it "TODO" $
-        parse stmt "var x:Int <- 1"
-        `shouldBe` Left []
+        parse expr_parens "(1)"
+        `shouldBe` Right (Number annz{source=("",1,2)} 1)
 -}
 
     describe "tokens:" $ do
@@ -64,17 +64,17 @@ spec = do
                 `shouldBe` Right ()
             it "/ xxx " $
                 parse comm "/ xxx "
-                `shouldBe` Left "(line 1, column 1):\nunexpected \" \"\nexpecting \"//\""
+                `shouldBe` Left "(line 1, column 1):\nunexpected \" \""
 
-        describe "tk_str:" $ do
+        describe "tk_sym:" $ do
             it "(" $
-                parse (tk_str "(") "( "
+                parse (tk_sym "(") "( "
                 `shouldBe` Right ()
             it ")" $
-                parse (tk_str ")") ") "
+                parse (tk_sym ")") ") "
                 `shouldBe` Right ()
             it "-" $
-                parse (tk_str "-") "- "
+                parse (tk_sym "-") "- "
                 `shouldBe` Right ()
 
         describe "tk_op:" $ do
@@ -83,7 +83,10 @@ spec = do
                 `shouldBe` Right "$$"
             it "$$" $
                 parse tk_op "($$)"
-                `shouldBe` Left "(line 1, column 1):\nunexpected \"(\""
+                `shouldBe` Left "(line 1, column 1):\nunexpected \"(\"\nexpecting operator"
+            it "->" $
+                parse tk_op "->"
+                `shouldBe` Left "(line 1, column 3):\nunexpected arrow\nexpecting operator"
 
         describe "tk_num:" $ do
             it "''" $
@@ -120,18 +123,24 @@ spec = do
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"1\""
             it "var" $
                 parse tk_var "var"
-                `shouldBe` Left "(line 1, column 4):\nunexpected end of input\nexpecting digit, letter or \"_\""
+                `shouldBe` Left "(line 1, column 4):\nunexpected `var`\nexpecting identifier"
 
         describe "tk_type:" $ do
             it "Int" $
                 parse tk_type "Int"
                 `shouldBe` Right "Int"
+            it "U8" $
+                parse tk_type "U8"
+                `shouldBe` Right "U8"
             it "int" $
                 parse tk_type "int"
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"i\""
             it "I" $
                 parse tk_type "I"
-                `shouldBe` Left "(line 1, column 2):\nunexpected end of input\nexpecting digit, letter or \"_\""
+                `shouldBe` Left "(line 1, column 2):\nunexpected end of input\nexpecting type identifier"
+            it "III" $
+                parse tk_type "III"
+                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting type identifier"
 
         describe "tk_key:" $ do
             it "do" $
@@ -143,6 +152,12 @@ spec = do
             it "return" $
                 parse (tk_key "return") "return\n"
                 `shouldBe` Right "return"
+            it "ret" $
+                parse (tk_key "return") "ret\n"
+                `shouldBe` Left "(line 1, column 1):\nunexpected \"\\n\"\nexpecting \"return\""
+            it "returns" $
+                parse (tk_key "return") "returns\n"
+                `shouldBe` Left "(line 1, column 8):\nunexpected 's'"
 
     describe "type:" $ do
         describe "type0" $ do
@@ -161,7 +176,7 @@ spec = do
                 `shouldBe` Right (Type1 ["Int"])
             it "III" $
                 parse type_1 "III"
-                `shouldBe` Left "(line 1, column 4):\nunexpected end of input\nexpecting digit, letter or \"_\""
+                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting type identifier"
             it "int" $
                 parse type_1 "int"
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"i\""
@@ -171,7 +186,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 2):\nunexpected \")\"\nexpecting type"
             it "(Int)" $
                 parse type_N "(Int)"
-                `shouldBe` Left "(line 1, column 5):\nunexpected \")\"\nexpecting digit, letter, \"_\", \".\" or \",\""
+                `shouldBe` Left "(line 1, column 5):\nunexpected \")\"\nexpecting type identifier, \".\" or \",\""
             it "(Int,Int)" $
                 parse type_N "(Int,Int)"
                 `shouldBe` Right (TypeN [Type1 ["Int"], Type1 ["Int"]])
@@ -222,7 +237,7 @@ spec = do
                 parse expr_read "aaa"
                 `shouldBe` Right (Read annz{source=("",1,1)} "aaa")
         describe "umn:" $ do
-            it "`-1" $
+            it "-1" $
                 parse expr "-1"
                 `shouldBe` Right (Call annz{source=("",1,1)} (Read annz{source=("",1,1)} "negate") (Number annz{source=("",1,2)} 1))
             it "--1" $
@@ -232,12 +247,12 @@ spec = do
             it "(1)" $
                 parse expr_parens "(1)"
                 `shouldBe` Right (Number annz{source=("",1,2)} 1)
-            it "((- -1))" $
-                parse expr_parens "((- -1))"
-                `shouldBe` Left "(line 1, column 5):\nunexpected \"-\"\nexpecting primitive expression"
-            it "((- -1))" $
-                parse expr_parens "(- (-1))"
-                `shouldBe` Right (Call annz{source=("",1,2)} (Read annz{source=("",1,2)} "negate") (Call annz{source=("",1,5)} (Read annz{source=("",1,5)} "negate") (Number annz{source=("",1,6)} 1)))
+            it "((- +1))" $
+                parse expr_parens "((- +1))"
+                `shouldBe` Right (Call annz{source=("",1,5)} (Read annz{source=("",1,5)} "+") (Tuple annz{source=("",1,3)} [Read annz{source=("",1,3)} "-",Number annz{source=("",1,6)} 1]))
+            it "(- (-1))" $
+                parse expr_parens "(- (+1))"
+                `shouldBe` Right (Call annz{source=("",1,2)} (Read annz{source=("",1,2)} "negate") (Call annz{source=("",1,5)} (Read annz{source=("",1,5)} "+") (Number annz{source=("",1,6)} 1)))
         describe "add_sub:" $ do
             it "1+1" $
                 parse expr "1+1"
@@ -333,7 +348,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 22):\nunexpected arity mismatch"
             it "var (_,_)):Int" $
                 parse stmt "var (_,_):Int"
-                `shouldBe` Left "(line 1, column 14):\nunexpected arity mismatch"
+                `shouldBe` Left "(line 1, column 14):\nunexpected arity mismatch\nexpecting type identifier or \".\""
 
         describe "write:" $ do
             it "x <- 1" $
@@ -362,15 +377,15 @@ spec = do
         describe "if-then-else/if-else" $ do
             it "if 0 then return ()" $
                 parse stmt_match "if 0 then return ()"
-                `shouldBe` Left "(line 1, column 20):\nunexpected end of input\nexpecting statement, \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 20):\nunexpected end of input\nexpecting expression, statement, \"else/if\", \"else\" or \"end\""
 
             it "if 0 then return 0" $
                 parse stmt_match "if 0 then return 0"
-                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, statement, \"else/if\", \"else\" or \"end\""
+                `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, expression, statement, \"else/if\", \"else\" or \"end\""
 
             it "if 0 return 0 end" $
                 parse stmt_match "if 0 return 0 end"
-                `shouldBe` Left "(line 1, column 6):\nunexpected \"r\"\nexpecting \"then\""
+                `shouldBe` Left "(line 1, column 12):\nunexpected `return`\nexpecting expression"
 
             it "if 0 then return 0 else return 1 end" $
                 parse stmt_match "if 0 then return 0 else return 1 end"
@@ -380,7 +395,7 @@ spec = do
                 `shouldBe` Right (Match annz{source=("",1,1)} (LExp (Read annz{source=("",1,1)} "_true")) (Number annz{source=("",1,4)} 1) (Ret annz{source=("",1,11)} (Number annz{source=("",1,18)} 1)) (Nop annz{source=("",1,20)}))
             it "if then return 1 end" $
                 parse stmt_match "if then return 1 end"
-                `shouldBe` Left "(line 1, column 8):\nunexpected \" \"\nexpecting location or primitive expression"
+                `shouldBe` Left "(line 1, column 8):\nunexpected `then`\nexpecting identifier or expression"
             it "if then (if then else end) end" $
                 parse stmt_match "if 1 then ; if 0 then else return 1 end ; end"
                 `shouldBe` Right (Match annz{source=("",1,1)} (LExp (Read annz{source=("",1,1)} "_true")) (Number annz{source=("",1,4)} 1) (Match annz{source=("",1,13)} (LExp (Read annz{source=("",1,13)} "_true")) (Number annz{source=("",1,16)} 0) (Nop annz{source=("",1,23)}) (Ret annz{source=("",1,28)} (Number annz{source=("",1,35)} 1))) (Nop annz{source=("",1,43)}))
@@ -428,7 +443,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 32):\nunexpected 'd'\nexpecting end of input"
             it "func add" $
                 parse expr_func "func ((Int, Int) -> Int) do end"
-                `shouldBe` Left "(line 1, column 18):\nunexpected \"-\"\nexpecting \",\" or \")\""
+                `shouldBe` Left "(line 1, column 18):\nunexpected \"-\"\nexpecting \")\""
 
         describe "data" $ do
 
@@ -455,7 +470,7 @@ spec = do
 
             it "type Xxx with (Int)" $
               (parse stmt "type Xxx with (Int)")
-              `shouldBe` Left "(line 1, column 19):\nunexpected \")\"\nexpecting digit, letter, \"_\", \".\", \",\" or \"->\""
+              `shouldBe` Left "(line 1, column 19):\nunexpected \")\"\nexpecting type"
 
             it "type Xxx with Int ; x<-Xxx(1,1)" $
               (parse' stmt "type Xxx with Int ; var x:Xxx <- Xxx 1")
@@ -463,7 +478,7 @@ spec = do
 
             it "TODO-fields: type Xxx with (x,y) : (Int,Int)" $
               (parse stmt "type Xxx with (x,y) : (Int,Int)")
-              `shouldBe` Right (Data annz{source=("",1,1)} ["Xxx"] [] Type0 False)
+              `shouldBe` Left "TODO-fields"
 
             it "Xxx.Yyy" $
               (compile' $ fromRight' $ parse' stmt "type Int ; type Xxx with Int ; type Xxx.Yyy with Int ; var y:Xxx.Yyy <- Xxx.Yyy (1,2)")

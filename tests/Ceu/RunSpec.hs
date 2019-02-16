@@ -64,7 +64,7 @@ spec = do
     describe "vars:" $ do
         it "var Int a,b" $
             run True "var a,b :Int;" -- TODO: support a,b,c? (problem w/ assign/finalization)
-            `shouldBe` Left "(line 1, column 6):\nunexpected \",\"\nexpecting digit, letter, \"_\" or \":\""
+            `shouldBe` Left "(line 1, column 6):\nunexpected \",\"\nexpecting identifier or \":\""
         it "a <- 1; return a;" $
             run True "set a <- 1; return a"
             `shouldBe` Left "(line 1, column 7):\nvariable 'a' is not declared\n(line 1, column 20):\nvariable 'a' is not declared\n"
@@ -248,13 +248,13 @@ spec = do
         `shouldBe` Left "(line 1, column 7):\ntypes do not match : expected 'Int.1' : found 'Int.2'\n"
 
       it "x1 <- 1" $
-        (run True "var x:Int <- 1 ; set `x` <- 1 ; return 1")
+        (run True "var x:Int <- 1 ; set `x´ <- 1 ; return 1")
         `shouldBe` Left "(line 1, column 26):\nmatch might fail\n"
       it "x1 <- 1" $
-        (run True "var x:Int <- 1 ; set! `x` <- 1 ; return 1")
+        (run True "var x:Int <- 1 ; set! `x´ <- 1 ; return 1")
         `shouldBe` Right (Number 1)
       it "x1 <- 2" $
-        (run True "var x:Int <- 1 ; set! `x` <- 2 ; return 2")
+        (run True "var x:Int <- 1 ; set! `x´ <- 2 ; return 2")
         `shouldBe` Right (Error 1)
       it "1 <- x" $
         (run True "var x:Int <- 1 ; set! 1 <- x ; return x")
@@ -280,7 +280,7 @@ spec = do
             "var x:Int <- 10",
             "if x == 0 then",
             "   return 0",
-            "else/if `x` <- 10 then",
+            "else/if `x´ <- 10 then",
             "   return x",
             "else",
             "   return 0",
