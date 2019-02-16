@@ -78,7 +78,7 @@ fromStmt (B.Loop   _ p)                = Loop' (fromStmt p) (fromStmt p)
 fromStmt (B.Ret    _ e)                = Ret (fromExp e)
 fromStmt (B.Nop    _)                  = Nop
 
-fromStmt (B.Match  _ loc e p1 p2)      = Match (aux (fromLoc loc) (type_ $ getAnn e))
+fromStmt (B.Match  _ _ loc e p1 p2)    = Match (aux (fromLoc loc) (type_ $ getAnn e))
                                                (fromExp e) (fromStmt p1) (fromStmt p2)
   where
     aux LAny           _          = LAny
