@@ -200,9 +200,9 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
     -- if   1 <- x    // chk=true
     esc = if null esa then
             if chk then
-              bool ["match never fails"] [] chk'
+              bool [toError z "match never fails"] [] chk'
             else
-              bool ["match might fail"]  [] (not chk')
+              bool [toError z "match might fail"]  [] (not chk')
           else
             []
 
@@ -265,7 +265,7 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
                             let (chk',es',_,_) = aux ids z l (Right e) in (chk',es')
                            else
                             (chk2,[]) -- use chk2 -> chk1
-              otherwise          -> (ANY,False,[])
+              otherwise          -> (ANY,chk2,[])
 
         (LTuple ls)  -> (or chks, concat esls ++ ese, LTuple ls', toexp mexps'')
           where

@@ -234,7 +234,7 @@ spec = do
 
       it "x1 <- 1" $
         (run True "var x:Int <- 1 ; set `x` <- 1 ; return 1")
-        `shouldBe` Left "match might fail\n"
+        `shouldBe` Left "(line 1, column 26):\nmatch might fail\n"
       it "x1 <- 1" $
         (run True "var x:Int <- 1 ; set! `x` <- 1 ; return 1")
         `shouldBe` Right (Number 1)
@@ -254,6 +254,10 @@ spec = do
       it "data X with Int ; X 2 <- X 1" $
         (run True "type Xxx with Int ; set Xxx 2 <- Xxx 1 ; return 1")
         `shouldBe` Left "(line 1, column 31):\ntypes do not match : expected 'Int.2' : found 'Int.1'\n"
+
+      it "x <- (10,2) ; (i,2) <- x" $
+        (run True "type Xxx with (Int,Int) ; var x : Xxx <- Xxx (10,2) ; var i : int ; set! Xxx (i,2) <- x ; return i")
+        `shouldBe` Right (Number 10)
 
     describe "typeclass:" $ do
 
