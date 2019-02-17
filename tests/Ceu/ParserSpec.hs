@@ -486,8 +486,8 @@ spec = do
               `shouldBe` Right (Data annz{source=("",1,1)} ["Xxx"] [] (TypeN [Type1 ["Int"],Type1 ["Int"]]) False)
 
             it "type Xxx with (Int)" $
-              (parse stmt "type Xxx with (Int)")
-              `shouldBe` Left "(line 1, column 19):\nunexpected \")\"\nexpecting type"
+              (parse' stmt "type Xxx with (Int)")
+              `shouldBe` Right (Data annz ["Xxx"] [] (Type1 ["Int"]) False)
 
             it "type Xxx with Int ; x<-Xxx(1,1)" $
               (parse' stmt "type Xxx with Int ; var x:Xxx <- Xxx 1")

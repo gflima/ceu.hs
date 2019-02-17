@@ -218,6 +218,8 @@ spec = do
 
       -- TODO-20
 
+    describe "Chapter 2:" $ do
+
       it "not" $
         (run True $
           unlines [
@@ -254,13 +256,101 @@ spec = do
             "func and (x,y) : ((Bool,Bool)->Bool) do",
             "   if Bool.False <- x then",
             "     return Bool.False",
-            "   else/if Bool.False <- y then",
+            "   else",
+            "     return y",
+            "   end",
+            "end",
+            "return (Bool.True) and (Bool.True)"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "or" $
+        (run True $
+          unlines [
+            "func or (x,y) : ((Bool,Bool)->Bool) do",
+            "   if Bool.True <- x then",
+            "     return Bool.True",
+            "   else",
+            "     return y",
+            "   end",
+            "end",
+            "return (Bool.True) or (Bool.False)"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "===, =/=" $
+        (run True $
+          unlines [
+            "func not (x) : (Bool->Bool) do",
+            "   if Bool.True <- x then",
             "     return Bool.False",
             "   else",
             "     return Bool.True",
             "   end",
             "end",
-            "return (Bool.True) and (Bool.True)"
+            "func and (x,y) : ((Bool,Bool)->Bool) do",
+            "   if Bool.False <- x then",
+            "     return Bool.False",
+            "   else",
+            "     return y",
+            "   end",
+            "end",
+            "func or (x,y) : ((Bool,Bool)->Bool) do",
+            "   if Bool.True <- x then",
+            "     return Bool.True",
+            "   else",
+            "     return y",
+            "   end",
+            "end",
+            "func === (x,y) : ((Bool,Bool)->Bool) do",
+            "   return (x and y) or ((not x) and (not y))",
+            "end",
+            "func =/= (x,y) : ((Bool,Bool)->Bool) do",
+            "   return not (x === y)",
+            "end",
+            "return ((Bool.True) === (Bool.True)) =/= Bool.False"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "Equalable" $
+        (run True $
+          unlines [
+            "typeclass Equalable for a with",
+            "   func === : ((a -> a) -> Bool)",
+            "   func =/= : ((a -> a) -> Bool)",
+            "end",
+            "",
+            "func not (x) : (Bool->Bool) do",
+            "   if Bool.True <- x then",
+            "     return Bool.False",
+            "   else",
+            "     return Bool.True",
+            "   end",
+            "end",
+            "func and (x,y) : ((Bool,Bool)->Bool) do",
+            "   if Bool.False <- x then",
+            "     return Bool.False",
+            "   else",
+            "     return y",
+            "   end",
+            "end",
+            "func or (x,y) : ((Bool,Bool)->Bool) do",
+            "   if Bool.True <- x then",
+            "     return Bool.True",
+            "   else",
+            "     return y",
+            "   end",
+            "end",
+            "",
+            "instance of Equalable for Bool with",
+            "   func === (x,y) : ((Bool,Bool) -> Bool) do",
+            "     return (x and y) or ((not x) and (not y))",
+            "   end",
+            "   func =/= (x,y) : ((Bool,Bool) -> Bool) do",
+            "     return not (x === y)",
+            "   end",
+            "end",
+            "return ((Bool.True) === (Bool.True)) =/= Bool.False"
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 

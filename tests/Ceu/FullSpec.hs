@@ -109,9 +109,7 @@ spec = do
               (Var' annz "v" (TypeV "a")
               (Seq annz
               (Nop annz)
-              (Seq annz
-              (Match' annz False (LVar "v") (Arg annz) (Nop annz) (Ret annz (Error annz (-2))))
-              (Ret annz (Read annz "v"))))))
+              (Match' annz False (LVar "v") (Arg annz) (Seq annz (Nop annz) (Ret annz (Read annz "v"))) (Ret annz (Error annz (-2)))))))
             (Nop annz) (Ret annz (Error annz (-2)))))
         (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
 

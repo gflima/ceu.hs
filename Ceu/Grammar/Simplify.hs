@@ -34,14 +34,8 @@ stmt (Var z id tp p) =
     _ -> Var z id tp p'
   where p' = stmt p
 
---stmt (Write z _ (Unit _)) = Nop z
-
-{-
-stmt (If z exp p q) =
-  if p' == q' then p' else (If z exp p' q')
-  where p' = stmt p
-        q' = stmt q
--}
+-- TODO: loc may contain exp which may contain stmt
+stmt (Match z b loc exp p q) = Match z b loc (expr exp) (stmt p) (stmt q)
 
 -- normal form: (Seq x (Seq y (Seq z ...)))
 stmt (Seq z1 (Seq z2 p1 p2) p3) = stmt $ Seq z1 p1 (Seq z2 p2 p3)
