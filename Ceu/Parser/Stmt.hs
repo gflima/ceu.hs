@@ -102,10 +102,12 @@ stmt_error = do
 stmt_class :: Parser Stmt
 stmt_class = do
   pos  <- pos2src <$> getPosition
-  void <- try $ tk_key "typeclass"
+  void <- try $ tk_key "type/class"
+  par  <- optionMaybe $ try $ tk_sym "("
   cls  <- tk_type
   void <- tk_key "for"
   var  <- tk_var      -- TODO: list of vars
+  void <- if isJust par then do tk_sym ")" else do { return () }
   void <- tk_key "with"
   ifc  <- stmt
   void <- tk_key "end"
@@ -114,11 +116,12 @@ stmt_class = do
 stmt_inst :: Parser Stmt
 stmt_inst = do
   pos  <- pos2src <$> getPosition
-  void <- try $ tk_key "instance"
-  void <- tk_key "of"
+  void <- try $ tk_key "type/instance"
+  par  <- optionMaybe $ try $ tk_sym "("
   cls  <- tk_type
   void <- tk_key "for"
   tp   <- pType       -- TODO: list of types
+  void <- if isJust par then do tk_sym ")" else do { return () }
   void <- tk_key "with"
   imp  <- stmt
   void <- tk_key "end"

@@ -315,7 +315,7 @@ spec = do
       it "Equalable" $
         (run True $
           unlines [
-            "typeclass Equalable for a with",
+            "type/class Equalable for a with",
             "   func === : ((a,a) -> Bool)",
             "   func =/= : ((a,a) -> Bool)",
             "end",
@@ -342,7 +342,7 @@ spec = do
             "   end",
             "end",
             "",
-            "instance of Equalable for Bool with",
+            "type/instance Equalable for Bool with",
             "   func === (x,y) : ((Bool,Bool) -> Bool) do",
             "     return (x and y) or ((not x) and (not y))",
             "   end",

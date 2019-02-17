@@ -524,20 +524,60 @@ spec = do
                 ])
               `shouldBe` Right (Seq annz (Data annz ["Aa"] [] (Type1 ["Int"]) False) (Seq annz (Data annz ["Aa","Bb"] [] Type0 False) (Seq annz (Seq annz (Seq annz (Var annz "b" (Type1 ["Aa","Bb"])) (Nop annz)) (Set annz False (LVar "b") (Cons annz ["Aa","Bb"] (Number annz 1)))) (Seq annz (Seq annz (Seq annz (Var annz "a" (Type1 ["Aa"])) (Nop annz)) (Set annz False (LVar "a") (Read annz "b"))) (Seq annz (Seq annz (Seq annz (Var annz "v" (Type1 ["Int"])) (Nop annz)) (Nop annz)) (Seq annz (Set annz False (LCons ["Aa"] (LVar "v")) (Read annz "b")) (Ret annz (Read annz "v"))))))))
 
-        describe "typeclass:" $ do
+        describe "type/class:" $ do
 
             it "Int ; F3able a ; inst F3able Int ; return f3 1" $
               (parse stmt $
                 unlines [
-                  "typeclass F3able for a with"        ,
+                  "type/class F3able for a with"  ,
                   " var f3 : (a -> Int)"          ,
                   "end"                           ,
-                  "instance of F3able for Int with"    ,
+                  "type/instance (F3able for Int) with" ,
                   " func f3 (v) : (a -> Int) do"  ,
                   "   return v"                   ,
                   " end"                          ,
                   "end"                           ,
                   "return f3(10)"
+                ])
+              `shouldBe` Right
+                (Seq annz{source=("",1,1)}
+                (Class annz{source=("",1,1)} "F3able" ["a"]
+                  (Seq annz{source=("",2,2)}
+                  (Seq annz{source=("",0,0)}
+                  (Var annz{source=("",2,2)} "f3" (TypeF (TypeV "a") (Type1 ["Int"])))
+                  (Nop annz{source=("",0,0)}))
+                  (Nop annz{source=("",2,2)})))
+                (Seq annz{source=("",1,1)}
+                (Inst annz{source=("",4,1)} "F3able" [Type1 ["Int"]]
+                  (FuncS annz{source=("",5,2)} "f3" (TypeF (TypeV "a") (Type1 ["Int"]))
+                    (Seq annz{source=("",5,2)}
+                    (Seq annz{source=("",0,0)}
+                    (Var annz{source=("",5,2)} "v" (TypeV "a"))
+                    (Nop annz{source=("",0,0)}))
+                    (Seq annz{source=("",5,2)}
+                    (Set annz{source=("",5,2)} False (LVar "v") (Arg annz{source=("",5,2)})) (Ret annz{source=("",6,4)} (Read annz{source=("",6,11)} "v"))))))
+                (Ret annz{source=("",9,1)} (Call annz{source=("",9,8)} (Read annz{source=("",9,8)} "f3") (Number annz{source=("",9,11)} 10)))))
+
+            it "Ord extends Eq" $
+              (parse' stmt $
+                unlines [
+                  "type/class Eq for a with",
+                  "   func == : ((a,a) -> Bool)",
+                  "end",
+                  "",
+                  "type/class (Ord for a) extends (Eq for a) with",
+                  "   func >= : ((a,a) -> Bool",
+                  "end",
+                  "",
+                  "type/instance Eq for Bool with",
+                  "   func == (x,y) : ((a,a) -> Bool) do return Bool.True end",
+                  "end",
+                  "",
+                  "type/instance (Ord for Bool) extends (Eq for Bool) with",
+                  "   func >= (x,y) : ((a,a) -> Bool) do return Bool.True end",
+                  "end",
+                  "",
+                  "return (Bool.True) >= (Bool.False)"
                 ])
               `shouldBe` Right
                 (Seq annz{source=("",1,1)}

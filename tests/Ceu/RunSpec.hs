@@ -288,15 +288,15 @@ spec = do
           ])
         `shouldBe` Right (Number 10)
 
-    describe "typeclass:" $ do
+    describe "type/class:" $ do
 
       it "Int ; F3able a ; inst F3able Int ; return f3 1" $
         (run True $
           unlines [
-            "typeclass F3able for a with"       ,
+            "type/class F3able for a with"       ,
             " var f3 : (a -> Int)"              ,
             "end"                               ,
-            "instance of F3able for Int with"   ,
+            "type/instance F3able for Int with"   ,
             " func f3 (v) : (Int -> Int) do"    ,
             "   return v"                       ,
             " end"                              ,
@@ -308,15 +308,15 @@ spec = do
       it "Int ; Bool ; F2able a ; inst F2able Bool/Int ; return f2 1" $
         (run True $
           unlines [
-            "typeclass F2able for a with"       ,
+            "type/class F2able for a with"       ,
             " var f2 : (a -> Int)"              ,
             "end"                               ,
-            "instance of F2able for Bool with"  ,
+            "type/instance F2able for Bool with"  ,
             " func f2 (v) : (Bool -> Int) do"   ,
             "   return 0"                       ,
             " end"                              ,
             "end"                               ,
-            "instance of F2able for Int with"   ,
+            "type/instance F2able for Int with"   ,
             " func f2 (v) : (Int -> Int) do"    ,
             "   return v+1"                     ,
             " end"                              ,
@@ -329,15 +329,15 @@ spec = do
       it "Int ; Bool ; F2able a ; inst F2able Bool/Int ; return f2 1" $
         (run True $
           unlines [
-            "typeclass F2able for a with"       ,
+            "type/class (F2able for a) with"    ,
             " var f2 : (a -> Int)"              ,
             "end"                               ,
-            "instance of F2able for Int with"   ,
+            "type/instance F2able for Int with" ,
             " func f2 (v) : (Int -> Int) do"    ,
             "   return v+1"                     ,
             " end"                              ,
             "end"                               ,
-            "instance of F2able for Bool with"  ,
+            "type/instance F2able for Bool with",
             " func f2 (v) : (Bool -> Int) do"   ,
             "   return 0"                       ,
             " end"                              ,
@@ -350,12 +350,12 @@ spec = do
       it "Equalable" $
         (run True $
           unlines [
-            "typeclass Equalable for a with",
+            "type/class Equalable for a with",
             "   func === : ((a,a) -> Bool)",
             "   func =/= : ((a,a) -> Bool)",
             "end",
             "",
-            "instance of Equalable for Bool with",
+            "type/instance Equalable for Bool with",
             "   func === (x,y) : ((Bool,Bool) -> Bool) do",
             "     return x",
             "   end",
