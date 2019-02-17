@@ -50,12 +50,12 @@ errDeclared z str id ids =
     if (take 1 id == "_") then [] else    -- nested _ret, __and (par/and)
         case find (isAny $ (==)id) ids of
             Nothing  -> []
-            (Just _) -> [toError z str ++ " '" ++ id ++ "' is already declared"]
+            (Just _) -> [toError z $ str ++ " '" ++ id ++ "' is already declared"]
 
 getErrsTypesDeclared :: Ann -> [Stmt] -> Type -> Errors
 getErrsTypesDeclared z ids tp = concatMap aux $ map (\id->(id, find (isData $ (==)id) ids)) $ Type.get1s tp
     where
-        aux (id, Nothing) = [toError z "type '" ++ id ++ "' is not declared"]
+        aux (id, Nothing) = [toError z $ "type '" ++ id ++ "' is not declared"]
         aux (_,  Just _)  = []
 
 -------------------------------------------------------------------------------
@@ -86,7 +86,7 @@ read' z (rel,txp) ids id = if id == "_INPUT" then ([], Type1 ["Int"])
                $ filter (isClass $ const True) ids              -- [cls1,cls2, ...]
             of
             -- not found
-            Nothing -> (TypeV "?", [toError z "variable '" ++ id ++ "' is not declared"])
+            Nothing -> (TypeV "?", [toError z $ "variable '" ++ id ++ "' is not declared"])
 
             -- find matching instance | id : a=<txp>
             Just (Class _ cls [var] _ _, Just (Var _ id tp_var _)) ->
@@ -96,7 +96,7 @@ read' z (rel,txp) ids id = if id == "_INPUT" then ([], Type1 ["Int"])
                   let tp = Type.instantiate insts (TypeV var) in
                     case find (isRel SUB tp . getTP) $ filter (isInst $ (==cls)) (sort' ids) of
                       Nothing   -> (TypeV "?",
-                                    [toError z "variable '" ++ id ++
+                                    [toError z $ "variable '" ++ id ++
                                      "' has no associated instance for type '" ++
                                      Type.show' txp ++ "' in class '" ++ cls ++ "'"])
                       Just inst -> (getTP $ fromJust
@@ -127,7 +127,7 @@ stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] im
         -- check if this instance is already declared
         es1 = case find isSameInst ids of
             Nothing  -> []
-            (Just _) -> [toError z "instance '" ++ id ++ " (" ++
+            (Just _) -> [toError z $ "instance '" ++ id ++ " (" ++
                          intercalate "," [Type.show' tp] ++ ")' is already declared"]
         isSameInst (Inst _ id' [tp'] _ _) = (id==id' && [tp]==[tp'])
         isSameInst _                      = False
@@ -135,31 +135,32 @@ stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] im
         -- check if class exists
         -- compares class vs instance function by function in order
         es0 = case find (isClass $ (==)id) ids of
-            Nothing                      -> [toError z "typeclass '" ++ id ++ "' is not declared"]
+            Nothing                      -> [toError z $ "typeclass '" ++ id ++ "' is not declared"]
             Just (Class _ _ [var] ifc _) -> compares ifc imp where
                 compares (Var _ id1 tp1 (Nop _))
-                         (Var _ id2 tp2 _)                  = (names id1 id2) ++
-                                                              (instOf var tp1 tp2)
+                         (Var z id2 tp2 _)                  = (names id1 id2) ++
+                                                              (instOf z var tp1 tp2)
                 compares (Var _ id1 tp1 p1)
-                         (Var _ id2 tp2 (Match _ _ _ _ p2 _)) = (names id1 id2) ++
-                                                                (instOf var tp1 tp2) ++
+                         (Var z id2 tp2 (Match _ _ _ _ p2 _)) = (names id1 id2) ++
+                                                                (instOf z var tp1 tp2) ++
                                                                 (compares p1 p2)
                 compares x y = error $ show [x,y]
                 --compares (Nop _) (Nop _) = []
 
         -- check if function names are the same
         names id1 id2 | id1==id2  = []
-                      | otherwise = [toError z "names do not match : expected '" ++ id1 ++ "' : found '" ++ id2 ++ "'"]
+                      | otherwise = [toError z $ "names do not match : expected '" ++ id1 ++ "' : found '" ++ id2 ++ "'"]
 
         -- check if (Inst tps) match (Class vars) in all functions
-        instOf var tp1 tp2 = case (relates SUP tp1 tp2) of
-                              Left es -> es
-                              Right (_,insts) ->
-                                let tp' = Type.instantiate insts (TypeV var) in
-                                  if tp' == tp then []
-                                               else ["types do not match : expected '" ++
-                                                    (Type.show' tp) ++ "' : found '" ++
-                                                    (Type.show' tp') ++ "'"]
+        instOf z var tp1 tp2 =
+          case (relates SUP tp1 tp2) of
+            Left es -> map (toError z) es
+            Right (_,insts) ->
+              let tp' = Type.instantiate insts (TypeV var) in
+                if tp' == tp then []
+                             else [toError z $ "types do not match : expected '" ++
+                                  (Type.show' tp) ++ "' : found '" ++
+                                  (Type.show' tp') ++ "'"]
 
 stmt ids (Inst _ _ tps _ _) = error "not implemented: multiple types"
 
@@ -240,7 +241,7 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
           where
             (tpl,esl)  = case find (isVar $ (==)var) ids of
               (Just (Var _ _ tp _)) -> (tp,    [])
-              Nothing               -> (TypeT, [toError z "variable '" ++ var ++ "' is not declared"])
+              Nothing               -> (TypeT, [toError z $ "variable '" ++ var ++ "' is not declared"])
             (ese,mexp) = f (SUP,tpl) tpexp
         (LExp e)     -> (True, es++ese, LExp e', mexp)
           where
@@ -253,7 +254,7 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
             str       = Type.hier2str hr
             (tpd,esd) = case find (isData $ (==)str) ids of
               Just (Data _ _ _ tp _ _) -> (tp,    [])
-              Nothing                  -> (TypeT, [toError z "type '" ++ str ++ "' is not declared"])
+              Nothing                  -> (TypeT, [toError z $ "type '" ++ str ++ "' is not declared"])
 
             (ese,mexp)      = f (rel,txp) tpexp
             (chk2,esl,l',_) = aux ids z l (Left tpd)
@@ -361,9 +362,9 @@ expr' _ ids (Cons  z hr exp) = (es++es_exp, Cons z{type_=(Type1 hr)} hr exp')
         hr_str = Type.hier2str hr
         (tp,es) = case find (isData $ (==)hr_str) ids of
             Nothing                      ->
-              (TypeV "?", [toError z "type '" ++ hr_str ++ "' is not declared"])
+              (TypeV "?", [toError z $ "type '" ++ hr_str ++ "' is not declared"])
             Just (Data _ _ _ tp True  _) ->
-              (tp,        [toError z "type '" ++ hr_str ++ "' is abstract"])
+              (tp,        [toError z $ "type '" ++ hr_str ++ "' is abstract"])
             Just (Data _ _ _ tp False _) ->
               (tp,        [])
         (es_exp, exp') = expr z (SUP,tp) ids exp
