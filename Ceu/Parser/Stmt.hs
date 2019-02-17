@@ -305,39 +305,6 @@ expr = do
 
 -------------------------------------------------------------------------------
 
-{-
-expr_infix :: Parser Exp
-expr_infix = do
-  void <- notFollowedBy tk_op
-  e1   <- expr_prim
-  pos  <- pos2src <$> getPosition
-  op   <- tk_op <|> tk_var
-  void <- notFollowedBy tk_op
-  e2   <- expr_prim
-  return $ Call annz{source=pos} (Read annz{source=pos} op) (Tuple (getAnn e1) [e1,e2])
-
-expr_prefix :: Parser Exp
-expr_prefix = do
-  op   <- expr_prim
-  void <- notFollowedBy tk_op
-  e    <- expr_prim
-  return $ case op of
-            (Read _ "-") -> Call (getAnn op) (Read (getAnn op) "negate") e
-            otherwise    -> Call (getAnn op) op e
-
-expr_posfix :: Parser Exp
-expr_posfix = do
-  void <- notFollowedBy tk_op
-  e    <- expr_prim
-  op   <- expr_prim
-  return $ Call (getAnn e) op e
-
-expr_call :: Parser Exp
-expr_call = expr_infix <|> expr_prefix <|> expr_posfix
--}
-
--------------------------------------------------------------------------------
-
 func :: Source -> Parser (Type, Stmt)
 func pos = do
   loc  <- pLoc

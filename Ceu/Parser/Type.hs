@@ -45,6 +45,13 @@ type_V = do
     var <- tk_var
     return $ TypeV var
 
+type_parens :: Parser Type
+type_parens = do
+  void <- tk_sym "("
+  tp   <- pType
+  void <- tk_sym ")"
+  return tp
+
 pType :: Parser Type
-pType = try type_0 <|> try type_1 <|> try type_N <|> try type_F <|> try type_V
-        <?> "type"
+pType = type_1 <|> try type_V <|> try type_0 <|> try type_N <|> try type_F
+        <|> type_parens <?> "type"
