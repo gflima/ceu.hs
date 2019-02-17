@@ -12,6 +12,18 @@ main = hspec spec
 spec :: Spec
 spec = do
 
+{-
+  describe "TODO:" $ do
+
+    it "((a,a) -> (a,a)) > ((X,X.A) -> (X.A,X.A.B)" $
+      relates SUP
+      (TypeF (TypeN [TypeV "a", TypeV "a"])
+            (TypeN [TypeV "a", TypeV "a"]))
+      (TypeF (TypeN [Type1 ["X"],     Type1 ["X","A"]])
+            (TypeN [Type1 ["X","A"], Type1 ["X","A","B"]]))
+      `shouldBe` Right (TypeF (TypeN [Type1 ["X"],Type1 ["X","A"]]) (TypeN [Type1 ["X","A"],Type1 ["X","A","B"]]),[("a",Type1 ["X","A"])])
+-}
+
   describe "supOf" $ do
 
     it "Int > BOT" $
@@ -57,7 +69,7 @@ spec = do
 
     it "(a -> a) > (Int -> Int.1)" $
       relates SUP (TypeF (TypeV "a") (TypeV "a")) (TypeF (Type1 ["Int"]) (Type1 ["Int","1"]))
-      `shouldBe` Right ((TypeF (Type1 ["Int"]) (Type1 ["Int","1"])), [("a", Type1 ["Int"])])
+      `shouldBe` Right ((TypeF (Type1 ["Int"]) (Type1 ["Int","1"])), [("a", Type1 ["Int","1"])])
 
     it "(Int -> Int) /> (Int.1 -> Int)" $
       relates SUP (TypeF (Type1 ["Int"]) (Type1 ["Int"])) (TypeF (Type1 ["Int","1"]) (Type1 ["Int"]))
@@ -81,7 +93,7 @@ spec = do
             Type0)
       (TypeF (TypeN [Type1 ["X"], Type1 ["X","A"]])
             Type0)
-      `shouldBe` Right (TypeF (TypeN [Type1 ["X"],Type1 ["X","A"]]) Type0,[("a",Type1 ["X"])])
+      `shouldBe` Right (TypeF (TypeN [Type1 ["X"],Type1 ["X","A"]]) Type0,[("a",Type1 ["X","A"])])
 
     it "((a,a) -> ()) > ((Y,X.A) -> ()" $
       relates SUP
@@ -97,7 +109,7 @@ spec = do
             (TypeN [TypeV "a", TypeV "a"]))
       (TypeF (TypeN [Type1 ["X"],     Type1 ["X","A"]])
             (TypeN [Type1 ["X","A"], Type1 ["X","A","B"]]))
-      `shouldBe` Right (TypeF (TypeN [Type1 ["X"],Type1 ["X","A"]]) (TypeN [Type1 ["X","A"],Type1 ["X","A","B"]]),[("a",Type1 ["X"])])
+      `shouldBe` Right (TypeF (TypeN [Type1 ["X"],Type1 ["X","A"]]) (TypeN [Type1 ["X","A"],Type1 ["X","A","B"]]),[("a",Type1 ["X","A"])])
 
     it "((a,a) -> (a,a)) > ((X,X.A) -> (X,X.A.B)" $
       relates SUP

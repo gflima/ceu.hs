@@ -85,8 +85,8 @@ relatesErrors rel tp1 tp2 = either id (const []) (relates rel tp1 tp2)
 
 relates :: Relation -> Type -> Type -> Either Errors (Type, [(ID_Var,Type)])
 relates rel tp1 tp2 =
-  if ret && null es_inst then Right (tp, singles)
-                         else Left $ es_tps ++ es_inst
+  if ret && null esi then Right (tp, right)
+                     else Left $ es_tps ++ esi
   where
     (ret, tp, insts) = case rel of
                         SUP -> tp1 `supOf` tp2
@@ -100,36 +100,52 @@ relates rel tp1 tp2 =
 
     sorted  = sortBy (\(a,_,_)(b,_,_) -> compare a b) insts    -- [("a",A,SUP),("a",A,SUB),("b",B,SUP)]
     grouped = groupBy (\(x,_,_)(y,_,_)->x==y && x/="?") sorted -- [[("a",A,SUP),("a",A,SUB)], [("b",B,SUP)]]
-    es_inst = concatMap f grouped
+    final   = map f grouped   -- [("a",Asub,[]), ("b",Bsub,[])]
+    esi     = concatMap snd final
+    right   = map       fst final
 
+    f :: [(ID_Var,Type,Relation)] -> ((ID_Var,Type), Errors)
     f l@((var,_,_):_) =
-      let sups    = map gettp $ filter isSUP       l
-          subs    = map gettp $ filter (not.isSUP) l
-          min_tp  = min sups
-          max_tp  = max subs
-          sups_ok = sups==[] || all (isSupOf min_tp) sups
-          subs_ok = subs==[] || all (isSubOf max_tp) subs
-          ok      = sups_ok && subs_ok &&
-                    (sups==[] || subs==[] || max_tp `isSupOf` min_tp)
+      let subs    = map gettp $ filter isSUP l
+          supest  = supest' $ expand subs
+          subs_ok = all (isSupOf supest) subs
+
+          sups    = map gettp $ filter (not.isSUP) l
+          subest  = subest' $ expand sups
+          sups_ok = all (isSubOf subest) sups
+
+          ok      = --traceShow (subs,supest, sups,subest)
+                    sups_ok && subs_ok &&
+                    (sups==[] || subs==[] || subest `isSupOf` supest)
       in
-        if ok then [] else
-          if sups_ok && subs_ok && sups/=[] && subs/=[] && (max_tp `isSubOf` min_tp) then
-            ["type variance does not match : '" ++ show' max_tp ++
-                   "' should be supertype of '" ++ show' min_tp ++ "'"]
-          else
-            ["ambigous instances for '" ++ var ++ "' : " ++
-             intercalate ", " (map (quote.show'.gettp) l)]
+        if ok then
+          ((var, bool supest subest (subs==[])), [])
+        else
+          ((var,TypeB),
+            if sups_ok && subs_ok && sups/=[] && subs/=[] && (subest `isSubOf` supest) then
+              ["type variance does not match : '" ++ show' subest ++
+               "' should be supertype of '" ++ show' supest ++ "'"]
+            else
+              ["ambigous instances for '" ++ var ++ "' : " ++
+               intercalate ", " (map (quote.show'.gettp) l)]
+          )
 
     gettp (_,tp,_) = tp
     isSUP (_, _,v) = v == SUP
 
-    singles = map ((\(var,tp,_)->(var,tp)).head) grouped    -- [("a",A), ("b",B)]
     quote x = "'" ++ x ++ "'"
 
     -- the types have no total order but there should be a min
     --sort' :: Bool -> [Type] -> Type
-    max tps = head $ sortBy (\t1 t2 -> bool LT GT (t1 `isSupOf` t2)) tps
-    min tps = head $ sortBy (\t1 t2 -> bool LT GT (t1 `isSubOf` t2)) tps
+    supest' tps = head $ sortBy (\t1 t2 -> bool GT LT (t1 `isSupOf` t2)) tps
+    subest' tps = head $ sortBy (\t1 t2 -> bool GT LT (t1 `isSubOf` t2)) tps
+
+    -- [A.B, X, ...] -> [A, A.B, X, ...]
+    expand tps = tps --concatMap aux tps
+      where
+        aux :: Type -> [Type]
+        aux (Type1 hr) = map Type1 $ scanl1 (++) $ map (:[]) hr
+        aux tp         = [tp]
 
 -------------------------------------------------------------------------------
 
