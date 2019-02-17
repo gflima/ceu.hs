@@ -20,7 +20,7 @@ spec = do
 
 -------------------------------------------------------------------------------
 
-    -- TODO-3: square : Float -> Float
+    -- TODO-3-20: square : Float -> Float
 
     describe "Chapter 1:" $ do
 
@@ -64,6 +64,8 @@ spec = do
             "return square (smaller (5, 3+4))"
            ])
         `shouldBe` Right (Number 25)
+
+      -- TODO-3
 
       it "three" $
         (run True $
@@ -191,6 +193,30 @@ spec = do
             "return fact (-5)"
            ])
         `shouldBe` Right (Error 1)
+
+      it "locals" $
+        (run True $
+          unlines [
+            "func f (x,y) : ((Int,Int)->Int) do",
+            "   var a:Int <- x+y",
+            "   return (a+1) * (a+2)",
+            "end",
+            "return f (2,3)"
+           ])
+        `shouldBe` Right (Number 42)
+
+      it "locals" $
+        (run True $
+          unlines [
+            "func f (x,y) : ((Int,Int)->Int) do",
+            "   var (a,b):(Int,Int) <- (x+y, x*y)",
+            "   return (a+1) * (b+2)",
+            "end",
+            "return f (2,3)"
+           ])
+        `shouldBe` Right (Number 48)
+
+      -- TODO-20
 
 -------------------------------------------------------------------------------
 
