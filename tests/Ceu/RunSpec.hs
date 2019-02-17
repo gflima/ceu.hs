@@ -255,7 +255,7 @@ spec = do
         `shouldBe` Right (Number 1)
       it "x1 <- 2" $
         (run True "var x:Int <- 1 ; set! `x´ <- 2 ; return 2")
-        `shouldBe` Right (Error 1)
+        `shouldBe` Right (Error (-2))
       it "1 <- x" $
         (run True "var x:Int <- 1 ; set! 1 <- x ; return x")
         `shouldBe` Right (Number 1)

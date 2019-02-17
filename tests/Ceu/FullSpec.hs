@@ -60,7 +60,7 @@ spec = do
 
       it "scope var x end ; x=1" $ do
         compile' (Seq annz (Scope annz (Var annz "x" (Type1 ["Int"]))) (Set annz False (LVar "x") (Number annz 1)))
-        `shouldBe` (["type 'Int' is not declared","variable 'x' is not declared"], B.Seq annz (B.Var annz "x" (Type1 ["Int"]) (B.Nop annz)) (B.Match annz False (B.LVar "x") (B.Number (annz{type_=Type1 ["Int","1"]}) 1) (B.Nop annz) (B.Ret annz (B.Error annz 1))))
+        `shouldBe` (["type 'Int' is not declared","variable 'x' is not declared"], B.Seq annz (B.Var annz "x" (Type1 ["Int"]) (B.Nop annz)) (B.Match annz False (B.LVar "x") (B.Number (annz{type_=Type1 ["Int","1"]}) 1) (B.Nop annz) (B.Ret annz (B.Error annz (-2)))))
 
   --------------------------------------------------------------------------
 
@@ -110,9 +110,9 @@ spec = do
               (Seq annz
               (Nop annz)
               (Seq annz
-              (Match' annz False (LVar "v") (Arg annz) (Nop annz) (Ret annz (Error annz 1)))
+              (Match' annz False (LVar "v") (Arg annz) (Nop annz) (Ret annz (Error annz (-2))))
               (Ret annz (Read annz "v"))))))
-            (Nop annz) (Ret annz (Error annz 1))))
+            (Nop annz) (Ret annz (Error annz (-2)))))
         (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
 
   --------------------------------------------------------------------------

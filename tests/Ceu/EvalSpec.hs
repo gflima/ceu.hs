@@ -150,7 +150,7 @@ spec = do
       steps (
         (Var ("f", Just $ Func (Ret (Number 1)))
         (Ret (Call (Read "f") Unit)))
-        , [])
+        , [("_steps",Just $ Number 0)])
       `shouldBe` (Number 1)
 
     it "ret f(1)" $
@@ -158,7 +158,7 @@ spec = do
         (Var ("+__((Int,Int) -> Int)", Nothing)
         (Var ("f", Just $ Func (Ret (Call (Read "+__((Int,Int) -> Int)") (Tuple [Read "_arg",Number 1]))))
         (Ret (Call (Read "f") (Number 2)))))
-        , [])
+        , [("_steps",Just $ Number 0)])
       `shouldBe` (Number 3)
 
     it "ret f(1,2)" $
@@ -166,7 +166,7 @@ spec = do
         (Var ("+__((Int,Int) -> Int)", Nothing)
         (Var ("f", Just $ Func (Ret (Call (Read "+__((Int,Int) -> Int)") (Read "_arg"))))
         (Ret (Call (Read "f") (Tuple [Number 1,Number 2])))))
-        , [])
+        , [("_steps",Just $ Number 0)])
       `shouldBe` (Number 3)
 
   --------------------------------------------------------------------------

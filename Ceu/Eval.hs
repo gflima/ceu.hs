@@ -13,6 +13,11 @@ import qualified Ceu.Grammar.TypeSys as T
 type Vars = [(ID_Var, Maybe Exp)]
 type Desc = (Stmt, Vars)
 
+error_terminate :: Int
+error_match     :: Int
+error_terminate = -1
+error_match     = -2
+
 data Exp
     = Error  Int
     | Number Int            -- 1
@@ -208,7 +213,7 @@ step p =  error $ "step: cannot advance : " ++ (show p)
 steps :: Desc -> Exp
 steps (Ret e, vars) = envEval vars e
 steps d             = if (envRead vars "_steps") == (Number 1000) then
-                        Error 2
+                        Error error_terminate
                       else
                         steps (step d') where (s,vars) = d
                                               d'       = (s,vars')

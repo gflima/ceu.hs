@@ -83,7 +83,7 @@ spec = do
             "end",
             "return infinity ()"
            ])
-        `shouldBe` Right (Error 2)
+        `shouldBe` Right (Error (-1))
 
       it "three" $
         (run True $
@@ -96,7 +96,7 @@ spec = do
             "end",
             "return three (infinity ())"
            ])
-        `shouldBe` Right (Error 2)
+        `shouldBe` Right (Error (-1))
 
 -------------------------------------------------------------------------------
 
