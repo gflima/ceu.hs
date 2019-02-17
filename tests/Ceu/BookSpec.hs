@@ -162,6 +162,36 @@ spec = do
            ])
         `shouldBe` Right (Number 0)
 
+      it "fact" $
+        (run True $
+          unlines [
+            "func fact (n) : (Int->Int) do",
+            "   if n == 0 then",
+            "     return 1",
+            "   else",
+            "     return n * (fact (n-1))",
+            "   end",
+            "end",
+            "return fact 5"
+           ])
+        `shouldBe` Right (Number 120)
+
+      it "fact - error" $
+        (run True $
+          unlines [
+            "func fact (n) : (Int->Int) do",
+            "   if n < 0 then",
+            "     error 1",
+            "   else/if n == 0 then",
+            "     return 1",
+            "   else",
+            "     return n * (fact (n-1))",
+            "   end",
+            "end",
+            "return fact (-5)"
+           ])
+        `shouldBe` Right (Error 1)
+
 -------------------------------------------------------------------------------
 
     where

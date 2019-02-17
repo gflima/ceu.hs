@@ -89,6 +89,14 @@ stmt_ret = do
   e  <- expr
   return $ Ret annz{source=pos} e
 
+stmt_error :: Parser Stmt
+stmt_error = do
+  pos  <- pos2src <$> getPosition
+  void <- try $ tk_key "error"
+  e    <- expr_number
+  return $ let (Number z n) = e in
+            Ret annz{source=pos} (Error z n)
+
 -------------------------------------------------------------------------------
 
 stmt_class :: Parser Stmt
@@ -198,7 +206,8 @@ stmt1 = do
        stmt_do      <|>
        stmt_match   <|>
        stmt_loop    <|>
-       stmt_ret     <?> "statement"
+       stmt_ret     <|>
+       stmt_error   <?> "statement"
   return s
 
 stmt_seq :: Source -> Parser Stmt
