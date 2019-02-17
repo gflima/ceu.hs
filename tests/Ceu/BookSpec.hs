@@ -98,6 +98,70 @@ spec = do
            ])
         `shouldBe` Right (Error (-1))
 
+      it "multiply 3 4" $
+        (run True $
+          unlines [
+            "func multiply (x,y) : ((Int,Int) -> Int) do",
+            "   if x == 0 then",
+            "     return 0",
+            "   else",
+            "     return x * y",
+            "   end",
+            "end",
+            "return multiply (3,4)"
+           ])
+        `shouldBe` Right (Number 12)
+
+      it "multiply 3 infinity" $
+        (run True $
+          unlines [
+            "func multiply (x,y) : ((Int,Int) -> Int) do",
+            "   if x == 0 then",
+            "     return 0",
+            "   else",
+            "     return x * y",
+            "   end",
+            "end",
+            "func infinity () : (() -> Int) do",
+            "   return (infinity()) + 1",
+            "end",
+            "return multiply (3,infinity())"
+           ])
+        `shouldBe` Right (Error (-1))
+
+      it "twice" $
+        (run True $
+          unlines [
+            "func twice (f,x) : (((Int->Int), Int) -> Int) do",
+            "   return f (f x)",
+            "end",
+            "return twice (negate,3)"
+           ])
+        `shouldBe` Right (Number 3)
+
+      it "+" $
+        (run True $
+          unlines [
+            "return 1 + (+ (2,3))"
+           ])
+        `shouldBe` Right (Number 6)
+
+      it "signum" $
+        (run True $
+          unlines [
+            "func signum (x) : (Int->Int) do",
+            "   if x < 0 then",
+            "     return  -1",
+            "   else/if x == 0 then",
+            "     return 0",
+            "   else",
+            "     return 1",
+            "   end",
+            "end",
+            "return (signum 1) + ((signum (-10)) + (signum (10-10)))"
+           ])
+        `shouldBe` Right (Number 0)
+
 -------------------------------------------------------------------------------
 
     where
