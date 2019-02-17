@@ -218,6 +218,52 @@ spec = do
 
       -- TODO-20
 
+      it "not" $
+        (run True $
+          unlines [
+            "func not (x) : (Bool->Bool) do",
+            "   if Bool.True <- x then",
+            "     return Bool.False",
+            "   else",
+            "     return Bool.True",
+            "   end",
+            "end",
+            "return not Bool.False"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "and-1" $
+        (run True $
+          unlines [
+            "func and (x,y) : ((Bool,Bool)->Bool) do",
+            "   if Bool.False <- x then",
+            "     return Bool.False",
+            "   else/if Bool.False <- y then",
+            "     return Bool.False",
+            "   else",
+            "     return Bool.True",
+            "   end",
+            "end",
+            "return and (Bool.True,Bool.False)"
+           ])
+        `shouldBe` Right (Cons ["Bool","False"] Unit)
+
+      it "and-2" $
+        (run True $
+          unlines [
+            "func and (x,y) : ((Bool,Bool)->Bool) do",
+            "   if Bool.False <- x then",
+            "     return Bool.False",
+            "   else/if Bool.False <- y then",
+            "     return Bool.False",
+            "   else",
+            "     return Bool.True",
+            "   end",
+            "end",
+            "return (Bool.True) and (Bool.True)"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
 -------------------------------------------------------------------------------
 
     where

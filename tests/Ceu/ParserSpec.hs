@@ -23,6 +23,7 @@ clearStmt (Class _ cls vars ifc)     = Class  annz cls vars (clearStmt ifc)
 clearStmt (Inst  _ cls tps  imp)     = Inst   annz cls tps  (clearStmt imp)
 clearStmt (Data  _ tp vars flds abs) = Data   annz tp  vars flds abs
 clearStmt (Var   _ var tp)           = Var    annz var tp
+clearStmt (FuncS _ var tp p)         = FuncS  annz var tp (clearStmt p)
 clearStmt (Set   _ chk loc exp)      = Set    annz chk loc (clearExp exp)
 clearStmt (If    _ exp p1 p2)        = If     annz (clearExp exp) (clearStmt p1) (clearStmt p2)
 clearStmt (Seq   _ p1 p2)            = Seq    annz (clearStmt p1) (clearStmt p2)
@@ -52,9 +53,15 @@ spec = do
 
 {-
     describe "TODO:" $ do
-      it "TODO" $
-        parse expr_parens "(1)"
-        `shouldBe` Right (Number annz{source=("",1,2)} 1)
+      it "and" $
+        (parse' stmt $
+          unlines [
+            "func and (x,y) : ((Bool,Bool)->Bool) do",
+            "   return Bool.False",
+            "end",
+            "return Bool.True and Bool.False"
+           ])
+        `shouldBe` Left "XXX"
 -}
 
     describe "tokens:" $ do
@@ -444,6 +451,16 @@ spec = do
             it "func add" $
                 parse expr_func "func ((Int, Int) -> Int) do end"
                 `shouldBe` Left "(line 1, column 18):\nunexpected \"-\"\nexpecting \")\""
+
+            it "and" $
+              (parse' stmt $
+                unlines [
+                  "func and (x,y) : ((Bool,Bool)->Bool) do",
+                  "   return Bool.False",
+                  "end",
+                  "return (Bool.True) and (Bool.True)"
+                 ])
+              `shouldBe` Right (Seq annz (FuncS annz "and" (TypeF (TypeN [Type1 ["Bool"],Type1 ["Bool"]]) (Type1 ["Bool"])) (Seq annz (Seq annz (Var annz "x" (Type1 ["Bool"])) (Seq annz (Var annz "y" (Type1 ["Bool"])) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","False"] (Unit annz)))))) (Ret annz (Call annz (Read annz "and") (Tuple annz [Cons annz ["Bool","True"] (Unit annz),Cons annz ["Bool","True"] (Unit annz)]))))
 
         describe "data" $ do
 
