@@ -316,8 +316,8 @@ spec = do
         (run True $
           unlines [
             "typeclass Equalable for a with",
-            "   func === : ((a -> a) -> Bool)",
-            "   func =/= : ((a -> a) -> Bool)",
+            "   func === : ((a,a) -> Bool)",
+            "   func =/= : ((a,a) -> Bool)",
             "end",
             "",
             "func not (x) : (Bool->Bool) do",

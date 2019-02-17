@@ -36,12 +36,12 @@ isAny f s = isClass f s || isData f s || isVar  f s
 
 classinst2ids :: Stmt -> [Stmt]
 classinst2ids p = case p of
-    (Class _ _ _ ifc _) -> aux ifc
-    (Inst  _ _ _ imp _) -> aux imp
+    (Class _ _ _ ifc _) -> aux $ ifc
+    (Inst  _ _ _ imp _) -> aux $ imp
     where
-        --aux (Nop _)                   = []
-        aux s@(Var _ _ _ p)           = [s] -- : aux p
-        aux (Seq _ s@(Var _ _ _ p) _) = s : aux p
+        aux s@(Var _ _ _ (Match _ _ _ _ p _)) = s : aux p
+        aux s@(Var _ _ _ p)                   = s : aux p
+        aux (Nop _)                           = []
 
 -------------------------------------------------------------------------------
 

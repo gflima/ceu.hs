@@ -97,10 +97,9 @@ fromStmt (B.Match  _ _ loc e p1 p2)    = Match (aux (fromLoc loc) (type_ $ getAn
 
 fromStmt (B.Inst   _ _ _ imp p)        = aux (fromStmt imp) (fromStmt p)
   where
-    aux (Var vv (Seq x y)) p = Var vv (Seq x (aux y p))
-    aux (Var vv xy)        p = Var vv (Seq xy p)
-    aux _                  p = p
-    --aux x p = error $ show (x,p)
+    -- put `imp` in scope of `p`
+    aux (Var vv (Match a b x d)) p = Var vv (Match a b (aux x p) d)
+    aux _                        p = p
 
 ----------------------------------------------------------------------------
 

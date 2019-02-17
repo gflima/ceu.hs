@@ -347,6 +347,26 @@ spec = do
           ])
         `shouldBe` Right (Number 2)
 
+      it "Equalable" $
+        (run True $
+          unlines [
+            "typeclass Equalable for a with",
+            "   func === : ((a,a) -> Bool)",
+            "   func =/= : ((a,a) -> Bool)",
+            "end",
+            "",
+            "instance of Equalable for Bool with",
+            "   func === (x,y) : ((Bool,Bool) -> Bool) do",
+            "     return x",
+            "   end",
+            "   func =/= (x,y) : ((Bool,Bool) -> Bool) do",
+            "     return y",
+            "   end",
+            "end",
+            "return ((Bool.True) === (Bool.True)) =/= Bool.False"
+           ])
+        `shouldBe` Right (Cons ["Bool","False"] Unit)
+
 -------------------------------------------------------------------------------
 
     describe "do-end:" $ do
