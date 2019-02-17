@@ -117,7 +117,11 @@ stmt_class = do
   void      <- tk_key "with"
   ifc       <- stmt
   void      <- tk_key "end"
-  return $ Class annz{source=pos} cls [var] ifc
+  return $ let ext' = case ext of
+                        Just (sup,var') -> [(sup,[var'])]
+                        Nothing         -> []
+           in
+            Class annz{source=pos} (cls,[var]) ext' ifc
 
 stmt_inst :: Parser Stmt
 stmt_inst = do
@@ -127,7 +131,7 @@ stmt_inst = do
   void     <- tk_key "with"
   imp      <- stmt
   void     <- tk_key "end"
-  return $ Inst annz{source=pos} cls [tp] imp
+  return $ Inst annz{source=pos} (cls,[tp]) imp
 
 stmt_data :: Parser Stmt
 stmt_data = do

@@ -7,8 +7,8 @@ import Ceu.Grammar.Full.Full
 compile :: Stmt -> Stmt
 compile p = stmt p
 stmt :: Stmt -> Stmt
-stmt (Class z cls vars ifc)     = Class  z cls vars (stmt ifc)
-stmt (Inst  z cls tps  imp)     = Inst   z cls tps  (stmt imp)
+stmt (Class z me  ext ifc)      = Class  z me ext (stmt ifc)
+stmt (Inst  z me  imp)          = Inst   z me (stmt imp)
 stmt (Set   z chk loc exp)      = Match' z chk   loc (expr exp) (Nop z) (Ret z (Error z error_match))
 stmt (Match z loc exp p1 p2)    = Match' z True  loc (expr exp) (stmt p1) (stmt p2)
 stmt (CallS z exp1 exp2)        = CallS  z (expr exp1) (expr exp2)

@@ -66,8 +66,8 @@ toBasicLoc (LExp   exp)     = B.LExp (toBasicExp exp)
 -------------------------------------------------------------------------------
 
 data Stmt
-  = Class    Ann ID_Class [ID_Var] Stmt           -- new class declaration
-  | Inst     Ann ID_Class [Type]   Stmt           -- new class instance
+  = Class    Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] Stmt -- new class declaration
+  | Inst     Ann (ID_Class,[Type])   Stmt           -- new class instance
   | Data     Ann [ID_Type] [ID_Var] Type Bool     -- new type declaration
   | Var      Ann ID_Var Type                      -- variable declaration
   | FuncS    Ann ID_Var Type Stmt                 -- function declaration
@@ -78,8 +78,8 @@ data Stmt
   | Seq      Ann Stmt Stmt                        -- sequence
   | Loop     Ann Stmt                             -- infinite loop
   | Scope    Ann Stmt                             -- scope for local variables
-  | Class'   Ann ID_Class [ID_Var] Stmt Stmt      -- new class declaration
-  | Inst'    Ann ID_Class [Type]   Stmt Stmt      -- new class instance
+  | Class'   Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] Stmt Stmt -- new class declaration
+  | Inst'    Ann (ID_Class,[Type]) Stmt Stmt      -- new class instance
   | Data'    Ann [ID_Type] [ID_Var] Type Bool Stmt -- new type declaration w/ stmts in scope
   | Var'     Ann ID_Var Type Stmt                 -- variable declaration w/ stmts in scope
   | Match'   Ann Bool Loc Exp Stmt Stmt           -- match w/ chk
@@ -93,7 +93,7 @@ infixr 1 `sSeq`
 instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
     getAnn (Class    z _ _ _) = z
-    getAnn (Inst     z _ _ _) = z
+    getAnn (Inst     z _ _)   = z
     getAnn (Data     z _ _ _ _) = z
     getAnn (Var      z _ _)   = z
     getAnn (FuncS    z _ _ _) = z
@@ -107,8 +107,8 @@ instance HasAnn Stmt where
     getAnn (Ret      z _    ) = z
 
 toBasicStmt :: Stmt -> B.Stmt
-toBasicStmt (Class' z cls vars ifc p)     = B.Class z cls vars (toBasicStmt ifc) (toBasicStmt p)
-toBasicStmt (Inst'  z cls tps  imp p)     = B.Inst  z cls tps  (toBasicStmt imp) (toBasicStmt p)
+toBasicStmt (Class' z me ext ifc p)       = B.Class z me ext (toBasicStmt ifc) (toBasicStmt p)
+toBasicStmt (Inst'  z me imp p)           = B.Inst  z me     (toBasicStmt imp) (toBasicStmt p)
 toBasicStmt (Data'  z tp vars flds abs p) = B.Data  z tp  vars flds abs (toBasicStmt p)
 toBasicStmt (Var'   z var tp p)           = B.Var   z var tp (toBasicStmt p)
 toBasicStmt (Match' z chk loc exp p1 p2)  = B.Match z chk (toBasicLoc loc) (toBasicExp exp)

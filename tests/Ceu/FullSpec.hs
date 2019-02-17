@@ -80,14 +80,14 @@ spec = do
 
     it "class/inst" $ do
       compile (Seq annz
-                (Class annz "F3able" ["a"]
+                (Class annz ("F3able",["a"]) []
                   (Seq annz
                   (Seq annz
                   (Var annz "f3" (TypeF (TypeV "a") (Type1 ["Int"])))
                   (Nop annz))
                   (Nop annz)))
                 (Seq annz
-                (Inst annz "F3able" [Type1 ["Int"]]
+                (Inst annz ("F3able",[Type1 ["Int"]])
                   (FuncS annz "f3" (TypeF (TypeV "a") (Type1 ["Int"]))
                     (Seq annz
                     (Seq annz
@@ -98,10 +98,10 @@ spec = do
                     (Ret annz (Read annz "v"))))))
                 (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
       `shouldBe`
-        (Class' annz "F3able" ["a"]
+        (Class' annz ("F3able",["a"]) []
           (Var' annz "f3" (TypeF (TypeV "a") (Type1 ["Int"]))
           (Seq annz (Nop annz) (Nop annz)))
-        (Inst' annz "F3able" [Type1 ["Int"]]
+        (Inst' annz ("F3able",[Type1 ["Int"]])
           (Var' annz "f3" (TypeF (TypeV "a") (Type1 ["Int"]))
           (Match' annz False
             (LVar "f3")

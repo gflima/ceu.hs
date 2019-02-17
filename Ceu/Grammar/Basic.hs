@@ -44,8 +44,8 @@ data Loc = LAny
 -------------------------------------------------------------------------------
 
 data Stmt
-    = Class  Ann ID_Class [ID_Var] Stmt Stmt  -- new class declaration
-    | Inst   Ann ID_Class [Type] Stmt Stmt    -- new class instance
+    = Class  Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] Stmt Stmt -- new class declaration
+    | Inst   Ann (ID_Class,[Type]) Stmt Stmt  -- new class instance
     | Data   Ann [ID_Type] [ID_Var] Type Bool Stmt -- new type declaration
     | Var    Ann ID_Var  Type Stmt            -- variable declaration
     | Match  Ann Bool Loc Exp Stmt Stmt       -- match/assignment/if statement
@@ -92,7 +92,7 @@ infixr 1 `sSeq`
 instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
     getAnn (Class z _ _ _ _)   = z
-    getAnn (Inst  z _ _ _ _)   = z
+    getAnn (Inst  z _ _ _)     = z
     getAnn (Data  z _ _ _ _ _) = z
     getAnn (Var   z _ _ _)     = z
     getAnn (Match z _ _ _ _ _) = z

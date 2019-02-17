@@ -19,8 +19,8 @@ import Ceu.Grammar.Full.Eval    (prelude, compile')
 import qualified Ceu.Grammar.Basic as B
 
 clearStmt :: Stmt -> Stmt
-clearStmt (Class _ cls vars ifc)     = Class  annz cls vars (clearStmt ifc)
-clearStmt (Inst  _ cls tps  imp)     = Inst   annz cls tps  (clearStmt imp)
+clearStmt (Class _ me ext ifc)       = Class  annz me ext (clearStmt ifc)
+clearStmt (Inst  _ me     imp)       = Inst   annz me     (clearStmt imp)
 clearStmt (Data  _ tp vars flds abs) = Data   annz tp  vars flds abs
 clearStmt (Var   _ var tp)           = Var    annz var tp
 clearStmt (FuncS _ var tp p)         = FuncS  annz var tp (clearStmt p)
@@ -541,14 +541,14 @@ spec = do
                 ])
               `shouldBe` Right
                 (Seq annz{source=("",1,1)}
-                (Class annz{source=("",1,1)} "F3able" ["a"]
+                (Class annz{source=("",1,1)} ("F3able", ["a"]) []
                   (Seq annz{source=("",2,2)}
                   (Seq annz{source=("",0,0)}
                   (Var annz{source=("",2,2)} "f3" (TypeF (TypeV "a") (Type1 ["Int"])))
                   (Nop annz{source=("",0,0)}))
                   (Nop annz{source=("",2,2)})))
                 (Seq annz{source=("",1,1)}
-                (Inst annz{source=("",4,1)} "F3able" [Type1 ["Int"]]
+                (Inst annz{source=("",4,1)} ("F3able", [Type1 ["Int"]])
                   (FuncS annz{source=("",5,2)} "f3" (TypeF (TypeV "a") (Type1 ["Int"]))
                     (Seq annz{source=("",5,2)}
                     (Seq annz{source=("",0,0)}
@@ -580,23 +580,21 @@ spec = do
                   "return (Bool.True) >= (Bool.False)"
                 ])
               `shouldBe` Right
-                (Seq annz{source=("",1,1)}
-                (Class annz{source=("",1,1)} "F3able" ["a"]
-                  (Seq annz{source=("",2,2)}
-                  (Seq annz{source=("",0,0)}
-                  (Var annz{source=("",2,2)} "f3" (TypeF (TypeV "a") (Type1 ["Int"])))
-                  (Nop annz{source=("",0,0)}))
-                  (Nop annz{source=("",2,2)})))
-                (Seq annz{source=("",1,1)}
-                (Inst annz{source=("",4,1)} "F3able" [Type1 ["Int"]]
-                  (FuncS annz{source=("",5,2)} "f3" (TypeF (TypeV "a") (Type1 ["Int"]))
-                    (Seq annz{source=("",5,2)}
-                    (Seq annz{source=("",0,0)}
-                    (Var annz{source=("",5,2)} "v" (TypeV "a"))
-                    (Nop annz{source=("",0,0)}))
-                    (Seq annz{source=("",5,2)}
-                    (Set annz{source=("",5,2)} False (LVar "v") (Arg annz{source=("",5,2)})) (Ret annz{source=("",6,4)} (Read annz{source=("",6,11)} "v"))))))
-                (Ret annz{source=("",9,1)} (Call annz{source=("",9,8)} (Read annz{source=("",9,8)} "f3") (Number annz{source=("",9,11)} 10)))))
+                (Seq annz
+                (Class annz ("Eq",["a"]) []
+                  (Var annz "==" (TypeF (TypeN [TypeV "a",TypeV "a"]) (Type1 ["Bool"]))))
+                (Seq annz
+                (Class annz ("Ord",["a"]) [("Eq",["a"])]
+                  (Var annz ">=" (TypeF (TypeN [TypeV "a",TypeV "a"]) (Type1 ["Bool"]))))
+                (Seq annz
+                (Inst annz ("Eq",[Type1 ["Bool"]])
+                  (FuncS annz "==" (TypeF (TypeN [TypeV "a",TypeV "a"]) (Type1 ["Bool"]))
+                    (Seq annz (Seq annz (Var annz "x" (TypeV "a")) (Seq annz (Var annz "y" (TypeV "a")) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"] (Unit annz)))))))
+                (Seq annz
+                (Inst annz ("Ord",[Type1 ["Bool"]])
+                  (FuncS annz ">=" (TypeF (TypeN [TypeV "a",TypeV "a"]) (Type1 ["Bool"]))
+                    (Seq annz (Seq annz (Var annz "x" (TypeV "a")) (Seq annz (Var annz "y" (TypeV "a")) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"] (Unit annz)))))))
+                (Ret annz (Call annz (Read annz ">=") (Tuple annz [Cons annz ["Bool","True"] (Unit annz),Cons annz ["Bool","False"] (Unit annz)])))))))
 
         describe "seq:" $ do
             it "x <- k k <- 1" $

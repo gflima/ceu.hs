@@ -19,17 +19,17 @@ go p = stmt [] p
 
 -------------------------------------------------------------------------------
 
-isClass f (Class _ id _ _ _)   = f id
-isClass _  _                   = False
+isClass f (Class _ (id,_) _ _ _) = f id
+isClass _  _                     = False
 
-isInst  f (Inst  _ id _ _ _)   = f id
-isInst  _  _                   = False
+isInst  f (Inst  _ (id,_) _ _)   = f id
+isInst  _  _                     = False
 
-isData  f (Data  _ hr _ _ _ _) = f (Type.hier2str hr)
-isData  _  _                   = False
+isData  f (Data  _ hr _ _ _ _)   = f (Type.hier2str hr)
+isData  _  _                     = False
 
-isVar   f (Var   _ id _ _)     = f id
-isVar   _  _                   = False
+isVar   f (Var   _ id _ _)       = f id
+isVar   _  _                     = False
 
 isAny :: (String -> Bool) -> Stmt -> Bool
 isAny f s = isClass f s || isData f s || isVar  f s
@@ -37,7 +37,7 @@ isAny f s = isClass f s || isData f s || isVar  f s
 classinst2ids :: Stmt -> [Stmt]
 classinst2ids p = case p of
     (Class _ _ _ ifc _) -> aux $ ifc
-    (Inst  _ _ _ imp _) -> aux $ imp
+    (Inst  _ _ imp _)   -> aux $ imp
     where
         aux s@(Var _ _ _ (Match _ _ _ _ p _)) = s : aux p
         aux s@(Var _ _ _ p)                   = s : aux p
@@ -89,7 +89,7 @@ read' z (rel,txp) ids id = if id == "_INPUT" then ([], Type1 ["Int"])
             Nothing -> (TypeV "?", [toError z $ "variable '" ++ id ++ "' is not declared"])
 
             -- find matching instance | id : a=<txp>
-            Just (Class _ cls [var] _ _, Just (Var _ id tp_var _)) ->
+            Just (Class _ (cls,[var]) _ _ _, Just (Var _ id tp_var _)) ->
               case (relates rel txp tp_var) of
                 Left  es        -> (TypeV "?", map (toError z) es)
                 Right (_,insts) ->
@@ -103,23 +103,23 @@ read' z (rel,txp) ids id = if id == "_INPUT" then ([], Type1 ["Int"])
                                           $ find (isVar $ (==)id) (classinst2ids inst),
                                     [])
 
-    getTP (Inst _ _ [tp] _ _) = tp
-    getTP (Var  _ _ tp _)     = tp
+    getTP (Inst _ (_,[tp]) _ _) = tp
+    getTP (Var  _ _ tp _)       = tp
     sort' ids = ids -- TODO: sort by subtyping (topological order)
 
 -------------------------------------------------------------------------------
 
 stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
 
-stmt ids s@(Class z id [var] ifc p) = ((errDeclared z "typeclass" id ids) ++ es1 ++ es2,
-                                        Class z id [var] ifc' p')
-                                      where
-                                        (es1,ifc') = stmt ids ifc
-                                        (es2,p')   = stmt (s:ids) p
+stmt ids s@(Class z (id,[var]) ext ifc p) = ((errDeclared z "typeclass" id ids) ++ es1 ++ es2,
+                                             Class z (id,[var]) ext ifc' p')
+                                            where
+                                              (es1,ifc') = stmt ids ifc
+                                              (es2,p')   = stmt (s:ids) p
 
-stmt ids (Class _ _ vars _ _) = error "not implemented: multiple vars"
+stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
 
-stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] imp' p')
+stmt ids s@(Inst z (id,[tp]) imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z (id,[tp]) imp' p')
     where
         (es2,imp') = stmt (filter (not . (isClass $ (==)id)) ids) imp -- prevent clashes w/ own class
         (es3,p')   = stmt (s:ids) p
@@ -129,14 +129,14 @@ stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] im
             Nothing  -> []
             (Just _) -> [toError z $ "instance '" ++ id ++ " (" ++
                          intercalate "," [Type.show' tp] ++ ")' is already declared"]
-        isSameInst (Inst _ id' [tp'] _ _) = (id==id' && [tp]==[tp'])
+        isSameInst (Inst _ (id',[tp']) _ _) = (id==id' && [tp]==[tp'])
         isSameInst _                      = False
 
         -- check if class exists
         -- compares class vs instance function by function in order
         es0 = case find (isClass $ (==)id) ids of
             Nothing                      -> [toError z $ "typeclass '" ++ id ++ "' is not declared"]
-            Just (Class _ _ [var] ifc _) -> compares ifc imp where
+            Just (Class _ (_,[var]) _ ifc _) -> compares ifc imp where
                 compares (Var _ id1 tp1 (Nop _))
                          (Var z id2 tp2 _)                  = (names id1 id2) ++
                                                               (instOf z var tp1 tp2)
@@ -162,7 +162,7 @@ stmt ids s@(Inst z id [tp] imp p) = (es0 ++ es1 ++ es2 ++ es3, Inst z id [tp] im
                                   (Type.show' tp) ++ "' : found '" ++
                                   (Type.show' tp') ++ "'"]
 
-stmt ids (Inst _ _ tps _ _) = error "not implemented: multiple types"
+stmt ids (Inst _ (_,tps) _ _) = error "not implemented: multiple types"
 
 stmt ids s@(Data z hr [] flds abs p) = (es_dcl ++ (errDeclared z "type" (Type.hier2str hr) ids) ++ es,
                                         s')

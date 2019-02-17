@@ -433,9 +433,9 @@ spec = do
       it "Int ; X a ; inst X Int ; return f3 1" $
         go
           (B.Data annz ["Int"] [] Type0 False
-          (B.Class annz "X" ["a"]
+          (B.Class annz ("X",["a"]) []
             (B.Var annz "f3" (TypeF (TypeV "a") (Type1 ["Int"])) (B.Nop annz))
-          (B.Inst annz "X" [Type1 ["Int"]]
+          (B.Inst annz ("X", [Type1 ["Int"]])
             (B.Var annz "f3" (TypeF (Type1 ["Int"]) (Type1 ["Int"]))
             (B.Match annz False
               (B.LVar "f3")
@@ -451,9 +451,9 @@ spec = do
           (B.Data annz ["Int"] [] Type0 False
           (B.Var annz "+" (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"]))
           (B.Data annz ["Bool"] [] Type0 False
-          (B.Class annz "X" ["a"]
+          (B.Class annz ("X", ["a"]) []
             (B.Var annz "f2" (TypeF (TypeV "a") (Type1 ["Int"])) (B.Nop annz))
-          (B.Inst annz "X" [Type1 ["Bool"]]
+          (B.Inst annz ("X", [Type1 ["Bool"]])
             (B.Var annz "f2" (TypeF (Type1 ["Bool"]) (Type1 ["Int"]))
             (B.Match annz False
               (B.LVar "f2")
@@ -461,7 +461,7 @@ spec = do
                 (B.Ret annz (B.Number annz 0)))
               (B.Nop annz)
               (B.Nop annz)))
-          (B.Inst annz "X" [Type1 ["Int"]]
+          (B.Inst annz ("X", [Type1 ["Int"]])
             (B.Var annz "f2" (TypeF (Type1 ["Int"]) (Type1 ["Int"]))
             (B.Match annz False
               (B.LVar "f2")
@@ -484,9 +484,9 @@ spec = do
           (B.Data annz ["Int"] [] Type0 False
           (B.Var annz "+" (TypeF (TypeN [Type1 ["Int"], Type1 ["Int"]]) (Type1 ["Int"]))
           (B.Data annz ["Bool"] [] Type0 False
-          (B.Class annz "X" ["a"]
+          (B.Class annz ("X", ["a"]) []
             (B.Var annz "f4" (TypeF (TypeV "a") (Type1 ["Int"])) (B.Nop annz))
-          (B.Inst annz "X" [Type1 ["Int"]]
+          (B.Inst annz ("X", [Type1 ["Int"]])
             (B.Var annz "f4" (TypeF (Type1 ["Int"]) (Type1 ["Int"]))
             (B.Match annz False
               (B.LVar "f4")
@@ -497,7 +497,7 @@ spec = do
                     (B.Tuple annz [B.Arg annz, B.Number annz 1]))))
                 (B.Nop annz)
                 (B.Nop annz)))
-          (B.Inst annz "X" [Type1 ["Bool"]]
+          (B.Inst annz ("X", [Type1 ["Bool"]])
             (B.Var annz "f4" (TypeF (Type1 ["Bool"]) (Type1 ["Int"]))
             (B.Match annz False
               (B.LVar "f4")
