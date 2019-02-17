@@ -16,6 +16,7 @@ keywords = [
     "else/if",
     "end",
     "error",
+    "extends",
     "for",
     "func",
     "if",

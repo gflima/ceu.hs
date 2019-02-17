@@ -99,32 +99,34 @@ stmt_error = do
 
 -------------------------------------------------------------------------------
 
-stmt_class :: Parser Stmt
-stmt_class = do
-  pos  <- pos2src <$> getPosition
-  void <- try $ tk_key "type/class"
-  par  <- optionMaybe $ try $ tk_sym "("
+pTypeFor :: Parser a -> Parser (String,a)
+pTypeFor p = do
+  par  <- optionMaybe $ tk_sym "("
   cls  <- tk_type
   void <- tk_key "for"
-  var  <- tk_var      -- TODO: list of vars
+  v    <- p             -- TODO: list of ps
   void <- if isJust par then do tk_sym ")" else do { return () }
-  void <- tk_key "with"
-  ifc  <- stmt
-  void <- tk_key "end"
+  return (cls,v)
+
+stmt_class :: Parser Stmt
+stmt_class = do
+  pos       <- pos2src <$> getPosition
+  void      <- try $ tk_key "type/class"
+  (cls,var) <- pTypeFor tk_var
+  ext       <- optionMaybe $ (tk_key "extends" *> pTypeFor tk_var)
+  void      <- tk_key "with"
+  ifc       <- stmt
+  void      <- tk_key "end"
   return $ Class annz{source=pos} cls [var] ifc
 
 stmt_inst :: Parser Stmt
 stmt_inst = do
-  pos  <- pos2src <$> getPosition
-  void <- try $ tk_key "type/instance"
-  par  <- optionMaybe $ try $ tk_sym "("
-  cls  <- tk_type
-  void <- tk_key "for"
-  tp   <- pType       -- TODO: list of types
-  void <- if isJust par then do tk_sym ")" else do { return () }
-  void <- tk_key "with"
-  imp  <- stmt
-  void <- tk_key "end"
+  pos      <- pos2src <$> getPosition
+  void     <- try $ tk_key "type/instance"
+  (cls,tp) <- pTypeFor pType
+  void     <- tk_key "with"
+  imp      <- stmt
+  void     <- tk_key "end"
   return $ Inst annz{source=pos} cls [tp] imp
 
 stmt_data :: Parser Stmt
