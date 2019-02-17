@@ -207,7 +207,13 @@ step p =  error $ "step: cannot advance : " ++ (show p)
 
 steps :: Desc -> Exp
 steps (Ret e, vars) = envEval vars e
-steps d             = steps (step d)
+steps d             = if (envRead vars "_steps") == (Number 1000) then
+                        Error 2
+                      else
+                        steps (step d') where (s,vars) = d
+                                              d'       = (s,vars')
+                                              vars'    = envWrite vars "_steps" (Number $ v+1)
+                                              Number v = envRead vars "_steps"
 
 go :: B.Stmt -> Exp
 go p = case T.go p of
@@ -215,4 +221,4 @@ go p = case T.go p of
     (es, _) -> error $ "compile error : " ++ show es
 
 go' :: B.Stmt -> Exp
-go' p = steps (fromStmt p, [])
+go' p = steps (fromStmt p, [("_steps",Just $ Number 0)])
