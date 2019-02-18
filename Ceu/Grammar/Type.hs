@@ -108,12 +108,12 @@ relates rel tp1 tp2 =
     f l@((var,_,_):_) =
       let
           -- input
-          sups    = comPre $ map gettp $ filter (not.isSUP) l
+          sups    = comPre $ map gettp $ filter isSUP l
           supest  = supest' sups
           sups_ok = all (isSupOf supest) sups
 
           -- output
-          subs    = comPre $ map gettp $ filter isSUP l
+          subs    = comPre $ map gettp $ filter (not.isSUP) l
           subest  = subest' subs
           subs_ok = all (isSubOf subest) subs
 
