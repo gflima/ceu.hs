@@ -342,6 +342,12 @@ expr z (rel,txp) ids exp = (es1++es2, exp') where
   es2 = if not.null $ es1 then [] else
           map (toError z) (relatesErrors rel txp (type_ $ getAnn exp'))
 
+  -- https://en.wikipedia.org/wiki/Subtyping
+  -- If S is a subtype of T, the subtyping relation is often written S <: T,
+  -- to mean that any term of type S can be safely used in a context where a
+  -- term of type T is expected.
+  --    txp = T :> S = exp'.type
+
 -- TODO: use txp in the cases below:
 --  * number: decide for float/int/etc
 --  * cons:   ?

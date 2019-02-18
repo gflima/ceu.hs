@@ -69,15 +69,15 @@ spec = do
 
     it "(a -> a) > (Int -> Int.1)" $
       relates SUP (TypeF (TypeV "a") (TypeV "a")) (TypeF (Type1 ["Int"]) (Type1 ["Int","1"]))
-      `shouldBe` Right ((TypeF (Type1 ["Int"]) (Type1 ["Int","1"])), [("a", Type1 ["Int","1"])])
+      `shouldBe` Left ["types do not match : expected '(a -> a)' : found '(Int -> Int.1)'","type variance does not match : 'Int.1' should be supertype of 'Int'"]
 
     it "(Int -> Int) /> (Int.1 -> Int)" $
       relates SUP (TypeF (Type1 ["Int"]) (Type1 ["Int"])) (TypeF (Type1 ["Int","1"]) (Type1 ["Int"]))
       `shouldBe` Left ["types do not match : expected '(Int -> Int)' : found '(Int.1 -> Int)'"]
 
-    it "(a -> a) /> (Int.1 -> Int)" $
+    it "(a -> a) > (Int.1 -> Int)" $
       relates SUP (TypeF (TypeV "a") (TypeV "a")) (TypeF (Type1 ["Int","1"]) (Type1 ["Int"]))
-      `shouldBe` Left ["types do not match : expected '(a -> a)' : found '(Int.1 -> Int)'","type variance does not match : 'Int.1' should be supertype of 'Int'"]
+      `shouldBe` Right (TypeF (Type1 ["Int","1"]) (Type1 ["Int"]),[("a",Type1 ["Int"])])
 
     it "(True -> Bool) > (Bool -> Bool)" $
       relates SUP (TypeF (Type1 ["Bool","True"]) (Type1 ["Bool"])) (TypeF (Type1 ["Bool"]) (Type1 ["Bool"]))
@@ -93,7 +93,7 @@ spec = do
              Type0)
       (TypeF (TypeN [Type1 ["X"], Type1 ["X","A"]])
              Type0)
-      `shouldBe` Right (TypeF (TypeN [Type1 ["X"],Type1 ["X","A"]]) Type0,[("a",Type1 ["X","A"])])
+      `shouldBe` Right (TypeF (TypeN [Type1 ["X"],Type1 ["X","A"]]) Type0,[("a",Type1 ["X"])])
 
     it "((a,a) -> ()) > ((Y,X.A) -> ()" $
       relates SUP
@@ -109,7 +109,7 @@ spec = do
              (TypeN [TypeV "a", TypeV "a"]))
       (TypeF (TypeN [Type1 ["X"],     Type1 ["X","A"]])
              (TypeN [Type1 ["X","A"], Type1 ["X","A","B"]]))
-      `shouldBe` Right (TypeF (TypeN [Type1 ["X"],Type1 ["X","A"]]) (TypeN [Type1 ["X","A"],Type1 ["X","A","B"]]),[("a",Type1 ["X","A"])])
+      `shouldBe` Left ["types do not match : expected '((a,a) -> (a,a))' : found '((X,X.A) -> (X.A,X.A.B))'","type variance does not match : 'X.A.B' should be supertype of 'X'"]
 
     it "((a,a) -> (a,a)) > ((X,X.A) -> (X,X.A.B)" $
       relates SUP
@@ -117,19 +117,19 @@ spec = do
              (TypeN [TypeV "a", TypeV "a"]))
       (TypeF (TypeN [Type1 ["X"], Type1 ["X","A"]])
              (TypeN [Type1 ["X"], Type1 ["X","A","B"]]))
-      `shouldBe` Left ["types do not match : expected '((a,a) -> (a,a))' : found '((X,X.A) -> (X,X.A.B))'","type variance does not match : 'X.A' should be supertype of 'X'"]
+      `shouldBe` Left ["types do not match : expected '((a,a) -> (a,a))' : found '((X,X.A) -> (X,X.A.B))'","type variance does not match : 'X.A.B' should be supertype of 'X'"]
 
     it "(a,a) -> () > (True,False) -> ()" $
       relates SUP
       (TypeF (TypeN [TypeV "a",                 TypeV "a"])                  Type0)
       (TypeF (TypeN [Type1 ["X","Bool","True"], Type1 ["X","Bool","False"]]) Type0)
-      `shouldBe` Left ["TODO"]
+      `shouldBe` Right (TypeF (TypeN [Type1 ["X","Bool","True"],Type1 ["X","Bool","False"]]) Type0,[("a",Type1 ["X","Bool"])])
 
     it "() -> (a,a) > () -> (True,False)" $
       relates SUP
       (TypeF Type0 (TypeN [TypeV "a",                 TypeV "a"]))
       (TypeF Type0 (TypeN [Type1 ["X","Bool","True"], Type1 ["X","Bool","False"]]))
-      `shouldBe` Right (TypeF Type0 (TypeN [Type1 ["X","Bool","True"],Type1 ["X","Bool","False"]]),[("a",Type1 ["X","Bool"])])
+      `shouldBe` Left ["TODO"]
 
     it "(a,a) -> (a,a) > (True,False) -> (True,False)" $
       relates SUP

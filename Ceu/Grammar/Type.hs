@@ -109,20 +109,20 @@ relates rel tp1 tp2 =
       let
           -- input
           sups    = comPre $ map gettp $ filter (not.isSUP) l
-          subest  = subest' $ expand sups
-          sups_ok = all (isSubOf subest) sups
+          supest  = supest' sups
+          sups_ok = all (isSupOf supest) sups
 
           -- output
           subs    = comPre $ map gettp $ filter isSUP l
-          supest  = supest' $ expand subs
-          subs_ok = all (isSupOf supest) subs
+          subest  = subest' subs
+          subs_ok = all (isSubOf subest) subs
 
           ok      = --traceShow (subs,supest, sups,subest)
                     sups_ok && subs_ok &&
                     (sups==[] || subs==[] || subest `isSupOf` supest)
       in
         if ok then
-          ((var, bool supest subest (subs==[])), [])
+          ((var, bool subest supest (subs==[])), [])
         else
           ((var,TypeB),
             if sups_ok && subs_ok && sups/=[] && subs/=[] && (subest `isSubOf` supest) then
@@ -142,13 +142,6 @@ relates rel tp1 tp2 =
     --sort' :: Bool -> [Type] -> Type
     supest' tps = head $ sortBy (\t1 t2 -> bool GT LT (t1 `isSupOf` t2)) tps
     subest' tps = head $ sortBy (\t1 t2 -> bool GT LT (t1 `isSubOf` t2)) tps
-
-    -- [A.B, X, ...] -> [A, A.B, X, ...]
-    expand tps = tps --concatMap aux tps
-      where
-        aux :: Type -> [Type]
-        aux (Type1 hr) = map Type1 $ scanl1 (++) $ map (:[]) hr
-        aux tp         = [tp]
 
     comPre tps = tps ++ l where
       l = bool [Type1 pre] [] (null tp1s || null pre)
