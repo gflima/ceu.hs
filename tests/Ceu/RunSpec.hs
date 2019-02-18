@@ -174,6 +174,16 @@ spec = do
            ])
         `shouldBe` Left "(line 6, column 4):\nvariable 'a' is already declared\n"
 
+      it "fst : (a,a) -> a" $
+        (run True $
+          unlines [
+            "func fst (x,y) : ((a,a) -> a) do",
+            "   return x",
+            "end",
+            "return fst (Bool.True, Bool.False)"
+          ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
     describe "data:" $ do
 
       it "type Xxx" $
@@ -366,6 +376,29 @@ spec = do
             "return ((Bool.True) === (Bool.True)) =/= Bool.False"
            ])
         `shouldBe` Right (Cons ["Bool","False"] Unit)
+
+      it "Ord extends Eq" $
+        (run True $
+          unlines [
+            "type/class Eq for a with",
+            "   func === : ((a,a) -> Bool)",
+            "end",
+            "",
+            "type/class (Ord for a) extends (Eq for a) with",
+            "   func =>= : ((a,a) -> Bool)",
+            "end",
+            "",
+            "type/instance Eq for Bool with",
+            "   func === (x,y) : ((Bool,Bool) -> Bool) do return Bool.True end",
+            "end",
+            "",
+            "type/instance (Ord for Bool) with",
+            "   func =>= (x,y) : ((Bool,Bool) -> Bool) do return x === y end",
+            "end",
+            "",
+            "return (Bool.True) =>= (Bool.False)"
+          ])
+        `shouldBe` Left "TODO"
 
 -------------------------------------------------------------------------------
 

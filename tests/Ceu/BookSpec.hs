@@ -352,7 +352,7 @@ spec = do
             "end",
             "return ((Bool.True) === (Bool.True)) =/= Bool.False"
            ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Left "TODO" --Right (Cons ["Bool","True"] Unit)
 
 -------------------------------------------------------------------------------
 

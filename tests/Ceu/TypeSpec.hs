@@ -90,34 +90,54 @@ spec = do
     it "((a,a) -> ()) > ((X,X.A) -> ()" $
       relates SUP
       (TypeF (TypeN [TypeV "a", TypeV "a"])
-            Type0)
+             Type0)
       (TypeF (TypeN [Type1 ["X"], Type1 ["X","A"]])
-            Type0)
+             Type0)
       `shouldBe` Right (TypeF (TypeN [Type1 ["X"],Type1 ["X","A"]]) Type0,[("a",Type1 ["X","A"])])
 
     it "((a,a) -> ()) > ((Y,X.A) -> ()" $
       relates SUP
       (TypeF (TypeN [TypeV "a", TypeV "a"])
-            Type0)
+             Type0)
       (TypeF (TypeN [Type1 ["Y"], Type1 ["X","A"]])
-            Type0)
+             Type0)
       `shouldBe` Left ["types do not match : expected '((a,a) -> ())' : found '((Y,X.A) -> ())'","ambigous instances for 'a' : 'Y', 'X.A'"]
 
     it "((a,a) -> (a,a)) > ((X,X.A) -> (X.A,X.A.B)" $
       relates SUP
       (TypeF (TypeN [TypeV "a", TypeV "a"])
-            (TypeN [TypeV "a", TypeV "a"]))
+             (TypeN [TypeV "a", TypeV "a"]))
       (TypeF (TypeN [Type1 ["X"],     Type1 ["X","A"]])
-            (TypeN [Type1 ["X","A"], Type1 ["X","A","B"]]))
+             (TypeN [Type1 ["X","A"], Type1 ["X","A","B"]]))
       `shouldBe` Right (TypeF (TypeN [Type1 ["X"],Type1 ["X","A"]]) (TypeN [Type1 ["X","A"],Type1 ["X","A","B"]]),[("a",Type1 ["X","A"])])
 
     it "((a,a) -> (a,a)) > ((X,X.A) -> (X,X.A.B)" $
       relates SUP
       (TypeF (TypeN [TypeV "a", TypeV "a"])
-            (TypeN [TypeV "a", TypeV "a"]))
+             (TypeN [TypeV "a", TypeV "a"]))
       (TypeF (TypeN [Type1 ["X"], Type1 ["X","A"]])
-            (TypeN [Type1 ["X"], Type1 ["X","A","B"]]))
+             (TypeN [Type1 ["X"], Type1 ["X","A","B"]]))
       `shouldBe` Left ["types do not match : expected '((a,a) -> (a,a))' : found '((X,X.A) -> (X,X.A.B))'","type variance does not match : 'X.A' should be supertype of 'X'"]
+
+    it "(a,a) -> () > (True,False) -> ()" $
+      relates SUP
+      (TypeF (TypeN [TypeV "a",                 TypeV "a"])                  Type0)
+      (TypeF (TypeN [Type1 ["X","Bool","True"], Type1 ["X","Bool","False"]]) Type0)
+      `shouldBe` Left ["TODO"]
+
+    it "() -> (a,a) > () -> (True,False)" $
+      relates SUP
+      (TypeF Type0 (TypeN [TypeV "a",                 TypeV "a"]))
+      (TypeF Type0 (TypeN [Type1 ["X","Bool","True"], Type1 ["X","Bool","False"]]))
+      `shouldBe` Right (TypeF Type0 (TypeN [Type1 ["X","Bool","True"],Type1 ["X","Bool","False"]]),[("a",Type1 ["X","Bool"])])
+
+    it "(a,a) -> (a,a) > (True,False) -> (True,False)" $
+      relates SUP
+      (TypeF (TypeN [TypeV "a", TypeV "a"])
+             (TypeN [TypeV "a", TypeV "a"]))
+      (TypeF (TypeN [Type1 ["X","Bool","True"], Type1 ["X","Bool","False"]])
+             (TypeN [Type1 ["X","Bool","True"], Type1 ["X","Bool","False"]]))
+      `shouldBe` Left ["TODO"]
 
   describe "isSupOf / isSubOf" $ do
 

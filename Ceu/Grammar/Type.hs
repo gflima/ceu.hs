@@ -106,13 +106,16 @@ relates rel tp1 tp2 =
 
     f :: [(ID_Var,Type,Relation)] -> ((ID_Var,Type), Errors)
     f l@((var,_,_):_) =
-      let subs    = map gettp $ filter isSUP l
-          supest  = supest' $ expand subs
-          subs_ok = all (isSupOf supest) subs
-
-          sups    = map gettp $ filter (not.isSUP) l
+      let
+          -- input
+          sups    = comPre $ map gettp $ filter (not.isSUP) l
           subest  = subest' $ expand sups
           sups_ok = all (isSubOf subest) sups
+
+          -- output
+          subs    = comPre $ map gettp $ filter isSUP l
+          supest  = supest' $ expand subs
+          subs_ok = all (isSupOf supest) subs
 
           ok      = --traceShow (subs,supest, sups,subest)
                     sups_ok && subs_ok &&
@@ -146,6 +149,26 @@ relates rel tp1 tp2 =
         aux :: Type -> [Type]
         aux (Type1 hr) = map Type1 $ scanl1 (++) $ map (:[]) hr
         aux tp         = [tp]
+
+    comPre tps = tps ++ l where
+      l = bool [Type1 pre] [] (null tp1s || null pre)
+
+      tp1s = filter isType1 tps
+      pre  = commonPrefixAll $ map (\(Type1 hr)->hr) tp1s
+
+      isType1 (Type1 _) = True
+      isType1 _         = False
+
+      -- https://stackoverflow.com/questions/21717646/longest-common-prefix-in-haskell
+      commonPrefixAll :: (Eq a) => [[a]] -> [a]
+      commonPrefixAll = foldl1 commonPrefix
+        where
+          commonPrefix :: (Eq e) => [e] -> [e] -> [e]
+          commonPrefix _ [] = []
+          commonPrefix [] _ = []
+          commonPrefix (x:xs) (y:ys)
+            | x == y    = x : commonPrefix xs ys
+            | otherwise = []
 
 -------------------------------------------------------------------------------
 
