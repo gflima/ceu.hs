@@ -119,24 +119,30 @@ spec = do
              (TypeN [Type1 ["X"], Type1 ["X","A","B"]]))
       `shouldBe` Left ["types do not match : expected '((a,a) -> (a,a))' : found '((X,X.A) -> (X,X.A.B))'","type variance does not match : 'X.A.B' should be supertype of 'X'"]
 
-    it "(a,a) -> () > (True,False) -> ()" $
+    it "(True,False) -> () > (a,a) -> ()" $
       relates SUP
-      (TypeF (TypeN [TypeV "a",                 TypeV "a"])                  Type0)
       (TypeF (TypeN [Type1 ["X","Bool","True"], Type1 ["X","Bool","False"]]) Type0)
-      `shouldBe` Right (TypeF (TypeN [Type1 ["X","Bool","True"],Type1 ["X","Bool","False"]]) Type0,[("a",Type1 ["X","Bool"])])
-
-    it "() -> (a,a) > () -> (True,False)" $
-      relates SUP
-      (TypeF Type0 (TypeN [TypeV "a",                 TypeV "a"]))
-      (TypeF Type0 (TypeN [Type1 ["X","Bool","True"], Type1 ["X","Bool","False"]]))
+      (TypeF (TypeN [TypeV "a",                 TypeV "a"])                  Type0)
       `shouldBe` Left ["TODO"]
 
-    it "(a,a) -> (a,a) > (True,False) -> (True,False)" $
+    it "()->(True,False) SUP ()->(a,a)" $
       relates SUP
-      (TypeF (TypeN [TypeV "a", TypeV "a"])
-             (TypeN [TypeV "a", TypeV "a"]))
+      (TypeF Type0 (TypeN [Type1 ["X","Bool","True"], Type1 ["X","Bool","False"]]))
+      (TypeF Type0 (TypeN [TypeV "a",                 TypeV "a"]))
+      `shouldBe` Left ["TODO"]
+
+    it "(True,False) -> (True,False) SUP (a,a) -> (a,a)" $
+      relates SUP
       (TypeF (TypeN [Type1 ["X","Bool","True"], Type1 ["X","Bool","False"]])
              (TypeN [Type1 ["X","Bool","True"], Type1 ["X","Bool","False"]]))
+      (TypeF (TypeN [TypeV "a", TypeV "a"])
+             (TypeN [TypeV "a", TypeV "a"]))
+      `shouldBe` Left ["TODO"]
+
+    it "(True,False)->top SUP (a,a)->a" $
+      relates SUP
+      (TypeF (TypeN [Type1 ["Bool","True"], Type1 ["Bool","False"]]) TypeT)
+      (TypeF (TypeN [TypeV "a",             TypeV "a"])              (TypeV "a"))
       `shouldBe` Left ["TODO"]
 
   describe "isSupOf / isSubOf" $ do
