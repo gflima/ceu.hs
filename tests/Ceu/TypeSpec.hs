@@ -141,7 +141,7 @@ spec = do
       relates SUP
       (TypeF Type0 (TypeN [Type1 ["X","Bool","True"], Type1 ["X","Bool","False"]]))
       (TypeF Type0 (TypeN [TypeV "a",                 TypeV "a"]))
-      `shouldBe` Left ["TODO"]
+      `shouldBe` Left ["types do not match : expected '(() -> (X.Bool.True,X.Bool.False))' : found '(() -> (a,a))'","ambigous instances for 'a' : 'X.Bool.True', 'X.Bool.False'"]
 
     it "(True,False)->(True,False) SUP (a,a)->(a,a)" $
       relates SUP
@@ -149,7 +149,7 @@ spec = do
              (TypeN [Type1 ["X","Bool","True"], Type1 ["X","Bool","False"]]))
       (TypeF (TypeN [TypeV "a", TypeV "a"])
              (TypeN [TypeV "a", TypeV "a"]))
-      `shouldBe` Left ["TODO"]
+      `shouldBe` Left ["types do not match : expected '((X.Bool.True,X.Bool.False) -> (X.Bool.True,X.Bool.False))' : found '((a,a) -> (a,a))'","ambigous instances for 'a' : 'X.Bool.True', 'X.Bool.False', 'X.Bool.True', 'X.Bool.False'"]
 
     it "(True,False)->top SUP (a,a)->a" $
       relates SUP

@@ -388,17 +388,51 @@ spec = do
             "   func =>= : ((a,a) -> Bool)",
             "end",
             "",
-            "type/instance Eq for Bool with",
-            "   func === (x,y) : ((Bool,Bool) -> Bool) do return Bool.True end",
-            "end",
-            "",
             "type/instance (Ord for Bool) with",
             "   func =>= (x,y) : ((Bool,Bool) -> Bool) do return x === y end",
             "end",
             "",
             "return (Bool.True) =>= (Bool.False)"
           ])
-        `shouldBe` Left "TODO"
+        `shouldBe` Left "(line 9, column 1):\ntype/instance 'Eq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated instance for type '((Bool,Bool) -> top)' in class 'Eq'\n"
+
+      it "Ord extends Eq" $
+        (run True $
+          unlines [
+            "type/class (Ord for a) extends (Eq for a) with",
+            "   func =>= : ((a,a) -> Bool)",
+            "end",
+            "",
+            "type/instance (Ord for Bool) with",
+            "   func =>= (x,y) : ((Bool,Bool) -> Bool) do return x end",
+            "end",
+            "",
+            "return (Bool.True) =>= (Bool.False)"
+          ])
+        `shouldBe` Left "(line 1, column 1):\ntype/class 'Eq' is not declared\n(line 5, column 1):\ntype/instance 'Eq for Bool' is not declared\n"
+
+      it "Ord extends Eq" $
+        (run True $
+          unlines [
+            "type/class Eq for a with",
+            "   func =%= : ((a,a) -> Bool)",
+            "end",
+            "",
+            "type/class (Ord for a) extends (Eq for a) with",
+            "   func =$= : ((a,a) -> Bool)",
+            "end",
+            "",
+            "type/instance Eq for Bool with",
+            "   func =%= (x,y) : ((Bool,Bool) -> Bool) do return y end",
+            "end",
+            "",
+            "type/instance (Ord for Bool) with",
+            "   func =$= (x,y) : ((Bool,Bool) -> Bool) do return x =%= y end",
+            "end",
+            "",
+            "return (Bool.True) =$= (Bool.False)"
+          ])
+        `shouldBe` Right (Cons ["Bool","False"] Unit)
 
 -------------------------------------------------------------------------------
 

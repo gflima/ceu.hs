@@ -312,6 +312,7 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
+-- TODO: default implementation
       it "Equalable" $
         (run True $
           unlines [
@@ -352,7 +353,7 @@ spec = do
             "end",
             "return ((Bool.True) === (Bool.True)) =/= Bool.False"
            ])
-        `shouldBe` Left "TODO" --Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
 
 -------------------------------------------------------------------------------
 
