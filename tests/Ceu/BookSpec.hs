@@ -22,6 +22,7 @@ spec = do
 
     -- TODO-3-20: square : Float -> Float
 
+{-
     describe "Chapter 1:" $ do
 
       it "square" $
@@ -312,15 +313,11 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
+-}
 -- TODO: default implementation
-      it "Equalable" $
+      it "Equalable: default =/=" $
         (run True $
           unlines [
-            "type/class Equalable for a with",
-            "   func === : ((a,a) -> Bool)",
-            "   func =/= : ((a,a) -> Bool)",
-            "end",
-            "",
             "func not (x) : (Bool->Bool) do",
             "   if Bool.True <- x then",
             "     return Bool.False",
@@ -343,12 +340,14 @@ spec = do
             "   end",
             "end",
             "",
+            "type/class Equalable for a with",
+            "   func ===       : ((a,a) -> Bool)",
+            "   func =/= (x,y) : ((a,a) -> Bool) do return not (x == y) end",
+            "end",
+            "",
             "type/instance Equalable for Bool with",
             "   func === (x,y) : ((Bool,Bool) -> Bool) do",
             "     return (x and y) or ((not x) and (not y))",
-            "   end",
-            "   func =/= (x,y) : ((Bool,Bool) -> Bool) do",
-            "     return not (x === y)",
             "   end",
             "end",
             "return ((Bool.True) === (Bool.True)) =/= Bool.False"

@@ -1,7 +1,7 @@
 module Ceu.Grammar.TypeSys where
 
 import Debug.Trace
-import Data.List (find, intercalate, unfoldr, unzip4)
+import Data.List (find, intercalate, unfoldr, unzip4, sortBy)
 import Data.Maybe (isJust, fromJust)
 import Data.Bool (bool)
 
@@ -34,14 +34,19 @@ isVar   _  _                     = False
 isAny :: (String -> Bool) -> Stmt -> Bool
 isAny f s = isClass f s || isData f s || isVar  f s
 
-classinst2ids :: Stmt -> [Stmt]
-classinst2ids p = case p of
-    (Class _ _ _ ifc _) -> aux $ ifc
-    (Inst  _ _ imp _)   -> aux $ imp
-    where
-        aux s@(Var _ _ _ (Match _ _ _ _ p _)) = s : aux p
-        aux s@(Var _ _ _ p)                   = s : aux p
-        aux (Nop _)                           = []
+clssinst2ids :: Stmt -> [(Stmt,Bool)]
+clssinst2ids p = case p of
+  (Class _ _ _ ifc _) -> sortBy fsort (aux ifc)
+  (Inst  _ _ imp _)   -> sortBy fsort (aux imp)
+  where
+    aux :: Stmt -> [(Stmt,Bool)]
+    aux s@(Var _ _ _ (Match _ _ _ _ p _)) = (s,True)  : aux p
+    aux s@(Var _ _ _ p)                   = (s,False) : aux p
+    aux (Nop _)                           = []
+    aux p = error $ show p
+
+    fsort :: (Stmt,Bool) -> (Stmt,Bool) -> Ordering
+    fsort (Var _ a _ _,_) (Var _ b _ _,_) = compare a b
 
 -------------------------------------------------------------------------------
 
@@ -82,15 +87,15 @@ read' z (rel,txp) ids id = if id == "_INPUT" then ([], Type1 ["Int"])
           -- find in classes | class X a with id : a
           case find (\(_,var) -> isJust var)            -- Just (clsI, Just (Var ...))
                $ map (\(cls,ids) -> (cls, find (isVar $ (==)id) ids)) -- [(cls1,Just (Var .)), .]
-               $ map (\cls -> (cls, classinst2ids cls)) -- [(cls1,ids1), ...]
+               $ map (\cls -> (cls, map fst $ clssinst2ids cls)) -- [(cls1,ids1), ...]
                $ filter (isClass $ const True) ids              -- [cls1,cls2, ...]
             of
             -- not found
             Nothing -> (TypeV "?", [toError z $ "variable '" ++ id ++ "' is not declared"])
 
             -- find matching instance | id : a=<txp>
-            Just (Class _ (cls,[var]) _ _ _, Just (Var _ id tp_var _)) ->
-              case (relates rel txp tp_var) of
+            Just pp@(Class _ (cls,[var]) _ _ _, Just (Var _ id tp_var _)) ->
+              case relates rel txp tp_var of
                 Left  es        -> (TypeV "?", map (toError z) es)
                 Right (_,insts) ->
                   let tp = Type.instantiate insts (TypeV var) in
@@ -99,8 +104,10 @@ read' z (rel,txp) ids id = if id == "_INPUT" then ([], Type1 ["Int"])
                                     [toError z $ "variable '" ++ id ++
                                      "' has no associated instance for type '" ++
                                      Type.show' txp ++ "' in class '" ++ cls ++ "'"])
-                      Just inst -> (getTP $ fromJust
-                                          $ find (isVar $ (==)id) (classinst2ids inst),
+                      Just inst ->
+                        case find (isVar $ (==)id) (map fst $ clssinst2ids inst) of
+                          Just p  -> (getTP p, [])
+                          Nothing -> (getTP $ fromJust $ find (isVar $ (==)id) (map fst $ clssinst2ids (fst pp)),
                                     [])
 
     getTP (Inst _ (_,[tp]) _ _) = tp
@@ -156,27 +163,41 @@ stmt ids s@(Inst z (id,[tp]) imp p) = (es0++es1++es2++es3++es4, Inst z (id,[tp])
             isInstOf me (Inst _ me' _ _) = (me == me')
             isInstOf _  _                = False
 
-        -- compares class vs instance function by function in order
-        es0 = case cls of
-          Nothing                            -> [toError z $ "type/class '" ++ id ++ "' is not declared"]
-          Just (Class _ (_,[var]) _ ifc _) -> compares ifc imp where
-            compares (Var _ id1 tp1 (Nop _))
-                     (Var z id2 tp2 _)                    = (names id1 id2) ++
-                                                            (instVScls z var tp1 tp2)
-            compares (Var _ id1 tp1 p1)
-                     (Var z id2 tp2 (Match _ _ _ _ p2 _)) = (names id1 id2) ++
-                                                            (instVScls z var tp1 tp2) ++
-                                                            (compares p1 p2)
-            compares x y = error $ show [x,y]
-            --compares (Nop _) (Nop _) = []
+        -- get function dcls from Inst/Class (last bool = has implementation)
+        fs (Nop _)                           = []
+        fs (Var z id tp (Match _ _ _ _ p _)) = [(z, id, tp, True )] ++ fs p
+        fs (Var z id tp p)                   = [(z, id, tp, False)] ++ fs p
+        fs p = error $ show p
+        fsort (_,a,_,_) (_,b,_,_) = compare a b
 
-        -- check if function names are the same
-        names id1 id2 | id1==id2  = []
-                      | otherwise = [toError z $ "names do not match : expected '" ++ id1 ++ "' : found '" ++ id2 ++ "'"]
+        -- compares class vs instance function by function (sorted)
+        es0 = case cls of
+          Nothing                              -> [toError z $ "type/class '" ++ id ++ "' is not declared"]
+          Just cls@(Class _ (_,[var]) _ ifc _) -> compares (clssinst2ids cls)
+                                                           (clssinst2ids s) where
+            compares [] [] = []
+
+            compares ((Var z1 id1 _ _, has1):l1) [] =
+              bool [toError z $ "missing implementation of '" ++ id1 ++ "'"] [] has1
+                ++ compares l1 []
+
+            compares [] ((Var z2 id2 _ _, _):l2) =
+              [toError z2 $ "unexpected implementation of '" ++ id2 ++ "'"]
+                ++ compares [] l2
+
+            compares ((Var z1 id1 tp1 _, has1):l1) l2'@((Var z2 id2 tp2 _, has2):l2) =
+              if id1 == id2 then
+                clssVSinst z2 var tp1 tp2 ++ compares l1 l2
+              else
+                if has1 then
+                  compares l1 l2'
+                else
+                  [toError z $ "missing implementation of '" ++ id1 ++ "'"]
+                    ++ compares l1 l2'
 
         -- check if (Inst tps) match (Class vars) in all functions
-        instVScls z var tp1 tp2 =
-          case (relates SUP tp1 tp2) of
+        clssVSinst z var tp1 tp2 =
+          case relates SUP tp1 tp2 of
             Left es -> map (toError z) es
             Right (_,insts) ->
               let tp' = Type.instantiate insts (TypeV var) in
@@ -211,7 +232,7 @@ stmt ids s@(Var  z id tp p) = (es_data ++ es_dcl ++ es_id ++ es, Var z id tp p')
                                 es_id   = errDeclared z "variable" id ids
                                 (es,p') = stmt (s:ids) p
                                 es_dcl = errDeclared z "variable" id ids'
-                                ids' = concatMap classinst2ids $ filter (isClass $ const True) ids
+                                ids' = map fst $ concatMap clssinst2ids $ filter (isClass $ const True) ids
 
 stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fromJust mexp) p1' p2')
   where
