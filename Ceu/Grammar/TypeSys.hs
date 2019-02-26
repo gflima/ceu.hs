@@ -43,7 +43,7 @@ clssinst2ids p = case p of
     aux s@(Var _ _ _ (Match _ _ _ _ p _)) = (s,True)  : aux p
     aux s@(Var _ _ _ p)                   = (s,False) : aux p
     aux (Nop _)                           = []
-    aux p = error $ show p
+    --aux p = error $ show p
 
     fsort :: (Stmt,Bool) -> (Stmt,Bool) -> Ordering
     fsort (Var _ a _ _,_) (Var _ b _ _,_) = compare a b

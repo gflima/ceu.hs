@@ -342,7 +342,7 @@ spec = do
             "",
             "type/class Equalable for a with",
             "   func ===       : ((a,a) -> Bool)",
-            "   func =/= (x,y) : ((a,a) -> Bool) do return not (x == y) end",
+            "   func =/= (x,y) : ((a,a) -> Bool) do return not (x === y) end",
             "end",
             "",
             "type/instance Equalable for Bool with",

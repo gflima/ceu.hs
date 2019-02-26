@@ -73,7 +73,6 @@ fromLoc (B.LTuple locs)    = LTuple $ map fromLoc locs
 fromLoc (B.LExp   exp)     = LExp (fromExp exp)
 
 fromStmt :: B.Stmt -> Stmt
-fromStmt (B.Class  _ _ _ _   p)        = fromStmt p
 fromStmt (B.Data   _ _ _ _ _ p)        = fromStmt p
 fromStmt (B.Var _ id tp@(TypeF _ _) p) = Var (id++"__"++Type.show' tp, Nothing) (fromStmt p)
 fromStmt (B.Var _ id _ p)              = Var (id,Nothing) (fromStmt p)
@@ -95,11 +94,14 @@ fromStmt (B.Match  _ _ loc e p1 p2)    = Match (aux (fromLoc loc) (type_ $ getAn
     aux (LExp x)      tp          = LExp x
     aux loc            _          = loc
 
+fromStmt (B.Class  _ _ _ ifc p)        = aux (fromStmt ifc) (fromStmt p)
+
 fromStmt (B.Inst   _ _ imp p)          = aux (fromStmt imp) (fromStmt p)
-  where
-    -- put `imp` in scope of `p`
-    aux (Var vv (Match a b x d)) p = Var vv (Match a b (aux x p) d)
-    aux _                        p = p
+
+-- put `imp` in scope of `p`
+aux (Var vv (Match a b x d)) p = Var vv (Match a b (aux x p) d)
+aux (Var vv x)               p = aux x p
+aux _                        p = p
 
 ----------------------------------------------------------------------------
 
