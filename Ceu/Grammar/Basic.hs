@@ -10,7 +10,7 @@ data Exp
     = Error  Ann Int
     | Unit   Ann                -- ()
     | Number Ann Int            -- 1
-    | Cons   Ann [ID_Type] Exp  -- True
+    | Cons   Ann [ID_Type] Exp  -- Bool.True ; Tree.Node (Tree.Leaf,1,Tree.Leaf)
     | Read   Ann ID_Var         -- a ; xs
     | Arg    Ann
     | Tuple  Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)

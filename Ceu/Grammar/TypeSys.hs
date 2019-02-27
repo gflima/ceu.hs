@@ -108,7 +108,7 @@ read' z (rel,txp) ids id = if id == "_INPUT" then ([], Type1 ["Int"])
                         case find (isVar $ (==)id) (map fst $ clssinst2ids inst) of
                           Just p  -> (getTP p, [])
                           Nothing -> (getTP $ fromJust $ find (isVar $ (==)id) (map fst $ clssinst2ids (fst pp)),
-                                    [])
+                                      [])
 
     getTP (Inst _ (_,[tp]) _ _) = tp
     getTP (Var  _ _ tp _)       = tp
@@ -119,8 +119,14 @@ read' z (rel,txp) ids id = if id == "_INPUT" then ([], Type1 ["Int"])
 stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
 
 stmt ids s@(Class z (id,[var]) exts ifc p) = (es0 ++ es1 ++ es2 ++ es3,
-                                             Class z (id,[var]) exts ifc' p')
+                                              Class z (id,[var]) exts ifc' p')
   where
+    {-
+      class Equalable for a with
+        func === : ((a,a) -> Bool)
+        func =/= : ((a,a) -> Bool)
+    -}
+
     es0 = errDeclared z "type/class" id ids
     (es2,ifc') = stmt ids ifc
     (es3,p')   = stmt (s:ids) p
@@ -132,30 +138,34 @@ stmt ids s@(Class z (id,[var]) exts ifc p) = (es0 ++ es1 ++ es2 ++ es3,
 
 stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
 
-stmt ids s@(Inst z (id,[tp]) imp p) = (es0++es1++es2++es3++es4, Inst z (id,[tp]) imp' p')
-    where
-        (es4,p')   = stmt (s:ids) p
+stmt ids s@(Inst z (id,[tp]) imp p) =
 
-        (es3,imp') = stmt (filter (not . (isClass $ (==)id)) ids) imp -- prevent clashes w/ own class
-        -- check if this instance is already declared
-        es2 = case find isSameInst ids of
-            Nothing  -> []
-            (Just _) -> [toError z $ "instance '" ++ id ++ " (" ++
+  -- check if class is declared
+  case find (isClass $ (==)id) ids of
+
+    Nothing -> (es++esi++esp, ret) where
+               es = [toError z $ "type/class '" ++ id ++ "' is not declared"]
+
+    Just cls@(Class _ (_,[var]) exts ifc _) ->
+
+      -- check if this instance is already declared
+      case find isSameInst ids of
+        Just _  -> (es++esi++esp, ret) where
+                   es = [toError z $ "instance '" ++ id ++ " (" ++
                          intercalate "," [Type.show' tp] ++ ")' is already declared"]
-        isSameInst (Inst _ (id',[tp']) _ _) = (id==id' && [tp]==[tp'])
-        isSameInst _                      = False
 
-        -- check if class exists
-        cls = find (isClass $ (==)id) ids
+        -----------------------------------------------------------------------
+        -- class is declared and instance does not exist
+        -----------------------------------------------------------------------
 
-        -- check extends
-        --  type/class    (Eq  for a)
-        --  type/instance (Eq  for Bool)                  <-- so Bool must implement Eq
-        --  type/class    (Ord for a) extends (Eq for a)  <-- but Ord extends Eq
-        --  type/instance (Ord for Bool)                  <-- Bool implements Ord
-        es1 = case cls of
-          Nothing -> []
-          Just (Class _ _ exts ifc _) -> concatMap f exts where
+        Nothing -> (es1++es2++esi++esp, ret) where
+
+          -- check extends
+          --  type/class    (Eq  for a)
+          --  type/instance (Eq  for Bool)                  <-- so Bool must implement Eq
+          --  type/class    (Ord for a) extends (Eq for a)  <-- but Ord extends Eq
+          --  type/instance (Ord for Bool)                  <-- Bool implements Ord
+          es1 = concatMap f exts where
             f (sup,_) = case find (isInstOf (sup,[tp])) ids of
               Nothing -> [toError z $ "type/instance '" ++ sup ++ " for " ++
                           (Type.show' tp) ++ "' is not declared"]
@@ -163,48 +173,77 @@ stmt ids s@(Inst z (id,[tp]) imp p) = (es0++es1++es2++es3++es4, Inst z (id,[tp])
             isInstOf me (Inst _ me' _ _) = (me == me')
             isInstOf _  _                = False
 
-        -- get function dcls from Inst/Class (last bool = has implementation)
-        fs (Nop _)                           = []
-        fs (Var z id tp (Match _ _ _ _ p _)) = [(z, id, tp, True )] ++ fs p
-        fs (Var z id tp p)                   = [(z, id, tp, False)] ++ fs p
-        fs p = error $ show p
-        fsort (_,a,_,_) (_,b,_,_) = compare a b
+          ---------------------------------------------------------------------
 
-        -- compares class vs instance function by function (sorted)
-        es0 = case cls of
-          Nothing                              -> [toError z $ "type/class '" ++ id ++ "' is not declared"]
-          Just cls@(Class _ (_,[var]) _ ifc _) -> compares (clssinst2ids cls)
-                                                           (clssinst2ids s) where
-            compares [] [] = []
+          -- compares class vs instance function by function (sorted)
+          -- also collects implementations to add wrappers to Inst
+          (es2,imps) = compares (clssinst2ids cls) (clssinst2ids s) where
+            --compares :: [a] -> [a] -> (Errors, [Maybe Stmt])
+            compares [] [] = ([], [])
 
-            compares ((Var z1 id1 _ _, has1):l1) [] =
-              bool [toError z $ "missing implementation of '" ++ id1 ++ "'"] [] has1
-                ++ compares l1 []
+            compares ((imp@(Var z1 id1 tp1 _), has1):l1) [] =
+              (bool ([toError z $ "missing implementation of '" ++ id1 ++ "'"], [Nothing])
+                    ([], [Just imp])
+                    has1)
+                +++ compares l1 []
 
             compares [] ((Var z2 id2 _ _, _):l2) =
-              [toError z2 $ "unexpected implementation of '" ++ id2 ++ "'"]
-                ++ compares [] l2
+              ([toError z2 $ "unexpected implementation of '" ++ id2 ++ "'"],[])
+                +++ compares [] l2
 
-            compares ((Var z1 id1 tp1 _, has1):l1) l2'@((Var z2 id2 tp2 _, has2):l2) =
+            compares ((imp1@(Var z1 id1 tp1 _), has1):l1) l2'@((imp2@(Var z2 id2 tp2 _), has2):l2) =
               if id1 == id2 then
-                clssVSinst z2 var tp1 tp2 ++ compares l1 l2
+                (clssVSinst z2 var tp1 tp2,[Just imp2]) +++ compares l1 l2
               else
                 if has1 then
-                  compares l1 l2'
+                  ([],[Just imp1]) +++ compares l1 l2'
                 else
-                  [toError z $ "missing implementation of '" ++ id1 ++ "'"]
-                    ++ compares l1 l2'
+                  ([toError z $ "missing implementation of '" ++ id1 ++ "'"],[Nothing])
+                    +++ compares l1 l2'
 
-        -- check if (Inst tps) match (Class vars) in all functions
-        clssVSinst z var tp1 tp2 =
-          case relates SUP tp1 tp2 of
-            Left es -> map (toError z) es
-            Right (_,insts) ->
-              let tp' = Type.instantiate insts (TypeV var) in
-                if tp' == tp then []
-                             else [toError z $ "types do not match : expected '" ++
-                                  (Type.show' tp) ++ "' : found '" ++
-                                  (Type.show' tp') ++ "'"]
+            -- check if (Inst tps) match (Class vars) in all functions
+            clssVSinst z var tp1 tp2 =
+              case relates SUP tp1 tp2 of
+                Left es -> map (toError z) es
+                Right (_,insts) ->
+                  let tp' = Type.instantiate insts (TypeV var) in
+                    if tp' == tp then []
+                                 else [toError z $ "types do not match : expected '" ++
+                                      (Type.show' tp) ++ "' : found '" ++
+                                      (Type.show' tp') ++ "'"]
+            (+++) (a1,b1) (a2,b2) = (a1++a2, b1++b2)
+
+          ---------------------------------------------------------------------
+
+          (esp,p') = stmt (var' (Nop z) : s : ids) p
+
+          ret = var' $
+                  if all isJust imps then
+                    Match z False (LVar id')
+                            (Tuple z $ map (\(Just (Var z id tp (Match _ _ _ exp _ _))) -> exp) imps)
+                            (Inst z (id,[tp]) imp' p')
+                            (Ret z $ Error z (-2)) -- TODO: -2
+                  else
+                    Inst z (id,[tp]) imp' p'
+
+          var' p = Var z id'
+                    (TypeN $ map (\(Var _ _ tp _)->tp) $ map fst $ clssinst2ids s)
+                    p
+          id' = intercalate "__" ["_inst",id,Type.show' tp]
+
+        -----------------------------------------------------------------------
+        -----------------------------------------------------------------------
+
+      where
+        isSameInst (Inst _ (id',[tp']) _ _) = (id==id' && [tp]==[tp'])
+        isSameInst _                        = False
+
+  where
+    -- if class is not declared or instance is already declared
+    ret        = Inst z (id,[tp]) imp' p'
+    (esp,p')   = stmt ids p
+    (esi,imp') = stmt (filter (not . (isClass $ (==)id)) ids) imp
+                       -- prevent clashes w/ own class
 
 stmt ids (Inst _ (_,tps) _ _) = error "not implemented: multiple types"
 
