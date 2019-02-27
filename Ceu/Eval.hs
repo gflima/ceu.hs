@@ -98,6 +98,10 @@ fromStmt (B.Match  _ _ loc e p1 p2)    = Match (aux (fromLoc loc) (type_ $ getAn
     aux (LExp x)      tp          = LExp x
     aux loc            _          = loc
 
+{-
+fromStmt (B.Class  _ _ _ ifc p)        = fromStmt p
+fromStmt (B.Inst   _ _ imp p)          = fromStmt p
+-}
 fromStmt (B.Class  _ _ _ ifc p)        = aux (fromStmt ifc) (fromStmt p)
 fromStmt (B.Inst   _ _ imp p)          = aux (fromStmt imp) (fromStmt p)
 -- put `imp` in scope of `p`

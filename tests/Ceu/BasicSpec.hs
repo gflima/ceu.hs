@@ -488,7 +488,7 @@ spec = do
         (Class annz ("X",["a"]) [] (Nop annz)
         (Class annz ("X",["a"]) [] (Nop annz)
         (Nop annz))))
-      `shouldBe` ["type/class 'X' is already declared"]
+      `shouldBe` ["interface 'X' is already declared"]
 
     it "X.f ; Y.f" $
       (fst $ TypeSys.go
@@ -571,7 +571,7 @@ spec = do
           (Var annz "fff" (TypeF (Type1 ["Int"]) Type0)
           (Nop annz))
         (Nop annz))))))
-      `shouldBe` ["type/class 'X' is not declared","variable 'fff' is already declared"]
+      `shouldBe` ["interface 'X' is not declared","variable 'fff' is already declared"]
 
     it "A ; Xable a ; inst Xable A ; a/=A" $
       (fst $ TypeSys.go

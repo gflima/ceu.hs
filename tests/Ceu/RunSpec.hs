@@ -298,15 +298,15 @@ spec = do
           ])
         `shouldBe` Right (Number 10)
 
-    describe "type/class:" $ do
+    describe "interface:" $ do
 
       it "Int ; F3able a ; inst F3able Int ; return f3 1" $
         (run True $
           unlines [
-            "type/class F3able for a with"       ,
+            "interface F3able for a with"       ,
             " var f3 : (a -> Int)"              ,
             "end"                               ,
-            "type/instance F3able for Int with"   ,
+            "implementation F3able for Int with"   ,
             " func f3 (v) : (Int -> Int) do"    ,
             "   return v"                       ,
             " end"                              ,
@@ -318,15 +318,15 @@ spec = do
       it "Int ; Bool ; F2able a ; inst F2able Bool/Int ; return f2 1" $
         (run True $
           unlines [
-            "type/class F2able for a with"       ,
+            "interface F2able for a with"       ,
             " var f2 : (a -> Int)"              ,
             "end"                               ,
-            "type/instance F2able for Bool with"  ,
+            "implementation F2able for Bool with"  ,
             " func f2 (v) : (Bool -> Int) do"   ,
             "   return 0"                       ,
             " end"                              ,
             "end"                               ,
-            "type/instance F2able for Int with"   ,
+            "implementation F2able for Int with"   ,
             " func f2 (v) : (Int -> Int) do"    ,
             "   return v+1"                     ,
             " end"                              ,
@@ -339,15 +339,15 @@ spec = do
       it "Int ; Bool ; F2able a ; inst F2able Bool/Int ; return f2 1" $
         (run True $
           unlines [
-            "type/class (F2able for a) with"    ,
+            "interface (F2able for a) with"    ,
             " var f2 : (a -> Int)"              ,
             "end"                               ,
-            "type/instance F2able for Int with" ,
+            "implementation F2able for Int with" ,
             " func f2 (v) : (Int -> Int) do"    ,
             "   return v+1"                     ,
             " end"                              ,
             "end"                               ,
-            "type/instance F2able for Bool with",
+            "implementation F2able for Bool with",
             " func f2 (v) : (Bool -> Int) do"   ,
             "   return 0"                       ,
             " end"                              ,
@@ -360,12 +360,12 @@ spec = do
       it "Equalable" $
         (run True $
           unlines [
-            "type/class Equalable for a with",
+            "interface Equalable for a with",
             "   func === : ((a,a) -> Bool)",
             "   func =/= : ((a,a) -> Bool)",
             "end",
             "",
-            "type/instance Equalable for Bool with",
+            "implementation Equalable for Bool with",
             "   func === (x,y) : ((Bool,Bool) -> Bool) do",
             "     return x",
             "   end",
@@ -380,53 +380,53 @@ spec = do
       it "Ord extends Eq" $
         (run True $
           unlines [
-            "type/class Eq for a with",
+            "interface Eq for a with",
             "   func === : ((a,a) -> Bool)",
             "end",
             "",
-            "type/class (Ord for a) extends (Eq for a) with",
+            "interface (Ord for a) extends (Eq for a) with",
             "   func =>= : ((a,a) -> Bool)",
             "end",
             "",
-            "type/instance (Ord for Bool) with",
+            "implementation (Ord for Bool) with",
             "   func =>= (x,y) : ((Bool,Bool) -> Bool) do return x === y end",
             "end",
             "",
             "return (Bool.True) =>= (Bool.False)"
           ])
-        `shouldBe` Left "(line 9, column 1):\ntype/instance 'Eq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated instance for type '((Bool,Bool) -> top)' in class 'Eq'\n"
+        `shouldBe` Left "(line 9, column 1):\nimplementation 'Eq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated instance for type '((Bool,Bool) -> top)' in class 'Eq'\n"
 
       it "Ord extends Eq" $
         (run True $
           unlines [
-            "type/class (Ord for a) extends (Eq for a) with",
+            "interface (Ord for a) extends (Eq for a) with",
             "   func =>= : ((a,a) -> Bool)",
             "end",
             "",
-            "type/instance (Ord for Bool) with",
+            "implementation (Ord for Bool) with",
             "   func =>= (x,y) : ((Bool,Bool) -> Bool) do return x end",
             "end",
             "",
             "return (Bool.True) =>= (Bool.False)"
           ])
-        `shouldBe` Left "(line 1, column 1):\ntype/class 'Eq' is not declared\n(line 5, column 1):\ntype/instance 'Eq for Bool' is not declared\n"
+        `shouldBe` Left "(line 1, column 1):\ninterface 'Eq' is not declared\n(line 5, column 1):\nimplementation 'Eq for Bool' is not declared\n"
 
       it "Ord extends Eq" $
         (run True $
           unlines [
-            "type/class Eq for a with",
+            "interface Eq for a with",
             "   func =%= : ((a,a) -> Bool)",
             "end",
             "",
-            "type/class (Ord for a) extends (Eq for a) with",
+            "interface (Ord for a) extends (Eq for a) with",
             "   func =$= : ((a,a) -> Bool)",
             "end",
             "",
-            "type/instance Eq for Bool with",
+            "implementation Eq for Bool with",
             "   func =%= (x,y) : ((Bool,Bool) -> Bool) do return y end",
             "end",
             "",
-            "type/instance (Ord for Bool) with",
+            "implementation (Ord for Bool) with",
             "   func =$= (x,y) : ((Bool,Bool) -> Bool) do return x =%= y end",
             "end",
             "",

@@ -127,13 +127,13 @@ stmt ids s@(Class z (id,[var]) exts ifc p) = (es0 ++ es1 ++ es2 ++ es3,
         func =/= : ((a,a) -> Bool)
     -}
 
-    es0 = errDeclared z "type/class" id ids
+    es0 = errDeclared z "interface" id ids
     (es2,ifc') = stmt ids ifc
     (es3,p')   = stmt (s:ids) p
 
     es1 = concatMap f exts
     f (sup,_) = case find (isClass $ (==)sup) ids of
-      Nothing -> [toError z $ "type/class '" ++ sup ++ "' is not declared"]
+      Nothing -> [toError z $ "interface '" ++ sup ++ "' is not declared"]
       Just _  -> []
 
 stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
@@ -144,7 +144,7 @@ stmt ids s@(Inst z (id,[tp]) imp p) =
   case find (isClass $ (==)id) ids of
 
     Nothing -> (es++esi++esp, ret) where
-               es = [toError z $ "type/class '" ++ id ++ "' is not declared"]
+               es = [toError z $ "interface '" ++ id ++ "' is not declared"]
 
     Just cls@(Class _ (_,[var]) exts ifc _) ->
 
@@ -161,13 +161,13 @@ stmt ids s@(Inst z (id,[tp]) imp p) =
         Nothing -> (es1++es2++esi++esp, ret) where
 
           -- check extends
-          --  type/class    (Eq  for a)
-          --  type/instance (Eq  for Bool)                  <-- so Bool must implement Eq
-          --  type/class    (Ord for a) extends (Eq for a)  <-- but Ord extends Eq
-          --  type/instance (Ord for Bool)                  <-- Bool implements Ord
+          --  interface      (Eq  for a)
+          --  implementation (Eq  for Bool)                  <-- so Bool must implement Eq
+          --  interface      (Ord for a) extends (Eq for a)  <-- but Ord extends Eq
+          --  implementation (Ord for Bool)                  <-- Bool implements Ord
           es1 = concatMap f exts where
             f (sup,_) = case find (isInstOf (sup,[tp])) ids of
-              Nothing -> [toError z $ "type/instance '" ++ sup ++ " for " ++
+              Nothing -> [toError z $ "implementation '" ++ sup ++ " for " ++
                           (Type.show' tp) ++ "' is not declared"]
               Just _  -> []
             isInstOf me (Inst _ me' _ _) = (me == me')
@@ -220,9 +220,9 @@ stmt ids s@(Inst z (id,[tp]) imp p) =
           ret = var' $
                   if all isJust imps then
                     Match z False (LVar id')
-                            (Tuple z $ map (\(Just (Var z id tp (Match _ _ _ exp _ _))) -> exp) imps)
-                            (Inst z (id,[tp]) imp' p')
-                            (Ret z $ Error z (-2)) -- TODO: -2
+                      (Tuple z $ map (\(Just (Var z id tp (Match _ _ _ exp _ _))) -> exp) imps)
+                      (Inst z (id,[tp]) imp' p')
+                      (Ret z $ Error z (-2)) -- TODO: -2
                   else
                     Inst z (id,[tp]) imp' p'
 
@@ -231,7 +231,6 @@ stmt ids s@(Inst z (id,[tp]) imp p) =
                     p
           id' = intercalate "__" ["_inst",id,Type.show' tp]
 
-        -----------------------------------------------------------------------
         -----------------------------------------------------------------------
 
       where

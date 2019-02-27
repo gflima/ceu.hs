@@ -524,15 +524,15 @@ spec = do
                 ])
               `shouldBe` Right (Seq annz (Data annz ["Aa"] [] (Type1 ["Int"]) False) (Seq annz (Data annz ["Aa","Bb"] [] Type0 False) (Seq annz (Seq annz (Seq annz (Var annz "b" (Type1 ["Aa","Bb"])) (Nop annz)) (Set annz False (LVar "b") (Cons annz ["Aa","Bb"] (Number annz 1)))) (Seq annz (Seq annz (Seq annz (Var annz "a" (Type1 ["Aa"])) (Nop annz)) (Set annz False (LVar "a") (Read annz "b"))) (Seq annz (Seq annz (Seq annz (Var annz "v" (Type1 ["Int"])) (Nop annz)) (Nop annz)) (Seq annz (Set annz False (LCons ["Aa"] (LVar "v")) (Read annz "b")) (Ret annz (Read annz "v"))))))))
 
-        describe "type/class:" $ do
+        describe "interface:" $ do
 
             it "Int ; F3able a ; inst F3able Int ; return f3 1" $
               (parse stmt $
                 unlines [
-                  "type/class F3able for a with"  ,
+                  "interface F3able for a with"  ,
                   " var f3 : (a -> Int)"          ,
                   "end"                           ,
-                  "type/instance (F3able for Int) with" ,
+                  "implementation (F3able for Int) with" ,
                   " func f3 (v) : (a -> Int) do"  ,
                   "   return v"                   ,
                   " end"                          ,
@@ -561,19 +561,19 @@ spec = do
             it "Ord extends Eq" $
               (parse' stmt $
                 unlines [
-                  "type/class Eq for a with",
+                  "interface Eq for a with",
                   "   func == : ((a,a) -> Bool)",
                   "end",
                   "",
-                  "type/class (Ord for a) extends (Eq for a) with",
+                  "interface (Ord for a) extends (Eq for a) with",
                   "   func >= : ((a,a) -> Bool)",
                   "end",
                   "",
-                  "type/instance Eq for Bool with",
+                  "implementation Eq for Bool with",
                   "   func == (x,y) : ((a,a) -> Bool) do return Bool.True end",
                   "end",
                   "",
-                  "type/instance (Ord for Bool) with",
+                  "implementation (Ord for Bool) with",
                   "   func >= (x,y) : ((a,a) -> Bool) do return Bool.True end",
                   "end",
                   "",

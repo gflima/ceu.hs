@@ -56,6 +56,20 @@ data Stmt
     | Nop    Ann                              -- dummy statement (internal)
     deriving (Eq, Show)
 
+{-
+show_stmt :: Int -> Stmt -> String
+
+show_stmt spc (Class _ (id,[var]) exts ifc p) =
+  spc ++ "class " ++ id ++ " for " ++ var ++ ") extends TODO with\n" ++
+    show_stmt (spc++"  ") ifc ++
+  show_stmt spc p
+
+show_stmt spc (Inst _ (id,[tp]) exts ifc p) =
+  spc ++ "class " ++ id ++ " (" ++ intercalate "," vars ++ ") extends TODO\n" ++
+    show_stmt (spc++"  ") ifc ++
+  show_stmt spc p
+-}
+
 --  class Equalable a where
 --      eq :: a -> a -> Bool
 --

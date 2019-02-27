@@ -111,7 +111,7 @@ pTypeFor p = do
 stmt_class :: Parser Stmt
 stmt_class = do
   pos       <- pos2src <$> getPosition
-  void      <- try $ tk_key "type/class"
+  void      <- try $ tk_key "interface"
   (cls,var) <- pTypeFor tk_var
   ext       <- optionMaybe $ (tk_key "extends" *> pTypeFor tk_var)
   void      <- tk_key "with"
@@ -126,7 +126,7 @@ stmt_class = do
 stmt_inst :: Parser Stmt
 stmt_inst = do
   pos      <- pos2src <$> getPosition
-  void     <- try $ tk_key "type/instance"
+  void     <- try $ tk_key "implementation"
   (cls,tp) <- pTypeFor pType
   void     <- tk_key "with"
   imp      <- stmt
