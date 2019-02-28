@@ -16,6 +16,7 @@ fromLeft (Left v) = v
 
 go :: Stmt -> (Errors, Stmt)
 go p = stmt [] p
+--go p = traceShowId $ stmt [] p
 
 -------------------------------------------------------------------------------
 
@@ -104,11 +105,13 @@ read' z (rel,txp) ids id = if id == "_INPUT" then ([], Type1 ["Int"])
                                     [toError z $ "variable '" ++ id ++
                                      "' has no associated instance for type '" ++
                                      Type.show' txp ++ "' in class '" ++ cls ++ "'"])
-                      Just inst ->
-                        case find (isVar $ (==)id) (map fst $ clssinst2ids inst) of
-                          Just p  -> (getTP p, [])
-                          Nothing -> (getTP $ fromJust $ find (isVar $ (==)id) (map fst $ clssinst2ids (fst pp)),
-                                      [])
+                      Just inst -> (Type.instantiate insts $ getTP $ fromJust $
+                                      find (isVar $ (==)id)
+                                           (map fst $ clssinst2ids (fst pp)),
+                                    [])
+                        --case find (isVar $ (==)id) (map fst $ clssinst2ids inst) of
+                          --Just p  -> (getTP p, [])
+                          --Nothing -> (getTP $ fromJust $ find (isVar $ (==)id) (map fst $ clssinst2ids (fst pp)), [])
 
     getTP (Inst _ (_,[tp]) _ _) = tp
     getTP (Var  _ _ tp _)       = tp
@@ -143,14 +146,14 @@ stmt ids s@(Inst z (id,[tp]) imp p) =
   -- check if class is declared
   case find (isClass $ (==)id) ids of
 
-    Nothing -> (es++esi++esp, ret) where
+    Nothing -> (es++esi++esp, p') where
                es = [toError z $ "interface '" ++ id ++ "' is not declared"]
 
     Just cls@(Class _ (_,[var]) exts ifc _) ->
 
       -- check if this instance is already declared
       case find isSameInst ids of
-        Just _  -> (es++esi++esp, ret) where
+        Just _  -> (es++esi++esp, p') where
                    es = [toError z $ "instance '" ++ id ++ " (" ++
                          intercalate "," [Type.show' tp] ++ ")' is already declared"]
 
@@ -183,7 +186,7 @@ stmt ids s@(Inst z (id,[tp]) imp p) =
 
             compares ((imp@(Var z1 id1 tp1 _), has1):l1) [] =
               (bool ([toError z $ "missing implementation of '" ++ id1 ++ "'"], [Nothing])
-                    ([], [Just imp])
+                    ([], [Just (True,imp)])
                     has1)
                 +++ compares l1 []
 
@@ -193,10 +196,10 @@ stmt ids s@(Inst z (id,[tp]) imp p) =
 
             compares ((imp1@(Var z1 id1 tp1 _), has1):l1) l2'@((imp2@(Var z2 id2 tp2 _), has2):l2) =
               if id1 == id2 then
-                (clssVSinst z2 var tp1 tp2,[Just imp2]) +++ compares l1 l2
+                (clssVSinst z2 var tp1 tp2,[Just (False,imp2)]) +++ compares l1 l2
               else
                 if has1 then
-                  ([],[Just imp1]) +++ compares l1 l2'
+                  ([],[Just (True,imp1)]) +++ compares l1 l2'
                 else
                   ([toError z $ "missing implementation of '" ++ id1 ++ "'"],[Nothing])
                     +++ compares l1 l2'
@@ -220,11 +223,17 @@ stmt ids s@(Inst z (id,[tp]) imp p) =
           ret = var' $
                   if all isJust imps then
                     Match z False (LVar id')
-                      (Tuple z $ map (\(Just (Var z id tp (Match _ _ _ exp _ _))) -> exp) imps)
+                      (Tuple z $ map f imps)
                       (Inst z (id,[tp]) imp' p')
                       (Ret z $ Error z (-2)) -- TODO: -2
                   else
                     Inst z (id,[tp]) imp' p'
+                  where
+                    f (Just (False, Var z id tp (Match _ _ _ exp _ _))) = exp
+                    f (Just (True,  Var z id tp (Match _ _ _ exp _ _))) = exp'
+                      where
+                        (Func z tp body) = exp
+                        exp' = traceShowId (Func z tp body)
 
           var' p = Var z id'
                     (TypeN $ map (\(Var _ _ tp _)->tp) $ map fst $ clssinst2ids s)
@@ -239,7 +248,6 @@ stmt ids s@(Inst z (id,[tp]) imp p) =
 
   where
     -- if class is not declared or instance is already declared
-    ret        = Inst z (id,[tp]) imp' p'
     (esp,p')   = stmt ids p
     (esi,imp') = stmt (filter (not . (isClass $ (==)id)) ids) imp
                        -- prevent clashes w/ own class
