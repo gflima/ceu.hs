@@ -188,6 +188,8 @@ step (Match loc e p q,vars)  = case envEval vars e of
                                 Error x -> (Left  $ Error x, vars)
                                 e'      -> (Right $ e' == v, vars)
 
+    --aux x y z = error $ show (y,z)
+
     --err xp got = error $ "assignment does not match : expected '" ++ show xp ++
                                                  --"' : found '"    ++ show got ++ "'"
 
@@ -223,4 +225,4 @@ go p = case T.go p of
     (es, _) -> error $ "compile error : " ++ show es
 
 go' :: B.Stmt -> Exp
-go' p = steps (fromStmt p, [("_steps",Just $ Number 0)])
+go' p = steps (fromStmt p, [("_steps",Just $ Number 0),("_vtable",Nothing)])

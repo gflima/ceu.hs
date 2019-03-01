@@ -50,6 +50,8 @@ clssinst2ids p = sortBy fsort $
     fsort :: (Stmt,Bool) -> (Stmt,Bool) -> Ordering
     fsort (Var _ a _ _,_) (Var _ b _ _,_) = compare a b
 
+err z = Ret z $ Error z (-2)  -- TODO: -2
+
 -------------------------------------------------------------------------------
 
 errDeclared :: Ann -> String -> String -> [Stmt] -> Errors
@@ -92,15 +94,30 @@ stmt ids (Class z (id,[var]) exts ifc p) = (es0 ++ es1 ++ es2 ++ es3, ret) where
       Nothing -> [toError z $ "interface '" ++ sup ++ "' is not declared"]
       Just _  -> []
 
-    -- keep only the default implementations
-    ret = foldr f p' $ map fst $ clssinst2ids s' where
-      f (Var z1 id1 tp1 (Match z2 False l2 exp2 _   f2)) acc =
-        (Var z1 id1 tp1 (Match z2 False l2 exp2 acc f2))
+    ret = foldr f p' ids' where
+      ids' = map fst $ clssinst2ids s'
+
+      -- add vtable to scope
+      --  ((===, =/=), ...) <- _vtable
+      vtable z p = Match z False
+                    (LTuple (map (\(Var _ id _ _)-> LVar id) ids'))
+                    (Read z "_vtable")
+                    p (err z)
+
+      -- Method w implementation (=/=)
+      f (Var z1 id1 tp1 (Match z2 False l2 exp2 t2  f2)) acc =
+        (Var z1 id1 tp1 (Match z2 False l2 exp  acc f2))
+        where
+          Func z tp p = exp2
+          exp = Func z tp $ vtable z p
+
+      -- Method w/o implementation (===)
+      -- call method at my index
+      --  === (...)
       f (Var z1 id1 tp1 _) acc =
-        (Var z1 id1 tp1 (Match z1 False loc exp acc err)) where
-          loc = LVar id1
-          exp = Func z1 tp1 err
-          err = Ret z $ Error z (-2)  -- TODO: -2
+        (Var z1 id1 tp1 (Match z1 False (LVar id1) exp acc (err z1)))
+        where
+          exp = Func z1 tp1 $ vtable z1 (err z1) -- TODO (call)
 
 stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
 
@@ -148,12 +165,12 @@ stmt ids (Inst z (id,[inst_tp]) imp p) =
             -- compares class vs instance function by function (sorted)
             -- also collects implementations to add wrappers to Inst
             (es2,imps) = compares (clssinst2ids cls) (clssinst2ids s') where
-              --compares :: [a] -> [a] -> (Errors, [Maybe Stmt])
+              --compares :: [a] -> [a] -> (Errors, [Maybe (Bool,Stmt)])
               compares [] [] = ([], [])
 
               compares ((imp@(Var z1 id1 tp1 _), has1):l1) [] =
                 (bool ([toError z $ "missing implementation of '" ++ id1 ++ "'"], [Nothing])
-                      ([], [Just (True,imp)])
+                      ([], [Just (True,imp)]) -- class impl
                       has1)
                   +++ compares l1 []
 
@@ -164,10 +181,10 @@ stmt ids (Inst z (id,[inst_tp]) imp p) =
               compares ((imp1@(Var z1 id1 tp1 _), has1):l1) l2'@((imp2@(Var z2 id2 tp2 _), has2):l2) =
                 if id1 == id2 then
                   (clssVSinst z2 tp1 tp2,[Just (False,imp2)]) +++ compares l1 l2
-                else
+                else                          -- inst impl
                   if has1 then
                     ([],[Just (True,imp1)]) +++ compares l1 l2'
-                  else
+                  else                        -- class impl
                     ([toError z $ "missing implementation of '" ++ id1 ++ "'"],[Nothing])
                       +++ compares l1 l2'
 
@@ -189,19 +206,28 @@ stmt ids (Inst z (id,[inst_tp]) imp p) =
 
             ret = vars' $ --traceShowId $
                     if all isJust imps then
+                      -- _inst__Eq__tp <- (===, =/=)
+                      -- (===__tp, =/=__tp) <- _inst__Eq__tp
                       Match z False (LVar id') (Tuple z $ map f1 imps)
                         (Match z False (LTuple $ map f2 imps) (Read z id')
                           p'
-                          (Ret z $ Error z (-2))) -- TODO: -2
-                        (Ret z $ Error z (-2))    -- TODO: -2
+                          (err z))
+                        (err z)
                     else
                       p'
                     where
+                      -- inst impl
                       f1 (Just (False, Var _ _ _ (Match _ _ _ exp _ _))) = exp
-                      f1 (Just (True,  Var _ _ _ (Match _ _ _ exp _ _))) = exp'
+
+                      -- class impl (=/=)
+                      --  func (...) _vtable=inst ; return call (=/=) (...)
+                      f1 (Just (True,  Var _ id tp _)) = exp
                          where
-                          (Func z tp body) = exp
-                          exp' = Func z tp body
+                          exp = Func z tp
+                                  (Match z False (LVar "_vtable") (Read z id')
+                                    (Ret z $ Call z (Read z id) (Read z "_arg"))
+                                    (err z))
+
                       f2 (Just (_, Var _ id tp _)) = --traceShowId $
                         LVar $ id ++ "__" ++
                           Type.show' (Type.instantiate [(clss_var,inst_tp)] tp)
