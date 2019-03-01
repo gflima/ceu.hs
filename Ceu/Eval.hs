@@ -132,18 +132,18 @@ envEval vars e = case e of
 
     Call  f e'  ->
       case (envEval vars f, envEval vars e') of
-        (Error x, _) -> Error x
-        (_, Error x) -> Error x
-        (Read "negate__(Int -> Int)",    Number x)                   -> Number (-x)
-        (Read "+__((Int,Int) -> Int)",   Tuple [Number x, Number y]) -> Number (x+y)
-        (Read "-__((Int,Int) -> Int)",   Tuple [Number x, Number y]) -> Number (x-y)
-        (Read "*__((Int,Int) -> Int)",   Tuple [Number x, Number y]) -> Number (x*y)
-        (Read "/__((Int,Int) -> Int)",   Tuple [Number x, Number y]) -> Number (x `div` y)
-        (Read "==__((Int,Int) -> Bool)", Tuple [Number x, Number y]) -> Cons (bool ["Bool","False"] ["Bool","True"] (x == y)) Unit
-        (Read "<=__((Int,Int) -> Bool)", Tuple [Number x, Number y]) -> Cons (bool ["Bool","False"] ["Bool","True"] (x <= y)) Unit
-        (Read "<__((Int,Int) -> Bool)",  Tuple [Number x, Number y]) -> Cons (bool ["Bool","False"] ["Bool","True"] (x < y)) Unit
-        (Func p,        arg)                                         -> steps (p, ("_arg",Just arg):vars)
-        otherwise    -> error $ show (f,e')
+        (Error x, _)                                -> Error x
+        (_, Error x)                                -> Error x
+        (Read "negate", Number x)                   -> Number (-x)
+        (Read "+",      Tuple [Number x, Number y]) -> Number (x+y)
+        (Read "-",      Tuple [Number x, Number y]) -> Number (x-y)
+        (Read "*",      Tuple [Number x, Number y]) -> Number (x*y)
+        (Read "/",      Tuple [Number x, Number y]) -> Number (x `div` y)
+        (Read "==",     Tuple [Number x, Number y]) -> Cons (bool ["Bool","False"] ["Bool","True"] (x == y)) Unit
+        (Read "<=",     Tuple [Number x, Number y]) -> Cons (bool ["Bool","False"] ["Bool","True"] (x <= y)) Unit
+        (Read "<",      Tuple [Number x, Number y]) -> Cons (bool ["Bool","False"] ["Bool","True"] (x < y)) Unit
+        (Func p,    arg)                            -> steps (p, ("_arg",Just arg):vars)
+        otherwise                                   -> error $ show (f,e')
 
     e         -> e
 

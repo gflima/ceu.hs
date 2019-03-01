@@ -46,16 +46,16 @@ spec = do
         envEval [] (Number 0) `shouldBe` (Number 0)
 
       it "pass: eval in simple env" $
-        let vars = [("negate__(Int -> Int)",Nothing), ("+__((Int,Int) -> Int)",Nothing), ("-__((Int,Int) -> Int)",Nothing),
+        let vars = [("negate",Nothing), ("+",Nothing), ("-",Nothing),
                     ("x",Just (Number 1)),("y",Just (Number 2))] in
-          envEval vars (Call (Read "+__((Int,Int) -> Int)") (Tuple [(Call (Read "-__((Int,Int) -> Int)") (Tuple [(Read "x"),(Number 3)])),(Call (Read "negate__(Int -> Int)") (Read "y"))]))
+          envEval vars (Call (Read "+") (Tuple [(Call (Read "-") (Tuple [(Read "x"),(Number 3)])),(Call (Read "negate") (Read "y"))]))
           `shouldBe` (Number (-4))
 
       it "pass: eval in complex env" $
-        let vars = [("negate__(Int -> Int)",Nothing), ("+__((Int,Int) -> Int)",Nothing), ("-__((Int,Int) -> Int)",Nothing),
+        let vars = [("negate",Nothing), ("+",Nothing), ("-",Nothing),
                     ("y",Just (Number 2)),("x",Just (Number 1)),
                     ("y",Just (Number 99)),("x",Just (Number 99))] in
-          envEval vars (Call (Read "+__((Int,Int) -> Int)") (Tuple [(Call (Read "-__((Int,Int) -> Int)") (Tuple [(Read "x"),(Number 3)])),(Call (Read "negate__(Int -> Int)") (Read "y"))]))
+          envEval vars (Call (Read "+") (Tuple [(Call (Read "-") (Tuple [(Read "x"),(Number 3)])),(Call (Read "negate") (Read "y"))]))
           `shouldBe` (Number (-4))
 
   --------------------------------------------------------------------------
@@ -81,32 +81,32 @@ spec = do
 
       it "[x=1,y=?] y=x+2" $
         step (
-          (Var ("+__((Int,Int) -> Int)",Nothing)
+          (Var ("+",Nothing)
           (Var ("x",(Just (Number 1)))
           (Var ("y",Nothing)
-          (Match (LVar "y") (Call (Read "+__((Int,Int) -> Int)") (Tuple [(Read "x"),(Number 2)])) Nop Nop)))), [])
-        `shouldBe` (Var ("+__((Int,Int) -> Int)",Nothing) (Var ("x",(Just (Number 1))) (Var ("y",(Just (Number 3))) Nop)), [])
+          (Match (LVar "y") (Call (Read "+") (Tuple [(Read "x"),(Number 2)])) Nop Nop)))), [])
+        `shouldBe` (Var ("+",Nothing) (Var ("x",(Just (Number 1))) (Var ("y",(Just (Number 3))) Nop)), [])
 
       it "[x=1,y=?] y=x+2" $
         step
-          (Var ("+__((Int,Int) -> Int)",Nothing)
+          (Var ("+",Nothing)
         (Var ("x",(Just (Number 1)))
         (Var ("y",Nothing)
-          (Match (LVar "y") (Call (Read "+__((Int,Int) -> Int)") (Tuple [(Read "x"),(Number 2)])) Nop Nop))), [])
+          (Match (LVar "y") (Call (Read "+") (Tuple [(Read "x"),(Number 2)])) Nop Nop))), [])
         `shouldBe`
-        (Var ("+__((Int,Int) -> Int)",Nothing)
+        (Var ("+",Nothing)
         (Var ("x",(Just (Number 1)))
         (Var ("y",(Just (Number 3))) Nop)), [])
 
       it "[x=?] x=-(5+1)" $
         step
-        (Var ("negate__(Int -> Int)",Nothing)
-        (Var ("+__((Int,Int) -> Int)",Nothing)
+        (Var ("negate",Nothing)
+        (Var ("+",Nothing)
         (Var ("x",(Just (Number 0)))
-          (Match (LVar "x") (Call (Read "negate__(Int -> Int)") (Call (Read "+__((Int,Int) -> Int)") (Tuple [(Number 5),(Number 1)]))) Nop Nop))), [])
+          (Match (LVar "x") (Call (Read "negate") (Call (Read "+") (Tuple [(Number 5),(Number 1)]))) Nop Nop))), [])
         `shouldBe`
-        (Var ("negate__(Int -> Int)",Nothing)
-        (Var ("+__((Int,Int) -> Int)",Nothing)
+        (Var ("negate",Nothing)
+        (Var ("+",Nothing)
         (Var ("x",(Just (Number (-6)))) Nop)), [])
 
   describe "seq" $ do
@@ -155,16 +155,16 @@ spec = do
 
     it "ret f(1)" $
       steps (
-        (Var ("+__((Int,Int) -> Int)", Nothing)
-        (Var ("f", Just $ Func (Ret (Call (Read "+__((Int,Int) -> Int)") (Tuple [Read "_arg",Number 1]))))
+        (Var ("+", Nothing)
+        (Var ("f", Just $ Func (Ret (Call (Read "+") (Tuple [Read "_arg",Number 1]))))
         (Ret (Call (Read "f") (Number 2)))))
         , [("_steps",Just $ Number 0)])
       `shouldBe` (Number 3)
 
     it "ret f(1,2)" $
       steps (
-        (Var ("+__((Int,Int) -> Int)", Nothing)
-        (Var ("f", Just $ Func (Ret (Call (Read "+__((Int,Int) -> Int)") (Read "_arg"))))
+        (Var ("+", Nothing)
+        (Var ("f", Just $ Func (Ret (Call (Read "+") (Read "_arg"))))
         (Ret (Call (Read "f") (Tuple [Number 1,Number 2])))))
         , [("_steps",Just $ Number 0)])
       `shouldBe` (Number 3)
