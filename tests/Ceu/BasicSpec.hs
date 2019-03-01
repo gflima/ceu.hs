@@ -221,14 +221,12 @@ spec = do
             (Var annz "fff" (TypeF (TypeV "a") (Type1 ["Int"])) (Nop annz))
         (Inst annz ("X",[Type1 ["Int"]])
             (Var annz "fff" (TypeF (Type1 ["Int"]) (Type1 ["Int"]))
-            (Seq annz
             (Match annz False
               (LVar "fff")
               (Func annz (TypeF (Type1 ["Int"]) (Type1 ["Int"]))
                 (Ret annz (Number annz 1)))
               (Nop annz)
-              (Nop annz))
-            (Nop annz)))
+              (Nop annz)))
         (Ret annz (Call annz (Read annz "fff") (Number annz 1)))))))
       `shouldBe` []
 
@@ -536,7 +534,7 @@ spec = do
           (Var annz "fff" (TypeF (Type1 ["A"]) Type0)
           (Nop annz))
         (Nop annz))))))
-      `shouldBe` ["instance 'Xable (A)' is already declared"]
+      `shouldBe` ["missing implementation of 'fff'","instance 'Xable (A)' is already declared"]
 
     it "A ; Xable a ; inst Xable A ; ()/=Int" $
       (fst $ TypeSys.go
@@ -559,7 +557,7 @@ spec = do
           (Var annz "fff" (TypeF (Type1 ["A"]) (Type1 ["Int"]))
           (Nop annz))
         (Nop annz))))))
-      `shouldBe` ["types do not match : expected '(a -> ())' : found '(A -> Int)'"]
+      `shouldBe` ["types do not match : expected '(a -> ())' : found '(A -> Int)'","missing implementation of 'fff'"]
 
     it "A ; Xable a ; inst X A" $
       (fst $ TypeSys.go
@@ -583,7 +581,7 @@ spec = do
           (Var annz "fff" (TypeF (Type1 ["Int"]) Type0)
           (Nop annz))
         (Nop annz))))))
-      `shouldBe` ["types do not match : expected 'A' : found 'Int'"]
+      `shouldBe` ["types do not match : expected 'A' : found 'Int'","missing implementation of 'fff'"]
 
     it "A ; Xable.fff(a) ; inst Xable A ; fff(A)" $
       (fst $ TypeSys.go
@@ -594,7 +592,7 @@ spec = do
           (Var annz "fff" (TypeF (Type1 ["A"]) Type0)
           (Nop annz))
         (CallS annz (Read annz "fff") (Cons annz ["A"] (Unit annz)))))))
-      `shouldBe` []
+      `shouldBe` ["missing implementation of 'fff'"]
 
     it "A ; Xable.fff(a) ; Inst Xable (A,A) ; fff(A,A)" $
       TypeSys.go
@@ -617,7 +615,7 @@ spec = do
           (Var annz "fff" (TypeF (Type1 ["A"]) Type0)
           (Nop annz))
         (CallS annz (Read annz "fff") (Number annz 1)))))))
-      `shouldBe` ["variable 'fff' has no associated instance for type '(Int.1 -> ?)' in class 'Xable'"]
+      `shouldBe` ["missing implementation of 'fff'","variable 'fff' has no associated instance for type '(Int.1 -> ?)' in class 'Xable'"]
 
     it "Int ; Bool ; Equalable a ; eq 1 Bool" $
       (fst $ TypeSys.go
@@ -686,7 +684,7 @@ spec = do
           (Var annz "fff" (TypeF (Type1 ["A"]) Type0)
           (Nop annz))
         (CallS annz (Read annz "fff") (Cons annz ["A","B"] (Unit annz)))))))))
-      `shouldBe` ["TODO: sort by subtyping relation"]
+      `shouldBe` ["TODO: sort by subtyping relation","missing implementation of 'fff'","missing implementation of 'fff'"]
 
   describe "return-type polymorphism" $ do
 

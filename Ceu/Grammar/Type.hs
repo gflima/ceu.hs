@@ -71,7 +71,9 @@ cat tp1        tp2             = TypeN $ [tp1,tp2]
 -- Type: type of the instantiated variable
 -- [(a,Type1 "Bool"),...] -> TypeV "a" -> Type1 "Bool"
 instantiate :: [(ID_Var,Type)] -> Type -> Type
-instantiate vars (TypeV var)     = snd $ fromJust $ find (\(var',_) -> var==var') vars
+instantiate vars (TypeV var)     = case find (\(var',_) -> var==var') vars of
+                                    Nothing    -> TypeV var
+                                    Just (_,v) -> v
 instantiate vars (TypeF inp out) = TypeF (instantiate vars inp) (instantiate vars out)
 instantiate vars (TypeN tps)     = TypeN $ map (instantiate vars) tps
 instantiate _    tp              = tp
