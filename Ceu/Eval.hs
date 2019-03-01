@@ -59,10 +59,10 @@ fromExp (B.Unit   _)      = Unit
 fromExp (B.Tuple  _ vs)   = Tuple (map fromExp vs)
 fromExp (B.Call   _ f e)  = Call (fromExp f) (fromExp e)
 fromExp (B.Func   _ z p)  = Func (fromStmt p)
-fromExp (B.Read   z id)   = Read id' where
-                              id' = case type_ z of
-                                tp@(TypeF _ _) -> id ++ "__" ++ Type.show' tp
-                                otherwise      -> id
+fromExp (B.Read   z id)   = Read id --' where
+                              --id' = case type_ z of
+                                --tp@(TypeF _ _) -> id ++ "__" ++ Type.show' tp
+                                --otherwise      -> id
 
 -------------------------------------------------------------------------------
 
@@ -78,7 +78,7 @@ fromLoc (B.LExp   exp)     = LExp (fromExp exp)
 
 fromStmt :: B.Stmt -> Stmt
 fromStmt (B.Data   _ _ _ _ _ p)        = fromStmt p
-fromStmt (B.Var _ id tp@(TypeF _ _) p) = Var (id++"__"++Type.show' tp, Nothing) (fromStmt p)
+--fromStmt (B.Var _ id tp@(TypeF _ _) p) = Var (id++"__"++Type.show' tp, Nothing) (fromStmt p)
 fromStmt (B.Var _ id _ p)              = Var (id,Nothing) (fromStmt p)
 fromStmt (B.CallS  _ f e)              = CallS (fromExp f) (fromExp e)
 fromStmt (B.Seq    _ p1 p2)            = Seq (fromStmt p1) (fromStmt p2)
@@ -92,16 +92,16 @@ fromStmt (B.Match  _ _ loc e p1 p2)    = Match (aux (fromLoc loc) (type_ $ getAn
     aux LAny           _          = LAny
     aux (LVar id)      tp         =
       case tp of
-        tp@(TypeF _ _)           -> LVar $ id ++ "__" ++ Type.show' tp
+        --tp@(TypeF _ _)           -> LVar $ id ++ "__" ++ Type.show' tp
         otherwise                -> LVar $ id
     aux (LTuple locs) (TypeN tps) = LTuple $ zipWith aux locs tps
     aux (LExp x)      tp          = LExp x
     aux loc            _          = loc
 
+{-
 fromStmt (B.Class  _ _ _ ifc p)        = fromStmt p
 fromStmt (B.Inst   _ _ imp p)          = fromStmt p
 
-{-
 fromStmt (B.Class  _ _ _ ifc p)        = aux (fromStmt ifc) (fromStmt p)
 fromStmt (B.Inst   _ _ imp p)          = aux (fromStmt imp) (fromStmt p)
 -- put `imp` in scope of `p`
