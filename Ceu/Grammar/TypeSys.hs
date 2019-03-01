@@ -36,9 +36,10 @@ isAny :: (String -> Bool) -> Stmt -> Bool
 isAny f s = isClass f s || isData f s || isVar  f s
 
 clssinst2ids :: Stmt -> [(Stmt,Bool)]
-clssinst2ids p = case p of
-  (Class _ _ _ ifc _) -> sortBy fsort (aux ifc)
-  (Inst  _ _ imp _)   -> sortBy fsort (aux imp)
+clssinst2ids p = sortBy fsort $
+  case p of
+    (Class _ _ _ ifc _) -> aux ifc
+    (Inst  _ _ imp _)   -> aux imp
   where
     aux :: Stmt -> [(Stmt,Bool)]
     aux s@(Var _ _ _ (Match _ _ _ _ p _)) = (s,True)  : aux p
@@ -80,15 +81,7 @@ call z (rel,txp) ids f exp = (bool es_exp es_f (null es_exp), tp_out, f', exp')
 
 stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
 
-stmt ids (Class z (id,[var]) exts ifc p) = (es0 ++ es1 ++ es2 ++ es3,
-                                            p') --Class z (id,[var]) exts ifc' p')
-  where
-    {-
-      class Equalable for a with
-        func === : ((a,a) -> Bool)
-        func =/= : ((a,a) -> Bool)
-    -}
-
+stmt ids (Class z (id,[var]) exts ifc p) = (es0 ++ es1 ++ es2 ++ es3, ret) where
     es0 = errDeclared z "interface" id ids
     (es3,p')   = stmt (s':ids) p
     (es2,ifc') = stmt ids ifc
@@ -98,6 +91,16 @@ stmt ids (Class z (id,[var]) exts ifc p) = (es0 ++ es1 ++ es2 ++ es3,
     f (sup,_) = case find (isClass $ (==)sup) ids of
       Nothing -> [toError z $ "interface '" ++ sup ++ "' is not declared"]
       Just _  -> []
+
+    -- keep only the default implementations
+    ret = foldr f p' $ map fst $ clssinst2ids s' where
+      f (Var z1 id1 tp1 (Match z2 False l2 exp2 _   f2)) acc =
+        (Var z1 id1 tp1 (Match z2 False l2 exp2 acc f2))
+      f (Var z1 id1 tp1 _) acc =
+        (Var z1 id1 tp1 (Match z1 False loc exp acc err)) where
+          loc = LVar id1
+          exp = Func z1 tp1 err
+          err = Ret z $ Error z (-2)  -- TODO: -2
 
 stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
 
