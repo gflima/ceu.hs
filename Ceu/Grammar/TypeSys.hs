@@ -97,13 +97,6 @@ stmt ids (Class z (id,[var]) exts ifc p) = (es0 ++ es1 ++ es2 ++ es3, ret) where
     ret = foldr f p' ids' where
       ids' = map fst $ clssinst2ids s'
 
-      -- add vtable to scope
-      --  ((===, =/=), ...) <- _vtable
-      vtable z p = Match z False
-                    (LTuple (map (\(Var _ id _ _)-> LVar id) ids'))
-                    (Read z "_vtable")
-                    p (err z)
-
       -- Method w implementation (=/=)
       f (Var z1 id1 tp1 (Match z2 False l2 exp2 t2  f2)) acc =
         (Var z1 id1 tp1 (Match z2 False l2 exp  acc f2))
@@ -111,13 +104,15 @@ stmt ids (Class z (id,[var]) exts ifc p) = (es0 ++ es1 ++ es2 ++ es3, ret) where
           Func z tp p = exp2
           exp = Func z tp $ vtable z p
 
+          -- add vtable to scope
+          --  ((===, =/=), ...) <- _vtable
+          vtable z p = Match z False
+                        (LTuple (map (\(Var _ id _ _)-> LVar id) ids'))
+                        (Read z "_vtable")
+                        p (err z)
+
       -- Method w/o implementation (===)
-      -- call method at my index
-      --  === (...)
-      f (Var z1 id1 tp1 _) acc =
-        (Var z1 id1 tp1 (Match z1 False (LVar id1) exp acc (err z1)))
-        where
-          exp = Func z1 tp1 $ vtable z1 (err z1) -- TODO (call)
+      f (Var z1 id1 tp1 _) acc = Var z1 id1 tp1 acc
 
 stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
 

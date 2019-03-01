@@ -351,11 +351,6 @@ spec = do
             "   end",
             "end",
             "return ((Bool.True) === (Bool.True)) =/= Bool.False"
-                                                  -- 1
--- 1: poly read in Bool context
---    call =/=__((Bool,Bool)->Bool)
---      which calls
---        =/=__((a,a)->Bool) passing Bool dict
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
