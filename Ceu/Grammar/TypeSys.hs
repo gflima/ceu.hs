@@ -178,15 +178,22 @@ stmt ids (Inst z (id,[inst_tp]) imp p) =
                 ([toError z2 $ "unexpected implementation of '" ++ id2 ++ "'"],[])
                   +++ compares [] l2
 
-              compares ((imp1@(Var z1 id1 tp1 _), has1):l1) l2'@((imp2@(Var z2 id2 tp2 _), has2):l2) =
+              compares ((imp1@(Var z1 id1 tp1 _), has1):l1)
+                       l2'@((imp2@(Var z2 id2 tp2 imp), has2):l2) =
                 if id1 == id2 then
-                  (clssVSinst z2 tp1 tp2,[Just (False,imp2)]) +++ compares l1 l2
+                  let es = case imp of
+                            Match _ _ _ _ _ _ -> []
+                            otherwise -> [toError z2 $ "missing implementation of '" ++ id2 ++ "'"]
+                  in
+                    (clssVSinst z2 tp1 tp2 ++ es, [Just (False,imp2)]) +++ compares l1 l2
                 else                          -- inst impl
                   if has1 then
                     ([],[Just (True,imp1)]) +++ compares l1 l2'
                   else                        -- class impl
                     ([toError z $ "missing implementation of '" ++ id1 ++ "'"],[Nothing])
                       +++ compares l1 l2'
+
+              compares _ ((y,_):_) = ([toError (getAnn y) $ "unexpected statement"], [])
 
               -- check if (Inst tps) match (Class vars) in all functions
               clssVSinst z tp1 tp2 =
@@ -218,6 +225,7 @@ stmt ids (Inst z (id,[inst_tp]) imp p) =
                     where
                       -- inst impl
                       f1 (Just (False, Var _ _ _ (Match _ _ _ exp _ _))) = exp
+                      f1 (Just (False, Var _ _ _ _)) = Error z (-2) -- TODO: to pass tests
 
                       -- class impl (=/=)
                       --  func (...) _vtable=inst ; return call (=/=) (...)
@@ -227,6 +235,8 @@ stmt ids (Inst z (id,[inst_tp]) imp p) =
                                   (Match z False (LVar "_vtable") (Read z id')
                                     (Ret z $ Call z (Read z id) (Read z "_arg"))
                                     (err z))
+
+                      f1 p = error $ show p
 
                       f2 (Just (_, Var _ id tp _)) = --traceShowId $
                         LVar $ id ++ "__" ++
