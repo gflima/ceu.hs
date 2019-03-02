@@ -73,7 +73,7 @@ data Stmt
   | FuncS    Ann ID_Var Type Stmt                 -- function declaration
   | Match    Ann Loc Exp Stmt Stmt                -- match
   | Set      Ann Bool Loc Exp                     -- assignment statement
-  | CallS    Ann Exp Exp                          -- call function
+  | CallS    Ann Exp                              -- call function
   | If       Ann Exp Stmt Stmt                    -- conditional
   | Seq      Ann Stmt Stmt                        -- sequence
   | Loop     Ann Stmt                             -- infinite loop
@@ -113,7 +113,7 @@ toBasicStmt (Data'  z tp vars flds abs p) = B.Data  z tp  vars flds abs (toBasic
 toBasicStmt (Var'   z var tp p)           = B.Var   z var tp (toBasicStmt p)
 toBasicStmt (Match' z chk loc exp p1 p2)  = B.Match z chk (toBasicLoc loc) (toBasicExp exp)
                                                           (toBasicStmt p1) (toBasicStmt p2)
-toBasicStmt (CallS  z f e)                = B.CallS z (toBasicExp f) (toBasicExp e)
+toBasicStmt (CallS  z e)                  = B.CallS z (toBasicExp e)
 toBasicStmt (Seq    z p1 p2)              = B.Seq   z (toBasicStmt p1) (toBasicStmt p2)
 toBasicStmt (Loop   z p)                  = B.Loop  z (toBasicStmt p)
 toBasicStmt (Nop    z)                    = B.Nop   z

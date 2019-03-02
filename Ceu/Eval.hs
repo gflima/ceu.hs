@@ -41,7 +41,7 @@ data Loc = LAny
 data Stmt
     = Var    (ID_Var,Maybe Exp) Stmt    -- block with environment store
     | Match  Loc Exp Stmt Stmt          -- match/assignment/if statement
-    | CallS  Exp Exp                    -- procedure call
+    | CallS  Exp                        -- procedure call
     | Seq    Stmt Stmt                  -- sequence
     | Nop                               -- dummy statement (internal)
     | Ret    Exp                        -- terminate program with exp
@@ -80,7 +80,7 @@ fromStmt :: B.Stmt -> Stmt
 fromStmt (B.Data   _ _ _ _ _ p)        = fromStmt p
 --fromStmt (B.Var _ id tp@(TypeF _ _) p) = Var (id++"__"++Type.show' tp, Nothing) (fromStmt p)
 fromStmt (B.Var _ id _ p)              = Var (id,Nothing) (fromStmt p)
-fromStmt (B.CallS  _ f e)              = CallS (fromExp f) (fromExp e)
+fromStmt (B.CallS  _ e)                = CallS (fromExp e)
 fromStmt (B.Seq    _ p1 p2)            = Seq (fromStmt p1) (fromStmt p2)
 fromStmt (B.Loop   _ p)                = Loop' (fromStmt p) (fromStmt p)
 fromStmt (B.Ret    _ e)                = Ret (fromExp e)
@@ -134,6 +134,7 @@ envEval vars e = case e of
       case (envEval vars f, envEval vars e') of
         (Error x, _)                                -> Error x
         (_, Error x)                                -> Error x
+        (Read "print",  x)                          -> traceShowId x
         (Read "negate", Number x)                   -> Number (-x)
         (Read "+",      Tuple [Number x, Number y]) -> Number (x+y)
         (Read "-",      Tuple [Number x, Number y]) -> Number (x-y)
@@ -155,8 +156,8 @@ step (Var _  Nop,     vars)  = (Nop,        vars)
 step (Var vv (Ret e), vars)  = (Ret e,      vv:vars)
 step (Var vv p,       vars)  = (Var vv' p', vars') where (p',vv':vars') = step (p,vv:vars)
 
-step (CallS f e,      vars)  = (p,          vars) where
-                                ret = envEval vars (Call f e)
+step (CallS e,        vars)  = (p,          vars) where
+                                ret = envEval vars e
                                 p   = case ret of
                                         Error v   -> Ret ret
                                         otherwise -> Nop

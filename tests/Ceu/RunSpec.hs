@@ -145,6 +145,14 @@ spec = do
           ])
         `shouldBe` Right (Number 1)
 
+      it "call 1" $
+        (run True $ "call 1")
+        `shouldBe` Left "(line 1, column 1):\nexpected call\n"
+
+      it "call print" $
+        (run True $ "call print 1 ; return print 2")
+        `shouldBe` Right (Number 2)
+
       it "recursion" $
         (run True $
           unlines [

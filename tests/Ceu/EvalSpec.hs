@@ -286,7 +286,7 @@ spec = do
                         (B.Func annz (TypeF Type0 Type0)
                           (B.Ret annz (B.Error annz 1)))
             (B.Seq annz
-              (B.CallS annz (B.Read annz "f1") (B.Unit annz))
+              (B.CallS annz (B.Call annz (B.Read annz "f1") (B.Unit annz)))
               (B.Ret annz (B.Number annz 99)))
             (B.Ret annz (B.Error annz 99)))))
         `shouldBe` (Error 1)
@@ -294,7 +294,7 @@ spec = do
       it "Int ; f1 (err!) ; f1 ; ret 99" $
         go
           (B.Seq annz
-            (B.CallS annz (B.Error annz 1) (B.Unit annz))
+            (B.CallS annz (B.Call annz (B.Error annz 1) (B.Unit annz)))
             (B.Ret annz (B.Error annz 99)))
         `shouldBe` (Error 1)
 

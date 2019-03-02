@@ -365,6 +365,14 @@ spec = do
                 parse stmt_attr "set val <- 1"
                 `shouldBe` Right (Set annz{source=("",1,9)} False (LVar "val") (Number annz{source=("",1,12)} 1))
 
+        describe "call:" $ do
+          it "call 1" $
+            parse stmt_call "call 1"
+            `shouldBe` Right (CallS annz{source = ("",1,1)} (Number annz{source=("",1,6)} 1))
+          it "call print" $
+            parse stmt_call "call print 1"
+            `shouldBe` Right (CallS (annz {source = ("",1,1)}) (Call (annz {source = ("",1,6)}) (Read (annz {source = ("",1,6)}) "print") (Number (annz {source = ("",1,12)}) 1)))
+
 -------------------------------------------------------------------------------
 
         describe "do-end:" $ do

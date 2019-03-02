@@ -69,18 +69,6 @@ getErrsTypesDeclared z ids tp = concatMap aux $ map (\id->(id, find (isData $ (=
 
 -------------------------------------------------------------------------------
 
-call :: Ann -> (Relation,Type) -> [Stmt] -> Exp -> Exp -> (Errors, Type, Exp, Exp)
-call z (rel,txp) ids f exp = (bool es_exp es_f (null es_exp), tp_out, f', exp')
-  where
-    (es_exp, exp') = expr z (rel,TypeV "?") ids exp
-    (es_f,   f')   = expr z (rel,TypeF (type_$getAnn$exp') txp) ids f
-
-    tp_out = case type_ $ getAnn f' of
-      TypeF _ out -> out
-      otherwise   -> txp
-
--------------------------------------------------------------------------------
-
 stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
 
 stmt ids (Class z (id,[var]) exts ifc p) = (es0 ++ es1 ++ es2 ++ es3, ret) where
@@ -393,8 +381,11 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
                   (TypeN x) -> x
                   x         -> [x]
 
-stmt ids (CallS z f exp) = (es, CallS z f' exp') where
-                           (es, _, f', exp') = call z (SUP,TypeV "?") ids f exp
+stmt ids (CallS z exp) = (ese++esf, CallS z exp') where
+                         (ese, exp') = expr z (SUP,TypeV "?") ids exp
+                         esf = case exp' of
+                          Call _ _ _ -> []
+                          otherwise  -> [toError z "expected call"]
 
 -------------------------------------------------------------------------------
 
@@ -514,6 +505,12 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where
                 getTP (Var  _ _ tp _)       = tp
                 sort' ids = ids -- TODO: sort by subtyping (topological order)
 
-expr' xp ids (Call z f exp) = (es, Call z{type_=out} f' exp')
-                                 where
-                                  (es, out, f', exp') = call z xp ids f exp
+expr' (rel,txp) ids (Call z f exp) = (bool es_exp es_f (null es_exp),
+                                     Call z{type_=tp_out} f' exp')
+  where
+    (es_exp, exp') = expr z (rel,TypeV "?") ids exp
+    (es_f,   f')   = expr z (rel,TypeF (type_$getAnn$exp') txp) ids f
+
+    tp_out = case type_ $ getAnn f' of
+      TypeF _ out -> out
+      otherwise   -> txp

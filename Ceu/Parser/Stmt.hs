@@ -165,6 +165,13 @@ stmt_attr = do
   s    <- pSet (set=="set!") loc
   return s
 
+stmt_call :: Parser Stmt
+stmt_call = do
+  pos  <- pos2src <$> getPosition
+  set  <- tk_key "call"
+  e    <- expr
+  return $ CallS annz{source=pos} e
+
 -------------------------------------------------------------------------------
 
 stmt_do :: Parser Stmt
@@ -212,6 +219,7 @@ stmt1 = do
        stmt_var     <|>
        stmt_funcs   <|>
        stmt_attr    <|>
+       stmt_call    <|>
        stmt_do      <|>
        stmt_match   <|>
        stmt_loop    <|>

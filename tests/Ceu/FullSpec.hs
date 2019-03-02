@@ -127,8 +127,9 @@ spec = do
 
     it "call (func () : (() -> ()) do end)" $ do
       go (Seq annz
-          (CallS annz (Func annz (TypeF Type0 Type0)
-                        (Ret annz (Unit annz))) (Unit annz))
+          (CallS annz (Call annz
+                        (Func annz (TypeF Type0 Type0)
+                          (Ret annz (Unit annz))) (Unit annz)))
           (Ret annz (Number annz 10)))
       `shouldBe` Right (E.Number 10)
 
