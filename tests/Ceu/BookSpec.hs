@@ -22,7 +22,6 @@ spec = do
 
     -- TODO-3-20: square : Float -> Float
 
-{-
     describe "Chapter 1:" $ do
 
       it "square" $
@@ -313,8 +312,6 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
--}
--- TODO: default implementation
       it "Equalable: default =/=" $
         (run True $
           unlines [
