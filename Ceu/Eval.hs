@@ -226,4 +226,4 @@ go p = case T.go p of
     (es, _) -> error $ "compile error : " ++ show es
 
 go' :: B.Stmt -> Exp
-go' p = steps (fromStmt p, [("_steps",Just $ Number 0),("_vtable",Nothing)])
+go' p = steps (fromStmt p, [("_steps",Just $ Number 0)])

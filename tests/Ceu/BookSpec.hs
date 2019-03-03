@@ -20,11 +20,13 @@ spec = do
 
 -------------------------------------------------------------------------------
 
+{-
+-}
     -- TODO-3-20: square : Float -> Float
 
     describe "Chapter 1:" $ do
 
-      it "square" $
+      it "square" $           -- pg 2
         (run True $
           unlines [
             "func square (x) : (Int -> Int) do",
@@ -34,7 +36,7 @@ spec = do
            ])
         `shouldBe` Right (Number 9)
 
-      it "smaller" $
+      it "smaller" $          -- pg 2
         (run True $
           unlines [
             "func smaller (x,y) : ((Int,Int) -> Int) do",
@@ -48,7 +50,7 @@ spec = do
            ])
         `shouldBe` Right (Number 6)
 
-      it "square/smaller" $
+      it "square/smaller" $   -- pg 3
         (run True $
           unlines [
             "func square (x) : (Int -> Int) do",
@@ -67,7 +69,7 @@ spec = do
 
       -- TODO-3
 
-      it "three" $
+      it "three" $            -- pg 5
         (run True $
           unlines [
             "func three (x) : (Int -> Int) do",
@@ -77,7 +79,7 @@ spec = do
            ])
         `shouldBe` Right (Number 3)
 
-      it "infinity" $
+      it "infinity" $         -- pg 5
         (run True $
           unlines [
             "func infinity () : (() -> Int) do",
@@ -87,7 +89,7 @@ spec = do
            ])
         `shouldBe` Right (Error (-1))
 
-      it "three" $
+      it "three/infinity" $   -- pg 5
         (run True $
           unlines [
             "func three (x) : (Int -> Int) do",
@@ -100,7 +102,7 @@ spec = do
            ])
         `shouldBe` Right (Error (-1))
 
-      it "multiply 3 4" $
+      it "multiply 3 4" $     -- pg 9
         (run True $
           unlines [
             "func multiply (x,y) : ((Int,Int) -> Int) do",
@@ -114,7 +116,7 @@ spec = do
            ])
         `shouldBe` Right (Number 12)
 
-      it "multiply 3 infinity" $
+      it "multiply 3 infinity" $  -- pg 9
         (run True $
           unlines [
             "func multiply (x,y) : ((Int,Int) -> Int) do",
@@ -131,7 +133,7 @@ spec = do
            ])
         `shouldBe` Right (Error (-1))
 
-      it "twice" $
+      it "twice" $            -- pg 12
         (run True $
           unlines [
             "func twice (f,x) : (((Int->Int), Int) -> Int) do",
@@ -141,14 +143,14 @@ spec = do
            ])
         `shouldBe` Right (Number 3)
 
-      it "+" $
+      it "+" $                -- pg 12
         (run True $
           unlines [
             "return 1 + (+ (2,3))"
            ])
         `shouldBe` Right (Number 6)
 
-      it "signum" $
+      it "signum" $           -- pg 18
         (run True $
           unlines [
             "func signum (x) : (Int->Int) do",
@@ -164,7 +166,7 @@ spec = do
            ])
         `shouldBe` Right (Number 0)
 
-      it "fact" $
+      it "fact" $             -- pg 19
         (run True $
           unlines [
             "func fact (n) : (Int->Int) do",
@@ -178,7 +180,7 @@ spec = do
            ])
         `shouldBe` Right (Number 120)
 
-      it "fact - error" $
+      it "fact - error" $     -- pg 20
         (run True $
           unlines [
             "func fact (n) : (Int->Int) do",
@@ -194,7 +196,7 @@ spec = do
            ])
         `shouldBe` Right (Error 1)
 
-      it "locals" $
+      it "locals" $           -- pg 20
         (run True $
           unlines [
             "func f (x,y) : ((Int,Int)->Int) do",
@@ -205,7 +207,7 @@ spec = do
            ])
         `shouldBe` Right (Number 42)
 
-      it "locals" $
+      it "locals" $           -- pg 21
         (run True $
           unlines [
             "func f (x,y) : ((Int,Int)->Int) do",
@@ -220,7 +222,17 @@ spec = do
 
     describe "Chapter 2:" $ do
 
-      it "not" $
+      it "data" $             -- pg 29
+        (run True $
+          unlines [
+            "type Bool_",
+            "type Bool_.False_",
+            "type Bool_.True_",
+            "return Bool_.True_"
+          ])
+        `shouldBe` Right (Cons ["Bool_","True_"] Unit)
+
+      it "not" $              -- pg 30
         (run True $
           unlines [
             "func not (x) : (Bool->Bool) do",
@@ -234,7 +246,7 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "and-1" $
+      it "and-1" $            -- pg 30
         (run True $
           unlines [
             "func and (x,y) : ((Bool,Bool)->Bool) do",
@@ -250,7 +262,7 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","False"] Unit)
 
-      it "and-2" $
+      it "and-2" $            -- pg 30
         (run True $
           unlines [
             "func and (x,y) : ((Bool,Bool)->Bool) do",
@@ -264,7 +276,7 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "or" $
+      it "or" $               -- pg 30
         (run True $
           unlines [
             "func or (x,y) : ((Bool,Bool)->Bool) do",
@@ -278,7 +290,7 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "===, =/=" $
+      it "===, =/=" $         -- pg 31
         (run True $
           unlines [
             "func not (x) : (Bool->Bool) do",
@@ -312,7 +324,7 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "Equalable: default =/=" $
+      it "Equalable: default =/=" $   -- pg 32
         (run True $
           unlines [
             "func not (x) : (Bool->Bool) do",
@@ -348,6 +360,63 @@ spec = do
             "   end",
             "end",
             "return ((Bool.True) === (Bool.True)) =/= Bool.False"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "Orderable" $        -- pg 32
+        (run True $
+          unlines [
+            "func not (x) : (Bool->Bool) do",
+            "   if Bool.True <- x then",
+            "     return Bool.False",
+            "   else",
+            "     return Bool.True",
+            "   end",
+            "end",
+            "func and (x,y) : ((Bool,Bool)->Bool) do",
+            "   if Bool.False <- x then",
+            "     return Bool.False",
+            "   else",
+            "     return y",
+            "   end",
+            "end",
+            "func or (x,y) : ((Bool,Bool)->Bool) do",
+            "   if Bool.True <- x then",
+            "     return Bool.True",
+            "   else",
+            "     return y",
+            "   end",
+            "end",
+            "",
+            "interface Equalable for a with",
+            "   func ===       : ((a,a) -> Bool)",
+            "   func =/= (x,y) : ((a,a) -> Bool) do return not (x === y) end",
+            "end",
+            "",
+            "implementation Equalable for Bool with",
+            "   func === (x,y) : ((Bool,Bool) -> Bool) do",
+            "     return (x and y) or ((not x) and (not y))",
+            "   end",
+            "end",
+            "",
+            "interface Orderable for a extends Equalable for a with",
+            "  func @<        : ((a,a) -> Bool)",
+            "  func @<= (x,y) : ((a,a) -> Bool) do return (x @< y) or (x === y) end",
+            "  func @>  (x,y) : ((a,a) -> Bool) do return not (x @<= y)         end",
+            "  func @>= (x,y) : ((a,a) -> Bool) do return (x @> y) or (x === y) end",
+            "end",
+            "",
+            "implementation Orderable for Bool with",
+            "  func @< (x,y) : ((Bool,Bool) -> Bool) do",
+            "    if      (Bool.False, Bool.False) <- (x, y) then return Bool.False",
+            "    else/if (Bool.False, Bool.True)  <- (x, y) then return Bool.True",
+            "    else/if (Bool.True,  Bool.False) <- (x, y) then return Bool.False",
+            "    else/if (Bool.True,  Bool.True)  <- (x, y) then return Bool.False",
+            "    end",
+            "  end",
+            "end",
+            "return ((((Bool.True)  @>  (Bool.False))  and ((Bool.True) @>= (Bool.True))) and",
+            "         ((Bool.False) @<= (Bool.False))) and ((Bool.False) @< (Bool.True))"
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 

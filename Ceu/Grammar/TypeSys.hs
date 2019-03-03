@@ -86,18 +86,9 @@ stmt ids (Class z (id,[var]) exts ifc p) = (es0 ++ es1 ++ es2 ++ es3, ret) where
       ids' = map fst $ clssinst2ids s'
 
       -- Method w implementation (=/=)
-      f (Var z1 id1 tp1 (Match z2 False l2 exp2 t2  f2)) acc =
-        (Var z1 id1 tp1 (Match z2 False l2 exp  acc f2))
-        where
-          Func z tp p = exp2
-          exp = Func z tp $ vtable z p
-
-          -- add vtable to scope
-          --  ((===, =/=), ...) <- _vtable
-          vtable z p = Match z False
-                        (LTuple (map (\(Var _ id _ _)-> LVar id) ids'))
-                        (Read z "_vtable")
-                        p (err z)
+      f (Var z1 id1 tp1 (Match z2 False (LVar id2) exp2 t2 f2)) acc | id1==id2 =
+        (Var z1 (id1++"__"++Type.show' tp1) tp1
+          (Match z2 False (LVar $ id2++"__"++Type.show' tp1) exp2 acc f2))
 
       -- Method w/o implementation (===)
       f (Var z1 id1 tp1 _) acc = Var z1 id1 tp1 acc
@@ -192,47 +183,45 @@ stmt ids (Inst z (id,[inst_tp]) imp p) =
 
             ---------------------------------------------------------------------
 
-            (esp,p') = stmt (vars' (Nop z) : s' : ids) p
+            (esp,p') = stmt (s' : ids) p
 
-            ret = vars' $ --traceShowId $
-                    if all isJust imps then
-                      -- _inst__Eq__tp <- (===, =/=)
-                      -- (===__tp, =/=__tp) <- _inst__Eq__tp
-                      Match z False (LVar id') (Tuple z $ map f1 imps)
-                        (Match z False (LTuple $ map f2 imps) (Read z id')
-                          p'
-                          (err z))
-                        (err z)
-                    else
-                      p'
-                    where
-                      -- inst impl
-                      f1 (Just (False, Var _ _ _ (Match _ _ _ exp _ _))) = exp
-                      f1 (Just (False, Var _ _ _ _)) = Error z (-2) -- TODO: to pass tests
+            ret = if all isJust imps then
+                    foldr f p' $ map fromJust imps
+                  else
+                    p'
+                  where
+                    -- instance implementation:
+                    -- body -> (f1,f2,...)<-(f1_tp,f2_tp,...) ; body
+                    f :: (Bool,Stmt) -> Stmt -> Stmt
+                    f (False, Var z1 id1 tp1 (Match z2 False (LVar id2) exp _ e2)) acc
+                      | (id1 == id2) =
+                        Var z1 (id1++"__"++Type.show' tp1) tp1
+                          (Match z2 False (LVar $ id2++"__"++Type.show' tp1)
+                                          (wrap tp1 exp)
+                                          acc e2)
+                    f (False, Var _ _ _ _) acc = acc -- TODO: to pass tests
 
-                      -- class impl (=/=)
-                      --  func (...) _vtable=inst ; return call (=/=) (...)
-                      f1 (Just (True,  Var _ id tp _)) = exp
-                         where
-                          exp = Func z tp
-                                  (Match z False (LVar "_vtable") (Read z id')
-                                    (Ret z $ Call z (Read z id) (Read z "_arg"))
-                                    (err z))
+                    -- class implementation:
+                    -- body -> (f1,f2,...)<-(f1_tp,f2_tp,...) ; f_default()
+                    f (True,  Var z id tp _) acc =
+                      Var z (id ++ "__" ++ Type.show' tp') tp
+                        (Match z False (LVar $ id ++ "__" ++ Type.show' tp')
+                          (wrap tp' $ Read z (id++"__"++Type.show' tp))
+                          acc (err z))
+                      where
+                        tp' = Type.instantiate [(clss_var,inst_tp)] tp
 
-                      f1 p = error $ show p
-
-                      f2 (Just (_, Var _ id tp _)) = --traceShowId $
-                        LVar $ id ++ "__" ++
-                          Type.show' (Type.instantiate [(clss_var,inst_tp)] tp)
-
-            vars' p = Var z id'
-                      (TypeN $ map (\(Var _ _ tp _)->tp) $ map fst $ clssinst2ids s')
-                      (foldr f3 p imps) where
-                        f3 (Just (_, Var z id tp _)) p =
-                          Var z (id ++ "__" ++ Type.show' tp') tp' p where
-                            tp' = Type.instantiate [(clss_var,inst_tp)] tp
-
-            id' = intercalate "__" ["_inst",id,Type.show' inst_tp]
+                    wrap :: Type -> Exp -> Exp
+                    wrap tp body = Func z tp $
+                                    foldr f (Ret z $ Call z body (Read z "_arg"))
+                                      $ map (snd.fromJust) imps
+                      where
+                        f (Var z id tp _) acc =
+                          Var z id tp
+                            (Match z False (LVar id)
+                              (Read z (id++"__"++Type.show' tp))
+                              acc
+                              (err z))
 
           -----------------------------------------------------------------------
 

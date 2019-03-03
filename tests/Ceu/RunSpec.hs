@@ -385,6 +385,24 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","False"] Unit)
 
+      it "Equalable" $
+        (run True $
+          unlines [
+            "interface Fable for a with",
+            "   func f3 :   (a -> Bool)",
+            "   func f2 x : (a -> Bool) do return f3 x end",
+            "   func f1 x : (a -> Bool) do return f2 x end",
+            "end",
+            "",
+            "implementation Fable for Bool with",
+            "   func f3 x : (Bool -> Bool) do",
+            "     return x",
+            "   end",
+            "end",
+            "return f1 (Bool.True)"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
       it "Ord extends Eq" $
         (run True $
           unlines [
