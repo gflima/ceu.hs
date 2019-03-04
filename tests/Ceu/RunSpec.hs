@@ -16,7 +16,33 @@ main = hspec spec
 spec :: Spec
 spec = do
 
-    --describe "TODO:" $ do
+-- TypeV (a, [Fable,...])
+{-
+    describe "TODO:" $ do
+
+      it "Fable f1/f2/f3 ; f a implements Fable" $
+        (run True $
+          unlines [
+            "interface Fable for a with",
+            "   func f3 :   (a -> Bool)",
+            "   func f2 x : (a -> Bool) do return f3 x end",
+            "   func f1 x : (a -> Bool) do return f2 x end",
+            "end",
+            "",
+            "func f x : (a -> Bool) where a implements Fable do",
+            "   return f1 x",
+            "end",
+            "",
+            "implementation Fable for Bool with",
+            "   func f3 x : (Bool -> Bool) do",
+            "     return x",
+            "   end",
+            "end",
+            "",
+            "return f (Bool.True)"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+-}
 
     describe "return:" $ do
         it "return 1" $
@@ -385,24 +411,6 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","False"] Unit)
 
-      it "Equalable" $
-        (run True $
-          unlines [
-            "interface Fable for a with",
-            "   func f3 :   (a -> Bool)",
-            "   func f2 x : (a -> Bool) do return f3 x end",
-            "   func f1 x : (a -> Bool) do return f2 x end",
-            "end",
-            "",
-            "implementation Fable for Bool with",
-            "   func f3 x : (Bool -> Bool) do",
-            "     return x",
-            "   end",
-            "end",
-            "return f1 (Bool.True)"
-           ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
-
       it "Ord extends Eq" $
         (run True $
           unlines [
@@ -459,6 +467,47 @@ spec = do
             "return (Bool.True) =$= (Bool.False)"
           ])
         `shouldBe` Right (Cons ["Bool","False"] Unit)
+
+      it "f1/f2/f3" $
+        (run True $
+          unlines [
+            "interface Fable for a with",
+            "   func f3 :   (a -> Bool)",
+            "   func f2 x : (a -> Bool) do return f3 x end",
+            "   func f1 x : (a -> Bool) do return f2 x end",
+            "end",
+            "",
+            "implementation Fable for Bool with",
+            "   func f3 x : (Bool -> Bool) do",
+            "     return x",
+            "   end",
+            "end",
+            "return f1 (Bool.True)"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "Fable f1/f2/f3 ; f a is Fable" $
+        (run True $
+          unlines [
+            "interface Fable for a with",
+            "   func f3 :   (a -> Bool)",
+            "   func f2 x : (a -> Bool) do return f3 x end",
+            "   func f1 x : (a -> Bool) do return f2 x end",
+            "end",
+            "",
+            "implementation Fable for Bool with",
+            "   func f3 x : (Bool -> Bool) do",
+            "     return x",
+            "   end",
+            "end",
+            "",
+            "func f x : (a -> Bool) where a implements Fable do",
+            "   return f1 x",
+            "end",
+            "",
+            "return f (Bool.True)"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
 
 -------------------------------------------------------------------------------
 

@@ -13,7 +13,7 @@ import Text.Parsec.Combinator (notFollowedBy, many1, chainl, chainl1, chainr1, o
 
 import Ceu.Parser.Common
 import Ceu.Parser.Token
-import Ceu.Parser.Type        (pType, type_F, tk_types)
+import Ceu.Parser.Type        (pType, type_F, tk_hier)
 
 import Ceu.Grammar.Globals    (Source, ID_Var)
 import Ceu.Grammar.Type       (Type(..))
@@ -49,7 +49,7 @@ pLoc = lany  <|> lvar <|> try lunit  <|> lnumber <|>
                 num <- tk_num
                 return $ LNumber num
     lcons   = do
-                cons <- tk_types
+                cons <- tk_hier
                 loc  <- option LUnit pLoc
                 return $ LCons cons loc
     ltuple  = do
@@ -137,7 +137,7 @@ stmt_data :: Parser Stmt
 stmt_data = do
   pos  <- pos2src <$> getPosition
   void <- try $ tk_key "type"
-  id   <- tk_types
+  id   <- tk_hier
   with <- option Type0 (tk_key "with" *> pType)
   return $ Data annz{source=pos} id [] with False
 
@@ -249,7 +249,7 @@ expr_number = do
 expr_cons :: Parser Exp
 expr_cons = do
   pos1 <- pos2src <$> getPosition
-  cons <- tk_types
+  cons <- tk_hier
   pos2 <- pos2src <$> getPosition
   exp  <- option (Unit annz{source=pos2}) expr
   return $ Cons annz{source=pos1} cons exp
@@ -334,6 +334,8 @@ func pos = do
             case dcls of
               Nothing  -> do { fail "arity mismatch" }
               Just dcls' -> return dcls'
+
+  --ifc <- optionMaybe ((,) <$> (tk_key "where" *> tk_var) <*> (tk_key "implements" *> tk_type))
 
   void <- tk_key "do"
   imp  <- stmt

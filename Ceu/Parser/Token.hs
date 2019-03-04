@@ -22,6 +22,7 @@ keywords = [
     "func",
     "if",
     "implementation",
+    --"implements",
     "interface",
     "loop",
     "set",
@@ -30,6 +31,7 @@ keywords = [
     "var",
     "return",
     "type",
+    --"where",
     "with"
   ]
 tk_reserved :: Parser ()
