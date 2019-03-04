@@ -10,7 +10,7 @@ import Ceu.Grammar.Globals
 data Type = TypeB
           | TypeT
           | Type0
-          | Type1 [ID_Type]
+          | TypeD [ID_Type]
           | TypeN [Type]    -- (len >= 2)
           | TypeF Type Type
           | TypeV ID_Var
@@ -27,7 +27,7 @@ show' (TypeV id)      = id
 show' TypeT           = "top"
 show' TypeB           = "bot"
 show' Type0           = "()"
-show' (Type1 hier)    = hier2str hier
+show' (TypeD hier)    = hier2str hier
 show' (TypeF inp out) = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
 show' (TypeN tps)     = "(" ++ intercalate "," (map show' tps) ++ ")"
 
@@ -39,16 +39,16 @@ get1s (TypeV _)       = []
 get1s TypeT           = []
 get1s TypeB           = []
 get1s Type0           = []
-get1s (Type1 hier)    = [hier2str hier]
+get1s (TypeD hier)    = [hier2str hier]
 get1s (TypeF inp out) = get1s inp ++ get1s out
 get1s (TypeN ts)      = concatMap get1s ts
 
 -------------------------------------------------------------------------------
 
 getSuper :: Type -> Maybe Type
-getSuper (Type1 [_])  = Nothing
-getSuper (Type1 hier) = Just $ Type1 (init hier)
-getSuper _            = error "bug found : expecting `Type1`"
+getSuper (TypeD [_])  = Nothing
+getSuper (TypeD hier) = Just $ TypeD (init hier)
+getSuper _            = error "bug found : expecting `TypeD`"
 
 splitOn :: Eq a => a -> [a] -> [[a]]
 splitOn d [] = []
@@ -69,7 +69,7 @@ cat tp1        tp2             = TypeN $ [tp1,tp2]
 -- list: list with instantiated pairs (var,Type)
 -- Type: type (possibly TypeV) we want to instantiate
 -- Type: type of the instantiated variable
--- [(a,Type1 "Bool"),...] -> TypeV "a" -> Type1 "Bool"
+-- [(a,TypeD "Bool"),...] -> TypeV "a" -> TypeD "Bool"
 instantiate :: [(ID_Var,Type)] -> Type -> Type
 instantiate vars (TypeV var)     = case find (\(var',_) -> var==var') vars of
                                     Nothing    -> TypeV var
@@ -147,13 +147,13 @@ relates rel tp1 tp2 =
     subest' tps = head $ sortBy (\t1 t2 -> bool GT LT (t1 `isSubOf` t2)) tps
 
     comPre tps = tps ++ l where
-      l = bool [Type1 pre] [] (null tp1s || null pre)
+      l = bool [TypeD pre] [] (null tp1s || null pre)
 
-      tp1s = filter isType1 tps
-      pre  = commonPrefixAll $ map (\(Type1 hr)->hr) tp1s
+      tp1s = filter isTypeD tps
+      pre  = commonPrefixAll $ map (\(TypeD hr)->hr) tp1s
 
-      isType1 (Type1 _) = True
-      isType1 _         = False
+      isTypeD (TypeD _) = True
+      isTypeD _         = False
 
       -- https://stackoverflow.com/questions/21717646/longest-common-prefix-in-haskell
       commonPrefixAll :: (Eq a) => [[a]] -> [a]
@@ -198,12 +198,12 @@ supOf Type0             Type0             = (True,  Type0, [])
 supOf Type0             _                 = (False, Type0, [])
 supOf sup               Type0             = (False, sup,   [])
 
-supOf sup@(Type1 x)     sub@(Type1 y)
+supOf sup@(TypeD x)     sub@(TypeD y)
   | x `isPrefixOf` y                       = (True,  sub,   [])
   | otherwise                              = (False, sup,   [])
 
-supOf sup@(Type1 _)     _                 = (False, sup,   [])
-supOf sup               (Type1 _)         = (False, sup,   [])
+supOf sup@(TypeD _)     _                 = (False, sup,   [])
+supOf sup               (TypeD _)         = (False, sup,   [])
 
 supOf sup@(TypeF inp1 out1) sub@(TypeF inp2 out2) =
   let (i,_,k) = inp2 `supOf` inp1      -- contravariance on inputs
@@ -241,6 +241,6 @@ reducesToType0 _         = False
 toTypeN :: Type -> Type
 toTypeN (TypeN tps) = TypeN tps
 toTypeN Type0       = TypeN []
-toTypeN (Type1 tp)  = TypeN [Type1 tp]
+toTypeN (TypeD tp)  = TypeN [TypeD tp]
 toTypeN tp          = error $ show tp
 -}

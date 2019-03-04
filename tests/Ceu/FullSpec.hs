@@ -24,7 +24,7 @@ spec = do
 {-
   describe "TODO" $ do
     it "TODO" $
-      compile' (Seq annz (Data annz ["Int"] [] Type0 False) (Seq annz (Seq annz (Var annz "x" (Type1 ["Int"])) (Nop annz)) (Seq annz (Set annz False (LVar "x") (Number annz 1)) (Ret annz (Number annz 1)))))
+      compile' (Seq annz (Data annz ["Int"] [] Type0 False) (Seq annz (Seq annz (Var annz "x" (TypeD ["Int"])) (Nop annz)) (Seq annz (Set annz False (LVar "x") (Number annz 1)) (Ret annz (Number annz 1)))))
       `shouldBe` ([], (B.Var annz "x" Type0 (B.Nop annz)))
 -}
 
@@ -51,16 +51,16 @@ spec = do
         `shouldBe` (Var' annz "x" Type0 (Nop annz))
 
       it "var x <- 1 ; (Nop annz)" $ do
-        Scope.compile (Seq annz (Var annz "x" (Type1 ["Int"])) (Seq annz (Set annz False (LVar "x") (Number annz 1)) (Nop annz)))
-        `shouldBe` (Var' annz "x" (Type1 ["Int"]) (Seq annz (Set annz False (LVar "x") (Number annz 1)) (Nop annz)))
+        Scope.compile (Seq annz (Var annz "x" (TypeD ["Int"])) (Seq annz (Set annz False (LVar "x") (Number annz 1)) (Nop annz)))
+        `shouldBe` (Var' annz "x" (TypeD ["Int"]) (Seq annz (Set annz False (LVar "x") (Number annz 1)) (Nop annz)))
 
       it "scope var x end ; var y" $ do
         Scope.compile (Seq annz (Scope annz (Var annz "x" Type0)) (Var annz "y" Type0))
         `shouldBe` Seq annz (Var' annz "x" Type0 (Nop annz)) (Var' annz "y" Type0 (Nop annz))
 
       it "scope var x end ; x=1" $ do
-        compile' (Seq annz (Scope annz (Var annz "x" (Type1 ["Int"]))) (Set annz False (LVar "x") (Number annz 1)))
-        `shouldBe` (["data 'Int' is not declared","variable 'x' is not declared"], B.Seq annz (B.Var annz "x" (Type1 ["Int"]) (B.Nop annz)) (B.Match annz False (B.LVar "x") (B.Number (annz{type_=Type1 ["Int","1"]}) 1) (B.Nop annz) (B.Ret annz (B.Error annz (-2)))))
+        compile' (Seq annz (Scope annz (Var annz "x" (TypeD ["Int"]))) (Set annz False (LVar "x") (Number annz 1)))
+        `shouldBe` (["data 'Int' is not declared","variable 'x' is not declared"], B.Seq annz (B.Var annz "x" (TypeD ["Int"]) (B.Nop annz)) (B.Match annz False (B.LVar "x") (B.Number (annz{type_=TypeD ["Int","1"]}) 1) (B.Nop annz) (B.Ret annz (B.Error annz (-2)))))
 
   --------------------------------------------------------------------------
 
@@ -71,24 +71,24 @@ spec = do
       `shouldBe` ([], (B.Var annz "x" Type0 (B.Nop annz)))
 
     it "do var x; x = 1 end" $ do
-      compile' (Var' annz "x" (Type1 ["Int"]) (Match' annz False (LVar "x") (Number annz 1) (Nop annz) (Nop annz)))
-      `shouldBe` (["data 'Int' is not declared"], (B.Var annz "x" (Type1 ["Int"]) (B.Match annz False (B.LVar "x") (B.Number annz{type_=Type1 ["Int","1"]} 1) (B.Nop annz) (B.Nop annz))))
+      compile' (Var' annz "x" (TypeD ["Int"]) (Match' annz False (LVar "x") (Number annz 1) (Nop annz) (Nop annz)))
+      `shouldBe` (["data 'Int' is not declared"], (B.Var annz "x" (TypeD ["Int"]) (B.Match annz False (B.LVar "x") (B.Number annz{type_=TypeD ["Int","1"]} 1) (B.Nop annz) (B.Nop annz))))
 
     it "do var x; x = 1 end" $ do
-      compile' (Var' annz "x" (Type1 ["Int"]) (Match' annz False (LVar "x") (Number annz 1) (Nop annz) (Nop annz)))
-      `shouldBe` (["data 'Int' is not declared"], (B.Var annz "x" (Type1 ["Int"]) (B.Match annz False (B.LVar "x") (B.Number annz{type_=Type1 ["Int","1"]} 1) (B.Nop annz) (B.Nop annz))))
+      compile' (Var' annz "x" (TypeD ["Int"]) (Match' annz False (LVar "x") (Number annz 1) (Nop annz) (Nop annz)))
+      `shouldBe` (["data 'Int' is not declared"], (B.Var annz "x" (TypeD ["Int"]) (B.Match annz False (B.LVar "x") (B.Number annz{type_=TypeD ["Int","1"]} 1) (B.Nop annz) (B.Nop annz))))
 
     it "class/inst" $ do
       compile (Seq annz
                 (Class annz ("F3able",["a"]) []
                   (Seq annz
                   (Seq annz
-                  (Var annz "f3" (TypeF (TypeV "a") (Type1 ["Int"])))
+                  (Var annz "f3" (TypeF (TypeV "a") (TypeD ["Int"])))
                   (Nop annz))
                   (Nop annz)))
                 (Seq annz
-                (Inst annz ("F3able",[Type1 ["Int"]])
-                  (FuncS annz "f3" (TypeF (TypeV "a") (Type1 ["Int"]))
+                (Inst annz ("F3able",[TypeD ["Int"]])
+                  (FuncS annz "f3" (TypeF (TypeV "a") (TypeD ["Int"]))
                     (Seq annz
                     (Seq annz
                     (Var annz "v" (TypeV "a"))
@@ -99,13 +99,13 @@ spec = do
                 (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
       `shouldBe`
         (Class' annz ("F3able",["a"]) []
-          (Var' annz "f3" (TypeF (TypeV "a") (Type1 ["Int"]))
+          (Var' annz "f3" (TypeF (TypeV "a") (TypeD ["Int"]))
           (Seq annz (Nop annz) (Nop annz)))
-        (Inst' annz ("F3able",[Type1 ["Int"]])
-          (Var' annz "f3" (TypeF (TypeV "a") (Type1 ["Int"]))
+        (Inst' annz ("F3able",[TypeD ["Int"]])
+          (Var' annz "f3" (TypeF (TypeV "a") (TypeD ["Int"]))
           (Match' annz False
             (LVar "f3")
-            (Func annz (TypeF (TypeV "a") (Type1 ["Int"]))
+            (Func annz (TypeF (TypeV "a") (TypeD ["Int"]))
               (Var' annz "v" (TypeV "a")
               (Seq annz
               (Nop annz)
@@ -121,7 +121,7 @@ spec = do
       `shouldBe` Right (E.Number 1)
 
     it "data X with Int ; x:Int ; X 1 <- X 2" $ do
-      go (Seq annz (Data annz ["Xxx"] [] (Type1 ["Int"]) False) (Seq annz (Set annz False (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 2))) (Ret annz (Number annz 2))))
+      go (Seq annz (Data annz ["Xxx"] [] (TypeD ["Int"]) False) (Seq annz (Set annz False (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 2))) (Ret annz (Number annz 2))))
       `shouldBe`
         Left ["types do not match : expected 'Int.1' : found 'Int.2'"]
 
@@ -136,7 +136,7 @@ spec = do
     it "ret (func () : (() -> Int) do ret 10 end) ()" $ do
       go (Ret annz
             (Call annz
-              (Func annz (TypeF Type0 (Type1 ["Int"]))
+              (Func annz (TypeF Type0 (TypeD ["Int"]))
                 (Ret annz (Number annz 10)))
               (Unit annz)))
       `shouldBe` Right (E.Number 10)

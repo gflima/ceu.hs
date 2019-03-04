@@ -237,10 +237,10 @@ stmt ids s@(Data z hr [] flds abs p) = (es_dcl ++ (errDeclared z "data" (Type.hi
     s'             = Data z hr [] flds' abs p'
     (es,p')        = stmt (s':ids) p
     (flds',es_dcl) =
-      case Type.getSuper (Type1 hr) of
+      case Type.getSuper (TypeD hr) of
         Nothing          -> (flds, [])
-        Just (Type1 sup) -> (Type.cat sups flds,
-                             (getErrsTypesDeclared z ids (Type1 sup)) ++
+        Just (TypeD sup) -> (Type.cat sups flds,
+                             (getErrsTypesDeclared z ids (TypeD sup)) ++
                              (getErrsTypesDeclared z ids flds))
                             where
                               sups = case find (isData $ (==)(Type.hier2str sup)) ids of
@@ -302,7 +302,7 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
                                                       txp  = Type0
                                                       chk' = fchk txp mexp tpexp
         (LNumber v)  -> (chk',  ese, loc, mexp) where (ese,mexp) = f (SUB,txp)   tpexp
-                                                      txp  = Type1 ["Int",show v]
+                                                      txp  = TypeD ["Int",show v]
                                                       chk' = fchk txp mexp tpexp
         (LVar var)   -> (False, esl++ese, loc, mexp)
           where
@@ -317,7 +317,7 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
 
         (LCons hr l) -> (fchk txp mexp tpexp || chk1, esd++esl++es'++ese, LCons hr l', mexp)
           where
-            txp       = Type1 hr
+            txp       = TypeD hr
             str       = Type.hier2str hr
             (tpd,esd) = case find (isData $ (==)str) ids of
               Just (Data _ _ _ tp _ _) -> (tp,    [])
@@ -382,7 +382,7 @@ stmt ids (CallS z exp) = (ese++esf, CallS z exp') where
 {-
 stmt ids (If z exp p1 p2)   = (ese ++ es1 ++ es2, If z exp' p1' p2')
                               where
-                                (ese,exp') = expr z (Type1 ["Bool"]) ids exp
+                                (ese,exp') = expr z (TypeD ["Bool"]) ids exp
                                   -- VAR: I expect exp.type to be a subtype of Bool
                                 (es1,p1') = stmt ids p1
                                 (es2,p2') = stmt ids p2
@@ -426,14 +426,14 @@ expr z (rel,txp) ids exp = (es1++es2, exp') where
 expr' :: (Relation,Type) -> [Stmt] -> Exp -> (Errors, Exp)
 
 expr' _       _   (Error  z v)     = ([], Error  z{type_=TypeB} v)
-expr' _       _   (Number z v)     = ([], Number z{type_=Type1 ["Int",show v]} v)
+expr' _       _   (Number z v)     = ([], Number z{type_=TypeD ["Int",show v]} v)
 expr' _       _   (Unit   z)       = ([], Unit   z{type_=Type0})
 expr' (_,txp) _   (Arg    z)       = ([], Arg    z{type_=txp})
 expr' _       ids (Func   z tp p)  = (es, Func   z{type_=tp} tp p')
                                      where
                                       (es,p') = stmt ids p
 
-expr' _ ids (Cons  z hr exp) = (es++es_exp, Cons z{type_=(Type1 hr)} hr exp')
+expr' _ ids (Cons  z hr exp) = (es++es_exp, Cons z{type_=(TypeD hr)} hr exp')
     where
         hr_str = Type.hier2str hr
         (tp,es) = case find (isData $ (==)hr_str) ids of
@@ -455,7 +455,7 @@ expr' _ ids (Tuple z exps) = (es, Tuple z{type_=tps'} exps') where
 expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where
   (id', tp, es) =
     if id == "_INPUT" then
-      (id, Type1 ["Int"], [])
+      (id, TypeD ["Int"], [])
     else
       -- find in top-level ids | id : a
       case find (isVar $ (==)id) ids of
