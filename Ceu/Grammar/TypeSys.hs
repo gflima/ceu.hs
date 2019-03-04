@@ -15,8 +15,8 @@ import Ceu.Grammar.Basic
 fromLeft (Left v) = v
 
 go :: Stmt -> (Errors, Stmt)
---go p = stmt [] [] p
-go p = traceShowId $ stmt [] p
+go p = stmt [] p
+--go p = traceShowId $ stmt [] p
 
 -------------------------------------------------------------------------------
 
@@ -76,6 +76,10 @@ stmt ids (Class z (id,[var]) exts ifc p) = (es0 ++ es1 ++ es2 ++ es3, ret) where
     (es3,p')   = stmt (s':ids) p
     (es2,ifc') = stmt ids ifc
     s'         = Class z (id,[var]) exts ifc' (Nop z)
+
+    -- add constraint to each tp in var
+    -- unifica vars com retorno
+    -- nao precisa de s'
 
     es1 = concatMap f exts
     f (sup,_) = case find (isClass $ (==)sup) ids of
@@ -459,7 +463,7 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where
     else
       -- find in top-level ids | id : a
       case find (isVar $ (==)id) ids of
-        Just (Var _ _ tp _) -> (id, tp, [])   -- found
+        Just (Var _ _ tp _) -> traceShowId (id, tp, [])   -- found
         Nothing             ->                -- not found
           -- find in classes | class X a with id : a
           case find (\(_,var) -> isJust var)            -- Just (clsI, Just (Var ...))

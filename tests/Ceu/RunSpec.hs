@@ -31,7 +31,7 @@ spec = do
             "",
             "func g x : (a -> Bool) where a implements IFable do",
             "   return f1 x",   -- dont instantiate f1 bc typeof(x)=a and a is IFable
-            "end",
+            "end",  -- declare one g for each implementation
             "",
             "implementation IFable for Bool with",
             "   func f3 x : (Bool -> Bool) do",
@@ -52,10 +52,13 @@ spec = do
             "end",
             "",
             "return (g (Bool.True)) or (h (Bool.False))"
+                    -- g_Bool->Bool
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
 {-
+-}
+
     describe "return:" $ do
         it "return 1" $
             run True "return 1"
@@ -541,7 +544,6 @@ spec = do
 
 -------------------------------------------------------------------------------
 
--}
     where
         run :: Bool -> String -> Either String Exp
         run withPrelude input =
