@@ -33,11 +33,11 @@ spec = do
   describe "Func.compile" $ do
 
     it "func id : (a->a) do end" $ do
-      FuncS.compile (FuncS annz "id" (TypeF (TypeV "a") (TypeV "a")) (Nop annz))
+      FuncS.compile (FuncS annz "id" (TypeF (TypeV "a" []) (TypeV "a" [])) (Nop annz))
       `shouldBe` (Seq annz
-                  (Var annz "id" (TypeF (TypeV "a") (TypeV "a")))
+                  (Var annz "id" (TypeF (TypeV "a" []) (TypeV "a" [])))
                   (Set annz False (LVar "id")
-                    (Func annz (TypeF (TypeV "a") (TypeV "a")) (Nop annz))))
+                    (Func annz (TypeF (TypeV "a" []) (TypeV "a" [])) (Nop annz))))
 
   describe "Scope.compile" $ do
 
@@ -83,15 +83,15 @@ spec = do
                 (Class annz ("F3able",["a"]) []
                   (Seq annz
                   (Seq annz
-                  (Var annz "f3" (TypeF (TypeV "a") (TypeD ["Int"])))
+                  (Var annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"])))
                   (Nop annz))
                   (Nop annz)))
                 (Seq annz
                 (Inst annz ("F3able",[TypeD ["Int"]])
-                  (FuncS annz "f3" (TypeF (TypeV "a") (TypeD ["Int"]))
+                  (FuncS annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))
                     (Seq annz
                     (Seq annz
-                    (Var annz "v" (TypeV "a"))
+                    (Var annz "v" (TypeV "a" []))
                     (Nop annz))
                     (Seq annz
                     (Set annz False (LVar "v") (Arg annz))
@@ -99,14 +99,14 @@ spec = do
                 (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
       `shouldBe`
         (Class' annz ("F3able",["a"]) []
-          (Var' annz "f3" (TypeF (TypeV "a") (TypeD ["Int"]))
+          (Var' annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))
           (Seq annz (Nop annz) (Nop annz)))
         (Inst' annz ("F3able",[TypeD ["Int"]])
-          (Var' annz "f3" (TypeF (TypeV "a") (TypeD ["Int"]))
+          (Var' annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))
           (Match' annz False
             (LVar "f3")
-            (Func annz (TypeF (TypeV "a") (TypeD ["Int"]))
-              (Var' annz "v" (TypeV "a")
+            (Func annz (TypeF (TypeV "a" []) (TypeD ["Int"]))
+              (Var' annz "v" (TypeV "a" [])
               (Seq annz
               (Nop annz)
               (Match' annz False (LVar "v") (Arg annz) (Seq annz (Nop annz) (Ret annz (Read annz "v"))) (Ret annz (Error annz (-2)))))))

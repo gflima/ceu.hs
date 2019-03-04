@@ -37,7 +37,7 @@ type_F = do
 type_V :: Parser Type
 type_V = do
     var <- tk_var
-    return $ TypeV var
+    return $ TypeV var []
 
 type_parens :: Parser Type
 type_parens = do

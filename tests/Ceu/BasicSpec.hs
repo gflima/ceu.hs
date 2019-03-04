@@ -100,7 +100,7 @@ spec = do
   checkCheckIt (Match annz False (LVar "a") (Call annz (Read annz "f") (Number annz 1)) (Nop annz) (Nop annz)) ["variable 'a' is not declared","variable 'f' is not declared"]
   checkCheckIt (Var annz "x" (TypeN [Type0,Type0]) (Match annz False (LVar "x") (Unit annz) (Nop annz) (Nop annz)))  ["types do not match : expected '((),())' : found '()'"]
   checkCheckIt (prelude annz (Var annz "x" (TypeD ["Int"]) (Match annz False (LVar "x") (Unit annz) (Nop annz) (Nop annz)))) ["types do not match : expected 'Int' : found '()'"]
-  checkCheckIt (prelude annz (Var annz "identity" (TypeF (TypeV "a") (TypeV "a")) (Var annz "a" (TypeD ["Int"]) (Match annz False (LVar "a") (Call annz (Read annz "identity") (Number annz 1)) (Nop annz) (Nop annz))))) []
+  checkCheckIt (prelude annz (Var annz "identity" (TypeF (TypeV "a" []) (TypeV "a" [])) (Var annz "a" (TypeD ["Int"]) (Match annz False (LVar "a") (Call annz (Read annz "identity") (Number annz 1)) (Nop annz) (Nop annz))))) []
 
   describe "write" $ do
     it "ret = 1" $
@@ -176,20 +176,20 @@ spec = do
         `shouldBe` (["variable 'f' is already declared"],Var annz "f" (TypeF Type0 Type0) (Var annz "f" (TypeF Type0 Type0) (Nop annz)))
 
     it "func f[a]; func f[0]" $
-      TypeSys.go (Var annz "f" (TypeF (TypeV "a") (TypeV "a")) (Var annz "f" (TypeF Type0 Type0) (Nop annz)))
-        `shouldBe` (["variable 'f' is already declared"],Var annz "f" (TypeF (TypeV "a") (TypeV "a")) (Var annz "f" (TypeF Type0 Type0) (Nop annz)))
+      TypeSys.go (Var annz "f" (TypeF (TypeV "a" []) (TypeV "a" [])) (Var annz "f" (TypeF Type0 Type0) (Nop annz)))
+        `shouldBe` (["variable 'f' is already declared"],Var annz "f" (TypeF (TypeV "a" []) (TypeV "a" [])) (Var annz "f" (TypeF Type0 Type0) (Nop annz)))
 
     it "func f; func ~f" $
       TypeSys.go (Var annz "f" (TypeF Type0 Type0) (Var annz "f" (TypeF Type0 TypeT) (Nop annz)))
         `shouldBe` (["variable 'f' is already declared"],Var annz "f" (TypeF Type0 Type0) (Var annz "f" (TypeF Type0 TypeT) (Nop annz)))
 
     it "func first :: (a,a)->a ; var a::Int ; a = first((),1)" $
-      (fst $ TypeSys.go (prelude annz (Var annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (TypeD ["Int"]) (Match annz False (LVar "a") (Call annz (Read annz "first") (Tuple annz [(Unit annz),(Number annz 1)])) (Nop annz) (Nop annz))))))
+      (fst $ TypeSys.go (prelude annz (Var annz "first" (TypeF (TypeN [(TypeV "a" []),(TypeV "a" [])]) (TypeV "a" [])) (Var annz "a" (TypeD ["Int"]) (Match annz False (LVar "a") (Call annz (Read annz "first") (Tuple annz [(Unit annz),(Number annz 1)])) (Nop annz) (Nop annz))))))
         `shouldBe`
       --["types do not match : expected '(a,a)' : found '((),Int)'","ambigous instances for 'a' : '()', 'Int'"]
           ["types do not match : expected '(((),Int.1) -> Int)' : found '((a,a) -> a)'","ambigous instances for 'a' : '()', 'Int.1', 'Int'"]
 
-    checkCheckIt (prelude annz (Var annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a")) (Var annz "a" (TypeD ["Int"]) (Match annz False (LVar "a") (Call annz (Read annz "first") (Tuple annz [(Number annz 1),(Number annz 1)])) (Nop annz) (Nop annz))))) []
+    checkCheckIt (prelude annz (Var annz "first" (TypeF (TypeN [(TypeV "a" []),(TypeV "a" [])]) (TypeV "a" [])) (Var annz "a" (TypeD ["Int"]) (Match annz False (LVar "a") (Call annz (Read annz "first") (Tuple annz [(Number annz 1),(Number annz 1)])) (Nop annz) (Nop annz))))) []
 
     it "f <- func x = x" $
       (fst $ TypeSys.go
@@ -203,14 +203,14 @@ spec = do
 
     it "f : () -> a ; return f()" $
       (fst $ TypeSys.go
-        (Var annz "f" (TypeF Type0 (TypeV "a"))
+        (Var annz "f" (TypeF Type0 (TypeV "a" []))
         (Ret annz (Call annz (Read annz "f") (Unit annz)))))
         `shouldBe` []
 
     it "f : a -> Int ; return f(1)" $
       (fst $ TypeSys.go
         (Data annz ["Int"] [] Type0 False
-        (Var annz "f" (TypeF (TypeV "a") (TypeD ["Int"]))
+        (Var annz "f" (TypeF (TypeV "a" []) (TypeD ["Int"]))
         (Ret annz (Call annz (Read annz "f") (Number annz 1))))))
         `shouldBe` []
 
@@ -218,7 +218,7 @@ spec = do
       (fst $ TypeSys.go $ Simplify.go
         (Data annz ["Int"] [] Type0 False
         (Class annz ("X",["a"]) []
-            (Var annz "fff" (TypeF (TypeV "a") (TypeD ["Int"])) (Nop annz))
+            (Var annz "fff" (TypeF (TypeV "a" []) (TypeD ["Int"])) (Nop annz))
         (Inst annz ("X",[TypeD ["Int"]])
             (Var annz "fff" (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
             (Match annz False
@@ -491,42 +491,42 @@ spec = do
     it "X.f ; Y.f" $
       (fst $ TypeSys.go
         (Class annz ("X",["a"]) []
-          (Var annz "f" (TypeF (TypeV "a") Type0) (Nop annz))
+          (Var annz "f" (TypeF (TypeV "a" []) Type0) (Nop annz))
         (Class annz ("Y",["a"]) []
-          (Var annz "f" (TypeF (TypeV "a") Type0) (Nop annz))
+          (Var annz "f" (TypeF (TypeV "a" []) Type0) (Nop annz))
         (Nop annz))))
       `shouldBe` ["variable 'f' is already declared"]
 
     it "X.f ; f" $
       (fst $ TypeSys.go
         (Class annz ("X",["a"]) []
-          (Var annz "f" (TypeF (TypeV "a") Type0) (Nop annz))
-        (Var annz "f" (TypeF (TypeV "a") Type0)
+          (Var annz "f" (TypeF (TypeV "a" []) Type0) (Nop annz))
+        (Var annz "f" (TypeF (TypeV "a" []) Type0)
         (Nop annz))))
       `shouldBe` ["variable 'f' is already declared"]
 
     it "~Bool ; Equalable ; (==)" $
       TypeSys.go
         (Class annz ("Equalable",["a"]) []
-          (Var annz "==" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeD ["Bool"]))
+          (Var annz "==" (TypeF (TypeN [(TypeV "a" []),(TypeV "a" [])]) (TypeD ["Bool"]))
             (Nop annz))
           (Nop annz))
-      `shouldBe` (["data 'Bool' is not declared"],(Var annz "==" (TypeF (TypeN [TypeV "a",TypeV "a"]) (TypeD ["Bool"])) (Nop annz)))
+      `shouldBe` (["data 'Bool' is not declared"],(Var annz "==" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"])) (Nop annz)))
 
     it "Bool ; Equalable ; (==)" $
       TypeSys.go
         (Data annz ["Bool"] [] Type0 True
         (Class annz ("Equalable",["a"]) []
-          (Var annz "==" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeD ["Bool"]))
+          (Var annz "==" (TypeF (TypeN [(TypeV "a" []),(TypeV "a" [])]) (TypeD ["Bool"]))
           (Nop annz))
         (Nop annz)))
-      `shouldBe` ([],Data annz ["Bool"] [] Type0 True (Var annz "==" (TypeF (TypeN [TypeV "a",TypeV "a"]) (TypeD ["Bool"])) (Nop annz)))
+      `shouldBe` ([],Data annz ["Bool"] [] Type0 True (Var annz "==" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"])) (Nop annz)))
 
     it "A ; Xable ; inst ; inst" $
       (fst $ TypeSys.go
         (Data annz ["A"] [] Type0 False
         (Class annz ("Xable",["a"]) []
-          (Var annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
+          (Var annz "fff" (TypeF (TypeV "a" []) Type0) (Nop annz))
         (Inst annz ("Xable",[TypeD ["A"]])
           (Var annz "fff" (TypeF (TypeD ["A"]) Type0)
           (Nop annz))
@@ -540,7 +540,7 @@ spec = do
       (fst $ TypeSys.go
         (Data annz ["A"] [] Type0 False
         (Class annz ("Xable",["a"]) []
-          (Var annz "fff1" (TypeF (TypeV "a") Type0) (Nop annz))
+          (Var annz "fff1" (TypeF (TypeV "a" []) Type0) (Nop annz))
         (Inst annz ("Xable",[TypeD ["A"]])
           (Var annz "fff2" (TypeF (TypeD ["A"]) Type0)
           (Nop annz))
@@ -552,7 +552,7 @@ spec = do
         (Data annz ["Int"] [] Type0 False
         (Data annz ["A"] [] Type0 False
         (Class annz ("Xable",["a"]) []
-          (Var annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
+          (Var annz "fff" (TypeF (TypeV "a" []) Type0) (Nop annz))
         (Inst annz ("Xable",[TypeD ["A"]])
           (Var annz "fff" (TypeF (TypeD ["A"]) (TypeD ["Int"]))
           (Nop annz))
@@ -564,7 +564,7 @@ spec = do
         (Data annz ["Int"] [] Type0 False
         (Data annz ["A"] [] Type0 False
         (Class annz ("Xable",["a"]) []
-          (Var annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
+          (Var annz "fff" (TypeF (TypeV "a" []) Type0) (Nop annz))
         (Inst annz ("X",[TypeD ["A"]])
           (Var annz "fff" (TypeF (TypeD ["Int"]) Type0)
           (Nop annz))
@@ -576,7 +576,7 @@ spec = do
         (Data annz ["Int"] [] Type0 False
         (Data annz ["A"] [] Type0 False
         (Class annz ("Xable",["a"]) []
-          (Var annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
+          (Var annz "fff" (TypeF (TypeV "a" []) Type0) (Nop annz))
         (Inst annz ("Xable",[TypeD ["A"]])
           (Var annz "fff" (TypeF (TypeD ["Int"]) Type0)
           (Nop annz))
@@ -587,7 +587,7 @@ spec = do
       (fst $ TypeSys.go
         (Data annz ["A"] [] Type0 False
         (Class annz ("Xable",["a"]) []
-          (Var annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
+          (Var annz "fff" (TypeF (TypeV "a" []) Type0) (Nop annz))
         (Inst annz ("Xable",[TypeD ["A"]])
           (Var annz "fff" (TypeF (TypeD ["A"]) Type0)
           (Nop annz))
@@ -598,19 +598,19 @@ spec = do
       TypeSys.go
         (Data annz ["A"] [] Type0 False
         (Class annz ("Xable",["a"]) []
-          (Var annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
+          (Var annz "fff" (TypeF (TypeV "a" []) Type0) (Nop annz))
         (Inst annz ("Xable",[TypeN [TypeD ["A"], TypeD ["A"]]])
           (Var annz "fff" (TypeF (TypeN [TypeD ["A"], TypeD ["A"]]) Type0)
           (Nop annz))
         (CallS annz (Call annz (Read annz "fff") (Tuple annz [(Cons annz ["A"] (Unit annz)),(Cons annz ["A"] (Unit annz))]))))))
-      `shouldBe` (["missing implementation of 'fff'"],Data annz ["A"] [] Type0 False (Var annz "fff" (TypeF (TypeV "a") Type0) (CallS annz (Call (annz {type_ = Type0}) (Read (annz {type_ = TypeF (TypeN [TypeD ["A"],TypeD ["A"]]) Type0}) "fff__((A,A) -> ())") (Tuple (annz {type_ = TypeN [TypeD ["A"],TypeD ["A"]]}) [Cons (annz {type_ = TypeD ["A"]}) ["A"] (Unit (annz {type_ = Type0})),Cons (annz {type_ = TypeD ["A"]}) ["A"] (Unit (annz {type_ = Type0}))])))))
+      `shouldBe` (["missing implementation of 'fff'"],Data annz ["A"] [] Type0 False (Var annz "fff" (TypeF (TypeV "a" []) Type0) (CallS annz (Call (annz {type_ = Type0}) (Read (annz {type_ = TypeF (TypeN [TypeD ["A"],TypeD ["A"]]) Type0}) "fff__((A,A) -> ())") (Tuple (annz {type_ = TypeN [TypeD ["A"],TypeD ["A"]]}) [Cons (annz {type_ = TypeD ["A"]}) ["A"] (Unit (annz {type_ = Type0})),Cons (annz {type_ = TypeD ["A"]}) ["A"] (Unit (annz {type_ = Type0}))])))))
 
     it "Int ; A ; Xable a ; inst Xable A ; fff 1" $
       (fst $ TypeSys.go
         (Data annz ["Int"] [] Type0 False
         (Data annz ["A"] [] Type0 False
         (Class annz ("Xable",["a"]) []
-          (Var annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
+          (Var annz "fff" (TypeF (TypeV "a" []) Type0) (Nop annz))
         (Inst annz ("Xable",[TypeD ["A"]])
           (Var annz "fff" (TypeF (TypeD ["A"]) Type0)
           (Nop annz))
@@ -622,7 +622,7 @@ spec = do
         (Data annz ["Int"] [] Type0 False
         (Data annz ["Bool"] [] Type0 False
         (Class annz ("Equalable",["a"]) []
-          (Var annz "eq" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeD ["Bool"])) (Nop annz))
+          (Var annz "eq" (TypeF (TypeN [(TypeV "a" []),(TypeV "a" [])]) (TypeD ["Bool"])) (Nop annz))
         (CallS annz (Call annz (Read annz "eq") (Tuple annz [(Cons annz ["Bool"] (Unit annz)),(Number annz 1)])))))))
       `shouldBe` ["types do not match : expected '((Bool,Int.1) -> ?)' : found '((a,a) -> Bool)'",
                   "ambigous instances for 'a' : 'Bool', 'Int.1'"]
@@ -632,7 +632,7 @@ spec = do
         (Data annz ["Int"] [] Type0 False
         (Data annz ["Bool"] [] Type0 False
         (Class annz ("Xable",["a"]) []
-          (Var annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
+          (Var annz "fff" (TypeF (TypeV "a" []) Type0) (Nop annz))
         (Inst annz ("Xable", [TypeD ["Bool"]])
           (Var annz "fff" (TypeF (TypeD ["Bool"]) Type0)
           (Nop annz))
@@ -642,26 +642,26 @@ spec = do
         (Seq annz
           (CallS annz (Call annz (Read annz "fff") (Number annz 1)))
           (CallS annz (Call annz (Read annz "fff") (Cons annz ["Bool"] (Unit annz)))))))))))
-      `shouldBe` (["missing implementation of 'fff'","missing implementation of 'fff'"],Data annz ["Int"] [] Type0 False (Data annz ["Bool"] [] Type0 False (Var annz "fff" (TypeF (TypeV "a") Type0) (Seq annz (CallS annz (Call (annz {type_ = Type0}) (Read (annz {type_ = TypeF (TypeD ["Int"]) Type0}) "fff__(Int -> ())") (Number (annz {type_ = TypeD ["Int","1"]}) 1))) (CallS annz (Call (annz {type_ = Type0}) (Read (annz {type_ = TypeF (TypeD ["Bool"]) Type0}) "fff__(Bool -> ())") (Cons (annz {type_ = TypeD ["Bool"]}) ["Bool"] (Unit (annz {type_ = Type0})))))))))
+      `shouldBe` (["missing implementation of 'fff'","missing implementation of 'fff'"],Data annz ["Int"] [] Type0 False (Data annz ["Bool"] [] Type0 False (Var annz "fff" (TypeF (TypeV "a" []) Type0) (Seq annz (CallS annz (Call (annz {type_ = Type0}) (Read (annz {type_ = TypeF (TypeD ["Int"]) Type0}) "fff__(Int -> ())") (Number (annz {type_ = TypeD ["Int","1"]}) 1))) (CallS annz (Call (annz {type_ = Type0}) (Read (annz {type_ = TypeF (TypeD ["Bool"]) Type0}) "fff__(Bool -> ())") (Cons (annz {type_ = TypeD ["Bool"]}) ["Bool"] (Unit (annz {type_ = Type0})))))))))
 
     it "A ; A.B ; Xable a ; inst Xable A ; fff A.B (must use A.fff)" $
       (TypeSys.go
         (Data annz ["A"] [] Type0 False
         (Data annz ["A","B"] [] Type0 False
         (Class annz ("Xable",["a"]) []
-          (Var annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
+          (Var annz "fff" (TypeF (TypeV "a" []) Type0) (Nop annz))
         (Inst annz ("Xable", [TypeD ["A"]])
           (Var annz "fff" (TypeF (TypeD ["A"]) Type0)
           (Nop annz))
         (CallS annz (Call annz (Read annz "fff") (Cons annz ["A","B"] (Unit annz)))))))))
-      `shouldBe` (["missing implementation of 'fff'"],Data annz ["A"] [] Type0 False (Data annz ["A","B"] [] Type0 False (Var annz "fff" (TypeF (TypeV "a") Type0) (CallS annz (Call (annz {type_ = Type0}) (Read (annz {type_ = TypeF (TypeD ["A"]) Type0}) "fff__(A -> ())") (Cons (annz {type_ = TypeD ["A","B"]}) ["A","B"] (Unit (annz {type_ = Type0}))))))))
+      `shouldBe` (["missing implementation of 'fff'"],Data annz ["A"] [] Type0 False (Data annz ["A","B"] [] Type0 False (Var annz "fff" (TypeF (TypeV "a" []) Type0) (CallS annz (Call (annz {type_ = Type0}) (Read (annz {type_ = TypeF (TypeD ["A"]) Type0}) "fff__(A -> ())") (Cons (annz {type_ = TypeD ["A","B"]}) ["A","B"] (Unit (annz {type_ = Type0}))))))))
 
     it "A ; A.B ; Xable a ; inst Xable A/A.B ; fff A.B ; (must use A.B.fff)" $
       (TypeSys.go
         (Data annz ["A"] [] Type0 False
         (Data annz ["A","B"] [] Type0 False
         (Class annz ("Xable", ["a"]) []
-          (Var annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
+          (Var annz "fff" (TypeF (TypeV "a" []) Type0) (Nop annz))
         (Inst annz ("Xable", [TypeD ["A"]])
           (Var annz "fff" (TypeF (TypeD ["A"]) Type0)
           (Nop annz))
@@ -669,14 +669,14 @@ spec = do
           (Var annz "fff" (TypeF (TypeD ["A","B"]) Type0)
           (Nop annz))
         (CallS annz (Call annz (Read annz "fff") (Cons annz ["A","B"] (Unit annz))))))))))
-      `shouldBe` (["missing implementation of 'fff'","missing implementation of 'fff'"],Data annz ["A"] [] Type0 False (Data annz ["A","B"] [] Type0 False (Var annz "fff" (TypeF (TypeV "a") Type0) (CallS annz (Call (annz {type_ = Type0}) (Read (annz {type_ = TypeF (TypeD ["A","B"]) Type0}) "fff__(A.B -> ())") (Cons (annz {type_ = TypeD ["A","B"]}) ["A","B"] (Unit (annz {type_ = Type0}))))))))
+      `shouldBe` (["missing implementation of 'fff'","missing implementation of 'fff'"],Data annz ["A"] [] Type0 False (Data annz ["A","B"] [] Type0 False (Var annz "fff" (TypeF (TypeV "a" []) Type0) (CallS annz (Call (annz {type_ = Type0}) (Read (annz {type_ = TypeF (TypeD ["A","B"]) Type0}) "fff__(A.B -> ())") (Cons (annz {type_ = TypeD ["A","B"]}) ["A","B"] (Unit (annz {type_ = Type0}))))))))
 
     it "A ; A.B ; Xable a ; inst Xable A.B/A ; fff A.B ; (must use A.B.fff)" $
       (fst $ TypeSys.go
         (Data annz ["A"] [] Type0 False
         (Data annz ["A","B"] [] Type0 False
         (Class annz ("Xable", ["a"]) []
-          (Var annz "fff" (TypeF (TypeV "a") Type0) (Nop annz))
+          (Var annz "fff" (TypeF (TypeV "a" []) Type0) (Nop annz))
         (Inst annz ("Xable", [TypeD ["A","B"]])
           (Var annz "fff" (TypeF (TypeD ["A","B"]) Type0)
           (Nop annz))
@@ -692,73 +692,73 @@ spec = do
       (TypeSys.go
         (Data annz ["B"] [] Type0 False
         (Class annz ("X", ["b"]) []
-          (Var annz "fff" (TypeF Type0 (TypeV "b")) (Nop annz))
+          (Var annz "fff" (TypeF Type0 (TypeV "b" [])) (Nop annz))
         (Inst annz ("X", [TypeD ["B"]])
           (Var annz "fff" (TypeF Type0 (TypeD ["B"]))
           (Nop annz))
         (CallS annz (Call annz (Read annz "fff") (Unit annz)))))))
-      `shouldBe` (["missing implementation of 'fff'"],Data annz ["B"] [] Type0 False (Var annz "fff" (TypeF Type0 (TypeV "b")) (CallS annz (Call (annz {type_ = TypeD ["B"]}) (Read (annz {type_ = TypeF Type0 (TypeD ["B"])}) "fff__(() -> B)") (Unit (annz {type_ = Type0}))))))
+      `shouldBe` (["missing implementation of 'fff'"],Data annz ["B"] [] Type0 False (Var annz "fff" (TypeF Type0 (TypeV "b" [])) (CallS annz (Call (annz {type_ = TypeD ["B"]}) (Read (annz {type_ = TypeF Type0 (TypeD ["B"])}) "fff__(() -> B)") (Unit (annz {type_ = Type0}))))))
 
     it "B ; X.f:a->b ; inst B.f:a->B ; f()" $
       (TypeSys.go
         (Data annz ["B"] [] Type0 False
         (Class annz ("X", ["b"]) []
-          (Var annz "fff" (TypeF (TypeV "a") (TypeV "b")) (Nop annz))
+          (Var annz "fff" (TypeF (TypeV "a" []) (TypeV "b" [])) (Nop annz))
         (Inst annz ("X", [TypeD ["B"]])
-          (Var annz "fff" (TypeF (TypeV "a") (TypeD ["B"]))
+          (Var annz "fff" (TypeF (TypeV "a" []) (TypeD ["B"]))
           (Nop annz))
         (CallS annz (Call annz (Read annz "fff") (Unit annz)))))))
-      `shouldBe` (["missing implementation of 'fff'"],Data annz ["B"] [] Type0 False (Var annz "fff" (TypeF (TypeV "a") (TypeV "b")) (CallS annz (Call (annz {type_ = TypeD ["B"]}) (Read (annz {type_ = TypeF (TypeV "a") (TypeD ["B"])}) "fff__(a -> B)") (Unit (annz {type_ = Type0}))))))
+      `shouldBe` (["missing implementation of 'fff'"],Data annz ["B"] [] Type0 False (Var annz "fff" (TypeF (TypeV "a" []) (TypeV "b" [])) (CallS annz (Call (annz {type_ = TypeD ["B"]}) (Read (annz {type_ = TypeF (TypeV "a" []) (TypeD ["B"])}) "fff__(a -> B)") (Unit (annz {type_ = Type0}))))))
 
     it "B1 ; B2 ; X.f:a->b ; inst B1.f:a->B1 ; inst B2.f:a->B2 ; f()" $
       (TypeSys.go
         (Data annz ["B1"] [] Type0 False
         (Data annz ["B2"] [] Type0 False
         (Class annz ("X", ["b"]) []
-          (Var annz "fff" (TypeF (TypeV "a") (TypeV "b")) (Nop annz))
+          (Var annz "fff" (TypeF (TypeV "a" []) (TypeV "b" [])) (Nop annz))
         (Inst annz ("X", [TypeD ["B1"]])
-          (Var annz "fff" (TypeF (TypeV "a") (TypeD ["B1"]))
+          (Var annz "fff" (TypeF (TypeV "a" []) (TypeD ["B1"]))
           (Nop annz))
         (Inst annz ("X", [TypeD ["B2"]])
-          (Var annz "fff" (TypeF (TypeV "a") (TypeD ["B2"]))
+          (Var annz "fff" (TypeF (TypeV "a" []) (TypeD ["B2"]))
           (Nop annz))
         (CallS annz (Call annz (Read annz "fff") (Unit annz)))))))))
                   -- the problem is that CallS accept any return data
-      `shouldBe` (["TODO: should be error because both B1/B2 are ok","missing implementation of 'fff'","missing implementation of 'fff'"],Data annz ["B1"] [] Type0 False (Data annz ["B2"] [] Type0 False (Var annz "fff" (TypeF (TypeV "a") (TypeV "b")) (CallS annz (Call (annz {type_ = TypeD ["B2"]}) (Read (annz {type_ = TypeF (TypeV "a") (TypeD ["B2"])}) "fff__(a -> B2)") (Unit (annz {type_ = Type0})))))))
+      `shouldBe` (["TODO: should be error because both B1/B2 are ok","missing implementation of 'fff'","missing implementation of 'fff'"],Data annz ["B1"] [] Type0 False (Data annz ["B2"] [] Type0 False (Var annz "fff" (TypeF (TypeV "a" []) (TypeV "b" [])) (CallS annz (Call (annz {type_ = TypeD ["B2"]}) (Read (annz {type_ = TypeF (TypeV "a" []) (TypeD ["B2"])}) "fff__(a -> B2)") (Unit (annz {type_ = Type0})))))))
 
     it "B1 ; B2 ; X.f:a->b ; inst B1.f:a->B1 ; inst B2.f:a->B2 ; b1=f()" $
       (TypeSys.go
         (Data annz ["B1"] [] Type0 False
         (Data annz ["B2"] [] Type0 False
         (Class annz ("X", ["b"]) []
-          (Var annz "fff" (TypeF (TypeV "a") (TypeV "b")) (Nop annz))
+          (Var annz "fff" (TypeF (TypeV "a" []) (TypeV "b" [])) (Nop annz))
         (Inst annz ("X", [TypeD ["B1"]])
-          (Var annz "fff" (TypeF (TypeV "a") (TypeD ["B1"]))
+          (Var annz "fff" (TypeF (TypeV "a" []) (TypeD ["B1"]))
           (Nop annz))
         (Inst annz ("X", [TypeD ["B2"]])
-          (Var annz "fff" (TypeF (TypeV "a") (TypeD ["B2"]))
+          (Var annz "fff" (TypeF (TypeV "a" []) (TypeD ["B2"]))
           (Nop annz))
         (Var annz "b1" (TypeD ["B1"])
         (Match annz False (LVar "b1")
           (Call annz (Read annz "fff") (Unit annz)) (Nop annz) (Nop annz)))))))))
-      `shouldBe` (["missing implementation of 'fff'","missing implementation of 'fff'"],Data annz ["B1"] [] Type0 False (Data annz ["B2"] [] Type0 False (Var annz "fff" (TypeF (TypeV "a") (TypeV "b")) (Var annz "b1" (TypeD ["B1"]) (Match annz False (LVar "b1") (Call (annz {type_ = TypeD ["B1"]}) (Read (annz {type_ = TypeF (TypeV "a") (TypeD ["B1"])}) "fff__(a -> B1)") (Unit (annz {type_ = Type0}))) (Nop annz) (Nop annz))))))
+      `shouldBe` (["missing implementation of 'fff'","missing implementation of 'fff'"],Data annz ["B1"] [] Type0 False (Data annz ["B2"] [] Type0 False (Var annz "fff" (TypeF (TypeV "a" []) (TypeV "b" [])) (Var annz "b1" (TypeD ["B1"]) (Match annz False (LVar "b1") (Call (annz {type_ = TypeD ["B1"]}) (Read (annz {type_ = TypeF (TypeV "a" []) (TypeD ["B1"])}) "fff__(a -> B1)") (Unit (annz {type_ = Type0}))) (Nop annz) (Nop annz))))))
 
     it "B1 ; B2 ; X.f:a->b ; inst B1.f:a->B1 ; inst B2.f:a->B2 ; b2=f()" $
       (TypeSys.go
         (Data annz ["B1"] [] Type0 False
         (Data annz ["B2"] [] Type0 False
         (Class annz ("X", ["b"]) []
-          (Var annz "fff" (TypeF (TypeV "a") (TypeV "b")) (Nop annz))
+          (Var annz "fff" (TypeF (TypeV "a" []) (TypeV "b" [])) (Nop annz))
         (Inst annz ("X", [TypeD ["B1"]])
-          (Var annz "fff" (TypeF (TypeV "a") (TypeD ["B1"]))
+          (Var annz "fff" (TypeF (TypeV "a" []) (TypeD ["B1"]))
           (Nop annz))
         (Inst annz ("X", [TypeD ["B2"]])
-          (Var annz "fff" (TypeF (TypeV "a") (TypeD ["B2"]))
+          (Var annz "fff" (TypeF (TypeV "a" []) (TypeD ["B2"]))
           (Nop annz))
         (Var annz "b2" (TypeD ["B2"])
         (Match annz False (LVar "b2")
           (Call annz (Read annz "fff") (Unit annz)) (Nop annz) (Nop annz)))))))))
-      `shouldBe` (["missing implementation of 'fff'","missing implementation of 'fff'"],Data annz ["B1"] [] Type0 False (Data annz ["B2"] [] Type0 False (Var annz "fff" (TypeF (TypeV "a") (TypeV "b")) (Var annz "b2" (TypeD ["B2"]) (Match annz False (LVar "b2") (Call (annz {type_ = TypeD ["B2"]}) (Read (annz {type_ = TypeF (TypeV "a") (TypeD ["B2"])}) "fff__(a -> B2)") (Unit (annz {type_ = Type0}))) (Nop annz) (Nop annz))))))
+      `shouldBe` (["missing implementation of 'fff'","missing implementation of 'fff'"],Data annz ["B1"] [] Type0 False (Data annz ["B2"] [] Type0 False (Var annz "fff" (TypeF (TypeV "a" []) (TypeV "b" [])) (Var annz "b2" (TypeD ["B2"]) (Match annz False (LVar "b2") (Call (annz {type_ = TypeD ["B2"]}) (Read (annz {type_ = TypeF (TypeV "a" []) (TypeD ["B2"])}) "fff__(a -> B2)") (Unit (annz {type_ = Type0}))) (Nop annz) (Nop annz))))))
 
   --------------------------------------------------------------------------
 

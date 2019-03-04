@@ -13,7 +13,7 @@ data Type = TypeB
           | TypeD ID_Data_Hier
           | TypeN [Type]    -- (len >= 2)
           | TypeF Type Type
-          | TypeV ID_Var
+          | TypeV ID_Var [ID_Class]
     deriving (Eq,Show)
 
 data Relation = SUP | SUB | ANY | NONE deriving (Eq, Show)
@@ -23,7 +23,7 @@ data Relation = SUP | SUB | ANY | NONE deriving (Eq, Show)
 hier2str = intercalate "."
 
 show' :: Type -> String
-show' (TypeV id)      = id
+show' (TypeV id _)    = id
 show' TypeT           = "top"
 show' TypeB           = "bot"
 show' Type0           = "()"
@@ -35,7 +35,7 @@ show' (TypeN tps)     = "(" ++ intercalate "," (map show' tps) ++ ")"
 
 getDs :: Type -> [ID_Data]
 
-getDs (TypeV _)       = []
+getDs (TypeV _ _)     = []
 getDs TypeT           = []
 getDs TypeB           = []
 getDs Type0           = []
@@ -71,8 +71,8 @@ cat tp1        tp2             = TypeN $ [tp1,tp2]
 -- Type: type of the instantiated variable
 -- [(a,TypeD "Bool"),...] -> TypeV "a" -> TypeD "Bool"
 instantiate :: [(ID_Var,Type)] -> Type -> Type
-instantiate vars (TypeV var)     = case find (\(var',_) -> var==var') vars of
-                                    Nothing    -> TypeV var
+instantiate vars (TypeV var clss) = case find (\(var',_) -> var==var') vars of
+                                    Nothing    -> TypeV var clss
                                     Just (_,v) -> v
 instantiate vars (TypeF inp out) = TypeF (instantiate vars inp) (instantiate vars out)
 instantiate vars (TypeN tps)     = TypeN $ map (instantiate vars) tps
@@ -190,9 +190,9 @@ supOf TypeT             sub               = (True,  sub,   [])
 supOf _                 TypeB             = (True,  TypeB, [])
 supOf TypeB             _                 = (False, TypeB, [])
 
-supOf sup@(TypeV a1)    sub@(TypeV a2)    = (True,  sub,   [(a1,sub,SUP),(a2,sup,SUB)])
-supOf (TypeV a1)        sub               = (True,  sub,   [(a1,sub,SUP)])
-supOf sup               sub@(TypeV a2)    = (True,  sub,   [(a2,sup,SUB)])
+supOf sup@(TypeV a1 _)  sub@(TypeV a2 _)  = (True,  sub,   [(a1,sub,SUP),(a2,sup,SUB)])
+supOf (TypeV a1 _)      sub               = (True,  sub,   [(a1,sub,SUP)])
+supOf sup               sub@(TypeV a2 _)  = (True,  sub,   [(a2,sup,SUB)])
 
 supOf Type0             Type0             = (True,  Type0, [])
 supOf Type0             _                 = (False, Type0, [])
@@ -225,7 +225,7 @@ supOf (TypeN sups)      (TypeN subs)      = foldr f (True, TypeN [], []) $
 -------------------------------------------------------------------------------
 
 isParametric :: Type -> Bool
-isParametric (TypeV _)     = True
+isParametric (TypeV _ _)   = True
 isParametric (TypeF t1 t2) = isParametric t1 || isParametric t2
 isParametric (TypeN l)     = foldr (\tp acc -> isParametric tp || acc) False l
 isParametric _             = False

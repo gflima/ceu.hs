@@ -23,7 +23,7 @@ prelude z p =
     (Seq z (Data z ["Bool.False"] [] Type0 False)
     (Seq z (Var  z "_true"  (TypeD ["Bool"]))
     (Seq z (Set  z False (LVar "_true") (Cons z ["Bool","True"] (Unit z)))
-    (Seq z (Var  z "print"  (TypeF (TypeV "?")                            (TypeV "?")))
+    (Seq z (Var  z "print"  (TypeF (TypeV "?" [])                         (TypeV "?" [])))
     (Seq z (Var  z "negate" (TypeF (TypeD ["Int"])                        (TypeD ["Int"])))
     (Seq z (Var  z "=="     (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Bool"])))
     (Seq z (Var  z "<="     (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Bool"])))
