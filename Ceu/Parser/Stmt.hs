@@ -136,7 +136,7 @@ stmt_inst = do
 stmt_data :: Parser Stmt
 stmt_data = do
   pos  <- pos2src <$> getPosition
-  void <- try $ tk_key "type"
+  void <- try $ tk_key "data"
   id   <- tk_data_hier
   with <- option Type0 (tk_key "with" *> pType)
   return $ Data annz{source=pos} id [] with False

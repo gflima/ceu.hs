@@ -144,24 +144,24 @@ spec = do
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"i\""
             it "I" $
                 parse tk_data "I"
-                `shouldBe` Left "(line 1, column 2):\nunexpected end of input\nexpecting type identifier"
+                `shouldBe` Left "(line 1, column 2):\nunexpected end of input\nexpecting data identifier"
             it "III" $
                 parse tk_data "III"
-                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting type identifier"
+                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting data identifier"
             it "IEq" $
                 parse tk_data "IEq"
-                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting type identifier"
+                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting data identifier"
 
         describe "tk_data_hier:" $ do
             it "Int.X" $
                 parse tk_data_hier "Int.X"
-                `shouldBe` Left "(line 1, column 6):\nunexpected end of input\nexpecting type identifier"
+                `shouldBe` Left "(line 1, column 6):\nunexpected end of input\nexpecting data identifier"
             it "Bool.True" $
                 parse tk_data_hier "Bool.True"
                 `shouldBe` Right ["Bool","True"]
             it "U8.IEq" $
                 parse tk_data_hier "U8.IEq"
-                `shouldBe` Left "(line 1, column 7):\nunexpected uppercase identifier\nexpecting type identifier"
+                `shouldBe` Left "(line 1, column 7):\nunexpected uppercase identifier\nexpecting data identifier"
             it "Int.U8" $
                 parse tk_data_hier "Int.U8"
                 `shouldBe` Right ["Int", "U8"]
@@ -170,13 +170,13 @@ spec = do
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"i\""
             it "I" $
                 parse tk_data_hier "I"
-                `shouldBe` Left "(line 1, column 2):\nunexpected end of input\nexpecting type identifier"
+                `shouldBe` Left "(line 1, column 2):\nunexpected end of input\nexpecting data identifier"
             it "III" $
                 parse tk_data_hier "III"
-                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting type identifier"
+                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting data identifier"
             it "IEq" $
                 parse tk_data_hier "IEq"
-                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting type identifier"
+                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting data identifier"
 
         describe "tk_ifc:" $ do
             it "Int" $
@@ -229,7 +229,7 @@ spec = do
                 `shouldBe` Right (Type1 ["Int"])
             it "III" $
                 parse type_1 "III"
-                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting type identifier"
+                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting data identifier"
             it "int" $
                 parse type_1 "int"
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"i\""
@@ -239,7 +239,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 2):\nunexpected \")\"\nexpecting type"
             it "(Int)" $
                 parse type_N "(Int)"
-                `shouldBe` Left "(line 1, column 5):\nunexpected \")\"\nexpecting type identifier, \".\" or \",\""
+                `shouldBe` Left "(line 1, column 5):\nunexpected \")\"\nexpecting data identifier, \".\" or \",\""
             it "(Int,Int)" $
                 parse type_N "(Int,Int)"
                 `shouldBe` Right (TypeN [Type1 ["Int"], Type1 ["Int"]])
@@ -401,7 +401,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 22):\nunexpected arity mismatch"
             it "var (_,_)):Int" $
                 parse stmt "var (_,_):Int"
-                `shouldBe` Left "(line 1, column 14):\nunexpected arity mismatch\nexpecting type identifier or \".\""
+                `shouldBe` Left "(line 1, column 14):\nunexpected arity mismatch\nexpecting data identifier or \".\""
 
         describe "write:" $ do
             it "x <- 1" $
@@ -518,58 +518,58 @@ spec = do
 
         describe "data" $ do
 
-            it "type Xxx" $
-              (parse stmt "type Xxx")
+            it "data Xxx" $
+              (parse stmt "data Xxx")
               `shouldBe` Right (Data annz{source=("",1,1)} ["Xxx"] [] Type0 False)
-            it "type Xxx ; var x = Xxx" $
-              (parse' stmt "type Xxx ; var x:Xxx <- Xxx")
+            it "data Xxx ; var x = Xxx" $
+              (parse' stmt "data Xxx ; var x:Xxx <- Xxx")
               `shouldBe` Right (Seq annz (Data annz ["Xxx"] [] Type0 False) (Seq annz (Seq annz (Var annz "x" (Type1 ["Xxx"])) (Nop annz)) (Set annz False (LVar "x") (Cons annz ["Xxx"] (Unit annz)))))
-            it "type Xxx.Yyy" $
-              (parse stmt "type Xxx.Yyy")
+            it "data Xxx.Yyy" $
+              (parse stmt "data Xxx.Yyy")
               `shouldBe` Right (Data annz{source=("",1,1)} ["Xxx","Yyy"] [] Type0 False)
-            it "type Xxx.Yyy" $
-              (parse stmt "type Xxx.Yyy")
+            it "data Xxx.Yyy" $
+              (parse stmt "data Xxx.Yyy")
               `shouldBe` Right (Data annz{source=("",1,1)} ["Xxx","Yyy"] [] Type0 False)
 
-            it "type Xxx with ()" $
-              (parse stmt "type Xxx with ()")
+            it "data Xxx with ()" $
+              (parse stmt "data Xxx with ()")
               `shouldBe` Right (Data annz{source=("",1,1)} ["Xxx"] [] Type0 False)
 
-            it "type Xxx with (Int,Int)" $
-              (parse stmt "type Xxx with (Int,Int)")
+            it "data Xxx with (Int,Int)" $
+              (parse stmt "data Xxx with (Int,Int)")
               `shouldBe` Right (Data annz{source=("",1,1)} ["Xxx"] [] (TypeN [Type1 ["Int"],Type1 ["Int"]]) False)
 
-            it "type Xxx with (Int)" $
-              (parse' stmt "type Xxx with (Int)")
+            it "data Xxx with (Int)" $
+              (parse' stmt "data Xxx with (Int)")
               `shouldBe` Right (Data annz ["Xxx"] [] (Type1 ["Int"]) False)
 
-            it "type Xxx with Int ; x<-Xxx(1,1)" $
-              (parse' stmt "type Xxx with Int ; var x:Xxx <- Xxx 1")
+            it "data Xxx with Int ; x<-Xxx(1,1)" $
+              (parse' stmt "data Xxx with Int ; var x:Xxx <- Xxx 1")
               `shouldBe` Right (Seq annz (Data annz ["Xxx"] [] (Type1 ["Int"]) False) (Seq annz (Seq annz (Var annz "x" (Type1 ["Xxx"])) (Nop annz)) (Set annz False (LVar "x") (Cons annz ["Xxx"] (Number annz 1)))))
 
-            it "TODO-fields: type Xxx with (x,y) : (Int,Int)" $
-              (parse stmt "type Xxx with (x,y) : (Int,Int)")
+            it "TODO-fields: data Xxx with (x,y) : (Int,Int)" $
+              (parse stmt "data Xxx with (x,y) : (Int,Int)")
               `shouldBe` Left "TODO-fields"
 
             it "Xxx.Yyy" $
-              (compile' $ fromRight' $ parse' stmt "type Int ; type Xxx with Int ; type Xxx.Yyy with Int ; var y:Xxx.Yyy <- Xxx.Yyy (1,2)")
+              (compile' $ fromRight' $ parse' stmt "data Int ; data Xxx with Int ; data Xxx.Yyy with Int ; var y:Xxx.Yyy <- Xxx.Yyy (1,2)")
               `shouldBe` ([],B.Data annz ["Int"] [] Type0 False (B.Data annz ["Xxx"] [] (Type1 ["Int"]) False (B.Data annz ["Xxx","Yyy"] [] (TypeN [Type1 ["Int"],Type1 ["Int"]]) False (B.Var annz "y" (Type1 ["Xxx","Yyy"]) (B.Match annz False (B.LVar "y") (B.Cons annz{type_=Type1 ["Xxx","Yyy"]} ["Xxx","Yyy"] (B.Tuple annz{type_=TypeN [Type1 ["Int","1"],Type1 ["Int","2"]]} [B.Number annz{type_=Type1 ["Int","1"]} 1,B.Number annz{type_=Type1 ["Int","2"]} 2])) (B.Nop annz) (B.Ret annz (B.Error annz (-2))))))))
 
             it "data X with Int ; x:Int ; X x <- X 1 ; ret x" $
-              (parse' stmt "type Xxx with Int ; var x:Int ; set Xxx x <- Xxx 1 ; return x")
+              (parse' stmt "data Xxx with Int ; var x:Int ; set Xxx x <- Xxx 1 ; return x")
               `shouldBe` Right (Seq annz (Data annz ["Xxx"] [] (Type1 ["Int"]) False) (Seq annz (Seq annz (Seq annz (Var annz "x" (Type1 ["Int"])) (Nop annz)) (Nop annz)) (Seq annz (Set annz False (LCons ["Xxx"] (LVar "x")) (Cons annz ["Xxx"] (Number annz 1))) (Ret annz (Read annz "x")))))
             it "data X with Int ; X 1 <- X 1 ; return 1" $
-              (parse' stmt "type Xxx with Int ; set Xxx 1 <- Xxx 1 ; return 1")
+              (parse' stmt "data Xxx with Int ; set Xxx 1 <- Xxx 1 ; return 1")
               `shouldBe` Right (Seq annz (Data annz ["Xxx"] [] (Type1 ["Int"]) False) (Seq annz (Set annz False (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 1))) (Ret annz (Number annz 1))))
             it "data X with Int ; x:Int ; X 1 <- X 2" $
-              (parse' stmt "type Xxx with Int ; set Xxx 1 <- Xxx 2 ; return 2")
+              (parse' stmt "data Xxx with Int ; set Xxx 1 <- Xxx 2 ; return 2")
               `shouldBe` Right (Seq annz (Data annz ["Xxx"] [] (Type1 ["Int"]) False) (Seq annz (Set annz False (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 2))) (Ret annz (Number annz 2))))
 
             it "Aa <- Aa.Bb" $
               (parse' stmt $
                 unlines [
-                  "type Aa with Int",
-                  "type Aa.Bb",
+                  "data Aa with Int",
+                  "data Aa.Bb",
                   "var b : Aa.Bb <- Aa.Bb 1",
                   "var a : Aa <- b",
                   "var v : Int",

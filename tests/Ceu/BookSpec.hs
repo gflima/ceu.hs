@@ -225,9 +225,9 @@ spec = do
       it "data" $             -- pg 29
         (run True $
           unlines [
-            "type Bool_",
-            "type Bool_.False_",
-            "type Bool_.True_",
+            "data Bool_",
+            "data Bool_.False_",
+            "data Bool_.True_",
             "return Bool_.True_"
           ])
         `shouldBe` Right (Cons ["Bool_","True_"] Unit)

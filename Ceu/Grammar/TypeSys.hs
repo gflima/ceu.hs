@@ -64,7 +64,7 @@ errDeclared z str id ids =
 getErrsTypesDeclared :: Ann -> [Stmt] -> Type -> Errors
 getErrsTypesDeclared z ids tp = concatMap aux $ map (\id->(id, find (isData $ (==)id) ids)) $ Type.get1s tp
     where
-        aux (id, Nothing) = [toError z $ "type '" ++ id ++ "' is not declared"]
+        aux (id, Nothing) = [toError z $ "data '" ++ id ++ "' is not declared"]
         aux (_,  Just _)  = []
 
 -------------------------------------------------------------------------------
@@ -231,7 +231,7 @@ stmt ids (Inst z (id,[inst_tp]) imp p) =
 
 stmt ids (Inst _ (_,tps) _ _) = error "not implemented: multiple types"
 
-stmt ids s@(Data z hr [] flds abs p) = (es_dcl ++ (errDeclared z "type" (Type.hier2str hr) ids) ++ es,
+stmt ids s@(Data z hr [] flds abs p) = (es_dcl ++ (errDeclared z "data" (Type.hier2str hr) ids) ++ es,
                                         s')
   where
     s'             = Data z hr [] flds' abs p'
@@ -321,7 +321,7 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
             str       = Type.hier2str hr
             (tpd,esd) = case find (isData $ (==)str) ids of
               Just (Data _ _ _ tp _ _) -> (tp,    [])
-              Nothing                  -> (TypeT, [toError z $ "type '" ++ str ++ "' is not declared"])
+              Nothing                  -> (TypeT, [toError z $ "data '" ++ str ++ "' is not declared"])
 
             (ese,mexp)      = f (rel,txp) tpexp
             (chk2,esl,l',_) = aux ids z l (Left tpd)
@@ -438,9 +438,9 @@ expr' _ ids (Cons  z hr exp) = (es++es_exp, Cons z{type_=(Type1 hr)} hr exp')
         hr_str = Type.hier2str hr
         (tp,es) = case find (isData $ (==)hr_str) ids of
             Nothing                      ->
-              (TypeV "?", [toError z $ "type '" ++ hr_str ++ "' is not declared"])
+              (TypeV "?", [toError z $ "data '" ++ hr_str ++ "' is not declared"])
             Just (Data _ _ _ tp True  _) ->
-              (tp,        [toError z $ "type '" ++ hr_str ++ "' is abstract"])
+              (tp,        [toError z $ "data '" ++ hr_str ++ "' is abstract"])
             Just (Data _ _ _ tp False _) ->
               (tp,        [])
         (es_exp, exp') = expr z (SUP,tp) ids exp
@@ -479,7 +479,7 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where
                     case find (isRel SUB tp . getTP) $ filter (isInst $ (==cls)) (sort' ids) of
                       Nothing -> (id, TypeV "?",
                                   [toError z $ "variable '" ++ id ++
-                                   "' has no associated instance for type '" ++
+                                   "' has no associated instance for data '" ++
                                    Type.show' txp ++ "' in class '" ++ cls ++ "'"])
                       Just (Inst _ (_,[inst_tp]) _ _) ->
                         (id ++ "__" ++ Type.show' tp', tp', []) where

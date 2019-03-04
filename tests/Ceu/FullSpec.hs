@@ -60,7 +60,7 @@ spec = do
 
       it "scope var x end ; x=1" $ do
         compile' (Seq annz (Scope annz (Var annz "x" (Type1 ["Int"]))) (Set annz False (LVar "x") (Number annz 1)))
-        `shouldBe` (["type 'Int' is not declared","variable 'x' is not declared"], B.Seq annz (B.Var annz "x" (Type1 ["Int"]) (B.Nop annz)) (B.Match annz False (B.LVar "x") (B.Number (annz{type_=Type1 ["Int","1"]}) 1) (B.Nop annz) (B.Ret annz (B.Error annz (-2)))))
+        `shouldBe` (["data 'Int' is not declared","variable 'x' is not declared"], B.Seq annz (B.Var annz "x" (Type1 ["Int"]) (B.Nop annz)) (B.Match annz False (B.LVar "x") (B.Number (annz{type_=Type1 ["Int","1"]}) 1) (B.Nop annz) (B.Ret annz (B.Error annz (-2)))))
 
   --------------------------------------------------------------------------
 
@@ -72,11 +72,11 @@ spec = do
 
     it "do var x; x = 1 end" $ do
       compile' (Var' annz "x" (Type1 ["Int"]) (Match' annz False (LVar "x") (Number annz 1) (Nop annz) (Nop annz)))
-      `shouldBe` (["type 'Int' is not declared"], (B.Var annz "x" (Type1 ["Int"]) (B.Match annz False (B.LVar "x") (B.Number annz{type_=Type1 ["Int","1"]} 1) (B.Nop annz) (B.Nop annz))))
+      `shouldBe` (["data 'Int' is not declared"], (B.Var annz "x" (Type1 ["Int"]) (B.Match annz False (B.LVar "x") (B.Number annz{type_=Type1 ["Int","1"]} 1) (B.Nop annz) (B.Nop annz))))
 
     it "do var x; x = 1 end" $ do
       compile' (Var' annz "x" (Type1 ["Int"]) (Match' annz False (LVar "x") (Number annz 1) (Nop annz) (Nop annz)))
-      `shouldBe` (["type 'Int' is not declared"], (B.Var annz "x" (Type1 ["Int"]) (B.Match annz False (B.LVar "x") (B.Number annz{type_=Type1 ["Int","1"]} 1) (B.Nop annz) (B.Nop annz))))
+      `shouldBe` (["data 'Int' is not declared"], (B.Var annz "x" (Type1 ["Int"]) (B.Match annz False (B.LVar "x") (B.Number annz{type_=Type1 ["Int","1"]} 1) (B.Nop annz) (B.Nop annz))))
 
     it "class/inst" $ do
       compile (Seq annz

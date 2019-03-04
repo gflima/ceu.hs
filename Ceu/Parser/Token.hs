@@ -14,6 +14,7 @@ import Text.Parsec.Combinator (many1, notFollowedBy, manyTill, eof)
 keywords = [
     "_",
     "call",
+    "data",
     "do",
     "else",
     "else/if",
@@ -32,7 +33,6 @@ keywords = [
     "then",
     "var",
     "return",
-    "type",
     --"where",
     "with"
   ]
@@ -92,7 +92,7 @@ tk_ifc = do
 tk_data :: Parser String    -- Int, Int_0   // I, II, int, _Int
 tk_data = do
     fst       <- satisfy isUpper
-    (snd:rst) <- many1 $ (digit <|> letter <|> char '_' <?> "type identifier")
+    (snd:rst) <- many1 $ (digit <|> letter <|> char '_' <?> "data identifier")
     --guard $ not $ null $ filter (\c -> isLower c) rst
     when (fst=='I' && isUpper snd) $ unexpected "uppercase identifier"
     when (all isUpper (snd:rst))   $ unexpected "uppercase identifier"

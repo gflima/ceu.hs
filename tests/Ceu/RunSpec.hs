@@ -130,11 +130,11 @@ spec = do
         `shouldBe` Right (Number 3)
 
       it "Int ; + ; return 1+2" $
-        run False "type Int ; func + : ((Int,Int)->Int) ; return 1+2"
+        run False "data Int ; func + : ((Int,Int)->Int) ; return 1+2"
         `shouldBe` Right (Number 3)
 
       it "Int ; + ; return +(1,2)" $
-        run False "type Int ; func + : ((Int,Int)->Int) ; return +(1,2)"
+        run False "data Int ; func + : ((Int,Int)->Int) ; return +(1,2)"
         `shouldBe` Right (Number 3)
 
       it "(f,g) <- (+,c) ; return f(g 1, g 2)" $
@@ -220,31 +220,31 @@ spec = do
 
     describe "data:" $ do
 
-      it "type Xxx" $
-        (run False "type Xxx ; var x:Xxx <- Xxx ; return x")
+      it "data Xxx" $
+        (run False "data Xxx ; var x:Xxx <- Xxx ; return x")
         `shouldBe` Right (Cons ["Xxx"] Unit)
 
-      it "type Xxx.Yyy" $
-        (run False "type Xxx ; type Xxx.Yyy ; var x:Xxx.Yyy <- Xxx.Yyy ; return x")
+      it "data Xxx.Yyy" $
+        (run False "data Xxx ; data Xxx.Yyy ; var x:Xxx.Yyy <- Xxx.Yyy ; return x")
         `shouldBe` Right (Cons ["Xxx","Yyy"] Unit)
 
-      it "type Xxx.Yyy" $
-        (run False "type Xxx ; type Xxx.Yyy ; var x:Xxx <- Xxx.Yyy ; return x")
+      it "data Xxx.Yyy" $
+        (run False "data Xxx ; data Xxx.Yyy ; var x:Xxx <- Xxx.Yyy ; return x")
         `shouldBe` Right (Cons ["Xxx","Yyy"] Unit)
 
-      it "type Xxx with (Int,Int)" $
-        (run True "type Xxx with (Int,Int) ; var x:Xxx <- Xxx (1+1,2+2) ; return x")
+      it "data Xxx with (Int,Int)" $
+        (run True "data Xxx with (Int,Int) ; var x:Xxx <- Xxx (1+1,2+2) ; return x")
         `shouldBe` Right (Cons ["Xxx"] (Tuple [Number 2, Number 4]))
 
-      it "type Xxx(Int), Xxx.Yyy(Int), y=Yyy(1,2)" $
-        (run True "type Xxx with Int ; type Xxx.Yyy with Int ; var y:Xxx.Yyy <- Xxx.Yyy (1,2) ; return y")
+      it "data Xxx(Int), Xxx.Yyy(Int), y=Yyy(1,2)" $
+        (run True "data Xxx with Int ; data Xxx.Yyy with Int ; var y:Xxx.Yyy <- Xxx.Yyy (1,2) ; return y")
         `shouldBe` Right (Cons ["Xxx","Yyy"] (Tuple [Number 1,Number 2]))
 
       it "Aa <- Aa.Bb" $
         (run True $
           unlines [
-            "type Aa with Int",
-            "type Aa.Bb",
+            "data Aa with Int",
+            "data Aa.Bb",
             "var b : Aa.Bb <- Aa.Bb 1",
             "var a : Aa <- b",
             "var v : Int",
@@ -256,9 +256,9 @@ spec = do
       it "List" $
         (run True $
           unlines [
-            "type List",
-            "type List.Empty",
-            "type List.Pair with (Int,List)",
+            "data List",
+            "data List.Empty",
+            "data List.Pair with (Int,List)",
             "var l1 : List      <- List",
             "var l2 : List.Pair <- List.Pair(1, List.Empty)",
             "set l1   <- l2",
@@ -272,9 +272,9 @@ spec = do
       it "List" $
         (run True $
           unlines [
-            "type List",
-            "type List.Empty",
-            "type List.Pair with (Int,List)",
+            "data List",
+            "data List.Empty",
+            "data List.Pair with (Int,List)",
             "var l1 : List <- List.Pair(1, List.Empty)",
             "var x1 : Int",
             "set! List.Pair(x1,_) <- l1",
@@ -305,17 +305,17 @@ spec = do
         `shouldBe` Right (Number 1)
 
       it "data X with Int ; x:Int ; X x <- X 1" $
-        (run True "type Xxx with Int ; var x:Int ; set Xxx x <- Xxx 1 ; return x")
+        (run True "data Xxx with Int ; var x:Int ; set Xxx x <- Xxx 1 ; return x")
         `shouldBe` Right (Number 1)
       it "data X with Int ; X 1 <- X 1" $
-        (run True "type Xxx with Int ; set Xxx 1 <- Xxx 1 ; return 1")
+        (run True "data Xxx with Int ; set Xxx 1 <- Xxx 1 ; return 1")
         `shouldBe` Right (Number 1)
       it "data X with Int ; X 2 <- X 1" $
-        (run True "type Xxx with Int ; set Xxx 2 <- Xxx 1 ; return 1")
+        (run True "data Xxx with Int ; set Xxx 2 <- Xxx 1 ; return 1")
         `shouldBe` Left "(line 1, column 31):\ntypes do not match : expected 'Int.2' : found 'Int.1'\n"
 
       it "x <- (10,2) ; (i,2) <- x" $
-        (run True "type Xxx with (Int,Int) ; var x : Xxx <- Xxx (10,2) ; var i : int ; set! Xxx (i,2) <- x ; return i")
+        (run True "data Xxx with (Int,Int) ; var x : Xxx <- Xxx (10,2) ; var i : int ; set! Xxx (i,2) <- x ; return i")
         `shouldBe` Right (Number 10)
 
       it "match/if" $
@@ -428,7 +428,7 @@ spec = do
             "",
             "return (Bool.True) =>= (Bool.False)"
           ])
-        `shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated instance for type '((Bool,Bool) -> top)' in class 'IEq'\n"
+        `shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated instance for data '((Bool,Bool) -> top)' in class 'IEq'\n"
 
       it "IOrd extends IEq" $
         (run True $

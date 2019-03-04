@@ -169,7 +169,7 @@ spec = do
   describe "functions" $ do
     it "func ~Int" $
       (fst $ TypeSys.go (Var annz "f" (TypeF Type0 (Type1 ["Int"])) (Nop annz)))
-        `shouldBe` ["type 'Int' is not declared"]
+        `shouldBe` ["data 'Int' is not declared"]
 
     it "func f; func f" $
       TypeSys.go (Var annz "f" (TypeF Type0 Type0) (Var annz "f" (TypeF Type0 Type0) (Nop annz)))
@@ -279,7 +279,7 @@ spec = do
 
     it "A <- 1" $
       (fst $ TypeSys.go (Match annz True (LCons ["A"] LUnit) (Number annz 1) (Nop annz) (Nop annz)))
-      `shouldBe` ["type 'A' is not declared","types do not match : expected 'A' : found 'Int.1'"]
+      `shouldBe` ["data 'A' is not declared","types do not match : expected 'A' : found 'Int.1'"]
 
     it "A ; A.B ; A <- A.B" $
       (fst $ TypeSys.go
@@ -343,31 +343,31 @@ spec = do
         (Data annz ["Bool"] [] Type0 True
         (Data annz ["Bool","False"] [] Type0 False
         (Nop annz)))))
-      `shouldBe` ["type 'Bool' is not declared"]
+      `shouldBe` ["data 'Bool' is not declared"]
 
     it "Bool.True (w/o Bool)" $
       (fst $ TypeSys.go
         (Data annz ["Bool","True","Xxx"] [] Type0 False (Nop annz)))
-      `shouldBe` ["type 'Bool.True' is not declared"]
+      `shouldBe` ["data 'Bool.True' is not declared"]
 
     it "Int/Int" $
       (fst $ TypeSys.go
         (Data annz ["Int"] [] Type0 False
         (Data annz ["Int"] [] Type0 False
         (Nop annz))))
-      `shouldBe` ["type 'Int' is already declared"]
+      `shouldBe` ["data 'Int' is already declared"]
 
     it "~Int / x::Int" $
       (fst $ TypeSys.go
         (Var annz "x" (Type1 ["Int"]) (Nop annz)))
-      `shouldBe` ["type 'Int' is not declared"]
+      `shouldBe` ["data 'Int' is not declared"]
 
     it "x=Bool" $
       (fst $ TypeSys.go
         (Data annz ["Bool"] [] Type0 True
           (Var annz "x" (Type1 ["Bool"])
             (Match annz False (LVar "x") (Cons annz ["Bool"] (Unit annz)) (Nop annz) (Nop annz)))))
-      `shouldBe` ["type 'Bool' is abstract"]
+      `shouldBe` ["data 'Bool' is abstract"]
 
     it "Bool ; x=True" $
       (fst $ TypeSys.go
@@ -428,7 +428,7 @@ spec = do
       (fst $ TypeSys.go
         (Var annz "x" (Type1 ["Bool"])
           (Match annz False (LVar "x") (Cons annz{type_=(Type1 ["Bool"])} ["Bool","True"] (Unit annz)) (Nop annz) (Nop annz))))
-      `shouldBe` ["type 'Bool' is not declared","type 'Bool.True' is not declared"]
+      `shouldBe` ["data 'Bool' is not declared","data 'Bool.True' is not declared"]
 
     it "data X with Int ; x <- X ()" $
       (fst $ TypeSys.go
@@ -511,7 +511,7 @@ spec = do
           (Var annz "==" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (Type1 ["Bool"]))
             (Nop annz))
           (Nop annz))
-      `shouldBe` (["type 'Bool' is not declared"],(Var annz "==" (TypeF (TypeN [TypeV "a",TypeV "a"]) (Type1 ["Bool"])) (Nop annz)))
+      `shouldBe` (["data 'Bool' is not declared"],(Var annz "==" (TypeF (TypeN [TypeV "a",TypeV "a"]) (Type1 ["Bool"])) (Nop annz)))
 
     it "Bool ; Equalable ; (==)" $
       TypeSys.go
@@ -615,7 +615,7 @@ spec = do
           (Var annz "fff" (TypeF (Type1 ["A"]) Type0)
           (Nop annz))
         (CallS annz (Call annz (Read annz "fff") (Number annz 1))))))))
-      `shouldBe` ["missing implementation of 'fff'","variable 'fff' has no associated instance for type '(Int.1 -> ?)' in class 'Xable'"]
+      `shouldBe` ["missing implementation of 'fff'","variable 'fff' has no associated instance for data '(Int.1 -> ?)' in class 'Xable'"]
 
     it "Int ; Bool ; Equalable a ; eq 1 Bool" $
       (fst $ TypeSys.go
@@ -686,7 +686,7 @@ spec = do
         (CallS annz (Call annz (Read annz "fff") (Cons annz ["A","B"] (Unit annz))))))))))
       `shouldBe` ["TODO: sort by subtyping relation","missing implementation of 'fff'","missing implementation of 'fff'"]
 
-  describe "return-type polymorphism" $ do
+  describe "return-data polymorphism" $ do
 
     it "B ; X.f:()->b ; inst B.f:()->B ; f()" $
       (TypeSys.go
@@ -723,7 +723,7 @@ spec = do
           (Var annz "fff" (TypeF (TypeV "a") (Type1 ["B2"]))
           (Nop annz))
         (CallS annz (Call annz (Read annz "fff") (Unit annz)))))))))
-                  -- the problem is that CallS accept any return type
+                  -- the problem is that CallS accept any return data
       `shouldBe` (["TODO: should be error because both B1/B2 are ok","missing implementation of 'fff'","missing implementation of 'fff'"],Data annz ["B1"] [] Type0 False (Data annz ["B2"] [] Type0 False (Var annz "fff" (TypeF (TypeV "a") (TypeV "b")) (CallS annz (Call (annz {type_ = Type1 ["B2"]}) (Read (annz {type_ = TypeF (TypeV "a") (Type1 ["B2"])}) "fff__(a -> B2)") (Unit (annz {type_ = Type0})))))))
 
     it "B1 ; B2 ; X.f:a->b ; inst B1.f:a->B1 ; inst B2.f:a->B2 ; b1=f()" $
