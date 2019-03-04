@@ -324,7 +324,7 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "Equalable: default =/=" $   -- pg 32
+      it "IEqualable: default =/=" $   -- pg 32
         (run True $
           unlines [
             "func not (x) : (Bool->Bool) do",
@@ -349,12 +349,12 @@ spec = do
             "   end",
             "end",
             "",
-            "interface Equalable for a with",
+            "interface IEqualable for a with",
             "   func ===       : ((a,a) -> Bool)",
             "   func =/= (x,y) : ((a,a) -> Bool) do return not (x === y) end",
             "end",
             "",
-            "implementation Equalable for Bool with",
+            "implementation IEqualable for Bool with",
             "   func === (x,y) : ((Bool,Bool) -> Bool) do",
             "     return (x and y) or ((not x) and (not y))",
             "   end",
@@ -363,7 +363,7 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "Orderable" $        -- pg 32
+      it "IOrderable" $        -- pg 32
         (run True $
           unlines [
             "func not (x) : (Bool->Bool) do",
@@ -388,25 +388,25 @@ spec = do
             "   end",
             "end",
             "",
-            "interface Equalable for a with",
+            "interface IEqualable for a with",
             "   func ===       : ((a,a) -> Bool)",
             "   func =/= (x,y) : ((a,a) -> Bool) do return not (x === y) end",
             "end",
             "",
-            "implementation Equalable for Bool with",
+            "implementation IEqualable for Bool with",
             "   func === (x,y) : ((Bool,Bool) -> Bool) do",
             "     return (x and y) or ((not x) and (not y))",
             "   end",
             "end",
             "",
-            "interface Orderable for a extends Equalable for a with",
+            "interface IOrderable for a extends IEqualable for a with",
             "  func @<        : ((a,a) -> Bool)",
             "  func @<= (x,y) : ((a,a) -> Bool) do return (x @< y) or (x === y) end",
             "  func @>  (x,y) : ((a,a) -> Bool) do return not (x @<= y)         end",
             "  func @>= (x,y) : ((a,a) -> Bool) do return (x @> y) or (x === y) end",
             "end",
             "",
-            "implementation Orderable for Bool with",
+            "implementation IOrderable for Bool with",
             "  func @< (x,y) : ((Bool,Bool) -> Bool) do",
             "    if      (Bool.False, Bool.False) <- (x, y) then return Bool.False",
             "    else/if (Bool.False, Bool.True)  <- (x, y) then return Bool.True",

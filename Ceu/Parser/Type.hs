@@ -5,15 +5,9 @@ import Text.Parsec.String       (Parser)
 import Text.Parsec.Prim         (many)
 
 import Ceu.Parser.Common
-import Ceu.Parser.Token         (tk_sym, tk_var, tk_type)
+import Ceu.Parser.Token         (tk_sym, tk_var,tk_data_hier)
 
-import Ceu.Grammar.Globals      (ID_Type)
 import Ceu.Grammar.Type         (Type(..))
-
-tk_hier :: Parser [ID_Type]
-tk_hier = do
-  v <- (:) <$> tk_type <*> many (try $ tk_sym "." *> tk_type)
-  return v
 
 type_0 :: Parser Type
 type_0 = do
@@ -23,7 +17,7 @@ type_0 = do
 
 type_1 :: Parser Type
 type_1 = do
-    tp <- tk_hier
+    tp <- tk_data_hier
     return $ Type1 tp
 
 type_N :: Parser Type

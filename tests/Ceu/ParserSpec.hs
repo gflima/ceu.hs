@@ -132,22 +132,68 @@ spec = do
                 parse tk_var "var"
                 `shouldBe` Left "(line 1, column 4):\nunexpected `var`\nexpecting identifier"
 
-        describe "tk_type:" $ do
+        describe "tk_data:" $ do
             it "Int" $
-                parse tk_type "Int"
+                parse tk_data "Int"
                 `shouldBe` Right "Int"
             it "U8" $
-                parse tk_type "U8"
+                parse tk_data "U8"
                 `shouldBe` Right "U8"
             it "int" $
-                parse tk_type "int"
+                parse tk_data "int"
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"i\""
             it "I" $
-                parse tk_type "I"
+                parse tk_data "I"
                 `shouldBe` Left "(line 1, column 2):\nunexpected end of input\nexpecting type identifier"
             it "III" $
-                parse tk_type "III"
+                parse tk_data "III"
                 `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting type identifier"
+            it "IEq" $
+                parse tk_data "IEq"
+                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting type identifier"
+
+        describe "tk_data_hier:" $ do
+            it "Int.X" $
+                parse tk_data_hier "Int.X"
+                `shouldBe` Left "(line 1, column 6):\nunexpected end of input\nexpecting type identifier"
+            it "Bool.True" $
+                parse tk_data_hier "Bool.True"
+                `shouldBe` Right ["Bool","True"]
+            it "U8.IEq" $
+                parse tk_data_hier "U8.IEq"
+                `shouldBe` Left "(line 1, column 7):\nunexpected uppercase identifier\nexpecting type identifier"
+            it "Int.U8" $
+                parse tk_data_hier "Int.U8"
+                `shouldBe` Right ["Int", "U8"]
+            it "int.X" $
+                parse tk_data_hier "int.X"
+                `shouldBe` Left "(line 1, column 1):\nunexpected \"i\""
+            it "I" $
+                parse tk_data_hier "I"
+                `shouldBe` Left "(line 1, column 2):\nunexpected end of input\nexpecting type identifier"
+            it "III" $
+                parse tk_data_hier "III"
+                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting type identifier"
+            it "IEq" $
+                parse tk_data_hier "IEq"
+                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting type identifier"
+
+        describe "tk_ifc:" $ do
+            it "Int" $
+                parse tk_ifc "Int"
+                `shouldBe` Left "(line 1, column 2):\nunexpected \"n\""
+            it "U8" $
+                parse tk_ifc "U8"
+                `shouldBe` Left "(line 1, column 1):\nunexpected \"U\"\nexpecting \"I\""
+            it "int" $
+                parse tk_ifc "int"
+                `shouldBe` Left "(line 1, column 1):\nunexpected \"i\"\nexpecting \"I\""
+            it "I" $
+                parse tk_ifc "I"
+                `shouldBe` Left "(line 1, column 2):\nunexpected end of input"
+            it "III" $
+                parse tk_ifc "III"
+                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting interface identifier"
 
         describe "tk_key:" $ do
             it "do" $
@@ -534,13 +580,13 @@ spec = do
 
         describe "interface:" $ do
 
-            it "Int ; F3able a ; inst F3able Int ; return f3 1" $
+            it "Int ; IF3able a ; inst IF3able Int ; return f3 1" $
               (parse stmt $
                 unlines [
-                  "interface F3able for a with"  ,
+                  "interface IF3able for a with"  ,
                   " var f3 : (a -> Int)"          ,
                   "end"                           ,
-                  "implementation (F3able for Int) with" ,
+                  "implementation (IF3able for Int) with" ,
                   " func f3 (v) : (a -> Int) do"  ,
                   "   return v"                   ,
                   " end"                          ,
@@ -549,14 +595,14 @@ spec = do
                 ])
               `shouldBe` Right
                 (Seq annz{source=("",1,1)}
-                (Class annz{source=("",1,1)} ("F3able", ["a"]) []
+                (Class annz{source=("",1,1)} ("IF3able", ["a"]) []
                   (Seq annz{source=("",2,2)}
                   (Seq annz{source=("",0,0)}
                   (Var annz{source=("",2,2)} "f3" (TypeF (TypeV "a") (Type1 ["Int"])))
                   (Nop annz{source=("",0,0)}))
                   (Nop annz{source=("",2,2)})))
                 (Seq annz{source=("",1,1)}
-                (Inst annz{source=("",4,1)} ("F3able", [Type1 ["Int"]])
+                (Inst annz{source=("",4,1)} ("IF3able", [Type1 ["Int"]])
                   (FuncS annz{source=("",5,2)} "f3" (TypeF (TypeV "a") (Type1 ["Int"]))
                     (Seq annz{source=("",5,2)}
                     (Seq annz{source=("",0,0)}
@@ -566,22 +612,22 @@ spec = do
                     (Set annz{source=("",5,2)} False (LVar "v") (Arg annz{source=("",5,2)})) (Ret annz{source=("",6,4)} (Read annz{source=("",6,11)} "v"))))))
                 (Ret annz{source=("",9,1)} (Call annz{source=("",9,8)} (Read annz{source=("",9,8)} "f3") (Number annz{source=("",9,11)} 10)))))
 
-            it "Ord extends Eq" $
+            it "IOrd extends IEq" $
               (parse' stmt $
                 unlines [
-                  "interface Eq for a with",
+                  "interface IEq for a with",
                   "   func == : ((a,a) -> Bool)",
                   "end",
                   "",
-                  "interface (Ord for a) extends (Eq for a) with",
+                  "interface (IOrd for a) extends (IEq for a) with",
                   "   func >= : ((a,a) -> Bool)",
                   "end",
                   "",
-                  "implementation Eq for Bool with",
+                  "implementation IEq for Bool with",
                   "   func == (x,y) : ((a,a) -> Bool) do return Bool.True end",
                   "end",
                   "",
-                  "implementation (Ord for Bool) with",
+                  "implementation (IOrd for Bool) with",
                   "   func >= (x,y) : ((a,a) -> Bool) do return Bool.True end",
                   "end",
                   "",
@@ -589,17 +635,17 @@ spec = do
                 ])
               `shouldBe` Right
                 (Seq annz
-                (Class annz ("Eq",["a"]) []
+                (Class annz ("IEq",["a"]) []
                   (Var annz "==" (TypeF (TypeN [TypeV "a",TypeV "a"]) (Type1 ["Bool"]))))
                 (Seq annz
-                (Class annz ("Ord",["a"]) [("Eq",["a"])]
+                (Class annz ("IOrd",["a"]) [("IEq",["a"])]
                   (Var annz ">=" (TypeF (TypeN [TypeV "a",TypeV "a"]) (Type1 ["Bool"]))))
                 (Seq annz
-                (Inst annz ("Eq",[Type1 ["Bool"]])
+                (Inst annz ("IEq",[Type1 ["Bool"]])
                   (FuncS annz "==" (TypeF (TypeN [TypeV "a",TypeV "a"]) (Type1 ["Bool"]))
                     (Seq annz (Seq annz (Var annz "x" (TypeV "a")) (Seq annz (Var annz "y" (TypeV "a")) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"] (Unit annz)))))))
                 (Seq annz
-                (Inst annz ("Ord",[Type1 ["Bool"]])
+                (Inst annz ("IOrd",[Type1 ["Bool"]])
                   (FuncS annz ">=" (TypeF (TypeN [TypeV "a",TypeV "a"]) (Type1 ["Bool"]))
                     (Seq annz (Seq annz (Var annz "x" (TypeV "a")) (Seq annz (Var annz "y" (TypeV "a")) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"] (Unit annz)))))))
                 (Ret annz (Call annz (Read annz ">=") (Tuple annz [Cons annz ["Bool","True"] (Unit annz),Cons annz ["Bool","False"] (Unit annz)])))))))

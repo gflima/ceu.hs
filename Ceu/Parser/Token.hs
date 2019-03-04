@@ -4,6 +4,8 @@ import Control.Monad          (void, guard, when)
 import Data.Char              (isLower, isUpper)
 import Data.List              (intercalate)
 
+import Ceu.Grammar.Globals    (ID_Type)
+
 import Text.Parsec.Prim       (many, (<|>), (<?>), try, unexpected)
 import Text.Parsec.String     (Parser)
 import Text.Parsec.Char       (char, oneOf, digit, satisfy, string, letter, anyChar, newline)
@@ -69,22 +71,38 @@ tk_num = do
 tk_var :: Parser String     -- x, x_0       // Xx
 tk_var = do
     --void  <- notFollowedBy tk_reserved
-    first <- satisfy isLower
-    rest  <- many $ (digit <|> letter <|> oneOf "_'?" <?> "identifier")
-    when (elem (first:rest) keywords) $ unexpected $ "`" ++ (first:rest) ++ "`"
+    fst <- satisfy isLower
+    rst <- many $ (digit <|> letter <|> oneOf "_'?" <?> "identifier")
+    when (elem (fst:rst) keywords) $ unexpected $ "`" ++ (fst:rst) ++ "`"
     s
-    return (first:rest)
+    return (fst:rst)
 
 tk_func = tk_var
 
-tk_type :: Parser String    -- Int, Int_0   // I, II, int, _Int
-tk_type = do
-    first <- satisfy isUpper
-    rest  <- many1 $ (digit <|> letter <|> char '_' <?> "type identifier")
-    --guard $ not $ null $ filter (\c -> isLower c) rest
-    when (all isUpper rest) $ unexpected "uppercase identifier"
+tk_ifc :: Parser String    -- Int, Int_0   // I, II, int, _Int
+tk_ifc = do
+    fst <- char 'I'
+    snd <- satisfy isUpper
+    rst <- many1 $ (digit <|> letter <|> char '_' <?> "interface identifier")
+    --guard $ not $ null $ filter (\c -> isLower c) rst
+    when (all isUpper rst) $ unexpected "uppercase identifier"
     s
-    return (first:rest)
+    return (fst:snd:rst)
+
+tk_data :: Parser String    -- Int, Int_0   // I, II, int, _Int
+tk_data = do
+    fst       <- satisfy isUpper
+    (snd:rst) <- many1 $ (digit <|> letter <|> char '_' <?> "type identifier")
+    --guard $ not $ null $ filter (\c -> isLower c) rst
+    when (fst=='I' && isUpper snd) $ unexpected "uppercase identifier"
+    when (all isUpper (snd:rst))   $ unexpected "uppercase identifier"
+    s
+    return (fst:snd:rst)
+
+tk_data_hier :: Parser [ID_Type]
+tk_data_hier = do
+  v <- (:) <$> tk_data <*> many (try $ tk_sym "." *> tk_data)
+  return v
 
 tk_key :: String -> Parser String
 tk_key k = do

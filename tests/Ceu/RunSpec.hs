@@ -16,24 +16,24 @@ main = hspec spec
 spec :: Spec
 spec = do
 
--- TypeV (a, [Fable,...])
+-- TypeV (a, [IFable,...])
 {-
     describe "TODO:" $ do
 
-      it "Fable f1/f2/f3 ; f a implements Fable" $
+      it "IFable f1/f2/f3 ; f a implements IFable" $
         (run True $
           unlines [
-            "interface Fable for a with",
+            "interface IFable for a with",
             "   func f3 :   (a -> Bool)",
             "   func f2 x : (a -> Bool) do return f3 x end",
             "   func f1 x : (a -> Bool) do return f2 x end",
             "end",
             "",
-            "func f x : (a -> Bool) where a implements Fable do",
+            "func f x : (a -> Bool) where a implements IFable do",
             "   return f1 x",
             "end",
             "",
-            "implementation Fable for Bool with",
+            "implementation IFable for Bool with",
             "   func f3 x : (Bool -> Bool) do",
             "     return x",
             "   end",
@@ -334,13 +334,13 @@ spec = do
 
     describe "interface:" $ do
 
-      it "Int ; F3able a ; inst F3able Int ; return f3 1" $
+      it "Int ; IF3able a ; inst IF3able Int ; return f3 1" $
         (run True $
           unlines [
-            "interface F3able for a with"       ,
+            "interface IF3able for a with"       ,
             " var f3 : (a -> Int)"              ,
             "end"                               ,
-            "implementation F3able for Int with"   ,
+            "implementation IF3able for Int with"   ,
             " func f3 (v) : (Int -> Int) do"    ,
             "   return v"                       ,
             " end"                              ,
@@ -349,18 +349,18 @@ spec = do
           ])
         `shouldBe` Right (Number 10)
 
-      it "Int ; Bool ; F2able a ; inst F2able Bool/Int ; return f2 1" $
+      it "Int ; Bool ; IF2able a ; inst IF2able Bool/Int ; return f2 1" $
         (run True $
           unlines [
-            "interface F2able for a with"       ,
+            "interface IF2able for a with"       ,
             " var f2 : (a -> Int)"              ,
             "end"                               ,
-            "implementation F2able for Bool with"  ,
+            "implementation IF2able for Bool with"  ,
             " func f2 (v) : (Bool -> Int) do"   ,
             "   return 0"                       ,
             " end"                              ,
             "end"                               ,
-            "implementation F2able for Int with"   ,
+            "implementation IF2able for Int with"   ,
             " func f2 (v) : (Int -> Int) do"    ,
             "   return v+1"                     ,
             " end"                              ,
@@ -370,18 +370,18 @@ spec = do
           ])
         `shouldBe` Right (Number 2)
 
-      it "Int ; Bool ; F2able a ; inst F2able Bool/Int ; return f2 1" $
+      it "Int ; Bool ; IF2able a ; inst IF2able Bool/Int ; return f2 1" $
         (run True $
           unlines [
-            "interface (F2able for a) with"    ,
+            "interface (IF2able for a) with"    ,
             " var f2 : (a -> Int)"              ,
             "end"                               ,
-            "implementation F2able for Int with" ,
+            "implementation IF2able for Int with" ,
             " func f2 (v) : (Int -> Int) do"    ,
             "   return v+1"                     ,
             " end"                              ,
             "end"                               ,
-            "implementation F2able for Bool with",
+            "implementation IF2able for Bool with",
             " func f2 (v) : (Bool -> Int) do"   ,
             "   return 0"                       ,
             " end"                              ,
@@ -391,15 +391,15 @@ spec = do
           ])
         `shouldBe` Right (Number 2)
 
-      it "Equalable" $
+      it "IEqualable" $
         (run True $
           unlines [
-            "interface Equalable for a with",
+            "interface IEqualable for a with",
             "   func === : ((a,a) -> Bool)",
             "   func =/= : ((a,a) -> Bool)",
             "end",
             "",
-            "implementation Equalable for Bool with",
+            "implementation IEqualable for Bool with",
             "   func === (x,y) : ((Bool,Bool) -> Bool) do",
             "     return x",
             "   end",
@@ -411,56 +411,56 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","False"] Unit)
 
-      it "Ord extends Eq" $
+      it "IOrd extends IEq" $
         (run True $
           unlines [
-            "interface Eq for a with",
+            "interface IEq for a with",
             "   func === : ((a,a) -> Bool)",
             "end",
             "",
-            "interface (Ord for a) extends (Eq for a) with",
+            "interface (IOrd for a) extends (IEq for a) with",
             "   func =>= : ((a,a) -> Bool)",
             "end",
             "",
-            "implementation (Ord for Bool) with",
+            "implementation (IOrd for Bool) with",
             "   func =>= (x,y) : ((Bool,Bool) -> Bool) do return x === y end",
             "end",
             "",
             "return (Bool.True) =>= (Bool.False)"
           ])
-        `shouldBe` Left "(line 9, column 1):\nimplementation 'Eq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated instance for type '((Bool,Bool) -> top)' in class 'Eq'\n"
+        `shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated instance for type '((Bool,Bool) -> top)' in class 'IEq'\n"
 
-      it "Ord extends Eq" $
+      it "IOrd extends IEq" $
         (run True $
           unlines [
-            "interface (Ord for a) extends (Eq for a) with",
+            "interface (IOrd for a) extends (IEq for a) with",
             "   func =>= : ((a,a) -> Bool)",
             "end",
             "",
-            "implementation (Ord for Bool) with",
+            "implementation (IOrd for Bool) with",
             "   func =>= (x,y) : ((Bool,Bool) -> Bool) do return x end",
             "end",
             "",
             "return (Bool.True) =>= (Bool.False)"
           ])
-        `shouldBe` Left "(line 1, column 1):\ninterface 'Eq' is not declared\n(line 5, column 1):\nimplementation 'Eq for Bool' is not declared\n"
+        `shouldBe` Left "(line 1, column 1):\ninterface 'IEq' is not declared\n(line 5, column 1):\nimplementation 'IEq for Bool' is not declared\n"
 
-      it "Ord extends Eq" $
+      it "IOrd extends IEq" $
         (run True $
           unlines [
-            "interface Eq for a with",
+            "interface IEq for a with",
             "   func =%= : ((a,a) -> Bool)",
             "end",
             "",
-            "interface (Ord for a) extends (Eq for a) with",
+            "interface (IOrd for a) extends (IEq for a) with",
             "   func =$= : ((a,a) -> Bool)",
             "end",
             "",
-            "implementation Eq for Bool with",
+            "implementation IEq for Bool with",
             "   func =%= (x,y) : ((Bool,Bool) -> Bool) do return y end",
             "end",
             "",
-            "implementation (Ord for Bool) with",
+            "implementation (IOrd for Bool) with",
             "   func =$= (x,y) : ((Bool,Bool) -> Bool) do return x =%= y end",
             "end",
             "",
@@ -471,13 +471,13 @@ spec = do
       it "f1/f2/f3" $
         (run True $
           unlines [
-            "interface Fable for a with",
+            "interface IFable for a with",
             "   func f3 :   (a -> Bool)",
             "   func f2 x : (a -> Bool) do return f3 x end",
             "   func f1 x : (a -> Bool) do return f2 x end",
             "end",
             "",
-            "implementation Fable for Bool with",
+            "implementation IFable for Bool with",
             "   func f3 x : (Bool -> Bool) do",
             "     return x",
             "   end",
@@ -486,22 +486,22 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "Fable f1/f2/f3 ; f a is Fable" $
+      it "IFable f1/f2/f3 ; f a is IFable" $
         (run True $
           unlines [
-            "interface Fable for a with",
+            "interface IFable for a with",
             "   func f3 :   (a -> Bool)",
             "   func f2 x : (a -> Bool) do return f3 x end",
             "   func f1 x : (a -> Bool) do return f2 x end",
             "end",
             "",
-            "implementation Fable for Bool with",
+            "implementation IFable for Bool with",
             "   func f3 x : (Bool -> Bool) do",
             "     return x",
             "   end",
             "end",
             "",
-            "func f x : (a -> Bool) where a implements Fable do",
+            "func f x : (a -> Bool) where a implements IFable do",
             "   return f1 x",
             "end",
             "",
