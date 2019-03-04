@@ -227,7 +227,7 @@ supOf (TypeN sups)      (TypeN subs)      = foldr f (True, TypeN [], []) $
 isParametric :: Type -> Bool
 isParametric (TypeV _ _)   = True
 isParametric (TypeF t1 t2) = isParametric t1 || isParametric t2
-isParametric (TypeN l)     = foldr (\tp acc -> isParametric tp || acc) False l
+isParametric (TypeN l)     = any isParametric l
 isParametric _             = False
 
 -------------------------------------------------------------------------------

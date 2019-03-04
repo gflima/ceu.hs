@@ -15,7 +15,7 @@ import Ceu.Parser.Common
 import Ceu.Parser.Token
 import Ceu.Parser.Type        (pType, type_F)
 
-import Ceu.Grammar.Globals    (Source, ID_Var)
+import Ceu.Grammar.Globals    (Source, ID_Var, ID_Class)
 import Ceu.Grammar.Type       (Type(..))
 import Ceu.Grammar.Ann        (annz, source, getAnn, Ann(..))
 import Ceu.Grammar.Full.Full
@@ -102,7 +102,7 @@ stmt_error = do
 pClassFor :: Parser a -> Parser (String,a)
 pClassFor p = do
   par  <- optionMaybe $ tk_sym "("
-  cls  <- tk_ifc
+  cls  <- tk_class
   void <- tk_key "for"
   v    <- p             -- TODO: list of ps
   void <- if isJust par then do tk_sym ")" else do { return () }
@@ -332,10 +332,10 @@ func pos = do
               dcls = (matchLocType pos loc tp')
           in
             case dcls of
-              Nothing  -> do { fail "arity mismatch" }
+              Nothing    -> do { fail "arity mismatch" }
               Just dcls' -> return dcls'
 
-  --ifc <- optionMaybe ((,) <$> (tk_key "where" *> tk_var) <*> (tk_key "implements" *> tk_type))
+  ifc <- optionMaybe ((,) <$> (tk_key "where" *> tk_var) <*> (tk_key "implements" *> tk_class))
 
   void <- tk_key "do"
   imp  <- stmt
@@ -343,11 +343,22 @@ func pos = do
 
   ann  <- do { return annz{source=pos} }
 
-  return $ (tp, Seq ann
-                  dcls
-                  (Seq ann
-                    (Set ann False loc (Arg ann))
-                    imp))
+  return $ (implements tp ifc,
+            Seq ann
+                dcls
+                (Seq ann
+                  (Set ann False loc (Arg ann))
+                  imp))
+
+implements :: Type -> Maybe (ID_Var,ID_Class) -> Type
+implements tp Nothing = tp
+implements tp (Just (var,cls)) = aux (var,cls) tp where
+  aux :: (ID_Var,ID_Class) -> Type -> Type
+  aux (var,cls) (TypeV var' []) | var==var' = TypeV var [cls]
+  aux (var,cls) Type0           = Type0
+  aux (var,cls) (TypeD hier)    = TypeD hier
+  aux (var,cls) (TypeF inp out) = TypeF (aux (var,cls) inp) (aux (var,cls) out)
+  aux (var,cls) (TypeN ts)      = TypeN $ map (aux (var,cls)) ts
 
 stmt_funcs :: Parser Stmt
 stmt_funcs = do

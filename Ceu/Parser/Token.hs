@@ -25,7 +25,7 @@ keywords = [
     "func",
     "if",
     "implementation",
-    --"implements",
+    "implements",
     "interface",
     "loop",
     "set",
@@ -33,7 +33,7 @@ keywords = [
     "then",
     "var",
     "return",
-    --"where",
+    "where",
     "with"
   ]
 tk_reserved :: Parser ()
@@ -79,8 +79,8 @@ tk_var = do
 
 tk_func = tk_var
 
-tk_ifc :: Parser String    -- Int, Int_0   // I, II, int, _Int
-tk_ifc = do
+tk_class :: Parser String    -- Int, Int_0   // I, II, int, _Int
+tk_class = do
     fst <- char 'I'
     snd <- satisfy isUpper
     rst <- many1 $ (digit <|> letter <|> char '_' <?> "interface identifier")

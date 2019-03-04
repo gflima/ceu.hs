@@ -17,10 +17,10 @@ spec :: Spec
 spec = do
 
 -- TypeV (a, [IFable,...])
-{-
     describe "TODO:" $ do
 
-      it "IFable f1/f2/f3 ; f a implements IFable" $
+      -- TODO: PUT-BACK
+      it "IFable f1/f2/f3 ; g/h a implements IFable" $
         (run True $
           unlines [
             "interface IFable for a with",
@@ -29,8 +29,8 @@ spec = do
             "   func f1 x : (a -> Bool) do return f2 x end",
             "end",
             "",
-            "func f x : (a -> Bool) where a implements IFable do",
-            "   return f1 x",
+            "func g x : (a -> Bool) where a implements IFable do",
+            "   return f1 x",   -- dont instantiate f1 bc typeof(x)=a and a is IFable
             "end",
             "",
             "implementation IFable for Bool with",
@@ -39,11 +39,23 @@ spec = do
             "   end",
             "end",
             "",
-            "return f (Bool.True)"
+            "func h x : (a -> Bool) where a implements IFable do",
+            "   return f1 x",
+            "end",
+            "",
+            "func or (x,y) : ((Bool,Bool)->Bool) do",
+            "   if Bool.True <- x then",
+            "     return Bool.True",
+            "   else",
+            "     return y",
+            "   end",
+            "end",
+            "",
+            "return (g (Bool.True)) or (h (Bool.False))"
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
--}
 
+{-
     describe "return:" $ do
         it "return 1" $
             run True "return 1"
@@ -486,28 +498,7 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "IFable f1/f2/f3 ; f a is IFable" $
-        (run True $
-          unlines [
-            "interface IFable for a with",
-            "   func f3 :   (a -> Bool)",
-            "   func f2 x : (a -> Bool) do return f3 x end",
-            "   func f1 x : (a -> Bool) do return f2 x end",
-            "end",
-            "",
-            "implementation IFable for Bool with",
-            "   func f3 x : (Bool -> Bool) do",
-            "     return x",
-            "   end",
-            "end",
-            "",
-            "func f x : (a -> Bool) where a implements IFable do",
-            "   return f1 x",
-            "end",
-            "",
-            "return f (Bool.True)"
-           ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+      -- TODO: PUT-BACK
 
 -------------------------------------------------------------------------------
 
@@ -550,6 +541,7 @@ spec = do
 
 -------------------------------------------------------------------------------
 
+-}
     where
         run :: Bool -> String -> Either String Exp
         run withPrelude input =

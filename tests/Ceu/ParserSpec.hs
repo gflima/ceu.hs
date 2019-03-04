@@ -178,21 +178,21 @@ spec = do
                 parse tk_data_hier "IEq"
                 `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting data identifier"
 
-        describe "tk_ifc:" $ do
+        describe "tk_class:" $ do
             it "Int" $
-                parse tk_ifc "Int"
+                parse tk_class "Int"
                 `shouldBe` Left "(line 1, column 2):\nunexpected \"n\""
             it "U8" $
-                parse tk_ifc "U8"
+                parse tk_class "U8"
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"U\"\nexpecting \"I\""
             it "int" $
-                parse tk_ifc "int"
+                parse tk_class "int"
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"i\"\nexpecting \"I\""
             it "I" $
-                parse tk_ifc "I"
+                parse tk_class "I"
                 `shouldBe` Left "(line 1, column 2):\nunexpected end of input"
             it "III" $
-                parse tk_ifc "III"
+                parse tk_class "III"
                 `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting interface identifier"
 
         describe "tk_key:" $ do
