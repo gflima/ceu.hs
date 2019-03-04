@@ -15,8 +15,8 @@ import Ceu.Grammar.Basic
 fromLeft (Left v) = v
 
 go :: Stmt -> (Errors, Stmt)
-go p = stmt [] [] p
---go p = traceShowId $ stmt [] [] p
+--go p = stmt [] [] p
+go p = traceShowId $ stmt [] p
 
 -------------------------------------------------------------------------------
 
@@ -69,12 +69,12 @@ getErrsTypesDeclared z ids tp = concatMap aux $ map (\id->(id, find (isData $ (=
 
 -------------------------------------------------------------------------------
 
-stmt :: [Stmt] -> [ID_Var] -> Stmt -> (Errors, Stmt)
+stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
 
-stmt ids no (Class z (id,[var]) exts ifc p) = (es0 ++ es1 ++ es2 ++ es3, ret) where
+stmt ids (Class z (id,[var]) exts ifc p) = (es0 ++ es1 ++ es2 ++ es3, ret) where
     es0 = errDeclared z "interface" id ids
-    (es3,p')   = stmt (s':ids) no p
-    (es2,ifc') = stmt ids no ifc
+    (es3,p')   = stmt (s':ids) p
+    (es2,ifc') = stmt ids ifc
     s'         = Class z (id,[var]) exts ifc' (Nop z)
 
     es1 = concatMap f exts
@@ -93,11 +93,11 @@ stmt ids no (Class z (id,[var]) exts ifc p) = (es0 ++ es1 ++ es2 ++ es3, ret) wh
       -- Method w/o implementation (===)
       f (Var z1 id1 tp1 _) acc = Var z1 id1 tp1 acc
 
-stmt ids no (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
+stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
 
-stmt ids no (Inst z (id,[inst_tp]) imp p) =
-  let (esp,p')   = stmt (s':ids) no p
-      (esi,imp') = stmt (filter (not . (isClass $ (==)id)) ids) no imp
+stmt ids (Inst z (id,[inst_tp]) imp p) =
+  let (esp,p')   = stmt (s':ids) p
+      (esi,imp') = stmt (filter (not . (isClass $ (==)id)) ids) imp
                          -- prevent clashes w/ own class
       s'         = Inst z (id,[inst_tp]) imp' (Nop z)
   in
@@ -183,7 +183,7 @@ stmt ids no (Inst z (id,[inst_tp]) imp p) =
 
             ---------------------------------------------------------------------
 
-            (esp,p') = stmt (s' : ids) no p
+            (esp,p') = stmt (s' : ids) p
 
             ret = if all isJust imps then
                     foldr f p' $ map fromJust imps
@@ -229,13 +229,13 @@ stmt ids no (Inst z (id,[inst_tp]) imp p) =
           isSameInst (Inst _ (id',[tp']) _ _) = (id==id' && [inst_tp]==[tp'])
           isSameInst _                        = False
 
-stmt ids no (Inst _ (_,tps) _ _) = error "not implemented: multiple types"
+stmt ids (Inst _ (_,tps) _ _) = error "not implemented: multiple types"
 
-stmt ids no s@(Data z hr [] flds abs p) = (es_dcl ++ (errDeclared z "data" (Type.hier2str hr) ids) ++ es,
+stmt ids s@(Data z hr [] flds abs p) = (es_dcl ++ (errDeclared z "data" (Type.hier2str hr) ids) ++ es,
                                         s')
   where
     s'             = Data z hr [] flds' abs p'
-    (es,p')        = stmt (s':ids) no p
+    (es,p')        = stmt (s':ids) p
     (flds',es_dcl) =
       case Type.getSuper (TypeD hr) of
         Nothing          -> (flds, [])
@@ -247,20 +247,20 @@ stmt ids no s@(Data z hr [] flds abs p) = (es_dcl ++ (errDeclared z "data" (Type
                                       Nothing                     -> Type0
                                       Just (Data _ _ _ sups' _ _) -> sups'
 
-stmt ids no s@(Data z hr vars flds abs p) = error "not implemented"
+stmt ids s@(Data z hr vars flds abs p) = error "not implemented"
 
-stmt ids no s@(Var  z id tp p) = (es_data ++ es_dcl ++ es_id ++ es, Var z id tp p')
+stmt ids s@(Var  z id tp p) = (es_data ++ es_dcl ++ es_id ++ es, Var z id tp p')
                               where
                                 es_data = getErrsTypesDeclared z ids tp
                                 es_id   = errDeclared z "variable" id ids
-                                (es,p') = stmt (s:ids) no p
+                                (es,p') = stmt (s:ids) p
                                 es_dcl = errDeclared z "variable" id ids'
                                 ids' = map fst $ concatMap clssinst2ids $ filter (isClass $ const True) ids
 
-stmt ids no (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fromJust mexp) p1' p2')
+stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fromJust mexp) p1' p2')
   where
-    (es1, p1') = stmt ids no p1
-    (es2, p2') = stmt ids no p2
+    (es1, p1') = stmt ids p1
+    (es2, p2') = stmt ids p2
     (chk', esa, loc', mexp) = aux ids z loc (Right exp)
 
     -- set  x <- 1    // chk=false
@@ -278,7 +278,7 @@ stmt ids no (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' 
     f (rel,txp) tpexp =
       case tpexp of
         Left  tp  -> (map (toError z) (relatesErrors rel txp tp), Nothing)
-        Right exp -> (es, Just exp') where (es,exp') = expr z (rel,txp) ids no exp
+        Right exp -> (es, Just exp') where (es,exp') = expr z (rel,txp) ids exp
 
     fchk :: Type -> Maybe Exp -> Either Type Exp -> Bool
     fchk txp mexp tpexp = not $ isRel SUP txp (maybe (fromLeft tpexp) (type_.getAnn) mexp)
@@ -313,7 +313,7 @@ stmt ids no (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' 
         (LExp e)     -> (True, es++ese, LExp e', mexp)
           where
             (ese,mexp) = f (SUP, type_ $ getAnn e') tpexp
-            (es, e')   = expr z (SUP,TypeT) ids no e
+            (es, e')   = expr z (SUP,TypeT) ids e
 
         (LCons hr l) -> (fchk txp mexp tpexp || chk1, esd++esl++es'++ese, LCons hr l', mexp)
           where
@@ -370,8 +370,8 @@ stmt ids no (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' 
                   (TypeN x) -> x
                   x         -> [x]
 
-stmt ids no (CallS z exp) = (ese++esf, CallS z exp') where
-                         (ese, exp') = expr z (SUP, TypeV "?" []) ids no exp
+stmt ids (CallS z exp) = (ese++esf, CallS z exp') where
+                         (ese, exp') = expr z (SUP, TypeV "?" []) ids exp
                          esf = case exp' of
                           Call _ _ _ -> []
                           otherwise  -> [toError z "expected call"]
@@ -380,34 +380,34 @@ stmt ids no (CallS z exp) = (ese++esf, CallS z exp') where
 
 
 {-
-stmt ids no (If z exp p1 p2)   = (ese ++ es1 ++ es2, If z exp' p1' p2')
+stmt ids (If z exp p1 p2)   = (ese ++ es1 ++ es2, If z exp' p1' p2')
                               where
-                                (ese,exp') = expr z (TypeD ["Bool"]) ids no exp
+                                (ese,exp') = expr z (TypeD ["Bool"]) ids exp
                                   -- VAR: I expect exp.type to be a subtype of Bool
-                                (es1,p1') = stmt ids no p1
-                                (es2,p2') = stmt ids no p2
+                                (es1,p1') = stmt ids p1
+                                (es2,p2') = stmt ids p2
 -}
 
-stmt ids no (Seq z p1 p2)      = (es1++es2, Seq z p1' p2')
+stmt ids (Seq z p1 p2)      = (es1++es2, Seq z p1' p2')
                               where
-                                (es1,p1') = stmt ids no p1
-                                (es2,p2') = stmt ids no p2
-stmt ids no (Loop z p)         = (es, Loop z p')
+                                (es1,p1') = stmt ids p1
+                                (es2,p2') = stmt ids p2
+stmt ids (Loop z p)         = (es, Loop z p')
                               where
-                                (es,p') = stmt ids no p
+                                (es,p') = stmt ids p
 
-stmt ids no (Ret z exp)        = (es, Ret z exp')
+stmt ids (Ret z exp)        = (es, Ret z exp')
                               where
-                                (es,exp') = expr z (SUP,TypeT) ids no exp
+                                (es,exp') = expr z (SUP,TypeT) ids exp
                                   -- VAR: I expect exp.type to be a subtype of Top (any type)
 
-stmt _   _  (Nop z)            = ([], Nop z)
+stmt _   (Nop z)            = ([], Nop z)
 
 -------------------------------------------------------------------------------
 
-expr :: Ann -> (Relation,Type) -> [Stmt] -> [ID_Var] -> Exp -> (Errors, Exp)
-expr z (rel,txp) ids no exp = (es1++es2, exp') where
-  (es1, exp') = expr' (rel,bool (TypeV "?" []) txp (rel==SUP)) ids no exp
+expr :: Ann -> (Relation,Type) -> [Stmt] -> Exp -> (Errors, Exp)
+expr z (rel,txp) ids exp = (es1++es2, exp') where
+  (es1, exp') = expr' (rel,bool (TypeV "?" []) txp (rel==SUP)) ids exp
                            -- only force expected type on SUP
   es2 = if not.null $ es1 then [] else
           map (toError z) (relatesErrors rel txp (type_ $ getAnn exp'))
@@ -423,17 +423,17 @@ expr z (rel,txp) ids no exp = (es1++es2, exp') where
 --  * cons:   ?
 --  * tuple:  instantiate sub exps
 
-expr' :: (Relation,Type) -> [Stmt] -> [ID_Var] -> Exp -> (Errors, Exp)
+expr' :: (Relation,Type) -> [Stmt] -> Exp -> (Errors, Exp)
 
-expr' _       _   _  (Error  z v)     = ([], Error  z{type_=TypeB} v)
-expr' _       _   _  (Number z v)     = ([], Number z{type_=TypeD ["Int",show v]} v)
-expr' _       _   _  (Unit   z)       = ([], Unit   z{type_=Type0})
-expr' (_,txp) _   _  (Arg    z)       = ([], Arg    z{type_=txp})
-expr' _       ids no (Func   z tp p)  = (es, Func   z{type_=tp} tp p')
+expr' _       _   (Error  z v)     = ([], Error  z{type_=TypeB} v)
+expr' _       _   (Number z v)     = ([], Number z{type_=TypeD ["Int",show v]} v)
+expr' _       _   (Unit   z)       = ([], Unit   z{type_=Type0})
+expr' (_,txp) _   (Arg    z)       = ([], Arg    z{type_=txp})
+expr' _       ids (Func   z tp p)  = (es, Func   z{type_=tp} tp p')
                                      where
-                                      (es,p') = stmt ids no p
+                                      (es,p') = stmt ids p
 
-expr' _ ids no (Cons  z hr exp) = (es++es_exp, Cons z{type_=(TypeD hr)} hr exp')
+expr' _ ids (Cons  z hr exp) = (es++es_exp, Cons z{type_=(TypeD hr)} hr exp')
     where
         hr_str = Type.hier2str hr
         (tp,es) = case find (isData $ (==)hr_str) ids of
@@ -443,16 +443,16 @@ expr' _ ids no (Cons  z hr exp) = (es++es_exp, Cons z{type_=(TypeD hr)} hr exp')
               (tp,        [toError z $ "data '" ++ hr_str ++ "' is abstract"])
             Just (Data _ _ _ tp False _) ->
               (tp,        [])
-        (es_exp, exp') = expr z (SUP,tp) ids no exp
+        (es_exp, exp') = expr z (SUP,tp) ids exp
 
-expr' _ ids no (Tuple z exps) = (es, Tuple z{type_=tps'} exps') where
+expr' _ ids (Tuple z exps) = (es, Tuple z{type_=tps'} exps') where
                               rets :: [(Errors,Exp)]
-                              rets  = map (\e -> expr z (SUP,TypeV "?" []) ids no e) exps
+                              rets  = map (\e -> expr z (SUP,TypeV "?" []) ids e) exps
                               es    = concat $ map fst rets
                               exps' = map snd rets
                               tps'  = TypeN (map (type_.getAnn) exps')
 
-expr' (rel,txp) ids no (Read z id) = (es, Read z{type_=tp} id') where
+expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where
   (id', tp, es) =
     if id == "_INPUT" then
       (id, TypeD ["Int"], [])
@@ -497,11 +497,11 @@ expr' (rel,txp) ids no (Read z id) = (es, Read z{type_=tp} id') where
                 getTP (Var  _ _ tp _)       = tp
                 sort' ids = ids -- TODO: sort by subtyping (topological order)
 
-expr' (rel,txp) ids no (Call z f exp) = (bool es_exp es_f (null es_exp),
+expr' (rel,txp) ids (Call z f exp) = (bool es_exp es_f (null es_exp),
                                      Call z{type_=tp_out} f' exp')
   where
-    (es_exp, exp') = expr z (rel,TypeV "?" []) ids no exp
-    (es_f,   f')   = expr z (rel,TypeF (type_$getAnn$exp') txp) ids no f
+    (es_exp, exp') = expr z (rel,TypeV "?" []) ids exp
+    (es_f,   f')   = expr z (rel,TypeF (type_$getAnn$exp') txp) ids f
 
     tp_out = case type_ $ getAnn f' of
       TypeF _ out -> out
