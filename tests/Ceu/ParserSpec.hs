@@ -489,7 +489,7 @@ spec = do
                 `shouldBe` Right (FuncS annz{source=("",1,1)} "add" (TypeF (TypeN [TypeD ["Int"],TypeD ["Int"]]) (TypeD ["Int"])) (Seq annz{source=("",1,1)} (Seq annz{source=("",0,0)} (Var annz{source=("",1,1)} "a" (TypeD ["Int"])) (Nop annz{source=("",0,0)})) (Seq annz{source=("",1,1)} (Set annz{source=("",1,1)} False (LTuple [LVar "a",LAny]) (Arg annz{source=("",1,1)})) (Nop annz{source=("",1,41)}))))
             it "func add (...) : (...)" $
                 parse stmt_funcs "func add (a,_) : ((Int, Int) -> Int)"
-                `shouldBe` Left "(line 1, column 37):\nunexpected end of input\nexpecting \"do\""
+                `shouldBe` Left "(line 1, column 37):\nunexpected end of input\nexpecting \"where\" or \"do\""
             it "func add : (...)" $
                 parse stmt_funcs "func add : ((Int, Int) -> Int)"
                 `shouldBe` Right (Var annz{source=("",1,1)} "add" (TypeF (TypeN [TypeD ["Int"],TypeD ["Int"]]) (TypeD ["Int"])))

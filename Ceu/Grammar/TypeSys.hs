@@ -477,7 +477,7 @@ expr' (rel,txp) ids no (Read z id) = (es, Read z{type_=tp} id') where
                 Right (_,insts) ->
                   let tp = Type.instantiate (traceShowId insts) (traceShowId $ TypeV clss_var []) in
                     if Type.isParametric tp then
-                      traceShowId (id, tp, [])
+                      (id, tp, [])  -- TODO: (TypeV "?") should be error
                     else
                       case find (isRel SUB tp . getTP) $ filter (isInst $ (==cls)) (sort' ids) of
                         Nothing -> (id, TypeV "?" [],
