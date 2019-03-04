@@ -21,7 +21,7 @@ error_match     = -2
 data Exp
     = Error  Int
     | Number Int            -- 1
-    | Cons   [ID_Type] Exp  -- True
+    | Cons   ID_Data_Hier Exp  -- True
     | Read   ID_Var         -- a ; xs
     | Unit                  -- ()
     | Tuple  [Exp]          -- (1,2) ; ((1),2) ; ((1,2),3) ; ((),()) // (len >= 2)
@@ -33,7 +33,7 @@ data Loc = LAny
          | LVar ID_Var
          | LUnit
          | LNumber Int
-         | LCons [ID_Type] Loc
+         | LCons ID_Data_Hier Loc
          | LTuple [Loc]
          | LExp Exp
   deriving (Eq, Show)

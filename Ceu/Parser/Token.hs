@@ -4,7 +4,7 @@ import Control.Monad          (void, guard, when)
 import Data.Char              (isLower, isUpper)
 import Data.List              (intercalate)
 
-import Ceu.Grammar.Globals    (ID_Type)
+import Ceu.Grammar.Globals    (ID_Data_Hier)
 
 import Text.Parsec.Prim       (many, (<|>), (<?>), try, unexpected)
 import Text.Parsec.String     (Parser)
@@ -99,7 +99,7 @@ tk_data = do
     s
     return (fst:snd:rst)
 
-tk_data_hier :: Parser [ID_Type]
+tk_data_hier :: Parser ID_Data_Hier
 tk_data_hier = do
   v <- (:) <$> tk_data <*> many (try $ tk_sym "." *> tk_data)
   return v

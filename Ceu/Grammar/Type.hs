@@ -10,7 +10,7 @@ import Ceu.Grammar.Globals
 data Type = TypeB
           | TypeT
           | Type0
-          | TypeD [ID_Type]
+          | TypeD ID_Data_Hier
           | TypeN [Type]    -- (len >= 2)
           | TypeF Type Type
           | TypeV ID_Var
@@ -33,15 +33,15 @@ show' (TypeN tps)     = "(" ++ intercalate "," (map show' tps) ++ ")"
 
 -------------------------------------------------------------------------------
 
-get1s :: Type -> [ID_Type]
+getDs :: Type -> [ID_Data]
 
-get1s (TypeV _)       = []
-get1s TypeT           = []
-get1s TypeB           = []
-get1s Type0           = []
-get1s (TypeD hier)    = [hier2str hier]
-get1s (TypeF inp out) = get1s inp ++ get1s out
-get1s (TypeN ts)      = concatMap get1s ts
+getDs (TypeV _)       = []
+getDs TypeT           = []
+getDs TypeB           = []
+getDs Type0           = []
+getDs (TypeD hier)    = [hier2str hier]
+getDs (TypeF inp out) = getDs inp ++ getDs out
+getDs (TypeN ts)      = concatMap getDs ts
 
 -------------------------------------------------------------------------------
 

@@ -12,7 +12,7 @@ import qualified Ceu.Grammar.Basic as B
 data Exp
     = Error  Ann Int            -- 1
     | Number Ann Int            -- 1
-    | Cons   Ann [ID_Type] Exp  -- True
+    | Cons   Ann ID_Data_Hier Exp  -- True
     | Read   Ann ID_Var         -- a ; xs
     | Arg    Ann
     | Unit   Ann                -- ()
@@ -50,7 +50,7 @@ data Loc = LAny
          | LVar ID_Var
          | LUnit
          | LNumber Int
-         | LCons [ID_Type] Loc
+         | LCons ID_Data_Hier Loc
          | LTuple [Loc]
          | LExp Exp
   deriving (Eq, Show)
@@ -68,7 +68,7 @@ toBasicLoc (LExp   exp)     = B.LExp (toBasicExp exp)
 data Stmt
   = Class    Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] Stmt -- new class declaration
   | Inst     Ann (ID_Class,[Type])   Stmt           -- new class instance
-  | Data     Ann [ID_Type] [ID_Var] Type Bool     -- new type declaration
+  | Data     Ann ID_Data_Hier [ID_Var] Type Bool     -- new type declaration
   | Var      Ann ID_Var Type                      -- variable declaration
   | FuncS    Ann ID_Var Type Stmt                 -- function declaration
   | Match    Ann Loc Exp Stmt Stmt                -- match
@@ -80,7 +80,7 @@ data Stmt
   | Scope    Ann Stmt                             -- scope for local variables
   | Class'   Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] Stmt Stmt -- new class declaration
   | Inst'    Ann (ID_Class,[Type]) Stmt Stmt      -- new class instance
-  | Data'    Ann [ID_Type] [ID_Var] Type Bool Stmt -- new type declaration w/ stmts in scope
+  | Data'    Ann ID_Data_Hier [ID_Var] Type Bool Stmt -- new type declaration w/ stmts in scope
   | Var'     Ann ID_Var Type Stmt                 -- variable declaration w/ stmts in scope
   | Match'   Ann Bool Loc Exp Stmt Stmt           -- match w/ chk
   | Nop      Ann                                  -- nop as in basic Grammar

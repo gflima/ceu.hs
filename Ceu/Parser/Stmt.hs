@@ -99,8 +99,8 @@ stmt_error = do
 
 -------------------------------------------------------------------------------
 
-pIfcFor :: Parser a -> Parser (String,a)
-pIfcFor p = do
+pClassFor :: Parser a -> Parser (String,a)
+pClassFor p = do
   par  <- optionMaybe $ tk_sym "("
   cls  <- tk_ifc
   void <- tk_key "for"
@@ -112,8 +112,8 @@ stmt_class :: Parser Stmt
 stmt_class = do
   pos       <- pos2src <$> getPosition
   void      <- try $ tk_key "interface"
-  (cls,var) <- pIfcFor tk_var
-  ext       <- optionMaybe $ (tk_key "extends" *> pIfcFor tk_var)
+  (cls,var) <- pClassFor tk_var
+  ext       <- optionMaybe $ (tk_key "extends" *> pClassFor tk_var)
   void      <- tk_key "with"
   ifc       <- stmt
   void      <- tk_key "end"
@@ -127,7 +127,7 @@ stmt_inst :: Parser Stmt
 stmt_inst = do
   pos      <- pos2src <$> getPosition
   void     <- try $ tk_key "implementation"
-  (cls,tp) <- pIfcFor pType
+  (cls,tp) <- pClassFor pType
   void     <- tk_key "with"
   imp      <- stmt
   void     <- tk_key "end"

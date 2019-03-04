@@ -10,7 +10,7 @@ data Exp
     = Error  Ann Int
     | Unit   Ann                -- ()
     | Number Ann Int            -- 1
-    | Cons   Ann [ID_Type] Exp  -- Bool.True ; Tree.Node (Tree.Leaf,1,Tree.Leaf)
+    | Cons   Ann ID_Data_Hier Exp  -- Bool.True ; Tree.Node (Tree.Leaf,1,Tree.Leaf)
     | Read   Ann ID_Var         -- a ; xs
     | Arg    Ann
     | Tuple  Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
@@ -36,7 +36,7 @@ data Loc = LAny
          | LVar ID_Var
          | LUnit
          | LNumber Int
-         | LCons [ID_Type] Loc
+         | LCons ID_Data_Hier Loc
          | LTuple [Loc]
          | LExp Exp
   deriving (Eq, Show)
@@ -46,7 +46,7 @@ data Loc = LAny
 data Stmt
     = Class  Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] Stmt Stmt -- new class declaration
     | Inst   Ann (ID_Class,[Type]) Stmt Stmt  -- new class instance
-    | Data   Ann [ID_Type] [ID_Var] Type Bool Stmt -- new type declaration
+    | Data   Ann ID_Data_Hier [ID_Var] Type Bool Stmt -- new type declaration
     | Var    Ann ID_Var  Type Stmt            -- variable declaration
     | Match  Ann Bool Loc Exp Stmt Stmt       -- match/assignment/if statement
     | CallS  Ann Exp                          -- call function

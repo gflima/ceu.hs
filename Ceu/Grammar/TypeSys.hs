@@ -6,7 +6,7 @@ import Data.Maybe (isJust, fromJust)
 import Data.Bool (bool)
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Type as Type (Type(..), show', instantiate, get1s, getSuper,
+import Ceu.Grammar.Type as Type (Type(..), show', instantiate, getDs, getSuper,
                                  cat, hier2str,
                                  Relation(..), relates, isRel, relatesErrors)
 import Ceu.Grammar.Ann
@@ -62,7 +62,7 @@ errDeclared z str id ids =
             (Just _) -> [toError z $ str ++ " '" ++ id ++ "' is already declared"]
 
 getErrsTypesDeclared :: Ann -> [Stmt] -> Type -> Errors
-getErrsTypesDeclared z ids tp = concatMap aux $ map (\id->(id, find (isData $ (==)id) ids)) $ Type.get1s tp
+getErrsTypesDeclared z ids tp = concatMap aux $ map (\id->(id, find (isData $ (==)id) ids)) $ Type.getDs tp
     where
         aux (id, Nothing) = [toError z $ "data '" ++ id ++ "' is not declared"]
         aux (_,  Just _)  = []
