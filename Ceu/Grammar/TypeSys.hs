@@ -4,6 +4,7 @@ import Debug.Trace
 import Data.List (find, intercalate, unfoldr, unzip4, sortBy)
 import Data.Maybe (isJust, fromJust)
 import Data.Bool (bool)
+import qualified Data.Map as Table
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Type as Type (Type(..), show', instantiate, getDs, getSuper,
@@ -35,20 +36,16 @@ isVar   _  _                     = False
 isAny :: (String -> Bool) -> Stmt -> Bool
 isAny f s = isClass f s || isData f s || isVar  f s
 
-clssinst2ids :: Stmt -> [(Stmt,Bool)]
-clssinst2ids p = sortBy fsort $
+clssinst2table :: Stmt -> Table.Map ID_Var Stmt
+clssinst2table p =
   case p of
     (Class _ _ _ ifc _) -> aux ifc
     (Inst  _ _ imp _)   -> aux imp
   where
-    aux :: Stmt -> [(Stmt,Bool)]
-    aux s@(Var _ _ _ (Match _ _ _ _ p _)) = (s,True)  : aux p
-    aux s@(Var _ _ _ p)                   = (s,False) : aux p
-    aux (Nop _)                           = []
-    --aux p = error $ show p
-
-    fsort :: (Stmt,Bool) -> (Stmt,Bool) -> Ordering
-    fsort (Var _ a _ _,_) (Var _ b _ _,_) = compare a b
+    aux :: Stmt -> Table.Map ID_Var Stmt
+    aux s@(Var _ id _ (Match _ _ _ _ p _)) = Table.insert id s (aux p)
+    aux s@(Var _ id _ p)                   = Table.insert id s (aux p)
+    aux (Nop _)                            = Table.empty
 
 err z = Ret z $ Error z (-2)  -- TODO: -2
 
@@ -86,13 +83,13 @@ stmt ids (Class z (id,[var]) exts ifc p) = (es0 ++ es1 ++ es2 ++ es3, ret) where
       Nothing -> [toError z $ "interface '" ++ sup ++ "' is not declared"]
       Just _  -> []
 
-    ret = foldr f p' ids' where
-      ids' = map fst $ clssinst2ids s'
+-- TODO: tirar __TP
+    ret = foldr f p' (Table.elems $ clssinst2table s') where
 
       -- Method w implementation (=/=)
       f (Var z1 id1 tp1 (Match z2 False (LVar id2) exp2 t2 f2)) acc | id1==id2 =
-        (Var z1 (id1++"__"++Type.show' tp1) tp1
-          (Match z2 False (LVar $ id2++"__"++Type.show' tp1) exp2 acc f2))
+        (Var z1 id1 tp1
+          (Match z2 False (LVar id2) exp2 acc f2))
 
       -- Method w/o implementation (===)
       f (Var z1 id1 tp1 _) acc = Var z1 id1 tp1 acc
@@ -123,7 +120,7 @@ stmt ids (Inst z (id,[inst_tp]) imp p) =
           -- class is declared and instance does not exist
           -----------------------------------------------------------------------
 
-          Nothing -> (es1++es2++esi++esp, ret) where
+          Nothing -> (es1++esi++esp++ex++ey++ez, ret) where
 
             -- check extends
             --  interface      (Eq  for a)
@@ -140,92 +137,77 @@ stmt ids (Inst z (id,[inst_tp]) imp p) =
 
             ---------------------------------------------------------------------
 
-            -- compares class vs instance function by function (sorted)
-            -- also collects implementations to add wrappers to Inst
-            (es2,imps) = compares (clssinst2ids cls) (clssinst2ids s') where
-              --compares :: [a] -> [a] -> (Errors, [Maybe (Bool,Stmt)])
-              compares [] [] = ([], [])
+            hcls  = clssinst2table cls
+            hinst = clssinst2table s'
 
-              compares ((imp@(Var z1 id1 tp1 _), has1):l1) [] =
-                (bool ([toError z $ "missing implementation of '" ++ id1 ++ "'"], [Nothing])
-                      ([], [Just (True,imp)]) -- class impl
-                      has1)
-                  +++ compares l1 []
+            -- funcs in cls (w/o default impl) not in inst
+            ex = concatMap f $ Table.keys $ Table.difference (Table.filter g hcls) hinst where
+                    f id = [toError z $ "missing implementation of '" ++ id ++ "'"]
+                    g (Var _ _ _ (Match _ _ _ _ _ _)) = False
+                    g _                               = True
 
-              compares [] ((Var z2 id2 _ _, _):l2) =
-                ([toError z2 $ "unexpected implementation of '" ++ id2 ++ "'"],[])
-                  +++ compares [] l2
+            -- funcs in inst not in cls
+            ey = concatMap f $ Table.keys $ Table.difference hinst hcls where
+                    f id = [toError z $ "unexpected implementation of '" ++ id ++ "'"]
 
-              compares ((imp1@(Var z1 id1 tp1 _), has1):l1)
-                       l2'@((imp2@(Var z2 id2 tp2 imp), has2):l2) =
-                if id1 == id2 then
-                  let es = case imp of
-                            Match _ _ _ _ _ _ -> []
-                            otherwise -> [toError z2 $ "missing implementation of '" ++ id2 ++ "'"]
-                  in
-                    (clssVSinst z2 tp1 tp2 ++ es, [Just (False,imp2)]) +++ compares l1 l2
-                else                          -- inst impl
-                  if has1 then
-                    ([],[Just (True,imp1)]) +++ compares l1 l2'
-                  else                        -- class impl
-                    ([toError z $ "missing implementation of '" ++ id1 ++ "'"],[Nothing])
-                      +++ compares l1 l2'
-
-              compares _ ((y,_):_) = ([toError (getAnn y) $ "unexpected statement"], [])
-
-              -- check if (Inst tps) match (Class vars) in all functions
-              clssVSinst z tp1 tp2 =
-                case relates SUP tp1 tp2 of
-                  Left es -> map (toError z) es
-                  Right (_,insts) ->
-                    let tp' = Type.instantiate insts (TypeV clss_var []) in
-                      if tp' == inst_tp then []
-                                   else [toError z $ "types do not match : expected '" ++
-                                        (Type.show' inst_tp) ++ "' : found '" ++
-                                        (Type.show' tp') ++ "'"]
-              (+++) (a1,b1) (a2,b2) = (a1++a2, b1++b2)
+            -- funcs in both: check sigs // check impls
+            ez = concat $ Table.elems $ Table.intersectionWith f hcls hinst where
+                    f (Var _ _ tp1 _) (Var z2 id2 tp2 imp) =
+                      case relates SUP tp1 tp2 of
+                        Left es -> map (toError z2) es
+                        Right (_,insts) ->
+                          let tp' = Type.instantiate insts (TypeV clss_var []) in
+                            if tp' == inst_tp then
+                              []
+                            else
+                              [toError z $ "types do not match : expected '" ++
+                                (Type.show' inst_tp) ++ "' : found '" ++
+                                (Type.show' tp') ++ "'"]
+                      ++
+                      case imp of
+                        Match _ _ _ _ _ _ -> []
+                        otherwise         -> [toError z2 $ "missing implementation of '" ++ id2 ++ "'"]
 
             ---------------------------------------------------------------------
 
             (esp,p') = stmt (s' : ids) p
 
-            ret = if all isJust imps then
-                    foldr f p' $ map fromJust imps
-                  else
-                    p'
-                  where
-                    -- instance implementation:
-                    -- body -> (f1,f2,...)<-(f1_tp,f2_tp,...) ; body
-                    f :: (Bool,Stmt) -> Stmt -> Stmt
-                    f (False, Var z1 id1 tp1 (Match z2 False (LVar id2) exp _ e2)) acc
-                      | (id1 == id2) =
-                        Var z1 (id1++"__"++Type.show' tp1) tp1
-                          (Match z2 False (LVar $ id2++"__"++Type.show' tp1)
-                                          (wrap tp1 exp)
-                                          acc e2)
-                    f (False, Var _ _ _ _) acc = acc -- TODO: to pass tests
+            ret = foldr f p' imps where
+              imps = Table.elems $ Table.union (Table.map ((,) True)  hinst) -- prefer instance implementations
+                                           (Table.map ((,) False) hcls)
 
-                    -- class implementation:
-                    -- body -> (f1,f2,...)<-(f1_tp,f2_tp,...) ; f_default()
-                    f (True,  Var z id tp _) acc =
-                      Var z (id ++ "__" ++ Type.show' tp') tp
-                        (Match z False (LVar $ id ++ "__" ++ Type.show' tp')
-                          (wrap tp' $ Read z (id++"__"++Type.show' tp))
-                          acc (err z))
-                      where
-                        tp' = Type.instantiate [(clss_var,inst_tp)] tp
+              -- instance implementation:
+              -- body -> (f1,f2,...)<-(f1_tp,f2_tp,...) ; body
+              f :: (Bool,Stmt) -> Stmt -> Stmt
+              f (True, Var z1 id1 tp1 (Match z2 False (LVar id2) exp _ e2)) acc
+                | (id1 == id2) =
+                  Var z1 (id1++"__"++Type.show' tp1) tp1
+                    (Match z2 False (LVar $ id2++"__"++Type.show' tp1)
+                                    (wrap tp1 exp)
+                                    acc e2)
+              f (True, Var _ _ _ _) acc = acc -- TODO: to pass tests
 
-                    wrap :: Type -> Exp -> Exp
-                    wrap tp body = Func z tp $
-                                    foldr f (Ret z $ Call z body (Read z "_arg"))
-                                      $ map (snd.fromJust) imps
-                      where
-                        f (Var z id tp _) acc =
-                          Var z id tp
-                            (Match z False (LVar id)
-                              (Read z (id++"__"++Type.show' tp))
-                              acc
-                              (err z))
+              -- class implementation:
+              -- body -> (f1,f2,...)<-(f1_tp,f2_tp,...) ; f_default()
+              f (False,  Var z id tp _) acc =
+                Var z (id ++ "__" ++ Type.show' tp') tp
+                  (Match z False (LVar $ id ++ "__" ++ Type.show' tp')
+                    (wrap tp' $ Read z id)
+                    acc (err z))
+                where
+                  tp' = Type.instantiate [(clss_var,inst_tp)] tp
+
+              wrap :: Type -> Exp -> Exp
+              wrap tp body = Func z tp $
+                              foldr f (Ret z $ Call z body (Read z "_arg"))
+                                $ map snd $ filter fst imps
+                where
+                  f (Var z id tp _) acc =
+                    Var z id tp
+                      (Match z False (LVar id)
+                        (Read z (id++"__"++Type.show' tp))
+                        acc
+                        (err z))
 
           -----------------------------------------------------------------------
 
@@ -259,7 +241,7 @@ stmt ids s@(Var  z id tp p) = (es_data ++ es_dcl ++ es_id ++ es, Var z id tp p')
                                 es_id   = errDeclared z "variable" id ids
                                 (es,p') = stmt (s:ids) p
                                 es_dcl = errDeclared z "variable" id ids'
-                                ids' = map fst $ concatMap clssinst2ids $ filter (isClass $ const True) ids
+                                ids' = Table.elems $ Table.unions $ map clssinst2table $ filter (isClass $ const True) ids
 
 stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fromJust mexp) p1' p2')
   where
@@ -463,12 +445,12 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where
     else
       -- find in top-level ids | id : a
       case find (isVar $ (==)id) ids of
-        Just (Var _ _ tp _) -> traceShowId (id, tp, [])   -- found
+        Just (Var _ _ tp _) -> (id, tp, [])   -- found
         Nothing             ->                -- not found
           -- find in classes | class X a with id : a
           case find (\(_,var) -> isJust var)            -- Just (clsI, Just (Var ...))
                $ map (\(cls,ids) -> (cls, find (isVar $ (==)id) ids)) -- [(cls1,Just (Var .)), .]
-               $ map (\cls -> (cls, map fst $ clssinst2ids cls)) -- [(cls1,ids1), ...]
+               $ map (\cls -> (cls, Table.elems $ clssinst2table cls)) -- [(cls1,ids1), ...]
                $ filter (isClass $ const True) ids              -- [cls1,cls2, ...]
             of
             -- not found
@@ -479,7 +461,7 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where
               case relates rel txp tp_var of
                 Left  es        -> (id, TypeV "?" [], map (toError z) es)
                 Right (_,insts) ->
-                  let tp = Type.instantiate (traceShowId insts) (traceShowId $ TypeV clss_var []) in
+                  let tp = Type.instantiate insts (TypeV clss_var []) in
                     if Type.isParametric tp then
                       (id, tp, [])  -- TODO: (TypeV "?") should be error
                     else
@@ -492,10 +474,10 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where
                           (id ++ "__" ++ Type.show' tp', tp', []) where
                             tp' = Type.instantiate [(clss_var,inst_tp)] $ getTP $
                                     fromJust $ find (isVar $ (==)id)
-                                                    (map fst $ clssinst2ids (fst pp))
-                          --case find (isVar $ (==)id) (map fst $ clssinst2ids inst) of
+                                                    (Table.elems $ clssinst2table (fst pp))
+                          --case find (isVar $ (==)id) (Table.elems $ clssinst2table inst) of
                             --Just p  -> (getTP p, [])
-                            --Nothing -> (getTP $ fromJust $ find (isVar $ (==)id) (map fst $ clssinst2ids (fst pp)), [])
+                            --Nothing -> (getTP $ fromJust $ find (isVar $ (==)id) (Table.elems $ clssinst2table (fst pp)), [])
               where
                 getTP (Inst _ (_,[tp]) _ _) = tp
                 getTP (Var  _ _ tp _)       = tp

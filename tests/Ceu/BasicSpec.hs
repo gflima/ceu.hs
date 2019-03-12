@@ -534,7 +534,7 @@ spec = do
           (Var annz "fff" (TypeF (TypeD ["A"]) Type0)
           (Nop annz))
         (Nop annz))))))
-      `shouldBe` ["missing implementation of 'fff'","instance 'Xable (A)' is already declared"]
+      `shouldBe` ["instance 'Xable (A)' is already declared","missing implementation of 'fff'"]
 
     it "A ; Xable a ; inst Xable A ; ()/=Int" $
       (fst $ TypeSys.go
@@ -615,7 +615,7 @@ spec = do
           (Var annz "fff" (TypeF (TypeD ["A"]) Type0)
           (Nop annz))
         (CallS annz (Call annz (Read annz "fff") (Number annz 1))))))))
-      `shouldBe` ["missing implementation of 'fff'","variable 'fff' has no associated instance for data '(Int.1 -> ?)' in class 'Xable'"]
+      `shouldBe` ["variable 'fff' has no associated instance for data '(Int.1 -> ?)' in class 'Xable'","missing implementation of 'fff'"]
 
     it "Int ; Bool ; Equalable a ; eq 1 Bool" $
       (fst $ TypeSys.go
