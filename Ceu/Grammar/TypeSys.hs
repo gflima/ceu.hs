@@ -69,30 +69,42 @@ getErrsTypesDeclared z ids tp = concatMap aux $ map (\id->(id, find (isData $ (=
 stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
 
 stmt ids (Class z (id,[var]) exts ifc p) = (es0 ++ es1 ++ es2 ++ es3, ret) where
-    es0 = errDeclared z "interface" id ids
-    (es3,p')   = stmt (s':ids) p
-    (es2,ifc') = stmt ids ifc
-    s'         = Class z (id,[var]) exts ifc' (Nop z)
+  es0 = errDeclared z "interface" id ids
+  (es3,p')   = stmt (s':ids) (cat ifc p)
+  (es2,ifc') = stmt ids ifc
+  s'         = Class z (id,[var]) exts ifc' (Nop z)
 
-    -- add constraint to each tp in var
-    -- unifica vars com retorno
-    -- nao precisa de s'
+  -- add constraint to each tp in var
+  -- unifica vars com retorno
+  -- nao precisa de s'
 
-    es1 = concatMap f exts
-    f (sup,_) = case find (isClass $ (==)sup) ids of
-      Nothing -> [toError z $ "interface '" ++ sup ++ "' is not declared"]
-      Just _  -> []
+  es1 = concatMap f exts
+  f (sup,_) = case find (isClass $ (==)sup) ids of
+    Nothing -> [toError z $ "interface '" ++ sup ++ "' is not declared"]
+    Just _  -> []
 
--- TODO: tirar __TP
-    ret = foldr f p' (Table.elems $ clssinst2table s') where
+  ret = foldr f p' (Table.elems $ clssinst2table s') where
 
-      -- Method w implementation (=/=)
-      f (Var z1 id1 tp1 (Match z2 False (LVar id2) exp2 t2 f2)) acc | id1==id2 =
-        (Var z1 id1 tp1
-          (Match z2 False (LVar id2) exp2 acc f2))
+    -- Method w implementation (=/=)
+    f (Var z1 id1 tp1 (Match z2 False (LVar id2) exp2 t2 f2)) acc | id1==id2 =
+      (Var z1 id1 tp1
+        (Match z2 False (LVar id2) exp2 acc f2))
 
-      -- Method w/o implementation (===)
-      f (Var z1 id1 tp1 _) acc = Var z1 id1 tp1 acc
+    -- Method w/o implementation (===)
+    f (Var z1 id1 tp1 _) acc = Var z1 id1 tp1 acc
+
+  -- f, g, ..., p   (f,g,... may have type constraints)
+  cat (Var z id tp (Match z2 False loc exp t f)) p =
+    Var z id (constraint tp) (Match z2 False loc exp (cat t p) f)
+  cat (Var z id tp q) p = Var z id (constraint tp) (cat q p)
+  cat (Nop _) p         = p
+
+  constraint Type0                      = Type0
+  constraint (TypeD x)                  = TypeD x
+  constraint (TypeN l)                  = TypeN $ map constraint l
+  constraint (TypeF inp out)            = TypeF (constraint inp) (constraint out)
+  constraint (TypeV var' l) | var==var' = TypeV var' (id:l)
+                            | otherwise = TypeV var' l
 
 stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
 
