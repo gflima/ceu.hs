@@ -76,7 +76,7 @@ stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
 
 stmt ids s@(Class z (id,[var]) exts ifc p) = (esMe ++ esExts ++ esIfc ++ esP, ret) where
   esMe      = errDeclared z "interface" id ids
-  (esP,p')  = stmt (s:ids) p
+  (esP,p')  = stmt (s:ids) p  -- XXX: nao usar s p/ funcoes, usar cat
   (esIfc,_) = stmt ids ifc
   esExts    = concatMap f exts where
                 f (sup,_) = case find (isClass $ (==)sup) ids of
@@ -100,30 +100,25 @@ stmt ids s@(Class z (id,[var]) exts ifc p) = (esMe ++ esExts ++ esIfc ++ esP, re
 
 stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
 
-stmt ids s@(Inst z (id,[inst_tp]) imp p) =
-  let (esp,p')   = stmt (s:ids) p
-      (esi,imp') = stmt (s : filter (not . (isClass $ (==)id)) ids) imp
+stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP ++ esImp, ret) where
+  (esP,p')     = stmt (s'++ids) p   -- XXX: nao usar s p/ funcoes, usar cat
+  (esImp,imp') = stmt (s : filter (not . (isClass $ (==)id)) ids) imp
                          -- prevent clashes w/ own class
-  in
-    -- check if class is declared
+
+  (ret, s', es) =
     case find (isClass $ (==)id) ids of
+      -- class is not declared
+      Nothing -> (p', [], [toError z $ "interface '" ++ id ++ "' is not declared"])
 
-      Nothing -> (es++esi++esp, p') where
-                 es = [toError z $ "interface '" ++ id ++ "' is not declared"]
-
+      -- class is declared
       Just cls@(Class _ (_,[clss_var]) exts ifc _) ->
 
-        -- check if this instance is already declared
         case find isSameInst ids of
-          Just _  -> (es++esi++esp, p') where
-                     es = [toError z $ "instance '" ++ id ++ " (" ++
-                           intercalate "," [Type.show' inst_tp] ++ ")' is already declared"]
+          -- instance is already declared
+          Just _  -> (p', [], [toError z $ "instance '" ++ id ++ " (" ++ intercalate "," [Type.show' inst_tp] ++ ")' is already declared"])
 
-          -----------------------------------------------------------------------
-          -- class is declared and instance does not exist
-          -----------------------------------------------------------------------
-
-          Nothing -> (es1++esi++esp++ex++ey++ez, ret) where
+          -- instance is not declared
+          Nothing -> (ret, [s], es1++ex++ey++ez) where
 
             -- check extends
             --  interface      (Eq  for a)
@@ -172,8 +167,6 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) =
                         otherwise         -> [toError z2 $ "missing implementation of '" ++ id2 ++ "'"]
 
             ---------------------------------------------------------------------
-
-            (esp,p') = stmt (s:ids) p
 
             ret = foldr f p' imps where
               imps = Table.elems $ Table.union (Table.map ((,) True)  hinst) -- prefer instance implementations
