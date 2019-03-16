@@ -7,7 +7,7 @@ import Data.Bool (bool)
 import qualified Data.Map as Table
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Type as Type (Type(..), show', instantiate, getDs, getSuper,
+import Ceu.Grammar.Type as Type (Type(..), show', instantiate, getDs, getVs, getSuper,
                                  cat, hier2str, isParametric,
                                  Relation(..), relates, isRel, relatesErrors)
 import Ceu.Grammar.Ann
@@ -55,8 +55,14 @@ errDeclared :: Ann -> String -> String -> [Stmt] -> Errors
 errDeclared z str id ids =
     if (take 1 id == "_") then [] else    -- nested _ret, __and (par/and)
         case find (isAny $ (==)id) ids of
-            Nothing  -> []
-            (Just _) -> [toError z $ str ++ " '" ++ id ++ "' is already declared"]
+            Nothing             -> []
+            Just (Var _ _ tp _) ->
+              case find (isInst (\id -> elem id (Type.getVs tp))) ids of
+                Just _          -> []
+                Nothing         -> err
+            Just _              -> err
+        where
+          err = [toError z $ str ++ " '" ++ id ++ "' is already declared"]
 
 getErrsTypesDeclared :: Ann -> [Stmt] -> Type -> Errors
 getErrsTypesDeclared z ids tp = concatMap aux $ map (\id->(id, find (isData $ (==)id) ids)) $ Type.getDs tp
@@ -68,30 +74,16 @@ getErrsTypesDeclared z ids tp = concatMap aux $ map (\id->(id, find (isData $ (=
 
 stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
 
-stmt ids (Class z (id,[var]) exts ifc p) = (es0 ++ es1 ++ es2 ++ es3, ret) where
-  es0 = errDeclared z "interface" id ids
-  (es3,p')   = stmt (s':ids) (cat ifc p)
-  (es2,ifc') = stmt ids ifc
-  s'         = Class z (id,[var]) exts ifc' (Nop z)
+stmt ids s@(Class z (id,[var]) exts ifc p) = (esMe ++ esExts ++ esIfc ++ esP, ret) where
+  esMe      = errDeclared z "interface" id ids
+  (esP,p')  = stmt (s:ids) p
+  (esIfc,_) = stmt ids ifc
+  esExts    = concatMap f exts where
+                f (sup,_) = case find (isClass $ (==)sup) ids of
+                  Nothing -> [toError z $ "interface '" ++ sup ++ "' is not declared"]
+                  Just _  -> []
 
-  -- add constraint to each tp in var
-  -- unifica vars com retorno
-  -- nao precisa de s'
-
-  es1 = concatMap f exts
-  f (sup,_) = case find (isClass $ (==)sup) ids of
-    Nothing -> [toError z $ "interface '" ++ sup ++ "' is not declared"]
-    Just _  -> []
-
-  ret = foldr f p' (Table.elems $ clssinst2table s') where
-
-    -- Method w implementation (=/=)
-    f (Var z1 id1 tp1 (Match z2 False (LVar id2) exp2 t2 f2)) acc | id1==id2 =
-      (Var z1 id1 tp1
-        (Match z2 False (LVar id2) exp2 acc f2))
-
-    -- Method w/o implementation (===)
-    f (Var z1 id1 tp1 _) acc = Var z1 id1 tp1 acc
+  ret = cat ifc p'
 
   -- f, g, ..., p   (f,g,... may have type constraints)
   cat (Var z id tp (Match z2 False loc exp t f)) p =
@@ -108,11 +100,10 @@ stmt ids (Class z (id,[var]) exts ifc p) = (es0 ++ es1 ++ es2 ++ es3, ret) where
 
 stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
 
-stmt ids (Inst z (id,[inst_tp]) imp p) =
-  let (esp,p')   = stmt (s':ids) p
-      (esi,imp') = stmt (filter (not . (isClass $ (==)id)) ids) imp
+stmt ids s@(Inst z (id,[inst_tp]) imp p) =
+  let (esp,p')   = stmt (s:ids) p
+      (esi,imp') = stmt (s : filter (not . (isClass $ (==)id)) ids) imp
                          -- prevent clashes w/ own class
-      s'         = Inst z (id,[inst_tp]) imp' (Nop z)
   in
     -- check if class is declared
     case find (isClass $ (==)id) ids of
@@ -150,7 +141,7 @@ stmt ids (Inst z (id,[inst_tp]) imp p) =
             ---------------------------------------------------------------------
 
             hcls  = clssinst2table cls
-            hinst = clssinst2table s'
+            hinst = clssinst2table (Inst z (id,[inst_tp]) imp' (Nop z))
 
             -- funcs in cls (w/o default impl) not in inst
             ex = concatMap f $ Table.keys $ Table.difference (Table.filter g hcls) hinst where
@@ -182,7 +173,7 @@ stmt ids (Inst z (id,[inst_tp]) imp p) =
 
             ---------------------------------------------------------------------
 
-            (esp,p') = stmt (s' : ids) p
+            (esp,p') = stmt (s:ids) p
 
             ret = foldr f p' imps where
               imps = Table.elems $ Table.union (Table.map ((,) True)  hinst) -- prefer instance implementations

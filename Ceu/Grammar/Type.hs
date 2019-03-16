@@ -45,6 +45,18 @@ getDs (TypeN ts)      = concatMap getDs ts
 
 -------------------------------------------------------------------------------
 
+getVs :: Type -> [ID_Class]
+
+getVs (TypeV _ clss)  = clss
+getVs TypeT           = []
+getVs TypeB           = []
+getVs Type0           = []
+getVs (TypeD hier)    = []
+getVs (TypeF inp out) = getVs inp ++ getVs out
+getVs (TypeN ts)      = concatMap getVs ts
+
+-------------------------------------------------------------------------------
+
 getSuper :: Type -> Maybe Type
 getSuper (TypeD [_])  = Nothing
 getSuper (TypeD hier) = Just $ TypeD (init hier)

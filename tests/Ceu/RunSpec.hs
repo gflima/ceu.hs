@@ -57,7 +57,6 @@ spec = do
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
 {-
--}
 
     describe "return:" $ do
         it "return 1" $
@@ -543,6 +542,7 @@ spec = do
             `shouldBe` Right (Number 1)
 
 -------------------------------------------------------------------------------
+-}
 
     where
         run :: Bool -> String -> Either String Exp
