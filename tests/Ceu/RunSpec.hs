@@ -16,47 +16,7 @@ main = hspec spec
 spec :: Spec
 spec = do
 
--- TypeV (a, [IFable,...])
-    describe "TODO:" $ do
-
-      -- TODO: PUT-BACK
-      it "IFable f1/f2/f3 ; g/h a implements IFable" $
-        (run True $
-          unlines [
-            "interface IFable for a with",
-            "   func f3 :   (a -> Bool)",
-            "   func f2 x : (a -> Bool) do return f3 x end",
-            "   func f1 x : (a -> Bool) do return f2 x end",
-            "end",
-            "",
-            "func g x : (a -> Bool) where a implements IFable do",
-            "   return f1 x",   -- dont instantiate f1 bc typeof(x)=a and a is IFable
-            "end",  -- declare one g for each implementation
-            "",
-            "implementation IFable for Bool with",
-            "   func f3 x : (Bool -> Bool) do",
-            "     return x",
-            "   end",
-            "end",
-            "",
-            "func h x : (a -> Bool) where a implements IFable do",
-            "   return f1 x",
-            "end",
-            "",
-            "func or (x,y) : ((Bool,Bool)->Bool) do",
-            "   if Bool.True <- x then",
-            "     return Bool.True",
-            "   else",
-            "     return y",
-            "   end",
-            "end",
-            "",
-            "return (g (Bool.True)) or (h (Bool.False))"
-                    -- g_Bool->Bool
-           ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
-
-{-
+    --describe "TODO:" $ do
 
     describe "return:" $ do
         it "return 1" $
@@ -500,7 +460,41 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      -- TODO: PUT-BACK
+      it "IFable f1/f2/f3 ; g/h a implements IFable" $
+        (run True $
+          unlines [
+            "interface IFable for a with",
+            "   func f3 :   (a -> Bool)",
+            "   func f2 x : (a -> Bool) do return f3 x end",
+            "   func f1 x : (a -> Bool) do return f2 x end",
+            "end",
+            "",
+            "func g x : (a -> Bool) where a implements IFable do",
+            "   return f1 x",   -- dont instantiate f1 bc typeof(x)=a and a is IFable
+            "end",  -- declare one g for each implementation
+            "",
+            "implementation IFable for Bool with",
+            "   func f3 x : (Bool -> Bool) do",
+            "     return x",
+            "   end",
+            "end",
+            "",
+            "func h x : (a -> Bool) where a implements IFable do",
+            "   return f1 x",
+            "end",
+            "",
+            "func or (x,y) : ((Bool,Bool)->Bool) do",
+            "   if Bool.True <- x then",
+            "     return Bool.True",
+            "   else",
+            "     return y",
+            "   end",
+            "end",
+            "",
+            "return (g (Bool.True)) or (h (Bool.False))"
+                    -- g_Bool->Bool
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
 
 -------------------------------------------------------------------------------
 
@@ -542,7 +536,6 @@ spec = do
             `shouldBe` Right (Number 1)
 
 -------------------------------------------------------------------------------
--}
 
     where
         run :: Bool -> String -> Either String Exp

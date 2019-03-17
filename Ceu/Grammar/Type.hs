@@ -55,6 +55,8 @@ getVs (TypeD hier)    = []
 getVs (TypeF inp out) = getVs inp ++ getVs out
 getVs (TypeN ts)      = concatMap getVs ts
 
+hasVs tp = not $ null $ getVs tp
+
 -------------------------------------------------------------------------------
 
 getSuper :: Type -> Maybe Type
@@ -233,14 +235,6 @@ supOf (TypeN sups)      (TypeN subs)      = foldr f (True, TypeN [], []) $
     tops = replicate (length sups - length subs) TypeT
     f (ret, tp, insts) (ret', TypeN tps', insts') =
       (ret&&ret', TypeN (tp:tps'), insts++insts')
-
--------------------------------------------------------------------------------
-
-isParametric :: Type -> Bool
-isParametric (TypeV _ _)   = True
-isParametric (TypeF t1 t2) = isParametric t1 || isParametric t2
-isParametric (TypeN l)     = any isParametric l
-isParametric _             = False
 
 -------------------------------------------------------------------------------
 
