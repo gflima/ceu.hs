@@ -442,6 +442,23 @@ spec = do
           ])
         `shouldBe` Right (Cons ["Bool","False"] Unit)
 
+      it "f1/f2" $
+        (run True $
+          unlines [
+            "interface IFable for a with",
+            "   func f2 :   (a -> Bool)",
+            "   func f1 x : (a -> Bool) do return f2 x end",
+            "end",
+            "",
+            "implementation IFable for Bool with",
+            "   func f2 x : (Bool -> Bool) do",
+            "     return x",
+            "   end",
+            "end",
+            "return f1 (Bool.True)"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
       it "f1/f2/f3" $
         (run True $
           unlines [

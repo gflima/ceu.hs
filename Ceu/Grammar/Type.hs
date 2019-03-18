@@ -5,6 +5,8 @@ import Data.Bool   (bool)
 import Data.Maybe  (fromJust)
 import Data.Either (isRight)
 import Data.List   (sortBy, groupBy, find, intercalate, isPrefixOf)
+import qualified Data.Set as Set
+
 import Ceu.Grammar.Globals
 
 data Type = TypeB
@@ -33,29 +35,32 @@ show' (TypeN tps)     = "(" ++ intercalate "," (map show' tps) ++ ")"
 
 -------------------------------------------------------------------------------
 
-getDs :: Type -> [ID_Data]
+getDs :: Type -> Set.Set ID_Data
 
-getDs (TypeV _ _)     = []
-getDs TypeT           = []
-getDs TypeB           = []
-getDs Type0           = []
-getDs (TypeD hier)    = [hier2str hier]
-getDs (TypeF inp out) = getDs inp ++ getDs out
-getDs (TypeN ts)      = concatMap getDs ts
+getDs (TypeV _ _)     = Set.empty
+getDs TypeT           = Set.empty
+getDs TypeB           = Set.empty
+getDs Type0           = Set.empty
+getDs (TypeD hier)    = Set.singleton $ hier2str hier
+getDs (TypeF inp out) = Set.union (getDs inp) (getDs out)
+getDs (TypeN ts)      = Set.unions $ map getDs ts
 
 -------------------------------------------------------------------------------
 
-getVs :: Type -> [ID_Class]
+getVs :: Type -> Set.Set [ID_Class]
 
-getVs (TypeV _ clss)  = clss
-getVs TypeT           = []
-getVs TypeB           = []
-getVs Type0           = []
-getVs (TypeD hier)    = []
-getVs (TypeF inp out) = getVs inp ++ getVs out
-getVs (TypeN ts)      = concatMap getVs ts
+getVs (TypeV _ clss)  = Set.singleton clss
+getVs TypeT           = Set.empty
+getVs TypeB           = Set.empty
+getVs Type0           = Set.empty
+getVs (TypeD hier)    = Set.empty
+getVs (TypeF inp out) = Set.union (getVs inp) (getVs out)
+getVs (TypeN ts)      = Set.unions $ map getVs ts
 
-hasVs tp = not $ null $ getVs tp
+hasVs tp = not $ Set.null $ getVs tp
+
+getVs' :: Type -> Set.Set ID_Class
+getVs' tp = Set.unions $ map Set.fromList $ Set.toList $ getVs tp
 
 -------------------------------------------------------------------------------
 
@@ -197,8 +202,6 @@ supOf :: Type -> Type -> (Bool, Type, [(ID_Var,Type,Relation)])
                                         -- "a" >= tp (True)
                                         -- "a" <= tp (False)
 
-supOf TypeT             TypeT             = (True,  TypeT, [])
-supOf sup               TypeT             = (False, sup,   [])
 supOf TypeT             sub               = (True,  sub,   [])
 
 supOf _                 TypeB             = (True,  TypeB, [])
@@ -211,6 +214,8 @@ supOf sup               sub@(TypeV a2 _)  = (True,  sub,   [(a2,sup,SUB)])
 supOf Type0             Type0             = (True,  Type0, [])
 supOf Type0             _                 = (False, Type0, [])
 supOf sup               Type0             = (False, sup,   [])
+
+supOf sup               TypeT             = (False, sup,   [])
 
 supOf sup@(TypeD x)     sub@(TypeD y)
   | x `isPrefixOf` y                       = (True,  sub,   [])
@@ -228,11 +233,11 @@ supOf sup@(TypeF inp1 out1) sub@(TypeF inp2 out2) =
 supOf sup@(TypeF _ _)   _                 = (False, sup,   [])
 supOf sup               (TypeF _ _)       = (False, sup,   [])
 
-supOf (TypeN sups)      (TypeN subs)      = foldr f (True, TypeN [], []) $
-                                              zipWith supOf (sups++bots) (subs++tops)
+supOf sup@(TypeN sups)  (TypeN subs)      = if (length subs) /= (length sups) then
+                                              (False, sup, [])
+                                            else
+                                              foldr f (True, TypeN [], []) $ zipWith supOf sups subs
   where
-    bots = replicate (length subs - length sups) TypeB
-    tops = replicate (length sups - length subs) TypeT
     f (ret, tp, insts) (ret', TypeN tps', insts') =
       (ret&&ret', TypeN (tp:tps'), insts++insts')
 
