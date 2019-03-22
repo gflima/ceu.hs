@@ -88,11 +88,9 @@ stmt ids s@(Class z (id,[var]) exts ifc p) = (esMe ++ esExts ++ es, p') where
 
   -- f, g, ..., p   (f,g,... may have type constraints)
   cat (Var z id tp (Match z2 False (LVar id') exp t f)) p | id==id' =
-    Var z id (constraint tp)
-      (Var z (idtp id tp) (constraint tp) (Match z2 False (LVar $ idtp id tp) exp (cat t p) f))
+    Var z id (constraint tp) (Match z2 False (LVar id') exp (cat t p) f)
   cat (Var z id tp q) p =
-    Var z id (constraint tp)
-      (Var z (idtp id tp) (constraint tp) (cat q p))
+    Var z id (constraint tp) (cat q p)
   cat (Nop _) p = p
 
   constraint Type0                      = Type0
@@ -138,8 +136,14 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
 
             hcls        = class2table cls
             (p', hinst) = cat1 [] imp p
-            p''         = foldr cat2 p'  (Table.elems $ Table.difference hcls hinst)
+            p''         = foldr cat2 p'  (filter paramImpls ids)
+            --p''         = foldr cat2 p'  (Table.elems $ Table.difference hcls hinst)
             p'''        = foldr cat3 p'' (Table.elems hcls)
+
+            paramImpls (Var _ id1 tp (Match _ False (LVar id2) _ _ _))
+              | id1==id2  = elem id (Type.getVs' tp)
+              | otherwise = False
+            paramImpls _  = False
 
             ---------------------------------------------------------------------
 
@@ -239,16 +243,23 @@ stmt ids s@(Data z hr [] flds abs p) = (es_dcl ++ (errDeclared z Nothing "data" 
 
 stmt ids s@(Data z hr vars flds abs p) = error "not implemented"
 
-stmt ids s@(Var  z id tp p) = (es_data ++ es_id ++ es, Var z id tp p')
-                              where
-                                es_data = getErrsTypesDeclared z ids tp
-                                es_id   = errDeclared z (Just chk) "variable" id ids
-                                (es,p') = stmt (s:ids) p
+stmt ids s@(Var  z id tp p) = (es_data ++ es_id ++ es, Var z id tp p'') where
+  es_data = getErrsTypesDeclared z ids tp
+  es_id   = errDeclared z (Just chk) "variable" id ids where
+              chk :: Stmt -> Bool
+              chk (Var _ id1 tp'@(TypeF _ _) (Match _ False (LVar id2) _ _ _)) = (id1 /= id2)
+              chk (Var _ id1 tp'@(TypeF _ _) _) = (tp == tp') -- function prototype
+              chk _ = False
+  (es,p'') = stmt (s:ids) p'
 
-                                chk :: Stmt -> Bool
-                                chk (Var _ id1 tp'@(TypeF _ _) (Match _ False (LVar id2) _ _ _)) = (id1 /= id2)
-                                chk (Var _ id1 tp'@(TypeF _ _) _) = (tp == tp') -- function prototype
-                                chk _ = False
+  p' = if take 2 id == "__" then p else
+    case Set.toList $ Type.getVs' tp of
+      []    -> p
+      [cls] -> case p of
+        Match z2 False (LVar id') exp t f
+          | id==id'   -> Var z (idtp id tp) tp (Match z2 False (LVar $ idtp id tp) exp t f)
+          | otherwise -> p
+        _             -> p
 
 stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fromJust mexp) p1' p2')
   where
