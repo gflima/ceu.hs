@@ -308,7 +308,7 @@ spec = do
 
     describe "interface:" $ do
 
-      it "Int ; IF3able a ; inst IF3able Int ; return f3 1" $
+      it "XXX: Int ; IF3able a ; inst IF3able Int ; return f3 1" $
         (run True $
           unlines [
             "interface IF3able for a with"       ,
@@ -442,6 +442,31 @@ spec = do
           ])
         `shouldBe` Right (Cons ["Bool","False"] Unit)
 
+      it "f1" $
+        (run True $
+          unlines [
+            "interface IFable for a with",
+            "   func f1 : (a -> Bool)",
+            "end",
+            "implementation IFable for Bool with",
+            "   func f1 x : (Bool -> Bool) do return Bool.True end",
+            "end",
+            "return f1 (Bool.True)"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "f1 default" $
+        (run True $
+          unlines [
+            "interface IFable for a with",
+            "   func f1 x : (a -> Bool) do return Bool.True end",
+            "end",
+            "implementation IFable for Bool with",
+            "end",
+            "return f1 (Bool.True)"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
       it "f1/f2" $
         (run True $
           unlines [
@@ -477,7 +502,7 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "XXX: IFable f ; g a implements IFable" $
+      it "IFable f ; g a implements IFable" $
         (run True $
           unlines [
             "interface IFable for a with",

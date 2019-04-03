@@ -136,14 +136,8 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
 
             hcls        = class2table cls
             (p', hinst) = cat1 [] imp p
-            p''         = foldr cat2 p'  (filter paramImpls ids)
-            --p''         = foldr cat2 p'  (Table.elems $ Table.difference hcls hinst)
+            p''         = foldr cat2 p'  (Table.elems hcls)
             p'''        = foldr cat3 p'' (Table.elems hcls)
-
-            paramImpls (Var _ id1 tp (Match _ False (LVar id2) _ _ _))
-              | id1==id2  = elem id (Type.getVs' tp)
-              | otherwise = False
-            paramImpls _  = False
 
             ---------------------------------------------------------------------
 
@@ -226,10 +220,10 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
 stmt ids (Inst _ (_,tps) _ _) = error "not implemented: multiple types"
 
 stmt ids s@(Data z hr [] flds abs p) = (es_dcl ++ (errDeclared z Nothing "data" (Type.hier2str hr) ids) ++ es,
-                                        s')
+                                        s' p')
   where
-    s'             = Data z hr [] flds' abs p'
-    (es,p')        = stmt (s':ids) p
+    s'             = Data z hr [] flds' abs
+    (es,p')        = stmt ((s' (Nop annz)):ids) p
     (flds',es_dcl) =
       case Type.getSuper (TypeD hr) of
         Nothing          -> (flds, [])
