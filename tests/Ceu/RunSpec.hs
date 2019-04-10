@@ -308,7 +308,17 @@ spec = do
 
     describe "interface:" $ do
 
-      it "XXX: Int ; IF3able a ; inst IF3able Int ; return f3 1" $
+{-
+__f3__(a -> Int) :: IF3able a => a -> Int   // Class/constraint
+
+__f3__(Int -> Int) :: Int -> Int;           // Inst/cat3
+__f3__(Int -> Int) :: Int -> Int :
+  f3 = __f3__(Int -> Int)                   // Inst/cat1
+  ...
+
+__f3__(Int -> Int) 10                       // Read
+-}
+      it "Int ; IF3able a ; inst IF3able Int ; return f3 1" $
         (run True $
           unlines [
             "interface IF3able for a with"       ,
@@ -385,7 +395,7 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","False"] Unit)
 
-      it "IOrd extends IEq" $
+      it "XXX: IOrd extends IEq" $
         (run True $
           unlines [
             "interface IEq for a with",

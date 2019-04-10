@@ -40,12 +40,17 @@ isVar   _  _                     = False
 isAny :: (String -> Bool) -> Stmt -> Bool
 isAny f s = isClass f s || isData f s || isVar  f s
 
-class2table :: Stmt -> Table.Map ID_Var Stmt
-class2table (Class _ _ _ ifc _) = aux ifc where
-  aux :: Stmt -> Table.Map ID_Var Stmt
-  aux s@(Var _ id _ (Match _ _ _ _ p _)) = Table.insert id s (aux p)
-  aux s@(Var _ id _ p)                   = Table.insert id s (aux p)
-  aux (Nop _)                            = Table.empty
+class2table :: [Stmt] -> Stmt -> Table.Map ID_Var Stmt
+class2table ids (Class z (_,[var]) exts ifc _) =
+  case exts of
+    [(sid,_)] -> Table.union (class2table ids super) (aux ifc) where
+                  super = fromJust $ find (isClass $ (==)sid) ids
+    []        -> aux ifc
+  where
+    aux :: Stmt -> Table.Map ID_Var Stmt
+    aux s@(Var _ id _ (Match _ _ _ _ p _)) = Table.insert id s (aux p)
+    aux s@(Var _ id _ p)                   = Table.insert id s (aux p)
+    aux (Nop _)                            = Table.empty
 
 err z = Ret z $ Error z (-2)  -- TODO: -2
 
@@ -134,15 +139,15 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
 
             ---------------------------------------------------------------------
 
-            hcls        = class2table cls
+            hcls        = class2table ids cls
             (p', hinst) = cat1 [] imp p
-            p''         = foldr cat2 p'  (Table.elems hcls)
+            p''         = foldr cat2 p'  (Table.elems $ Table.difference hcls hinst) --(Table.elems hcls)
             p'''        = foldr cat3 p'' (Table.elems hcls)
 
             ---------------------------------------------------------------------
 
             -- funcs in cls (w/o default impl) not in inst
-            ex = concatMap f $ Table.keys $ Table.difference (Table.filter g hcls) hinst where
+            ex = concatMap f $ Table.keys $ Table.difference (traceShowId $ Table.filter g hcls) hinst where
                     f id = [toError z $ "missing implementation of '" ++ id ++ "'"]
                     g (Var _ _ _ (Match _ _ _ _ _ _)) = False
                     g _                               = True
@@ -188,7 +193,7 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
             cat1 imps x p = error $ show x
 
             -- class implementation:
-            -- body -> (f1,f2,...)<-(f1_tp,f2_tp,...) ; f_default()
+            -- body -> (f1,f2,...)<-(f1_tp,f2_tp,...) ; f_a()
             cat2 (Var z id tp _) acc =
               Var z (idtp id tp') tp'
                 (Match z False (LVar $ idtp id tp')
@@ -465,12 +470,15 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where
                 []    -> (id, tp, [])
                 [cls] ->  -- TODO: single cls
                   case find pred ids of
+{-
+-- now we check the implementations
                     Nothing -> (id, TypeV "?" [],
                                 [toError z $ "variable '" ++ id ++
                                  "' has no associated implementation for data '" ++
                                  Type.show' txp ++ "' in interface '" ++ cls ++ "'"])
                                where
                                 [cls] = Set.toList $ Type.getVs' tp'  -- TODO: single cls
+-}
                     Just (Var _ _ tp'' _) -> (id', tp'', []) where
                                               id' = if Type.hasVs tp'' then
                                                       id
