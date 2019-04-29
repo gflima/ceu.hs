@@ -132,7 +132,7 @@ envEval vars e = case e of
         (Read "<=",     Tuple [Number x, Number y]) -> Cons (bool ["Bool","False"] ["Bool","True"] (x <= y)) Unit
         (Read "<",      Tuple [Number x, Number y]) -> Cons (bool ["Bool","False"] ["Bool","True"] (x < y)) Unit
         (Func p,        arg)                        -> steps (p, ("_arg",Just arg):vars)
-        otherwise                                   -> error $ show (f,e')
+        otherwise                                   -> error $ show (f,e',vars)
 
     e         -> e
 

@@ -20,8 +20,8 @@ fromLeft (Left v) = v
 idtp id tp = "__" ++ id ++ "__" ++ Type.show' tp
 
 go :: Stmt -> (Errors, Stmt)
-go p = stmt [] p
---go p = traceShowId $ stmt [] p
+--go p = stmt [] p
+go p = traceShowId $ stmt [] p
 
 -------------------------------------------------------------------------------
 
@@ -51,6 +51,25 @@ class2table ids (Class z (_,[var]) exts ifc _) =
     aux s@(Var _ id _ (Match _ _ _ _ p _)) = Table.insert id s (aux p)
     aux s@(Var _ id _ p)                   = Table.insert id s (aux p)
     aux (Nop _)                            = Table.empty
+
+inst2table :: [Stmt] -> Stmt -> Table.Map ID_Var Stmt
+inst2table ids (Inst z (cls,[tp]) imp _) = Table.union (aux imp) sups where
+  sups =
+    case find (isClass $ (==)cls) ids of
+      Just (Class z _ exts _ _) -> Table.unions $ map f exts
+
+  f (cls',_) =
+    case find pred ids of
+      Just x  -> inst2table ids x
+      Nothing -> Table.empty
+    where
+      pred (Inst  _ (x,[y]) _ _) = (x==cls' && y==tp)
+      pred _ = False
+
+  aux :: Stmt -> Table.Map ID_Var Stmt
+  aux s@(Var _ id _ (Match _ _ _ _ p _)) = Table.insert id s (aux p)
+  --aux s@(Var _ id _ p)                   = Table.insert id s (aux p)
+  aux (Nop _)                            = Table.empty
 
 err z = Ret z $ Error z (-2)  -- TODO: -2
 
@@ -139,15 +158,16 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
 
             ---------------------------------------------------------------------
 
-            hcls        = class2table ids cls
-            (p', hinst) = cat1 [] imp p
-            p''         = foldr cat2 p'  (Table.elems $ Table.difference hcls hinst) --(Table.elems hcls)
-            p'''        = foldr cat3 p'' (Table.elems hcls)
+            hcls  = class2table ids cls
+            hinst = inst2table  ids s
+            p'    = cat1 [] imp p
+            p''   = foldr cat2 p'  (Table.elems $ Table.difference hcls hinst) --(Table.elems hcls)
+            p'''  = foldr cat3 p'' (Table.elems hcls)
 
             ---------------------------------------------------------------------
 
             -- funcs in cls (w/o default impl) not in inst
-            ex = concatMap f $ Table.keys $ Table.difference (traceShowId $ Table.filter g hcls) hinst where
+            ex = concatMap f $ Table.keys $ Table.difference (Table.filter g hcls) hinst where
                     f id = [toError z $ "missing implementation of '" ++ id ++ "'"]
                     g (Var _ _ _ (Match _ _ _ _ _ _)) = False
                     g _                               = True
@@ -182,15 +202,14 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
             -- instance implementation:
             -- body ==> (f1,f2,...)<-(f1_tp,f2_tp,...) ; body
             cat1 imps s@(Var z id tp (Match z2 False (LVar _) exp t f)) p =
-              (ret, Table.insert id ret y) where
-                ret   = Var z id' tp (Match z2 False (LVar id') exp' x f)
-                (x,y) = cat1 (s:imps) t p
-                --tp'   = Type.instantiate [(clss_var,inst_tp)] tp
-                id'   = idtp id tp
-                --exp'  = wrap imps tp' $ Read z id
-                exp'  = wrap tp exp
-            cat1 imps (Nop _) p = (p, Table.empty)
-            cat1 imps x p = error $ show x
+              Var z id' tp
+                (Match z2 False (LVar id')
+                  (wrap tp exp)
+                  (cat1 (s:imps) t p) f)
+              where
+                id' = idtp id tp
+            cat1 imps (Nop _) p = p
+            --cat1 imps x p = error $ show x
 
             -- class implementation:
             -- body -> (f1,f2,...)<-(f1_tp,f2_tp,...) ; f_a()
