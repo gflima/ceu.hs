@@ -375,7 +375,7 @@ __f3__(Int -> Int) 10                       // Read
           ])
         `shouldBe` Right (Number 2)
 
-      it "YYY: IEqualable" $
+      it "IEqualable" $
         (run True $
           unlines [
             "interface IEqualable for a with",
@@ -513,7 +513,7 @@ __f3__(Int -> Int) 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "IFable f ; g a implements IFable" $
+      it "YYY: IFable f ; g a implements IFable" $
         (run True $
           unlines [
             "interface IFable for a with",

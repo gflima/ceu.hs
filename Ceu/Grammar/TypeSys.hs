@@ -20,8 +20,8 @@ fromLeft (Left v) = v
 idtp id tp = "__" ++ id ++ "__" ++ Type.show' tp
 
 go :: Stmt -> (Errors, Stmt)
---go p = stmt [] p
-go p = traceShowId $ stmt [] p
+go p = stmt [] p
+--go p = traceShowId $ stmt [] p
 
 -------------------------------------------------------------------------------
 
@@ -43,8 +43,10 @@ isAny f s = isClass f s || isData f s || isVar  f s
 class2table :: [Stmt] -> Stmt -> Table.Map ID_Var Stmt
 class2table ids (Class z (_,[var]) exts ifc _) =
   case exts of
-    [(sid,_)] -> Table.union (class2table ids super) (aux ifc) where
-                  super = fromJust $ find (isClass $ (==)sid) ids
+    [(sid,_)] -> Table.union super (aux ifc) where
+                  super = case find (isClass $ (==)sid) ids of
+                    Just x    -> class2table ids x
+                    otherwise -> Table.empty
     []        -> aux ifc
   where
     aux :: Stmt -> Table.Map ID_Var Stmt
@@ -213,13 +215,14 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
 
             -- class implementation:
             -- body -> (f1,f2,...)<-(f1_tp,f2_tp,...) ; f_a()
-            cat2 (Var z id tp _) acc =
+            cat2 (Var z id tp (Match _ _ _ _ _ _)) acc =
               Var z (idtp id tp') tp'
                 (Match z False (LVar $ idtp id tp')
                   (wrap tp $ Read z (idtp id tp))
                   acc (err z))
               where
                 tp' = Type.instantiate [(clss_var,inst_tp)] tp
+            cat2 (Var z id tp _) acc = acc            -- no class impl. either
 
             wrap :: Type -> Exp -> Exp
             wrap tp body = Func z tp $
