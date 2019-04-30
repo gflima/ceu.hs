@@ -162,7 +162,7 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
 
             hcls  = class2table ids cls
             hinst = inst2table  ids s
-            p'    = cat1 [] imp p
+            p'    = cat1 imp p
             p''   = foldr cat2 p'  (Table.elems $ Table.difference hcls hinst) --(Table.elems hcls)
             p'''  = foldr cat3 p'' (Table.elems hcls)
 
@@ -203,15 +203,15 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
 
             -- instance implementation:
             -- body ==> (f1,f2,...)<-(f1_tp,f2_tp,...) ; body
-            cat1 imps s@(Var z id tp (Match z2 False (LVar _) exp t f)) p =
+            cat1 s@(Var z id tp (Match z2 False (LVar _) exp t f)) p =
               Var z id' tp
                 (Match z2 False (LVar id')
                   (wrap tp exp)
-                  (cat1 (s:imps) t p) f)
+                  (cat1 t p) f)
               where
                 id' = idtp id tp
-            cat1 imps (Nop _) p = p
-            --cat1 imps x p = error $ show x
+            cat1 (Nop _) p = p
+            --cat1 x p = error $ show x
 
             -- class implementation:
             -- body -> (f1,f2,...)<-(f1_tp,f2_tp,...) ; f_a()

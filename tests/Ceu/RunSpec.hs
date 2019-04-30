@@ -430,6 +430,23 @@ __f3__(Int -> Int) 10                       // Read
           ])
         `shouldBe` Left "(line 1, column 1):\ninterface 'IEq' is not declared\n(line 5, column 1):\nimplementation 'IEq for Bool' is not declared\n"
 
+      it "IOrd embeds IEq" $
+        (run True $
+          unlines [
+            "interface (IOrd for a) with",
+            "   func =%= : ((a,a) -> Bool)",
+            "   func =$= : ((a,a) -> Bool)",
+            "end",
+            "",
+            "implementation (IOrd for Bool) with",
+            "   func =%= (x,y) : ((Bool,Bool) -> Bool) do return y end",
+            "   func =$= (x,y) : ((Bool,Bool) -> Bool) do return x =%= y end",
+            "end",
+            "",
+            "return (Bool.True) =$= (Bool.False)"
+          ])
+        `shouldBe` Right (Cons ["Bool","False"] Unit)
+
       it "XXX: IOrd extends IEq" $
         (run True $
           unlines [
