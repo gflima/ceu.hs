@@ -38,7 +38,7 @@ isVar   f (Var   _ id _ _)       = f id
 isVar   _  _                     = False
 
 isAny :: (String -> Bool) -> Stmt -> Bool
-isAny f s = isClass f s || isData f s || isVar  f s
+isAny f s = isClass f s || isData f s || isVar f s
 
 class2table :: [Stmt] -> Stmt -> Table.Map ID_Var Stmt
 class2table ids (Class z (_,[var]) exts ifc _) =
@@ -145,6 +145,11 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
           -- instance is not declared
           Nothing -> (p''', es1++ex++ey++ez) where
 
+            hcls  = class2table ids cls
+            hinst = inst2table  ids s
+
+            ---------------------------------------------------------------------
+
             -- check extends
             --  interface      (Eq  for a)
             --  implementation (Eq  for Bool)                  <-- so Bool must implement Eq
@@ -157,14 +162,6 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
                 Just _  -> []
               isInstOf me (Inst _ me' _ _) = (me == me')
               isInstOf _  _                = False
-
-            ---------------------------------------------------------------------
-
-            hcls  = class2table ids cls
-            hinst = inst2table  ids s
-            p'    = cat1 imp p
-            p''   = foldr cat2 p'  (Table.elems $ Table.difference hcls hinst) --(Table.elems hcls)
-            p'''  = foldr cat3 p'' (Table.elems hcls)
 
             ---------------------------------------------------------------------
 
@@ -198,8 +195,28 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
 
             ---------------------------------------------------------------------
 
+            p'    = cat1 imp p
+            p''   = foldr cat2 p'  (Table.elems $ Table.difference hcls hinst) --(Table.elems hcls)
+            p'''  = foldr cat3 p'' (Table.elems $ Table.difference insted dcleds)
+                    where
+                      -- all symbols to be type instantiated in hcls
+                      insted :: Table.Map ID_Var Stmt
+                      insted = Table.foldrWithKey f Table.empty hcls
+                      f k (Var z id tp p) acc = Table.insert k' v' acc where
+                        k'  = idtp k tp'
+                        v'  = Var z (idtp id tp') tp' p
+                        tp' = Type.instantiate [(clss_var,inst_tp)] tp
 
-            ---------------------------------------------------------------------
+                      -- all already declared type instantiated symbols
+                      -- (from super implementations)
+                      dcleds :: Table.Map ID_Var Stmt
+                      --dcleds = Table.empty
+                      dcleds = Table.fromList
+                                $ map (\s@(Var _ id _ _)->(id,s))
+                                $ filter (isVar $ const True) ids
+
+                      -- prototypes
+                      cat3 (Var z id tp _) acc = Var z id tp acc
 
             -- instance implementation:
             -- body ==> (f1,f2,...)<-(f1_tp,f2_tp,...) ; body
@@ -233,12 +250,6 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
                     (Read z (idtp id (Type.instantiate [(clss_var,inst_tp)] tp)))
                     acc
                     (err z)
-
-            -- prototypes
-            cat3 (Var z id tp _) acc =
-              Var z (idtp id tp') tp' acc
-              where
-                tp' = Type.instantiate [(clss_var,inst_tp)] tp
 
         where
           isSameInst (Inst _ (id',[tp']) _ _) = (id==id' && [inst_tp]==[tp'])

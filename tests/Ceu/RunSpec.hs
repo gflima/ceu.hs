@@ -413,7 +413,7 @@ __f3__(Int -> Int) 10                       // Read
             "return (Bool.True) =>= (Bool.False)"
           ])
         --`shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated instance for data '((Bool,Bool) -> top)' in class 'IEq'\n"
-        `shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 9, column 1):\nmissing implementation of '==='\n(line 2, column 4):\nvariable '__===__((a,a) -> Bool)' is not declared\n"
+        `shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 9, column 1):\nmissing implementation of '==='\n"
 
       it "IOrd extends IEq" $
         (run True $
@@ -447,7 +447,7 @@ __f3__(Int -> Int) 10                       // Read
           ])
         `shouldBe` Right (Cons ["Bool","False"] Unit)
 
-      it "XXX: IOrd extends IEq" $
+      it "IOrd extends IEq" $
         (run True $
           unlines [
             "interface IEq for a with",
