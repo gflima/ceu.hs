@@ -60,23 +60,28 @@ data Stmt
 show_stmt :: Int -> Stmt -> String
 --show_stmt spc (Class _ (id,_) _ _ p) = replicate spc ' ' ++ "class "  ++ id ++ "\n" ++ show_stmt spc p
 --show_stmt spc (Inst  _ (id,_) _ p)   = replicate spc ' ' ++ "inst "   ++ id ++ "\n" ++ show_stmt spc p
-show_stmt spc (Data _ id _ _ _ p)    = replicate spc ' ' ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
-show_stmt spc (Var _ id _ p)         = replicate spc ' ' ++ "var "    ++ id ++ "\n" ++ show_stmt spc p
-show_stmt spc (Ret _ e)              = replicate spc ' ' ++ "return " ++ show_exp spc e
-show_stmt spc (Match _ False loc e p1 p2) = replicate spc ' ' ++ show_loc loc ++ " = " ++ show_exp spc e ++ "\n" ++ show_stmt spc p1
+show_stmt spc (Data _ id _ _ _ p)     = replicate spc ' ' ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
+show_stmt spc (Var _ id _ p)          = replicate spc ' ' ++ "var "    ++ id ++ "\n" ++ show_stmt spc p
+show_stmt spc (CallS _ e)             = replicate spc ' ' ++ "call " ++ show_exp spc e
+show_stmt spc (Ret _ e)               = replicate spc ' ' ++ "return " ++ show_exp spc e
+show_stmt spc (Seq _ p1 p2)           = replicate spc ' ' ++ "--\n" ++ show_stmt (spc+4) p1 ++
+                                        replicate spc ' ' ++ "--\n" ++ show_stmt (spc+4) p2
+show_stmt spc (Match _ _ loc e p1 p2) = replicate spc ' ' ++ show_loc loc ++ " = " ++ show_exp spc e ++ "\n" ++ show_stmt spc p1
 show_stmt spc p = error $ show p
 
 show_exp :: Int -> Exp -> String
 show_exp spc (Cons _ _ _)   = "cons"
 show_exp spc (Read _ id)    = id
 show_exp spc (Arg _)        = "arg"
+show_exp spc (Tuple _ es)   = "(" ++ intercalate "," (map (show_exp spc) es) ++ ")"
 show_exp spc (Func _ _ p)   = "func" ++ "\n" ++ show_stmt (spc+4) p
 show_exp spc (Call _ e1 e2) = "call" ++ " " ++ show_exp spc e1 ++ " " ++ show_exp spc e2
 show_exp spc e              = show e
 
 show_loc :: Loc -> String
-show_loc (LVar id) = id
-
+show_loc (LVar id)   = id
+show_loc (LTuple ls) = "(" ++ intercalate "," (map show_loc ls) ++ ")"
+show_loc l = show l
 
 --  class Equalable a where
 --      eq :: a -> a -> Bool
