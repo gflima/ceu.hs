@@ -117,10 +117,10 @@ stmt ids s@(Class z (id,[var]) exts ifc p) = (esMe ++ esExts ++ es, p') where
   (es,p') = stmt (s:ids) (cat ifc p)
 
   -- f, g, ..., p   (f,g,... may have type constraints)
-  cat (Var z id tp (Match z2 False (LVar id') exp t f)) p | id==id' =
-    Var z id (Type.addConstraint (var,id) tp) (Match z2 False (LVar id') exp (cat t p) f)
-  cat (Var z id tp q) p =
-    Var z id (Type.addConstraint (var,id) tp) (cat q p)
+  cat (Var z k tp (Match z2 False (LVar k') exp t f)) p | k==k' =
+    Var z k (Type.addConstraint (var,id) tp) (Match z2 False (LVar k') exp (cat t p) f)
+  cat (Var z k tp q) p =
+    Var z k (Type.addConstraint (var,k) tp) (cat q p)
   cat (Nop _) p = p
 
 stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
@@ -192,50 +192,52 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
 
             ---------------------------------------------------------------------
 
-            p1 = cat1 imp p
+            -- rename instance implementations:
+            -- f1 :: (A -> T) --> __f1__(A -> T)
+            p1 = cat imp p
                  where
-                  -- instance implementation:
-                  -- body ==> (f1,f2,...)<-(f1_tp,f2_tp,...) ; body
-                  cat1 s@(Var z id tp (Match z2 False (LVar _) exp t f)) p =
-                    Var z id' tp
-                      (Match z2 False (LVar id')
-                        (wrap tp exp)
-                        (cat1 t p) f)
+                  cat s@(Var z id tp (Match z2 False (LVar _) exp t f)) p =
+                    Var z id' tp (Match z2 False (LVar id') exp (cat t p) f)
                     where
                       id' = idtp id tp
-                  cat1 (Nop _) p = p
-                  --cat1 x p = error $ show x
+                  cat (Nop _) p = p
+                  --cat x p = error $ show x
 
-            p2 = foldr cat2 p1  (Table.elems $ Table.difference (Table.union hcls hglbs) hinst) --(Table.elems hcls)
+            -- instantiate all parametric globals (in associated class or others)
+            -- Example:
+            --    interface I
+            --      func f : (a -> B)
+            --    func g : (a -> B) where a implements I
+            --    implementation of I for A
+            -- Needs to generate:
+            --    func f : (A -> B)
+            --    func g : (A -> B)
+            p2 = foldr cat p1 glbs
                  where
                   -- class implementation:
                   -- body -> (f1,f2,...)<-(f1_tp,f2_tp,...) ; f_a()
-                  cat2 (Var z id tp (Match _ _ _ _ _ _)) acc =
+                  cat (Var z id tp (Match _ _ _ _ _ _)) acc =
                     Var z (idtp id tp') tp'
                       (Match z False (LVar $ idtp id tp')
                         (wrap tp $ Read z (idtp id tp))
                         acc (err z))
                     where
                       tp' = Type.instantiate [(clss_var,inst_tp)] tp
-                  cat2 (Var z id tp _) acc = acc            -- no class impl. either
+                  cat (Var z id tp _) acc = acc            -- no class impl. either
 
-                  -- All parametric globals with type containing instance id must be
-                  -- intantiated.
-                  -- Example:
-                  --    interface I
-                  --    func f : (a -> B) where a implements I
-                  --    implementation of I for A
-                  -- Need to generate:
-                  --    func f : (A -> B)
-                  hglbs :: Table.Map ID_Var Stmt
-{-
-                  hglbs = Table.empty
--}
-                  hglbs = Table.fromList $ map f2 $ filter f1 ids
-                          where
-                            f1 (Var _ id' tp _) = (Set.member id $ Type.getVs' tp) && (take 2 id' /= "__")
-                            f1 _                = False
-                            f2 s@(Var _ id _ _) = (id,s)
+                  glbs = filter f ids where
+                          f (Var _ id' tp _) = (Set.member id $ Type.getVs' tp) && (take 2 id' /= "__")
+                          f _                = False
+
+                  wrap :: Type -> Exp -> Exp
+                  wrap tp body = Func z tp $
+                                  foldr f (Ret z $ Call z body (Arg z)) (Table.elems hcls)
+                    where
+                      f (Var z id tp _) acc =
+                        Match z False (LVar id)
+                          (Read z (idtp id (Type.instantiate [(clss_var,inst_tp)] tp)))
+                          acc
+                          (err z)
 
             p3 = foldr cat3 p2 (Table.elems $ Table.difference insted dcleds)
                  where
@@ -257,16 +259,6 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
 
                   -- prototypes
                   cat3 (Var z id tp _) acc = Var z id tp acc
-
-            wrap :: Type -> Exp -> Exp
-            wrap tp body = Func z tp $
-                            foldr f (Ret z $ Call z body (Arg z)) (Table.elems hcls)
-              where
-                f (Var z id tp _) acc =
-                  Match z False (LVar id)
-                    (Read z (idtp id (Type.instantiate [(clss_var,inst_tp)] tp)))
-                    acc
-                    (err z)
 
         where
           isSameInst (Inst _ (id',[tp']) _ _) = (id==id' && [inst_tp]==[tp'])
