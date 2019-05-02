@@ -21,7 +21,11 @@ idtp id tp = "__" ++ id ++ "__" ++ Type.show' tp
 
 go :: Stmt -> (Errors, Stmt)
 go p = stmt [] p
---go p = traceShowId $ stmt [] p
+{-
+go p = f $ stmt [] p
+       where
+        f (e,s) = traceShow (show_stmt 0 s) (e,s)
+-}
 
 -------------------------------------------------------------------------------
 
@@ -143,7 +147,7 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
           Just _  -> (p, [toError z $ "implementation '" ++ id ++ " (" ++ intercalate "," [Type.show' inst_tp] ++ ")' is already declared"])
 
           -- instance is not declared
-          Nothing -> (p''', es1++ex++ey++ez) where
+          Nothing -> (p3, es1++ex++ey++ez) where
 
             hcls  = class2table ids cls
             hinst = inst2table  ids s
@@ -195,51 +199,71 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
 
             ---------------------------------------------------------------------
 
-            p'    = cat1 imp p
-            p''   = foldr cat2 p'  (Table.elems $ Table.difference hcls hinst) --(Table.elems hcls)
-            p'''  = foldr cat3 p'' (Table.elems $ Table.difference insted dcleds)
+            p1 = cat1 imp p
+                 where
+                  -- instance implementation:
+                  -- body ==> (f1,f2,...)<-(f1_tp,f2_tp,...) ; body
+                  cat1 s@(Var z id tp (Match z2 False (LVar _) exp t f)) p =
+                    Var z id' tp
+                      (Match z2 False (LVar id')
+                        (wrap tp exp)
+                        (cat1 t p) f)
                     where
-                      -- all symbols to be type instantiated in hcls
-                      insted :: Table.Map ID_Var Stmt
-                      insted = Table.foldrWithKey f Table.empty hcls
-                      f k (Var z id tp p) acc = Table.insert k' v' acc where
-                        k'  = idtp k tp'
-                        v'  = Var z (idtp id tp') tp' p
-                        tp' = Type.instantiate [(clss_var,inst_tp)] tp
+                      id' = idtp id tp
+                  cat1 (Nop _) p = p
+                  --cat1 x p = error $ show x
 
-                      -- all already declared type instantiated symbols
-                      -- (from super implementations)
-                      dcleds :: Table.Map ID_Var Stmt
-                      --dcleds = Table.empty
-                      dcleds = Table.fromList
-                                $ map (\s@(Var _ id _ _)->(id,s))
-                                $ filter (isVar $ const True) ids
+            p2 = foldr cat2 p1  (Table.elems $ Table.difference (Table.union hcls hglbs) hinst) --(Table.elems hcls)
+                 where
+                  -- class implementation:
+                  -- body -> (f1,f2,...)<-(f1_tp,f2_tp,...) ; f_a()
+                  cat2 (Var z id tp (Match _ _ _ _ _ _)) acc =
+                    Var z (idtp id tp') tp'
+                      (Match z False (LVar $ idtp id tp')
+                        (wrap tp $ Read z (idtp id tp))
+                        acc (err z))
+                    where
+                      tp' = Type.instantiate [(clss_var,inst_tp)] tp
+                  cat2 (Var z id tp _) acc = acc            -- no class impl. either
 
-                      -- prototypes
-                      cat3 (Var z id tp _) acc = Var z id tp acc
+                  -- All parametric globals with type containing instance id must be
+                  -- intantiated.
+                  -- Example:
+                  --    interface I
+                  --    func f : (a -> B) where a implements I
+                  --    implementation of I for A
+                  -- Need to generate:
+                  --    func f : (A -> B)
+                  hglbs :: Table.Map ID_Var Stmt
+{-
+                  hglbs = Table.empty
+-}
+                  hglbs = Table.fromList $ map f2 $ filter f1 ids
+                          where
+                            f1 (Var _ id' tp _) = (Set.member id $ Type.getVs' tp) && (take 2 id' /= "__")
+                            f1 _                = False
+                            f2 s@(Var _ id _ _) = (id,s)
 
-            -- instance implementation:
-            -- body ==> (f1,f2,...)<-(f1_tp,f2_tp,...) ; body
-            cat1 s@(Var z id tp (Match z2 False (LVar _) exp t f)) p =
-              Var z id' tp
-                (Match z2 False (LVar id')
-                  (wrap tp exp)
-                  (cat1 t p) f)
-              where
-                id' = idtp id tp
-            cat1 (Nop _) p = p
-            --cat1 x p = error $ show x
+            p3 = foldr cat3 p2 (Table.elems $ Table.difference insted dcleds)
+                 where
+                  -- all symbols to be type instantiated in hcls
+                  insted :: Table.Map ID_Var Stmt
+                  insted = Table.foldrWithKey f Table.empty hcls
+                  f k (Var z id tp p) acc = Table.insert k' v' acc where
+                    k'  = idtp k tp'
+                    v'  = Var z (idtp id tp') tp' p
+                    tp' = Type.instantiate [(clss_var,inst_tp)] tp
 
-            -- class implementation:
-            -- body -> (f1,f2,...)<-(f1_tp,f2_tp,...) ; f_a()
-            cat2 (Var z id tp (Match _ _ _ _ _ _)) acc =
-              Var z (idtp id tp') tp'
-                (Match z False (LVar $ idtp id tp')
-                  (wrap tp $ Read z (idtp id tp))
-                  acc (err z))
-              where
-                tp' = Type.instantiate [(clss_var,inst_tp)] tp
-            cat2 (Var z id tp _) acc = acc            -- no class impl. either
+                  -- all already declared type instantiated symbols
+                  -- (from super implementations)
+                  dcleds :: Table.Map ID_Var Stmt
+                  --dcleds = Table.empty
+                  dcleds = Table.fromList
+                            $ map (\s@(Var _ id _ _)->(id,s))
+                            $ filter (isVar $ const True) ids
+
+                  -- prototypes
+                  cat3 (Var z id tp _) acc = Var z id tp acc
 
             wrap :: Type -> Exp -> Exp
             wrap tp body = Func z tp $

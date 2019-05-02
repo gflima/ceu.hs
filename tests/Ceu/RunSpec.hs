@@ -530,6 +530,44 @@ __f3__(Int -> Int) 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
+      it "ZZZ: IFable f ; g a implements IFable" $
+        (run True $
+          unlines [
+            "interface IFable for a with",
+            "   func f : (a -> Bool)",
+            "end",
+            "",
+            "func g x : (a -> Bool) where a implements IFable do",
+            "   return f x",   -- dont instantiate f bc typeof(x)=a and a is IFable
+            "end",  -- declare one g for each implementation
+            "",
+            "return (g (Bool.True))"
+                    -- g_Bool->Bool
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "ZZZ: IFable f ; g a implements IFable" $
+        (run True $
+          unlines [
+            "interface IFable for a with",
+            "   func f : (a -> Bool)",
+            "end",
+            "",
+            "func g x : (a -> Bool) where a implements IFable do",
+            "   return f x",   -- dont instantiate f bc typeof(x)=a and a is IFable
+            "end",  -- declare one g for each implementation
+            "",
+            "implementation IFable for Bool with",
+            "   func f x : (Bool -> Bool) do",
+            "     return x",
+            "   end",
+            "end",
+            "",
+            "return (g (Bool.True))"
+                    -- g_Bool->Bool
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
       it "YYY: IFable f ; g a implements IFable" $
         (run True $
           unlines [
@@ -537,28 +575,6 @@ __f3__(Int -> Int) 10                       // Read
             "   func f : (a -> Bool)",
             "end",
             "",
-            "func g x : (a -> Bool) where a implements IFable do",
-            "   return f x",   -- dont instantiate f bc typeof(x)=a and a is IFable
-            "end",  -- declare one g for each implementation
-            "",
-            "implementation IFable for Bool with",
-            "   func f x : (Bool -> Bool) do",
-            "     return x",
-            "   end",
-            "end",
-            "",
-            "return (g (Bool.True))"
-                    -- g_Bool->Bool
-           ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
-
-      it "IFable f ; g a implements IFable" $
-        (run True $
-          unlines [
-            "interface IFable for a with",
-            "   func f : (a -> Bool)",
-            "end",
-            "",
             "implementation IFable for Bool with",
             "   func f x : (Bool -> Bool) do",
             "     return x",
@@ -574,7 +590,7 @@ __f3__(Int -> Int) 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "IFable f1/f2/f3 ; g/h a implements IFable" $
+      it "ZZZ: IFable f1/f2/f3 ; g/h a implements IFable" $
         (run True $
           unlines [
             "interface IFable for a with",
