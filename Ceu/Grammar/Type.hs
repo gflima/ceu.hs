@@ -62,6 +62,13 @@ hasVs tp = not $ Set.null $ getVs tp
 getVs' :: Type -> Set.Set ID_Class
 getVs' tp = Set.unions $ map Set.fromList $ Set.toList $ getVs tp
 
+addConstraint (var,id) Type0                      = Type0
+addConstraint (var,id) (TypeD x)                  = TypeD x
+addConstraint (var,id) (TypeN l)                  = TypeN $ map (addConstraint (var,id)) l
+addConstraint (var,id) (TypeF inp out)            = TypeF (addConstraint (var,id) inp) (addConstraint (var,id) out)
+addConstraint (var,id) (TypeV var' l) | var==var' = TypeV var' (id:l)
+                                      | otherwise = TypeV var' l
+
 -------------------------------------------------------------------------------
 
 getSuper :: Type -> Maybe Type

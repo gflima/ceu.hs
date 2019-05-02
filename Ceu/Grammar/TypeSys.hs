@@ -10,7 +10,7 @@ import qualified Data.Set as Set
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Type as Type (Type(..), show', instantiate, getDs, getVs', getSuper,
-                                 cat, hier2str, hasVs,
+                                 cat, hier2str, hasVs, addConstraint,
                                  Relation(..), relates, isRel, relatesErrors)
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
@@ -118,17 +118,10 @@ stmt ids s@(Class z (id,[var]) exts ifc p) = (esMe ++ esExts ++ es, p') where
 
   -- f, g, ..., p   (f,g,... may have type constraints)
   cat (Var z id tp (Match z2 False (LVar id') exp t f)) p | id==id' =
-    Var z id (constraint tp) (Match z2 False (LVar id') exp (cat t p) f)
+    Var z id (Type.addConstraint (var,id) tp) (Match z2 False (LVar id') exp (cat t p) f)
   cat (Var z id tp q) p =
-    Var z id (constraint tp) (cat q p)
+    Var z id (Type.addConstraint (var,id) tp) (cat q p)
   cat (Nop _) p = p
-
-  constraint Type0                      = Type0
-  constraint (TypeD x)                  = TypeD x
-  constraint (TypeN l)                  = TypeN $ map constraint l
-  constraint (TypeF inp out)            = TypeF (constraint inp) (constraint out)
-  constraint (TypeV var' l) | var==var' = TypeV var' (id:l)
-                            | otherwise = TypeV var' l
 
 stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
 
