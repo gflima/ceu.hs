@@ -228,11 +228,20 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
                   cat (Var z id tp (Match _ _ _ _ _ _)) acc =
                     Var z (idtp id tp') tp'
                       (Match z False (LVar $ idtp id tp')
-                        (wrap z [(clss_var,inst_tp)] tp (Table.elems hcls) $ Read z (idtp id tp))
+                        (wrap z [(clss_var,inst_tp)] tp fs $ Read z (idtp id tp))
                         acc (err z))
                     where
                       tp' = Type.instantiate [(clss_var,inst_tp)] tp
                   cat (Var z id tp _) acc = acc            -- no class impl. either
+
+                  fs  = filter f ids
+                        where
+                          f (Var _ id' tp _) = (Type.hasVs id tp) && (take 2 id' /= "__")
+                          --f (Var _ _ tp _) = Type.hasVs id tp
+                          f _ = False
+                  x = map g fs
+                  y = map g $ Table.elems hcls
+                  g (Var _ id _ _) = id
 
                   glbs = filter f ids where
                           f (Var _ id' tp _) = (Type.hasVs id tp) && (take 2 id' /= "__")
@@ -328,11 +337,10 @@ stmt ids s@(Var  z id tp p) = (es_data ++ es_id ++ es, Var z id tp p'') where
                   acc (err z))
               where
                 tp' = Type.instantiate [(var,inst)] tp
-
-                fs = filter f ids
-                     where
-                      f (Var _ id tp _) = Type.hasVs cls tp
-                      f _ = False
+                fs  = filter f ids
+                      where
+                        f (Var _ id tp _) = Type.hasVs cls tp
+                        f _ = False
         _   -> p
 
 stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fromJust mexp) p1' p2')
