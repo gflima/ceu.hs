@@ -47,20 +47,23 @@ getDs (TypeN ts)      = Set.unions $ map getDs ts
 
 -------------------------------------------------------------------------------
 
-getVs :: Type -> Set.Set [ID_Class]
+getVs :: Type -> Set.Set (ID_Var,[ID_Class])
 
-getVs (TypeV _ clss)  = Set.singleton clss
-getVs TypeT           = Set.empty
-getVs TypeB           = Set.empty
-getVs Type0           = Set.empty
-getVs (TypeD hier)    = Set.empty
-getVs (TypeF inp out) = Set.union (getVs inp) (getVs out)
-getVs (TypeN ts)      = Set.unions $ map getVs ts
+getVs (TypeV var clss) = Set.singleton (var,clss)
+getVs TypeT            = Set.empty
+getVs TypeB            = Set.empty
+getVs Type0            = Set.empty
+getVs (TypeD hier)     = Set.empty
+getVs (TypeF inp out)  = Set.union (getVs inp) (getVs out)
+getVs (TypeN ts)       = Set.unions $ map getVs ts
 
-hasVs tp = not $ Set.null $ getVs tp
+hasAnyVs :: Type -> Bool
+hasAnyVs tp = not $ Set.null $ getVs tp
 
-getVs' :: Type -> Set.Set ID_Class
-getVs' tp = Set.unions $ map Set.fromList $ Set.toList $ getVs tp
+hasVs :: ID_Class -> Type -> Bool
+hasVs cls tp = not $ null $ Set.filter f $ getVs tp
+               where
+                f (var,clss) = elem cls clss
 
 addConstraint (var,id) Type0                      = Type0
 addConstraint (var,id) (TypeD x)                  = TypeD x
