@@ -20,12 +20,12 @@ fromLeft (Left v) = v
 idtp id tp = "__" ++ id ++ "__" ++ Type.show' tp
 
 go :: Stmt -> (Errors, Stmt)
-go p = stmt [] p
 {-
+go p = stmt [] p
+-}
 go p = f $ stmt [] p
        where
         f (e,s) = traceShow (show_stmt 0 s) (e,s)
--}
 
 -------------------------------------------------------------------------------
 
@@ -239,7 +239,7 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
                           acc
                           (err z)
 
-            p3 = foldr cat3 p2 (Table.elems $ Table.difference insted dcleds)
+            p3 = foldr cat p2 (Table.elems $ Table.difference insted dcleds)
                  where
                   -- all symbols to be type instantiated in hcls
                   insted :: Table.Map ID_Var Stmt
@@ -258,7 +258,7 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
                             $ filter (isVar $ const True) ids
 
                   -- prototypes
-                  cat3 (Var z id tp _) acc = Var z id tp acc
+                  cat (Var z id tp _) acc = Var z id tp acc
 
         where
           isSameInst (Inst _ (id',[tp']) _ _) = (id==id' && [inst_tp]==[tp'])
@@ -293,6 +293,11 @@ stmt ids s@(Var  z id tp p) = (es_data ++ es_id ++ es, Var z id tp p'') where
               chk _ = False
   (es,p'') = stmt (s:ids) p'
 
+  -- rename generic implementations from
+  --    f :: (a -> T)
+  -- to
+  --    __f__(a -> T)
+  --p' = p
   p' = if take 2 id == "__" then p else
     case Set.toList $ Type.getVs' tp of
       []    -> p
