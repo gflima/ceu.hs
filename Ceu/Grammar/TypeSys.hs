@@ -77,14 +77,19 @@ inst2table ids (Inst z (cls,[tp]) imp _) = Table.union (aux imp) sups where
   --aux s@(Var _ id _ p)                   = Table.insert id s (aux p)
   aux (Nop _)                            = Table.empty
 
-wrap :: Ann -> [(ID_Var,Type)] -> Type -> [Stmt] -> Exp -> Exp
-wrap z l tp fs body = Func z tp $ foldr f (Ret z $ Call z body (Arg z)) fs
+--wrap :: Ann -> [(ID_Var,Type)] -> Type -> [Stmt] -> Exp -> Exp
+wrap z (cls,ids) (l,tp) body = Func z tp $ foldr f (Ret z $ Call z body (Arg z)) fs
   where
     f (Var z id tp _) acc =
       Match z False (LVar id)
         (Read z (idtp id (Type.instantiate l tp)))
         acc
         (err z)
+
+    fs = filter f ids
+         where
+             f (Var _ id tp _) = (Type.hasVs cls tp) && (take 2 id /= "__")
+             f _ = False
 
 err z = Ret z $ Error z (-2)  -- TODO: -2
 
@@ -134,24 +139,24 @@ stmt ids s@(Class z (id,[var]) exts ifc p) = (esMe ++ esExts ++ es, p') where
 
 stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
 
-stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
+stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
   (esP, p'') = stmt (s:ids) p'
   (p',  es)  =
-    case find (isClass $ (==)id) ids of
+    case find (isClass $ (==)cls) ids of
       -- class is not declared
-      Nothing -> (p, [toError z $ "interface '" ++ id ++ "' is not declared"])
+      Nothing -> (p, [toError z $ "interface '" ++ cls ++ "' is not declared"])
 
       -- class is declared
-      Just cls@(Class _ (_,[clss_var]) exts ifc _) ->
+      Just k@(Class _ (_,[clss_var]) exts ifc _) ->
 
         case find isSameInst ids of
           -- instance is already declared
-          Just _  -> (p, [toError z $ "implementation '" ++ id ++ " (" ++ intercalate "," [Type.show' inst_tp] ++ ")' is already declared"])
+          Just _  -> (p, [toError z $ "implementation '" ++ cls ++ " (" ++ intercalate "," [Type.show' inst_tp] ++ ")' is already declared"])
 
           -- instance is not declared
           Nothing -> (p3, es1++ex++ey++ez) where
 
-            hcls  = class2table ids cls
+            hcls  = class2table ids k
             hinst = inst2table  ids s
 
             ---------------------------------------------------------------------
@@ -187,7 +192,7 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
                       case relates SUP tp1 tp2 of
                         Left es -> map (toError z2) es
                         Right (_,insts) ->
-                          let tp' = Type.instantiate insts (TypeV clss_var [id]) in
+                          let tp' = Type.instantiate insts (TypeV clss_var [cls]) in
                             if tp' == inst_tp then
                               []
                             else
@@ -228,24 +233,15 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
                   cat (Var z id tp (Match _ _ _ _ _ _)) acc =
                     Var z (idtp id tp') tp'
                       (Match z False (LVar $ idtp id tp')
-                        (wrap z [(clss_var,inst_tp)] tp fs $ Read z (idtp id tp))
+                        (wrap z (cls,ids) ([(clss_var,inst_tp)], tp) $ Read z (idtp id tp))
                         acc (err z))
                     where
                       tp' = Type.instantiate [(clss_var,inst_tp)] tp
                   cat (Var z id tp _) acc = acc            -- no class impl. either
 
-                  fs  = filter f ids
-                        where
-                          f (Var _ id' tp _) = (Type.hasVs id tp) && (take 2 id' /= "__")
-                          --f (Var _ _ tp _) = Type.hasVs id tp
-                          f _ = False
-                  x = map g fs
-                  y = map g $ Table.elems hcls
-                  g (Var _ id _ _) = id
-
                   glbs = filter f ids where
-                          f (Var _ id' tp _) = (Type.hasVs id tp) && (take 2 id' /= "__")
-                          f _                = False
+                          f (Var _ id tp _) = (Type.hasVs cls tp) && (take 2 id /= "__")
+                          f _               = False
 
             p3 = foldr cat p2 (Table.elems $ Table.difference insted dcleds)
                  where
@@ -269,7 +265,7 @@ stmt ids s@(Inst z (id,[inst_tp]) imp p) = (es ++ esP, p'') where
                   cat (Var z id tp _) acc = Var z id tp acc
 
         where
-          isSameInst (Inst _ (id',[tp']) _ _) = (id==id' && [inst_tp]==[tp'])
+          isSameInst (Inst _ (id,[tp']) _ _) = (cls==id && [inst_tp]==[tp'])
           isSameInst _                        = False
 
 stmt ids (Inst _ (_,tps) _ _) = error "not implemented: multiple types"
@@ -332,15 +328,11 @@ stmt ids s@(Var  z id tp p) = (es_data ++ es_id ++ es, Var z id tp p'') where
             cat inst acc =
               Var z (idtp id tp') tp'
                 (Match z False (LVar $ idtp id tp')
-                  (wrap z [(var,inst)] tp fs $ Read z (idtp id tp))
+                  (wrap z (cls,ids) ([(var,inst)], tp) $ Read z (idtp id tp))
                   --(Read z (idtp id tp))
                   acc (err z))
               where
                 tp' = Type.instantiate [(var,inst)] tp
-                fs  = filter f ids
-                      where
-                        f (Var _ id tp _) = Type.hasVs cls tp
-                        f _ = False
         _   -> p
 
 stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fromJust mexp) p1' p2')
