@@ -44,19 +44,22 @@ isVar   _  _                     = False
 isAny :: (String -> Bool) -> Stmt -> Bool
 isAny f s = isClass f s || isData f s || isVar f s
 
+supers :: [Stmt] -> Stmt -> [Stmt]
+supers ids s@(Class z _ exts ifc _) = s :
+  case traceShowId exts of
+    [(sid,_)] -> case find (isClass $ (==)sid) ids of
+                  Just x    -> supers ids x
+                  otherwise -> []
+    otherwise -> []
+
 class2table :: [Stmt] -> Stmt -> Table.Map ID_Var Stmt
-class2table ids (Class z (_,[var]) exts ifc _) =
-  case exts of
-    [(sid,_)] -> Table.union super (aux ifc) where
-                  super = case find (isClass $ (==)sid) ids of
-                    Just x    -> class2table ids x
-                    otherwise -> Table.empty
-    []        -> aux ifc
+class2table ids cls = Table.unions $ map f1 (supers ids cls)
   where
-    aux :: Stmt -> Table.Map ID_Var Stmt
-    aux s@(Var _ id _ (Match _ _ _ _ p _)) = Table.insert id s (aux p)
-    aux s@(Var _ id _ p)                   = Table.insert id s (aux p)
-    aux (Nop _)                            = Table.empty
+    f1 (Class _ _ _ ifc _) = f2 ifc
+    f2 :: Stmt -> Table.Map ID_Var Stmt
+    f2 s@(Var _ id _ (Match _ _ _ _ p _)) = Table.insert id s (f2 p)
+    f2 s@(Var _ id _ p)                   = Table.insert id s (f2 p)
+    f2 (Nop _)                            = Table.empty
 
 inst2table :: [Stmt] -> Stmt -> Table.Map ID_Var Stmt
 inst2table ids (Inst z (cls,[tp]) imp _) = Table.union (aux imp) sups where
@@ -88,8 +91,11 @@ wrap z (cls,ids) (l,tp) body = Func z tp $ foldr f (Ret z $ Call z body (Arg z))
 
     fs = filter f ids
          where
-             f (Var _ id tp _) = (Type.hasVs cls tp) && (take 2 id /= "__")
-             f _ = False
+          f (Var _ id tp _) = (any (\cls->Type.hasVs cls tp) clss) && (take 2 id /= "__")
+          f _ = False
+
+          clss = map (\(Class _ (id,_) _ _ _)->id) $
+                  supers ids (fromJust $ find (isClass $ (==)cls) ids)
 
 err z = Ret z $ Error z (-2)  -- TODO: -2
 
@@ -310,9 +316,8 @@ stmt ids s@(Var  z id tp p) = (es_data ++ es_id ++ es, Var z id tp p'') where
   --      ...
   --p' = p
   p' = if take 2 id == "__" then p else
-    case Set.toList $ Type.getVs tp of
+    case Set.toList $ Set.filter (\(_,l)->not (null l)) $ Type.getVs tp of
       []            -> p
-      [(_,[])]      -> p
       [(var,[cls])] -> case p of
         Match z2 False (LVar id') exp t f
           | id/=id' -> p
@@ -541,9 +546,8 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where
           case relates rel txp tp of
             Left  es      -> (id, TypeV "?" [], map (toError z) es)
             Right (tp',_) -> if take 2 id == "__" then (id, tp, []) else
-              case Set.toList $ Type.getVs tp' of
+              case Set.toList $ Set.filter (\(_,l)->not (null l)) $ Type.getVs tp' of
                 []          -> (id, tp, [])
-                [(_,[])]    -> (id, tp, [])
                 [(_,[cls])] ->  -- TODO: single cls
                   case find pred ids of
 {-

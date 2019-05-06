@@ -530,7 +530,7 @@ __f3__(Int -> Int) 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "XXX: IFable f ; g a implements IFable" $
+      it "IFable f ; g a implements IFable" $
         (run True $
           unlines [
             "interface IFable for a with",
@@ -546,7 +546,7 @@ __f3__(Int -> Int) 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "YYY: IFable f ; g a implements IFable" $
+      it "IFable f ; g a implements IFable" $
         (run True $
           unlines [
             "interface IFable for a with",
@@ -568,7 +568,7 @@ __f3__(Int -> Int) 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "YYY: IFable f ; g a implements IFable" $
+      it "IFable f ; g a implements IFable" $
         (run True $
           unlines [
             "interface IFable for a with",
