@@ -119,3 +119,28 @@ toBasicStmt (Loop   z p)                  = B.Loop  z (toBasicStmt p)
 toBasicStmt (Nop    z)                    = B.Nop   z
 toBasicStmt (Ret    z exp)                = B.Ret   z (toBasicExp exp)
 toBasicStmt p                             = error $ "toBasicStmt: unexpected statement: " ++ (show p)
+
+-------------------------------------------------------------------------------
+
+map_stmt :: (Stmt->Stmt, Exp->Exp, Type->Type) -> Stmt -> Stmt
+map_stmt f@(fs,_,_)  (Class z me ext p)       = fs (Class z me ext (map_stmt f p))
+map_stmt f@(fs,_,_)  (Inst  z me p)           = fs (Inst  z me (map_stmt f p))
+map_stmt f@(fs,_,ft) (Data  z me flds tp abs) = fs (Data  z me flds (ft tp) abs)
+map_stmt f@(fs,_,ft) (Var   z id tp)          = fs (Var   z id (ft tp))
+map_stmt f@(fs,_,ft) (FuncS z id tp p)        = fs (FuncS z id (ft tp) (map_stmt f p))
+map_stmt f@(fs,_,_)  (Match z loc exp p1 p2)  = fs (Match z loc (map_exp f exp) (map_stmt f p1) (map_stmt f p2))
+map_stmt f@(fs,_,_)  (Set   z b loc exp)      = fs (Set   z b loc (map_exp f exp))
+map_stmt f@(fs,_,_)  (CallS z exp)            = fs (CallS z (map_exp f exp))
+map_stmt f@(fs,_,_)  (If    z exp p1 p2)      = fs (If    z (map_exp f exp) (map_stmt f p1) (map_stmt f p2))
+map_stmt f@(fs,_,_)  (Seq   z p1 p2)          = fs (Seq   z (map_stmt f p1) (map_stmt f p2))
+map_stmt f@(fs,_,_)  (Loop  z p)              = fs (Loop  z (map_stmt f p))
+map_stmt f@(fs,_,_)  (Scope z p)              = fs (Scope z (map_stmt f p))
+map_stmt f@(fs,_,_)  (Ret   z exp)              = fs (Ret   z (map_exp f exp))
+map_stmt f@(fs,_,_)  (Nop   z)                  = fs (Nop   z)
+
+map_exp :: (Stmt->Stmt, Exp->Exp, Type->Type) -> Exp -> Exp
+map_exp f@(_,fe,_)  (Cons  z id e)  = fe (Cons  z id (map_exp f e))
+map_exp f@(_,fe,_)  (Tuple z es)    = fe (Tuple z (map (map_exp f) es))
+map_exp f@(_,fe,ft) (Func  z tp p)  = fe (Func  z (ft tp) (map_stmt f p))
+map_exp f@(_,fe,_)  (Call  z e1 e2) = fe (Call  z (map_exp f e1) (map_exp f e2))
+map_exp f@(_,fe,_)  exp             = fe exp
