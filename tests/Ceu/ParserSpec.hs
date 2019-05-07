@@ -580,75 +580,104 @@ spec = do
 
         describe "interface:" $ do
 
-            it "Int ; IF3able a ; inst IF3able Int ; return f3 1" $
-              (parse stmt $
-                unlines [
-                  "interface IF3able for a with"  ,
-                  " var f3 : (a -> Int)"          ,
-                  "end"                           ,
-                  "implementation (IF3able for Int) with" ,
-                  " func f3 (v) : (a -> Int) do"  ,
-                  "   return v"                   ,
-                  " end"                          ,
-                  "end"                           ,
-                  "return f3(10)"
-                ])
-              `shouldBe` Right
-                (Seq annz{source=("",1,1)}
-                (Class annz{source=("",1,1)} ("IF3able", ["a"]) []
-                  (Seq annz{source=("",2,2)}
+          it "Int ; IF3able a ; inst IF3able Int ; return f3 1" $
+            (parse stmt $
+              unlines [
+                "interface IF3able for a with"  ,
+                " var f3 : (a -> Int)"          ,
+                "end"                           ,
+                "implementation (IF3able for Int) with" ,
+                " func f3 (v) : (a -> Int) do"  ,
+                "   return v"                   ,
+                " end"                          ,
+                "end"                           ,
+                "return f3(10)"
+              ])
+            `shouldBe` Right
+              (Seq annz{source=("",1,1)}
+              (Class annz{source=("",1,1)} ("IF3able", ["a"]) []
+                (Seq annz{source=("",2,2)}
+                (Seq annz{source=("",0,0)}
+                (Var annz{source=("",2,2)} "f3" (TypeF (TypeV "a" ["IF3able"]) (TypeD ["Int"])))
+                (Nop annz{source=("",0,0)}))
+                (Nop annz{source=("",2,2)})))
+              (Seq annz{source=("",1,1)}
+              (Inst annz{source=("",4,1)} ("IF3able", [TypeD ["Int"]])
+                (FuncS annz{source=("",5,2)} "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))
+                  (Seq annz{source=("",5,2)}
                   (Seq annz{source=("",0,0)}
-                  (Var annz{source=("",2,2)} "f3" (TypeF (TypeV "a" []) (TypeD ["Int"])))
+                  (Var annz{source=("",5,2)} "v" (TypeV "a" []))
                   (Nop annz{source=("",0,0)}))
-                  (Nop annz{source=("",2,2)})))
-                (Seq annz{source=("",1,1)}
-                (Inst annz{source=("",4,1)} ("IF3able", [TypeD ["Int"]])
-                  (FuncS annz{source=("",5,2)} "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))
-                    (Seq annz{source=("",5,2)}
-                    (Seq annz{source=("",0,0)}
-                    (Var annz{source=("",5,2)} "v" (TypeV "a" []))
-                    (Nop annz{source=("",0,0)}))
-                    (Seq annz{source=("",5,2)}
-                    (Set annz{source=("",5,2)} False (LVar "v") (Arg annz{source=("",5,2)})) (Ret annz{source=("",6,4)} (Read annz{source=("",6,11)} "v"))))))
-                (Ret annz{source=("",9,1)} (Call annz{source=("",9,8)} (Read annz{source=("",9,8)} "f3") (Number annz{source=("",9,11)} 10)))))
+                  (Seq annz{source=("",5,2)}
+                  (Set annz{source=("",5,2)} False (LVar "v") (Arg annz{source=("",5,2)})) (Ret annz{source=("",6,4)} (Read annz{source=("",6,11)} "v"))))))
+              (Ret annz{source=("",9,1)} (Call annz{source=("",9,8)} (Read annz{source=("",9,8)} "f3") (Number annz{source=("",9,11)} 10)))))
 
-            it "IOrd extends IEq" $
-              (parse' stmt $
-                unlines [
-                  "interface IEq for a with",
-                  "   func == : ((a,a) -> Bool)",
-                  "end",
-                  "",
-                  "interface (IOrd for a) extends (IEq for a) with",
-                  "   func >= : ((a,a) -> Bool)",
-                  "end",
-                  "",
-                  "implementation IEq for Bool with",
-                  "   func == (x,y) : ((a,a) -> Bool) do return Bool.True end",
-                  "end",
-                  "",
-                  "implementation (IOrd for Bool) with",
-                  "   func >= (x,y) : ((a,a) -> Bool) do return Bool.True end",
-                  "end",
-                  "",
-                  "return (Bool.True) >= (Bool.False)"
-                ])
-              `shouldBe` Right
-                (Seq annz
-                (Class annz ("IEq",["a"]) []
-                  (Var annz "==" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))))
-                (Seq annz
-                (Class annz ("IOrd",["a"]) [("IEq",["a"])]
-                  (Var annz ">=" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))))
-                (Seq annz
-                (Inst annz ("IEq",[TypeD ["Bool"]])
-                  (FuncS annz "==" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))
-                    (Seq annz (Seq annz (Var annz "x" (TypeV "a" [])) (Seq annz (Var annz "y" (TypeV "a" [])) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"] (Unit annz)))))))
-                (Seq annz
-                (Inst annz ("IOrd",[TypeD ["Bool"]])
-                  (FuncS annz ">=" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))
-                    (Seq annz (Seq annz (Var annz "x" (TypeV "a" [])) (Seq annz (Var annz "y" (TypeV "a" [])) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"] (Unit annz)))))))
-                (Ret annz (Call annz (Read annz ">=") (Tuple annz [Cons annz ["Bool","True"] (Unit annz),Cons annz ["Bool","False"] (Unit annz)])))))))
+          it "IOrd extends IEq" $
+            (parse' stmt $
+              unlines [
+                "interface IEq for a with",
+                "   func == : ((a,a) -> Bool)",
+                "end",
+                "",
+                "interface (IOrd for a) extends (IEq for a) with",
+                "   func >= : ((a,a) -> Bool)",
+                "end",
+                "",
+                "implementation IEq for Bool with",
+                "   func == (x,y) : ((a,a) -> Bool) do return Bool.True end",
+                "end",
+                "",
+                "implementation (IOrd for Bool) with",
+                "   func >= (x,y) : ((a,a) -> Bool) do return Bool.True end",
+                "end",
+                "",
+                "return (Bool.True) >= (Bool.False)"
+              ])
+            `shouldBe` Right
+              (Seq annz
+              (Class annz ("IEq",["a"]) []
+                (Var annz "==" (TypeF (TypeN [TypeV "a" ["IEq"],TypeV "a" ["IEq"]]) (TypeD ["Bool"]))))
+              (Seq annz
+              (Class annz ("IOrd",["a"]) [("IEq",["a"])]
+                (Var annz ">=" (TypeF (TypeN [TypeV "a" ["IOrd"],TypeV "a" ["IOrd"]]) (TypeD ["Bool"]))))
+              (Seq annz
+              (Inst annz ("IEq",[TypeD ["Bool"]])
+                (FuncS annz "==" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))
+                  (Seq annz (Seq annz (Var annz "x" (TypeV "a" [])) (Seq annz (Var annz "y" (TypeV "a" [])) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"] (Unit annz)))))))
+              (Seq annz
+              (Inst annz ("IOrd",[TypeD ["Bool"]])
+                (FuncS annz ">=" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))
+                  (Seq annz (Seq annz (Var annz "x" (TypeV "a" [])) (Seq annz (Var annz "y" (TypeV "a" [])) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"] (Unit annz)))))))
+              (Ret annz (Call annz (Read annz ">=") (Tuple annz [Cons annz ["Bool","True"] (Unit annz),Cons annz ["Bool","False"] (Unit annz)])))))))
+
+          it "IFable f ; g a implements IFable" $
+            (parse' stmt $
+              unlines [
+                "interface IFable for a with",
+                "   func f : (a -> Bool)",
+                "end",
+                "",
+                "func g x : (a -> Bool) where a implements IFable do",
+                "   return f x",
+                "end",
+                "",
+                --"var h : (a -> Bool) where a implements IFable",
+                --"set h <- func x : (a -> Bool) where a implements IFable do",
+                --"   return f x",
+                --"end",
+                "",
+                "return (g (Bool.True))"
+               ])
+            `shouldBe` Right
+              (Seq annz
+                (Class annz ("IFable",["a"]) []
+                  (Var annz "f" (TypeF (TypeV "a" ["IFable"]) (TypeD ["Bool"]))))
+              (Seq annz
+                (FuncS annz "g" (TypeF (TypeV "a" ["IFable"]) (TypeD ["Bool"]))
+                  (Seq annz
+                  (Seq annz
+                    (Var annz "x" (TypeV "a" ["IFable"])) (Nop annz))
+                  (Seq annz (Set annz False (LVar "x") (Arg annz)) (Ret annz (Call annz (Read annz "f") (Read annz "x")))))) (Ret annz (Call annz (Read annz "g") (Cons annz ["Bool","True"] (Unit annz))))))
 
         describe "seq:" $ do
             it "x <- k k <- 1" $

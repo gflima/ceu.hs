@@ -66,12 +66,12 @@ hasConstraint cls tp = not $ null $ Set.filter f $ getConstraints tp
                        where
                         f (var,clss) = elem cls clss
 
-addConstraint (var,id) Type0                      = Type0
-addConstraint (var,id) (TypeD x)                  = TypeD x
-addConstraint (var,id) (TypeN l)                  = TypeN $ map (addConstraint (var,id)) l
-addConstraint (var,id) (TypeF inp out)            = TypeF (addConstraint (var,id) inp) (addConstraint (var,id) out)
-addConstraint (var,id) (TypeV var' l) | var==var' = TypeV var' (id:l)
-                                      | otherwise = TypeV var' l
+addConstraint (var,cls) Type0                      = Type0
+addConstraint (var,cls) (TypeD x)                  = TypeD x
+addConstraint (var,cls) (TypeN l)                  = TypeN $ map (addConstraint (var,cls)) l
+addConstraint (var,cls) (TypeF inp out)            = TypeF (addConstraint (var,cls) inp) (addConstraint (var,cls) out)
+addConstraint (var,cls) (TypeV var' l) | var==var' = TypeV var' (cls:l)
+                                       | otherwise = TypeV var' l
 
 -------------------------------------------------------------------------------
 

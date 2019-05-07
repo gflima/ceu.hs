@@ -139,9 +139,9 @@ stmt ids s@(Class z (id,[var]) exts ifc p) = (esMe ++ esExts ++ es, p') where
 
   -- f, g, ..., p   (f,g,... may have type constraints)
   cat (Var z k tp (Match z2 False (LVar k') exp t f)) p | k==k' =
-    Var z k (Type.addConstraint (var,id) tp) (Match z2 False (LVar k') exp (cat t p) f)
+    Var z k tp {-(Type.addConstraint (var,id) tp)-} (Match z2 False (LVar k') exp (cat t p) f)
   cat (Var z k tp q) p =
-    Var z k (Type.addConstraint (var,id) tp) (cat q p)
+    Var z k tp {-(Type.addConstraint (var,id) tp)-} (cat q p)
   cat (Nop _) p = p
 
 stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
@@ -317,7 +317,7 @@ stmt ids s@(Var  z id tp p) = (es_data ++ es_id ++ es, Var z id tp p'') where
   --      ...
   --p' = p
   p' = if take 2 id == "__" then p else
-    case Set.toList $ Set.filter (\(_,l)->not (null l)) $ Type.getConstraints tp of
+    case traceShowId $ Set.toList $ Type.getConstraints tp of
       []            -> p
       [(var,[cls])] -> case p of
         Match z2 False (LVar id') exp t f
@@ -547,7 +547,7 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where
           case relates rel txp tp of
             Left  es      -> (id, TypeV "?" [], map (toError z) es)
             Right (tp',_) -> if take 2 id == "__" then (id, tp, []) else
-              case Set.toList $ Set.filter (\(_,l)->not (null l)) $ Type.getConstraints tp' of
+              case Set.toList $ Type.getConstraints tp' of
                 []          -> (id, tp, [])
                 [(_,[cls])] ->  -- TODO: single cls
                   case find pred ids of
