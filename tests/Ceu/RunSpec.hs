@@ -483,6 +483,19 @@ __f3__(Int -> Int) 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
+      it "f1.x" $
+        (run True $
+          unlines [
+            "interface IFable for a with",
+            "   func f1 : (a -> Bool)",
+            "end",
+            "implementation IFable for Bool with",
+            "   func f1 x : (Bool -> Bool) do return x end",
+            "end",
+            "return f1 (Bool.True)"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
       it "f1 default" $
         (run True $
           unlines [
@@ -495,7 +508,7 @@ __f3__(Int -> Int) 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "XXX: f1/f2" $
+      it "f1/f2" $
         (run True $
           unlines [
             "interface IFable for a with",

@@ -10,7 +10,7 @@ import qualified Data.Set as Set
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Type as Type (Type(..), show', instantiate, getDs,
-                                 hasConstraint, hasAnyConstraint, getConstraints,
+                                 hasConstraint, hasAnyConstraint, getConstraints, addConstraint,
                                  getSuper, cat, hier2str,
                                  Relation(..), relates, isRel, relatesErrors)
 import Ceu.Grammar.Ann
@@ -135,9 +135,11 @@ stmt ids s@(Class z (id,[var]) exts ifc p) = (esMe ++ esExts ++ es, p') where
 
   -- f, g, ..., p   (f,g,... may have type constraints)
   cat (Var z k tp (Match z2 False (LVar k') exp t f)) p | k==k' =
-    Var z k tp {-(Type.addConstraint (var,id) tp)-} (Match z2 False (LVar k') exp (cat t p) f)
+    --Var z k (Type.addConstraint (var,id) tp) (Match z2 False (LVar k') exp (cat t p) f)
+    Var z k tp (Match z2 False (LVar k') exp (cat t p) f)
   cat (Var z k tp q) p =
-    Var z k tp {-(Type.addConstraint (var,id) tp)-} (cat q p)
+    --Var z k (Type.addConstraint (var,id) tp) (cat q p)
+    Var z k tp (cat q p)
   cat (Nop _) p = p
 
 stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
@@ -336,6 +338,14 @@ stmt ids s@(Var z id tp p) = (es_data ++ es_id ++ es, Var z id tp p'') where
               where
                 tp' = Type.instantiate [(var,inst)] tp
         _   -> p
+{-
+      where
+        xxx = find pred ids
+        pred (Var _ _ tp _) = case Set.toList $ Type.getConstraints tp of
+                                [(var,[cls])] -> True
+                                otherwise     -> False
+        pred _              = False
+-}
 
 stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fromJust mexp) p1' p2')
   where
@@ -532,15 +542,15 @@ expr' _ ids (Tuple z exps) = (es, Tuple z{type_=tps'} exps') where
                               exps' = map snd rets
                               tps'  = TypeN (map (type_.getAnn) exps')
 
-expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where
+expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
   (id', tp, es)
     | (id == "_INPUT") = (id, TypeD ["Int"], [])
     | otherwise        =
       -- find in top-level ids | id : a
       case find (isVar $ (==)id) ids of
         Nothing             -> (id, TypeV "?" [], [toError z $ "variable '" ++ id ++ "' is not declared"])
-        Just (Var _ _ tp _) ->
-          case relates rel txp tp of
+        Just (Var _ _ tp _) ->                                        -- var x : a is IFable
+          case relates rel txp tp of                                  -- (?) x
             Left  es      -> (id, TypeV "?" [], map (toError z) es)
             Right (tp',_) -> if take 2 id == "__" then (id, tp, []) else
               case Set.toList $ Type.getConstraints tp' of
@@ -556,7 +566,7 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where
                                where
                                 [(_,[cls])] = Set.toList $ Type.getVs tp'  -- TODO: single cls
 -}
-                    Just (Var _ idx tp'' _) -> (id', tp'', []) where
+                    Just (Var _ _ tp'' _) -> (id', tp'', []) where
                                               id' = if Type.hasAnyConstraint tp'' then
                                                       id
                                                     else

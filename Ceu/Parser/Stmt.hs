@@ -123,6 +123,7 @@ stmt_class = do
                         Nothing         -> []
            in
             (Class annz{source=pos} (cls,[var]) ext' (map_stmt (id,id,addConstraint(var,cls)) ifc))
+            --(Class annz{source=pos} (cls,[var]) ext' ifc)
 
 stmt_inst :: Parser Stmt
 stmt_inst = do
@@ -270,6 +271,7 @@ expr_func = do
     case Set.toList $ getConstraints tp of
       []            -> Func annz{source=pos} tp imp
       [(var,[cls])] -> Func annz{source=pos} tp (map_stmt (id,id,addConstraint(var,cls)) imp)
+      --[(var,[cls])] -> Func annz{source=pos} tp imp
 
 expr_unit :: Parser Exp
 expr_unit = do
@@ -381,4 +383,5 @@ stmt_funcs = do
                 case Set.toList $ getConstraints tp of
                   []            -> FuncS ann f tp imp
                   [(var,[cls])] -> FuncS ann f tp (map_stmt (id,id,addConstraint(var,cls)) imp)
+                  --[(var,[cls])] -> FuncS ann f tp imp
   return ret
