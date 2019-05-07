@@ -10,7 +10,7 @@ import qualified Data.Set as Set
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Type as Type (Type(..), show', instantiate, getDs,
-                                 hasConstraint, hasAnyConstraint, getConstraints, addConstraint,
+                                 hasConstraint, hasAnyConstraint, getConstraints,
                                  getSuper, cat, hier2str,
                                  Relation(..), relates, isRel, relatesErrors)
 import Ceu.Grammar.Ann
@@ -22,11 +22,7 @@ idtp id tp = "__" ++ id ++ "__" ++ Type.show' tp
 
 go :: Stmt -> (Errors, Stmt)
 go p = stmt [] p
-{-
-go p = f $ stmt [] p
-       where
-        f (e,s) = traceShow (show_stmt 0 s) (e,s)
--}
+--go p = f $ stmt [] p where f (e,s) = traceShow (show_stmt 0 s) (e,s)
 
 -------------------------------------------------------------------------------
 
@@ -295,7 +291,7 @@ stmt ids s@(Data z hr [] flds abs p) = (es_dcl ++ (errDeclared z Nothing "data" 
 
 stmt ids s@(Data z hr vars flds abs p) = error "not implemented"
 
-stmt ids s@(Var  z id tp p) = (es_data ++ es_id ++ es, Var z id tp p'') where
+stmt ids s@(Var z id tp p) = (es_data ++ es_id ++ es, Var z id tp p'') where
   es_data = getErrsTypesDeclared z ids tp
   es_id   = errDeclared z (Just chk) "variable" id ids where
               chk :: Stmt -> Bool
@@ -317,7 +313,7 @@ stmt ids s@(Var  z id tp p) = (es_data ++ es_id ++ es, Var z id tp p'') where
   --      ...
   --p' = p
   p' = if take 2 id == "__" then p else
-    case traceShowId $ Set.toList $ Type.getConstraints tp of
+    case Set.toList $ Type.getConstraints tp of
       []            -> p
       [(var,[cls])] -> case p of
         Match z2 False (LVar id') exp t f
