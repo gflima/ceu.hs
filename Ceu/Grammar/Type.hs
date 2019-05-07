@@ -47,23 +47,24 @@ getDs (TypeN ts)      = Set.unions $ map getDs ts
 
 -------------------------------------------------------------------------------
 
-getVs :: Type -> Set.Set (ID_Var,[ID_Class])
+getConstraints :: Type -> Set.Set (ID_Var,[ID_Class])
 
-getVs (TypeV var clss) = Set.singleton (var,clss)
-getVs TypeT            = Set.empty
-getVs TypeB            = Set.empty
-getVs Type0            = Set.empty
-getVs (TypeD hier)     = Set.empty
-getVs (TypeF inp out)  = Set.union (getVs inp) (getVs out)
-getVs (TypeN ts)       = Set.unions $ map getVs ts
+getConstraints (TypeV _ [])     = Set.empty
+getConstraints (TypeV var clss) = Set.singleton (var,clss)
+getConstraints TypeT            = Set.empty
+getConstraints TypeB            = Set.empty
+getConstraints Type0            = Set.empty
+getConstraints (TypeD hier)     = Set.empty
+getConstraints (TypeF inp out)  = Set.union (getConstraints inp) (getConstraints out)
+getConstraints (TypeN ts)       = Set.unions $ map getConstraints ts
 
-hasAnyVs :: Type -> Bool
-hasAnyVs tp = not $ Set.null $ getVs tp
+hasAnyConstraint :: Type -> Bool
+hasAnyConstraint tp = not $ Set.null $ getConstraints tp
 
-hasVs :: ID_Class -> Type -> Bool
-hasVs cls tp = not $ null $ Set.filter f $ getVs tp
-               where
-                f (var,clss) = elem cls clss
+hasConstraint :: ID_Class -> Type -> Bool
+hasConstraint cls tp = not $ null $ Set.filter f $ getConstraints tp
+                       where
+                        f (var,clss) = elem cls clss
 
 addConstraint (var,id) Type0                      = Type0
 addConstraint (var,id) (TypeD x)                  = TypeD x
@@ -228,8 +229,8 @@ supOf sup               Type0             = (False, sup,   [])
 supOf sup               TypeT             = (False, sup,   [])
 
 supOf sup@(TypeD x)     sub@(TypeD y)
-  | x `isPrefixOf` y                       = (True,  sub,   [])
-  | otherwise                              = (False, sup,   [])
+  | x `isPrefixOf` y                      = (True,  sub,   [])
+  | otherwise                             = (False, sup,   [])
 
 supOf sup@(TypeD _)     _                 = (False, sup,   [])
 supOf sup               (TypeD _)         = (False, sup,   [])

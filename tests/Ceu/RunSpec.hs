@@ -483,7 +483,7 @@ __f3__(Int -> Int) 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "ZZZ: f1 default" $
+      it "f1 default" $
         (run True $
           unlines [
             "interface IFable for a with",
@@ -495,7 +495,7 @@ __f3__(Int -> Int) 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "f1/f2" $
+      it "XXX: f1/f2" $
         (run True $
           unlines [
             "interface IFable for a with",
@@ -590,7 +590,7 @@ __f3__(Int -> Int) 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "XXX: IFable f1/f2/f3 ; g/h a implements IFable" $
+      it "IFable f1/f2/f3 ; g/h a implements IFable" $
         (run True $
           unlines [
             "interface IFable for a with",

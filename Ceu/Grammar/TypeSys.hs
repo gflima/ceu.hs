@@ -9,8 +9,9 @@ import qualified Data.Map as Table
 import qualified Data.Set as Set
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Type as Type (Type(..), show', instantiate, getDs, hasVs, hasAnyVs, getVs, getSuper,
-                                 cat, hier2str, hasAnyVs, addConstraint,
+import Ceu.Grammar.Type as Type (Type(..), show', instantiate, getDs,
+                                 hasConstraint, hasAnyConstraint, getConstraints, addConstraint,
+                                 getSuper, cat, hier2str,
                                  Relation(..), relates, isRel, relatesErrors)
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
@@ -46,7 +47,7 @@ isAny f s = isClass f s || isData f s || isVar f s
 
 supers :: [Stmt] -> Stmt -> [Stmt]
 supers ids s@(Class z _ exts ifc _) = s :
-  case traceShowId exts of
+  case exts of
     [(sid,_)] -> case find (isClass $ (==)sid) ids of
                   Just x    -> supers ids x
                   otherwise -> []
@@ -91,7 +92,7 @@ wrap z (cls,ids) (l,tp) body = Func z tp $ foldr f (Ret z $ Call z body (Arg z))
 
     fs = filter f ids
          where
-          f (Var _ id tp _) = (any (\cls->Type.hasVs cls tp) clss) && (take 2 id /= "__")
+          f (Var _ id tp _) = (any (\cls->Type.hasConstraint cls tp) clss) && (take 2 id /= "__")
           f _ = False
 
           clss = map (\(Class _ (id,_) _ _ _)->id) $
@@ -108,7 +109,7 @@ errDeclared z chk str id ids =
             Nothing               -> []
             Just s@(Var _ _ tp _) ->
               if chk' s then [] else
-                case find (isInst (\id -> Type.hasVs id tp)) ids of
+                case find (isInst (\id -> Type.hasConstraint id tp)) ids of
                   Just _          -> []
                   Nothing         -> err
             Just _                -> err
@@ -246,7 +247,7 @@ stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
                   cat (Var z id tp _) acc = acc            -- no class impl. either
 
                   glbs = filter f ids where
-                          f (Var _ id tp _) = (Type.hasVs cls tp) && (take 2 id /= "__")
+                          f (Var _ id tp _) = (Type.hasConstraint cls tp) && (take 2 id /= "__")
                           f _               = False
 
             p3 = foldr cat p2 (Table.elems $ Table.difference insted dcleds)
@@ -316,7 +317,7 @@ stmt ids s@(Var  z id tp p) = (es_data ++ es_id ++ es, Var z id tp p'') where
   --      ...
   --p' = p
   p' = if take 2 id == "__" then p else
-    case Set.toList $ Set.filter (\(_,l)->not (null l)) $ Type.getVs tp of
+    case Set.toList $ Set.filter (\(_,l)->not (null l)) $ Type.getConstraints tp of
       []            -> p
       [(var,[cls])] -> case p of
         Match z2 False (LVar id') exp t f
@@ -546,7 +547,7 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where
           case relates rel txp tp of
             Left  es      -> (id, TypeV "?" [], map (toError z) es)
             Right (tp',_) -> if take 2 id == "__" then (id, tp, []) else
-              case Set.toList $ Set.filter (\(_,l)->not (null l)) $ Type.getVs tp' of
+              case Set.toList $ Set.filter (\(_,l)->not (null l)) $ Type.getConstraints tp' of
                 []          -> (id, tp, [])
                 [(_,[cls])] ->  -- TODO: single cls
                   case find pred ids of
@@ -559,14 +560,14 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where
                                where
                                 [(_,[cls])] = Set.toList $ Type.getVs tp'  -- TODO: single cls
 -}
-                    Just (Var _ _ tp'' _) -> (id', tp'', []) where
-                                              id' = if Type.hasAnyVs tp'' then
+                    Just (Var _ idx tp'' _) -> (id', tp'', []) where
+                                              id' = if Type.hasAnyConstraint tp'' then
                                                       id
                                                     else
                                                       idtp id tp''
                   where
                     pred :: Stmt -> Bool
-                    pred (Var _ _ tp _) = isRight $ relates SUP txp tp
+                    pred (Var _ _ tp _) = isRight $ relates SUP txp tp  -- TODO: concrete vs concrete
                     pred _              = False
 
 expr' (rel,txp) ids (Call z f exp) = (bool es_exp es_f (null es_exp),
