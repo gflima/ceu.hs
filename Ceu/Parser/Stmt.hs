@@ -68,7 +68,7 @@ matchLocType src loc tp = case (aux src loc tp) of
     aux :: Source -> Loc -> Type -> Maybe [Stmt]
     aux pos LAny        _          = Just []
     aux pos LUnit       Type0      = Just []
-    aux pos (LVar var)  tp         = Just [Var annz{source=pos} var tp]
+    aux pos (LVar var)  tp         = Just [Var annz{source=pos} var False tp]
     aux pos (LTuple []) (TypeN []) = Just []
     aux pos (LTuple []) _          = Nothing
     aux pos (LTuple _)  (TypeN []) = Nothing
@@ -377,11 +377,11 @@ stmt_funcs = do
             Nothing -> do
               void <- tk_sym ":"
               tp   <- pType
-              return $ Var ann f tp
+              return $ Var ann f False tp
             Just (tp,imp) -> do
               return $
                 case Set.toList $ getConstraints tp of
-                  []            -> FuncS ann f tp imp
-                  [(var,[cls])] -> FuncS ann f tp (map_stmt (id,id,addConstraint(var,cls)) imp)
+                  []            -> FuncS ann f False tp imp
+                  [(var,[cls])] -> FuncS ann f True  tp (map_stmt (id,id,addConstraint(var,cls)) imp)
                   --[(var,[cls])] -> FuncS ann f tp imp
   return ret

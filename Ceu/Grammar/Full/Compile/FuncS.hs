@@ -11,7 +11,7 @@ compile p = stmt p
 stmt :: Stmt -> Stmt
 stmt (Class z me ext ifc)   = Class z me ext (stmt ifc)
 stmt (Inst  z me imp)       = Inst  z me     (stmt imp)
-stmt (FuncS z id tp imp)    = Seq z (Var z id tp) (Set z False (LVar id) (Func z tp imp))
+stmt (FuncS z id gen tp imp) = Seq z (Var z id gen tp) (Set z False (LVar id) (Func z tp imp))
 stmt (Set   z chk loc exp)  = Set z chk loc (expr exp)
 stmt (Match z loc exp p1 p2)= Match z loc (expr exp) (stmt p1) (stmt p2)
 stmt (CallS z exp)          = CallS z (expr exp)

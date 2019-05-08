@@ -33,9 +33,9 @@ spec = do
   describe "Func.compile" $ do
 
     it "func id : (a->a) do end" $ do
-      FuncS.compile (FuncS annz "id" (TypeF (TypeV "a" []) (TypeV "a" [])) (Nop annz))
+      FuncS.compile (FuncS annz "id" False (TypeF (TypeV "a" []) (TypeV "a" [])) (Nop annz))
       `shouldBe` (Seq annz
-                  (Var annz "id" (TypeF (TypeV "a" []) (TypeV "a" [])))
+                  (Var annz "id" False (TypeF (TypeV "a" []) (TypeV "a" [])))
                   (Set annz False (LVar "id")
                     (Func annz (TypeF (TypeV "a" []) (TypeV "a" [])) (Nop annz))))
 
@@ -43,23 +43,23 @@ spec = do
 
     describe "var:" $ do
       it "var x" $ do
-        Scope.compile (Var annz "x" Type0)
-        `shouldBe` (Var' annz "x" Type0 (Nop annz))
+        Scope.compile (Var annz "x" False Type0)
+        `shouldBe` (Var' annz "x" False Type0 (Nop annz))
 
       it "var x; (Nop annz)" $ do
-        Scope.compile (Seq annz (Var annz "x" Type0) (Nop annz))
-        `shouldBe` (Var' annz "x" Type0 (Nop annz))
+        Scope.compile (Seq annz (Var annz "x" False Type0) (Nop annz))
+        `shouldBe` (Var' annz "x" False Type0 (Nop annz))
 
       it "var x <- 1 ; (Nop annz)" $ do
-        Scope.compile (Seq annz (Var annz "x" (TypeD ["Int"])) (Seq annz (Set annz False (LVar "x") (Number annz 1)) (Nop annz)))
-        `shouldBe` (Var' annz "x" (TypeD ["Int"]) (Seq annz (Set annz False (LVar "x") (Number annz 1)) (Nop annz)))
+        Scope.compile (Seq annz (Var annz "x" False (TypeD ["Int"])) (Seq annz (Set annz False (LVar "x") (Number annz 1)) (Nop annz)))
+        `shouldBe` (Var' annz "x" False (TypeD ["Int"]) (Seq annz (Set annz False (LVar "x") (Number annz 1)) (Nop annz)))
 
       it "scope var x end ; var y" $ do
-        Scope.compile (Seq annz (Scope annz (Var annz "x" Type0)) (Var annz "y" Type0))
-        `shouldBe` Seq annz (Var' annz "x" Type0 (Nop annz)) (Var' annz "y" Type0 (Nop annz))
+        Scope.compile (Seq annz (Scope annz (Var annz "x" False Type0)) (Var annz "y" False Type0))
+        `shouldBe` Seq annz (Var' annz "x" False Type0 (Nop annz)) (Var' annz "y" False Type0 (Nop annz))
 
       it "scope var x end ; x=1" $ do
-        compile' (Seq annz (Scope annz (Var annz "x" (TypeD ["Int"]))) (Set annz False (LVar "x") (Number annz 1)))
+        compile' (Seq annz (Scope annz (Var annz "x" False (TypeD ["Int"]))) (Set annz False (LVar "x") (Number annz 1)))
         `shouldBe` (["data 'Int' is not declared","variable 'x' is not declared"], B.Seq annz (B.Var annz "x" False (TypeD ["Int"]) (B.Nop annz)) (B.Match annz False (B.LVar "x") (B.Number (annz{type_=TypeD ["Int","1"]}) 1) (B.Nop annz) (B.Ret annz (B.Error annz (-2)))))
 
   --------------------------------------------------------------------------
@@ -67,15 +67,15 @@ spec = do
   describe "compile'" $ do
 
     it "var x;" $ do
-      compile' (Var' annz "x" Type0 (Nop annz))
+      compile' (Var' annz "x" False Type0 (Nop annz))
       `shouldBe` ([], (B.Var annz "x" False Type0 (B.Nop annz)))
 
     it "do var x; x = 1 end" $ do
-      compile' (Var' annz "x" (TypeD ["Int"]) (Match' annz False (LVar "x") (Number annz 1) (Nop annz) (Nop annz)))
+      compile' (Var' annz "x" False (TypeD ["Int"]) (Match' annz False (LVar "x") (Number annz 1) (Nop annz) (Nop annz)))
       `shouldBe` (["data 'Int' is not declared"], (B.Var annz "x" False (TypeD ["Int"]) (B.Match annz False (B.LVar "x") (B.Number annz{type_=TypeD ["Int","1"]} 1) (B.Nop annz) (B.Nop annz))))
 
     it "do var x; x = 1 end" $ do
-      compile' (Var' annz "x" (TypeD ["Int"]) (Match' annz False (LVar "x") (Number annz 1) (Nop annz) (Nop annz)))
+      compile' (Var' annz "x" False (TypeD ["Int"]) (Match' annz False (LVar "x") (Number annz 1) (Nop annz) (Nop annz)))
       `shouldBe` (["data 'Int' is not declared"], (B.Var annz "x" False (TypeD ["Int"]) (B.Match annz False (B.LVar "x") (B.Number annz{type_=TypeD ["Int","1"]} 1) (B.Nop annz) (B.Nop annz))))
 
     it "class/inst" $ do
@@ -83,15 +83,15 @@ spec = do
                 (Class annz ("F3able",["a"]) []
                   (Seq annz
                   (Seq annz
-                  (Var annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"])))
+                  (Var annz "f3" False (TypeF (TypeV "a" []) (TypeD ["Int"])))
                   (Nop annz))
                   (Nop annz)))
                 (Seq annz
                 (Inst annz ("F3able",[TypeD ["Int"]])
-                  (FuncS annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))
+                  (FuncS annz "f3" False (TypeF (TypeV "a" []) (TypeD ["Int"]))
                     (Seq annz
                     (Seq annz
-                    (Var annz "v" (TypeV "a" []))
+                    (Var annz "v" False (TypeV "a" []))
                     (Nop annz))
                     (Seq annz
                     (Set annz False (LVar "v") (Arg annz))
@@ -99,14 +99,14 @@ spec = do
                 (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
       `shouldBe`
         (Class' annz ("F3able",["a"]) []
-          (Var' annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))
+          (Var' annz "f3" False (TypeF (TypeV "a" []) (TypeD ["Int"]))
           (Seq annz (Nop annz) (Nop annz)))
         (Inst' annz ("F3able",[TypeD ["Int"]])
-          (Var' annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))
+          (Var' annz "f3" False (TypeF (TypeV "a" []) (TypeD ["Int"]))
           (Match' annz False
             (LVar "f3")
             (Func annz (TypeF (TypeV "a" []) (TypeD ["Int"]))
-              (Var' annz "v" (TypeV "a" [])
+              (Var' annz "v" False (TypeV "a" [])
               (Seq annz
               (Nop annz)
               (Match' annz False (LVar "v") (Arg annz) (Seq annz (Nop annz) (Ret annz (Read annz "v"))) (Ret annz (Error annz (-2)))))))

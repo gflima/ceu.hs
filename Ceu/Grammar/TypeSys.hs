@@ -134,12 +134,12 @@ stmt ids s@(Class z (id,[var]) exts ifc p) = (esMe ++ esExts ++ es, p') where
   (es,p') = stmt (s:ids) (cat ifc p)
 
   -- f, g, ..., p   (f,g,... may have type constraints)
-  cat (Var z k gen tp (Match z2 False (LVar k') exp t f)) p | k==k' =
+  cat (Var z k False tp (Match z2 False (LVar k') exp t f)) p | k==k' =
     --Var z k (Type.addConstraint (var,id) tp) (Match z2 False (LVar k') exp (cat t p) f)
-    Var z k gen tp (Match z2 False (LVar k') exp (cat t p) f)
-  cat (Var z k gen tp q) p =
+    Var z k True tp (Match z2 False (LVar k') exp (cat t p) f)
+  cat (Var z k False tp q) p =
     --Var z k (Type.addConstraint (var,id) tp) (cat q p)
-    Var z k gen tp (cat q p)
+    Var z k True tp (cat q p)
   cat (Nop _) p = p
 
 stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
@@ -215,8 +215,8 @@ stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
             -- f1 :: (A -> T) --> __f1__(A -> T)
             p1 = cat imp p
                  where
-                  cat s@(Var z id gen tp (Match z2 False (LVar _) exp t f)) p =
-                    Var z id' gen tp (Match z2 False (LVar id') exp (cat t p) f)
+                  cat s@(Var z id False tp (Match z2 False (LVar _) exp t f)) p =
+                    Var z id' False tp (Match z2 False (LVar id') exp (cat t p) f)
                     where
                       id' = idtp id tp
                   cat (Nop _) p = p
@@ -235,8 +235,8 @@ stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
                  where
                   -- class implementation:
                   -- body -> (f1,f2,...)<-(f1_tp,f2_tp,...) ; f_a()
-                  cat (Var z id gen tp (Match _ _ _ _ _ _)) acc =
-                    Var z (idtp id tp') gen tp'
+                  cat (Var z id True tp (Match _ _ _ _ _ _)) acc =
+                    Var z (idtp id tp') False tp'
                       (Match z False (LVar $ idtp id tp')
                         (wrap z (cls,ids) ([(clss_var,inst_tp)], tp) $ Read z (idtp id tp))
                         acc (err z))
@@ -248,14 +248,14 @@ stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
                           f (Var _ id _ tp _) = (Type.hasConstraint cls tp) && (take 2 id /= "__")
                           f _                 = False
 
-            p3 = foldr cat p2 (Table.elems $ Table.difference insted dcleds)
+            p3 = foldr cat p2 (Table.elems $ Table.difference toinst dcleds)
                  where
-                  -- all symbols to be type instantiated in hcls
-                  insted :: Table.Map ID_Var Stmt
-                  insted = Table.foldrWithKey f Table.empty hcls
-                  f k (Var z id gen tp p) acc = Table.insert k' v' acc where
+                  -- all symbols to be type instantiated from hcls
+                  toinst :: Table.Map ID_Var Stmt
+                  toinst = Table.foldrWithKey f Table.empty hcls
+                  f k (Var z id _ tp p) acc = Table.insert k' v' acc where  -- TODO: gen=_ should be True, but Class is not mapped
                     k'  = idtp k tp'
-                    v'  = Var z (idtp id tp') gen tp' p
+                    v'  = Var z (idtp id tp') True tp' p
                     tp' = Type.instantiate [(clss_var,inst_tp)] tp
 
                   -- all already declared type instantiated symbols
@@ -267,7 +267,7 @@ stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
                             $ filter (isVar $ const True) ids
 
                   -- prototypes
-                  cat (Var z id gen tp _) acc = Var z id gen tp acc
+                  cat (Var z id True tp _) acc = Var z id False tp acc
 
         where
           isSameInst (Inst _ (id,[tp']) _ _) = (cls==id && [inst_tp]==[tp'])
