@@ -135,8 +135,8 @@ map_stmt f@(fs,_,_)  (If    z exp p1 p2)      = fs (If    z (map_exp f exp) (map
 map_stmt f@(fs,_,_)  (Seq   z p1 p2)          = fs (Seq   z (map_stmt f p1) (map_stmt f p2))
 map_stmt f@(fs,_,_)  (Loop  z p)              = fs (Loop  z (map_stmt f p))
 map_stmt f@(fs,_,_)  (Scope z p)              = fs (Scope z (map_stmt f p))
-map_stmt f@(fs,_,_)  (Ret   z exp)              = fs (Ret   z (map_exp f exp))
-map_stmt f@(fs,_,_)  (Nop   z)                  = fs (Nop   z)
+map_stmt f@(fs,_,_)  (Ret   z exp)            = fs (Ret   z (map_exp f exp))
+map_stmt f@(fs,_,_)  (Nop   z)                = fs (Nop   z)
 
 map_exp :: (Stmt->Stmt, Exp->Exp, Type->Type) -> Exp -> Exp
 map_exp f@(_,fe,_)  (Cons  z id e)  = fe (Cons  z id (map_exp f e))
