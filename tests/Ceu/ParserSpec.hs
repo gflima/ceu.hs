@@ -553,7 +553,7 @@ spec = do
 
             it "Xxx.Yyy" $
               (compile' $ fromRight' $ parse' stmt "data Int ; data Xxx with Int ; data Xxx.Yyy with Int ; var y:Xxx.Yyy <- Xxx.Yyy (1,2)")
-              `shouldBe` ([],B.Data annz ["Int"] [] Type0 False (B.Data annz ["Xxx"] [] (TypeD ["Int"]) False (B.Data annz ["Xxx","Yyy"] [] (TypeN [TypeD ["Int"],TypeD ["Int"]]) False (B.Var annz "y" (TypeD ["Xxx","Yyy"]) (B.Match annz False (B.LVar "y") (B.Cons annz{type_=TypeD ["Xxx","Yyy"]} ["Xxx","Yyy"] (B.Tuple annz{type_=TypeN [TypeD ["Int","1"],TypeD ["Int","2"]]} [B.Number annz{type_=TypeD ["Int","1"]} 1,B.Number annz{type_=TypeD ["Int","2"]} 2])) (B.Nop annz) (B.Ret annz (B.Error annz (-2))))))))
+              `shouldBe` ([],B.Data annz ["Int"] [] Type0 False (B.Data annz ["Xxx"] [] (TypeD ["Int"]) False (B.Data annz ["Xxx","Yyy"] [] (TypeN [TypeD ["Int"],TypeD ["Int"]]) False (B.Var annz "y" False (TypeD ["Xxx","Yyy"]) (B.Match annz False (B.LVar "y") (B.Cons annz{type_=TypeD ["Xxx","Yyy"]} ["Xxx","Yyy"] (B.Tuple annz{type_=TypeN [TypeD ["Int","1"],TypeD ["Int","2"]]} [B.Number annz{type_=TypeD ["Int","1"]} 1,B.Number annz{type_=TypeD ["Int","2"]} 2])) (B.Nop annz) (B.Ret annz (B.Error annz (-2))))))))
 
             it "data X with Int ; x:Int ; X x <- X 1 ; ret x" $
               (parse' stmt "data Xxx with Int ; var x:Int ; set Xxx x <- Xxx 1 ; return x")

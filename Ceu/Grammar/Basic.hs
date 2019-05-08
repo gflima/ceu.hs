@@ -48,7 +48,7 @@ data Stmt
     = Class  Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] Stmt Stmt -- new class declaration
     | Inst   Ann (ID_Class,[Type]) Stmt Stmt  -- new class instance
     | Data   Ann ID_Data_Hier [ID_Var] Type Bool Stmt -- new type declaration
-    | Var    Ann ID_Var  Type Stmt            -- variable declaration
+    | Var    Ann ID_Var Bool Type Stmt        -- variable declaration
     | Match  Ann Bool Loc Exp Stmt Stmt       -- match/assignment/if statement
     | CallS  Ann Exp                          -- call function
     | Seq    Ann Stmt Stmt                    -- sequence
@@ -63,7 +63,7 @@ show_stmt :: Int -> Stmt -> String
 --show_stmt spc (Class _ (id,_) _ _ p) = replicate spc ' ' ++ "class "  ++ id ++ "\n" ++ show_stmt spc p
 --show_stmt spc (Inst  _ (id,_) _ p)   = replicate spc ' ' ++ "inst "   ++ id ++ "\n" ++ show_stmt spc p
 show_stmt spc (Data _ id _ _ _ p)     = replicate spc ' ' ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
-show_stmt spc (Var _ id _ p)          = replicate spc ' ' ++ "var "    ++ id ++ "\n" ++ show_stmt spc p
+show_stmt spc (Var _ id _ _ p)        = replicate spc ' ' ++ "var "    ++ id ++ "\n" ++ show_stmt spc p
 show_stmt spc (CallS _ e)             = replicate spc ' ' ++ "call " ++ show_exp spc e
 show_stmt spc (Ret _ e)               = replicate spc ' ' ++ "return " ++ show_exp spc e
 show_stmt spc (Seq _ p1 p2)           = replicate spc ' ' ++ "--\n" ++ show_stmt (spc+4) p1 ++
@@ -146,7 +146,7 @@ instance HasAnn Stmt where
     getAnn (Class z _ _ _ _)   = z
     getAnn (Inst  z _ _ _)     = z
     getAnn (Data  z _ _ _ _ _) = z
-    getAnn (Var   z _ _ _)     = z
+    getAnn (Var   z _ _ _ _)   = z
     getAnn (Match z _ _ _ _ _) = z
     getAnn (CallS z _)         = z
     getAnn (Seq   z _ _)       = z

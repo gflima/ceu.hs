@@ -508,7 +508,7 @@ __f3__(Int -> Int) 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "f1/f2" $
+      it "XXX: f1/f2" $
         (run True $
           unlines [
             "interface IFable for a with",

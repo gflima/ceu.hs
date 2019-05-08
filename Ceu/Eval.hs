@@ -78,7 +78,7 @@ fromLoc (B.LExp   exp)     = LExp (fromExp exp)
 
 fromStmt :: B.Stmt -> Stmt
 fromStmt (B.Data   _ _ _ _ _ p)     = fromStmt p
-fromStmt (B.Var _ id _ p)           = Var (id,Nothing) (fromStmt p)
+fromStmt (B.Var _ id _ _ p)         = Var (id,Nothing) (fromStmt p)
 fromStmt (B.CallS  _ e)             = CallS (fromExp e)
 fromStmt (B.Seq    _ p1 p2)         = Seq (fromStmt p1) (fromStmt p2)
 fromStmt (B.Loop   _ p)             = Loop' (fromStmt p) (fromStmt p)

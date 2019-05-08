@@ -110,7 +110,7 @@ toBasicStmt :: Stmt -> B.Stmt
 toBasicStmt (Class' z me ext ifc p)       = B.Class z me ext (toBasicStmt ifc) (toBasicStmt p)
 toBasicStmt (Inst'  z me imp p)           = B.Inst  z me     (toBasicStmt imp) (toBasicStmt p)
 toBasicStmt (Data'  z tp vars flds abs p) = B.Data  z tp  vars flds abs (toBasicStmt p)
-toBasicStmt (Var'   z var tp p)           = B.Var   z var tp (toBasicStmt p)
+toBasicStmt (Var'   z var tp p)           = B.Var   z var False tp (toBasicStmt p)
 toBasicStmt (Match' z chk loc exp p1 p2)  = B.Match z chk (toBasicLoc loc) (toBasicExp exp)
                                                           (toBasicStmt p1) (toBasicStmt p2)
 toBasicStmt (CallS  z e)                  = B.CallS z (toBasicExp e)
