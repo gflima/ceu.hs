@@ -22,7 +22,7 @@ clearStmt :: Stmt -> Stmt
 clearStmt (Class _ me ext ifc)       = Class  annz me ext (clearStmt ifc)
 clearStmt (Inst  _ me     imp)       = Inst   annz me     (clearStmt imp)
 clearStmt (Data  _ tp vars flds abs) = Data   annz tp  vars flds abs
-clearStmt (Var   _ var gen tp)       = Var    annz var gen tp
+clearStmt (Var   _ var tp)           = Var    annz var tp
 clearStmt (FuncS _ var tp p)         = FuncS  annz var tp (clearStmt p)
 clearStmt (Set   _ chk loc exp)      = Set    annz chk loc (clearExp exp)
 clearStmt (If    _ exp p1 p2)        = If     annz (clearExp exp) (clearStmt p1) (clearStmt p2)
@@ -369,19 +369,19 @@ spec = do
         describe "var:" $ do
             it "var x: Int" $
                 parse stmt_var "var x: Int;"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" False (TypeD ["Int"])) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)})))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (TypeD ["Int"])) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)})))
             it "var val x" $
                 parse stmt_var "var val x"
                 `shouldBe` Left "(line 1, column 9):\nunexpected \"x\"\nexpecting \":\""
             it "var a: Int <- 1" $
                 parse stmt_var "var a : Int <- 1"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "a" False (TypeD ["Int"])) (Nop (annz{source = ("",0,0)}))) (Set (annz{source = ("",1,13)}) False (LVar "a") (Number (annz{source = ("",1,16)}) 1)))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "a" (TypeD ["Int"])) (Nop (annz{source = ("",0,0)}))) (Set (annz{source = ("",1,13)}) False (LVar "a") (Number (annz{source = ("",1,16)}) 1)))
             it "var x:() <- ()" $
                 parse stmt_var "var x:() <- ()"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" False Type0) (Nop (annz{source = ("",0,0)}))) (Set (annz{source = ("",1,10)}) False (LVar "x") (Unit (annz{source = ("",1,13)}))))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" Type0) (Nop (annz{source = ("",0,0)}))) (Set (annz{source = ("",1,10)}) False (LVar "x") (Unit (annz{source = ("",1,13)}))))
             it "var x:(Int,()) <- (1 ())" $
                 parse stmt_var "var x:(Int,()) <- (1,())"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" False (TypeN [TypeD ["Int"],Type0])) (Nop (annz{source = ("",0,0)}))) (Set (annz{source = ("",1,16)}) False (LVar "x") (Tuple (annz{source = ("",1,19)}) [Number (annz{source = ("",1,20)}) 1,Unit (annz{source = ("",1,22)})])))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (TypeN [TypeD ["Int"],Type0])) (Nop (annz{source = ("",0,0)}))) (Set (annz{source = ("",1,16)}) False (LVar "x") (Tuple (annz{source = ("",1,19)}) [Number (annz{source = ("",1,20)}) 1,Unit (annz{source = ("",1,22)})])))
 
         describe "var-tuples:" $ do
             it "((_,x,),_)" $ do
@@ -389,10 +389,10 @@ spec = do
                 `shouldBe` Right (LTuple [LTuple [LAny,LVar "x"],LAny])
             it "var (x,y) : (Int,Int) <- (1, 2); return x+y" $
                 parse stmt_var "var (x,y) : (Int,Int) <- (1, 2)"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" False (TypeD ["Int"])) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "y" False (TypeD ["Int"])) (Nop (annz{source = ("",0,0)})))) (Set (annz{source = ("",1,23)}) False (LTuple [LVar "x",LVar "y"]) (Tuple (annz{source = ("",1,26)}) [Number (annz{source = ("",1,27)}) 1,Number (annz{source = ("",1,30)}) 2])))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (TypeD ["Int"])) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "y" (TypeD ["Int"])) (Nop (annz{source = ("",0,0)})))) (Set (annz{source = ("",1,23)}) False (LTuple [LVar "x",LVar "y"]) (Tuple (annz{source = ("",1,26)}) [Number (annz{source = ("",1,27)}) 1,Number (annz{source = ("",1,30)}) 2])))
             it "var (x,(y,_)):(Int,(Int,Int)) <- (1, (2,3)); return x+y" $
                 parse stmt "var (x,(y,_)):(Int, (Int,Int)) <- (1, (2,3)); return x+y"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" False (TypeD ["Int"])) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "y" False (TypeD ["Int"])) (Nop (annz{source = ("",0,0)})))) (Set (annz{source = ("",1,32)}) False (LTuple [LVar "x",LTuple [LVar "y",LAny]]) (Tuple (annz{source = ("",1,35)}) [Number (annz{source = ("",1,36)}) 1,Tuple (annz{source = ("",1,39)}) [Number (annz{source = ("",1,40)}) 2,Number (annz{source = ("",1,42)}) 3]]))) (Ret (annz{source = ("",1,47)}) (Call (annz{source = ("",1,55)}) (Read annz{source=("",1,55)} "+") (Tuple (annz{source = ("",1,54)}) [Read (annz{source = ("",1,54)}) "x",Read (annz{source = ("",1,56)}) "y"]))))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (TypeD ["Int"])) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "y" (TypeD ["Int"])) (Nop (annz{source = ("",0,0)})))) (Set (annz{source = ("",1,32)}) False (LTuple [LVar "x",LTuple [LVar "y",LAny]]) (Tuple (annz{source = ("",1,35)}) [Number (annz{source = ("",1,36)}) 1,Tuple (annz{source = ("",1,39)}) [Number (annz{source = ("",1,40)}) 2,Number (annz{source = ("",1,42)}) 3]]))) (Ret (annz{source = ("",1,47)}) (Call (annz{source = ("",1,55)}) (Read annz{source=("",1,55)} "+") (Tuple (annz{source = ("",1,54)}) [Read (annz{source = ("",1,54)}) "x",Read (annz{source = ("",1,56)}) "y"]))))
             it "var (_,_):(Int,Int,Int)" $
                 parse stmt "var (_,_):(Int,Int,Int)"
                 `shouldBe` Left "(line 1, column 24):\nunexpected arity mismatch"
@@ -480,19 +480,19 @@ spec = do
         describe "func:" $ do
             it "var add : ..." $
                 parse stmt "var add : ((Int, Int) -> Int)"
-                `shouldBe` Right (Seq annz{source = ("",1,1)} (Seq annz (Var annz{source = ("",1,1)} "add" False (TypeF (TypeN [TypeD ["Int"],TypeD ["Int"]]) (TypeD ["Int"]))) (Nop annz)) (Nop annz{source = ("",1,1)}))
+                `shouldBe` Right (Seq annz{source = ("",1,1)} (Seq annz (Var annz{source = ("",1,1)} "add" (TypeF (TypeN [TypeD ["Int"],TypeD ["Int"]]) (TypeD ["Int"]))) (Nop annz)) (Nop annz{source = ("",1,1)}))
             it "var add : ... <- func ..." $
                 parse stmt "var add : ((Int, Int) -> Int) <- func (a,_) : ((Int, Int) -> Int) do end"
-                `shouldBe` Right (Seq annz{source=("",1,1)} (Seq annz (Var annz{source=("",1,1)} "add" False (TypeF (TypeN [TypeD ["Int"],TypeD ["Int"]]) (TypeD ["Int"]))) (Nop annz)) (Set annz{source=("",1,31)} False (LVar "add") (Func annz{source=("",1,34)} (TypeF (TypeN [TypeD ["Int"],TypeD ["Int"]]) (TypeD ["Int"])) (Seq annz{source=("",1,34)} (Seq annz (Var annz{source=("",1,34)} "a" False (TypeD ["Int"])) (Nop annz)) (Seq annz{source=("",1,34)} (Set annz{source=("",1,34)} False (LTuple [LVar "a",LAny]) (Arg annz{source=("",1,34)})) (Nop annz{source=("",1,70)}))))))
+                `shouldBe` Right (Seq annz{source=("",1,1)} (Seq annz (Var annz{source=("",1,1)} "add" (TypeF (TypeN [TypeD ["Int"],TypeD ["Int"]]) (TypeD ["Int"]))) (Nop annz)) (Set annz{source=("",1,31)} False (LVar "add") (Func annz{source=("",1,34)} (TypeF (TypeN [TypeD ["Int"],TypeD ["Int"]]) (TypeD ["Int"])) (Seq annz{source=("",1,34)} (Seq annz (Var annz{source=("",1,34)} "a" (TypeD ["Int"])) (Nop annz)) (Seq annz{source=("",1,34)} (Set annz{source=("",1,34)} False (LTuple [LVar "a",LAny]) (Arg annz{source=("",1,34)})) (Nop annz{source=("",1,70)}))))))
             it "func add : (...) do end" $
                 parse stmt_funcs "func add (a,_) : ((Int, Int) -> Int) do end"
-                `shouldBe` Right (FuncS annz{source=("",1,1)} "add" (TypeF (TypeN [TypeD ["Int"],TypeD ["Int"]]) (TypeD ["Int"])) (Seq annz{source=("",1,1)} (Seq annz{source=("",0,0)} (Var annz{source=("",1,1)} "a" False (TypeD ["Int"])) (Nop annz{source=("",0,0)})) (Seq annz{source=("",1,1)} (Set annz{source=("",1,1)} False (LTuple [LVar "a",LAny]) (Arg annz{source=("",1,1)})) (Nop annz{source=("",1,41)}))))
+                `shouldBe` Right (FuncS annz{source=("",1,1)} "add" (TypeF (TypeN [TypeD ["Int"],TypeD ["Int"]]) (TypeD ["Int"])) (Seq annz{source=("",1,1)} (Seq annz{source=("",0,0)} (Var annz{source=("",1,1)} "a" (TypeD ["Int"])) (Nop annz{source=("",0,0)})) (Seq annz{source=("",1,1)} (Set annz{source=("",1,1)} False (LTuple [LVar "a",LAny]) (Arg annz{source=("",1,1)})) (Nop annz{source=("",1,41)}))))
             it "func add (...) : (...)" $
                 parse stmt_funcs "func add (a,_) : ((Int, Int) -> Int)"
                 `shouldBe` Left "(line 1, column 37):\nunexpected end of input\nexpecting \"where\" or \"do\""
             it "func add : (...)" $
                 parse stmt_funcs "func add : ((Int, Int) -> Int)"
-                `shouldBe` Right (Var annz{source=("",1,1)} "add" False (TypeF (TypeN [TypeD ["Int"],TypeD ["Int"]]) (TypeD ["Int"])))
+                `shouldBe` Right (Var annz{source=("",1,1)} "add" (TypeF (TypeN [TypeD ["Int"],TypeD ["Int"]]) (TypeD ["Int"])))
             it "func (_,_,_) : (_,_)" $
                 parse stmt_funcs "func add (_,_,_) : ((Int, Int) -> Int) do end"
                 `shouldBe` Left "(line 1, column 40):\nunexpected \"d\"\narity mismatch"
@@ -514,7 +514,7 @@ spec = do
                   "end",
                   "return (Bool.True) and (Bool.True)"
                  ])
-              `shouldBe` Right (Seq annz (FuncS annz "and" (TypeF (TypeN [TypeD ["Bool"],TypeD ["Bool"]]) (TypeD ["Bool"])) (Seq annz (Seq annz (Var annz "x" False (TypeD ["Bool"])) (Seq annz (Var annz "y" False (TypeD ["Bool"])) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","False"] (Unit annz)))))) (Ret annz (Call annz (Read annz "and") (Tuple annz [Cons annz ["Bool","True"] (Unit annz),Cons annz ["Bool","True"] (Unit annz)]))))
+              `shouldBe` Right (Seq annz (FuncS annz "and" (TypeF (TypeN [TypeD ["Bool"],TypeD ["Bool"]]) (TypeD ["Bool"])) (Seq annz (Seq annz (Var annz "x" (TypeD ["Bool"])) (Seq annz (Var annz "y" (TypeD ["Bool"])) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","False"] (Unit annz)))))) (Ret annz (Call annz (Read annz "and") (Tuple annz [Cons annz ["Bool","True"] (Unit annz),Cons annz ["Bool","True"] (Unit annz)]))))
 
         describe "data" $ do
 
@@ -523,7 +523,7 @@ spec = do
               `shouldBe` Right (Data annz{source=("",1,1)} ["Xxx"] [] Type0 False)
             it "data Xxx ; var x = Xxx" $
               (parse' stmt "data Xxx ; var x:Xxx <- Xxx")
-              `shouldBe` Right (Seq annz (Data annz ["Xxx"] [] Type0 False) (Seq annz (Seq annz (Var annz "x" False (TypeD ["Xxx"])) (Nop annz)) (Set annz False (LVar "x") (Cons annz ["Xxx"] (Unit annz)))))
+              `shouldBe` Right (Seq annz (Data annz ["Xxx"] [] Type0 False) (Seq annz (Seq annz (Var annz "x" (TypeD ["Xxx"])) (Nop annz)) (Set annz False (LVar "x") (Cons annz ["Xxx"] (Unit annz)))))
             it "data Xxx.Yyy" $
               (parse stmt "data Xxx.Yyy")
               `shouldBe` Right (Data annz{source=("",1,1)} ["Xxx","Yyy"] [] Type0 False)
@@ -545,7 +545,7 @@ spec = do
 
             it "data Xxx with Int ; x<-Xxx(1,1)" $
               (parse' stmt "data Xxx with Int ; var x:Xxx <- Xxx 1")
-              `shouldBe` Right (Seq annz (Data annz ["Xxx"] [] (TypeD ["Int"]) False) (Seq annz (Seq annz (Var annz "x" False (TypeD ["Xxx"])) (Nop annz)) (Set annz False (LVar "x") (Cons annz ["Xxx"] (Number annz 1)))))
+              `shouldBe` Right (Seq annz (Data annz ["Xxx"] [] (TypeD ["Int"]) False) (Seq annz (Seq annz (Var annz "x" (TypeD ["Xxx"])) (Nop annz)) (Set annz False (LVar "x") (Cons annz ["Xxx"] (Number annz 1)))))
 
             it "TODO-fields: data Xxx with (x,y) : (Int,Int)" $
               (parse stmt "data Xxx with (x,y) : (Int,Int)")
@@ -557,7 +557,7 @@ spec = do
 
             it "data X with Int ; x:Int ; X x <- X 1 ; ret x" $
               (parse' stmt "data Xxx with Int ; var x:Int ; set Xxx x <- Xxx 1 ; return x")
-              `shouldBe` Right (Seq annz (Data annz ["Xxx"] [] (TypeD ["Int"]) False) (Seq annz (Seq annz (Seq annz (Var annz "x" False (TypeD ["Int"])) (Nop annz)) (Nop annz)) (Seq annz (Set annz False (LCons ["Xxx"] (LVar "x")) (Cons annz ["Xxx"] (Number annz 1))) (Ret annz (Read annz "x")))))
+              `shouldBe` Right (Seq annz (Data annz ["Xxx"] [] (TypeD ["Int"]) False) (Seq annz (Seq annz (Seq annz (Var annz "x" (TypeD ["Int"])) (Nop annz)) (Nop annz)) (Seq annz (Set annz False (LCons ["Xxx"] (LVar "x")) (Cons annz ["Xxx"] (Number annz 1))) (Ret annz (Read annz "x")))))
             it "data X with Int ; X 1 <- X 1 ; return 1" $
               (parse' stmt "data Xxx with Int ; set Xxx 1 <- Xxx 1 ; return 1")
               `shouldBe` Right (Seq annz (Data annz ["Xxx"] [] (TypeD ["Int"]) False) (Seq annz (Set annz False (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 1))) (Ret annz (Number annz 1))))
@@ -576,7 +576,7 @@ spec = do
                   "set (Aa v) <- b",
                   "return v"
                 ])
-              `shouldBe` Right (Seq annz (Data annz ["Aa"] [] (TypeD ["Int"]) False) (Seq annz (Data annz ["Aa","Bb"] [] Type0 False) (Seq annz (Seq annz (Seq annz (Var annz "b" False (TypeD ["Aa","Bb"])) (Nop annz)) (Set annz False (LVar "b") (Cons annz ["Aa","Bb"] (Number annz 1)))) (Seq annz (Seq annz (Seq annz (Var annz "a" False (TypeD ["Aa"])) (Nop annz)) (Set annz False (LVar "a") (Read annz "b"))) (Seq annz (Seq annz (Seq annz (Var annz "v" False (TypeD ["Int"])) (Nop annz)) (Nop annz)) (Seq annz (Set annz False (LCons ["Aa"] (LVar "v")) (Read annz "b")) (Ret annz (Read annz "v"))))))))
+              `shouldBe` Right (Seq annz (Data annz ["Aa"] [] (TypeD ["Int"]) False) (Seq annz (Data annz ["Aa","Bb"] [] Type0 False) (Seq annz (Seq annz (Seq annz (Var annz "b" (TypeD ["Aa","Bb"])) (Nop annz)) (Set annz False (LVar "b") (Cons annz ["Aa","Bb"] (Number annz 1)))) (Seq annz (Seq annz (Seq annz (Var annz "a" (TypeD ["Aa"])) (Nop annz)) (Set annz False (LVar "a") (Read annz "b"))) (Seq annz (Seq annz (Seq annz (Var annz "v" (TypeD ["Int"])) (Nop annz)) (Nop annz)) (Seq annz (Set annz False (LCons ["Aa"] (LVar "v")) (Read annz "b")) (Ret annz (Read annz "v"))))))))
 
         describe "interface:" $ do
 
@@ -598,7 +598,7 @@ spec = do
               (Class annz{source=("",1,1)} ("IF3able", ["a"]) []
                 (Seq annz{source=("",2,2)}
                 (Seq annz{source=("",0,0)}
-                (Var annz{source=("",2,2)} "f3" False (TypeF (TypeV "a" []) (TypeD ["Int"])))
+                (Var annz{source=("",2,2)} "f3" (TypeF (TypeV "a" []) (TypeD ["Int"])))
                 (Nop annz{source=("",0,0)}))
                 (Nop annz{source=("",2,2)})))
               (Seq annz{source=("",1,1)}
@@ -606,7 +606,7 @@ spec = do
                 (FuncS annz{source=("",5,2)} "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))
                   (Seq annz{source=("",5,2)}
                   (Seq annz{source=("",0,0)}
-                  (Var annz{source=("",5,2)} "v" False (TypeV "a" []))
+                  (Var annz{source=("",5,2)} "v" (TypeV "a" []))
                   (Nop annz{source=("",0,0)}))
                   (Seq annz{source=("",5,2)}
                   (Set annz{source=("",5,2)} False (LVar "v") (Arg annz{source=("",5,2)})) (Ret annz{source=("",6,4)} (Read annz{source=("",6,11)} "v"))))))
@@ -636,18 +636,18 @@ spec = do
             `shouldBe` Right
               (Seq annz
               (Class annz ("IEq",["a"]) []
-                (Var annz "==" False (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))))
+                (Var annz "==" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))))
               (Seq annz
               (Class annz ("IOrd",["a"]) [("IEq",["a"])]
-                (Var annz ">=" False (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))))
+                (Var annz ">=" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))))
               (Seq annz
               (Inst annz ("IEq",[TypeD ["Bool"]])
                 (FuncS annz "==" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))
-                  (Seq annz (Seq annz (Var annz "x" False (TypeV "a" [])) (Seq annz (Var annz "y" False (TypeV "a" [])) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"] (Unit annz)))))))
+                  (Seq annz (Seq annz (Var annz "x" (TypeV "a" [])) (Seq annz (Var annz "y" (TypeV "a" [])) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"] (Unit annz)))))))
               (Seq annz
               (Inst annz ("IOrd",[TypeD ["Bool"]])
                 (FuncS annz ">=" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))
-                  (Seq annz (Seq annz (Var annz "x" False (TypeV "a" [])) (Seq annz (Var annz "y" False (TypeV "a" [])) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"] (Unit annz)))))))
+                  (Seq annz (Seq annz (Var annz "x" (TypeV "a" [])) (Seq annz (Var annz "y" (TypeV "a" [])) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"] (Unit annz)))))))
               (Ret annz (Call annz (Read annz ">=") (Tuple annz [Cons annz ["Bool","True"] (Unit annz),Cons annz ["Bool","False"] (Unit annz)])))))))
 
           it "IFable f ; g a implements IFable" $
@@ -671,12 +671,12 @@ spec = do
             `shouldBe` Right
               (Seq annz
                 (Class annz ("IFable",["a"]) []
-                  (Var annz "f" False (TypeF (TypeV "a" []) (TypeD ["Bool"]))))
+                  (Var annz "f" (TypeF (TypeV "a" []) (TypeD ["Bool"]))))
               (Seq annz
                 (FuncS annz "g" (TypeF (TypeV "a" ["IFable"]) (TypeD ["Bool"]))
                   (Seq annz
                   (Seq annz
-                    (Var annz "x" False (TypeV "a" [])) (Nop annz))
+                    (Var annz "x" (TypeV "a" [])) (Nop annz))
                   (Seq annz (Set annz False (LVar "x") (Arg annz)) (Ret annz (Call annz (Read annz "f") (Read annz "x")))))) (Ret annz (Call annz (Read annz "g") (Cons annz ["Bool","True"] (Unit annz))))))
 
         describe "seq:" $ do
@@ -694,20 +694,20 @@ spec = do
 
             it "var a:Int ; a<-1" $
                 parse (stmt_seq ("",1,1)) "var a:Int ; set a<-1"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "a" False (TypeD ["Int"])) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Set (annz{source = ("",1,18)}) False (LVar "a") (Number (annz{source = ("",1,20)}) 1)))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "a" (TypeD ["Int"])) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Set (annz{source = ("",1,18)}) False (LVar "a") (Number (annz{source = ("",1,20)}) 1)))
 
         describe "stmt:" $ do
             it "var x:Int; return 1" $
                 parse stmt "var x:Int ;return 1"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" False (TypeD ["Int"])) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Ret (annz{source = ("",1,12)}) (Number (annz{source = ("",1,19)}) 1)))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (TypeD ["Int"])) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Ret (annz{source = ("",1,12)}) (Number (annz{source = ("",1,19)}) 1)))
 
             it "var x:Int; x<-1; return x" $
                 parse stmt "var x:Int ; set x <- 1 ; return x"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" False (TypeD ["Int"])) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Seq (annz{source = ("",1,1)}) (Set (annz{source = ("",1,19)}) False (LVar "x") (Number (annz{source = ("",1,22)}) 1)) (Ret (annz{source = ("",1,26)}) (Read (annz{source = ("",1,33)}) "x"))))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (TypeD ["Int"])) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Seq (annz{source = ("",1,1)}) (Set (annz{source = ("",1,19)}) False (LVar "x") (Number (annz{source = ("",1,22)}) 1)) (Ret (annz{source = ("",1,26)}) (Read (annz{source = ("",1,33)}) "x"))))
 
             it "var x:(Int,Int,)<-(1,2) ; return +x" $
                 parse stmt "var x:(Int,Int)<-(1,2) ; return +x"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" False (TypeN [TypeD ["Int"],TypeD ["Int"]])) (Nop (annz{source = ("",0,0)}))) (Set (annz{source = ("",1,16)}) False (LVar "x") (Tuple (annz{source = ("",1,18)}) [Number (annz{source = ("",1,19)}) 1,Number (annz{source = ("",1,21)}) 2]))) (Ret (annz{source = ("",1,26)}) (Call (annz{source = ("",1,33)}) (Read annz{source=("",1,33)} "+") (Read (annz{source = ("",1,34)}) "x"))))
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (TypeN [TypeD ["Int"],TypeD ["Int"]])) (Nop (annz{source = ("",0,0)}))) (Set (annz{source = ("",1,16)}) False (LVar "x") (Tuple (annz{source = ("",1,18)}) [Number (annz{source = ("",1,19)}) 1,Number (annz{source = ("",1,21)}) 2]))) (Ret (annz{source = ("",1,26)}) (Call (annz{source = ("",1,33)}) (Read annz{source=("",1,33)} "+") (Read (annz{source = ("",1,34)}) "x"))))
 
             it "do ... end" $
                 parse stmt "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end"

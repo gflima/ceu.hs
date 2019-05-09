@@ -68,7 +68,7 @@ matchLocType src loc tp = case (aux src loc tp) of
     aux :: Source -> Loc -> Type -> Maybe [Stmt]
     aux pos LAny        _          = Just []
     aux pos LUnit       Type0      = Just []
-    aux pos (LVar var)  tp         = Just [Var annz{source=pos} var False tp]
+    aux pos (LVar var)  tp         = Just [Var annz{source=pos} var tp]
     aux pos (LTuple []) (TypeN []) = Just []
     aux pos (LTuple []) _          = Nothing
     aux pos (LTuple _)  (TypeN []) = Nothing
@@ -372,7 +372,7 @@ stmt_funcs = do
             Nothing -> do
               void <- tk_sym ":"
               tp   <- pType
-              return $ Var ann f False tp
+              return $ Var ann f tp
             Just (tp,imp) -> do
               return $ FuncS ann f tp imp
   return ret
