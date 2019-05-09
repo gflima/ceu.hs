@@ -17,7 +17,7 @@ import Ceu.Parser.Token
 import Ceu.Parser.Type        (pType, type_F)
 
 import Ceu.Grammar.Globals    (Source, ID_Var, ID_Class)
-import Ceu.Grammar.Type       (Type(..), addConstraint, getConstraints)
+import Ceu.Grammar.Type       (Type(..))
 import Ceu.Grammar.Ann        (annz, source, getAnn, Ann(..))
 import Ceu.Grammar.Full.Full
 
@@ -114,16 +114,15 @@ stmt_class = do
   pos       <- pos2src <$> getPosition
   void      <- try $ tk_key "interface"
   (cls,var) <- pClassFor tk_var
-  ext       <- optionMaybe $ (tk_key "extends" *> pClassFor tk_var)
+  exts      <- optionMaybe $ (tk_key "extends" *> pClassFor tk_var)
   void      <- tk_key "with"
   ifc       <- stmt
   void      <- tk_key "end"
-  return $ let ext' = case ext of
+  return $ let exts' = case exts of
                         Just (sup,var') -> [(sup,[var'])]
                         Nothing         -> []
            in
-            (Class annz{source=pos} (cls,[var]) ext' (map_stmt (id,id,addConstraint(var,cls)) ifc))
-            --(Class annz{source=pos} (cls,[var]) ext' ifc)
+            (Class annz{source=pos} (cls,[var]) exts' ifc)
 
 stmt_inst :: Parser Stmt
 stmt_inst = do
@@ -268,13 +267,6 @@ expr_func = do
   void     <- try $ tk_key "func"
   (tp,imp) <- func pos
   return $ Func annz{source=pos} tp imp
-{-
-  return $
-    case Set.toList $ getConstraints tp of
-      []            -> Func annz{source=pos} tp imp
-      [(var,[cls])] -> Func annz{source=pos} tp (map_stmt (id,id,addConstraint(var,cls)) imp)
-      --[(var,[cls])] -> Func annz{source=pos} tp imp
--}
 
 expr_unit :: Parser Exp
 expr_unit = do
@@ -382,9 +374,5 @@ stmt_funcs = do
               tp   <- pType
               return $ Var ann f False tp
             Just (tp,imp) -> do
-              --return $ FuncS ann f tp imp
-              return $  -- TODO: remover tudo e fazer em Full.FuncS
-                case Set.toList $ getConstraints tp of
-                  []            -> FuncS ann f tp imp
-                  [(var,[cls])] -> FuncS ann f tp (map_stmt (id,id,addConstraint(var,cls)) imp)
+              return $ FuncS ann f tp imp
   return ret

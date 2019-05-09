@@ -29,6 +29,7 @@ spec = do
 -}
 
   --------------------------------------------------------------------------
+            --"   func f1 x : (a -> Bool) do return f2 x end",
 
   describe "Func.compile" $ do
 
@@ -99,7 +100,7 @@ spec = do
                 (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
       `shouldBe`
         (Class' annz ("F3able",["a"]) []
-          (Var' annz "f3" False (TypeF (TypeV "a" []) (TypeD ["Int"]))
+          (Var' annz "f3" True (TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"]))
           (Seq annz (Nop annz) (Nop annz)))
         (Inst' annz ("F3able",[TypeD ["Int"]])
           (Var' annz "f3" False (TypeF (TypeV "a" []) (TypeD ["Int"]))

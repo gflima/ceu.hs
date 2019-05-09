@@ -10,7 +10,7 @@ import qualified Data.Set as Set
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Type as Type (Type(..), show', instantiate, getDs,
-                                 hasConstraint, hasAnyConstraint, getConstraints, addConstraint,
+                                 hasConstraint, hasAnyConstraint, getConstraints,
                                  getSuper, cat, hier2str,
                                  Relation(..), relates, isRel, relatesErrors)
 import Ceu.Grammar.Ann
@@ -133,19 +133,12 @@ stmt ids s@(Class z (id,[var]) exts ifc p) = (esMe ++ esExts ++ es, p') where
                 Just _  -> []
   (es,p') = stmt (s:ids) (cat ifc p)
 
-  -- f, g, ..., p   (f,g,... may have type constraints)
-  cat (Var z k _ tp (Match z2 False (LVar k') exp t f)) p | k==k' =
-    Var z k True tp (Match z2 False (LVar k') exp (cat t p) f)
-  cat (Var z k _ tp q) p =
-    Var z k True tp (cat q p)
+  -- concatenate p to the end of ifc
+  cat (Var z k gen tp (Match z2 False (LVar k') exp t f)) p | k==k' =
+    Var z k gen tp (Match z2 False (LVar k') exp (cat t p) f)
+  cat (Var z k gen tp q) p =
+    Var z k gen tp (cat q p)
   cat (Nop _) p = p
-
-{-
-  cat (Var z k False tp (Match z2 False (LVar k') exp t f)) p | k==k' =
-    Var z k (Type.addConstraint (var,id) tp) (Match z2 False (LVar k') exp (cat t p) f)
-  cat (Var z k False tp q) p =
-    Var z k (Type.addConstraint (var,id) tp) (cat q p)
--}
 
 stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
 

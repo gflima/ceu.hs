@@ -598,7 +598,7 @@ spec = do
               (Class annz{source=("",1,1)} ("IF3able", ["a"]) []
                 (Seq annz{source=("",2,2)}
                 (Seq annz{source=("",0,0)}
-                (Var annz{source=("",2,2)} "f3" False (TypeF (TypeV "a" ["IF3able"]) (TypeD ["Int"])))
+                (Var annz{source=("",2,2)} "f3" False (TypeF (TypeV "a" []) (TypeD ["Int"])))
                 (Nop annz{source=("",0,0)}))
                 (Nop annz{source=("",2,2)})))
               (Seq annz{source=("",1,1)}
@@ -636,10 +636,10 @@ spec = do
             `shouldBe` Right
               (Seq annz
               (Class annz ("IEq",["a"]) []
-                (Var annz "==" False (TypeF (TypeN [TypeV "a" ["IEq"],TypeV "a" ["IEq"]]) (TypeD ["Bool"]))))
+                (Var annz "==" False (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))))
               (Seq annz
               (Class annz ("IOrd",["a"]) [("IEq",["a"])]
-                (Var annz ">=" False (TypeF (TypeN [TypeV "a" ["IOrd"],TypeV "a" ["IOrd"]]) (TypeD ["Bool"]))))
+                (Var annz ">=" False (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))))
               (Seq annz
               (Inst annz ("IEq",[TypeD ["Bool"]])
                 (FuncS annz "==" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))
@@ -671,12 +671,12 @@ spec = do
             `shouldBe` Right
               (Seq annz
                 (Class annz ("IFable",["a"]) []
-                  (Var annz "f" False (TypeF (TypeV "a" ["IFable"]) (TypeD ["Bool"]))))
+                  (Var annz "f" False (TypeF (TypeV "a" []) (TypeD ["Bool"]))))
               (Seq annz
                 (FuncS annz "g" (TypeF (TypeV "a" ["IFable"]) (TypeD ["Bool"]))
                   (Seq annz
                   (Seq annz
-                    (Var annz "x" False (TypeV "a" ["IFable"])) (Nop annz))
+                    (Var annz "x" False (TypeV "a" [])) (Nop annz))
                   (Seq annz (Set annz False (LVar "x") (Arg annz)) (Ret annz (Call annz (Read annz "f") (Read annz "x")))))) (Ret annz (Call annz (Read annz "g") (Cons annz ["Bool","True"] (Unit annz))))))
 
         describe "seq:" $ do
