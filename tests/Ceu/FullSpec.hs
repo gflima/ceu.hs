@@ -99,10 +99,10 @@ spec = do
                     (Ret annz (Read annz "v"))))))
                 (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
       `shouldBe`
-        (Class' annz ("F3able",["a"]) []
+        (Class'' annz ("F3able",["a"]) []
           (Var'' annz "f3" True (TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"]))
           (Seq annz (Nop annz) (Nop annz)))
-        (Inst' annz ("F3able",[TypeD ["Int"]])
+        (Inst'' annz ("F3able",[TypeD ["Int"]])
           (Var'' annz "f3" False (TypeF (TypeV "a" []) (TypeD ["Int"]))
           (Match' annz False
             (LVar "f3")
