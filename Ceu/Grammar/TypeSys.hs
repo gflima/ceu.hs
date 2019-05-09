@@ -134,13 +134,18 @@ stmt ids s@(Class z (id,[var]) exts ifc p) = (esMe ++ esExts ++ es, p') where
   (es,p') = stmt (s:ids) (cat ifc p)
 
   -- f, g, ..., p   (f,g,... may have type constraints)
-  cat (Var z k False tp (Match z2 False (LVar k') exp t f)) p | k==k' =
-    --Var z k (Type.addConstraint (var,id) tp) (Match z2 False (LVar k') exp (cat t p) f)
+  cat (Var z k _ tp (Match z2 False (LVar k') exp t f)) p | k==k' =
     Var z k True tp (Match z2 False (LVar k') exp (cat t p) f)
-  cat (Var z k False tp q) p =
-    --Var z k (Type.addConstraint (var,id) tp) (cat q p)
+  cat (Var z k _ tp q) p =
     Var z k True tp (cat q p)
   cat (Nop _) p = p
+
+{-
+  cat (Var z k False tp (Match z2 False (LVar k') exp t f)) p | k==k' =
+    Var z k (Type.addConstraint (var,id) tp) (Match z2 False (LVar k') exp (cat t p) f)
+  cat (Var z k False tp q) p =
+    Var z k (Type.addConstraint (var,id) tp) (cat q p)
+-}
 
 stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
 
@@ -302,7 +307,7 @@ stmt ids s@(Var z id gen tp p) = (es_data ++ es_id ++ es, Var z id gen tp p'') w
               chk _ = False
   (es,p'') = stmt (s:ids) p'
 
-  -- In case of parametric implementations:
+  -- In case of parametric/generic implementations:
   --  - rename from
   --      f :: (a -> T) where a implements I
   --    to

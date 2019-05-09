@@ -267,11 +267,14 @@ expr_func = do
   pos      <- pos2src <$> getPosition
   void     <- try $ tk_key "func"
   (tp,imp) <- func pos
+  return $ Func annz{source=pos} tp imp
+{-
   return $
     case Set.toList $ getConstraints tp of
       []            -> Func annz{source=pos} tp imp
       [(var,[cls])] -> Func annz{source=pos} tp (map_stmt (id,id,addConstraint(var,cls)) imp)
       --[(var,[cls])] -> Func annz{source=pos} tp imp
+-}
 
 expr_unit :: Parser Exp
 expr_unit = do
@@ -379,9 +382,9 @@ stmt_funcs = do
               tp   <- pType
               return $ Var ann f False tp
             Just (tp,imp) -> do
-              return $
+              --return $ FuncS ann f tp imp
+              return $  -- TODO: remover tudo e fazer em Full.FuncS
                 case Set.toList $ getConstraints tp of
-                  []            -> FuncS ann f False tp imp
-                  [(var,[cls])] -> FuncS ann f True  tp (map_stmt (id,id,addConstraint(var,cls)) imp)
-                  --[(var,[cls])] -> FuncS ann f tp imp
+                  []            -> FuncS ann f tp imp
+                  [(var,[cls])] -> FuncS ann f tp (map_stmt (id,id,addConstraint(var,cls)) imp)
   return ret

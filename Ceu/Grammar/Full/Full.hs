@@ -70,7 +70,7 @@ data Stmt
   | Inst     Ann (ID_Class,[Type])   Stmt         -- new class instance
   | Data     Ann ID_Data_Hier [ID_Var] Type Bool  -- new type declaration
   | Var      Ann ID_Var Bool Type                 -- variable declaration
-  | FuncS    Ann ID_Var Bool Type Stmt            -- function declaration
+  | FuncS    Ann ID_Var Type Stmt                 -- function declaration
   | Match    Ann Loc Exp Stmt Stmt                -- match
   | Set      Ann Bool Loc Exp                     -- assignment statement
   | CallS    Ann Exp                              -- call function
@@ -96,7 +96,7 @@ instance HasAnn Stmt where
     getAnn (Inst     z _ _)   = z
     getAnn (Data     z _ _ _ _) = z
     getAnn (Var      z _ _ _)   = z
-    getAnn (FuncS    z _ _ _ _) = z
+    getAnn (FuncS    z _ _ _) = z
     getAnn (Seq      z _ _  ) = z
     getAnn (Loop     z _    ) = z
     getAnn (Scope    z _    ) = z
@@ -127,7 +127,7 @@ map_stmt f@(fs,_,_)  (Class z me ext p)       = fs (Class z me ext (map_stmt f p
 map_stmt f@(fs,_,_)  (Inst  z me p)           = fs (Inst  z me (map_stmt f p))
 map_stmt f@(fs,_,ft) (Data  z me flds tp abs) = fs (Data  z me flds (ft tp) abs)
 map_stmt f@(fs,_,ft) (Var   z id gen tp)      = fs (Var   z id gen (ft tp))
-map_stmt f@(fs,_,ft) (FuncS z id gen tp p)    = fs (FuncS z id gen (ft tp) (map_stmt f p))
+map_stmt f@(fs,_,ft) (FuncS z id tp p)        = fs (FuncS z id (ft tp) (map_stmt f p))
 map_stmt f@(fs,_,_)  (Match z loc exp p1 p2)  = fs (Match z loc (map_exp f exp) (map_stmt f p1) (map_stmt f p2))
 map_stmt f@(fs,_,_)  (Set   z b loc exp)      = fs (Set   z b loc (map_exp f exp))
 map_stmt f@(fs,_,_)  (CallS z exp)            = fs (CallS z (map_exp f exp))

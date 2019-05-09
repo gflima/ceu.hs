@@ -33,7 +33,7 @@ spec = do
   describe "Func.compile" $ do
 
     it "func id : (a->a) do end" $ do
-      FuncS.compile (FuncS annz "id" False (TypeF (TypeV "a" []) (TypeV "a" [])) (Nop annz))
+      FuncS.compile (FuncS annz "id" (TypeF (TypeV "a" []) (TypeV "a" [])) (Nop annz))
       `shouldBe` (Seq annz
                   (Var annz "id" False (TypeF (TypeV "a" []) (TypeV "a" [])))
                   (Set annz False (LVar "id")
@@ -88,7 +88,7 @@ spec = do
                   (Nop annz)))
                 (Seq annz
                 (Inst annz ("F3able",[TypeD ["Int"]])
-                  (FuncS annz "f3" False (TypeF (TypeV "a" []) (TypeD ["Int"]))
+                  (FuncS annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))
                     (Seq annz
                     (Seq annz
                     (Var annz "v" False (TypeV "a" []))
