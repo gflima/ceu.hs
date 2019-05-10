@@ -1,31 +1,26 @@
-module Ceu.Grammar.Full.Compile.FuncS where
+module Ceu.Grammar.Full.Compile.Class where
 
 import Debug.Trace
 import qualified Data.Set as S
 
 import Ceu.Grammar.Globals
+import Ceu.Grammar.Ann      (Ann)
+import Ceu.Grammar.Type     (Type)
 import Ceu.Grammar.Full.Full
-import qualified Ceu.Grammar.Type as T
 
 compile :: Stmt -> Stmt
 compile p = stmt p
 
 stmt :: Stmt -> Stmt
-stmt (Class z (cls,[var]) exts ifc) = Class z (cls,[var]) exts (stmt $ aux ifc)
+stmt (Class z me exts ifc) = Seq z (Class' z me exts (aux ifc)) ifc
   where
-    aux (Seq   z p1 p2)     = Seq   z (aux p1) (aux p2)
-    aux (Var   z id tp)     = Var'  z id True (T.addConstraint (var,cls) tp)
-    aux (FuncS z id tp imp) = FuncS z id (T.addConstraint (var,cls) tp) imp
-    aux p                   = p
-
-stmt (FuncS z k tp imp) = Seq z (Var' z k gen tp) (Set z False (LVar k) (Func z tp (stmt imp')))
- where
-  (gen,imp') = case S.toList $ T.getConstraints tp of
-    []            -> (False, imp)
-    [(var,[cls])] -> (True,  (map_stmt (id,id,T.addConstraint(var,cls)) imp))
+    aux :: Stmt -> [(Ann, ID_Var, Type, Bool)]
+    aux (Seq  _ (Var' z id _ tp) (Set _ False (LVar id') _)) | id==id' = [(z,id,tp,True)]
+    aux (Seq  _ p1 p2)       = (aux p1) ++ (aux p2)
+    aux (Var' z id True tp)  = [(z,id,tp,False)]
+    aux p                    = []
 
 stmt (Inst  z me imp)        = Inst  z me (stmt imp)
-stmt (Var   z id tp)         = Var'  z id False tp
 stmt (Set   z chk loc exp)   = Set   z chk loc (expr exp)
 stmt (Match z loc exp p1 p2) = Match z loc (expr exp) (stmt p1) (stmt p2)
 stmt (CallS z exp)           = CallS z (expr exp)

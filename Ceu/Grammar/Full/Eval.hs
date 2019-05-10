@@ -13,7 +13,7 @@ import Ceu.Grammar.Full.Full
 import qualified Ceu.Grammar.Full.Compile.Scope as Scope
 import qualified Ceu.Grammar.Full.Compile.Seq   as Seq
 import qualified Ceu.Grammar.Full.Compile.Match as Match
---import qualified Ceu.Grammar.Full.Compile.Class as Class
+import qualified Ceu.Grammar.Full.Compile.Class as Class
 import qualified Ceu.Grammar.Full.Compile.FuncS as FuncS
 
 prelude :: Ann -> Stmt -> Stmt
@@ -36,7 +36,7 @@ prelude z p =
            p)))))))))))))))
 
 compile :: Stmt -> Stmt
-compile p = Scope.compile $ Seq.compile $ Match.compile $ {-Class.compile $-} FuncS.compile p
+compile p = Scope.compile $ Seq.compile $ Match.compile $ Class.compile $ FuncS.compile p
 
 compile' :: Stmt -> (Errors, B.Stmt)
 compile' p = (es4, p4)

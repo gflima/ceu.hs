@@ -67,7 +67,7 @@ toBasicLoc (LExp   exp)     = B.LExp (toBasicExp exp)
 
 data Stmt
   = Class    Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] Stmt -- new class declaration
-  -- | Class'   Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] [(Ann,ID_Var,Type)] -- interface w/ body
+  | Class'   Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] [(Ann,ID_Var,Type,Bool)] -- interface w/ body
   | Inst     Ann (ID_Class,[Type])   Stmt         -- new class instance
   | Data     Ann ID_Data_Hier [ID_Var] Type Bool  -- new type declaration
   | Var      Ann ID_Var Type                      -- variable declaration
@@ -84,7 +84,7 @@ data Stmt
   | Nop      Ann                                  -- nop as in basic Grammar
   | Ret      Ann Exp
   -- declarations w/ scope
-  | Class''  Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] Stmt Stmt
+  | Class''  Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] [(Ann,ID_Var,Type,Bool)] Stmt
   | Inst''   Ann (ID_Class,[Type]) Stmt Stmt
   | Data''   Ann ID_Data_Hier [ID_Var] Type Bool Stmt
   | Var''    Ann ID_Var Bool Type Stmt
@@ -111,7 +111,7 @@ instance HasAnn Stmt where
     getAnn (Var''    z _ _ _ _)   = z
 
 toBasicStmt :: Stmt -> B.Stmt
-toBasicStmt (Class'' z me ext ifc p)       = B.Class z me ext (toBasicStmt ifc) (toBasicStmt p)
+toBasicStmt (Class'' z me ext ifc p)       = B.Class z me ext ifc (toBasicStmt p)
 toBasicStmt (Inst''  z me imp p)           = B.Inst  z me     (toBasicStmt imp) (toBasicStmt p)
 toBasicStmt (Data''  z tp vars flds abs p) = B.Data  z tp  vars flds abs (toBasicStmt p)
 toBasicStmt (Var''   z var gen tp p)       = B.Var   z var gen tp (toBasicStmt p)

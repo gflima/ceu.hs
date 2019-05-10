@@ -45,7 +45,7 @@ data Loc = LAny
 -------------------------------------------------------------------------------
 
 data Stmt
-    = Class  Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] Stmt Stmt -- new class declaration
+    = Class  Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] [(Ann,ID_Var,Type,Bool)] Stmt -- new class declaration
     | Inst   Ann (ID_Class,[Type]) Stmt Stmt  -- new class instance
     | Data   Ann ID_Data_Hier [ID_Var] Type Bool Stmt -- new type declaration
     | Var    Ann ID_Var Bool Type Stmt        -- variable declaration

@@ -13,7 +13,7 @@ stmt :: Stmt -> Stmt
 stmt (Class z me ext ifc p) =
   case p' of
     Nop z'    -> Nop z'
-    otherwise -> Class z me ext (stmt ifc) p'
+    otherwise -> Class z me ext ifc p'
   where p' = stmt p
 
 stmt (Inst z me imp p) =

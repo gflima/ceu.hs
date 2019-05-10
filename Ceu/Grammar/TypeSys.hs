@@ -49,16 +49,20 @@ supers ids s@(Class z _ exts ifc _) = s :
                   otherwise -> []
     otherwise -> []
 
-class2table :: [Stmt] -> Stmt -> Table.Map ID_Var Stmt
+class2table :: [Stmt] -> Stmt -> Table.Map ID_Var (Ann,ID_Var,Type,Bool)
 class2table ids cls = Table.unions $ map f1 (supers ids cls)
   where
     f1 (Class _ _ _ ifc _) = f2 ifc
+    f2 :: [(Ann,ID_Var,Type,Bool)] -> Table.Map ID_Var (Ann,ID_Var,Type,Bool)
+    f2 ifc = Table.fromList $ map (\s@(_,id,_,_) -> (id,s)) ifc
+{-
     f2 :: Stmt -> Table.Map ID_Var Stmt
     f2 s@(Var _ id _ _ (Match _ _ _ _ p _)) = Table.insert id s (f2 p)
     f2 s@(Var _ id _ _ p)                   = Table.insert id s (f2 p)
     f2 (Nop _)                              = Table.empty
+-}
 
-inst2table :: [Stmt] -> Stmt -> Table.Map ID_Var Stmt
+inst2table :: [Stmt] -> Stmt -> Table.Map ID_Var (Ann,ID_Var,Type,Bool)
 inst2table ids (Inst z (cls,[tp]) imp _) = Table.union (aux imp) sups where
   sups =
     case find (isClass $ (==)cls) ids of
@@ -67,6 +71,24 @@ inst2table ids (Inst z (cls,[tp]) imp _) = Table.union (aux imp) sups where
   f (cls',_) =
     case find pred ids of
       Just x  -> inst2table ids x
+      Nothing -> Table.empty
+    where
+      pred (Inst  _ (x,[y]) _ _) = (x==cls' && y==tp)
+      pred _ = False
+
+  aux :: Stmt -> Table.Map ID_Var (Ann,ID_Var,Type,Bool)
+  aux s@(Var z id _ tp (Match _ _ _ _ p _)) = Table.insert id (z,id,tp,True) (aux p)
+  aux (Nop _)                               = Table.empty
+
+inst2table' :: [Stmt] -> Stmt -> Table.Map ID_Var Stmt
+inst2table' ids (Inst z (cls,[tp]) imp _) = Table.union (aux imp) sups where
+  sups =
+    case find (isClass $ (==)cls) ids of
+      Just (Class z _ exts _ _) -> Table.unions $ map f exts
+
+  f (cls',_) =
+    case find pred ids of
+      Just x  -> inst2table' ids x
       Nothing -> Table.empty
     where
       pred (Inst  _ (x,[y]) _ _) = (x==cls' && y==tp)
@@ -131,6 +153,8 @@ stmt ids s@(Class z (id,[var]) exts ifc p) = (esMe ++ esExts ++ es, p') where
               f (sup,_) = case find (isClass $ (==)sup) ids of
                 Nothing -> [toError z $ "interface '" ++ sup ++ "' is not declared"]
                 Just _  -> []
+  (es,p') = stmt (s:ids) p
+{-
   (es,p') = stmt (s:ids) (cat ifc p)
 
   -- concatenate p to the end of ifc
@@ -139,6 +163,7 @@ stmt ids s@(Class z (id,[var]) exts ifc p) = (esMe ++ esExts ++ es, p') where
   cat (Var z k gen tp q) p =
     Var z k gen tp (cat q p)
   cat (Nop _) p = p
+-}
 
 stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
 
@@ -159,8 +184,9 @@ stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
           -- instance is not declared
           Nothing -> (p3, es1++ex++ey++ez) where
 
-            hcls  = class2table ids k
-            hinst = inst2table  ids s
+            hcls   = class2table ids k
+            hinst  = inst2table  ids s
+            hinst' = inst2table' ids s
 
             ---------------------------------------------------------------------
 
@@ -182,8 +208,7 @@ stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
             -- funcs in cls (w/o default impl) not in inst
             ex = concatMap f $ Table.keys $ Table.difference (Table.filter g hcls) hinst where
                     f id = [toError z $ "missing implementation of '" ++ id ++ "'"]
-                    g (Var _ _ _ _ (Match _ _ _ _ _ _)) = False
-                    g _                                 = True
+                    g (_,_,_,impl) = impl
 
             -- funcs in inst not in cls
             ey = concatMap f $ Table.keys $ Table.difference hinst hcls where
@@ -191,7 +216,7 @@ stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
 
             -- funcs in both: check sigs // check impls
             ez = concat $ Table.elems $ Table.intersectionWith f hcls hinst where
-                    f (Var _ _ _ tp1 _) (Var z2 id2 _ tp2 imp) =
+                    f (_,_,tp1,_) (z2,id2,tp2,impl) =
                       case relates SUP tp1 tp2 of
                         Left es -> map (toError z2) es
                         Right (_,insts) ->
@@ -202,10 +227,7 @@ stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
                               [toError z $ "types do not match : expected '" ++
                                 (Type.show' inst_tp) ++ "' : found '" ++
                                 (Type.show' tp') ++ "'"]
-                      ++
-                      case imp of
-                        Match _ _ _ _ _ _ -> []
-                        otherwise         -> [toError z2 $ "missing implementation of '" ++ id2 ++ "'"]
+                      ++ (bool [toError z2 $ "missing implementation of '" ++ id2 ++ "'"] [] impl)
 
             ---------------------------------------------------------------------
 
@@ -249,23 +271,23 @@ stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
             p3 = foldr cat p2 (Table.elems $ Table.difference toinst dcleds)
                  where
                   -- all symbols to be type instantiated from hcls
-                  toinst :: Table.Map ID_Var Stmt
+                  toinst :: Table.Map ID_Var (Ann,ID_Var,Type,Bool)
                   toinst = Table.foldrWithKey f Table.empty hcls
-                  f k (Var z id _ tp p) acc = Table.insert k' v' acc where  -- TODO: gen=_ should be True, but Class is not mapped
+                  f k (z,id,tp,_) acc = Table.insert k' v' acc where  -- TODO: gen=_ should be True, but Class is not mapped
                     k'  = idtp k tp'
-                    v'  = Var z (idtp id tp') True tp' p
+                    v'  = (z, (idtp id tp'), tp', False)
                     tp' = Type.instantiate [(clss_var,inst_tp)] tp
 
                   -- all already declared type instantiated symbols
                   -- (from super implementations)
-                  dcleds :: Table.Map ID_Var Stmt
+                  dcleds :: Table.Map ID_Var (Ann,ID_Var,Type,Bool)
                   --dcleds = Table.empty
                   dcleds = Table.fromList
-                            $ map (\s@(Var _ id _ _ _)->(id,s))
+                            $ map (\(Var z id _ tp _)->(id,(z,id,tp,False)))
                             $ filter (isVar $ const True) ids
 
                   -- prototypes
-                  cat (Var z id True tp _) acc = Var z id False tp acc
+                  cat (z,id,tp,_) acc = Var z id False tp acc
 
         where
           isSameInst (Inst _ (id,[tp']) _ _) = (cls==id && [inst_tp]==[tp'])
