@@ -437,14 +437,16 @@ spec = do
             [(annz,"f3",(TypeF (TypeV "a" ["X"]) (TypeD ["Int"])),False)]
           (B.Var annz "f3" False (TypeF (TypeV "a" ["X"]) (TypeD ["Int"]))
           (B.Inst annz ("X", [TypeD ["Int"]])
+            [(annz,"f3",(TypeF (TypeD ["Int"]) (TypeD ["Int"])),True)]
             (B.Var annz "f3" False (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
             (B.Match annz False
               (B.LVar "f3")
               (B.Func annz (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
                 (B.Ret annz (B.Number annz 1)))
-              (B.Nop annz)
-              (B.Nop annz)))
-          (B.Ret annz (B.Call annz (B.Read annz "f3") (B.Number annz 1)))))))
+              (B.Seq annz
+                (B.Nop annz)
+                (B.Ret annz (B.Call annz (B.Read annz "f3") (B.Number annz 1))))
+              (B.Nop annz)))))))
         `shouldBe` (Number 1)
 
       it "Int ; Bool ; X a ; inst X Bool/Int ; return f2 1" $
@@ -456,29 +458,35 @@ spec = do
             [(annz,"f2",(TypeF (TypeV "a" ["X"]) (TypeD ["Int"])),False)]
           (B.Var annz "f2" False (TypeF (TypeV "a" ["X"]) (TypeD ["Int"]))
           (B.Inst annz ("X", [TypeD ["Bool"]])
+            [(annz,"f2",(TypeF (TypeD ["Bool"]) (TypeD ["Int"])),True)]
             (B.Var annz "f2" False (TypeF (TypeD ["Bool"]) (TypeD ["Int"]))
             (B.Match annz False
               (B.LVar "f2")
               (B.Func annz (TypeF (TypeD ["Bool"]) (TypeD ["Int"]))
                 (B.Ret annz (B.Number annz 0)))
-              (B.Nop annz)
-              (B.Nop annz)))
-          (B.Inst annz ("X", [TypeD ["Int"]])
-            (B.Var annz "f2" False (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
-            (B.Match annz False
-              (B.LVar "f2")
-              (B.Func annz (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
-                (B.Ret annz
-                  (B.Call annz
-                    (B.Read annz "+")
-                    (B.Tuple annz [B.Arg annz, B.Number annz 1]))))
-              (B.Nop annz)
-              (B.Nop annz)))
-          (B.Var annz "ret" False (TypeD ["Int"])
-          (B.Match annz False (B.LVar "ret")
-            (B.Call annz (B.Read annz "f2") (B.Number annz 1))
-            (B.Ret annz (B.Read annz "ret"))
-            (B.Ret annz (B.Error annz 99)))))))))))
+              (B.Seq annz
+                (B.Nop annz)
+                (B.Inst annz ("X", [TypeD ["Int"]])
+                  [(annz,"f2",(TypeF (TypeD ["Int"]) (TypeD ["Int"])),True)]
+                  (B.Var annz "f2" False (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
+                  (B.Match annz False
+                    (B.LVar "f2")
+                    (B.Func annz (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
+                      (B.Ret annz
+                        (B.Call annz
+                          (B.Read annz "+")
+                          (B.Tuple annz [B.Arg annz, B.Number annz 1]))))
+                    (B.Seq annz
+                      (B.Nop annz)
+                      (B.Var annz "ret" False (TypeD ["Int"])
+                      (B.Match annz False (B.LVar "ret")
+                        (B.Call annz (B.Read annz "f2") (B.Number annz 1))
+                        (B.Ret annz (B.Read annz "ret"))
+                        (B.Ret annz (B.Error annz 99))))
+                    )
+                    (B.Nop annz))))
+                    )
+                    (B.Nop annz)))))))))
         `shouldBe` (Number 2)
 
       it "Int ; Bool ; X a ; inst X Bool/Int ; return f4 1" $
@@ -490,6 +498,7 @@ spec = do
             [(annz,"f4",(TypeF (TypeV "a" ["X"]) (TypeD ["Int"])),False)]
           (B.Var annz "f4" False (TypeF (TypeV "a" ["X"]) (TypeD ["Int"]))
           (B.Inst annz ("X", [TypeD ["Int"]])
+            [(annz,"f4",(TypeF (TypeD ["Int"]) (TypeD ["Int"])),True)]
             (B.Var annz "f4" False (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
             (B.Match annz False
               (B.LVar "f4")
@@ -498,17 +507,22 @@ spec = do
                   (B.Call annz
                     (B.Read annz "+")
                     (B.Tuple annz [B.Arg annz, B.Number annz 1]))))
-                (B.Nop annz)
-                (B.Nop annz)))
-          (B.Inst annz ("X", [TypeD ["Bool"]])
-            (B.Var annz "f4" False (TypeF (TypeD ["Bool"]) (TypeD ["Int"]))
-            (B.Match annz False
-              (B.LVar "f4")
-              (B.Func annz (TypeF (TypeD ["Bool"]) (TypeD ["Int"]))
-                (B.Ret annz (B.Number annz 0)))
-              (B.Nop annz)
-              (B.Nop annz)))
-          (B.Ret annz (B.Call annz (B.Read annz "f4") (B.Number annz 1))))))))))
+                (B.Seq annz
+                  (B.Nop annz)
+                  (B.Inst annz ("X", [TypeD ["Bool"]])
+                    [(annz,"f4",(TypeF (TypeD ["Bool"]) (TypeD ["Int"])),True)]
+                    (B.Var annz "f4" False (TypeF (TypeD ["Bool"]) (TypeD ["Int"]))
+                    (B.Match annz False
+                      (B.LVar "f4")
+                      (B.Func annz (TypeF (TypeD ["Bool"]) (TypeD ["Int"]))
+                        (B.Ret annz (B.Number annz 0)))
+                      (B.Seq annz
+                        (B.Nop annz)
+                        (B.Ret annz (B.Call annz (B.Read annz "f4") (B.Number annz 1)))
+                      )
+                      (B.Nop annz))))
+                )
+                (B.Nop annz)))))))))
         `shouldBe` (Number 2)
 
     describe "misc" $ do

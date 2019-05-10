@@ -57,7 +57,7 @@ class2table ids cls = Table.unions $ map f1 (supers ids cls)
     f2 ifc = Table.fromList $ map (\s@(_,id,_,_) -> (id,s)) ifc
 
 inst2table :: [Stmt] -> Stmt -> Table.Map ID_Var (Ann,ID_Var,Type,Bool)
-inst2table ids (Inst z (cls,[tp]) imp _) = Table.union (aux imp) sups where
+inst2table ids (Inst z (cls,[tp]) imp _) = Table.union (f2 imp) sups where
   sups =
     case find (isClass $ (==)cls) ids of
       Just (Class z _ exts _ _) -> Table.unions $ map f exts
@@ -70,9 +70,15 @@ inst2table ids (Inst z (cls,[tp]) imp _) = Table.union (aux imp) sups where
       pred (Inst  _ (x,[y]) _ _) = (x==cls' && y==tp)
       pred _ = False
 
+{-
   aux :: Stmt -> Table.Map ID_Var (Ann,ID_Var,Type,Bool)
   aux s@(Var z id _ tp (Match _ _ _ _ p _)) = Table.insert id (z,id,tp,True) (aux p)
   aux (Nop _)                               = Table.empty
+-}
+
+  f2 :: [(Ann,ID_Var,Type,Bool)] -> Table.Map ID_Var (Ann,ID_Var,Type,Bool)
+  f2 ifc = Table.fromList $ map (\s@(_,id,_,_) -> (id,s)) ifc
+
 
 --wrap :: Ann -> [(ID_Var,Type)] -> Type -> [Stmt] -> Exp -> Exp
 wrap z (cls,ids) (l,tp) body = Func z tp $ foldr f (Ret z $ Call z body (Arg z)) fs
@@ -196,7 +202,9 @@ stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
 
             -- rename instance implementations:
             -- f1 :: (A -> T) --> __f1__(A -> T)
-            p1 = cat imp p
+            p1 = p
+{-
+                 cat imp p
                  where
                   cat s@(Var z id False tp (Match z2 False (LVar _) exp t f)) p =
                     Var z id' False tp (Match z2 False (LVar id') exp (cat t p) f)
@@ -204,6 +212,7 @@ stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
                       id' = idtp id tp
                   cat (Nop _) p = p
                   --cat x p = error $ show x
+-}
 
             -- instantiate all parametric globals (in associated class or others)
             -- Example:

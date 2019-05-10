@@ -68,7 +68,8 @@ toBasicLoc (LExp   exp)     = B.LExp (toBasicExp exp)
 data Stmt
   = Class    Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] Stmt -- new class declaration
   | Class'   Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] [(Ann,ID_Var,Type,Bool)] -- interface w/ body
-  | Inst     Ann (ID_Class,[Type])   Stmt         -- new class instance
+  | Inst     Ann (ID_Class,[Type]) Stmt           -- new class instance
+  | Inst'    Ann (ID_Class,[Type]) [(Ann,ID_Var,Type,Bool)] -- new class instance
   | Data     Ann ID_Data_Hier [ID_Var] Type Bool  -- new type declaration
   | Var      Ann ID_Var Type                      -- variable declaration
   | Var'     Ann ID_Var Bool Type                 -- variable declaration w/ is_generic? property
@@ -85,7 +86,7 @@ data Stmt
   | Ret      Ann Exp
   -- declarations w/ scope
   | Class''  Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] [(Ann,ID_Var,Type,Bool)] Stmt
-  | Inst''   Ann (ID_Class,[Type]) Stmt Stmt
+  | Inst''   Ann (ID_Class,[Type])                         [(Ann,ID_Var,Type,Bool)] Stmt
   | Data''   Ann ID_Data_Hier [ID_Var] Type Bool Stmt
   | Var''    Ann ID_Var Bool Type Stmt
   deriving (Eq, Show)
@@ -112,7 +113,7 @@ instance HasAnn Stmt where
 
 toBasicStmt :: Stmt -> B.Stmt
 toBasicStmt (Class'' z me ext ifc p)       = B.Class z me ext ifc (toBasicStmt p)
-toBasicStmt (Inst''  z me imp p)           = B.Inst  z me     (toBasicStmt imp) (toBasicStmt p)
+toBasicStmt (Inst''  z me     imp p)       = B.Inst  z me     imp (toBasicStmt p)
 toBasicStmt (Data''  z tp vars flds abs p) = B.Data  z tp  vars flds abs (toBasicStmt p)
 toBasicStmt (Var''   z var gen tp p)       = B.Var   z var gen tp (toBasicStmt p)
 toBasicStmt (Match'  z chk loc exp p1 p2)  = B.Match z chk (toBasicLoc loc) (toBasicExp exp)
@@ -128,7 +129,7 @@ toBasicStmt p                              = error $ "toBasicStmt: unexpected st
 
 map_stmt :: (Stmt->Stmt, Exp->Exp, Type->Type) -> Stmt -> Stmt
 map_stmt f@(fs,_,_)  (Class z me ext p)       = fs (Class z me ext (map_stmt f p))
-map_stmt f@(fs,_,_)  (Inst  z me p)           = fs (Inst  z me (map_stmt f p))
+map_stmt f@(fs,_,_)  (Inst  z me     p)       = fs (Inst  z me     (map_stmt f p))
 map_stmt f@(fs,_,ft) (Data  z me flds tp abs) = fs (Data  z me flds (ft tp) abs)
 map_stmt f@(fs,_,ft) (Var   z id tp)          = fs (Var   z id (ft tp))
 map_stmt f@(fs,_,ft) (FuncS z id tp p)        = fs (FuncS z id (ft tp) (map_stmt f p))

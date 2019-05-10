@@ -79,7 +79,54 @@ spec = do
       compile' (Var'' annz "x" False (TypeD ["Int"]) (Match' annz False (LVar "x") (Number annz 1) (Nop annz) (Nop annz)))
       `shouldBe` (["data 'Int' is not declared"], (B.Var annz "x" False (TypeD ["Int"]) (B.Match annz False (B.LVar "x") (B.Number annz{type_=TypeD ["Int","1"]} 1) (B.Nop annz) (B.Nop annz))))
 
-    it "class/inst" $ do
+    it "class/inst/0" $ do
+      compile (Inst annz ("F3able",[TypeD ["Int"]])
+                (FuncS annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))
+                  (Ret annz (Number annz 10))))
+      `shouldBe`
+        (Inst'' annz ("F3able",[TypeD ["Int"]])
+          [(annz,"f3",TypeF (TypeV "a" []) (TypeD ["Int"]),True)]
+        (Var'' annz "f3" False (TypeF (TypeV "a" []) (TypeD ["Int"]))
+          (Match' annz False (LVar "f3") (Func annz (TypeF (TypeV "a" []) (TypeD ["Int"])) (Ret annz (Number annz 10))) (Nop annz) (Ret annz (Error annz (-2))))))
+
+    it "class/inst/1" $ do
+      compile (Seq annz
+                (Class annz ("F3able",["a"]) []
+                  (Var annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))))
+                (Inst annz ("F3able",[TypeD ["Int"]])
+                  (FuncS annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))
+                    (Ret annz (Number annz 10)))))
+      `shouldBe`
+        (Class'' annz ("F3able",["a"]) []
+          [(annz,"f3",TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"]),False)]
+        (Var'' annz "f3" True (TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"]))
+        (Inst'' annz ("F3able",[TypeD ["Int"]])
+          [(annz,"f3",TypeF (TypeV "a" []) (TypeD ["Int"]),True)]
+        (Var'' annz "f3" False (TypeF (TypeV "a" []) (TypeD ["Int"]))
+            (Match' annz False (LVar "f3") (Func annz (TypeF (TypeV "a" []) (TypeD ["Int"])) (Ret annz (Number annz 10))) (Nop annz) (Ret annz (Error annz (-2))))))))
+
+    it "class/inst/2" $ do
+      compile (Seq annz
+                (Class annz ("F3able",["a"]) []
+                  (Var annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))))
+              (Seq annz
+                (Inst annz ("F3able",[TypeD ["Int"]])
+                  (FuncS annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))
+                    (Ret annz (Number annz 10))))
+              (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
+      `shouldBe`
+        (Class'' annz ("F3able",["a"]) []
+          [(annz,"f3",TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"]),False)]
+        (Var'' annz "f3" True (TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"]))
+        (Inst'' annz ("F3able",[TypeD ["Int"]])
+          [(annz,"f3",TypeF (TypeV "a" []) (TypeD ["Int"]),True)]
+        (Var'' annz "f3" False (TypeF (TypeV "a" []) (TypeD ["Int"]))
+            (Match' annz False (LVar "f3") (Func annz (TypeF (TypeV "a" []) (TypeD ["Int"])) (Ret annz (Number annz 10)))
+              (Seq annz
+                (Nop annz)
+                (Ret annz (Call annz (Read annz "f3") (Number annz 10))))
+              (Ret annz (Error annz (-2))))))))
+    it "class/inst/3" $ do
       compile (Seq annz
                 (Class annz ("F3able",["a"]) []
                   (Seq annz
@@ -100,11 +147,14 @@ spec = do
                 (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
       `shouldBe`
         (Class'' annz ("F3able",["a"]) []
-          [(annz,"f3",(TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"])),False)]
+          [(annz,"f3",TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"]),False)]
         (Var'' annz "f3" True (TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"]))
-        (Seq annz (Nop annz)
-        (Seq annz (Nop annz)
+        (Seq annz
+        (Nop annz)
+        (Seq annz
+        (Nop annz)
         (Inst'' annz ("F3able",[TypeD ["Int"]])
+          [(annz,"f3",TypeF (TypeV "a" []) (TypeD ["Int"]),True)]
           (Var'' annz "f3" False (TypeF (TypeV "a" []) (TypeD ["Int"]))
           (Match' annz False
             (LVar "f3")
@@ -113,8 +163,10 @@ spec = do
               (Seq annz
               (Nop annz)
               (Match' annz False (LVar "v") (Arg annz) (Seq annz (Nop annz) (Ret annz (Read annz "v"))) (Ret annz (Error annz (-2)))))))
-            (Nop annz) (Ret annz (Error annz (-2)))))
-        (Ret annz (Call annz (Read annz "f3") (Number annz 10))))))))
+            (Seq annz
+              (Nop annz)
+              (Ret annz (Call annz (Read annz "f3") (Number annz 10))))
+            (Ret annz (Error annz (-2))))))))))
 
   --------------------------------------------------------------------------
 

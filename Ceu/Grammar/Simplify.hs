@@ -19,7 +19,7 @@ stmt (Class z me ext ifc p) =
 stmt (Inst z me imp p) =
   case p' of
     Nop z'    -> Nop z'
-    otherwise -> Inst z me (stmt imp) p'
+    otherwise -> Inst z me imp p'
   where p' = stmt p
 
 stmt (Data z id vars flds abs p) =
