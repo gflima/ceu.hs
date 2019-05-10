@@ -100,8 +100,10 @@ spec = do
                 (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
       `shouldBe`
         (Class'' annz ("F3able",["a"]) []
-          (Var'' annz "f3" True (TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"]))
-          (Seq annz (Nop annz) (Nop annz)))
+          [(annz,"f3",(TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"])),False)]
+        (Var'' annz "f3" True (TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"]))
+        (Seq annz (Nop annz)
+        (Seq annz (Nop annz)
         (Inst'' annz ("F3able",[TypeD ["Int"]])
           (Var'' annz "f3" False (TypeF (TypeV "a" []) (TypeD ["Int"]))
           (Match' annz False
@@ -112,7 +114,7 @@ spec = do
               (Nop annz)
               (Match' annz False (LVar "v") (Arg annz) (Seq annz (Nop annz) (Ret annz (Read annz "v"))) (Ret annz (Error annz (-2)))))))
             (Nop annz) (Ret annz (Error annz (-2)))))
-        (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
+        (Ret annz (Call annz (Read annz "f3") (Number annz 10))))))))
 
   --------------------------------------------------------------------------
 

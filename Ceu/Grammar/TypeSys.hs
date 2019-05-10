@@ -55,12 +55,6 @@ class2table ids cls = Table.unions $ map f1 (supers ids cls)
     f1 (Class _ _ _ ifc _) = f2 ifc
     f2 :: [(Ann,ID_Var,Type,Bool)] -> Table.Map ID_Var (Ann,ID_Var,Type,Bool)
     f2 ifc = Table.fromList $ map (\s@(_,id,_,_) -> (id,s)) ifc
-{-
-    f2 :: Stmt -> Table.Map ID_Var Stmt
-    f2 s@(Var _ id _ _ (Match _ _ _ _ p _)) = Table.insert id s (f2 p)
-    f2 s@(Var _ id _ _ p)                   = Table.insert id s (f2 p)
-    f2 (Nop _)                              = Table.empty
--}
 
 inst2table :: [Stmt] -> Stmt -> Table.Map ID_Var (Ann,ID_Var,Type,Bool)
 inst2table ids (Inst z (cls,[tp]) imp _) = Table.union (aux imp) sups where
@@ -79,25 +73,6 @@ inst2table ids (Inst z (cls,[tp]) imp _) = Table.union (aux imp) sups where
   aux :: Stmt -> Table.Map ID_Var (Ann,ID_Var,Type,Bool)
   aux s@(Var z id _ tp (Match _ _ _ _ p _)) = Table.insert id (z,id,tp,True) (aux p)
   aux (Nop _)                               = Table.empty
-
-inst2table' :: [Stmt] -> Stmt -> Table.Map ID_Var Stmt
-inst2table' ids (Inst z (cls,[tp]) imp _) = Table.union (aux imp) sups where
-  sups =
-    case find (isClass $ (==)cls) ids of
-      Just (Class z _ exts _ _) -> Table.unions $ map f exts
-
-  f (cls',_) =
-    case find pred ids of
-      Just x  -> inst2table' ids x
-      Nothing -> Table.empty
-    where
-      pred (Inst  _ (x,[y]) _ _) = (x==cls' && y==tp)
-      pred _ = False
-
-  aux :: Stmt -> Table.Map ID_Var Stmt
-  aux s@(Var _ id _ _ (Match _ _ _ _ p _)) = Table.insert id s (aux p)
-  --aux s@(Var _ id _ p)                   = Table.insert id s (aux p)
-  aux (Nop _)                              = Table.empty
 
 --wrap :: Ann -> [(ID_Var,Type)] -> Type -> [Stmt] -> Exp -> Exp
 wrap z (cls,ids) (l,tp) body = Func z tp $ foldr f (Ret z $ Call z body (Arg z)) fs
@@ -154,17 +129,6 @@ stmt ids s@(Class z (id,[var]) exts ifc p) = (esMe ++ esExts ++ es, p') where
                 Nothing -> [toError z $ "interface '" ++ sup ++ "' is not declared"]
                 Just _  -> []
   (es,p') = stmt (s:ids) p
-{-
-  (es,p') = stmt (s:ids) (cat ifc p)
-
-  -- concatenate p to the end of ifc
-  cat (Var z k gen tp (Match z2 False (LVar k') exp t f)) p | k==k' =
-    Var z k gen tp (Match z2 False (LVar k') exp (cat t p) f)
-  cat (Var z k gen tp q) p =
-    Var z k gen tp (cat q p)
-  cat (Nop _) p = p
--}
-
 stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
 
 stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
@@ -186,7 +150,6 @@ stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
 
             hcls   = class2table ids k
             hinst  = inst2table  ids s
-            hinst' = inst2table' ids s
 
             ---------------------------------------------------------------------
 
@@ -208,7 +171,7 @@ stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
             -- funcs in cls (w/o default impl) not in inst
             ex = concatMap f $ Table.keys $ Table.difference (Table.filter g hcls) hinst where
                     f id = [toError z $ "missing implementation of '" ++ id ++ "'"]
-                    g (_,_,_,impl) = impl
+                    g (_,_,_,impl) = not impl
 
             -- funcs in inst not in cls
             ey = concatMap f $ Table.keys $ Table.difference hinst hcls where
@@ -561,7 +524,7 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
       -- find in top-level ids | id : a
       case find (isVar $ (==)id) ids of
         Nothing               -> (id, TypeV "?" [], [toError z $ "variable '" ++ id ++ "' is not declared"])
-        Just (Var _ _ _ tp _) ->                                        -- var x : a is IFable
+        Just (Var _ _ _ tp _) ->                                      -- var x : a is IFable
           case relates rel txp tp of                                  -- (?) x
             Left  es      -> (id, TypeV "?" [], map (toError z) es)
             Right (tp',_) -> if take 2 id == "__" then (id, tp, []) else
@@ -569,15 +532,6 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
                 []          -> (id, tp, [])
                 [(_,[cls])] ->  -- TODO: single cls
                   case find pred ids of
-{-
--- now we check the implementations
-                    Nothing -> (id, TypeV "?" [],
-                                [toError z $ "variable '" ++ id ++
-                                 "' has no associated implementation for data '" ++
-                                 Type.show' txp ++ "' in interface '" ++ cls ++ "'"])
-                               where
-                                [(_,[cls])] = Set.toList $ Type.getVs tp'  -- TODO: single cls
--}
                     Just (Var _ _ _ tp'' _) -> (id', tp'', []) where
                                                id' = if Type.hasAnyConstraint tp'' then
                                                       id

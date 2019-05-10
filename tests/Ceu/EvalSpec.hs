@@ -435,6 +435,7 @@ spec = do
           (B.Data annz ["Int"] [] Type0 False
           (B.Class annz ("X",["a"]) []
             [(annz,"f3",(TypeF (TypeV "a" ["X"]) (TypeD ["Int"])),False)]
+          (B.Var annz "f3" False (TypeF (TypeV "a" ["X"]) (TypeD ["Int"]))
           (B.Inst annz ("X", [TypeD ["Int"]])
             (B.Var annz "f3" False (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
             (B.Match annz False
@@ -443,7 +444,7 @@ spec = do
                 (B.Ret annz (B.Number annz 1)))
               (B.Nop annz)
               (B.Nop annz)))
-          (B.Ret annz (B.Call annz (B.Read annz "f3") (B.Number annz 1))))))
+          (B.Ret annz (B.Call annz (B.Read annz "f3") (B.Number annz 1)))))))
         `shouldBe` (Number 1)
 
       it "Int ; Bool ; X a ; inst X Bool/Int ; return f2 1" $
@@ -453,6 +454,7 @@ spec = do
           (B.Data annz ["Bool"] [] Type0 False
           (B.Class annz ("X", ["a"]) []
             [(annz,"f2",(TypeF (TypeV "a" ["X"]) (TypeD ["Int"])),False)]
+          (B.Var annz "f2" False (TypeF (TypeV "a" ["X"]) (TypeD ["Int"]))
           (B.Inst annz ("X", [TypeD ["Bool"]])
             (B.Var annz "f2" False (TypeF (TypeD ["Bool"]) (TypeD ["Int"]))
             (B.Match annz False
@@ -476,7 +478,7 @@ spec = do
           (B.Match annz False (B.LVar "ret")
             (B.Call annz (B.Read annz "f2") (B.Number annz 1))
             (B.Ret annz (B.Read annz "ret"))
-            (B.Ret annz (B.Error annz 99))))))))))
+            (B.Ret annz (B.Error annz 99)))))))))))
         `shouldBe` (Number 2)
 
       it "Int ; Bool ; X a ; inst X Bool/Int ; return f4 1" $
@@ -486,6 +488,7 @@ spec = do
           (B.Data annz ["Bool"] [] Type0 False
           (B.Class annz ("X", ["a"]) []
             [(annz,"f4",(TypeF (TypeV "a" ["X"]) (TypeD ["Int"])),False)]
+          (B.Var annz "f4" False (TypeF (TypeV "a" ["X"]) (TypeD ["Int"]))
           (B.Inst annz ("X", [TypeD ["Int"]])
             (B.Var annz "f4" False (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
             (B.Match annz False
@@ -505,7 +508,7 @@ spec = do
                 (B.Ret annz (B.Number annz 0)))
               (B.Nop annz)
               (B.Nop annz)))
-          (B.Ret annz (B.Call annz (B.Read annz "f4") (B.Number annz 1)))))))))
+          (B.Ret annz (B.Call annz (B.Read annz "f4") (B.Number annz 1))))))))))
         `shouldBe` (Number 2)
 
     describe "misc" $ do
