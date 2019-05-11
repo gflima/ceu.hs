@@ -28,6 +28,7 @@ keywords = [
     "implements",
     "interface",
     "loop",
+    "of",
     "set",
     "set!",
     "then",
