@@ -369,6 +369,16 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
+      it "TODO: @<= -- should error missing implementation" $
+        (run True $
+          ord ++ unlines [
+            "data Xx",
+            "data Xx.Aa",
+            "data Xx.Bb",
+            "return (Xx.Aa) @<= (Xx.Bb)"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
       it "leap years" $         -- pg 33
         (run True $
           ord ++ unlines [
@@ -402,7 +412,7 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "TODO: analyse triangles" $         -- pg 33
+      it "analyse triangles" $         -- pg 33
         (run True $
           ord ++ unlines [
             "data Triangle",
@@ -411,18 +421,22 @@ spec = do
             "data Triangle.Equilateral",
             "data Triangle.Scalene",
             "",
+            "implementation of IEqualable for Triangle with",
+            "end",
+            "",
             "func analyse (x,y,z) : ((Int,Int,Int) -> Triangle) do",
-            "   if (x + y) <= z then",
+            "   if (x + y) @<= z then",
             "     return Triangle.Failure",
-            "   else/if x == z then",
+            "   else/if x === z then",
             "     return Triangle.Equilateral",
-            "   else/if (x == y) or (y == z) then",
+            "   else/if (x === y) or (y === z) then",
             "     return Triangle.Isosceles",
             "   else",
             "     return Triangle.Scalene",
             "   end",
             "end",
-            "return (analyse (10,20,30)) === (Triangle.Isosceles)"
+            "return ((((analyse (10,20,30)) === (Triangle.Failure)) and ((analyse (10,20,25)) === (Triangle.Scalene)))",
+            "   and ((analyse (10,20,20)) === (Triangle.Isosceles))) and ((analyse (10,10,10)) === (Triangle.Equilateral))"
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
@@ -463,8 +477,26 @@ spec = do
           "end",
           "",
           "interface IEqualable for a with",
-          "   func ===       : ((a,a) -> Bool)",
-          "   func =/= (x,y) : ((a,a) -> Bool) do return not (x === y) end",
+          "   func === (x,y) : ((a,a) -> Bool) do",
+          "     if `x´ <- y then",
+          "       if `y´ <- x then",
+          "         return Bool.True",
+          "       else",
+          "         return Bool.False",
+          "       end",
+          "     else",
+          "       return Bool.False",
+          "     end",
+          "   end",
+          "   func =/= (x,y) : ((a,a) -> Bool) do",
+          "     return not (x === y)",
+          "   end",
+          "end",
+          "",
+          "implementation of IEqualable for Int with",
+          "   func === (x,y) : ((Int,Int) -> Bool) do",
+          "     return x == y",
+          "   end",
           "end",
           "",
           "implementation of IEqualable for Bool with",
@@ -478,6 +510,12 @@ spec = do
           "  func @<= (x,y) : ((a,a) -> Bool) do return (x @< y) or (x === y) end",
           "  func @>  (x,y) : ((a,a) -> Bool) do return not (x @<= y)         end",
           "  func @>= (x,y) : ((a,a) -> Bool) do return (x @> y) or (x === y) end",
+          "end",
+          "",
+          "implementation of IOrderable for Int with",
+          "  func @< (x,y) : ((Int,Int) -> Bool) do",
+          "    return x < y",
+          "  end",
           "end",
           "",
           "implementation of IOrderable for Bool with",
