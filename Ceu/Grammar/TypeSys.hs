@@ -22,6 +22,7 @@ idtp id tp = "__" ++ id ++ "__" ++ Type.show' tp
 
 go :: Stmt -> (Errors, Stmt)
 go p = stmt [] p
+--go p = f $ stmt [] p where f (e,s) = traceShow s (e,s)
 --go p = f $ stmt [] p where f (e,s) = traceShow (show_stmt 0 s) (e,s)
 
 -------------------------------------------------------------------------------
@@ -137,7 +138,7 @@ stmt ids s@(Class z (id,[var]) exts ifc p) = (esMe ++ esExts ++ es, p') where
   (es,p') = stmt (s:ids) p
 stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
 
-stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
+stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
   (esP, p'') = stmt (s:ids) p'
   (p',  es)  =
     case find (isClass $ (==)cls) ids of
@@ -149,7 +150,7 @@ stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
 
         case find isSameInst ids of
           -- instance is already declared
-          Just _  -> (p, [toError z $ "implementation '" ++ cls ++ " (" ++ intercalate "," [Type.show' inst_tp] ++ ")' is already declared"])
+          Just _  -> (p, [toError z $ "implementation '" ++ cls ++ " (" ++ intercalate "," [Type.show' itp] ++ ")' is already declared"])
 
           -- instance is not declared
           Nothing -> (p3, es1++ex++ey++ez) where
@@ -165,9 +166,9 @@ stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
             --  interface      (Ord for a) extends (Eq for a)  <-- but Ord extends Eq
             --  implementation (Ord for Bool)                  <-- Bool implements Ord
             es1 = concatMap f exts where
-              f (sup,_) = case find (isInstOf (sup,[inst_tp])) ids of
+              f (sup,_) = case find (isInstOf (sup,[itp])) ids of
                 Nothing -> [toError z $ "implementation '" ++ sup ++ " for " ++
-                            (Type.show' inst_tp) ++ "' is not declared"]
+                            (Type.show' itp) ++ "' is not declared"]
                 Just _  -> []
               isInstOf me (Inst _ me' _ _) = (me == me')
               isInstOf _  _                = False
@@ -190,11 +191,11 @@ stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
                         Left es -> map (toError z2) es
                         Right (_,insts) ->
                           let tp' = Type.instantiate insts (TypeV clss_var [cls]) in
-                            if tp' == inst_tp then
+                            if tp' == itp then
                               []
                             else
                               [toError z $ "types do not match : expected '" ++
-                                (Type.show' inst_tp) ++ "' : found '" ++
+                                (Type.show' itp) ++ "' : found '" ++
                                 (Type.show' tp') ++ "'"]
                       ++ (bool [toError z2 $ "missing implementation of '" ++ id2 ++ "'"] [] impl)
 
@@ -230,10 +231,10 @@ stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
                   cat (Var z id True tp (Match _ _ _ _ _ _)) acc =
                     Var z (idtp id tp') False tp'
                       (Match z False (LVar $ idtp id tp')
-                        (wrap z (cls,ids) ([(clss_var,inst_tp)], tp) $ Read z (idtp id tp))
+                        (wrap z (cls,ids) ([(clss_var,itp)], tp) $ Read z (idtp id tp))
                         acc (err z))
                     where
-                      tp' = Type.instantiate [(clss_var,inst_tp)] tp
+                      tp' = Type.instantiate [(clss_var,itp)] tp
                   cat (Var _ _ _ _ _) acc = acc            -- no class impl. either
 
                   glbs = filter f ids where
@@ -248,7 +249,7 @@ stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
                   f k (z,id,tp,_) acc = Table.insert k' v' acc where  -- TODO: gen=_ should be True, but Class is not mapped
                     k'  = idtp k tp'
                     v'  = (z, (idtp id tp'), tp', False)
-                    tp' = Type.instantiate [(clss_var,inst_tp)] tp
+                    tp' = Type.instantiate [(clss_var,itp)] tp
 
                   -- all already declared type instantiated symbols
                   -- (from super implementations)
@@ -262,7 +263,7 @@ stmt ids s@(Inst z (cls,[inst_tp]) imp p) = (es ++ esP, p'') where
                   cat (z,id,tp,_) acc = Var z id False tp acc
 
         where
-          isSameInst (Inst _ (id,[tp']) _ _) = (cls==id && [inst_tp]==[tp'])
+          isSameInst (Inst _ (id,[tp']) _ _) = (cls==id && [itp]==[tp'])
           isSameInst _                        = False
 
 stmt ids (Inst _ (_,tps) _ _) = error "not implemented: multiple types"

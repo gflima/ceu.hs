@@ -5,22 +5,33 @@ import qualified Data.Set as S
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann      (Ann)
-import Ceu.Grammar.Type     (Type)
+import Ceu.Grammar.Type     (Type, show')
 import Ceu.Grammar.Full.Full
 
 compile :: Stmt -> Stmt
 compile p = stmt p
 
-aux :: Stmt -> [(Ann, ID_Var, Type, Bool)]
-aux (Seq  _ (Var' z id _ tp) (Set _ False (LVar id') _)) | id==id' = [(z,id,tp,True)]
-aux (Seq  _ p1 p2)       = (aux p1) ++ (aux p2)
-aux (Var' z id True tp)  = [(z,id,tp,False)]
-aux p                    = []
+protos :: Stmt -> [(Ann, ID_Var, Type, Bool)]
+protos (Seq  _ (Var' z id _ tp) (Set _ False (LVar id') _)) | id==id' = [(z,id,tp,True)]
+protos (Seq  _ p1 p2)       = (protos p1) ++ (protos p2)
+protos (Var' z id True tp)  = [(z,id,tp,False)]
+protos p                    = []
+
+rename :: Stmt -> Stmt
+rename (Seq  z (Var' z1 id False tp)
+               (Set  z2 False (LVar id') exp))
+        | id==id'           = Seq  z (Var' z1 (idtp id tp) False tp)
+                                     (Set  z2 False (LVar $ idtp id' tp) exp)
+rename (Seq  z p1 p2)       = Seq  z (rename p1) (rename p2)
+rename (Var' z id False tp) = Var' z (idtp id tp) False tp
+rename p                    = p
+
+idtp id tp = "__" ++ id ++ "__" ++ show' tp
 
 stmt :: Stmt -> Stmt
 
-stmt (Class z me exts ifc)   = Seq z (Class' z me exts (aux ifc)) ifc
-stmt (Inst  z me imp)        = Seq z (Inst'  z me      (aux imp)) imp
+stmt (Class z me exts ifc)   = Seq z (Class' z me exts (protos ifc)) ifc
+stmt (Inst  z me imp)        = Seq z (Inst'  z me      (protos imp)) (rename imp)
 stmt (Set   z chk loc exp)   = Set   z chk loc (expr exp)
 stmt (Match z loc exp p1 p2) = Match z loc (expr exp) (stmt p1) (stmt p2)
 stmt (CallS z exp)           = CallS z (expr exp)

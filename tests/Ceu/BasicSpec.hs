@@ -546,12 +546,12 @@ spec = do
         (Var annz "fff" False (TypeF (TypeV "a" []) Type0)
         (Inst annz ("Xable",[TypeD ["A"]])
           [(annz, "fff", (TypeF (TypeD ["A"]) Type0), True)]
-          (func "fff" (TypeF (TypeD ["A"]) Type0)
+          (func "__fff__(A -> ())" (TypeF (TypeD ["A"]) Type0)
             (Seq annz
               (Nop annz)
               (Inst annz ("Xable",[TypeD ["A"]])
                 [(annz,"fff",(TypeF (TypeD ["A"]) Type0),True)]
-                (Var annz "fff" False (TypeF (TypeD ["A"]) Type0)
+                (Var annz "__fff__(A -> ())" False (TypeF (TypeD ["A"]) Type0)
                 (Seq annz
                   (Nop annz)
                   (Nop annz))))
@@ -601,7 +601,7 @@ spec = do
         (Var annz "fff" False (TypeF (TypeV "a" []) Type0)
         (Inst annz ("Xable",[TypeD ["A"]])
           [(annz,"fff",(TypeF (TypeD ["A"]) (TypeD ["Int"])),True)]
-          (func "fff" (TypeF (TypeD ["A"]) (TypeD ["Int"]))
+          (func "__fff__(A -> ())" (TypeF (TypeD ["A"]) (TypeD ["Int"]))
             (Seq annz
               (Nop annz)
               (Nop annz)))))))))
@@ -615,7 +615,7 @@ spec = do
         (Var annz "fff" False (TypeF (TypeV "a" []) Type0)
         (Inst annz ("X",[TypeD ["A"]])
           [(annz,"fff",(TypeF (TypeD ["Int"]) Type0),True)]
-          (func "fff" (TypeF (TypeD ["Int"]) Type0)
+          (func "__fff__(Int -> ())" (TypeF (TypeD ["Int"]) Type0)
             (Seq annz
               (Nop annz)
               (Nop annz)))))))))
@@ -629,7 +629,7 @@ spec = do
         (Var annz "fff" False (TypeF (TypeV "a" []) Type0)
         (Inst annz ("Xable",[TypeD ["A"]])
           [(annz, "fff", (TypeF (TypeD ["Int"]) Type0), True)]
-          (func "fff" (TypeF (TypeD ["Int"]) Type0)
+          (func "__fff__(Int -> ())" (TypeF (TypeD ["Int"]) Type0)
             (Seq annz
               (Nop annz)
               (Nop annz)))))))))
@@ -642,7 +642,7 @@ spec = do
         (Var annz "fff" False (TypeF (TypeV "a" []) Type0)
         (Inst annz ("Xable",[TypeD ["A"]])
           [(annz,"fff",(TypeF (TypeD ["A"]) Type0),True)]
-          (func "fff" (TypeF (TypeD ["A"]) Type0)
+          (func "__fff__(A -> ())" (TypeF (TypeD ["A"]) Type0)
             (Seq annz
               (Nop annz)
               (CallS annz (Call annz (Read annz "fff") (Cons annz ["A"] (Unit annz)))))))))))
@@ -655,11 +655,20 @@ spec = do
         (Var annz "fff" False (TypeF (TypeV "a" ["Xable"]) Type0)
         (Inst annz ("Xable",[TypeN [TypeD ["A"], TypeD ["A"]]])
           [(annz, "fff", (TypeF (TypeN [TypeD ["A"], TypeD ["A"]]) Type0), True)]
-          (func "fff" (TypeF (TypeN [TypeD ["A"], TypeD ["A"]]) Type0)
-            (Seq annz
-              (Nop annz)
-              (CallS annz (Call annz (Read annz "fff") (Tuple annz [(Cons annz ["A"] (Unit annz)),(Cons annz ["A"] (Unit annz))])))))))))
-      `shouldBe` ([],Data annz ["A"] [] Type0 False (Var annz "fff" False (TypeF (TypeV "a" ["Xable"]) Type0) (Var annz "__fff__((A,A) -> ())" False (TypeF (TypeN [TypeD ["A"],TypeD ["A"]]) Type0) (Var annz "__fff__((A,A) -> ())" False (TypeF (TypeN [TypeD ["A"],TypeD ["A"]]) Type0) (Match annz False (LVar "__fff__((A,A) -> ())") (Func (annz {type_ = TypeF (TypeN [TypeD ["A"],TypeD ["A"]]) Type0}) (TypeF (TypeN [TypeD ["A"],TypeD ["A"]]) Type0) (Ret annz (Error annz 99))) (CallS annz (Call (annz {type_ = Type0}) (Read (annz {type_ = TypeF (TypeN [TypeD ["A"],TypeD ["A"]]) Type0}) "__fff__((A,A) -> ())") (Tuple (annz {type_ = TypeN [TypeD ["A"],TypeD ["A"]]}) [Cons (annz {type_ = TypeD ["A"]}) ["A"] (Unit (annz {type_ = Type0})),Cons (annz {type_ = TypeD ["A"]}) ["A"] (Unit (annz {type_ = Type0}))]))) (Ret annz (Error annz 99)))))))
+          (func "__fff__((A,A) -> ())" (TypeF (TypeN [TypeD ["A"], TypeD ["A"]]) Type0)
+            (CallS annz (Call annz (Read annz "fff") (Tuple annz [(Cons annz ["A"] (Unit annz)),(Cons annz ["A"] (Unit annz))]))))))))
+      `shouldBe` ([],
+        Data annz ["A"] [] Type0 False
+        (Var annz "fff" False (TypeF (TypeV "a" ["Xable"]) Type0)
+        (Var annz "__fff__((A,A) -> ())" False (TypeF (TypeN [TypeD ["A"],TypeD ["A"]]) Type0)
+        (Var annz "__fff__((A,A) -> ())" False (TypeF (TypeN [TypeD ["A"],TypeD ["A"]]) Type0)
+        (Match annz False (LVar "__fff__((A,A) -> ())")
+          (Func (annz {type_ = TypeF (TypeN [TypeD ["A"],TypeD ["A"]]) Type0}) (TypeF (TypeN [TypeD ["A"],TypeD ["A"]]) Type0) (Ret annz (Error annz 99)))
+          (CallS annz
+            (Call (annz {type_ = Type0})
+              (Read (annz {type_ = TypeF (TypeN [TypeD ["A"],TypeD ["A"]]) Type0}) "__fff__((A,A) -> ())")
+              (Tuple (annz {type_ = TypeN [TypeD ["A"],TypeD ["A"]]}) [Cons (annz {type_ = TypeD ["A"]}) ["A"] (Unit (annz {type_ = Type0})),Cons (annz {type_ = TypeD ["A"]}) ["A"] (Unit (annz {type_ = Type0}))])))
+          (Ret annz (Error annz 99)))))))
 
     it "Int ; A ; Xable a ; inst Xable A ; fff 1" $
       (fst $ TypeSys.go
@@ -669,7 +678,7 @@ spec = do
         (Var annz "fff" False (TypeF (TypeV "a" []) Type0)
         (Inst annz ("Xable",[TypeD ["A"]])
           [(annz, "fff", (TypeF (TypeD ["A"]) Type0), True)]
-          (func "fff" (TypeF (TypeD ["A"]) Type0)
+          (func "__fff__(A -> ())" (TypeF (TypeD ["A"]) Type0)
             (Seq annz
               (Nop annz)
               (CallS annz (Call annz (Read annz "fff") (Number annz 1)))))))))))
@@ -685,7 +694,6 @@ spec = do
       `shouldBe` ["types do not match : expected '((Bool,Int.1) -> ?)' : found '((a,a) -> Bool)'",
                   "ambigous instances for 'a' : 'Bool', 'Int.1'"]
 
--- achar a implementacao correspondente
     it "Int ; Bool ; Xable a ; inst Xable Bool/Int ; fff 1 ; fff Bool" $
       (fst $ TypeSys.go
         (Data annz ["Int"] [] Type0 False
@@ -694,12 +702,12 @@ spec = do
         (Var annz "fff" False (TypeF (TypeV "a" []) Type0)
         (Inst annz ("Xable", [TypeD ["Bool"]])
           [(annz, "fff", (TypeF (TypeD ["Bool"]) Type0), True)]
-          (func "fff" (TypeF (TypeD ["Bool"]) Type0)
+          (func "__fff__(Bool -> ())" (TypeF (TypeD ["Bool"]) Type0)
             (Seq annz
               (Nop annz)
               (Inst annz ("Xable", [TypeD ["Int"]])
                 [(annz, "fff", (TypeF (TypeD ["Int"]) Type0), True)]
-                (func "fff" (TypeF (TypeD ["Int"]) Type0)
+                (func "__fff__(Int -> ())" (TypeF (TypeD ["Int"]) Type0)
                   (Seq annz
                     (Nop annz)
                     (Seq annz
@@ -715,7 +723,7 @@ spec = do
         (Var annz "fff" False (TypeF (TypeV "a" []) Type0)
         (Inst annz ("Xable", [TypeD ["A"]])
           [(annz, "fff", (TypeF (TypeD ["A"]) Type0), True)]
-          (func "fff" (TypeF (TypeD ["A"]) Type0)
+          (func "__fff__(A -> ())" (TypeF (TypeD ["A"]) Type0)
             (Seq annz
               (Nop annz)
               (CallS annz (Call annz (Read annz "fff") (Cons annz ["A","B"] (Unit annz))))))))))))
@@ -729,12 +737,12 @@ spec = do
         (Var annz "fff" False (TypeF (TypeV "a" []) Type0)
         (Inst annz ("Xable", [TypeD ["A"]])
           [(annz, "fff", (TypeF (TypeD ["A"]) Type0), True)]
-          (func "fff" (TypeF (TypeD ["A"]) Type0)
+          (func "__fff__(A -> ())" (TypeF (TypeD ["A"]) Type0)
             (Seq annz
               (Nop annz)
               (Inst annz ("Xable", [TypeD ["A","B"]])
                 [(annz, "fff", (TypeF (TypeD ["A","B"]) Type0), True)]
-                (func "fff" (TypeF (TypeD ["A","B"]) Type0)
+                (func "__fff__((A,B) -> ())" (TypeF (TypeD ["A","B"]) Type0)
                   (Seq annz
                     (Nop annz)
                     (CallS annz (Call annz (Read annz "fff") (Cons annz ["A","B"] (Unit annz)))))))))))))))
@@ -748,12 +756,12 @@ spec = do
         (Var annz "fff" False (TypeF (TypeV "a" []) Type0)
         (Inst annz ("Xable", [TypeD ["A","B"]])
           [(annz, "fff", (TypeF (TypeD ["A","B"]) Type0), True)]
-          (func "fff" (TypeF (TypeD ["A","B"]) Type0)
+          (func "__fff__((A,B) -> ())" (TypeF (TypeD ["A","B"]) Type0)
             (Seq annz
               (Nop annz)
               (Inst annz ("Xable", [TypeD ["A"]])
                 [(annz, "fff", (TypeF (TypeD ["A"]) Type0), True)]
-                (func "fff" (TypeF (TypeD ["A"]) Type0)
+                (func "__fff__(A -> ())" (TypeF (TypeD ["A"]) Type0)
                   (Seq annz
                     (Nop annz)
                     (CallS annz (Call annz (Read annz "fff") (Cons annz ["A","B"] (Unit annz)))))))))))))))
@@ -768,7 +776,7 @@ spec = do
         (Var annz "fff" False (TypeF Type0 (TypeV "b" []))
         (Inst annz ("X", [TypeD ["B"]])
           [(annz, "fff", (TypeF Type0 (TypeD ["B"])), True)]
-          (func "fff" (TypeF Type0 (TypeD ["B"]))
+          (func "__fff__(() -> B)" (TypeF Type0 (TypeD ["B"]))
             (Seq annz
               (Nop annz)
               (CallS annz (Call annz (Read annz "fff") (Unit annz))))))))))
@@ -781,7 +789,7 @@ spec = do
         (Var annz "fff" False (TypeF (TypeV "a" []) (TypeV "b" []))
         (Inst annz ("X", [TypeD ["B"]])
           [(annz, "fff", (TypeF (TypeV "a" []) (TypeD ["B"])), True)]
-          (func "fff" (TypeF (TypeV "a" []) (TypeD ["B"]))
+          (func "__fff__(a -> B)" (TypeF (TypeV "a" []) (TypeD ["B"]))
             (Seq annz
               (Nop annz)
               (CallS annz (Call annz (Read annz "fff") (Unit annz))))))))))
@@ -795,12 +803,12 @@ spec = do
         (Var annz "fff" False (TypeF (TypeV "a" []) (TypeV "b" []))
         (Inst annz ("X", [TypeD ["B1"]])
           [(annz, "fff", (TypeF (TypeV "a" []) (TypeD ["B1"])), True)]
-          (func "fff" (TypeF (TypeV "a" []) (TypeD ["B1"]))
+          (func "__fff__(a -> B)" (TypeF (TypeV "a" []) (TypeD ["B1"]))
             (Seq annz
               (Nop annz)
               (Inst annz ("X", [TypeD ["B2"]])
                 [(annz, "fff", (TypeF (TypeV "a" []) (TypeD ["B2"])), True)]
-                (func "fff" (TypeF (TypeV "a" []) (TypeD ["B2"]))
+                (func "__fff__(a -> B2)" (TypeF (TypeV "a" []) (TypeD ["B2"]))
                   (Seq annz
                     (Nop annz)
                     (CallS annz (Call annz (Read annz "fff") (Unit annz))))))))))))))
@@ -815,12 +823,12 @@ spec = do
         (Var annz "fff" False (TypeF (TypeV "a" []) (TypeV "b" []))
         (Inst annz ("X", [TypeD ["B1"]])
           [(annz, "fff", (TypeF (TypeV "a" []) (TypeD ["B1"])), True)]
-          (func "fff" (TypeF (TypeV "a" []) (TypeD ["B1"]))
+          (func "__fff__(a -> B1)" (TypeF (TypeV "a" []) (TypeD ["B1"]))
             (Seq annz
               (Nop annz)
               (Inst annz ("X", [TypeD ["B2"]])
                 [(annz, "fff", (TypeF (TypeV "a" []) (TypeD ["B2"])), True)]
-                (func "fff" (TypeF (TypeV "a" []) (TypeD ["B2"]))
+                (func "__fff__(a -> B2)" (TypeF (TypeV "a" []) (TypeD ["B2"]))
                   (Seq annz
                     (Nop annz)
                     (Var annz "b1" False (TypeD ["B1"])
@@ -836,12 +844,12 @@ spec = do
         (Var annz "fff" False (TypeF (TypeV "a" []) (TypeV "b" [])) 
         (Inst annz ("X", [TypeD ["B1"]])
           [(annz, "fff", (TypeF (TypeV "a" []) (TypeD ["B1"])), True)]
-          (func "fff" (TypeF (TypeV "a" []) (TypeD ["B1"]))
+          (func "__fff__(a -> B1)" (TypeF (TypeV "a" []) (TypeD ["B1"]))
             (Seq annz
               (Nop annz)
               (Inst annz ("X", [TypeD ["B2"]])
                 [(annz, "fff", (TypeF (TypeV "a" []) (TypeD ["B2"])), True)]
-                (func "fff" (TypeF (TypeV "a" []) (TypeD ["B2"]))
+                (func "__fff__(a -> B2)" (TypeF (TypeV "a" []) (TypeD ["B2"]))
                   (Seq annz
                     (Nop annz)
                     (Var annz "b2" False (TypeD ["B2"])

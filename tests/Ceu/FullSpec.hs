@@ -81,29 +81,29 @@ spec = do
 
     it "class/inst/0" $ do
       compile (Inst annz ("F3able",[TypeD ["Int"]])
-                (FuncS annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))
+                (FuncS annz "f3" (TypeF (TypeV "Int" []) (TypeD ["Int"]))
                   (Ret annz (Number annz 10))))
       `shouldBe`
         (Inst'' annz ("F3able",[TypeD ["Int"]])
-          [(annz,"f3",TypeF (TypeV "a" []) (TypeD ["Int"]),True)]
-        (Var'' annz "f3" False (TypeF (TypeV "a" []) (TypeD ["Int"]))
-          (Match' annz False (LVar "f3") (Func annz (TypeF (TypeV "a" []) (TypeD ["Int"])) (Ret annz (Number annz 10))) (Nop annz) (Ret annz (Error annz (-2))))))
+          [(annz,"f3",TypeF (TypeV "Int" []) (TypeD ["Int"]),True)]
+        (Var'' annz "__f3__(Int -> Int)" False (TypeF (TypeV "Int" []) (TypeD ["Int"]))
+          (Match' annz False (LVar "__f3__(Int -> Int)") (Func annz (TypeF (TypeV "Int" []) (TypeD ["Int"])) (Ret annz (Number annz 10))) (Nop annz) (Ret annz (Error annz (-2))))))
 
     it "class/inst/1" $ do
       compile (Seq annz
                 (Class annz ("F3able",["a"]) []
                   (Var annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))))
                 (Inst annz ("F3able",[TypeD ["Int"]])
-                  (FuncS annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))
+                  (FuncS annz "f3" (TypeF (TypeV "Int" []) (TypeD ["Int"]))
                     (Ret annz (Number annz 10)))))
       `shouldBe`
         (Class'' annz ("F3able",["a"]) []
           [(annz,"f3",TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"]),False)]
         (Var'' annz "f3" True (TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"]))
         (Inst'' annz ("F3able",[TypeD ["Int"]])
-          [(annz,"f3",TypeF (TypeV "a" []) (TypeD ["Int"]),True)]
-        (Var'' annz "f3" False (TypeF (TypeV "a" []) (TypeD ["Int"]))
-            (Match' annz False (LVar "f3") (Func annz (TypeF (TypeV "a" []) (TypeD ["Int"])) (Ret annz (Number annz 10))) (Nop annz) (Ret annz (Error annz (-2))))))))
+          [(annz,"f3",TypeF (TypeV "Int" []) (TypeD ["Int"]),True)]
+        (Var'' annz "__f3__(Int -> Int)" False (TypeF (TypeV "Int" []) (TypeD ["Int"]))
+            (Match' annz False (LVar "__f3__(Int -> Int)") (Func annz (TypeF (TypeV "Int" []) (TypeD ["Int"])) (Ret annz (Number annz 10))) (Nop annz) (Ret annz (Error annz (-2))))))))
 
     it "class/inst/2" $ do
       compile (Seq annz
@@ -111,7 +111,7 @@ spec = do
                   (Var annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))))
               (Seq annz
                 (Inst annz ("F3able",[TypeD ["Int"]])
-                  (FuncS annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))
+                  (FuncS annz "f3" (TypeF (TypeV "Int" []) (TypeD ["Int"]))
                     (Ret annz (Number annz 10))))
               (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
       `shouldBe`
@@ -119,9 +119,9 @@ spec = do
           [(annz,"f3",TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"]),False)]
         (Var'' annz "f3" True (TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"]))
         (Inst'' annz ("F3able",[TypeD ["Int"]])
-          [(annz,"f3",TypeF (TypeV "a" []) (TypeD ["Int"]),True)]
-        (Var'' annz "f3" False (TypeF (TypeV "a" []) (TypeD ["Int"]))
-            (Match' annz False (LVar "f3") (Func annz (TypeF (TypeV "a" []) (TypeD ["Int"])) (Ret annz (Number annz 10)))
+          [(annz,"f3",TypeF (TypeV "Int" []) (TypeD ["Int"]),True)]
+        (Var'' annz "__f3__(Int -> Int)" False (TypeF (TypeV "Int" []) (TypeD ["Int"]))
+            (Match' annz False (LVar "__f3__(Int -> Int)") (Func annz (TypeF (TypeV "Int" []) (TypeD ["Int"])) (Ret annz (Number annz 10)))
               (Seq annz
                 (Nop annz)
                 (Ret annz (Call annz (Read annz "f3") (Number annz 10))))
@@ -136,10 +136,10 @@ spec = do
                   (Nop annz)))
                 (Seq annz
                 (Inst annz ("F3able",[TypeD ["Int"]])
-                  (FuncS annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))
+                  (FuncS annz "f3" (TypeF (TypeV "Int" []) (TypeD ["Int"]))
                     (Seq annz
                     (Seq annz
-                    (Var annz "v" (TypeV "a" []))
+                    (Var annz "v" (TypeV "Int" []))
                     (Nop annz))
                     (Seq annz
                     (Set annz False (LVar "v") (Arg annz))
@@ -154,12 +154,12 @@ spec = do
         (Seq annz
         (Nop annz)
         (Inst'' annz ("F3able",[TypeD ["Int"]])
-          [(annz,"f3",TypeF (TypeV "a" []) (TypeD ["Int"]),True)]
-          (Var'' annz "f3" False (TypeF (TypeV "a" []) (TypeD ["Int"]))
+          [(annz,"f3",TypeF (TypeV "Int" []) (TypeD ["Int"]),True)]
+          (Var'' annz "__f3__(Int -> Int)" False (TypeF (TypeV "Int" []) (TypeD ["Int"]))
           (Match' annz False
-            (LVar "f3")
-            (Func annz (TypeF (TypeV "a" []) (TypeD ["Int"]))
-              (Var'' annz "v" False (TypeV "a" [])
+            (LVar "__f3__(Int -> Int)")
+            (Func annz (TypeF (TypeV "Int" []) (TypeD ["Int"]))
+              (Var'' annz "v" False (TypeV "Int" [])
               (Seq annz
               (Nop annz)
               (Match' annz False (LVar "v") (Arg annz) (Seq annz (Nop annz) (Ret annz (Read annz "v"))) (Ret annz (Error annz (-2)))))))
