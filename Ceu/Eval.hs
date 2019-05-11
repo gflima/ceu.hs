@@ -128,6 +128,7 @@ envEval vars e = case e of
         (Read "-",      Tuple [Number x, Number y]) -> Number (x-y)
         (Read "*",      Tuple [Number x, Number y]) -> Number (x*y)
         (Read "/",      Tuple [Number x, Number y]) -> Number (x `div` y)
+        (Read "rem",    Tuple [Number x, Number y]) -> Number (x `rem` y)
         (Read "==",     Tuple [Number x, Number y]) -> Cons (bool ["Bool","False"] ["Bool","True"] (x == y)) Unit
         (Read "<=",     Tuple [Number x, Number y]) -> Cons (bool ["Bool","False"] ["Bool","True"] (x <= y)) Unit
         (Read "<",      Tuple [Number x, Number y]) -> Cons (bool ["Bool","False"] ["Bool","True"] (x < y)) Unit

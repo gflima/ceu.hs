@@ -33,7 +33,8 @@ prelude z p =
     (Seq z (Var  z "-"      (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"])))
     (Seq z (Var  z "/"      (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"])))
     (Seq z (Var  z "*"      (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"])))
-           p)))))))))))))))
+    (Seq z (Var  z "rem"    (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"])))
+           p))))))))))))))))
 
 compile :: Stmt -> Stmt
 compile p = Scope.compile $ Seq.compile $ Match.compile $ Class.compile $ FuncS.compile p

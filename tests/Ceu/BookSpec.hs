@@ -20,8 +20,6 @@ spec = do
 
 -------------------------------------------------------------------------------
 
-{-
--}
     -- TODO-3-20: square : Float -> Float
 
     describe "Chapter 1:" $ do
@@ -365,58 +363,66 @@ spec = do
 
       it "IOrderable" $        -- pg 32
         (run True $
-          unlines [
-            "func not (x) : (Bool->Bool) do",
-            "   if Bool.True <- x then",
-            "     return Bool.False",
-            "   else",
-            "     return Bool.True",
-            "   end",
-            "end",
-            "func and (x,y) : ((Bool,Bool)->Bool) do",
-            "   if Bool.False <- x then",
-            "     return Bool.False",
-            "   else",
-            "     return y",
-            "   end",
-            "end",
-            "func or (x,y) : ((Bool,Bool)->Bool) do",
-            "   if Bool.True <- x then",
-            "     return Bool.True",
-            "   else",
-            "     return y",
-            "   end",
-            "end",
-            "",
-            "interface IEqualable for a with",
-            "   func ===       : ((a,a) -> Bool)",
-            "   func =/= (x,y) : ((a,a) -> Bool) do return not (x === y) end",
-            "end",
-            "",
-            "implementation IEqualable for Bool with",
-            "   func === (x,y) : ((Bool,Bool) -> Bool) do",
-            "     return (x and y) or ((not x) and (not y))",
-            "   end",
-            "end",
-            "",
-            "interface IOrderable for a extends IEqualable for a with",
-            "  func @<        : ((a,a) -> Bool)",
-            "  func @<= (x,y) : ((a,a) -> Bool) do return (x @< y) or (x === y) end",
-            "  func @>  (x,y) : ((a,a) -> Bool) do return not (x @<= y)         end",
-            "  func @>= (x,y) : ((a,a) -> Bool) do return (x @> y) or (x === y) end",
-            "end",
-            "",
-            "implementation IOrderable for Bool with",
-            "  func @< (x,y) : ((Bool,Bool) -> Bool) do",
-            "    if      (Bool.False, Bool.False) <- (x, y) then return Bool.False",
-            "    else/if (Bool.False, Bool.True)  <- (x, y) then return Bool.True",
-            "    else/if (Bool.True,  Bool.False) <- (x, y) then return Bool.False",
-            "    else/if (Bool.True,  Bool.True)  <- (x, y) then return Bool.False",
-            "    end",
-            "  end",
-            "end",
+          ord ++ unlines [
             "return ((((Bool.True)  @>  (Bool.False))  and ((Bool.True) @>= (Bool.True))) and",
             "         ((Bool.False) @<= (Bool.False))) and ((Bool.False) @< (Bool.True))"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "leap years" $         -- pg 33
+        (run True $
+          ord ++ unlines [
+            "func leapyear (y) : (Int -> Bool) do",
+            "   if (y rem 100) == 0 then",
+            "     return (y rem 400) == 0",
+            "   else",
+            "     return (y rem 4) == 0",
+            "   end",
+            "end",
+            "return (((not (leapyear 1979)) and (leapyear 1980)) and (not (leapyear 100))) and (leapyear 400)"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "analyse triangles" $         -- pg 33
+        (run True $
+          ord ++ unlines [
+            "func analyse (x,y,z) : ((Int,Int,Int) -> Int) do",
+            "   if (x + y) <= z then",
+            "     return 0",  -- Fail
+            "   else/if x == z then",
+            "     return 1",  -- Equi
+            "   else/if (x == y) or (y == z) then",
+            "     return 2",  -- Isos
+            "   else",
+            "     return 3",  -- Scal
+            "   end",
+            "end",
+            "return ((((analyse (10,20,30)) == 0) and ((analyse (10,20,25)) == 3))",
+            "   and ((analyse (10,20,20)) == 2)) and ((analyse (10,10,10)) == 1)"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "TODO: analyse triangles" $         -- pg 33
+        (run True $
+          ord ++ unlines [
+            "data Triangle",
+            "data Triangle.Failure",
+            "data Triangle.Isosceles",
+            "data Triangle.Equilateral",
+            "data Triangle.Scalene",
+            "",
+            "func analyse (x,y,z) : ((Int,Int,Int) -> Triangle) do",
+            "   if (x + y) <= z then",
+            "     return Triangle.Failure",
+            "   else/if x == z then",
+            "     return Triangle.Equilateral",
+            "   else/if (x == y) or (y == z) then",
+            "     return Triangle.Isosceles",
+            "   else",
+            "     return Triangle.Scalene",
+            "   end",
+            "end",
+            "return (analyse (10,20,30)) === (Triangle.Isosceles)"
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
@@ -432,3 +438,57 @@ spec = do
                         (Left errs) -> Left $ concatMap (\s->s++"\n") errs
                         (Right exp) -> Right exp
                     (Left  v') -> Left (show v')
+
+        ord = unlines [
+          "func not (x) : (Bool->Bool) do",
+          "   if Bool.True <- x then",
+          "     return Bool.False",
+          "   else",
+          "     return Bool.True",
+          "   end",
+          "end",
+          "func and (x,y) : ((Bool,Bool)->Bool) do",
+          "   if Bool.False <- x then",
+          "     return Bool.False",
+          "   else",
+          "     return y",
+          "   end",
+          "end",
+          "func or (x,y) : ((Bool,Bool)->Bool) do",
+          "   if Bool.True <- x then",
+          "     return Bool.True",
+          "   else",
+          "     return y",
+          "   end",
+          "end",
+          "",
+          "interface IEqualable for a with",
+          "   func ===       : ((a,a) -> Bool)",
+          "   func =/= (x,y) : ((a,a) -> Bool) do return not (x === y) end",
+          "end",
+          "",
+          "implementation IEqualable for Bool with",
+          "   func === (x,y) : ((Bool,Bool) -> Bool) do",
+          "     return (x and y) or ((not x) and (not y))",
+          "   end",
+          "end",
+          "",
+          "interface IOrderable for a extends IEqualable for a with",
+          "  func @<        : ((a,a) -> Bool)",
+          "  func @<= (x,y) : ((a,a) -> Bool) do return (x @< y) or (x === y) end",
+          "  func @>  (x,y) : ((a,a) -> Bool) do return not (x @<= y)         end",
+          "  func @>= (x,y) : ((a,a) -> Bool) do return (x @> y) or (x === y) end",
+          "end",
+          "",
+          "implementation IOrderable for Bool with",
+          "  func @< (x,y) : ((Bool,Bool) -> Bool) do",
+          "    if      (Bool.False, Bool.False) <- (x, y) then return Bool.False",
+          "    else/if (Bool.False, Bool.True)  <- (x, y) then return Bool.True",
+          "    else/if (Bool.True,  Bool.False) <- (x, y) then return Bool.False",
+          "    else/if (Bool.True,  Bool.True)  <- (x, y) then return Bool.False",
+          "    end",
+          "  end",
+          "end",
+          ""
+         ]
+
