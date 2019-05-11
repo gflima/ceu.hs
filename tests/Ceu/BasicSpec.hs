@@ -652,14 +652,14 @@ spec = do
       TypeSys.go
         (Data annz ["A"] [] Type0 False
         (Class annz ("Xable",["a"]) [] [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
-        (Var annz "fff" False (TypeF (TypeV "a" ["Xable"]) Type0)
+        (Var annz "fff" True (TypeF (TypeV "a" ["Xable"]) Type0)
         (Inst annz ("Xable",[TypeN [TypeD ["A"], TypeD ["A"]]])
           [(annz, "fff", (TypeF (TypeN [TypeD ["A"], TypeD ["A"]]) Type0), True)]
           (func "__fff__((A,A) -> ())" (TypeF (TypeN [TypeD ["A"], TypeD ["A"]]) Type0)
             (CallS annz (Call annz (Read annz "fff") (Tuple annz [(Cons annz ["A"] (Unit annz)),(Cons annz ["A"] (Unit annz))]))))))))
       `shouldBe` ([],
         Data annz ["A"] [] Type0 False
-        (Var annz "fff" False (TypeF (TypeV "a" ["Xable"]) Type0)
+        (Var annz "fff" True (TypeF (TypeV "a" ["Xable"]) Type0)
         (Var annz "__fff__((A,A) -> ())" False (TypeF (TypeN [TypeD ["A"],TypeD ["A"]]) Type0)
         (Var annz "__fff__((A,A) -> ())" False (TypeF (TypeN [TypeD ["A"],TypeD ["A"]]) Type0)
         (Match annz False (LVar "__fff__((A,A) -> ())")
@@ -674,15 +674,16 @@ spec = do
       (fst $ TypeSys.go
         (Data annz ["Int"] [] Type0 False
         (Data annz ["A"] [] Type0 False
-        (Class annz ("Xable",["a"]) [] [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
-        (Var annz "fff" False (TypeF (TypeV "a" []) Type0)
+        (Class annz ("Xable",["a"]) [] [(annz,"fff",(TypeF (TypeV "a" ["Xable"]) Type0),False)]
+        (Var annz "fff" True (TypeF (TypeV "a" ["Xable"]) Type0)
         (Inst annz ("Xable",[TypeD ["A"]])
           [(annz, "fff", (TypeF (TypeD ["A"]) Type0), True)]
           (func "__fff__(A -> ())" (TypeF (TypeD ["A"]) Type0)
             (Seq annz
               (Nop annz)
               (CallS annz (Call annz (Read annz "fff") (Number annz 1)))))))))))
-      `shouldBe` ["types do not match : expected '(Int.1 -> ?)' : found '(A -> ())'"]
+      --`shouldBe` ["types do not match : expected '(Int.1 -> ?)' : found '(A -> ())'"]
+      `shouldBe` ["variable 'fff' has no associated implementation for '(Int.1 -> ?)''"]
 
     it "Int ; Bool ; Equalable a ; eq 1 Bool" $
       (fst $ TypeSys.go

@@ -69,6 +69,7 @@ show_stmt spc (Ret _ e)               = replicate spc ' ' ++ "return " ++ show_e
 show_stmt spc (Seq _ p1 p2)           = replicate spc ' ' ++ "--\n" ++ show_stmt (spc+4) p1 ++
                                         replicate spc ' ' ++ "--\n" ++ show_stmt (spc+4) p2
 show_stmt spc (Match _ _ loc e p1 p2) = replicate spc ' ' ++ show_loc loc ++ " = " ++ show_exp spc e ++ "\n" ++ show_stmt spc p1
+show_stmt spc (Nop _)                 = replicate spc ' ' ++ "nop"
 show_stmt spc p = error $ show p
 
 show_exp :: Int -> Exp -> String

@@ -435,7 +435,7 @@ spec = do
           (B.Data annz ["Int"] [] Type0 False
           (B.Class annz ("X",["a"]) []
             [(annz,"f3",(TypeF (TypeV "a" ["X"]) (TypeD ["Int"])),False)]
-          (B.Var annz "f3" False (TypeF (TypeV "a" ["X"]) (TypeD ["Int"]))
+          (B.Var annz "f3" True (TypeF (TypeV "a" ["X"]) (TypeD ["Int"]))
           (B.Inst annz ("X", [TypeD ["Int"]])
             [(annz,"f3",(TypeF (TypeD ["Int"]) (TypeD ["Int"])),True)]
             (B.Var annz "__f3__(Int -> Int)" False (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
@@ -456,7 +456,7 @@ spec = do
           (B.Data annz ["Bool"] [] Type0 False
           (B.Class annz ("X", ["a"]) []
             [(annz,"f2",(TypeF (TypeV "a" ["X"]) (TypeD ["Int"])),False)]
-          (B.Var annz "f2" False (TypeF (TypeV "a" ["X"]) (TypeD ["Int"]))
+          (B.Var annz "f2" True (TypeF (TypeV "a" ["X"]) (TypeD ["Int"]))
           (B.Inst annz ("X", [TypeD ["Bool"]])
             [(annz,"f2",(TypeF (TypeD ["Bool"]) (TypeD ["Int"])),True)]
             (B.Var annz "__f2__(Bool -> Int)" False (TypeF (TypeD ["Bool"]) (TypeD ["Int"]))
@@ -496,7 +496,7 @@ spec = do
           (B.Data annz ["Bool"] [] Type0 False
           (B.Class annz ("X", ["a"]) []
             [(annz,"f4",(TypeF (TypeV "a" ["X"]) (TypeD ["Int"])),False)]
-          (B.Var annz "f4" False (TypeF (TypeV "a" ["X"]) (TypeD ["Int"]))
+          (B.Var annz "f4" True (TypeF (TypeV "a" ["X"]) (TypeD ["Int"]))
           (B.Inst annz ("X", [TypeD ["Int"]])
             [(annz,"f4",(TypeF (TypeD ["Int"]) (TypeD ["Int"])),True)]
             (B.Var annz "__f4__(Int -> Int)" False (TypeF (TypeD ["Int"]) (TypeD ["Int"]))

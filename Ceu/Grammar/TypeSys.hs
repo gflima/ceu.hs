@@ -238,7 +238,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                   cat (Var _ _ _ _ _) acc = acc            -- no class impl. either
 
                   glbs = filter f ids where
-                          f (Var _ id _ tp _) = (Type.hasConstraint cls tp) && (take 2 id /= "__")
+                          f (Var _ id _ tp _) = (Type.hasConstraint cls tp) -- && (take 2 id /= "__")
                           f _                 = False
 
             p3 = foldr cat p2 (Table.elems $ Table.difference toinst dcleds)
@@ -534,23 +534,32 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
       -- find in top-level ids | id : a
       case find (isVar $ (==)id) ids of
         Nothing               -> (id, TypeV "?" [], [toError z $ "variable '" ++ id ++ "' is not declared"])
-        Just (Var _ _ _ tp _) ->                                      -- var x : a is IFable
-          case relates rel txp tp of                                  -- (?) x
-            Left  es      -> (id, TypeV "?" [], map (toError z) es)
-            Right (tp',_) -> if take 2 id == "__" then (id, tp, []) else
-              case Set.toList $ Type.getConstraints tp' of
-                []          -> (id, tp, [])
-                [(_,[cls])] ->  -- TODO: single cls
-                  case find pred ids of
+        Just (Var _ _ gen tp _) ->                                        -- var x : tp
+          case relates rel txp tp of                                      -- txp relates to tp?
+            Left  es                      -> (id, TypeV "?" [], map (toError z) es)
+            Right (tp',_)
+              -- | take 2 id == "__"         -> (id, tp, [])
+              | not gen                   -> (id, tp, [])                 -- never generate instance
+              | Type.hasAnyConstraint txp -> (id, tp, [])                 -- expects generic use
+              | null constraints          -> (id, tp, [])                 -- tp is not generic
+              | otherwise -> case constraints of                          -- tp is generic
+                [(_,[cls])] -> -- TODO: single cls
+                  case find pred ids of                                   -- find implementation
                     Just (Var _ _ _ tp'' _) -> (id', tp'', []) where
                                                id' = if Type.hasAnyConstraint tp'' then
                                                       id
                                                      else
                                                       idtp id tp''
+                    Nothing -> (id, TypeV "?" [],
+                                [toError z $ "variable '" ++ id ++
+                                 "' has no associated implementation for '" ++
+                                 Type.show' txp ++ "''"])
                   where
                     pred :: Stmt -> Bool
-                    pred (Var _ _ _ tp _) = isRight $ relates SUP txp tp  -- TODO: concrete vs concrete
+                    pred (Var _ k _ tp _) = (idtp id tp == k) && (isRight $ relates SUP txp tp)
                     pred _                = False
+              where
+                constraints = Set.toList $ Type.getConstraints tp'
 
 expr' (rel,txp) ids (Call z f exp) = (bool es_exp es_f (null es_exp),
                                      Call z{type_=tp_out} f' exp')
