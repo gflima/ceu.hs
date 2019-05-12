@@ -84,7 +84,7 @@ tk_class :: Parser String    -- Int, Int_0   // I, II, int, _Int
 tk_class = do
     fst <- char 'I'
     snd <- satisfy isUpper
-    rst <- many1 $ (digit <|> letter <|> char '_' <?> "interface identifier")
+    rst <- many $ (digit <|> letter <|> char '_' <?> "interface identifier")
     --guard $ not $ null $ filter (\c -> isLower c) rst
     when (all isUpper rst) $ unexpected "uppercase identifier"
     s
@@ -92,13 +92,13 @@ tk_class = do
 
 tk_data :: Parser String    -- Int, Int_0   // I, II, int, _Int
 tk_data = do
-    fst       <- satisfy isUpper
-    (snd:rst) <- many1 $ (digit <|> letter <|> char '_' <?> "data identifier")
+    fst <- satisfy isUpper
+    rst <- many $ (digit <|> letter <|> char '_' <?> "data identifier")
     --guard $ not $ null $ filter (\c -> isLower c) rst
-    when (fst=='I' && isUpper snd) $ unexpected "uppercase identifier"
-    when (all isUpper (snd:rst))   $ unexpected "uppercase identifier"
+    --when (fst=='I' && (length rst >= 1) && isUpper (rst!!0)) $ unexpected "uppercase identifier"
+    --when (length rst >= 1 && all isUpper rst)                $ unexpected "uppercase identifier"
     s
-    return (fst:snd:rst)
+    return (fst:rst)
 
 tk_data_hier :: Parser ID_Data_Hier
 tk_data_hier = do

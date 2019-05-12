@@ -144,24 +144,29 @@ spec = do
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"i\""
             it "I" $
                 parse tk_data "I"
-                `shouldBe` Left "(line 1, column 2):\nunexpected end of input\nexpecting data identifier"
+                --`shouldBe` Left "(line 1, column 2):\nunexpected uppercase identifier\nexpecting data identifier"
+                `shouldBe` Right "I"
             it "III" $
                 parse tk_data "III"
-                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting data identifier"
+                --`shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting data identifier"
+                `shouldBe` Right "III"
             it "IEq" $
                 parse tk_data "IEq"
-                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting data identifier"
+                --`shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting data identifier"
+                `shouldBe` Right "IEq"
 
         describe "tk_data_hier:" $ do
             it "Int.X" $
                 parse tk_data_hier "Int.X"
-                `shouldBe` Left "(line 1, column 6):\nunexpected end of input\nexpecting data identifier"
+                --`shouldBe` Left "(line 1, column 6):\nunexpected end of input\nexpecting data identifier"
+                `shouldBe` Right ["Int", "X"]
             it "Bool.True" $
                 parse tk_data_hier "Bool.True"
                 `shouldBe` Right ["Bool","True"]
             it "U8.IEq" $
                 parse tk_data_hier "U8.IEq"
-                `shouldBe` Left "(line 1, column 7):\nunexpected uppercase identifier\nexpecting data identifier"
+                --`shouldBe` Left "(line 1, column 7):\nunexpected uppercase identifier\nexpecting data identifier"
+                `shouldBe` Right ["U8","IEq"]
             it "Int.U8" $
                 parse tk_data_hier "Int.U8"
                 `shouldBe` Right ["Int", "U8"]
@@ -170,13 +175,16 @@ spec = do
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"i\""
             it "I" $
                 parse tk_data_hier "I"
-                `shouldBe` Left "(line 1, column 2):\nunexpected end of input\nexpecting data identifier"
+                --`shouldBe` Left "(line 1, column 2):\nunexpected end of input\nexpecting data identifier"
+                `shouldBe` Right ["I"]
             it "III" $
                 parse tk_data_hier "III"
-                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting data identifier"
+                --`shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting data identifier"
+                `shouldBe` Right ["III"]
             it "IEq" $
                 parse tk_data_hier "IEq"
-                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting data identifier"
+                --`shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting data identifier"
+                `shouldBe` Right ["IEq"]
 
         describe "tk_class:" $ do
             it "Int" $
@@ -229,7 +237,8 @@ spec = do
                 `shouldBe` Right (TypeD ["Int"])
             it "III" $
                 parse type_1 "III"
-                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting data identifier"
+                --`shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting data identifier"
+                `shouldBe` Right (TypeD ["III"])
             it "int" $
                 parse type_1 "int"
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"i\""
