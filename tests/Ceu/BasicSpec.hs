@@ -683,7 +683,7 @@ spec = do
               (Nop annz)
               (CallS annz (Call annz (Read annz "fff") (Number annz 1)))))))))))
       --`shouldBe` ["types do not match : expected '(Int.1 -> ?)' : found '(A -> ())'"]
-      `shouldBe` ["variable 'fff' has no associated implementation for '(Int.1 -> ?)''"]
+      `shouldBe` ["variable 'fff' has no associated implementation for '(Int.1 -> ?)'"]
 
     it "Int ; Bool ; Equalable a ; eq 1 Bool" $
       (fst $ TypeSys.go

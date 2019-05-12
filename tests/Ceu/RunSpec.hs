@@ -543,7 +543,7 @@ __f3__(Int -> Int) 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "TODO: IFable f ; g a implements IFable" $
+      it "IFable f ; g a implements IFable" $
         (run True $
           unlines [
             "interface IFable for a with",
@@ -557,7 +557,7 @@ __f3__(Int -> Int) 10                       // Read
             "return (g (Bool.True))"
                     -- g_Bool->Bool
            ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Left "(line 9, column 9):\nvariable 'g' has no associated implementation for '(Bool.True -> ?)'\n"
 
       it "IFable f ; g a implements IFable" $
         (run True $

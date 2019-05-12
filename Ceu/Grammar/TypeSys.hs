@@ -545,19 +545,23 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
               | otherwise -> case constraints of                          -- tp is generic
                 [(_,[cls])] -> -- TODO: single cls
                   case find pred ids of                                   -- find implementation
-                    Just (Var _ _ _ tp'' _) -> (id', tp'', []) where
-                                               id' = if Type.hasAnyConstraint tp'' then
-                                                      id
-                                                     else
-                                                      idtp id tp''
-                    Nothing -> (id, TypeV "?" [],
-                                [toError z $ "variable '" ++ id ++
-                                 "' has no associated implementation for '" ++
-                                 Type.show' txp ++ "''"])
+                    Just (Var _ _ _ tp'' _) ->
+                      if Type.hasAnyConstraint tp'' then
+                        if Type.hasAnyConstraint txp then
+                          (id, tp'', [])
+                        else
+                          (id, TypeV "?" [], err)
+                      else
+                        (idtp id tp'', tp'', [])
+                    Nothing -> (id, TypeV "?" [], err)
                   where
                     pred :: Stmt -> Bool
                     pred (Var _ k _ tp _) = (idtp id tp == k) && (isRight $ relates SUP txp tp)
                     pred _                = False
+
+                    err = [toError z $ "variable '" ++ id ++
+                           "' has no associated implementation for '" ++
+                           Type.show' txp ++ "'"]
               where
                 constraints = Set.toList $ Type.getConstraints tp'
 

@@ -377,7 +377,7 @@ spec = do
             "data Xx.Bb",
             "return (Xx.Aa) @<= (Xx.Bb)"
            ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Left "(line 78, column 16):\nvariable '@<=' has no associated implementation for '((Xx.Aa,Xx.Bb) -> ?)'\n"
 
       it "leap years" $         -- pg 33
         (run True $
@@ -437,6 +437,13 @@ spec = do
             "end",
             "return ((((analyse (10,20,30)) === (Triangle.Failure)) and ((analyse (10,20,25)) === (Triangle.Scalene)))",
             "   and ((analyse (10,20,20)) === (Triangle.Isosceles))) and ((analyse (10,10,10)) === (Triangle.Equilateral))"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "implication" $         -- pg 34
+        (run True $
+          ord ++ unlines [
+            ""
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
