@@ -369,7 +369,7 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "TODO: @<= -- should error missing implementation" $
+      it "@<=" $
         (run True $
           ord ++ unlines [
             "data Xx",
@@ -443,7 +443,169 @@ spec = do
       it "implication" $         -- pg 34
         (run True $
           ord ++ unlines [
-            ""
+            "func impl (x,y) : ((Bool,Bool) -> Bool) do",
+            " return (not x) or y",
+            "end",
+            "return (((impl (Bool.False,Bool.True)) and (impl (Bool.True,Bool.True)))",
+            "  and (impl (Bool.False,Bool.False))) and (not (impl (Bool.True,Bool.False)))"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "analyse triangles" $         -- pg 35
+        (run True $
+          ord ++ unlines [
+            "data Triangle",
+            "data Triangle.Failure",
+            "data Triangle.Isosceles",
+            "data Triangle.Equilateral",
+            "data Triangle.Scalene",
+            "",
+            "implementation of IEqualable for Triangle with",
+            "end",
+            "",
+            "func analyse (x,y,z) : ((Int,Int,Int) -> Triangle) do",
+            "   if (x + y) @<= z then",
+            "     return Triangle.Failure",
+            "   else/if x === z then",
+            "     return Triangle.Equilateral",
+            "   else/if (x === y) or (y === z) then",
+            "     return Triangle.Isosceles",
+            "   else",
+            "     return Triangle.Scalene",
+            "   end",
+            "end",
+            "",
+            "func analyse2 (x,y,z) : ((Int,Int,Int) -> Triangle) do",
+            "   if (x @<= y) and (x @<= z) then",
+            "     if y @<= z then",
+            "       return analyse(x,y,z)",
+            "     else",
+            "       return analyse(x,z,y)",
+            "     end",
+            "   else/if (y @<= x) and (y @< z) then",
+            "     if x @<= z then",
+            "       return analyse(y,x,z)",
+            "     else",
+            "       return analyse(y,z,x)",
+            "     end",
+            "   else",
+            "     if x @<= y then",
+            "       return analyse(z,x,y)",
+            "     else",
+            "       return analyse(z,y,x)",
+            "     end",
+            "   end",
+            "end",
+            "return ((((analyse2 (30,20,10)) === (Triangle.Failure)) and ((analyse2 (10,25,20)) === (Triangle.Scalene)))",
+            "   and ((analyse2 (10,20,20)) === (Triangle.Isosceles))) and ((analyse2 (10,10,10)) === (Triangle.Equilateral))"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "sort3" $         -- pg 35
+        (run True $
+          ord ++ unlines [
+            "data Triangle",
+            "data Triangle.Failure",
+            "data Triangle.Isosceles",
+            "data Triangle.Equilateral",
+            "data Triangle.Scalene",
+            "",
+            "implementation of IEqualable for Triangle with",
+            "end",
+            "",
+            "func analyse (x,y,z) : ((Int,Int,Int) -> Triangle) do",
+            "   if (x + y) @<= z then",
+            "     return Triangle.Failure",
+            "   else/if x === z then",
+            "     return Triangle.Equilateral",
+            "   else/if (x === y) or (y === z) then",
+            "     return Triangle.Isosceles",
+            "   else",
+            "     return Triangle.Scalene",
+            "   end",
+            "end",
+            "",
+            "func sort3 (x,y,z) : ((Int,Int,Int) -> (Int,Int,Int)) do",
+            "   if (x @<= y) and (x @<= z) then",
+            "     if y @<= z then",
+            "       return (x,y,z)",
+            "     else",
+            "       return (x,z,y)",
+            "     end",
+            "   else/if (y @<= x) and (y @< z) then",
+            "     if x @<= z then",
+            "       return (y,x,z)",
+            "     else",
+            "       return (y,z,x)",
+            "     end",
+            "   else",
+            "     if x @<= y then",
+            "       return (z,x,y)",
+            "     else",
+            "       return (z,y,x)",
+            "     end",
+            "   end",
+            "end",
+            "",
+            "return ((((analyse (sort3 (30,20,10))) === (Triangle.Failure))  and",
+            "         ((analyse (sort3 (10,25,20))) === (Triangle.Scalene))) and",
+            "         ((analyse (sort3 (10,20,20))) === (Triangle.Isosceles))) and",
+            "         ((analyse (sort3 (10,10,10))) === (Triangle.Equilateral))"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "XXX: char" $         -- pg 36
+        (run True $
+          ord ++ unlines [
+            "data Char",
+            "data Char.AA",
+            "data Char.BB",
+            "data Char.CC",
+            "data Char.DD",
+            "data Char.Aa",
+            "data Char.Bb",
+            "data Char.Cc",
+            "data Char.Dd",
+            "",
+            "implementation of IEqualable for Char with",
+            "end",
+            "",
+            "func ord c : (Char -> Int) do",
+            " if c === Char.AA then",
+            "   return 1",
+            " else/if c === Char.BB then",
+            "   return 2",
+            " else/if c === Char.CC then",
+            "   return 3",
+            " else/if c === Char.DD then",
+            "   return 4",
+            " else/if c === Char.Aa then",
+            "   return 11",
+            " else/if c === Char.Bb then",
+            "   return 12",
+            " else/if c === Char.Cc then",
+            "   return 13",
+            " else/if c === Char.Dd then",
+            "   return 14",
+            " else",
+            "   return 0",
+            " end",
+            "end",
+            "",
+            "implementation of IOrderable for Char with",
+            "  func @< (x,y) : ((Char,Char) -> Bool) do",
+            "    return (ord x) < (ord y)",
+            "  end",
+            "end",
+            "",
+            "var c1 : Char <- Char.AA",
+            "var c2 : Char <- Char.BB",
+            "",
+            "var eq  : Bool <- c1 =/= c2",
+            "var gt  : Bool <- c1 @< c2",
+            "var cs  : Bool <- (Char.AA) @< (Char.Aa)",
+            "var sum : Int  <- (((ord c1) + (ord c2)) + (ord (Char.CC))) + (ord (Char.DD))",
+            "return ((eq and gt) and cs) and (sum == 10)"
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
