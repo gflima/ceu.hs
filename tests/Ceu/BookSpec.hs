@@ -3,12 +3,12 @@ module Ceu.BookSpec (main, spec) where
 import Test.Hspec
 import Data.Bool             (bool)
 import Debug.Trace
-import Text.Parsec           (eof, parse)
+import Text.Parsec           (parse)
 
 import Ceu.Eval              (Exp(..))
 import Ceu.Grammar.Ann       (annz)
 import Ceu.Grammar.Full.Eval (go, prelude)
-import Ceu.Parser.Stmt       (stmt)
+import Ceu.Parser.Stmt       (prog)
 
 main :: IO ()
 main = hspec spec
@@ -592,10 +592,55 @@ spec = do
             " end",
             "end",
             "",
+            "func chr c : (Int -> Char) do",
+            " if c === 1 then",
+            "   return Char.AA",
+            " else/if c === 2 then",
+            "   return Char.BB",
+            " else/if c === 3 then",
+            "   return Char.CC",
+            " else/if c === 4 then",
+            "   return Char.DD",
+            " else/if c === 11 then",
+            "   return Char.Aa",
+            " else/if c ===  12then",
+            "   return Char.Bb",
+            " else/if c === 13 then",
+            "   return Char.Cc",
+            " else/if c === 14 then",
+            "   return Char.Dd",
+            " else",
+            "   return 0",
+            " end",
+            "end",
+            "",
             "implementation of IOrderable for Char with",
             "  func @< (x,y) : ((Char,Char) -> Bool) do",
             "    return (ord x) < (ord y)",
             "  end",
+            "end",
+            "",
+            "func isLower c : (Char -> Bool) do",
+            "   return (c @>= Char.Aa) and (c @<= Char.Dd)",
+            "end",
+            "",
+            "func capitalize c : (Char -> Char) do",
+            "   var off : Int <- (ord (Char.AA)) - (ord (Char.Aa))",
+            "   if isLower c then",
+            "     return chr (off + (ord c))",
+            "   else",
+            "     return c",
+            "   end",
+            "end",
+            "",
+            "func nextlet c : (Char -> Char) do",
+            "   var (min,max) : (Int,Int)",
+            "   if isLower c then",
+            "     set (min,max) <- (ord Char.Aa, ord Char.Dd)",
+            "   else",
+            "     set (min,max) <- (ord Char.AA, ord Char.DD)",
+            "   end",
+            "   return chr (((((ord c) - min) + 1) rem ((max-min)+1)) + min)",
             "end",
             "",
             "var c1 : Char <- Char.AA",
@@ -604,8 +649,16 @@ spec = do
             "var eq  : Bool <- c1 =/= c2",
             "var gt  : Bool <- c1 @< c2",
             "var cs  : Bool <- (Char.AA) @< (Char.Aa)",
+            "var low : Bool <- (not (isLower (Char.AA))) and (isLower (Char.Dd))",
+            "var cp1 : Bool <- (capitalize (Char.BB)) === (Char.BB)",
+            "var cp2 : Bool <- (capitalize (Char.Cc)) === (Char.CC)",
+            "var nx1 : Bool <- (nextlet (Char.Cc)) === (Char.Dd)",
+            "var nx2 : Bool <- (nextlet (Char.AA)) === (Char.BB)",
+            "var nx3 : Bool <- (nextlet (Char.DD)) === (Char.AA)",
+            "var nx4 : Bool <- (nextlet (Char.Dd)) === (Char.Aa)",
+            "var nx  : Bool <- (nx1 and nx2) and (nx3 and nx4)",
             "var sum : Int  <- (((ord c1) + (ord c2)) + (ord (Char.CC))) + (ord (Char.DD))",
-            "return ((eq and gt) and cs) and (sum == 10)"
+            "return (((((eq and gt) and cs) and low) and (cp1 and cp2)) and nx) and (sum == 10)"
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
@@ -614,7 +667,7 @@ spec = do
     where
         run :: Bool -> String -> Either String Exp
         run withPrelude input =
-            let v = parse (stmt <* eof) "" input in
+            let v = parse prog "" input in
                 case v of
                     (Right p) ->
                       case go $ bool Prelude.id (prelude annz) withPrelude $ p of
