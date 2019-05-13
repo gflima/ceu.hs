@@ -11,7 +11,8 @@ stmt :: Stmt -> Stmt
 stmt (Inst   z me imp)             = Inst   z me (stmt imp)
 stmt (Match' z chk loc exp p1 p2)  = Match' z chk loc (expr exp) (stmt p1) (stmt p2)
 stmt (CallS  z exp)                = CallS  z (expr exp)
-stmt (Seq    z (Match' z' chk loc exp p1 p2) p3) = stmt $ Match' z' chk loc exp (Seq z p1 p3) p2
+--stmt (Seq    z (Match' z' chk loc exp p1 p2) p3) = stmt $ Match' z' chk loc exp (Seq z p1 p3) (Seq z p2 p3)
+stmt (Seq    z (Match' z' False loc exp p1 p2) p3) = stmt $ Match' z' False loc exp (Seq z p1 p3) p2
 stmt (Seq    z (Seq z' p1 p2) p3) = stmt $ Seq z p1 (Seq z' p2 p3)
 stmt (Seq    z p1 p2)              = Seq    z (stmt p1) (stmt p2)
 stmt (Loop   z p)                  = Loop   z (stmt p)

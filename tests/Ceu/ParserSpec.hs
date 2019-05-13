@@ -24,6 +24,7 @@ clearStmt (Inst  _ me     imp)       = Inst   annz me     (clearStmt imp)
 clearStmt (Data  _ tp vars flds abs) = Data   annz tp  vars flds abs
 clearStmt (Var   _ var tp)           = Var    annz var tp
 clearStmt (FuncS _ var tp p)         = FuncS  annz var tp (clearStmt p)
+--clearStmt (Match _ l r t f)          = Match  annz (clearExp l) (clearExp r) (clearStmt t) (clearStmt f)
 clearStmt (Set   _ chk loc exp)      = Set    annz chk loc (clearExp exp)
 clearStmt (If    _ exp p1 p2)        = If     annz (clearExp exp) (clearStmt p1) (clearStmt p2)
 clearStmt (Seq   _ p1 p2)            = Seq    annz (clearStmt p1) (clearStmt p2)

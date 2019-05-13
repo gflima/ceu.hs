@@ -3,12 +3,12 @@ module Ceu.RunSpec (main, spec) where
 import Test.Hspec
 import Data.Bool             (bool)
 import Debug.Trace
-import Text.Parsec           (eof, parse)
+import Text.Parsec           (parse)
 
 import Ceu.Eval              (Exp(..))
 import Ceu.Grammar.Ann       (annz)
 import Ceu.Grammar.Full.Eval (go, prelude)
-import Ceu.Parser.Stmt       (stmt)
+import Ceu.Parser.Stmt       (prog)
 
 main :: IO ()
 main = hspec spec
@@ -303,6 +303,26 @@ spec = do
             "else",
             "   return 0",
             "end"
+          ])
+        `shouldBe` Right (Number 10)
+
+      it "if" $
+        (run True $
+          unlines [
+            "if Bool.False then",
+            "else",
+            "end",
+            "return 10"
+          ])
+        `shouldBe` Right (Number 10)
+
+      it "if" $
+        (run True $
+          unlines [
+            " if Bool.True then",
+            "else",
+            "end",
+            "return 10"
           ])
         `shouldBe` Right (Number 10)
 
@@ -683,7 +703,7 @@ __f3__(Int -> Int) 10                       // Read
     where
         run :: Bool -> String -> Either String Exp
         run withPrelude input =
-            let v = parse (stmt <* eof) "" input in
+            let v = parse prog "" input in
                 case v of
                     (Right p) ->
                       case go $ bool Prelude.id (prelude annz) withPrelude $ p of

@@ -79,6 +79,17 @@ spec = do
       compile' (Var'' annz "x" False (TypeD ["Int"]) (Match' annz False (LVar "x") (Number annz 1) (Nop annz) (Nop annz)))
       `shouldBe` (["data 'Int' is not declared"], (B.Var annz "x" False (TypeD ["Int"]) (B.Match annz False (B.LVar "x") (B.Number annz{type_=TypeD ["Int","1"]} 1) (B.Nop annz) (B.Nop annz))))
 
+    it "if" $
+      compile
+        (Seq annz
+            (Match annz
+                (LExp (Read annz "_true"))
+                (Cons annz ["Bool","False"] (Unit annz))
+                (Nop annz)
+                (Nop annz))
+            (Ret annz (Number annz 10)))
+      `shouldBe` Seq annz (Match' annz True (LExp (Read annz "_true")) (Cons annz ["Bool","False"] (Unit annz)) (Nop annz) (Nop annz)) (Ret annz (Number annz 10))
+
     it "class/inst/0" $ do
       compile (Inst annz ("F3able",[TypeD ["Int"]])
                 (FuncS annz "f3" (TypeF (TypeV "Int" []) (TypeD ["Int"]))
