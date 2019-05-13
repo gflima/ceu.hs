@@ -45,6 +45,9 @@ tk_reserved = do
 s :: Parser ()
 s = void $ many $ (void $ oneOf " ;\n\t") <|> comm
 
+tk_spc :: Parser ()
+tk_spc = s
+
 comm :: Parser ()
 comm = void $ ((try $ string "//") >> (manyTill anyChar (void newline<|>eof)) <?> "")
 

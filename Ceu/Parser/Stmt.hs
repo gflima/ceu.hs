@@ -7,6 +7,7 @@ import Data.Maybe             (isJust, isNothing, fromJust)
 import qualified Data.Set as Set
 import Control.Monad          (guard, when)
 
+import Text.Parsec            (eof)
 import Text.Parsec.Prim       ((<|>), (<?>), try, getPosition, many, unexpected)
 import Text.Parsec.Char       (char, anyChar)
 import Text.Parsec.String     (Parser)
@@ -237,6 +238,13 @@ stmt :: Parser Stmt
 stmt = do
   pos <- pos2src <$> getPosition
   s   <- stmt_seq pos
+  return s
+
+prog :: Parser Stmt
+prog = do
+  void <- tk_spc
+  s    <- stmt
+  void <- eof
   return s
 
 -------------------------------------------------------------------------------
