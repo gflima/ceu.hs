@@ -363,7 +363,7 @@ spec = do
 
       it "IOrderable" $        -- pg 32
         (run True $
-          ord ++ unlines [
+          pre ++ unlines [
             "return ((((Bool.True)  @>  (Bool.False))  and ((Bool.True) @>= (Bool.True))) and",
             "         ((Bool.False) @<= (Bool.False))) and ((Bool.False) @< (Bool.True))"
            ])
@@ -371,7 +371,7 @@ spec = do
 
       it "@<=" $
         (run True $
-          ord ++ unlines [
+          pre ++ unlines [
             "data Xx",
             "data Xx.Aa",
             "data Xx.Bb",
@@ -381,7 +381,7 @@ spec = do
 
       it "leap years" $         -- pg 33
         (run True $
-          ord ++ unlines [
+          pre ++ unlines [
             "func leapyear (y) : (Int -> Bool) do",
             "   if (y rem 100) == 0 then",
             "     return (y rem 400) == 0",
@@ -395,7 +395,7 @@ spec = do
 
       it "analyse triangles" $         -- pg 33
         (run True $
-          ord ++ unlines [
+          pre ++ unlines [
             "func analyse (x,y,z) : ((Int,Int,Int) -> Int) do",
             "   if (x + y) <= z then",
             "     return 0",  -- Fail
@@ -414,7 +414,7 @@ spec = do
 
       it "analyse triangles" $         -- pg 33
         (run True $
-          ord ++ unlines [
+          pre ++ unlines [
             "data Triangle",
             "data Triangle.Failure",
             "data Triangle.Isosceles",
@@ -442,7 +442,7 @@ spec = do
 
       it "implication" $         -- pg 34
         (run True $
-          ord ++ unlines [
+          pre ++ unlines [
             "func impl (x,y) : ((Bool,Bool) -> Bool) do",
             " return (not x) or y",
             "end",
@@ -453,7 +453,7 @@ spec = do
 
       it "analyse triangles" $         -- pg 35
         (run True $
-          ord ++ unlines [
+          pre ++ unlines [
             "data Triangle",
             "data Triangle.Failure",
             "data Triangle.Isosceles",
@@ -503,7 +503,7 @@ spec = do
 
       it "sort3" $         -- pg 35
         (run True $
-          ord ++ unlines [
+          pre ++ unlines [
             "data Triangle",
             "data Triangle.Failure",
             "data Triangle.Isosceles",
@@ -556,7 +556,7 @@ spec = do
 
       it "char" $         -- pg 36
         (run True $
-          ord ++ unlines [
+          pre ++ unlines [
             "data Char",
             "data Char.AA",
             "data Char.BB",
@@ -664,7 +664,7 @@ spec = do
 
       it "enum" $         -- pg 38
         (run True $
-          ord ++ unlines [
+          pre ++ unlines [
             "interface IEnumerable for a with",
             "   func toEnum   : (a -> Int)",
             "   func fromEnum : (Int -> a)",
@@ -748,7 +748,7 @@ spec = do
 
       it "direction" $         -- pg 41
         (run True $
-          ord ++ unlines [
+          pre ++ unlines [
             "interface IEnumerable for a with",
             "   func toEnum   : (a -> Int)",
             "   func fromEnum : (Int -> a)",
@@ -806,7 +806,7 @@ spec = do
 
       it "bool enum" $         -- pg 41
         (run True $
-          ord ++ unlines [
+          pre ++ unlines [
             "interface IEnumerable for a with",
             "   func toEnum   : (a -> Int)",
             "   func fromEnum : (Int -> a)",
@@ -836,7 +836,7 @@ spec = do
 
       it "TODO: mkpair" $         -- pg 41
         (run True $
-          ord ++ unlines [
+          pre ++ unlines [
             "data Pair with (a,b)",
             "var Pair p1 : Pair (Int,Int) <- Pair (1,2)",
             "return p1"
@@ -845,7 +845,7 @@ spec = do
 
       it "fst/snd" $         -- pg 41
         (run True $
-          ord ++ unlines [
+          pre ++ unlines [
             "func fst (x,y) : ((a,b) -> a) do",
             "   return x",
             "end",
@@ -858,7 +858,7 @@ spec = do
 
       it "pair" $         -- pg 42
         (run True $
-          ord ++ unlines [
+          pre ++ unlines [
             "func pair ((f,g), x) : ((((a->b),(a->c)),a) -> (b,c)) do",
             "   return (f x, g x)",
             "end",
@@ -874,7 +874,7 @@ spec = do
 
       it "TODO: compose" $         -- pg 42
         (run True $
-          ord ++ unlines [
+          pre ++ unlines [
             "func compose (f,g) : (((a->b),(b->c)) -> (a -> c)) do",
             "   return func x : (a -> c) do",
             "           return f (g x)",
@@ -895,7 +895,7 @@ spec = do
 
       it "cross" $         -- pg 42
         (run True $
-          ord ++ unlines [
+          pre ++ unlines [
             "func fst (x,y) : ((a,b) -> a) do",
             "   return x",
             "end",
@@ -917,13 +917,59 @@ spec = do
 
       it "pi" $         -- pg 44
         (run True $
-          ord ++ unlines [
+          pre ++ unlines [
             "func pifun : (() -> Int) do",
             "   return 314",
             "end",
             "return pifun ()"
            ])
         `shouldBe` Right (Number 314)
+
+      it "roots" $         -- pg 44
+        (run True $
+          pre ++ unlines [
+            "implementation of IEqualable for (Int,Int) with end",
+            "func sqrt x : (Int -> Int) do",
+            "  if (x === 0) or (x === 1) then",
+            "    return x; ",
+            "  end",
+            "",
+            "  var i : Int <- 1",
+            "  var r : Int <- 1",
+            "  loop do",
+            "    if r @> x then",
+            "      return i - 1",
+            "    else",
+            "      set i <- i + 1",
+            "      set r <- i * i",
+            "    end",
+            "  end",
+            "end",
+            "func roots (a,b,c) : ((Int,Int,Int) -> (Int,Int)) do",
+            "   var e : Int <- (b*b) - (4 * (a*c))",
+            "   if a === 0 then",
+            "     return (0,0)",
+            "   else/if e @< 0 then",
+            "     return (-1,-1)",
+            "   else",
+            "     var d : Int <- 2 * a",
+            "     var r : Int <- sqrt e",
+            "     return (((-b)-r)/d, ((-b)+r)/d)",
+            "   end",
+            "end",
+            "return (((roots (3,4,5)) === (-1,-1)) and ((roots (2,-16,-18)) === (-1,9))) and ((roots (0,1,1)) === (0,0))",
+            "//return (roots (2,-16,-18))",
+            ""
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "XXX: tuples / eq / ord" $         -- pg 45
+        (run True $
+          pre ++ unlines [
+            "implementation of IEqualable for (a,b) with end",
+            "return (((1,1)===(1,1)) and ((1,2)=/=(1,1)))"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
 
 -------------------------------------------------------------------------------
 
@@ -938,7 +984,7 @@ spec = do
                         (Right exp) -> Right exp
                     (Left  v') -> Left (show v')
 
-        ord = unlines [
+        pre = unlines [
           "func not (x) : (Bool->Bool) do",
           "   if Bool.True <- x then",
           "     return Bool.False",
@@ -1014,4 +1060,3 @@ spec = do
           "end",
           ""
          ]
-

@@ -138,7 +138,7 @@ relates rel tp1 tp2 =
     right   = map       fst final
 
     f :: [(ID_Var,Type,Relation)] -> ((ID_Var,Type), Errors)
-    f l@((var,_,_):_) =
+    f l@((var,_,_):_) = --traceShow l $
       let
           -- input
           sups    = comPre $ map gettp $ filter isSUP l
@@ -157,6 +157,8 @@ relates rel tp1 tp2 =
         if ok then
           ((var, bool subest supest (subs==[])), [])
         else
+          --traceShow (rel, tp1, tp2, sups_ok, ret,tp,insts) $
+          --traceShow (sups_ok,grouped) $
           ((var,TypeB),
             if sups_ok && subs_ok && sups/=[] && subs/=[] && (subest `isSubOf` supest) then
               ["type variance does not match : '" ++ show' subest ++

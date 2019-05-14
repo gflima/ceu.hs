@@ -73,6 +73,7 @@ show_stmt spc (Nop _)                 = replicate spc ' ' ++ "nop"
 show_stmt spc p = error $ show p
 
 show_exp :: Int -> Exp -> String
+show_exp spc (Number _ n)   = show n
 show_exp spc (Cons _ _ _)   = "cons"
 show_exp spc (Read _ id)    = id
 show_exp spc (Arg _)        = "arg"

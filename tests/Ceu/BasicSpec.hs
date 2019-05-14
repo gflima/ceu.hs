@@ -749,7 +749,7 @@ spec = do
                     (CallS annz (Call annz (Read annz "fff") (Cons annz ["A","B"] (Unit annz)))))))))))))))
       `shouldBe` [] --,Data annz ["A"] [] Type0 False (Data annz ["A","B"] [] Type0 False (Var annz "fff" (TypeF (TypeV "a" ["Xable"]) Type0) (Var annz "fff__(A -> ())" (TypeF (TypeD ["A"]) Type0) (Var annz "fff__(A.B -> ())" (TypeF (TypeD ["A","B"]) Type0) (CallS annz (Call (annz {type_ = Type0}) (Read (annz {type_ = TypeF (TypeD ["A","B"]) Type0}) "fff__(A.B -> ())") (Cons (annz {type_ = TypeD ["A","B"]}) ["A","B"] (Unit (annz {type_ = Type0}))))))))))
 
-    it "A ; A.B ; Xable a ; inst Xable A.B/A ; fff A.B ; (must use A.B.fff)" $
+    it "TODO: A ; A.B ; Xable a ; inst Xable A.B/A ; fff A.B ; (must use A.B.fff)" $
       (fst $ TypeSys.go
         (Data annz ["A"] [] Type0 False
         (Data annz ["A","B"] [] Type0 False

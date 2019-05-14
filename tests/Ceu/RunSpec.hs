@@ -659,6 +659,71 @@ __f3__(Int -> Int) 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
+      it "params" $
+        (run True $
+          unlines [
+            "func not (x) : (Bool->Bool) do",
+            "   if Bool.True <- x then",
+            "     return Bool.False",
+            "   else",
+            "     return Bool.True",
+            "   end",
+            "end",
+            "",
+            "func and (x,y) : ((Bool,Bool)->Bool) do",
+            "   if Bool.False <- x then",
+            "     return Bool.False",
+            "   else",
+            "     return y",
+            "   end",
+            "end",
+            "",
+            "interface IEqualable for a with",
+            "   func === (x,y) : ((a,a) -> Bool) do",
+            "     if `x´ <- y then",
+            "       if `y´ <- x then",
+            "         return Bool.True",
+            "       else",
+            "         return Bool.False",
+            "       end",
+            "     else",
+            "       return Bool.False",
+            "     end",
+            "   end",
+            "   func =/= (x,y) : ((a,a) -> Bool) do",
+            "     return not (x === y)",
+            "   end",
+            "end",
+            "",
+            "implementation of IEqualable for b with",
+            "end",
+            "",
+            "return (1===1) and (1=/=2)"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "YYY: tuples" $
+        (run True $
+          pre ++ unlines [
+            "func f : ((a,a) -> Bool) do",
+            "   return Bool.True",
+            "end",
+            "return (1,2) f (1,1)"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "XXX: tuples" $
+        (run True $
+          pre ++ unlines [
+            "implementation of IEqualable for b with",
+            "end",
+            --"implementation of IOrderable for (a,b) with",
+            --"end",
+            --"return (((1,1)===(1,1)) and ((1,2)=/=(1,1))) and ((1,2)@>(1,1))"
+            "return (((1,1)===(1,1)) and ((1,2)=/=(1,1)))"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
 -------------------------------------------------------------------------------
 
     describe "do-end:" $ do
@@ -710,3 +775,38 @@ __f3__(Int -> Int) 10                       // Read
                         (Left errs) -> Left $ concatMap (\s->s++"\n") errs
                         (Right exp) -> Right exp
                     (Left  v') -> Left (show v')
+
+        pre = unlines [
+          "func not (x) : (Bool->Bool) do",
+          "   if Bool.True <- x then",
+          "     return Bool.False",
+          "   else",
+          "     return Bool.True",
+          "   end",
+          "end",
+          "",
+          "func and (x,y) : ((Bool,Bool)->Bool) do",
+          "   if Bool.False <- x then",
+          "     return Bool.False",
+          "   else",
+          "     return y",
+          "   end",
+          "end",
+          "",
+          "interface IEqualable for a with",
+          "   func === (x,y) : ((a,a) -> Bool) do",
+          "     if `x´ <- y then",
+          "       if `y´ <- x then",
+          "         return Bool.True",
+          "       else",
+          "         return Bool.False",
+          "       end",
+          "     else",
+          "       return Bool.False",
+          "     end",
+          "   end",
+          "   func =/= (x,y) : ((a,a) -> Bool) do",
+          "     return not (x === y)",
+          "   end",
+          "end"
+         ]
