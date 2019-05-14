@@ -554,7 +554,7 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "XXX: char" $         -- pg 36
+      it "char" $         -- pg 36
         (run True $
           ord ++ unlines [
             "data Char",
@@ -661,6 +661,269 @@ spec = do
             "return (((((eq and gt) and cs) and low) and (cp1 and cp2)) and nx) and (sum == 10)"
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "enum" $         -- pg 38
+        (run True $
+          ord ++ unlines [
+            "interface IEnumerable for a with",
+            "   func toEnum   : (a -> Int)",
+            "   func fromEnum : (Int -> a)",
+            "end",
+            "",
+            "data Day",
+            "data Day.Sun",
+            "data Day.Mon",
+            "data Day.Tue",
+            "data Day.Wed",
+            "data Day.Thu",
+            "data Day.Fri",
+            "data Day.Sat",
+            "",
+            "implementation of IEqualable for Day with end",
+            "",
+            "implementation of IEnumerable for Day with",
+            "   func toEnum day : (Day -> Int) do",
+            "     if day === Day.Sun then",
+            "       return 0",
+            "     else/if day === Day.Mon then",
+            "       return 1",
+            "     else/if day === Day.Tue then",
+            "       return 2",
+            "     else/if day === Day.Wed then",
+            "       return 3",
+            "     else/if day === Day.Thu then",
+            "       return 4",
+            "     else/if day === Day.Fri then",
+            "       return 5",
+            "     else/if day === Day.Sat then",
+            "       return 6",
+            "     end",
+            "   end",
+            "",
+            "   func fromEnum int : (Int -> Day) do",
+            "     if int === 0 then",
+            "       return Day.Sun",
+            "     else/if int === 1 then",
+            "       return Day.Mon",
+            "     else/if int === 2 then",
+            "       return Day.Tue",
+            "     else/if int === 3 then",
+            "       return Day.Wed",
+            "     else/if int === 4 then",
+            "       return Day.Thu",
+            "     else/if int === 5 then",
+            "       return Day.Fri",
+            "     else/if int === 6 then",
+            "       return Day.Sat",
+            "     end",
+            "   end",
+            "end",
+            "",
+            "implementation of IOrderable for Day with",
+            "  func @< (x,y) : ((Day,Day) -> Bool) do",
+            "    return (toEnum x) < (toEnum y)",
+            "  end",
+            "end",
+            "",
+            "func workday (day) : (Day -> Bool) do",
+            "  return (day @>= (Day.Mon)) and (day @<= (Day.Fri))",
+            "end",
+            "",
+            "func dayAfter (day) : (Day -> Day) do",
+            "  return fromEnum (((toEnum day) + 1) rem 7)",
+            "end",
+            "",
+            "var d1 : Day <- Day.Sun",
+            "var d2 : Day <- Day.Mon",
+            "",
+            "var eq  : Bool <- d1 =/= d2",
+            "var gt  : Bool <- d1 @< d2",
+            "var wd1 : Bool <- workday (Day.Sun)",
+            "var wd2 : Bool <- workday (Day.Fri)",
+            "var aft : Bool <- ((dayAfter (Day.Sun)) === (Day.Mon)) and ((dayAfter (Day.Sat)) === (Day.Sun))",
+            "var sum : Int  <- (((toEnum d1) + (toEnum d2)) + (toEnum (Day.Sat))) + (toEnum (Day.Wed))",
+            "return ((((eq and gt) and (sum == 10)) and ((fromEnum(toEnum(Day.Sat))) === Day.Sat)) and ((not wd1) and wd2)) and aft"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "direction" $         -- pg 41
+        (run True $
+          ord ++ unlines [
+            "interface IEnumerable for a with",
+            "   func toEnum   : (a -> Int)",
+            "   func fromEnum : (Int -> a)",
+            "end",
+            "",
+            "data Dir",
+            "data Dir.N",
+            "data Dir.S",
+            "data Dir.L",
+            "data Dir.O",
+            "",
+            "implementation of IEqualable for Dir with end",
+            "",
+            "implementation of IEnumerable for Dir with",
+            "   func toEnum dir : (Dir -> Int) do",
+            "     if dir === Dir.N then",
+            "       return 0",
+            "     else/if dir === Dir.S then",
+            "       return 1",
+            "     else/if dir === Dir.L then",
+            "       return 2",
+            "     else/if dir === Dir.O then",
+            "       return 3",
+            "     end",
+            "   end",
+            "",
+            "   func fromEnum int : (Int -> Dir) do",
+            "     if int === 0 then",
+            "       return Dir.N",
+            "     else/if int === 1 then",
+            "       return Dir.S",
+            "     else/if int === 2 then",
+            "       return Dir.L",
+            "     else/if int === 3 then",
+            "       return Dir.O",
+            "     end",
+            "   end",
+            "end",
+            "",
+            "func reverse (dir) : (Dir -> Dir) do",
+            "   if dir === (Dir.N) then",
+            "     return Dir.S",
+            "   else/if dir === (Dir.S) then",
+            "     return Dir.N",
+            "   else/if dir === (Dir.L) then",
+            "     return Dir.O",
+            "   else/if dir === (Dir.O) then",
+            "     return Dir.L",
+            "   end",
+            "end",
+            "",
+            "return (reverse (Dir.O)) === (Dir.L)"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "bool enum" $         -- pg 41
+        (run True $
+          ord ++ unlines [
+            "interface IEnumerable for a with",
+            "   func toEnum   : (a -> Int)",
+            "   func fromEnum : (Int -> a)",
+            "end",
+            "",
+            "implementation of IEnumerable for Bool with",
+            "   func toEnum bool : (Bool -> Int) do",
+            "     if bool === (Bool.False) then",
+            "       return 0",
+            "     else/if bool === (Bool.True) then",
+            "       return 1",
+            "     end",
+            "   end",
+            "",
+            "   func fromEnum int : (Int -> Bool) do",
+            "     if int === 0 then",
+            "       return Bool.False",
+            "     else/if int === 1 then",
+            "       return Bool.True",
+            "     end",
+            "   end",
+            "end",
+            "",
+            "return fromEnum ((toEnum (Bool.False)) + 1)"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "TODO: mkpair" $         -- pg 41
+        (run True $
+          ord ++ unlines [
+            "data Pair with (a,b)",
+            "var Pair p1 : Pair (Int,Int) <- Pair (1,2)",
+            "return p1"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "fst/snd" $         -- pg 41
+        (run True $
+          ord ++ unlines [
+            "func fst (x,y) : ((a,b) -> a) do",
+            "   return x",
+            "end",
+            "func snd (_,y) : ((a,b) -> a) do",
+            "   return y",
+            "end",
+            "return (((fst (1,-1)) + (snd (1,-1))) === 0) and (snd (Bool.False, Bool.True))"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "pair" $         -- pg 42
+        (run True $
+          ord ++ unlines [
+            "func pair ((f,g), x) : ((((a->b),(a->c)),a) -> (b,c)) do",
+            "   return (f x, g x)",
+            "end",
+            "func f x : (Int -> Bool) do",
+            "   return (x rem 2) === 1",
+            "end",
+            "func g x : (Int -> Int) do",
+            "   return x * 2",
+            "end",
+            "return pair ((f,g), 3)"
+           ])
+        `shouldBe` Right (Tuple [Cons ["Bool","True"] Unit,Number 6])
+
+      it "TODO: compose" $         -- pg 42
+        (run True $
+          ord ++ unlines [
+            "func compose (f,g) : (((a->b),(b->c)) -> (a -> c)) do",
+            "   return func x : (a -> c) do",
+            "           return f (g x)",
+            "          end",
+            "end",
+            "func inc x : (Int -> Int) do",
+            "   return x+1",
+            "end",
+            "func dec x : (Int -> Int) do",
+            "   return x-1",
+            "end",
+            "func dup x : (Int -> Int) do",
+            "   return x*2",
+            "end",
+            "return (compose (dec, compose(dup,inc))) 10"
+           ])
+        `shouldBe` Right (Number 21)
+
+      it "cross" $         -- pg 42
+        (run True $
+          ord ++ unlines [
+            "func fst (x,y) : ((a,b) -> a) do",
+            "   return x",
+            "end",
+            "func snd (_,y) : ((a,b) -> a) do",
+            "   return y",
+            "end",
+            "func cross ((f,g), p) : ((((a->b),(c->d)),(a,c)) -> (b,d)) do",
+            "   return (f (fst p), g (snd p))",
+            "end",
+            "func f x : (Int -> Bool) do",
+            "   return (x rem 2) === 1",
+            "end",
+            "func g x : (Int -> Int) do",
+            "   return x * 2",
+            "end",
+            "return cross ((f,g), (3,4))"
+           ])
+        `shouldBe` Right (Tuple [Cons ["Bool","True"] Unit,Number 8])
+
+      it "pi" $         -- pg 44
+        (run True $
+          ord ++ unlines [
+            "func pifun : (() -> Int) do",
+            "   return 314",
+            "end",
+            "return pifun ()"
+           ])
+        `shouldBe` Right (Number 314)
 
 -------------------------------------------------------------------------------
 

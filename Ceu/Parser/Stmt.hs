@@ -76,6 +76,7 @@ matchLocType src loc tp = case (aux src loc tp) of
     aux pos (LTuple (v1:vs1)) (TypeN (v2:vs2)) = (fmap (++) (aux pos v1 v2)) <*>
                                                  (aux pos (LTuple vs1) (TypeN vs2))
     aux pos (LTuple _)  _          = Nothing
+    aux pos loc         tp         = error $ show (pos,loc,tp)
 
 -------------------------------------------------------------------------------
 
