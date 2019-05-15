@@ -2,7 +2,7 @@ module Ceu.Grammar.Type where
 
 import Debug.Trace
 import Data.Bool   (bool)
-import Data.Maybe  (fromJust)
+import Data.Maybe  (fromJust, isJust)
 import Data.Either (isRight)
 import Data.List   (sortBy, groupBy, find, intercalate, isPrefixOf)
 import qualified Data.Set as Set
@@ -141,12 +141,12 @@ relates rel tp1 tp2 =
     f l@((var,_,_):_) = --traceShow l $
       let
           -- input
-          sups    = comPre $ map gettp $ filter isSUP l
+          sups    = comPre' $ map gettp $ filter isSUP l
           supest  = supest' sups
           sups_ok = all (isSupOf supest) sups
 
           -- output
-          subs    = comPre $ map gettp $ filter (not.isSUP) l
+          subs    = comPre' $ map gettp $ filter (not.isSUP) l
           subest  = subest' subs
           subs_ok = all (isSubOf subest) subs
 
@@ -178,25 +178,69 @@ relates rel tp1 tp2 =
     supest' tps = head $ sortBy (\t1 t2 -> bool GT LT (t1 `isSupOf` t2)) tps
     subest' tps = head $ sortBy (\t1 t2 -> bool GT LT (t1 `isSubOf` t2)) tps
 
-    comPre tps = tps ++ l where
-      l = bool [TypeD pre] [] (null tp1s || null pre)
+    comPre' :: [Type] -> [Type]
+    comPre' tps = case comPre tps of
+                  Just tp   -> tp : tps
+                  otherwise -> tps
 
-      tp1s = filter isTypeD tps
-      pre  = commonPrefixAll $ map (\(TypeD hr)->hr) tp1s
+comPre :: [Type] -> Maybe Type
+comPre tps = yyy where
+  l = bool [TypeD pre] [] (null tp1s || null pre)
 
-      isTypeD (TypeD _) = True
-      isTypeD _         = False
-
-      -- https://stackoverflow.com/questions/21717646/longest-common-prefix-in-haskell
-      commonPrefixAll :: (Eq a) => [[a]] -> [a]
-      commonPrefixAll = foldl1 commonPrefix
+  xxx = find isNotV tps
         where
-          commonPrefix :: (Eq e) => [e] -> [e] -> [e]
-          commonPrefix _ [] = []
-          commonPrefix [] _ = []
-          commonPrefix (x:xs) (y:ys)
-            | x == y    = x : commonPrefix xs ys
-            | otherwise = []
+          isNotV (TypeV _ _) = False
+          isNotV _           = True
+
+  yyy = case xxx of
+          Nothing -> bool (Just (head tps)) Nothing (null tps)
+          Just tp -> case tp of
+            TypeD _       -> case commonPrefixAll $ map (\(TypeD hr)->hr) $ filter isTypeD tps of
+                              [] -> Nothing
+                              tp -> Just $ TypeD tp
+            TypeF inp out -> f $ unzip $ map (\(TypeF inp out)->(inp,out)) $ filter isTypeF tps
+                             where
+                              f (inps,outs) =
+                                case (comPre inps, comPre outs) of
+                                  (Just inp, Just out) -> Just $ TypeF inp out
+                                  otherwise            -> Nothing
+
+            TypeN ts      -> if all isJust yyy then
+                              Just $ TypeN (map fromJust yyy)
+                             else
+                              Nothing
+                             where
+                              yyy = map comPre xxx                   -- [ com1,      com2 ]
+                              xxx = foldr (zipWith (:)) (rep l) l    -- [ [a,c,...], [b,d,...] ]
+                              rep l = replicate (length (head l)) [] -- [ [], [] ]
+                              l = map (\(TypeN tps)->tps)            -- [ [a,b], [c,d], ... ]
+                                    $ filter isTypeN tps             -- [ tn1,   tn2,   ... ]
+
+
+            otherwise     -> Nothing
+
+  tp1s = filter isTypeD tps
+  pre  = commonPrefixAll $ map (\(TypeD hr)->hr) tp1s
+
+  isTypeD (TypeD _)   = True
+  isTypeD _           = False
+
+  isTypeF (TypeF _ _) = True
+  isTypeF _           = False
+
+  isTypeN (TypeN _)   = True
+  isTypeN _           = False
+
+  -- https://stackoverflow.com/questions/21717646/longest-common-prefix-in-haskell
+  commonPrefixAll :: (Eq a) => [[a]] -> [a]
+  commonPrefixAll = foldl1 commonPrefix
+    where
+      commonPrefix :: (Eq e) => [e] -> [e] -> [e]
+      commonPrefix _ [] = []
+      commonPrefix [] _ = []
+      commonPrefix (x:xs) (y:ys)
+        | x == y    = x : commonPrefix xs ys
+        | otherwise = []
 
 -------------------------------------------------------------------------------
 

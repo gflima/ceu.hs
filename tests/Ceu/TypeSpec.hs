@@ -157,6 +157,48 @@ spec = do
       (TypeF (TypeN [TypeV "a" [],             TypeV "a" []])              (TypeV "a" []))
       `shouldBe` Right (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeV "a" []),[("a",TypeD ["Bool"])])
 
+    it "((1,2),(1,1))->? SUP (Int,Int)->Bool" $
+      relates SUP
+        (TypeF (TypeN [
+                TypeN [TypeD ["Int","1"],TypeD ["Int","2"]],
+                TypeN [TypeD ["Int","1"],TypeD ["Int","1"]]
+              ])
+              (TypeV "?" []))
+        (TypeF (TypeN [
+                TypeN [TypeD ["Int"],TypeD ["Int"]],
+                TypeN [TypeD ["Int"],TypeD ["Int"]]
+              ])
+              (TypeD ["Bool"]))
+      `shouldBe` Right (TypeF (TypeN [TypeN [TypeD ["Int"],TypeD ["Int"]],TypeN [TypeD ["Int"],TypeD ["Int"]]]) (TypeD ["Bool"]),[("?",TypeD ["Bool"])])
+
+    it "XXX: ((1,2),(1,1))->? SUP (a,a)->Bool" $
+      relates SUP
+        (TypeF (TypeN [
+                TypeN [TypeD ["Int","1"],TypeD ["Int","2"]],
+                TypeN [TypeD ["Int","1"],TypeD ["Int","1"]]
+              ])
+              (TypeV "?" []))
+        (TypeF (TypeN [
+                TypeV "a" ["IEqualable"],
+                TypeV "a" ["IEqualable"]
+              ])
+              (TypeD ["Bool"]))
+      `shouldBe` Right (TypeF (TypeN [TypeV "a" ["IEqualable"],TypeV "a" ["IEqualable"]]) (TypeD ["Bool"]),[("?",TypeD ["Bool"]),("a",TypeN [TypeD ["Int","1"],TypeD ["Int"]])])
+
+    it "YYY: ((1,2),(1,1))->? SUB (a,a)->Bool" $
+      relates SUP
+        (TypeF (TypeN [
+                TypeN [TypeD ["Int","1"],TypeD ["Int","2"]],
+                TypeN [TypeD ["Int","1"],TypeD ["Int","1"]]
+              ])
+              (TypeV "?" []))
+        (TypeF (TypeN [
+                TypeV "a" ["IEqualable"],
+                TypeV "a" ["IEqualable"]
+              ])
+              (TypeD ["Bool"]))
+      `shouldBe` Right (TypeF (TypeN [TypeV "a" ["IEqualable"],TypeV "a" ["IEqualable"]]) (TypeD ["Bool"]),[("?",TypeD ["Bool"]),("a",TypeN [TypeD ["Int","1"],TypeD ["Int"]])])
+
   describe "isSupOf / isSubOf" $ do
 
     it "(bot -> top) > (bot -> top)" $
@@ -233,6 +275,40 @@ spec = do
     it "b : ((a,b) ~ (Int,Bool)) ~> Bool" $
       inst' (TypeV "b" []) (TypeN [TypeV "a" [],TypeV "b" []], TypeN [TypeD ["Int"],TypeD ["Bool"]])
       `shouldBe` (TypeD ["Bool"])
+
+  describe "comPre" $ do
+
+    it "[A.1,A.1]" $
+      comPre [TypeD ["A","1"], TypeD ["A","1"]]
+      `shouldBe` Just (TypeD ["A","1"])
+
+    it "[A.1,A.2]" $
+      comPre [TypeD ["A","1"], TypeD ["A","2"]]
+      `shouldBe` Just (TypeD ["A"])
+
+    it "[A.1,A.2,a]" $
+      comPre [TypeD ["A","1"], TypeD ["A","2"], TypeV "a" []]
+      `shouldBe` Just (TypeD ["A"])
+
+    it "[A.1,A.2,a,(A.1,a),(A.2,a)]" $
+      comPre [TypeD ["A","1"], TypeD ["A","2"], TypeV "a" [],
+              TypeN [TypeD ["A","1"], TypeV "a" []], TypeN [TypeD ["A","2"], TypeV "a" []] ]
+      `shouldBe` Just (TypeD ["A"])
+
+    it "[(A.1->A.2), (A.2->a)]" $
+      comPre [TypeF (TypeD ["A","1"]) (TypeD ["A","2"]),
+              TypeF (TypeD ["A","2"]) (TypeV "a" [])]
+      `shouldBe` Just (TypeF (TypeD ["A"]) (TypeD ["A","2"]))
+
+    it "[a,(A.1,a),(A.2,a)]" $
+      comPre [ TypeV "a" [],
+               TypeN [TypeD ["A","1"], TypeV "a" []],
+               TypeN [TypeD ["A","2"], TypeV "a" []] ]
+      `shouldBe` Just (TypeN [TypeD ["A"],TypeV "a" []])
+
+    it "[ [True,False] ]" $
+      comPre [TypeN [TypeD ["Bool","True"],TypeD ["Bool","False"]]]
+      `shouldBe` Just (TypeN [TypeD ["Bool","True"],TypeD ["Bool","False"]])
 
   where
     inst' :: Type -> (Type,Type) -> Type
