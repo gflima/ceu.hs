@@ -405,13 +405,13 @@ spec = do
                 `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "x" (TypeD ["Int"])) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "y" (TypeD ["Int"])) (Nop (annz{source = ("",0,0)})))) (Set (annz{source = ("",1,32)}) False (LTuple [LVar "x",LTuple [LVar "y",LAny]]) (Tuple (annz{source = ("",1,35)}) [Number (annz{source = ("",1,36)}) 1,Tuple (annz{source = ("",1,39)}) [Number (annz{source = ("",1,40)}) 2,Number (annz{source = ("",1,42)}) 3]]))) (Ret (annz{source = ("",1,47)}) (Call (annz{source = ("",1,55)}) (Read annz{source=("",1,55)} "+") (Tuple (annz{source = ("",1,54)}) [Read (annz{source = ("",1,54)}) "x",Read (annz{source = ("",1,56)}) "y"]))))
             it "var (_,_):(Int,Int,Int)" $
                 parse stmt "var (_,_):(Int,Int,Int)"
-                `shouldBe` Left "(line 1, column 24):\nunexpected arity mismatch"
+                `shouldBe` Left "(line 1, column 24):\nunexpected arity mismatch\nexpecting \"where\""
             it "var (_,_,_):(Int,Int)" $
                 parse stmt "var (_,_,_):(Int,Int)"
-                `shouldBe` Left "(line 1, column 22):\nunexpected arity mismatch"
+                `shouldBe` Left "(line 1, column 22):\nunexpected arity mismatch\nexpecting \"where\""
             it "var (_,_)):Int" $
                 parse stmt "var (_,_):Int"
-                `shouldBe` Left "(line 1, column 14):\nunexpected arity mismatch\nexpecting data identifier or \".\""
+                `shouldBe` Left "(line 1, column 14):\nunexpected arity mismatch\nexpecting data identifier, \".\" or \"where\""
 
         describe "write:" $ do
             it "x <- 1" $
@@ -505,13 +505,13 @@ spec = do
                 `shouldBe` Right (Var annz{source=("",1,1)} "add" (TypeF (TypeN [TypeD ["Int"],TypeD ["Int"]]) (TypeD ["Int"])))
             it "func (_,_,_) : (_,_)" $
                 parse stmt_funcs "func add (_,_,_) : ((Int, Int) -> Int) do end"
-                `shouldBe` Left "(line 1, column 40):\nunexpected \"d\"\narity mismatch"
+                `shouldBe` Left "(line 1, column 40):\nunexpected \"d\"\nexpecting \"where\"\narity mismatch"
             it "func (a,b,c) : (x,y)" $
                 parse expr_func "func (_,_,_) : ((Int, Int) -> Int) do end"
-                `shouldBe` Left "(line 1, column 36):\nunexpected \"d\"\narity mismatch"
+                `shouldBe` Left "(line 1, column 36):\nunexpected \"d\"\nexpecting \"where\"\narity mismatch"
             it "func add" $
                 parse stmt_funcs "func add : ((Int, Int) -> Int) do end"
-                `shouldBe` Left "(line 1, column 32):\nunexpected 'd'\nexpecting end of input"
+                `shouldBe` Left "(line 1, column 32):\nunexpected 'd'\nexpecting \"where\" or end of input"
             it "func add" $
                 parse expr_func "func ((Int, Int) -> Int) do end"
                 `shouldBe` Left "(line 1, column 18):\nunexpected \"-\"\nexpecting \")\""
@@ -686,7 +686,7 @@ spec = do
                 (FuncS annz "g" (TypeF (TypeV "a" ["IFable"]) (TypeD ["Bool"]))
                   (Seq annz
                   (Seq annz
-                    (Var annz "x" (TypeV "a" [])) (Nop annz))
+                    (Var annz "x" (TypeV "a" ["IFable"])) (Nop annz))
                   (Seq annz (Set annz False (LVar "x") (Arg annz)) (Ret annz (Call annz (Read annz "f") (Read annz "x")))))) (Ret annz (Call annz (Read annz "g") (Cons annz ["Bool","True"] (Unit annz))))))
 
         describe "seq:" $ do

@@ -15,7 +15,7 @@ import Text.Parsec.Combinator (notFollowedBy, many1, chainl, chainl1, chainr1, o
 
 import Ceu.Parser.Common
 import Ceu.Parser.Token
-import Ceu.Parser.Type        (pType, type_F)
+import Ceu.Parser.Type        (pTypeIfc)
 
 import Ceu.Grammar.Globals    (Source, ID_Var, ID_Class)
 import Ceu.Grammar.Type       (Type(..))
@@ -131,7 +131,7 @@ stmt_inst = do
   pos      <- pos2src <$> getPosition
   void     <- try $ tk_key "implementation"
   void     <- tk_key "of"
-  (cls,tp) <- pClassFor pType
+  (cls,tp) <- pClassFor pTypeIfc
   void     <- tk_key "with"
   imp      <- stmt
   void     <- tk_key "end"
@@ -142,7 +142,7 @@ stmt_data = do
   pos  <- pos2src <$> getPosition
   void <- try $ tk_key "data"
   id   <- tk_data_hier
-  with <- option Type0 (tk_key "with" *> pType)
+  with <- option Type0 (tk_key "with" *> pTypeIfc)
   return $ Data annz{source=pos} id [] with False
 
 stmt_var :: Parser Stmt
@@ -151,7 +151,7 @@ stmt_var = do
   void <- try $ tk_key "var"
   loc  <- pLoc
   void <- tk_sym ":"
-  tp   <- pType
+  tp   <- pTypeIfc
   --guard (isJust $ matchLocType pos loc tp) <?> "arity match"
   when (isNothing $ matchLocType pos loc tp) $ unexpected "arity mismatch"
   s    <- option (Nop $ annz{source=pos})
@@ -337,7 +337,7 @@ func :: Source -> Parser (Type, Stmt)
 func pos = do
   loc  <- pLoc
   void <- tk_sym ":"
-  tp   <- type_F
+  tp   <- pTypeIfc
 
   dcls <- let (TypeF tp' _) = tp
               dcls = (matchLocType pos loc tp')
@@ -346,30 +346,18 @@ func pos = do
               Nothing    -> do { fail "arity mismatch" }
               Just dcls' -> return dcls'
 
-  ifc <- optionMaybe ((,) <$> (tk_key "where" *> tk_var) <*> (tk_key "implements" *> tk_class))
-
   void <- tk_key "do"
   imp  <- stmt
   void <- tk_key "end"
 
   ann  <- do { return annz{source=pos} }
 
-  return $ (implements tp ifc,
+  return $ (tp,
             Seq ann
                 dcls
                 (Seq ann
                   (Set ann False loc (Arg ann))
                   imp))
-
-implements :: Type -> Maybe (ID_Var,ID_Class) -> Type
-implements tp Nothing = tp
-implements tp (Just (var,cls)) = aux (var,cls) tp where
-  aux :: (ID_Var,ID_Class) -> Type -> Type
-  aux (var,cls) (TypeV var' []) | var==var' = TypeV var [cls]
-  aux (var,cls) Type0           = Type0
-  aux (var,cls) (TypeD hier)    = TypeD hier
-  aux (var,cls) (TypeF inp out) = TypeF (aux (var,cls) inp) (aux (var,cls) out)
-  aux (var,cls) (TypeN ts)      = TypeN $ map (aux (var,cls)) ts
 
 stmt_funcs :: Parser Stmt
 stmt_funcs = do
@@ -381,7 +369,7 @@ stmt_funcs = do
   ret  <- case tp_imp of
             Nothing -> do
               void <- tk_sym ":"
-              tp   <- pType
+              tp   <- pTypeIfc
               return $ Var ann f tp
             Just (tp,imp) -> do
               return $ FuncS ann f tp imp

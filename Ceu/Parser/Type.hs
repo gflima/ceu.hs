@@ -3,10 +3,12 @@ module Ceu.Parser.Type where
 import Text.Parsec.Prim         ((<|>), (<?>), try)
 import Text.Parsec.String       (Parser)
 import Text.Parsec.Prim         (many)
+import Text.Parsec.Combinator   (optionMaybe)
 
 import Ceu.Parser.Common
-import Ceu.Parser.Token         (tk_sym, tk_var,tk_data_hier)
+import Ceu.Parser.Token         (tk_sym, tk_key, tk_class, tk_var, tk_data_hier)
 
+import Ceu.Grammar.Globals      (ID_Var, ID_Class)
 import Ceu.Grammar.Type         (Type(..))
 
 type_0 :: Parser Type
@@ -49,3 +51,19 @@ type_parens = do
 pType :: Parser Type
 pType = type_1 <|> try type_V <|> try type_0 <|> try type_N <|> try type_F
         <|> type_parens <?> "type"
+
+pTypeIfc :: Parser Type
+pTypeIfc = do
+  tp  <- pType
+  ifc <- optionMaybe ((,) <$> (try (tk_key "where") *> tk_var) <*> (tk_key "implements" *> tk_class))
+  return $ implements tp ifc
+
+implements :: Type -> Maybe (ID_Var,ID_Class) -> Type
+implements tp Nothing = tp
+implements tp (Just (var,cls)) = aux (var,cls) tp where
+  aux :: (ID_Var,ID_Class) -> Type -> Type
+  aux (var,cls) (TypeV var' []) | var==var' = TypeV var [cls]
+  aux (var,cls) Type0           = Type0
+  aux (var,cls) (TypeD hier)    = TypeD hier
+  aux (var,cls) (TypeF inp out) = TypeF (aux (var,cls) inp) (aux (var,cls) out)
+  aux (var,cls) (TypeN ts)      = TypeN $ map (aux (var,cls)) ts
