@@ -1,5 +1,6 @@
 module Ceu.Grammar.Type where
 
+import Control.Exception (assert)
 import Debug.Trace
 import Data.Bool   (bool)
 import Data.Maybe  (fromJust, isJust)
@@ -212,9 +213,12 @@ comPre tps = yyy where
                              where
                               yyy = map comPre xxx                   -- [ com1,      com2 ]
                               xxx = foldr (zipWith (:)) (rep l) l    -- [ [a,c,...], [b,d,...] ]
-                              rep l = replicate (length (head l)) [] -- [ [], [] ]
+                              rep l = assert (ass l) $ replicate (length (head l)) [] -- [ [], [] ]
                               l = map (\(TypeN tps)->tps)            -- [ [a,b], [c,d], ... ]
                                     $ filter isTypeN tps             -- [ tn1,   tn2,   ... ]
+                              ass l = and $ map (== head l') (tail l')  -- all lists have same length
+                                      where
+                                        l' = map length l
 
 
             otherwise     -> Nothing

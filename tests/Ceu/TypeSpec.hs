@@ -310,6 +310,11 @@ spec = do
       comPre [TypeN [TypeD ["Bool","True"],TypeD ["Bool","False"]]]
       `shouldBe` Just (TypeN [TypeD ["Bool","True"],TypeD ["Bool","False"]])
 
+    it "OK: [ [True,False], [True] ]" $ -- arity mismatch
+      comPre [ TypeN [TypeD ["Bool","True"],TypeD ["Bool","False"]],
+               TypeN [TypeD ["Bool","True"]] ]
+      `shouldBe` Just (TypeN [TypeD ["Bool","True"],TypeD ["Bool","False"]])
+
   where
     inst' :: Type -> (Type,Type) -> Type
     inst' tp (sup,sub) =

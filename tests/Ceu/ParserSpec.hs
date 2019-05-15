@@ -660,6 +660,10 @@ spec = do
                   (Seq annz (Seq annz (Var annz "x" (TypeV "a" [])) (Seq annz (Var annz "y" (TypeV "a" [])) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"] (Unit annz)))))))
               (Ret annz (Call annz (Read annz ">=") (Tuple annz [Cons annz ["Bool","True"] (Unit annz),Cons annz ["Bool","False"] (Unit annz)])))))))
 
+          it "OK: IFable f ; g a implements IFable" $
+            (parse' stmt $ "var x : a where (a,b) implements IFable") -- (a,b) vs (IFable), arity mismatch
+            `shouldBe` Left "oi"
+
           it "IFable f ; g a implements IFable" $
             (parse' stmt $
               unlines [
