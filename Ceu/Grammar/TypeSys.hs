@@ -527,7 +527,7 @@ expr' _ ids (Tuple z exps) = (es, Tuple z{type_=tps'} exps') where
                               exps' = map snd rets
                               tps'  = TypeN (map (type_.getAnn) exps')
 
-expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
+expr' (rel,txp) ids (Read z id) = traceShow (id,id',txp) $ (es, Read z{type_=tp} id') where    -- Read x
   (id', tp, es)
     | (id == "_INPUT") = (id, TypeD ["Int"], [])
     | otherwise        =
@@ -556,7 +556,7 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
                     Nothing -> (id, TypeV "?" [], err)
                   where
                     pred :: Stmt -> Bool
-                    pred (Var _ k _ tp _) = (idtp id tp == k) && (isRight $ relates SUP txp tp)
+                    pred (Var _ k _ tp _) = traceShow ("k",k,SUP,txp,tp) $ (idtp id tp == k) && (isRight $ relates SUP txp tp)
                     pred _                = False
 
                     err = [toError z $ "variable '" ++ id ++
