@@ -18,7 +18,7 @@ import Ceu.Grammar.Basic
 
 fromLeft (Left v) = v
 
-idtp id tp = "$" ++ id ++ "$" ++ Type.show' tp
+idtp id tp = "$" ++ id ++ "$" ++ Type.show' tp ++ "$"
 
 go :: Stmt -> (Errors, Stmt)
 go p = stmt [] p

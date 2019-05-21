@@ -329,14 +329,14 @@ spec = do
     describe "interface:" $ do
 
 {-
-$f3$(a -> Int) :: IF3able a => a -> Int   // Class/constraint
+$f3$(a -> Int)$ :: IF3able a => a -> Int   // Class/constraint
 
-$f3$(Int -> Int) :: Int -> Int;           // Inst/cat3
-$f3$(Int -> Int) :: Int -> Int :
-  f3 = $f3$(Int -> Int)                   // Inst/cat1
+$f3$(Int -> Int)$ :: Int -> Int;           // Inst/cat3
+$f3$(Int -> Int)$ :: Int -> Int :
+  f3 = $f3$(Int -> Int)$                   // Inst/cat1
   ...
 
-$f3$(Int -> Int) 10                       // Read
+$f3$(Int -> Int)$ 10                       // Read
 -}
       it "ZZZ: Int ; IF3able a ; inst IF3able Int ; return f3 1" $
         (run True $
