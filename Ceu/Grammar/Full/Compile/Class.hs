@@ -26,7 +26,7 @@ rename (Seq  z p1 p2)       = Seq  z (rename p1) (rename p2)
 rename (Var' z id False tp) = Var' z (idtp id tp) False tp
 rename p                    = p
 
-idtp id tp = "__" ++ id ++ "__" ++ show' tp
+idtp id tp = "$" ++ id ++ "$" ++ show' tp
 
 stmt :: Stmt -> Stmt
 

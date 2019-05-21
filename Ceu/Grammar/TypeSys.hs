@@ -11,14 +11,14 @@ import qualified Data.Set as Set
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Type as Type (Type(..), show', instantiate, getDs,
                                  hasConstraint, hasAnyConstraint, getConstraints,
-                                 getSuper, cat, hier2str,
+                                 getSuper, cat, hier2str, isSupOf,
                                  Relation(..), relates, isRel, relatesErrors)
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
 
 fromLeft (Left v) = v
 
-idtp id tp = "__" ++ id ++ "__" ++ Type.show' tp
+idtp id tp = "$" ++ id ++ "$" ++ Type.show' tp
 
 go :: Stmt -> (Errors, Stmt)
 go p = stmt [] p
@@ -92,7 +92,7 @@ wrap z (cls,ids) (l,tp) body = Func z tp $ foldr f (Ret z $ Call z body (Arg z))
 
     fs = filter f ids
          where
-          f (Var _ id _ tp _) = (any (\cls->Type.hasConstraint cls tp) clss) && (take 2 id /= "__")
+          f (Var _ id _ tp _) = (any (\cls->Type.hasConstraint cls tp) clss) && (take 1 id /= "$")
           f _ = False
 
           clss = map (\(Class _ (id,_) _ _ _)->id) $
@@ -104,7 +104,7 @@ err z = Ret z $ Error z (-2)  -- TODO: -2
 
 errDeclared :: Ann -> Maybe (Stmt->Bool) -> String -> String -> [Stmt] -> Errors
 errDeclared z chk str id ids =
-    if (take 1 id == "_") then [] else    -- nested _ret, __and (par/and)
+    if (take 1 id == "_") || (take 1 id == "$") then [] else    -- nested _ret, __and (par/and)
         case find (isAny $ (==)id) ids of
             Nothing                 -> []
             Just s@(Var _ _ _ tp _) ->
@@ -170,8 +170,8 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                 Nothing -> [toError z $ "implementation '" ++ sup ++ " for " ++
                             (Type.show' itp) ++ "' is not declared"]
                 Just _  -> []
-              isInstOf me (Inst _ me' _ _) = (me == me')
-              isInstOf _  _                = False
+              isInstOf (x,[y]) (Inst _ (x',[y']) _ _) = (x'==x && y' `Type.isSupOf` y)
+              isInstOf _  _                           = False
 
             ---------------------------------------------------------------------
 
@@ -189,7 +189,10 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                     f (_,_,tp1,_) (z2,id2,tp2,impl) =
                       case relates SUP tp1 tp2 of
                         Left es -> map (toError z2) es
-                        Right (_,insts) ->
+{-
+                        Right _ -> []
+-}
+                        Right (_,insts) -> --traceShow (insts,tp1,tp2) $
                           let tp' = Type.instantiate insts (TypeV clss_var [cls]) in
                             if tp' == itp then
                               []
@@ -202,7 +205,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
             ---------------------------------------------------------------------
 
             -- rename instance implementations:
-            -- f1 :: (A -> T) --> __f1__(A -> T)
+            -- f1 :: (A -> T) --> $f1$(A -> T)
             p1 = p
 {-
                  cat imp p
@@ -238,7 +241,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                   cat (Var _ _ _ _ _) acc = acc            -- no class impl. either
 
                   glbs = filter f ids where
-                          f (Var _ id _ tp _) = (Type.hasConstraint cls tp) -- && (take 2 id /= "__")
+                          f (Var _ id _ tp _) = (Type.hasConstraint cls tp) -- && (take 1 id /= "$")
                           f _                 = False
 
             p3 = foldr cat p2 (Table.elems $ Table.difference toinst dcleds)
@@ -299,12 +302,12 @@ stmt ids s@(Var z id gen tp p) = (es_data ++ es_id ++ es, Var z id gen tp p'') w
   --  - rename from
   --      f :: (a -> T) where a implements I
   --    to
-  --      __f__(a -> T)
+  --      $f$(a -> T)
   --  - instantiate one f for each implementation of I
   --      f :: (a -> T)
   --    to
-  --      __f__(A -> T)
-  --      __f__(B -> T)
+  --      $f$(A -> T)
+  --      $f$(B -> T)
   --      ...
   --p' = p
   p' = if not gen then p else
@@ -527,7 +530,7 @@ expr' _ ids (Tuple z exps) = (es, Tuple z{type_=tps'} exps') where
                               exps' = map snd rets
                               tps'  = TypeN (map (type_.getAnn) exps')
 
-expr' (rel,txp) ids (Read z id) = traceShow (id,id',txp) $ (es, Read z{type_=tp} id') where    -- Read x
+expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
   (id', tp, es)
     | (id == "_INPUT") = (id, TypeD ["Int"], [])
     | otherwise        =
@@ -538,7 +541,7 @@ expr' (rel,txp) ids (Read z id) = traceShow (id,id',txp) $ (es, Read z{type_=tp}
           case relates rel txp tp of                                      -- txp relates to tp?
             Left  es                      -> (id, TypeV "?" [], map (toError z) es)
             Right (tp',_)
-              -- | take 2 id == "__"         -> (id, tp, [])
+              -- | take 1 id == "$"         -> (id, tp, [])
               | not gen                   -> (id, tp, [])                 -- never generate instance
               | Type.hasAnyConstraint txp -> (id, tp, [])                 -- expects generic use
               | null constraints          -> (id, tp, [])                 -- tp is not generic
@@ -556,7 +559,7 @@ expr' (rel,txp) ids (Read z id) = traceShow (id,id',txp) $ (es, Read z{type_=tp}
                     Nothing -> (id, TypeV "?" [], err)
                   where
                     pred :: Stmt -> Bool
-                    pred (Var _ k _ tp _) = traceShow ("k",k,SUP,txp,tp) $ (idtp id tp == k) && (isRight $ relates SUP txp tp)
+                    pred (Var _ k _ tp _) = (idtp id tp == k) && (isRight $ relates SUP txp tp)
                     pred _                = False
 
                     err = [toError z $ "variable '" ++ id ++

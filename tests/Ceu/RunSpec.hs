@@ -329,16 +329,16 @@ spec = do
     describe "interface:" $ do
 
 {-
-__f3__(a -> Int) :: IF3able a => a -> Int   // Class/constraint
+$f3$(a -> Int) :: IF3able a => a -> Int   // Class/constraint
 
-__f3__(Int -> Int) :: Int -> Int;           // Inst/cat3
-__f3__(Int -> Int) :: Int -> Int :
-  f3 = __f3__(Int -> Int)                   // Inst/cat1
+$f3$(Int -> Int) :: Int -> Int;           // Inst/cat3
+$f3$(Int -> Int) :: Int -> Int :
+  f3 = $f3$(Int -> Int)                   // Inst/cat1
   ...
 
-__f3__(Int -> Int) 10                       // Read
+$f3$(Int -> Int) 10                       // Read
 -}
-      it "Int ; IF3able a ; inst IF3able Int ; return f3 1" $
+      it "ZZZ: Int ; IF3able a ; inst IF3able Int ; return f3 1" $
         (run True $
           unlines [
             "interface IF3able for a with"       ,
@@ -702,7 +702,7 @@ __f3__(Int -> Int) 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "YYY: tuples" $
+      it "tuples" $
         (run True $
           pre ++ unlines [
             "func f : ((a,a) -> Bool) do",
@@ -712,7 +712,7 @@ __f3__(Int -> Int) 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "XXX: tuples" $
+      it "tuples" $
         (run True $
           pre ++ unlines [
             "implementation of IEqualable for b with",
@@ -721,6 +721,66 @@ __f3__(Int -> Int) 10                       // Read
             --"end",
             --"return (((1,1)===(1,1)) and ((1,2)=/=(1,1))) and ((1,2)@>(1,1))"
             "return (((1,1)===(1,1)) and ((1,2)=/=(1,1)))"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+    describe "extends" $ do
+
+      it "implementation for extends of (a,b)" $
+        (run True $
+          unlines [
+            "interface IFa for a with end",
+            --"implementation of IFa for (a,b) where (a,b) implements (IFa,IFa) with end",
+            "interface (IFb for a) extends (IFa for a) with end",
+            "implementation of IFb for (a,b) where (a,b) implements (IFb,IFb) with end",
+            "return Bool.True"
+           ])
+        `shouldBe` Left "(line 3, column 1):\nimplementation 'IFa for (a,b)' is not declared\n"
+
+      it "implementation for extends of (a,b)" $
+        (run True $
+          unlines [
+            "interface IFa for a with end",
+            "implementation of IFa for (c,d) where (c,d) implements (IFa,IFa) with end",
+            "interface (IFb for e) extends (IFa for e) with end",
+            "implementation of IFb for (m,n) where (m,n) implements (IFb,IFb) with end",
+            "return Bool.True"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "XXX: implementation for extends of (a,b)" $
+        (run True $
+          unlines [
+            "interface IFa for a with end",
+            "implementation of IFa for (c,d) where (c,d) implements (IFa,IFa) with end",
+            "interface (IFb for e) extends (IFa for e) with",
+            "   func f v : (e->()) do end",
+            "end",
+            "implementation of IFb for (m,n) where (m,n) implements (IFb,IFb) with",
+            "   func f v : ((m,n)->()) do end",
+            "end",
+            "return Bool.True"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "YYY: implementation for extends of (a,b)" $
+        (run True $
+          unlines [
+            "interface IGt for a with",
+            "   func gt : ((a,a) -> Int)",
+            "end",
+            "implementation of IGt for Int with",
+            "   func gt (x,y) : ((Int,Int) -> Int) do return 1 end",
+            "end",
+            "implementation of IGt for (m,n) where (m,n) implements (IGt,IGt) with",
+            "   func gt ((x1,x2),(y1,y2)) : (((m,n),(m,n)) -> Int) do",
+            "     return (gt x1 y1) + (gt x2 y2)",
+            "   end",
+            "end",
+            "func gt2 ((x1,x2),(y1,y2)) : (((m,n),(m,n)) -> Int) where (m,n) implements (IGt,IGt) do",
+            "  return (gt x1 y1) + (gt x2 y2)",
+            "end",
+            "return Bool.True"
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
