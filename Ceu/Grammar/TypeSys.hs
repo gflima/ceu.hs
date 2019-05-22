@@ -231,11 +231,11 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                  where
                   -- class implementation:
                   -- body -> (f1,f2,...)<-(f1_tp,f2_tp,...) ; f_a()
-                  cat (Var z id True tp (Match _ _ _ _ _ _)) acc =
-                    Var z (idtp id tp') False tp'
-                      (Match z False (LVar $ idtp id tp')
-                        (wrap z (cls,ids) ([(clss_var,itp)], tp) $ Read z (idtp id tp))
-                        acc (err z))
+                  cat (Var z1 id True tp (Match z2 False _ _ _ _)) acc =
+                    Var z1 (idtp id tp') False tp'
+                      (Match z2 False (LVar $ idtp id tp')
+                        (wrap z2 (cls,ids) ([(clss_var,itp)], tp) $ Read z2 (idtp id tp))
+                        acc (err z2))
                     where
                       tp' = Type.instantiate [(clss_var,itp)] tp
                   cat (Var _ _ _ _ _) acc = acc            -- no class impl. either
