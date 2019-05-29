@@ -2,7 +2,7 @@ module Ceu.Grammar.Basic where
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann      (Ann, HasAnn(..), annz)
-import Ceu.Grammar.Type     (Type(..))
+import Ceu.Grammar.Type     (Type(..), show')
 import Data.List            (intercalate)
 
 -------------------------------------------------------------------------------
@@ -63,7 +63,7 @@ show_stmt :: Int -> Stmt -> String
 --show_stmt spc (Class _ (id,_) _ _ p) = replicate spc ' ' ++ "class "  ++ id ++ "\n" ++ show_stmt spc p
 --show_stmt spc (Inst  _ (id,_) _ p)   = replicate spc ' ' ++ "inst "   ++ id ++ "\n" ++ show_stmt spc p
 show_stmt spc (Data _ id _ _ _ p)     = replicate spc ' ' ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
-show_stmt spc (Var _ id _ _ p)        = replicate spc ' ' ++ "var "    ++ id ++ "\n" ++ show_stmt spc p
+show_stmt spc (Var _ id _ tp p)       = replicate spc ' ' ++ "var "    ++ id ++ " : " ++ (show' tp) ++ "\n" ++ show_stmt spc p
 show_stmt spc (CallS _ e)             = replicate spc ' ' ++ "call " ++ show_exp spc e
 show_stmt spc (Ret _ e)               = replicate spc ' ' ++ "return " ++ show_exp spc e
 show_stmt spc (Seq _ p1 p2)           = replicate spc ' ' ++ "--\n" ++ show_stmt (spc+4) p1 ++

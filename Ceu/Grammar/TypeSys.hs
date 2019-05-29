@@ -314,29 +314,30 @@ stmt ids s@(Var z id gen tp p) = (es_data ++ es_id ++ es, Var z id gen tp p'') w
   --      ...
   --p' = p
   p' = if not gen then p else
-    case Set.toList $ Type.getConstraints tp of
-      []            -> p
-      [(var,[cls])] -> case p of
-        Match z2 False (LVar id') exp t f
-          | id/=id' -> p
-          | id==id' -> Var z (idtp id tp) False tp
-                        (Match z2 False (LVar $ idtp id tp) exp
-                          (foldr cat t toinst) f)
-          where
-            toinst = map g $ filter f ids
-                     where
-                      f (Inst _ (cls',_) _ _) = (cls == cls')
-                      f _                     = False
-                      g (Inst _ (_,[inst]) _ _) = inst  -- types to instantiate
-            cat inst acc =
-              Var z (idtp id tp') False tp'
-                (Match z False (LVar $ idtp id tp')
-                  (wrap z (cls,ids) ([(var,inst)], tp) $ Read z (idtp id tp))
-                  --(Read z (idtp id tp))
-                  acc (err z))
+    case p of
+      Match z2 False (LVar id') exp t f
+        | id/=id' -> p
+        | id==id' ->
+          case Set.toList $ Type.getConstraints tp of
+            []            -> p
+            [(var,[cls])] -> Var z (idtp id tp) False tp
+                              (Match z2 False (LVar $ idtp id tp) exp
+                                (foldr cat t toinst) f)
               where
-                tp' = Type.instantiate [(var,inst)] tp
-        _   -> p
+                toinst = map g $ filter f ids
+                         where
+                          f (Inst _ (cls',_) _ _) = (cls == cls')
+                          f _                     = False
+                          g (Inst _ (_,[inst]) _ _) = inst  -- types to instantiate
+                cat inst acc =
+                  Var z (idtp id tp') False tp'
+                    (Match z False (LVar $ idtp id tp')
+                      (wrap z (cls,ids) ([(var,inst)], tp) $ Read z (idtp id tp))
+                      --(Read z (idtp id tp))
+                      acc (err z))
+                  where
+                    tp' = Type.instantiate [(var,inst)] tp
+      _   -> p
 
 stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fromJust mexp) p1' p2')
   where
