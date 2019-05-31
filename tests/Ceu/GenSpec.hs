@@ -104,7 +104,7 @@ spec = do
             "end"                               ,
             "implementation of IEq for a where a implements IXx with" ,
             " func eq (x,y) : ((a,a) -> Int) do" ,
-            "   return (f x) eq (f y)"          ,
+            "   return ((f x) eq (f y)) + (1 eq 1)",
             " end"                              ,
             "end"                               ,
             "return (eq(Dd,Dd)) + (eq(Ee,Ee))"
