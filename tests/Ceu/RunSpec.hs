@@ -338,7 +338,7 @@ $f3$(Int -> Int)$ :: Int -> Int :
 
 $f3$(Int -> Int)$ 10                       // Read
 -}
-      it "ZZZ: Int ; IF3able a ; inst IF3able Int ; return f3 1" $
+      it "Int ; IF3able a ; inst IF3able Int ; return f3 1" $
         (run True $
           unlines [
             "interface IF3able for a with"       ,

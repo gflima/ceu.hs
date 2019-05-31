@@ -21,9 +21,9 @@ fromLeft (Left v) = v
 idtp id tp = "$" ++ id ++ "$" ++ Type.show' tp ++ "$"
 
 go :: Stmt -> (Errors, Stmt)
-go p = stmt [] p
+--go p = stmt [] p
 --go p = f $ stmt [] p where f (e,s) = traceShow s (e,s)
---go p = f $ stmt [] p where f (e,s) = traceShow (show_stmt 0 s) (e,s)
+go p = f $ stmt [] p where f (e,s) = traceShow (show_stmt 0 s) (e,s)
 
 -------------------------------------------------------------------------------
 
@@ -227,7 +227,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
             -- Needs to generate:
             --    func f : (A -> B)
             --    func g : (A -> B)
-            p2 = foldr cat p1 glbs
+            p2 = p1 --foldr cat p1 glbs
                  where
                   -- class implementation:
                   -- body -> (f1,f2,...)<-(f1_tp,f2_tp,...) ; f_a()
@@ -244,7 +244,31 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                           f (Var _ id _ tp _) = (Type.hasConstraint cls tp) -- && (take 1 id /= "$")
                           f _                 = False
 
-            p3 = foldr cat p2 (Table.elems $ Table.difference toinst dcleds)
+            p3 = foldr cat p2 (Table.elems $ Table.difference hcls hinst)
+                 where
+                  cat (z,id,tp,_) acc = traceShow (id,id',tp',traceShowId body') $
+                    Var z id' False tp'
+                      (Match z False (LVar id')
+                        body'
+                        acc
+                        (err z))
+                    where
+                      id'   = idtp id tp'
+                      tp'   = Type.instantiate [(clss_var,itp)] tp
+                      body  = case find (isVar $ (==)id) ids of
+                        (Just (Var _ id1 _ _ (Match _ False (LVar id2) x _ _)))
+                          | (id1 == id2) -> x
+                      body' = map_exp (Prelude.id,fexp,Prelude.id) body
+                        where
+                          fexp e@(Read z id)
+                            | pred id   = Read z (idtp id tp')
+                            | otherwise = e
+                            where
+                              pred id = any (\(_,id',_,_) -> id' == id) hcls 
+                          fexp e        = e
+
+{-
+            p3 = foldr cat p2
                  where
                   -- all symbols to be type instantiated from hcls
                   toinst :: Table.Map ID_Var (Ann,ID_Var,Type,Bool)
@@ -264,6 +288,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
 
                   -- prototypes
                   cat (z,id,tp,_) acc = Var z id False tp acc
+-}
 
         where
           isSameInst (Inst _ (id,[tp']) _ _) = (cls==id && [itp]==[tp'])
@@ -289,7 +314,7 @@ stmt ids s@(Data z hr [] flds abs p) = (es_dcl ++ (errDeclared z Nothing "data" 
 
 stmt ids s@(Data z hr vars flds abs p) = error "not implemented"
 
-stmt ids s@(Var z id gen tp p) = (es_data ++ es_id ++ es, Var z id gen tp p'') where
+stmt ids s@(Var z id gen tp p) = (es_data ++ es_id ++ es, f p'') where
   es_data = getErrsTypesDeclared z ids tp
   es_id   = errDeclared z (Just chk) "variable" id ids where
               chk :: Stmt -> Bool
@@ -298,24 +323,30 @@ stmt ids s@(Var z id gen tp p) = (es_data ++ es_id ++ es, Var z id gen tp p'') w
               chk _ = False
   (es,p'') = stmt (s:ids) p'
 
-  -- In case of parametric/generic implementations:
-  --  - rename from
+  f' p = Var z id gen tp p
+
+  -- In case of a parametric/generic implementation of `f`, declare a new `f`
+  -- for each implementation of I. Also keep the original `f` to match generic
+  -- uses of `f`.
   --      f :: (a -> T) where a implements I
   --    to
-  --      $f$(a -> T)
-  --  - instantiate one f for each implementation of I
-  --      f :: (a -> T)
-  --    to
-  --      $f$(A -> T)
-  --      $f$(B -> T)
+  --      f :: (a -> T) where a implements I
+  --      $f$(X -> T)$    // X implements I
+  --      $f$(Y -> T)$    // Y implements I
   --      ...
   --p' = p
-  p' = if not gen then p else
+  (f,p') = if not gen then (f',p) else
     case Set.toList $ Type.getConstraints tp of
-      []            -> p
+      []            -> (f',p)
+      _             -> case p of
+        Match z2 False (LVar id') exp t f
+          | id/=id' -> (f',p)
+          | id==id' -> (Prelude.id,t)
+        _   -> (Prelude.id,p)
+{-
       [(var,[cls])] -> case p of
         Match z2 False (LVar id') exp t f
-          | id/=id' -> p
+          | id/=id' -> (f',p)
           | id==id' -> Var z (idtp id tp) False tp
                         (Match z2 False (LVar $ idtp id tp) exp
                           (foldr cat t toinst) f)
@@ -333,7 +364,8 @@ stmt ids s@(Var z id gen tp p) = (es_data ++ es_id ++ es, Var z id gen tp p'') w
                   acc (err z))
               where
                 tp' = Type.instantiate [(var,inst)] tp
-        _   -> p
+        _   -> (f',p)
+-}
 
 stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fromJust mexp) p1' p2')
   where
@@ -540,7 +572,9 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
         Just (Var _ _ gen tp _) ->                                        -- var x : tp
           case relates rel txp tp of                                      -- txp relates to tp?
             Left  es                      -> (id, TypeV "?" [], map (toError z) es)
-            Right (tp',_)
+            Right (tp',_)                -- -> (id, tp, [])                 -- never generate instance
+{-
+-}
               -- | take 1 id == "$"         -> (id, tp, [])
               | not gen                   -> (id, tp, [])                 -- never generate instance
               | Type.hasAnyConstraint txp -> (id, tp, [])                 -- expects generic use

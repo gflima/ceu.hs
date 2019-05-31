@@ -89,12 +89,13 @@ show_loc l = show l
 
 -------------------------------------------------------------------------------
 
-{-
 map_stmt :: (Stmt->Stmt, Exp->Exp, Type->Type) -> Stmt -> Stmt
-map_stmt f@(fs,_,_)  (Class z me ext p1 p2)     = fs (Class z me ext (map_stmt f p1) (map_stmt f p2))
-map_stmt f@(fs,_,_)  (Inst  z me p1 p2)         = fs (Inst  z me (map_stmt f p1) (map_stmt f p2))
+map_stmt f@(fs,_,ft) (Class z me ext ifc p)     = fs (Class z me ext ifc' (map_stmt f p))
+                                                    where ifc' = map (\(x,y,tp,z)->(x,y,ft tp,z)) ifc
+map_stmt f@(fs,_,ft) (Inst  z me imp p)         = fs (Inst  z me imp' (map_stmt f p))
+                                                    where imp' = map (\(x,y,tp,z)->(x,y,ft tp,z)) imp
 map_stmt f@(fs,_,ft) (Data  z me flds tp abs p) = fs (Data  z me flds (ft tp) abs (map_stmt f p))
-map_stmt f@(fs,_,ft) (Var   z id tp p)          = fs (Var   z id (ft tp) (map_stmt f p))
+map_stmt f@(fs,_,ft) (Var   z id gen tp p)      = fs (Var   z id gen (ft tp) (map_stmt f p))
 map_stmt f@(fs,_,_)  (Match z b loc exp p1 p2)  = fs (Match z b loc (map_exp f exp) (map_stmt f p1) (map_stmt f p2))
 map_stmt f@(fs,_,_)  (CallS z exp)              = fs (CallS z (map_exp f exp))
 map_stmt f@(fs,_,_)  (Seq   z p1 p2)            = fs (Seq   z (map_stmt f p1) (map_stmt f p2))
@@ -108,7 +109,6 @@ map_exp f@(_,fe,_)  (Tuple z es)    = fe (Tuple z (map (map_exp f) es))
 map_exp f@(_,fe,ft) (Func  z tp p)  = fe (Func  z (ft tp) (map_stmt f p))
 map_exp f@(_,fe,_)  (Call  z e1 e2) = fe (Call  z (map_exp f e1) (map_exp f e2))
 map_exp f@(_,fe,_)  exp             = fe exp
--}
 
 --  class Equalable a where
 --      eq :: a -> a -> Bool
