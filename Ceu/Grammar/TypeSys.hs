@@ -153,7 +153,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
           Just _  -> (p, [toError z $ "implementation '" ++ cls ++ " (" ++ intercalate "," [Type.show' itp] ++ ")' is already declared"])
 
           -- instance is not declared
-          Nothing -> (p3, es1++ex++ey++ez) where
+          Nothing -> (p4, es1++ex++ey++ez) where
 
             hcls   = class2table ids k
             hinst  = inst2table  ids s
@@ -244,9 +244,22 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                           f (Var _ id _ tp _) = (Type.hasConstraint cls tp) -- && (take 1 id /= "$")
                           f _                 = False
 
+            -- Take each HCLS implementation not in HINST and instantiate as
+            -- if it was in HINST:
+            --    interface IEq for a with
+            --      var eq  : ((a,a) -> Int)
+            --      func neq (x,y) : ((a,a) -> Int) do ... eq ... end
+            --    end
+            --    implementation of IEq for Int with
+            --      func eq (x,y) : ((Int,Int) -> Int) do ... end
+            --    end
+            -- HINST does not have "neq", so we will copy it from HCLS,
+            -- instantiate with the implementation type and change all
+            -- occurrences of the HCLS symbols (e.g., eq) by the corresponding
+            -- instantiated symbol (e.g., $eq$Int$).
             p3 = foldr cat p2 (Table.elems $ Table.difference hcls hinst)
                  where
-                  cat (z,id,tp,_) acc = traceShow (id,id',tp',traceShowId body') $
+                  cat (z,id,tp,_) acc = --traceShow (id,id',tp',traceShowId body') $
                     Var z id' False tp'
                       (Match z False (LVar id')
                         body'
@@ -266,6 +279,14 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                             where
                               pred id = any (\(_,id',_,_) -> id' == id) hcls 
                           fexp e        = e
+
+            -- Prototype all HCLS as HINST signatures before the
+            -- implementations appear.
+            p4 = foldr cat p3 hcls
+                 where
+                  cat (_,id,tp,_) acc = Var z (idtp id tp') False tp' acc
+                    where
+                      tp' = Type.instantiate [(clss_var,itp)] tp
 
 {-
             p3 = foldr cat p2
