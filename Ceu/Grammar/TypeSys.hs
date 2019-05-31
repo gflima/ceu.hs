@@ -257,7 +257,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
             -- instantiate with the implementation type and change all
             -- occurrences of the HCLS symbols (e.g., eq) by the corresponding
             -- instantiated symbol (e.g., $eq$Int$).
-            p3 = foldr cat p2 (Table.elems $ Table.difference hcls hinst)
+            p3 = foldr cat p2 (traceShow kkk $ traceShowId $ Table.elems $ Table.difference hcls hinst)
                  where
                   cat (z,id,tp,_) acc = --traceShow (id,id',tp',traceShowId body') $
                     Var z id' False tp'
@@ -279,6 +279,14 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                             where
                               pred id = any (\(_,id',_,_) -> id' == id) hcls 
                           fexp e        = e
+
+                  kkk = (itp, cls, instss)
+                    where
+                      instss = Set.mapMonotonic f $ Type.getConstraints itp
+                      f (_,[cls]) = map xxx $ filter pred ids where
+                                      pred (Inst _ (cls',[tp']) _ _) = cls==cls'
+                                      pred _ = False
+                      xxx (Inst _ zzz _ _) = zzz
 
             -- Prototype all HCLS as HINST signatures before the
             -- implementations appear.
@@ -620,6 +628,7 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
                     err = [toError z $ "variable '" ++ id ++
                            "' has no associated implementation for '" ++
                            Type.show' txp ++ "'"]
+                x -> (id,tp,[]) --error $ show (id,x)
               where
                 constraints = Set.toList $ Type.getConstraints tp'
 

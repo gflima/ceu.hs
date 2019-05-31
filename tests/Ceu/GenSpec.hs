@@ -75,7 +75,43 @@ spec = do
            ])
         `shouldBe` Right (Number 1)
 
-      it "XXX: IEq + default + Int + (a,b)" $
+      it "XXX: IEq + default + $Int$ + IXx + $Dd$ + $IXx$" $
+        (run True $
+          unlines [
+            "interface IEq for a with"          ,
+            " var eq  : ((a,a) -> Int)"         ,
+            " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
+            "end"                               ,
+            "implementation of IEq for Int with" ,
+            " func eq (x,y) : ((Int,Int) -> Int) do",
+            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            " end"                              ,
+            "end"                               ,
+            "interface IXx for a with"          ,
+            " var f : (a -> Int)"               ,
+            "end"                               ,
+            "data Dd",
+            "implementation of IXx for Dd with" ,
+            " func f (x) : (Dd -> Int) do"    ,
+            "   return 1"                       ,
+            " end"                              ,
+            "end"                               ,
+            "data Ee",
+            "implementation of IXx for Ee with" ,
+            " func f (x) : (Ee -> Int) do"    ,
+            "   return 0"                       ,
+            " end"                              ,
+            "end"                               ,
+            "implementation of IEq for a where a implements IXx with" ,
+            " func eq (x,y) : ((a,a) -> Int) do" ,
+            "   return (f x) eq (f y)"          ,
+            " end"                              ,
+            "end"                               ,
+            "return (eq(Dd,Dd)) + (eq(Ee,Ee))"
+          ])
+        `shouldBe` Right (Number 1)
+
+      it "IEq + default + Int + (a,b)" $
         (run True $
           unlines [
             "interface IEq for a with"          ,
