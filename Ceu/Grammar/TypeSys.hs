@@ -248,7 +248,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
             -- if it was in HINST:
             --    interface IEq for a with
             --      var eq  : ((a,a) -> Int)
-            --      func neq (x,y) : ((a,a) -> Int) do ... eq ... end
+            --      func neq (x,y) : ((a,a) -> Int) do ... eq(a,a) ... end
             --    end
             --    implementation of IEq for Int with
             --      func eq (x,y) : ((Int,Int) -> Int) do ... end
@@ -271,14 +271,9 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                       body  = case find (isVar $ (==)id) ids of
                         (Just (Var _ id1 _ _ (Match _ False (LVar id2) x _ _)))
                           | (id1 == id2) -> x
-                      body' = map_exp (Prelude.id,fexp,Prelude.id) body
+                      body' = map_exp (Prelude.id,Prelude.id,ftp) body
                         where
-                          fexp e@(Read z id)
-                            | pred id   = Read z (idtp id tp')
-                            | otherwise = e
-                            where
-                              pred id = any (\(_,id',_,_) -> id' == id) hcls 
-                          fexp e        = e
+                          ftp tp = Type.instantiate [(clss_var,itp)] tp
 
                   kkk = (itp, cls, instss)
                     where
