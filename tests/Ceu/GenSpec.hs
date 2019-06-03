@@ -56,6 +56,25 @@ spec = do
           ])
         `shouldBe` Right (Number 1)
 
+      it "IEq + default + Int + f" $
+        (run True $
+          unlines [
+            "interface IEq for a with"          ,
+            " var eq  : ((a,a) -> Int)"         ,
+            " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
+            "end"                               ,
+            "implementation of IEq for Int with" ,
+            " func eq (x,y) : ((Int,Int) -> Int) do",
+            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            " end"                              ,
+            "end"                               ,
+            "func f x : (a -> Int) where a implements IEq do",
+            "   return x eq x",   -- eq_a
+            "end",
+            "return f 1"  -- eq_a=eq_Int
+           ])
+        `shouldBe` Right (Number 1)
+
       it "XXX: IEq + default + f + Int" $
         (run True $
           unlines [

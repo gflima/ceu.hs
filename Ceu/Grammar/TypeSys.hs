@@ -257,9 +257,9 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
             -- instantiate with the implementation type and change all
             -- occurrences of the HCLS symbols (e.g., eq) by the corresponding
             -- instantiated symbol (e.g., $eq$Int$).
-            p3 = foldr cat p2 (traceShow kkk $ traceShowId $ Table.elems $ Table.difference hcls hinst)
+            p3 = foldr cat p2 fs --(Table.elems $ Table.difference hcls hinst)
                  where
-                  cat (z,id,tp,_) acc = --traceShow (id,id',tp',traceShowId body') $
+                  cat (Var z id _ tp (Match _ False _ body _ _)) acc = --traceShow (id,id',tp',traceShowId body') $
                     Var z id' False tp'
                       (Match z False (LVar id')
                         body'
@@ -268,13 +268,21 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                     where
                       id'   = idtp id tp'
                       tp'   = Type.instantiate [(clss_var,itp)] tp
-                      body  = case find (isVar $ (==)id) ids of
-                        (Just (Var _ id1 _ _ (Match _ False (LVar id2) x _ _)))
-                          | (id1 == id2) -> x
                       body' = map_exp (Prelude.id,Prelude.id,ftp) body
                         where
                           ftp tp = Type.instantiate [(clss_var,itp)] tp
 
+                  fs  = filter pred ids
+                        where
+                          pred (Var _ id1 _ tp (Match _ False (LVar id2) body _ _)) =
+                            id1==id2 && (not $ elem id1 insts) && ctrs where
+                              insts = Table.keys hinst
+                              ctrs  = case Set.toList $ Type.getConstraints tp of
+                                []            -> False
+                                [(_, [cls'])] -> cls' == cls
+                          pred _ = False
+
+{-
                   kkk = (itp, cls, instss)
                     where
                       instss = Set.mapMonotonic f $ Type.getConstraints itp
@@ -282,6 +290,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                                       pred (Inst _ (cls',[tp']) _ _) = cls==cls'
                                       pred _ = False
                       xxx (Inst _ zzz _ _) = zzz
+-}
 
             -- Prototype all HCLS as HINST signatures before the
             -- implementations appear.
@@ -362,34 +371,32 @@ stmt ids s@(Var z id gen tp p) = (es_data ++ es_id ++ es, f p'') where
   (f,p') = if not gen then (f',p) else
     case Set.toList $ Type.getConstraints tp of
       []            -> (f',p)
-      _             -> case p of
-        Match z2 False (LVar id') exp t f
-          | id/=id' -> (f',p)
-          | id==id' -> (Prelude.id,t)
-        _   -> (Prelude.id,p)
-{-
       [(var,[cls])] -> case p of
-        Match z2 False (LVar id') exp t f
+        Match z2 False (LVar id') body t f
           | id/=id' -> (f',p)
-          | id==id' -> Var z (idtp id tp) False tp
-                        (Match z2 False (LVar $ idtp id tp) exp
-                          (foldr cat t toinst) f)
+          | id==id' -> (Prelude.id,funcs)
           where
-            toinst = map g $ filter f ids
+            insts = map g $ filter f ids
                      where
                       f (Inst _ (cls',_) _ _) = (cls == cls')
                       f _                     = False
                       g (Inst _ (_,[inst]) _ _) = inst  -- types to instantiate
-            cat inst acc =
-              Var z (idtp id tp') False tp'
-                (Match z False (LVar $ idtp id tp')
-                  (wrap z (cls,ids) ([(var,inst)], tp) $ Read z (idtp id tp))
-                  --(Read z (idtp id tp))
-                  acc (err z))
-              where
-                tp' = Type.instantiate [(var,inst)] tp
-        _   -> (f',p)
--}
+
+            funcs = foldr cat t insts
+                    where
+                      cat itp acc = --traceShow (id,id',tp',traceShowId body') $
+                        Var z id' False tp'
+                          (Match z False (LVar id')
+                            body'
+                            acc
+                            (err z))
+                        where
+                          id'   = idtp id tp'
+                          tp'   = Type.instantiate [(var,itp)] tp
+                          body' = map_exp (Prelude.id,Prelude.id,ftp) body
+                            where
+                              ftp tp = Type.instantiate [(var,itp)] tp
+        _   -> (Prelude.id,p)
 
 stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fromJust mexp) p1' p2')
   where
