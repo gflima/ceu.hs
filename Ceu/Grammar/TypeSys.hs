@@ -71,34 +71,8 @@ inst2table ids (Inst z (cls,[tp]) imp _) = Table.union (f2 imp) sups where
       pred (Inst  _ (x,[y]) _ _) = (x==cls' && y==tp)
       pred _ = False
 
-{-
-  aux :: Stmt -> Table.Map ID_Var (Ann,ID_Var,Type,Bool)
-  aux s@(Var z id _ tp (Match _ _ _ _ p _)) = Table.insert id (z,id,tp,True) (aux p)
-  aux (Nop _)                               = Table.empty
--}
-
   f2 :: [(Ann,ID_Var,Type,Bool)] -> Table.Map ID_Var (Ann,ID_Var,Type,Bool)
   f2 ifc = Table.fromList $ map (\s@(_,id,_,_) -> (id,s)) ifc
-
-
-{-
---wrap :: Ann -> [(ID_Var,Type)] -> Type -> [Stmt] -> Exp -> Exp
-wrap z (cls,ids) (l,tp) body = Func z tp $ foldr f (Ret z $ Call z body (Arg z)) fs
-  where
-    f (Var z id _ tp _) acc =
-      Match z False (LVar id)
-        (Read z (idtp id (Type.instantiate l tp)))
-        acc
-        (err z)
-
-    fs = filter f ids
-         where
-          f (Var _ id _ tp _) = (any (\cls->Type.hasConstraint cls tp) clss) && (take 1 id /= "$")
-          f _ = False
-
-          clss = map (\(Class _ (id,_) _ _ _)->id) $
-                  supers ids (fromJust $ find (isClass $ (==)cls) ids)
--}
 
 wrap (var,itp) (Var z id1 _ tp (Match _ False (LVar id2) body _ _)) acc | id1==id2 =
   Var z id' False tp'
@@ -168,7 +142,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
           Just _  -> (p, [toError z $ "implementation '" ++ cls ++ " (" ++ intercalate "," [Type.show' itp] ++ ")' is already declared"])
 
           -- instance is not declared
-          Nothing -> (p4, es1++ex++ey++ez) where
+          Nothing -> (p2, es1++ex++ey++ez) where
 
             hcls   = class2table ids k
             hinst  = inst2table  ids s
@@ -204,10 +178,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                     f (_,_,tp1,_) (z2,id2,tp2,impl) =
                       case relates SUP tp1 tp2 of
                         Left es -> map (toError z2) es
-{-
-                        Right _ -> []
--}
-                        Right (_,insts) -> --traceShow (insts,tp1,tp2) $
+                        Right (_,insts) ->
                           let tp' = Type.instantiate insts (TypeV clss_var [cls]) in
                             if tp' == itp then
                               []
@@ -219,64 +190,27 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
 
             ---------------------------------------------------------------------
 
-            -- rename instance implementations:
-            -- f1 :: (A -> T) --> $f1$(A -> T)
-            p1 = p
-{-
-                 cat imp p
-                 where
-                  cat s@(Var z id False tp (Match z2 False (LVar _) exp t f)) p =
-                    Var z id' False tp (Match z2 False (LVar id') exp (cat t p) f)
-                    where
-                      id' = idtp id tp
-                  cat (Nop _) p = p
-                  --cat x p = error $ show x
--}
-
-            -- instantiate all parametric globals (in associated class or others)
-            -- Example:
-            --    interface I
-            --      func f : (a -> B)
-            --    func g : (a -> B) where a implements I
-            --    implementation of I for A
-            -- Needs to generate:
-            --    func f : (A -> B)
-            --    func g : (A -> B)
-            p2 = p1 --foldr cat p1 glbs
-{-
-                 where
-                  -- class implementation:
-                  -- body -> (f1,f2,...)<-(f1_tp,f2_tp,...) ; f_a()
-                  cat (Var z id True tp (Match _ _ _ _ _ _)) acc =
-                    Var z (idtp id tp') False tp'
-                      (Match z False (LVar $ idtp id tp')
-                        (wrap z (cls,ids) ([(clss_var,itp)], tp) $ Read z (idtp id tp))
-                        acc (err z))
-                    where
-                      tp' = Type.instantiate [(clss_var,itp)] tp
-                  cat (Var _ _ _ _ _) acc = acc            -- no class impl. either
-
-                  glbs = filter f ids where
-                          f (Var _ id _ tp _) = (Type.hasConstraint cls tp) -- && (take 1 id /= "$")
-                          f _                 = False
--}
-
-            -- Take each HCLS implementation not in HINST and instantiate as
-            -- if it was in HINST:
+            -- Take each generic function with CLS constraint and instantiate
+            -- it with HINST type.
+            -- Either from default implementations in HCLS or from generic
+            -- functions:
             --    interface IEq for a with
             --      var eq  : ((a,a) -> Int)
-            --      func neq (x,y) : ((a,a) -> Int) do ... eq(a,a) ... end
+            --      func neq (x,y) : ((a,a) -> Int) do ... eq(a,a) ... end              -- THIS
             --    end
+            --    func f x : (a -> Int) where a implements IEq do ... eq(a,a) ... end   -- THIS
             --    implementation of IEq for Int with
             --      func eq (x,y) : ((Int,Int) -> Int) do ... end
             --    end
-            -- HINST does not have "neq", so we will copy it from HCLS,
-            -- instantiate with the implementation type and change all
-            -- occurrences of the HCLS symbols (e.g., eq) by the corresponding
-            -- instantiated symbol (e.g., $eq$Int$).
-            p3 = foldr cat p2 fs --(Table.elems $ Table.difference hcls hinst)
+            -- <to>
+            --    $neq$Int$ ...
+            --    $f$Int$ ...
+            -- HINST does not have `neq`, so we will copy it from HCLS,
+            -- instantiate with the implementation type, changing all HCLS
+            -- with HINST type.
+            p1 = foldr cat p fs
                  where
-                  cat s@(Var z id _ tp (Match _ False _ body _ _)) acc = --traceShow (id,id',tp',traceShowId body') $
+                  cat s@(Var z id _ tp (Match _ False _ body _ _)) acc =
                     wrap (clss_var,itp) s acc
 
                   fs  = filter pred ids
@@ -289,46 +223,13 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                                 [(_, [cls'])] -> cls' == cls
                           pred _ = False
 
-{-
-                  kkk = (itp, cls, instss)
-                    where
-                      instss = Set.mapMonotonic f $ Type.getConstraints itp
-                      f (_,[cls]) = map xxx $ filter pred ids where
-                                      pred (Inst _ (cls',[tp']) _ _) = cls==cls'
-                                      pred _ = False
-                      xxx (Inst _ zzz _ _) = zzz
--}
-
             -- Prototype all HCLS as HINST signatures before the
-            -- implementations appear.
-            p4 = foldr cat p3 hcls
+            -- implementations appear to prevent "undeclared" errors.
+            p2 = foldr cat p1 hcls
                  where
                   cat (_,id,tp,_) acc = Var z (idtp id tp') False tp' acc
                     where
                       tp' = Type.instantiate [(clss_var,itp)] tp
-
-{-
-            p3 = foldr cat p2
-                 where
-                  -- all symbols to be type instantiated from hcls
-                  toinst :: Table.Map ID_Var (Ann,ID_Var,Type,Bool)
-                  toinst = Table.foldrWithKey f Table.empty hcls
-                  f k (z,id,tp,_) acc = Table.insert k' v' acc where  -- TODO: gen=_ should be True, but Class is not mapped
-                    k'  = idtp k tp'
-                    v'  = (z, (idtp id tp'), tp', False)
-                    tp' = Type.instantiate [(clss_var,itp)] tp
-
-                  -- all already declared type instantiated symbols
-                  -- (from super implementations)
-                  dcleds :: Table.Map ID_Var (Ann,ID_Var,Type,Bool)
-                  --dcleds = Table.empty
-                  dcleds = Table.fromList
-                            $ map (\(Var z id _ tp _)->(id,(z,id,tp,False)))
-                            $ filter (isVar $ const True) ids
-
-                  -- prototypes
-                  cat (z,id,tp,_) acc = Var z id False tp acc
--}
 
         where
           isSameInst (Inst _ (id,[tp']) _ _) = (cls==id && [itp]==[tp'])
@@ -365,15 +266,13 @@ stmt ids s@(Var z id gen tp p) = (es_data ++ es_id ++ es, f p'') where
 
   f' p = Var z id gen tp p
 
-  -- In case of a parametric/generic implementation of `f`, declare a new `f`
-  -- for each implementation of I. Also keep the original `f` to match generic
-  -- uses of `f`.
-  --      f :: (a -> T) where a implements I
-  --    to
-  --      f :: (a -> T) where a implements I
-  --      $f$(X -> T)$    // X implements I
-  --      $f$(Y -> T)$    // Y implements I
-  --      ...
+  -- In case of a parametric/generic var with a constraint, instantiate it for
+  -- each implementation of the constraint:
+  --    f :: (a -> T) where a implements I
+  -- <to>
+  --    $f$X$
+  --    $f$Y$
+  --    ...
   --p' = p
   (f,p') = if not gen then (f',p) else
     case Set.toList $ Type.getConstraints tp of
@@ -381,18 +280,14 @@ stmt ids s@(Var z id gen tp p) = (es_data ++ es_id ++ es, f p'') where
       [(var,[cls])] -> case p of
         Match z2 False (LVar id') body t f
           | id/=id' -> (f',p)
-          | id==id' -> (Prelude.id,funcs)
-          where
-            insts = map g $ filter f ids
-                     where
+          | id==id' -> (Prelude.id,funcs) where
+            insts = map g $ filter f ids where
                       f (Inst _ (cls',_) _ _) = (cls == cls')
                       f _                     = False
                       g (Inst _ (_,[inst]) _ _) = inst  -- types to instantiate
 
-            funcs = foldr cat t insts
-                    where
-                      cat itp acc = --traceShow (id,id',tp',traceShowId body') $
-                        wrap (var,itp) s acc
+            funcs = foldr cat t insts where
+                      cat itp acc = wrap (var,itp) s acc
         _   -> (Prelude.id,p)
 
 stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fromJust mexp) p1' p2')
@@ -597,19 +492,17 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
       -- find in top-level ids | id : a
       case find (isVar $ (==)id) ids of
         Nothing               -> (id, TypeV "?" [], [toError z $ "variable '" ++ id ++ "' is not declared"])
-        Just (Var _ _ gen tp _) ->                                        -- var x : tp
-          case relates rel txp tp of                                      -- txp relates to tp?
+        Just (Var _ _ gen tp _) ->                            -- var x : tp
+          case relates rel txp tp of                          -- txp relates to tp?
             Left  es                      -> (id, TypeV "?" [], map (toError z) es)
-            Right (tp',_)                -- -> (id, tp, [])                 -- never generate instance
-{-
--}
+            Right (tp',_)                -- -> (id, tp, [])   -- never generate instance
               -- | take 1 id == "$"         -> (id, tp, [])
-              | not gen                   -> (id, tp, [])                 -- never generate instance
-              | Type.hasAnyConstraint txp -> (id, tp, [])                 -- expects generic use
-              | null constraints          -> (id, tp, [])                 -- tp is not generic
-              | otherwise -> case constraints of                          -- tp is generic
+              | not gen                   -> (id, tp, [])     -- never generate instance
+              | Type.hasAnyConstraint txp -> (id, tp, [])     -- expects generic use
+              | null constraints          -> (id, tp, [])     -- tp is not generic
+              | otherwise -> case constraints of              -- tp is generic
                 [(_,[cls])] -> -- TODO: single cls
-                  case find pred ids of                                   -- find implementation
+                  case find pred ids of                       -- find implementation
                     Just (Var _ _ _ tp'' _) ->
                       if Type.hasAnyConstraint tp'' then
                         if Type.hasAnyConstraint txp then
