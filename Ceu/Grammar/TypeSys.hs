@@ -81,6 +81,7 @@ inst2table ids (Inst z (cls,[tp]) imp _) = Table.union (f2 imp) sups where
   f2 ifc = Table.fromList $ map (\s@(_,id,_,_) -> (id,s)) ifc
 
 
+{-
 --wrap :: Ann -> [(ID_Var,Type)] -> Type -> [Stmt] -> Exp -> Exp
 wrap z (cls,ids) (l,tp) body = Func z tp $ foldr f (Ret z $ Call z body (Arg z)) fs
   where
@@ -97,6 +98,20 @@ wrap z (cls,ids) (l,tp) body = Func z tp $ foldr f (Ret z $ Call z body (Arg z))
 
           clss = map (\(Class _ (id,_) _ _ _)->id) $
                   supers ids (fromJust $ find (isClass $ (==)cls) ids)
+-}
+
+wrap (var,itp) (Var z id1 _ tp (Match _ False (LVar id2) body _ _)) acc | id1==id2 =
+  Var z id' False tp'
+    (Match z False (LVar id')
+      body'
+      acc
+      (err z))
+  where
+    id'   = idtp id1 tp'
+    tp'   = Type.instantiate [(var,itp)] tp
+    body' = map_exp (Prelude.id,Prelude.id,ftp) body
+      where
+        ftp tp = Type.instantiate [(var,itp)] tp
 
 err z = Ret z $ Error z (-2)  -- TODO: -2
 
@@ -228,6 +243,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
             --    func f : (A -> B)
             --    func g : (A -> B)
             p2 = p1 --foldr cat p1 glbs
+{-
                  where
                   -- class implementation:
                   -- body -> (f1,f2,...)<-(f1_tp,f2_tp,...) ; f_a()
@@ -243,6 +259,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                   glbs = filter f ids where
                           f (Var _ id _ tp _) = (Type.hasConstraint cls tp) -- && (take 1 id /= "$")
                           f _                 = False
+-}
 
             -- Take each HCLS implementation not in HINST and instantiate as
             -- if it was in HINST:
@@ -259,18 +276,8 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
             -- instantiated symbol (e.g., $eq$Int$).
             p3 = foldr cat p2 fs --(Table.elems $ Table.difference hcls hinst)
                  where
-                  cat (Var z id _ tp (Match _ False _ body _ _)) acc = --traceShow (id,id',tp',traceShowId body') $
-                    Var z id' False tp'
-                      (Match z False (LVar id')
-                        body'
-                        acc
-                        (err z))
-                    where
-                      id'   = idtp id tp'
-                      tp'   = Type.instantiate [(clss_var,itp)] tp
-                      body' = map_exp (Prelude.id,Prelude.id,ftp) body
-                        where
-                          ftp tp = Type.instantiate [(clss_var,itp)] tp
+                  cat s@(Var z id _ tp (Match _ False _ body _ _)) acc = --traceShow (id,id',tp',traceShowId body') $
+                    wrap (clss_var,itp) s acc
 
                   fs  = filter pred ids
                         where
@@ -385,17 +392,7 @@ stmt ids s@(Var z id gen tp p) = (es_data ++ es_id ++ es, f p'') where
             funcs = foldr cat t insts
                     where
                       cat itp acc = --traceShow (id,id',tp',traceShowId body') $
-                        Var z id' False tp'
-                          (Match z False (LVar id')
-                            body'
-                            acc
-                            (err z))
-                        where
-                          id'   = idtp id tp'
-                          tp'   = Type.instantiate [(var,itp)] tp
-                          body' = map_exp (Prelude.id,Prelude.id,ftp) body
-                            where
-                              ftp tp = Type.instantiate [(var,itp)] tp
+                        wrap (var,itp) s acc
         _   -> (Prelude.id,p)
 
 stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fromJust mexp) p1' p2')
