@@ -21,9 +21,9 @@ fromLeft (Left v) = v
 idtp id tp = "$" ++ id ++ "$" ++ Type.show' tp ++ "$"
 
 go :: Stmt -> (Errors, Stmt)
---go p = stmt [] p
+go p = stmt [] p
 --go p = f $ stmt [] p where f (e,s) = traceShow s (e,s)
-go p = f $ stmt [] p where f (e,s) = traceShow (show_stmt 0 s) (e,s)
+--go p = f $ stmt [] p where f (e,s) = traceShow (show_stmt 0 s) (e,s)
 
 -------------------------------------------------------------------------------
 
@@ -209,7 +209,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
             -- instantiate with the implementation type, changing all HCLS
             -- with HINST type.
             p1 = foldr cat p fs where
-                  cat f acc = foldr cat' p itps where
+                  cat f acc = foldr cat' acc itps where
                     cat' itp acc = wrap (clss_var,itp) f acc
 
                   -- follow concrete types from generic/constrained implementations:
@@ -221,6 +221,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                                     pred _                     = False
                                     f    (Inst _ (_,[tp]) _ _) = tp
 
+                  -- functions to instantiate
                   fs  = filter pred ids where
                           pred (Var _ id1 _ tp (Match _ False (LVar id2) body _ _)) =
                             id1==id2 && (not $ elem id1 insts) && ctrs where

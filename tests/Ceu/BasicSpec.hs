@@ -537,7 +537,7 @@ spec = do
         (Class annz ("Equalable",["a"]) [] []
         (Var annz "==" False (TypeF (TypeN [(TypeV "a" ["Equalable"]),(TypeV "a" ["Equalable"])]) (TypeD ["Bool"]))
         (Nop annz))))
-      `shouldBe` ([],Data annz ["Bool"] [] Type0 True (Var annz "==" False (TypeF (TypeN [TypeV "a" ["Equalable"],TypeV "a" ["Equalable"]]) (TypeD ["Bool"])) (Nop annz)))
+      `shouldBe` ([],Data annz ["Bool"] [] Type0 True (Nop annz))
 
     it "A ; Xable ; inst ; inst" $
       (fst $ TypeSys.go
@@ -621,7 +621,7 @@ spec = do
               (Nop annz)))))))))
       `shouldBe` ["interface 'X' is not declared"]
 
-    it "XXX: A ; Xable a ; inst Xable A ; a/=A" $
+    it "A ; Xable a ; inst Xable A ; a/=A" $
       (fst $ TypeSys.go
         (Data annz ["Int"] [] Type0 False
         (Data annz ["A"] [] Type0 False
@@ -659,7 +659,6 @@ spec = do
             (CallS annz (Call annz (Read annz "fff") (Tuple annz [(Cons annz ["A"] (Unit annz)),(Cons annz ["A"] (Unit annz))]))))))))
       `shouldBe` ([],
         Data annz ["A"] [] Type0 False
-        (Var annz "fff" True (TypeF (TypeV "a" ["Xable"]) Type0)
         (Var annz "$fff$((A,A) -> ())$" False (TypeF (TypeN [TypeD ["A"],TypeD ["A"]]) Type0)
         (Var annz "$fff$((A,A) -> ())$" False (TypeF (TypeN [TypeD ["A"],TypeD ["A"]]) Type0)
         (Match annz False (LVar "$fff$((A,A) -> ())$")
@@ -668,7 +667,7 @@ spec = do
             (Call (annz {type_ = Type0})
               (Read (annz {type_ = TypeF (TypeN [TypeD ["A"],TypeD ["A"]]) Type0}) "$fff$((A,A) -> ())$")
               (Tuple (annz {type_ = TypeN [TypeD ["A"],TypeD ["A"]]}) [Cons (annz {type_ = TypeD ["A"]}) ["A"] (Unit (annz {type_ = Type0})),Cons (annz {type_ = TypeD ["A"]}) ["A"] (Unit (annz {type_ = Type0}))])))
-          (Ret annz (Error annz 99)))))))
+          (Ret annz (Error annz 99))))))
 
     it "Int ; A ; Xable a ; inst Xable A ; fff 1" $
       (fst $ TypeSys.go
