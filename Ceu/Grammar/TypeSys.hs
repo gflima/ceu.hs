@@ -208,13 +208,20 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
             -- HINST does not have `neq`, so we will copy it from HCLS,
             -- instantiate with the implementation type, changing all HCLS
             -- with HINST type.
-            p1 = foldr cat p fs
-                 where
-                  cat s@(Var z id _ tp (Match _ False _ body _ _)) acc =
-                    wrap (clss_var,itp) s acc
+            p1 = foldr cat p fs where
+                  cat f acc = foldr cat' p itps where
+                    cat' itp acc = wrap (clss_var,itp) f acc
 
-                  fs  = filter pred ids
-                        where
+                  -- follow concrete types from generic/constrained implementations:
+                  --    implementation of IEq for a where a implements IXx
+                  itps = case Set.toList $ Type.getConstraints itp of
+                    []          -> [itp]
+                    [(_,[ifc])] -> map f $ filter pred ids where
+                                    pred (Inst _ (icls,_) _ _) = ifc==icls
+                                    pred _                     = False
+                                    f    (Inst _ (_,[tp]) _ _) = tp
+
+                  fs  = filter pred ids where
                           pred (Var _ id1 _ tp (Match _ False (LVar id2) body _ _)) =
                             id1==id2 && (not $ elem id1 insts) && ctrs where
                               insts = Table.keys hinst
@@ -274,7 +281,7 @@ stmt ids s@(Var z id gen tp p) = (es_data ++ es_id ++ es, f p'') where
   --    $f$Y$
   --    ...
   --p' = p
-  (f,p') = if not gen then (f',p) else
+  (f,p') = --if not gen then (f',p) else
     case Set.toList $ Type.getConstraints tp of
       []            -> (f',p)
       [(var,[cls])] -> case p of
@@ -494,7 +501,28 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
         Nothing               -> (id, TypeV "?" [], [toError z $ "variable '" ++ id ++ "' is not declared"])
         Just (Var _ _ gen tp _) ->                            -- var x : tp
           case relates rel txp tp of                          -- txp relates to tp?
-            Left  es                      -> (id, TypeV "?" [], map (toError z) es)
+            Left  es      -> (id, TypeV "?" [], map (toError z) es)
+            Right (tp',_) -> case Set.toList $ Type.getConstraints tp' of
+              []          -> (id, tp, [])
+              [(_,[cls])] -> case find pred ids of            -- find implementation
+                Just (Var _ _ _ tp'' _) ->
+                  if Type.hasAnyConstraint tp'' then
+                    if Type.hasAnyConstraint txp then
+                      (id, tp'', [])
+                    else
+                      (id, TypeV "?" [], err)
+                  else
+                    (idtp id tp'', tp'', [])
+                Nothing -> (id, TypeV "?" [], err)
+              where
+                pred :: Stmt -> Bool
+                pred (Var _ k _ tp _) = (idtp id tp == k) && (isRight $ relates SUP txp tp)
+                pred _                = False
+
+                err = [toError z $ "variable '" ++ id ++
+                       "' has no associated implementation for '" ++
+                       Type.show' txp ++ "'"]
+{-
             Right (tp',_)                -- -> (id, tp, [])   -- never generate instance
               -- | take 1 id == "$"         -> (id, tp, [])
               | not gen                   -> (id, tp, [])     -- never generate instance
@@ -523,6 +551,7 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
                 x -> (id,tp,[]) --error $ show (id,x)
               where
                 constraints = Set.toList $ Type.getConstraints tp'
+-}
 
 expr' (rel,txp) ids (Call z f exp) = (bool es_exp es_f (null es_exp),
                                      Call z{type_=tp_out} f' exp')

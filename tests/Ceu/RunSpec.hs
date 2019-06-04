@@ -467,7 +467,7 @@ $f3$(Int -> Int)$ 10                       // Read
           ])
         `shouldBe` Right (Cons ["Bool","False"] Unit)
 
-      it "IOrd extends IEq" $
+      it "XXX: IOrd extends IEq" $
         (run True $
           unlines [
             "interface IEq for a with",
@@ -748,7 +748,7 @@ $f3$(Int -> Int)$ 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "XXX: implementation for extends of (a,b)" $
+      it "implementation for extends of (a,b)" $
         (run True $
           unlines [
             "interface IFa for a with end",
