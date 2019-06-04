@@ -21,9 +21,9 @@ fromLeft (Left v) = v
 idtp id tp = "$" ++ id ++ "$" ++ Type.show' tp ++ "$"
 
 go :: Stmt -> (Errors, Stmt)
---go p = stmt [] p
+go p = stmt [] p
 --go p = f $ stmt [] p where f (e,s) = traceShow s (e,s)
-go p = f $ stmt [] p where f (e,s) = traceShow (show_stmt 0 s) (e,s)
+--go p = f $ stmt [] p where f (e,s) = traceShow (show_stmt 0 s) (e,s)
 
 -------------------------------------------------------------------------------
 
@@ -232,7 +232,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                   -- functions to instantiate
                   fs = Table.filter pred hcls where
                     pred (_,id,tp,_) = isNothing $ find (isVar $ (==)id') ids where
-                      id' = traceShow (id,itp) $ traceShowId $ idtp id tp'
+                      id' = idtp id tp'
                       tp' = Type.instantiate [(clss_var,itp)] tp
 
             -- follow concrete types from generic/constrained implementations:
@@ -284,15 +284,14 @@ stmt ids s@(Var z id tp p) = (es_data ++ es_id ++ es, f p'') where
   --    $f$X$
   --    $f$Y$
   --    ...
-  --p' = p
-  (f,p') = --if not gen then (f',p) else
+  (f,p') =
     case Set.toList $ Type.getConstraints tp of
-      []            -> (Var z id tp, p)
+      []            -> (Var z id tp, p)         -- normal concrete declarations
       [(var,[cls])] -> case p of
         Match z2 False (LVar id') body t f
-          | id/=id' -> (Var z id tp, p) --(Prelude.id, dcls p)
-          | id==id' -> (Prelude.id, funcs t)
-        _   -> (Prelude.id, p) --(Prelude.id, dcls p)
+          -- | id/=id' -> (Prelude.id, p)          -- just ignore parametric declarations
+          | id==id' -> (Prelude.id, funcs t)    -- instantiate for all available implementations
+        _   -> (Prelude.id, p)                  -- just ignore parametric declarations
         where
           insts :: [Type]
           insts = map g $ filter f ids where
