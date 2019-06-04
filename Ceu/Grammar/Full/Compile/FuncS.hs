@@ -17,25 +17,25 @@ stmt :: Stmt -> Stmt
 stmt (Class z (cls,[var]) exts ifc) = Class z (cls,[var]) exts (stmt $ aux ifc)
   where
     aux (Seq   z p1 p2)     = Seq   z (aux p1) (aux p2)
-    aux (Var   z id tp)     = Var'  z id True (T.addConstraint (var,cls) tp)
+    aux (Var   z id tp)     = Var   z id (T.addConstraint (var,cls) tp)
     aux (FuncS z id tp imp) = FuncS z id (T.addConstraint (var,cls) tp) imp
     aux p                   = p
 
 stmt (Inst  z (cls,[tp]) imp)       = Inst  z (cls,[tp]) (stmt $ aux imp)
   where
     aux (Seq   z p1 p2)      = Seq   z (aux p1) (aux p2)
-    aux (Var   z id tp')     = Var'  z id False (addConstraints (T.getConstraints tp) tp')
+    aux (Var   z id tp')     = Var   z id (addConstraints (T.getConstraints tp) tp')
     aux (FuncS z id tp' imp) = FuncS z id (addConstraints (T.getConstraints tp) tp') imp
     aux p                    = p
 
-stmt (FuncS z k tp imp) = Seq z (Var' z k gen tp) (Set z False (LVar k) (Func z tp (stmt imp')))
+stmt (FuncS z k tp imp) = Seq z (Var z k tp) (Set z False (LVar k) (Func z tp (stmt imp')))
  where
-  (gen,imp') = case S.toList $ T.getConstraints tp of
-    [] -> (False, imp)
-    l  -> (True,  (map_stmt (id,id,addConstraints l) imp))
+  imp' = case S.toList $ T.getConstraints tp of
+    [] -> imp
+    l  -> map_stmt (id,id,addConstraints l) imp
     --[(var,[cls])] -> (True,  (map_stmt (id,id,T.addConstraint(var,cls)) imp))
 
-stmt (Var   z id tp)         = Var'  z id False tp
+stmt (Var   z id tp)         = Var   z id tp
 stmt (Set   z chk loc exp)   = Set   z chk loc (expr exp)
 stmt (Match z loc exp p1 p2) = Match z loc (expr exp) (stmt p1) (stmt p2)
 stmt (CallS z exp)           = CallS z (expr exp)

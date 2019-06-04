@@ -177,8 +177,8 @@ spec = do
       it "(a,b) <- (1,2)" $
         go
           (B.Data annz ["Int"] [] Type0 False
-          (B.Var annz "a" False TypeT
-          (B.Var annz "b" False TypeT
+          (B.Var annz "a" TypeT
+          (B.Var annz "b" TypeT
           (B.Match annz False (B.LTuple [B.LVar "a",B.LVar "b"]) (B.Tuple annz [B.Number annz 1,B.Number annz 2])
             (B.Ret annz (B.Read annz "b"))
             (B.Ret annz (B.Error annz 99))))))
@@ -187,8 +187,8 @@ spec = do
       it "(_,b) <- (1,2)" $
         go
           (B.Data annz ["Int"] [] Type0 False
-          (B.Var annz "a" False TypeT
-          (B.Var annz "b" False TypeT
+          (B.Var annz "a" TypeT
+          (B.Var annz "b" TypeT
           (B.Match annz False (B.LTuple [B.LAny,B.LVar "b"]) (B.Tuple annz [B.Number annz 1,B.Number annz 2])
             (B.Ret annz (B.Read annz "b"))
             (B.Ret annz (B.Error annz 99))))))
@@ -213,7 +213,7 @@ spec = do
       it "a <- 1 ; `a` <- 1" $
         go
           (B.Data  annz ["Int"] [] Type0 False
-          (B.Var   annz "a" False (TypeD ["Int"])
+          (B.Var   annz "a" (TypeD ["Int"])
           (B.Match annz False (B.LVar "a") (B.Number annz 1)
             (B.Match annz True (B.LExp $ B.Read annz "a") (B.Number annz 1)
               (B.Ret   annz (B.Read annz "a"))
@@ -224,7 +224,7 @@ spec = do
       it "a <- 2 ; 1 <- a" $
         go
           (B.Data  annz ["Int"] [] Type0 False
-          (B.Var   annz "a" False (TypeD ["Int"])
+          (B.Var   annz "a" (TypeD ["Int"])
           (B.Match annz False (B.LVar "a") (B.Number annz 2)
             (B.Match annz True (B.LNumber 1) (B.Read annz "a")
               (B.Ret   annz (B.Read annz "a"))
@@ -235,7 +235,7 @@ spec = do
       it "a <- 1 ; 1 <- a" $
         go
           (B.Data  annz ["Int"] [] Type0 False
-          (B.Var   annz "a" False (TypeD ["Int"])
+          (B.Var   annz "a" (TypeD ["Int"])
           (B.Match annz False (B.LVar "a") (B.Number annz 1)
             (B.Match annz True (B.LNumber 1) (B.Read annz "a")
               (B.Ret   annz (B.Read annz "a"))
@@ -246,7 +246,7 @@ spec = do
       it "a <- 1 ; `a` <- 2" $
         go
           (B.Data  annz ["Int"] [] Type0 False
-          (B.Var   annz "a" False (TypeD ["Int"])
+          (B.Var   annz "a" (TypeD ["Int"])
           (B.Match annz False (B.LVar "a") (B.Number annz 1)
             (B.Match annz True (B.LExp $ B.Read annz "a") (B.Number annz 2)
               (B.Ret   annz (B.Read annz "a"))
@@ -259,7 +259,7 @@ spec = do
       it "Int ; f1 ; return f1 1" $
         go
           (B.Data annz ["Int"] [] Type0 False
-          (B.Var annz "f1" False (TypeF Type0 (TypeD ["Int"]))
+          (B.Var annz "f1" (TypeF Type0 (TypeD ["Int"]))
           (B.Match annz False (B.LVar "f1")
                         (B.Func annz (TypeF Type0 (TypeD ["Int"]))
                           (B.Ret annz (B.Number annz 1)))
@@ -270,7 +270,7 @@ spec = do
       it "Int ; f1 (err!) ; return f1 1" $
         go
           (B.Data annz ["Int"] [] Type0 False
-          (B.Var annz "f1" False (TypeF Type0 Type0)
+          (B.Var annz "f1" (TypeF Type0 Type0)
           (B.Match annz False (B.LVar "f1")
                         (B.Func annz (TypeF Type0 Type0)
                           (B.Ret annz (B.Error annz 1)))
@@ -281,7 +281,7 @@ spec = do
       it "Int ; f1 (err!) ; f1 ; ret 99" $
         go
           (B.Data annz ["Int"] [] Type0 False
-          (B.Var annz "f1" False (TypeF Type0 Type0)
+          (B.Var annz "f1" (TypeF Type0 Type0)
           (B.Match annz False (B.LVar "f1")
                         (B.Func annz (TypeF Type0 Type0)
                           (B.Ret annz (B.Error annz 1)))
@@ -301,13 +301,13 @@ spec = do
       it "(f,g) <- (+,c) ; return f(g 1, g 2)" $
         go
           (B.Data annz ["Int"] [] Type0 False
-          (B.Var annz "+" False (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]))
-          (B.Var annz "c" False (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
+          (B.Var annz "+" (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]))
+          (B.Var annz "c" (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
           (B.Match annz False (B.LVar "c")
                         (B.Func annz (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
                           (B.Ret annz (B.Arg annz)))
-            (B.Var annz "f" False (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]))
-              (B.Var annz "g" False (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
+            (B.Var annz "f" (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]))
+              (B.Var annz "g" (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
               (B.Match annz False (B.LTuple [B.LVar "f",B.LVar "g"]) (B.Tuple annz [B.Read annz "+",B.Read annz "c"])
                 (B.Ret annz
                   (B.Call annz
@@ -322,9 +322,9 @@ spec = do
       it "glb <- 1 ; f () -> glb ; ret glb" $
         go
           (B.Data  annz ["Int"] [] Type0 False
-          (B.Var   annz "glb" False (TypeD ["Int"])
+          (B.Var   annz "glb" (TypeD ["Int"])
           (B.Match annz False (B.LVar "glb") (B.Number annz 1)
-            (B.Var   annz "f" False (TypeF Type0 (TypeD ["Int"]))
+            (B.Var   annz "f" (TypeF Type0 (TypeD ["Int"]))
               (B.Match annz False (B.LVar "f")
                             (B.Func annz (TypeF Type0 (TypeD ["Int"]))
                               (B.Ret annz (B.Read annz "glb")))
@@ -337,9 +337,9 @@ spec = do
       it "glb <- 1 ; f() -> g() -> glb ; ret f()()" $
         go
           (B.Data  annz ["Int"] [] Type0 False
-          (B.Var   annz "glb" False (TypeD ["Int"])
+          (B.Var   annz "glb" (TypeD ["Int"])
           (B.Match annz False (B.LVar "glb") (B.Number annz 1)
-            (B.Var   annz "f" False (TypeF Type0 (TypeF Type0 (TypeD ["Int"])))
+            (B.Var   annz "f" (TypeF Type0 (TypeF Type0 (TypeD ["Int"])))
               (B.Match annz False (B.LVar "f")
                             (B.Func annz (TypeF Type0 (TypeF Type0 (TypeD ["Int"])))
                               (B.Ret annz
@@ -356,10 +356,10 @@ spec = do
       it "(TODO: loc lifetime) g' <- nil ; { loc <- 1 ; f() -> g() -> glb ; g' <- f() } ; ret g'()" $
         go
           (B.Data  annz ["Int"] [] Type0 False
-          (B.Var   annz "g'" False (TypeF Type0 (TypeD ["Int"]))
-          (B.Var   annz "loc" False (TypeD ["Int"])
+          (B.Var   annz "g'" (TypeF Type0 (TypeD ["Int"]))
+          (B.Var   annz "loc" (TypeD ["Int"])
           (B.Match annz False (B.LVar "loc") (B.Number annz 1)
-            (B.Var   annz "f" False (TypeF Type0 (TypeF Type0 (TypeD ["Int"])))
+            (B.Var   annz "f" (TypeF Type0 (TypeF Type0 (TypeD ["Int"])))
               (B.Match annz False (B.LVar "f")
                             (B.Func annz (TypeF Type0 (TypeF Type0 (TypeD ["Int"])))
                               (B.Ret annz
@@ -380,7 +380,7 @@ spec = do
         go
           (B.Data annz ["Int"] [] Type0 False
           (B.Data annz ["X"] [] (TypeD ["Int"]) False
-          (B.Var annz "x" False (TypeD ["X"])
+          (B.Var annz "x" (TypeD ["X"])
           (B.Match annz False (B.LVar "x") (B.Cons annz ["X"] (B.Number annz 1))
             (B.Ret annz (B.Read annz "x"))
             (B.Ret annz (B.Error annz 99))))))
@@ -389,9 +389,9 @@ spec = do
       it "data X with (Int,Int) ; x <- X (1,2) ; return +x" $
         go
           (B.Data annz ["Int"] [] Type0 False
-          (B.Var annz "+" False (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]))
+          (B.Var annz "+" (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]))
           (B.Data annz ["X"] [] (TypeN [TypeD ["Int"], TypeD ["Int"]]) False
-          (B.Var annz "x" False (TypeD ["X"])
+          (B.Var annz "x" (TypeD ["X"])
           (B.Match annz False (B.LVar "x") (B.Cons annz ["X"] (B.Tuple annz [B.Call annz (B.Read annz "+") (B.Tuple annz [B.Number annz 1,B.Number annz 2]), B.Number annz 3]))
             (B.Ret annz (B.Read annz "x"))
             (B.Ret annz (B.Error annz 99)))))))
@@ -400,9 +400,9 @@ spec = do
       it "TODO (coerse): data X with (Int,Int) ; x <- X (1,2) ; return +x" $
         go
           (B.Data annz ["Int"] [] Type0 False
-          (B.Var annz "+" False (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]))
+          (B.Var annz "+" (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]))
           (B.Data annz ["X"] [] (TypeN [TypeD ["Int"], TypeD ["Int"]]) False
-          (B.Var annz "x" False (TypeD ["X"])
+          (B.Var annz "x" (TypeD ["X"])
           (B.Match annz False (B.LVar "x") (B.Cons annz ["X"] (B.Tuple annz [B.Number annz 1,B.Number annz 2]))
             (B.Ret annz (B.Call annz (B.Read annz "+") (B.Read annz "x")))
             (B.Ret annz (B.Error annz 99)))))))
@@ -412,7 +412,7 @@ spec = do
         go
           (B.Data  annz ["Int"] [] Type0 False
           (B.Data  annz ["X"] [] (TypeD ["Int"]) False
-          (B.Var   annz "x" False (TypeD ["Int"])
+          (B.Var   annz "x" (TypeD ["Int"])
           (B.Match annz False (B.LCons ["X"] (B.LVar "x")) (B.Cons annz ["X"] (B.Number annz 1))
             (B.Ret   annz (B.Read annz "x"))
             (B.Ret   annz (B.Error annz 99))))))
@@ -422,7 +422,7 @@ spec = do
         go
           (B.Data  annz ["Int"] [] Type0 False
           (B.Data  annz ["X"] [] (TypeD ["Int"]) False
-          (B.Var   annz "x" False (TypeD ["Int"])
+          (B.Var   annz "x" (TypeD ["Int"])
           (B.Match annz True (B.LCons ["X"] (B.LNumber 1)) (B.Cons annz ["X"] (B.Number annz 2))
             (B.Ret   annz (B.Read annz "x"))
             (B.Ret   annz (B.Error annz 99))))))
@@ -435,10 +435,10 @@ spec = do
           (B.Data annz ["Int"] [] Type0 False
           (B.Class annz ("X",["a"]) []
             [(annz,"f3",(TypeF (TypeV "a" ["X"]) (TypeD ["Int"])),False)]
-          (B.Var annz "f3" True (TypeF (TypeV "a" ["X"]) (TypeD ["Int"]))
+          (B.Var annz "f3" (TypeF (TypeV "a" ["X"]) (TypeD ["Int"]))
           (B.Inst annz ("X", [TypeD ["Int"]])
             [(annz,"f3",(TypeF (TypeD ["Int"]) (TypeD ["Int"])),True)]
-            (B.Var annz "$f3$(Int -> Int)$" False (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
+            (B.Var annz "$f3$(Int -> Int)$" (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
             (B.Match annz False
               (B.LVar "$f3$(Int -> Int)$")
               (B.Func annz (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
@@ -452,14 +452,14 @@ spec = do
       it "Int ; Bool ; X a ; inst X Bool/Int ; return f2 1" $
         go
           (B.Data annz ["Int"] [] Type0 False
-          (B.Var annz "+" False (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]))
+          (B.Var annz "+" (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]))
           (B.Data annz ["Bool"] [] Type0 False
           (B.Class annz ("X", ["a"]) []
             [(annz,"f2",(TypeF (TypeV "a" ["X"]) (TypeD ["Int"])),False)]
-          (B.Var annz "f2" True (TypeF (TypeV "a" ["X"]) (TypeD ["Int"]))
+          (B.Var annz "f2" (TypeF (TypeV "a" ["X"]) (TypeD ["Int"]))
           (B.Inst annz ("X", [TypeD ["Bool"]])
             [(annz,"f2",(TypeF (TypeD ["Bool"]) (TypeD ["Int"])),True)]
-            (B.Var annz "$f2$(Bool -> Int)$" False (TypeF (TypeD ["Bool"]) (TypeD ["Int"]))
+            (B.Var annz "$f2$(Bool -> Int)$" (TypeF (TypeD ["Bool"]) (TypeD ["Int"]))
             (B.Match annz False
               (B.LVar "$f2$(Bool -> Int)$")
               (B.Func annz (TypeF (TypeD ["Bool"]) (TypeD ["Int"]))
@@ -468,7 +468,7 @@ spec = do
                 (B.Nop annz)
                 (B.Inst annz ("X", [TypeD ["Int"]])
                   [(annz,"f2",(TypeF (TypeD ["Int"]) (TypeD ["Int"])),True)]
-                  (B.Var annz "$f2$(Int -> Int)$" False (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
+                  (B.Var annz "$f2$(Int -> Int)$" (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
                   (B.Match annz False
                     (B.LVar "$f2$(Int -> Int)$")
                     (B.Func annz (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
@@ -478,7 +478,7 @@ spec = do
                           (B.Tuple annz [B.Arg annz, B.Number annz 1]))))
                     (B.Seq annz
                       (B.Nop annz)
-                      (B.Var annz "ret" False (TypeD ["Int"])
+                      (B.Var annz "ret" (TypeD ["Int"])
                       (B.Match annz False (B.LVar "ret")
                         (B.Call annz (B.Read annz "f2") (B.Number annz 1))
                         (B.Ret annz (B.Read annz "ret"))
@@ -492,14 +492,14 @@ spec = do
       it "Int ; Bool ; X a ; inst X Bool/Int ; return f4 1" $
         go
           (B.Data annz ["Int"] [] Type0 False
-          (B.Var annz "+" False (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]))
+          (B.Var annz "+" (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]))
           (B.Data annz ["Bool"] [] Type0 False
           (B.Class annz ("X", ["a"]) []
             [(annz,"f4",(TypeF (TypeV "a" ["X"]) (TypeD ["Int"])),False)]
-          (B.Var annz "f4" True (TypeF (TypeV "a" ["X"]) (TypeD ["Int"]))
+          (B.Var annz "f4" (TypeF (TypeV "a" ["X"]) (TypeD ["Int"]))
           (B.Inst annz ("X", [TypeD ["Int"]])
             [(annz,"f4",(TypeF (TypeD ["Int"]) (TypeD ["Int"])),True)]
-            (B.Var annz "$f4$(Int -> Int)$" False (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
+            (B.Var annz "$f4$(Int -> Int)$" (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
             (B.Match annz False
               (B.LVar "$f4$(Int -> Int)$")
               (B.Func annz (TypeF (TypeD ["Int"]) (TypeD ["Int"]))
@@ -511,7 +511,7 @@ spec = do
                   (B.Nop annz)
                   (B.Inst annz ("X", [TypeD ["Bool"]])
                     [(annz,"f4",(TypeF (TypeD ["Bool"]) (TypeD ["Int"])),True)]
-                    (B.Var annz "$f4$(Bool -> Int)$" False (TypeF (TypeD ["Bool"]) (TypeD ["Int"]))
+                    (B.Var annz "$f4$(Bool -> Int)$" (TypeF (TypeD ["Bool"]) (TypeD ["Int"]))
                     (B.Match annz False
                       (B.LVar "$f4$(Bool -> Int)$")
                       (B.Func annz (TypeF (TypeD ["Bool"]) (TypeD ["Int"]))
@@ -528,17 +528,17 @@ spec = do
     describe "misc" $ do
 
       evalProgItSuccess (Number 11)
-        (B.Var annz "+" False (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]))
-        (B.Var annz "a" False (TypeD ["Int"])
+        (B.Var annz "+" (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]))
+        (B.Var annz "a" (TypeD ["Int"])
         (B.Match annz False (B.LVar "a") (B.Number annz 1)
           (B.Ret annz (B.Call annz (B.Read annz "+") (B.Tuple annz [(B.Read annz "a"),(B.Number annz 10)])))
           (B.Ret annz (B.Error annz 99)))))
 
       evalProgItSuccess (Number 11)
-        (B.Var annz "+" False (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]))
-        (B.Var annz "a" False (TypeD ["Int"])
+        (B.Var annz "+" (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]))
+        (B.Var annz "a" (TypeD ["Int"])
         (B.Match annz False (B.LVar "a") (B.Number annz 1)
-          (B.Var annz "b" False (TypeD ["Int"])
+          (B.Var annz "b" (TypeD ["Int"])
             (B.Match annz False (B.LVar "b") (B.Number annz 91)
               (B.Ret annz
                 (B.Call annz (B.Read annz "+")
@@ -548,7 +548,7 @@ spec = do
 
       evalProgItSuccess (Number 1)
         (B.Ret annz (B.Number annz 1) `B.sSeq`
-            B.Var annz "_" False (TypeD ["Int"]) (B.Ret annz (B.Number annz 2)) `B.sSeq`
+            B.Var annz "_" (TypeD ["Int"]) (B.Ret annz (B.Number annz 2)) `B.sSeq`
             B.Nop annz)
 
       where

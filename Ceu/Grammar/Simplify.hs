@@ -28,10 +28,10 @@ stmt (Data z id vars flds abs p) =
     otherwise -> Data z id vars flds abs p'
   where p' = stmt p
 
-stmt (Var z id gen tp p) =
+stmt (Var z id tp p) =
   case p' of
     --Nop z'    -> Nop z'
-    _ -> Var z id gen tp p'
+    _ -> Var z id tp p'
   where p' = stmt p
 
 -- TODO: loc may contain exp which may contain stmt

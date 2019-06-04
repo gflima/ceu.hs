@@ -36,7 +36,7 @@ isInst  _  _                     = False
 isData  f (Data  _ hr _ _ _ _)   = f (Type.hier2str hr)
 isData  _  _                     = False
 
-isVar   f (Var   _ id _ _ _)     = f id
+isVar   f (Var   _ id _ _)       = f id
 isVar   _  _                     = False
 
 isAny :: (String -> Bool) -> Stmt -> Bool
@@ -74,8 +74,8 @@ inst2table ids (Inst z (cls,[tp]) imp _) = Table.union (f2 imp) sups where
   f2 :: [(Ann,ID_Var,Type,Bool)] -> Table.Map ID_Var (Ann,ID_Var,Type,Bool)
   f2 ifc = Table.fromList $ map (\s@(_,id,_,_) -> (id,s)) ifc
 
-wrap (var,itp) (Var z id1 _ tp (Match _ False (LVar id2) body _ _)) acc | id1==id2 =
-  Var z id' False tp'
+wrap (var,itp) (Var z id1 tp (Match _ False (LVar id2) body _ _)) acc | id1==id2 =
+  Var z id' tp'
     (Match z False (LVar id')
       body'
       acc
@@ -96,7 +96,7 @@ errDeclared z chk str id ids =
     if (take 1 id == "_") || (take 1 id == "$") then [] else    -- nested _ret, __and (par/and)
         case find (isAny $ (==)id) ids of
             Nothing                 -> []
-            Just s@(Var _ _ _ tp _) ->
+            Just s@(Var _ _ tp _) ->
               if chk' s then [] else
                 case find (isInst (\id -> Type.hasConstraint id tp)) ids of
                   Just _          -> []
@@ -223,7 +223,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
 
                   -- functions to instantiate
                   fs  = filter pred ids where
-                          pred (Var _ id1 _ tp (Match _ False (LVar id2) body _ _)) =
+                          pred (Var _ id1 tp (Match _ False (LVar id2) body _ _)) =
                             id1==id2 && (not $ elem id1 insts) && ctrs where
                               insts = Table.keys hinst
                               ctrs  = case Set.toList $ Type.getConstraints tp of
@@ -235,7 +235,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
             -- the implementations appear to prevent "undeclared" errors.
             p2 = foldr cat p1 (Table.filter pred hcls)
                  where
-                  cat (_,id,tp,_) acc = Var z (idtp id tp') False tp' acc
+                  cat (_,id,tp,_) acc = Var z (idtp id tp') tp' acc
                     where
                       tp' = Type.instantiate [(clss_var,itp)] tp
 
@@ -268,12 +268,12 @@ stmt ids s@(Data z hr [] flds abs p) = (es_dcl ++ (errDeclared z Nothing "data" 
 
 stmt ids s@(Data z hr vars flds abs p) = error "not implemented"
 
-stmt ids s@(Var z id gen tp p) = (es_data ++ es_id ++ es, f p'') where
+stmt ids s@(Var z id tp p) = (es_data ++ es_id ++ es, f p'') where
   es_data = getErrsTypesDeclared z ids tp
   es_id   = errDeclared z (Just chk) "variable" id ids where
               chk :: Stmt -> Bool
-              chk (Var _ id1 _ tp'@(TypeF _ _) (Match _ False (LVar id2) _ _ _)) = (id1 /= id2)
-              chk (Var _ id1 _ tp'@(TypeF _ _) _) = (tp == tp') -- function prototype
+              chk (Var _ id1 tp'@(TypeF _ _) (Match _ False (LVar id2) _ _ _)) = (id1 /= id2)
+              chk (Var _ id1 tp'@(TypeF _ _) _) = (tp == tp') -- function prototype
               chk _ = False
   (es,p'') = stmt (s:ids) p'
 
@@ -287,10 +287,10 @@ stmt ids s@(Var z id gen tp p) = (es_data ++ es_id ++ es, f p'') where
   --p' = p
   (f,p') = --if not gen then (f',p) else
     case Set.toList $ Type.getConstraints tp of
-      []            -> (Var z id gen tp, p)
+      []            -> (Var z id tp, p)
       [(var,[cls])] -> case p of
         Match z2 False (LVar id') body t f
-          | id/=id' -> (Var z id gen tp, p) --(Prelude.id, dcls p)
+          | id/=id' -> (Var z id tp, p) --(Prelude.id, dcls p)
           | id==id' -> (Prelude.id, funcs t)
         _   -> (Prelude.id, p) --(Prelude.id, dcls p)
         where
@@ -308,7 +308,7 @@ stmt ids s@(Var z id gen tp p) = (es_data ++ es_id ++ es, f p'') where
           dcls :: Stmt -> Stmt
           dcls  p = foldr cat p insts where
                       cat :: Type -> Stmt -> Stmt
-                      cat itp acc = Var z (idtp id tp') False tp' acc where
+                      cat itp acc = Var z (idtp id tp') tp' acc where
                                       tp' = Type.instantiate [(var,itp)] tp
 -}
 
@@ -362,8 +362,8 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
         (LVar var)   -> (False, esl++ese, loc, mexp)
           where
             (tpl,esl)  = case find (isVar $ (==)var) ids of
-              (Just (Var _ _ _ tp _)) -> (tp,    [])
-              Nothing                 -> (TypeV "?" [], [toError z $ "variable '" ++ var ++ "' is not declared"])
+              (Just (Var _ _ tp _)) -> (tp,    [])
+              Nothing               -> (TypeV "?" [], [toError z $ "variable '" ++ var ++ "' is not declared"])
             (ese,mexp) = f (SUP,tpl) tpexp
         (LExp e)     -> (True, es++ese, LExp e', mexp)
           where
@@ -513,14 +513,14 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
     | otherwise        =
       -- find in top-level ids | id : a
       case find (isVar $ (==)id) ids of
-        Nothing               -> (id, TypeV "?" [], [toError z $ "variable '" ++ id ++ "' is not declared"])
-        Just (Var _ _ gen tp _) ->                            -- var x : tp
+        Nothing             -> (id, TypeV "?" [], [toError z $ "variable '" ++ id ++ "' is not declared"])
+        Just (Var _ _ tp _) ->                            -- var x : tp
           case relates rel txp tp of                          -- txp relates to tp?
             Left  es      -> (id, TypeV "?" [], map (toError z) es)
             Right (tp',_) -> case Set.toList $ Type.getConstraints tp' of
               []          -> (id, tp, [])
               [(_,[cls])] -> case find pred ids of            -- find implementation
-                Just (Var _ _ _ tp'' _) ->
+                Just (Var _ _ tp'' _) ->
                   if Type.hasAnyConstraint tp'' then
                     if Type.hasAnyConstraint txp then
                       (id, tp'', [])
@@ -531,8 +531,8 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
                 Nothing -> (id, TypeV "?" [], err)
               where
                 pred :: Stmt -> Bool
-                pred (Var _ k _ tp _) = (idtp id tp == k) && (isRight $ relates SUP txp tp)
-                pred _                = False
+                pred (Var _ k tp _) = (idtp id tp == k) && (isRight $ relates SUP txp tp)
+                pred _              = False
 
                 err = [toError z $ "variable '" ++ id ++
                        "' has no associated implementation for '" ++
@@ -546,7 +546,7 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
               | otherwise -> case constraints of              -- tp is generic
                 [(_,[cls])] -> -- TODO: single cls
                   case find pred ids of                       -- find implementation
-                    Just (Var _ _ _ tp'' _) ->
+                    Just (Var _ _ tp'' _) ->
                       if Type.hasAnyConstraint tp'' then
                         if Type.hasAnyConstraint txp then
                           (id, tp'', [])
@@ -557,8 +557,8 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
                     Nothing -> (id, TypeV "?" [], err)
                   where
                     pred :: Stmt -> Bool
-                    pred (Var _ k _ tp _) = (idtp id tp == k) && (isRight $ relates SUP txp tp)
-                    pred _                = False
+                    pred (Var _ k tp _) = (idtp id tp == k) && (isRight $ relates SUP txp tp)
+                    pred _              = False
 
                     err = [toError z $ "variable '" ++ id ++
                            "' has no associated implementation for '" ++

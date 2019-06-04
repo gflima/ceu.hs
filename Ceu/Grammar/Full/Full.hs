@@ -72,7 +72,6 @@ data Stmt
   | Inst'    Ann (ID_Class,[Type]) [(Ann,ID_Var,Type,Bool)] -- new class instance
   | Data     Ann ID_Data_Hier [ID_Var] Type Bool  -- new type declaration
   | Var      Ann ID_Var Type                      -- variable declaration
-  | Var'     Ann ID_Var Bool Type                 -- variable declaration w/ is_generic? property
   | FuncS    Ann ID_Var Type Stmt                 -- function declaration
   | Match    Ann Loc Exp Stmt Stmt                -- match
   | Match'   Ann Bool Loc Exp Stmt Stmt           -- match w/ chk
@@ -88,7 +87,7 @@ data Stmt
   | Class''  Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] [(Ann,ID_Var,Type,Bool)] Stmt
   | Inst''   Ann (ID_Class,[Type])                         [(Ann,ID_Var,Type,Bool)] Stmt
   | Data''   Ann ID_Data_Hier [ID_Var] Type Bool Stmt
-  | Var''    Ann ID_Var Bool Type Stmt
+  | Var''    Ann ID_Var Type Stmt
   deriving (Eq, Show)
 
 sSeq a b = Seq annz a b
@@ -100,7 +99,6 @@ instance HasAnn Stmt where
     getAnn (Inst     z _ _)       = z
     getAnn (Data     z _ _ _ _)   = z
     getAnn (Var      z _ _)       = z
-    getAnn (Var'     z _ _ _)     = z
     getAnn (FuncS    z _ _ _)     = z
     getAnn (Match'   z _ _ _ _ _) = z
     getAnn (Seq      z _ _  )     = z
@@ -109,13 +107,13 @@ instance HasAnn Stmt where
     getAnn (Nop      z)           = z
     getAnn (Ret      z _)         = z
     getAnn (Data''   z _ _ _ _ _) = z
-    getAnn (Var''    z _ _ _ _)   = z
+    getAnn (Var''    z _ _ _)     = z
 
 toBasicStmt :: Stmt -> B.Stmt
 toBasicStmt (Class'' z me ext ifc p)       = B.Class z me ext ifc (toBasicStmt p)
 toBasicStmt (Inst''  z me     imp p)       = B.Inst  z me     imp (toBasicStmt p)
 toBasicStmt (Data''  z tp vars flds abs p) = B.Data  z tp  vars flds abs (toBasicStmt p)
-toBasicStmt (Var''   z var gen tp p)       = B.Var   z var gen tp (toBasicStmt p)
+toBasicStmt (Var''   z var tp p)           = B.Var   z var tp (toBasicStmt p)
 toBasicStmt (Match'  z chk loc exp p1 p2)  = B.Match z chk (toBasicLoc loc) (toBasicExp exp)
                                                           (toBasicStmt p1) (toBasicStmt p2)
 toBasicStmt (CallS   z e)                  = B.CallS z (toBasicExp e)
