@@ -94,7 +94,7 @@ spec = do
            ])
         `shouldBe` Right (Number 1)
 
-      it "IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
+      it "XXX: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
         (run True $
           unlines [
             "interface IEq for a with"          ,
@@ -128,7 +128,7 @@ spec = do
             "end"                               ,
             "return (eq(Dd,Dd)) + (eq(Ee,Ee))"
           ])
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Number 4)
 
       it "IEq + default + Int + (a,b)" $
         (run True $

@@ -5,7 +5,7 @@ import qualified Data.Set as S
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann      (Ann)
-import Ceu.Grammar.Type     (Type, show')
+import Ceu.Grammar.Type     (Type, show', hasAnyConstraint)
 import Ceu.Grammar.Full.Full
 
 compile :: Stmt -> Stmt
@@ -26,7 +26,7 @@ rename (Seq z p1 p2) = Seq  z (rename p1) (rename p2)
 rename (Var z id tp) = Var z (idtp id tp) tp
 rename p             = p
 
-idtp id tp = "$" ++ id ++ "$" ++ show' tp ++ "$"
+idtp id tp = if hasAnyConstraint tp then id else "$" ++ id ++ "$" ++ show' tp ++ "$"
 
 stmt :: Stmt -> Stmt
 
