@@ -2,7 +2,7 @@ module Ceu.Grammar.TypeSys where
 
 import Debug.Trace
 import Data.List (find, intercalate, unfoldr, unzip4, sortBy)
-import Data.Maybe (isJust, fromJust)
+import Data.Maybe (isNothing, isJust, fromJust)
 import Data.Bool (bool)
 import Data.Either (isRight)
 import qualified Data.Map as Table
@@ -230,12 +230,17 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                                 [(_, [cls'])] -> cls' == cls
                           pred _ = False
 
-            -- Prototype all HCLS as HINST signatures before the
-            -- implementations appear to prevent "undeclared" errors.
-            p2 = foldr cat p1 hcls
+            -- Prototype all HCLS as HINST signatures (not declared yet) before
+            -- the implementations appear to prevent "undeclared" errors.
+            p2 = foldr cat p1 (Table.filter pred hcls)
                  where
                   cat (_,id,tp,_) acc = Var z (idtp id tp') False tp' acc
                     where
+                      tp' = Type.instantiate [(clss_var,itp)] tp
+
+                  pred (_,id,tp,_) = isNothing $ find (isVar $ (==)id') ids
+                    where
+                      id' = idtp id tp'
                       tp' = Type.instantiate [(clss_var,itp)] tp
 
         where
@@ -271,8 +276,6 @@ stmt ids s@(Var z id gen tp p) = (es_data ++ es_id ++ es, f p'') where
               chk _ = False
   (es,p'') = stmt (s:ids) p'
 
-  f' p = Var z id gen tp p
-
   -- In case of a parametric/generic var with a constraint, instantiate it for
   -- each implementation of the constraint:
   --    f :: (a -> T) where a implements I
@@ -283,19 +286,30 @@ stmt ids s@(Var z id gen tp p) = (es_data ++ es_id ++ es, f p'') where
   --p' = p
   (f,p') = --if not gen then (f',p) else
     case Set.toList $ Type.getConstraints tp of
-      []            -> (f',p)
+      []            -> (Var z id gen tp, p)
       [(var,[cls])] -> case p of
         Match z2 False (LVar id') body t f
-          | id/=id' -> (f',p)
-          | id==id' -> (Prelude.id,funcs) where
-            insts = map g $ filter f ids where
-                      f (Inst _ (cls',_) _ _) = (cls == cls')
-                      f _                     = False
-                      g (Inst _ (_,[inst]) _ _) = inst  -- types to instantiate
+          | id/=id' -> (Var z id gen tp, p) --(Prelude.id, dcls p)
+          | id==id' -> (Prelude.id, funcs t)
+        _   -> (Prelude.id, p) --(Prelude.id, dcls p)
+        where
+          insts :: [Type]
+          insts = map g $ filter f ids where
+                    f (Inst _ (cls',_) _ _) = (cls == cls')
+                    f _                     = False
+                    g (Inst _ (_,[inst]) _ _) = inst  -- types to instantiate
 
-            funcs = foldr cat t insts where
+          funcs :: Stmt -> Stmt
+          funcs p = foldr cat p insts where
                       cat itp acc = wrap (var,itp) s acc
-        _   -> (Prelude.id,p)
+
+{-
+          dcls :: Stmt -> Stmt
+          dcls  p = foldr cat p insts where
+                      cat :: Type -> Stmt -> Stmt
+                      cat itp acc = Var z (idtp id tp') False tp' acc where
+                                      tp' = Type.instantiate [(var,itp)] tp
+-}
 
 stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fromJust mexp) p1' p2')
   where
