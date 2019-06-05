@@ -21,9 +21,9 @@ fromLeft (Left v) = v
 idtp id tp = "$" ++ id ++ "$" ++ Type.show' tp ++ "$"
 
 go :: Stmt -> (Errors, Stmt)
-go p = stmt [] p
+--go p = stmt [] p
 --go p = f $ stmt [] p where f (e,s) = traceShow s (e,s)
---go p = f $ stmt [] p where f (e,s) = traceShow (show_stmt 0 s) (e,s)
+go p = f $ stmt [] p where f (e,s) = traceShow (show_stmt 0 s) (e,s)
 
 -------------------------------------------------------------------------------
 
@@ -74,7 +74,7 @@ inst2table ids (Inst z (cls,[tp]) imp _) = Table.union (f2 imp) sups where
   f2 :: [(Ann,ID_Var,Type,Bool)] -> Table.Map ID_Var (Ann,ID_Var,Type,Bool)
   f2 ifc = Table.fromList $ map (\s@(_,id,_,_) -> (id,s)) ifc
 
-wrap (var,itp) (Var z id1 tp (Match _ False (LVar id2) body _ _)) acc | id1==id2 =
+wrap insts (Var z id1 tp (Match _ False (LVar id2) body _ _)) acc | id1==id2 = traceShow (id',tp') $
   Var z id' tp'
     (Match z False (LVar id')
       body'
@@ -82,10 +82,10 @@ wrap (var,itp) (Var z id1 tp (Match _ False (LVar id2) body _ _)) acc | id1==id2
       (err z))
   where
     id'   = idtp id1 tp'
-    tp'   = Type.instantiate [(var,itp)] tp
+    tp'   = Type.instantiate insts tp
     body' = map_exp (Prelude.id,Prelude.id,ftp) body
       where
-        ftp tp = Type.instantiate [(var,itp)] tp
+        ftp tp = Type.instantiate insts tp
 
 err z = Ret z $ Error z (-2)  -- TODO: -2
 
@@ -210,7 +210,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
             -- with HINST type.
             p1 = foldr cat p fs where
                   cat f acc = foldr cat' acc itps where
-                    cat' itp acc = wrap (clss_var,itp) f acc
+                    cat' itp acc = wrap [(clss_var,itp)] f acc
 
                   -- functions to instantiate
                   fs  = filter pred ids where
@@ -237,12 +237,23 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
 
             -- follow concrete types from generic/constrained implementations:
             --    implementation of IEq for a where a implements IXx
+            itps :: [Type]
             itps = case Set.toList $ Type.getConstraints itp of
               []          -> [itp]
               [(_,[ifc])] -> map f $ filter pred ids where
                               pred (Inst _ (icls,_) _ _) = ifc==icls
                               pred _                     = False
                               f    (Inst _ (_,[tp]) _ _) = tp
+              l@[("a",[ifc1]), ("b",[ifc2])] -> tps where
+                tps = map f combos where
+                        f (tp1,tp2) = Type.instantiate [("a",tp1), ("b",tp2)] itp
+                combos = [ (x,y) | x<-xs, y<-ys ]
+                [xs,ys] = map g l where
+                  g (_,[ifc]) = map f $ filter pred ids where
+                                  pred (Inst _ (icls,_) _ _) = ifc==icls
+                                  pred _                     = False
+                                  f    (Inst _ (_,[tp]) _ _) = tp
+
 
         where
           isSameInst (Inst _ (id,[tp']) _ _) = (cls==id && [itp]==[tp'])
@@ -301,7 +312,34 @@ stmt ids s@(Var z id tp p) = (es_data ++ es_id ++ es, f p'') where
 
           funcs :: Stmt -> Stmt
           funcs p = foldr cat p insts where
-                      cat itp acc = wrap (var,itp) s acc
+                      cat itp acc = wrap [(var,itp)] s acc
+
+      [(var1,[cls1]), (var2,[cls2])] -> case p of
+        Match z2 False (LVar id') body t f
+          -- | id/=id' -> (Prelude.id, p)          -- just ignore parametric declarations
+          | id==id' -> (Prelude.id, funcs t)    -- instantiate for all available implementations
+        _   -> (Prelude.id, p)                  -- just ignore parametric declarations
+        where
+          insts1 :: [Type]
+          insts1 = map g $ filter f ids where
+                    f (Inst _ (cls',_) _ _) = (cls1 == cls')
+                    f _                     = False
+                    g (Inst _ (_,[inst]) _ _) = inst  -- types to instantiate
+
+          insts2 :: [Type]
+          insts2 = map g $ filter f ids where
+                    f (Inst _ (cls',_) _ _) = (cls2 == cls')
+                    f _                     = False
+                    g (Inst _ (_,[inst]) _ _) = inst  -- types to instantiate
+          combos = traceShowId [ (x,y) | x<-insts1, y<-insts2 ]
+
+          funcs :: Stmt -> Stmt
+          funcs p = foldr cat p combos where
+                      cat (itp1,itp2) acc = traceShow "XXX" $ wrap [(var1,itp1),(var2,itp2)] s acc
+
+      -- TODO
+      _   -> (Prelude.id, p)
+      l -> error $ show (id,l)
 
 stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fromJust mexp) p1' p2')
   where
@@ -510,7 +548,8 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
             Left  es      -> (id, TypeV "?" [], map (toError z) es)
             Right (tp',_) -> case Set.toList $ Type.getConstraints tp' of
               []          -> (id, tp, [])
-              [(_,[cls])] -> case find pred ids of            -- find implementation
+-- TODO: simplificar isso aqui tudo
+              l           -> case find pred ids of            -- find implementation
                 Just (Var _ _ tp'' _) ->
                   if Type.hasAnyConstraint tp'' then
                     if Type.hasAnyConstraint txp then

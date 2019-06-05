@@ -94,7 +94,7 @@ spec = do
            ])
         `shouldBe` Right (Number 1)
 
-      it "XXX: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
+      it "IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
         (run True $
           unlines [
             "interface IEq for a with"          ,
@@ -130,7 +130,7 @@ spec = do
           ])
         `shouldBe` Right (Number 4)
 
-      it "IEq + default + Int + (a,b)" $
+      it "XXX: IEq + default + Int + (a,b)" $
         (run True $
           unlines [
             "interface IEq for a with"          ,
@@ -153,6 +153,37 @@ spec = do
             " end"                              ,
             "end"                               ,
             "return eq((10,20),(10,20))"            -- eq_a=eq_Int, eq_b=eq_Int
+          ])
+        `shouldBe` Right (Number 1)
+
+      it "IEq + default + Int + (a,b) + Bool" $
+        (run True $
+          unlines [
+            "interface IEq for a with"          ,
+            " var eq  : ((a,a) -> Int)"         ,
+            " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
+            "end"                               ,
+            "implementation of IEq for Int with" ,
+            " func eq (x,y) : ((Int,Int) -> Int) do",
+            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            " end"                              ,
+            "end"                               ,
+            "implementation of IEq for (a,b) where (a,b) implements (IEq,IEq) with" ,
+            " func eq ((x,y),(z,w)) : (((a,b),(a,b)) -> Int) do",
+            "   if x eq z then"                 ,   -- eq_a
+            "     if y eq w then"               ,   -- eq_b
+            "       return 1"                   ,
+            "     end"                          ,
+            "   end"                            ,
+            "   return 0"                       ,
+            " end"                              ,
+            "end"                               ,
+            "implementation of IEq for Bool with" ,
+            " func eq (x,y) : ((Bool,Bool) -> Int) do",
+            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            " end"                              ,
+            "end"                               ,
+            "return eq((10,20),(Bool.True,Bool.False))"
           ])
         `shouldBe` Right (Number 1)
 
