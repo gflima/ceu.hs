@@ -210,7 +210,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
             -- with HINST type.
             p1 = foldr cat p fs where
                   cat f acc = foldr cat' acc itps where
-                    cat' itp acc = wrap [(clss_var,itp)] f acc
+                    cat' itp acc = traceShow "ZZZ" $ wrap [(clss_var,itp)] f acc
 
                   -- functions to instantiate
                   fs  = filter pred ids where
@@ -312,7 +312,7 @@ stmt ids s@(Var z id tp p) = (es_data ++ es_id ++ es, f p'') where
 
           funcs :: Stmt -> Stmt
           funcs p = foldr cat p insts where
-                      cat itp acc = wrap [(var,itp)] s acc
+                      cat itp acc = traceShow "YYY" $ wrap [(var,itp)] s acc
 
       [(var1,[cls1]), (var2,[cls2])] -> case p of
         Match z2 False (LVar id') body t f
@@ -322,20 +322,20 @@ stmt ids s@(Var z id tp p) = (es_data ++ es_id ++ es, f p'') where
         where
           insts1 :: [Type]
           insts1 = map g $ filter f ids where
-                    f (Inst _ (cls',_) _ _) = (cls1 == cls')
-                    f _                     = False
-                    g (Inst _ (_,[inst]) _ _) = inst  -- types to instantiate
+                    f (Inst _ (cls',[itp']) _ _) = (cls1 == cls') && (not $ Type.hasAnyConstraint itp')
+                    f _                          = False
+                    g (Inst _ (_,[itp']) _ _)    = itp'  -- types to instantiate
 
           insts2 :: [Type]
           insts2 = map g $ filter f ids where
-                    f (Inst _ (cls',_) _ _) = (cls2 == cls')
-                    f _                     = False
-                    g (Inst _ (_,[inst]) _ _) = inst  -- types to instantiate
-          combos = traceShowId [ (x,y) | x<-insts1, y<-insts2 ]
+                    f (Inst _ (cls',[itp']) _ _) = (cls2 == cls') && (not $ Type.hasAnyConstraint itp')
+                    f _                          = False
+                    g (Inst _ (_,[itp']) _ _)    = itp'  -- types to instantiate
+          combos = traceShow ("Combos", insts1, insts2) $ traceShowId [ (x,y) | x<-insts1, y<-insts2 ]
 
           funcs :: Stmt -> Stmt
           funcs p = foldr cat p combos where
-                      cat (itp1,itp2) acc = traceShow "XXX" $ wrap [(var1,itp1),(var2,itp2)] s acc
+                      cat (itp1,itp2) acc = traceShow ("XXX",id,tp,var1,itp1,var2,itp2) $ wrap [(var1,itp1),(var2,itp2)] s acc
 
       -- TODO
       _   -> (Prelude.id, p)

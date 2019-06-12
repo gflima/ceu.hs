@@ -94,7 +94,7 @@ spec = do
            ])
         `shouldBe` Right (Number 1)
 
-      it "IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
+      it "YYY: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
         (run True $
           unlines [
             "interface IEq for a with"          ,
