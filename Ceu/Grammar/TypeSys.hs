@@ -21,9 +21,9 @@ fromLeft (Left v) = v
 idtp id tp = "$" ++ id ++ "$" ++ Type.show' tp ++ "$"
 
 go :: Stmt -> (Errors, Stmt)
---go p = stmt [] p
+go p = stmt [] p
 --go p = f $ stmt [] p where f (e,s) = traceShow s (e,s)
-go p = f $ stmt [] p where f (e,s) = traceShow (show_stmt 0 s) (e,s)
+--go p = f $ stmt [] p where f (e,s) = traceShow (show_stmt 0 s) (e,s)
 
 -------------------------------------------------------------------------------
 
@@ -42,11 +42,20 @@ isVar   _  _                     = False
 isAny :: (String -> Bool) -> Stmt -> Bool
 isAny f s = isClass f s || isData f s || isVar f s
 
-findVar :: (ID_Var,Relation,Type) -> [Stmt] -> Maybe Stmt
-findVar (id,rel,txp) ids = find f ids where
-                            f (Var _ id' tp' _) = id==id' &&
-                                                  (isRight $ relates rel txp tp')
-                            f _                 = False
+findVar :: Ann -> (ID_Var,Relation,Type) -> [Stmt] -> Either Errors (Stmt, (Type, [(ID_Var,Type)]))
+findVar z (id,rel,txp) ids =
+  case find f ids of
+    Just s@(Var _ _ tp' _)   -> Right (s, ret) where
+                                  Right ret = relates rel txp tp'
+    Nothing ->
+      case find (isVar $ (==)id) ids of
+        Nothing              -> Left $ [toError z $ "variable '" ++ id ++ "' is not declared"]
+        Just (Var _ _ tp' _) -> Left $ map (toError z) es where
+                                  Left es = relates rel txp tp'
+  where
+    f (Var _ id' tp' _) = id==id' &&
+                          (isRight $ relates rel txp tp')
+    f _                 = False
 
 supers :: [Stmt] -> Stmt -> [Stmt]
 supers ids s@(Class z _ exts ifc _) = s :
@@ -542,37 +551,34 @@ expr' _ ids (Tuple z exps) = (es, Tuple z{type_=tps'} exps') where
                               exps' = map snd rets
                               tps'  = TypeN (map (type_.getAnn) exps')
 
-expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} $ traceShow ("ret",id,id') id') where    -- Read x
+expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
   (id', tp, es)
     | (id == "_INPUT") = (id, TypeD ["Int"], [])
     | otherwise        =
       -- find in top-level ids | id : a
-      case findVar (id,rel,txp) ids of
-        Nothing             -> traceShow "a" (id, TypeV "?" [], [toError z $ "variable '" ++ id ++ "' is not declared"])
-        Just (Var _ _ tp _) ->                            -- var x : tp
-          case relates rel txp tp of                          -- txp relates to tp?
-            Left  es      -> traceShow "b" (id, TypeV "?" [], map (toError z) es)
-            Right (tp',_) -> case Set.toList $ Type.getConstraints tp' of
-              []          -> traceShow ("c",id,txp,tp) (id, tp, [])
--- TODO: simplificar isso aqui tudo
-              l           -> case find pred ids of            -- find implementation
-                Just (Var _ _ tp'' _) ->
-                  if Type.hasAnyConstraint tp'' then
-                    if Type.hasAnyConstraint txp then
-                      (id, tp'', [])
-                    else
-                      (id, TypeV "?" [], err)
+      case findVar z (id,rel,txp) ids of
+        Left  es -> (id, TypeV "?" [], es)
+        Right (Var _ _ tp _,(tp',_)) ->
+          case Set.toList $ Type.getConstraints tp' of
+            [] -> (id, tp, [])
+            l  -> case find pred ids of            -- find implementation
+              Just (Var _ _ tp'' _) ->
+                if Type.hasAnyConstraint tp'' then
+                  if Type.hasAnyConstraint txp then
+                    (id, tp'', [])
                   else
-                    (idtp id tp'', tp'', [])
-                Nothing -> (id, TypeV "?" [], err)
-              where
-                pred :: Stmt -> Bool
-                pred (Var _ k tp _) = (idtp id tp == k) && (isRight $ relates SUP txp tp)
-                pred _              = False
+                    (id, TypeV "?" [], err)
+                else
+                  (idtp id tp'', tp'', [])
+              Nothing -> (id, TypeV "?" [], err)
+            where
+              pred :: Stmt -> Bool
+              pred (Var _ k tp _) = (idtp id tp == k) && (isRight $ relates SUP txp tp)
+              pred _              = False
 
-                err = [toError z $ "variable '" ++ id ++
-                       "' has no associated implementation for '" ++
-                       Type.show' txp ++ "'"]
+              err = [toError z $ "variable '" ++ id ++
+                     "' has no associated implementation for '" ++
+                     Type.show' txp ++ "'"]
 
 expr' (rel,txp) ids (Call z f exp) = (bool es_exp es_f (null es_exp),
                                      Call z{type_=tp_out} f' exp')
