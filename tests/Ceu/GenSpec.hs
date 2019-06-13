@@ -144,15 +144,15 @@ spec = do
             "end"                               ,
             "implementation of IEq for (a,b) where (a,b) implements (IEq,IEq) with" ,
             " func eq ((x,y),(z,w)) : (((a,b),(a,b)) -> Int) do",
-            "   if x eq z then"                 ,   -- eq_a
-            "     if y eq w then"               ,   -- eq_b
+            "   if 1 <- (x eq z) then"                 ,   -- eq_a
+            "     if 1 <- (y eq w) then"               ,   -- eq_b
             "       return 1"                   ,
             "     end"                          ,
             "   end"                            ,
             "   return 0"                       ,
             " end"                              ,
             "end"                               ,
-            "return eq((10,20),(10,20))"            -- eq_a=eq_Int, eq_b=eq_Int
+            "return eq( eq(10,10), eq((10,20),(10,20)) )"            -- eq_a=eq_Int, eq_b=eq_Int
           ])
         `shouldBe` Right (Number 1)
 

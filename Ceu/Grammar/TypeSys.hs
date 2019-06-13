@@ -42,6 +42,12 @@ isVar   _  _                     = False
 isAny :: (String -> Bool) -> Stmt -> Bool
 isAny f s = isClass f s || isData f s || isVar f s
 
+findVar :: (ID_Var,Relation,Type) -> [Stmt] -> Maybe Stmt
+findVar (id,rel,txp) ids = find f ids where
+                            f (Var _ id' tp' _) = id==id' &&
+                                                  (isRight $ relates rel txp tp')
+                            f _                 = False
+
 supers :: [Stmt] -> Stmt -> [Stmt]
 supers ids s@(Class z _ exts ifc _) = s :
   case exts of
@@ -74,7 +80,7 @@ inst2table ids (Inst z (cls,[tp]) imp _) = Table.union (f2 imp) sups where
   f2 :: [(Ann,ID_Var,Type,Bool)] -> Table.Map ID_Var (Ann,ID_Var,Type,Bool)
   f2 ifc = Table.fromList $ map (\s@(_,id,_,_) -> (id,s)) ifc
 
-wrap insts (Var z id1 tp (Match _ False (LVar id2) body _ _)) acc | id1==id2 = traceShow (id',tp') $
+wrap insts (Var z id1 tp (Match _ False (LVar id2) body _ _)) acc | id1==id2 =
   Var z id' tp'
     (Match z False (LVar id')
       body'
@@ -210,7 +216,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
             -- with HINST type.
             p1 = foldr cat p fs where
                   cat f acc = foldr cat' acc itps where
-                    cat' itp acc = traceShow "ZZZ" $ wrap [(clss_var,itp)] f acc
+                    cat' itp acc = wrap [(clss_var,itp)] f acc
 
                   -- functions to instantiate
                   fs  = filter pred ids where
@@ -312,7 +318,7 @@ stmt ids s@(Var z id tp p) = (es_data ++ es_id ++ es, f p'') where
 
           funcs :: Stmt -> Stmt
           funcs p = foldr cat p insts where
-                      cat itp acc = traceShow "YYY" $ wrap [(var,itp)] s acc
+                      cat itp acc = wrap [(var,itp)] s acc
 
       [(var1,[cls1]), (var2,[cls2])] -> case p of
         Match z2 False (LVar id') body t f
@@ -331,11 +337,11 @@ stmt ids s@(Var z id tp p) = (es_data ++ es_id ++ es, f p'') where
                     f (Inst _ (cls',[itp']) _ _) = (cls2 == cls') && (not $ Type.hasAnyConstraint itp')
                     f _                          = False
                     g (Inst _ (_,[itp']) _ _)    = itp'  -- types to instantiate
-          combos = traceShow ("Combos", insts1, insts2) $ traceShowId [ (x,y) | x<-insts1, y<-insts2 ]
+          combos = [ (x,y) | x<-insts1, y<-insts2 ]
 
           funcs :: Stmt -> Stmt
           funcs p = foldr cat p combos where
-                      cat (itp1,itp2) acc = traceShow ("XXX",id,tp,var1,itp1,var2,itp2) $ wrap [(var1,itp1),(var2,itp2)] s acc
+                      cat (itp1,itp2) acc = wrap [(var1,itp1),(var2,itp2)] s acc
 
       -- TODO
       _   -> (Prelude.id, p)
@@ -536,18 +542,18 @@ expr' _ ids (Tuple z exps) = (es, Tuple z{type_=tps'} exps') where
                               exps' = map snd rets
                               tps'  = TypeN (map (type_.getAnn) exps')
 
-expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
+expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} $ traceShow ("ret",id,id') id') where    -- Read x
   (id', tp, es)
     | (id == "_INPUT") = (id, TypeD ["Int"], [])
     | otherwise        =
       -- find in top-level ids | id : a
-      case find (isVar $ (==)id) ids of
-        Nothing             -> (id, TypeV "?" [], [toError z $ "variable '" ++ id ++ "' is not declared"])
+      case findVar (id,rel,txp) ids of
+        Nothing             -> traceShow "a" (id, TypeV "?" [], [toError z $ "variable '" ++ id ++ "' is not declared"])
         Just (Var _ _ tp _) ->                            -- var x : tp
           case relates rel txp tp of                          -- txp relates to tp?
-            Left  es      -> (id, TypeV "?" [], map (toError z) es)
+            Left  es      -> traceShow "b" (id, TypeV "?" [], map (toError z) es)
             Right (tp',_) -> case Set.toList $ Type.getConstraints tp' of
-              []          -> (id, tp, [])
+              []          -> traceShow ("c",id,txp,tp) (id, tp, [])
 -- TODO: simplificar isso aqui tudo
               l           -> case find pred ids of            -- find implementation
                 Just (Var _ _ tp'' _) ->
