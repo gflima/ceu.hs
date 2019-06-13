@@ -2,7 +2,7 @@ module Ceu.Grammar.Basic where
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann      (Ann, HasAnn(..), annz)
-import Ceu.Grammar.Type     (Type(..))
+import Ceu.Grammar.Type     (Type(..), show')
 import Data.List            (intercalate)
 
 -------------------------------------------------------------------------------
@@ -63,12 +63,12 @@ show_stmt :: Int -> Stmt -> String
 --show_stmt spc (Class _ (id,_) _ _ p) = replicate spc ' ' ++ "class "  ++ id ++ "\n" ++ show_stmt spc p
 --show_stmt spc (Inst  _ (id,_) _ p)   = replicate spc ' ' ++ "inst "   ++ id ++ "\n" ++ show_stmt spc p
 show_stmt spc (Data _ id _ _ _ p)     = replicate spc ' ' ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
-show_stmt spc (Var _ id _ p)          = replicate spc ' ' ++ "var "    ++ id ++ "\n" ++ show_stmt spc p
+show_stmt spc (Var _ id tp p)          = replicate spc ' ' ++ "var "    ++ id ++ ": " ++ show' tp ++ "\n" ++ show_stmt spc p
 show_stmt spc (CallS _ e)             = replicate spc ' ' ++ "call " ++ show_exp spc e
 show_stmt spc (Ret _ e)               = replicate spc ' ' ++ "return " ++ show_exp spc e
 show_stmt spc (Seq _ p1 p2)           = replicate spc ' ' ++ "--\n" ++ show_stmt (spc+4) p1 ++
                                         replicate spc ' ' ++ "--\n" ++ show_stmt (spc+4) p2
-show_stmt spc (Match _ _ loc e p1 p2) = replicate spc ' ' ++ show_loc loc ++ " = " ++ show_exp spc e ++ "\n" ++ show_stmt spc p1
+show_stmt spc (Match _ _ loc e p1 p2) = replicate spc ' ' ++ show_loc loc ++ " = " ++ show_exp (spc+4) e ++ "\n" ++ show_stmt (spc+4) p1
 show_stmt spc (Nop _)                 = replicate spc ' ' ++ "nop"
 show_stmt spc p = error $ show p
 
@@ -83,8 +83,9 @@ show_exp spc (Call _ e1 e2) = "call" ++ " " ++ show_exp spc e1 ++ " " ++ show_ex
 show_exp spc e              = show e
 
 show_loc :: Loc -> String
-show_loc (LVar id)   = id
-show_loc (LTuple ls) = "(" ++ intercalate "," (map show_loc ls) ++ ")"
+show_loc (LVar   id)  = id
+show_loc (LTuple ls)  = "(" ++ intercalate "," (map show_loc ls) ++ ")"
+show_loc (LExp   exp) = show_exp 0 exp
 show_loc l = show l
 
 -------------------------------------------------------------------------------
