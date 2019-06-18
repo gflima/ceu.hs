@@ -69,10 +69,10 @@ spec = do
 
     it "a:() ; True <- a" $
       (fst $ TypeSys.go (prelude annz (Var annz "a" Type0 (Match annz True (LCons ["Bool","True"] LUnit) (Read annz "a") (Nop annz) (Nop annz)))))
-        `shouldBe` ["types do not match : expected 'Bool.True' : found '()'"]
+        `shouldBe` ["types do not match : expected 'Bool' : found '()'"]
     it "a:Int ; True <- a" $
       (fst $ TypeSys.go (prelude annz (Var annz "a" (TypeD ["Int"]) (Match annz True (LCons ["Bool","True"] LUnit) (Read annz "a") (Nop annz) (Nop annz)))))
-        `shouldBe` ["types do not match : expected 'Bool.True' : found 'Int'"]
+        `shouldBe` ["types do not match : expected 'Bool' : found 'Int'"]
 
     it "a:Bool ; True <- a" $
       (fst $ TypeSys.go (prelude annz (Var annz "a" (TypeD ["Bool"]) (Match annz True (LCons ["Bool","True"] LUnit) (Read annz "a") (Nop annz) (Nop annz)))))
@@ -324,7 +324,7 @@ spec = do
 
     it "A ; A 1 <- A" $
       (fst $ TypeSys.go (Data annz ["A"] [] Type0 False (Match annz False (LCons ["A"] (LNumber 1)) (Cons annz ["A"] (Unit annz)) (Nop annz) (Nop annz))))
-      `shouldBe` ["types do not match : expected 'Int.1' : found '()'"]
+      `shouldBe` ["types do not match : expected 'Int' : found '()'"]
 
     it "A ; A.B ; x:(Int,A.B) ; (1,A) <- x" $
       (fst $ TypeSys.go
@@ -433,7 +433,7 @@ spec = do
             (Nop annz)
             (Nop annz))))))))
       `shouldBe`
-        ["types do not match : expected '((Bool.True,Bool.False) -> ?)' : found '((Int,Int) -> Bool)'"]
+        ["types do not match : expected '((Bool.True,Bool.False) -> Bool)' : found '((Int,Int) -> Bool)'"]
 
     it "~Bool ; x=True" $
       (fst $ TypeSys.go
