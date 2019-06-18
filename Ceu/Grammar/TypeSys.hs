@@ -102,6 +102,14 @@ wrap insts (Var z id1 tp (Match _ False (LVar id2) body _ _)) acc | id1==id2 =
       where
         ftp tp = Type.instantiate insts tp
 
+combos :: [[a]] -> [[a]]
+combos l = foldr g [[]] l where
+    g :: [a] -> [[a]] -> [[a]]
+    g l combos = foldr (\v acc -> (h v combos) ++ acc) [] l
+
+    h :: a -> [[a]] -> [[a]]
+    h v combos = map (\combo -> v:combo) combos
+
 err z = Ret z $ Error z (-2)  -- TODO: -2
 
 -------------------------------------------------------------------------------
@@ -230,11 +238,14 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                   -- functions to instantiate
                   fs  = filter pred ids where
                           pred (Var _ id1 tp (Match _ False (LVar id2) body _ _)) =
-                            id1==id2 && (not $ elem id1 insts) && ctrs where
-                              insts = Table.keys hinst
+                            id1==id2 && (not inInsts) && ctrs where
+                              inInsts = not $ null $ Table.filter f hinst where
+                                          f (_,id',tp',_) = id1==id' && (isRight $ relates SUP tp' tp)
+                                              -- see GenSpec:CASE-1
                               ctrs  = case Set.toList $ Type.getConstraints tp of
                                 []            -> False
                                 [(_, [cls'])] -> cls' == cls
+                                [(_,[cls1]),(_,[cls2])] -> cls1==cls || cls2==cls
                           pred _ = False
 
             -- Prototype all HCLS as HINST signatures (not declared yet) before
@@ -260,14 +271,12 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                               pred _                     = False
                               f    (Inst _ (_,[tp]) _ _) = tp
               l@[("a",[ifc1]), ("b",[ifc2])] -> tps where
-                tps = map f combos where
-                        f (tp1,tp2) = Type.instantiate [("a",tp1), ("b",tp2)] itp
-                combos = [ (x,y) | x<-xs, y<-ys ]
-                [xs,ys] = map g l where
-                  g (_,[ifc]) = map f $ filter pred ids where
-                                  pred (Inst _ (icls,_) _ _) = ifc==icls
-                                  pred _                     = False
-                                  f    (Inst _ (_,[tp]) _ _) = tp
+                tps = map f $ combos (map g l) where
+                        f [tp1,tp2] = Type.instantiate [("a",tp1), ("b",tp2)] itp
+                        g (_,[ifc]) = map f $ filter pred ids where
+                                        pred (Inst _ (icls,_) _ _) = ifc==icls
+                                        pred _                     = False
+                                        f    (Inst _ (_,[tp]) _ _) = tp
 
 
         where
@@ -346,11 +355,10 @@ stmt ids s@(Var z id tp p) = (es_data ++ es_id ++ es, f p'') where
                     f (Inst _ (cls',[itp']) _ _) = (cls2 == cls') && (not $ Type.hasAnyConstraint itp')
                     f _                          = False
                     g (Inst _ (_,[itp']) _ _)    = itp'  -- types to instantiate
-          combos = [ (x,y) | x<-insts1, y<-insts2 ]
 
           funcs :: Stmt -> Stmt
-          funcs p = foldr cat p combos where
-                      cat (itp1,itp2) acc = wrap [(var1,itp1),(var2,itp2)] s acc
+          funcs p = foldr cat p (combos [insts1,insts2]) where
+                      cat [itp1,itp2] acc = wrap [(var1,itp1),(var2,itp2)] s acc
 
       -- TODO
       --_   -> (Prelude.id, p)
