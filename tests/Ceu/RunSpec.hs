@@ -763,7 +763,7 @@ $f3$(Int -> Int)$ 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "YYY: implementation for extends of (a,b)" $
+      it "implementation for extends of (a,b)" $
         (run True $
           unlines [
             "interface IGt for a with",
@@ -774,11 +774,11 @@ $f3$(Int -> Int)$ 10                       // Read
             "end",
             "implementation of IGt for (m,n) where (m,n) implements (IGt,IGt) with",
             "   func gt ((x1,x2),(y1,y2)) : (((m,n),(m,n)) -> Int) do",
-            "     return (gt x1 y1) + (gt x2 y2)",
+            "     return (gt(x1,y1)) + (gt(x2,y2))",
             "   end",
             "end",
             "func gt2 ((x1,x2),(y1,y2)) : (((m,n),(m,n)) -> Int) where (m,n) implements (IGt,IGt) do",
-            "  return (gt x1 y1) + (gt x2 y2)",
+            "  return (gt(x1,y1)) + (gt(x2,y2))",
             "end",
             "return Bool.True"
            ])

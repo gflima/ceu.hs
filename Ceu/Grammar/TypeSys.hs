@@ -110,6 +110,20 @@ combos l = foldr g [[]] l where
     h :: a -> [[a]] -> [[a]]
     h v combos = map (\combo -> v:combo) combos
 
+combos' :: [Stmt] -> [[ID_Class]] -> [[Type]]
+combos' ids clss = combos insts where
+  insts :: [[Type]]
+  insts = map h clss
+    where
+      h :: [ID_Class] -> [Type] -- include this instance "s"
+      h [cls] = map g $ filter f ids where
+        f :: Stmt -> Bool
+        f (Inst _ (cls',[itp']) _ _) = (cls == cls') && (not $ Type.hasAnyConstraint itp')
+        f _                          = False
+
+        g :: Stmt -> Type
+        g (Inst _ (_,[itp']) _ _)    = itp'  -- types to instantiate
+
 err z = Ret z $ Error z (-2)  -- TODO: -2
 
 -------------------------------------------------------------------------------
@@ -232,21 +246,26 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
             -- instantiate with the implementation type, changing all HCLS
             -- with HINST type.
             p1 = foldr cat p fs where
-                  cat f acc = foldr cat' acc itps where
-                    cat' itp acc = wrap [(clss_var,itp)] f acc
+              cat :: Stmt -> Stmt -> Stmt
+              cat f@(Var _ _ tp _) acc = foldr cat' acc itpss where
+                itpss :: [[Type]] -- only combos with new itp (others are already instantiated)
+                itpss = filter (\l -> elem itp l) $ combos' (s:ids) (map snd l)
 
-                  -- functions to instantiate
-                  fs  = filter pred ids where
-                          pred (Var _ id1 tp (Match _ False (LVar id2) body _ _)) =
-                            id1==id2 && (not inInsts) && ctrs where
-                              inInsts = not $ null $ Table.filter f hinst where
-                                          f (_,id',tp',_) = id1==id' && (isRight $ relates SUP tp' tp)
-                                              -- see GenSpec:CASE-1
-                              ctrs  = case Set.toList $ Type.getConstraints tp of
-                                []            -> False
-                                [(_, [cls'])] -> cls' == cls
-                                [(_,[cls1]),(_,[cls2])] -> cls1==cls || cls2==cls
-                          pred _ = False
+                cat' :: [Type] -> Stmt -> Stmt
+                cat' itps acc = wrap (zip (map fst l) itps) f acc
+
+                l = Set.toList $ Type.getConstraints tp
+
+              -- functions to instantiate
+              fs :: [Stmt]
+              fs  = filter pred ids where
+                      pred (Var _ id1 tp (Match _ False (LVar id2) body _ _)) =
+                        id1==id2 && (not inInsts) && ctrs where
+                          inInsts = not $ null $ Table.filter f hinst where
+                                      f (_,id',tp',_) = id1==id' && (isRight $ relates SUP tp' tp)
+                                          -- see GenSpec:CASE-1
+                          ctrs = Set.member [cls] $ Set.map snd $ Type.getConstraints tp
+                      pred _ = False
 
             -- Prototype all HCLS as HINST signatures (not declared yet) before
             -- the implementations appear to prevent "undeclared" errors.
@@ -261,23 +280,18 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                       id' = idtp id tp'
                       tp' = Type.instantiate [(clss_var,itp)] tp
 
-            -- follow concrete types from generic/constrained implementations:
-            --    implementation of IEq for a where a implements IXx
-            itps :: [Type]
-            itps = case Set.toList $ Type.getConstraints itp of
-              []          -> [itp]
-              [(_,[ifc])] -> map f $ filter pred ids where
-                              pred (Inst _ (icls,_) _ _) = ifc==icls
-                              pred _                     = False
-                              f    (Inst _ (_,[tp]) _ _) = tp
-              l@[("a",[ifc1]), ("b",[ifc2])] -> tps where
-                tps = map f $ combos (map g l) where
-                        f [tp1,tp2] = Type.instantiate [("a",tp1), ("b",tp2)] itp
-                        g (_,[ifc]) = map f $ filter pred ids where
-                                        pred (Inst _ (icls,_) _ _) = ifc==icls
-                                        pred _                     = False
-                                        f    (Inst _ (_,[tp]) _ _) = tp
-
+                  -- follow concrete types from generic/constrained implementations:
+                  --    implementation of IEq for a where a implements IXx
+                  itps :: [Type]
+                  itps = map f $ combos (map g l) where
+                    l = Set.toList $ Type.getConstraints itp
+                    f :: [Type] -> Type
+                    f tps = Type.instantiate (zip (map fst l) tps) itp
+                    g :: (ID_Var,[ID_Class]) -> [Type]
+                    g (_,[ifc]) = map f $ filter pred ids where
+                                    pred (Inst _ (icls,_) _ _) = ifc==icls
+                                    pred _                     = False
+                                    f    (Inst _ (_,[tp]) _ _) = tp
 
         where
           isSameInst (Inst _ (id,[tp']) _ _) = (cls==id && [itp]==[tp'])
@@ -319,50 +333,17 @@ stmt ids s@(Var z id tp p) = (es_data ++ es_id ++ es, f p'') where
   --    $f$X$
   --    $f$Y$
   --    ...
-  (f,p') =
-    case Set.toList $ Type.getConstraints tp of
-      []            -> (Var z id tp, p)         -- normal concrete declarations
-      [(var,[cls])] -> case p of
-        Match z2 False (LVar id') body t f
-          -- | id/=id' -> (Prelude.id, p)          -- just ignore parametric declarations
-          | id==id' -> (Prelude.id, funcs t)    -- instantiate for all available implementations
-        _   -> (Prelude.id, p)                  -- just ignore parametric declarations
-        where
-          insts :: [Type]
-          insts = map g $ filter f ids where
-                    f (Inst _ (cls',_) _ _) = (cls == cls')
-                    f _                     = False
-                    g (Inst _ (_,[inst]) _ _) = inst  -- types to instantiate
-
-          funcs :: Stmt -> Stmt
-          funcs p = foldr cat p insts where
-                      cat itp acc = wrap [(var,itp)] s acc
-
-      [(var1,[cls1]), (var2,[cls2])] -> case p of
-        Match z2 False (LVar id') body t f
-          -- | id/=id' -> (Prelude.id, p)          -- just ignore parametric declarations
-          | id==id' -> (Prelude.id, funcs t)    -- instantiate for all available implementations
-        _   -> (Prelude.id, p)                  -- just ignore parametric declarations
-        where
-          insts1 :: [Type]
-          insts1 = map g $ filter f ids where
-                    f (Inst _ (cls',[itp']) _ _) = (cls1 == cls') && (not $ Type.hasAnyConstraint itp')
-                    f _                          = False
-                    g (Inst _ (_,[itp']) _ _)    = itp'  -- types to instantiate
-
-          insts2 :: [Type]
-          insts2 = map g $ filter f ids where
-                    f (Inst _ (cls',[itp']) _ _) = (cls2 == cls') && (not $ Type.hasAnyConstraint itp')
-                    f _                          = False
-                    g (Inst _ (_,[itp']) _ _)    = itp'  -- types to instantiate
-
-          funcs :: Stmt -> Stmt
-          funcs p = foldr cat p (combos [insts1,insts2]) where
-                      cat [itp1,itp2] acc = wrap [(var1,itp1),(var2,itp2)] s acc
-
-      -- TODO
-      --_   -> (Prelude.id, p)
-      l -> error $ show (id,l)
+  (f,p') = case Set.toList $ Type.getConstraints tp of
+    [] -> (Var z id tp, p)                    -- normal concrete declarations
+    l  -> case p of
+      Match z2 False (LVar id') body t f
+        -- | id/=id' -> (Prelude.id, p)          -- just ignore parametric declarations
+        | id==id' -> (Prelude.id, funcs t)    -- instantiate for all available implementations
+      _   -> (Prelude.id, p)                  -- just ignore parametric declarations
+      where
+        funcs :: Stmt -> Stmt
+        funcs p = foldr cat p (combos' ids (map snd l)) where
+                    cat itps acc = wrap (zip (map fst l) itps) s acc
 
 stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fromJust mexp) p1' p2')
   where
