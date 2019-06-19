@@ -102,15 +102,6 @@ stmt_error = do
 
 -------------------------------------------------------------------------------
 
-pClassFor :: Parser a -> Parser (String,a)
-pClassFor p = do
-  par  <- optionMaybe $ tk_sym "("
-  cls  <- tk_class
-  void <- tk_key "for"
-  v    <- p             -- TODO: list of ps
-  void <- if isJust par then do tk_sym ")" else do { return () }
-  return (cls,v)
-
 stmt_class :: Parser Stmt
 stmt_class = do
   pos  <- pos2src <$> getPosition
@@ -140,7 +131,7 @@ stmt_inst = do
   par  <- optionMaybe $ tk_sym "("
   cls  <- tk_class
   void <- tk_key "for"
-  tp    <- pTypeContext
+  tp   <- pTypeContext
   void <- if isJust par then do tk_sym ")" else do { return () }
   void <- tk_key "with"
   imp  <- stmt
@@ -151,8 +142,12 @@ stmt_data :: Parser Stmt
 stmt_data = do
   pos  <- pos2src <$> getPosition
   void <- try $ tk_key "data"
+  --par  <- optionMaybe $ tk_sym "("
   id   <- tk_data_hier
-  --(cls,var) <- pClassFor tk_var
+  --var  <- optionMaybe tk_key "for"
+  --var  <- tk_var
+  --void <- if isJust par then do tk_sym ")" else do { return () }
+  --ctx  <- option [] pContext
   with <- option Type0 (tk_key "with" *> pTypeContext)
   return $ Data annz{source=pos} id [] with False
 

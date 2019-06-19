@@ -594,9 +594,9 @@ spec = do
               `shouldBe` Left ""
               parse stmt "data Unit of a where a is Eq with a"
               parse stmt "data Pair of a with (a,a)"
-              parse stmt "data Pair of (a where a is Eq) with (a,a)"
-              parse stmt "data Pair of (a,b) with (a,b)"
-              parse stmt "data Pair of ((a,b) where (a,b) is (Eq,Eq)) with (b,a)"
+              parse stmt "data (Pair of a) where (a is Eq) with (a,a)"
+              parse stmt "data (Pair of (a,b)) with (a,b)"
+              parse stmt "data (Pair of (a,b)) where (a is Eq, b is Eq) with (b,a)"
 -}
 
         describe "constraint:" $ do
