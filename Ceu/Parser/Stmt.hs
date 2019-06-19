@@ -15,7 +15,7 @@ import Text.Parsec.Combinator (notFollowedBy, many1, chainl, chainl1, chainr1, o
 
 import Ceu.Parser.Common
 import Ceu.Parser.Token
-import Ceu.Parser.Type        (pTypeIfc)
+import Ceu.Parser.Type        (pTypeContext,pContext)
 
 import Ceu.Grammar.Globals    (Source, ID_Var, ID_Class)
 import Ceu.Grammar.Type       (Type(..))
@@ -55,7 +55,7 @@ pLoc = lany  <|> lvar <|> try lunit  <|> lnumber <|>
                 loc  <- option LUnit pLoc
                 return $ LCons cons loc
     ltuple  = do
-                locs <- list pLoc
+                locs <- list2 pLoc
                 return (LTuple $ locs)
     lexp    = do
                 exp <- tk_sym "`" *> expr <* tk_sym "´"
@@ -113,28 +113,38 @@ pClassFor p = do
 
 stmt_class :: Parser Stmt
 stmt_class = do
-  pos       <- pos2src <$> getPosition
-  void      <- try $ tk_key "constraint"
-  (cls,var) <- pClassFor tk_var
-  exts      <- optionMaybe $ (tk_key "extends" *> pClassFor tk_var)
-  void      <- tk_key "with"
-  ifc       <- stmt
-  void      <- tk_key "end"
-  return $ let exts' = case exts of
-                        Just (sup,var') -> [sup]
-                        Nothing         -> []
-           in
-            (Class annz{source=pos} cls (TypeV var exts') ifc)
+  pos  <- pos2src <$> getPosition
+  void <- try $ tk_key "constraint"
+  par  <- optionMaybe $ tk_sym "("
+  cls  <- tk_class
+  void <- tk_key "for"
+  var  <- tk_var
+  void <- if isJust par then do tk_sym ")" else do { return () }
+  ctx  <- option [] pContext
+  void <- tk_key "with"
+  ifc  <- stmt
+  void <- tk_key "end"
+  return $ let sups = case ctx of
+                        []                       -> []
+                        [(var',sup)] | var==var' -> [sup]
+                                    | otherwise -> error "TODO: multiple variables"
+                        otherwise                -> error "TODO: multiple constraints"
+            in
+              Class annz{source=pos} cls (TypeV var sups) ifc where
 
 stmt_inst :: Parser Stmt
 stmt_inst = do
-  pos      <- pos2src <$> getPosition
-  void     <- try $ tk_key "instance"
-  void     <- tk_key "of"
-  (cls,tp) <- pClassFor pTypeIfc
-  void     <- tk_key "with"
-  imp      <- stmt
-  void     <- tk_key "end"
+  pos  <- pos2src <$> getPosition
+  void <- try $ tk_key "instance"
+  void <- tk_key "of"
+  par  <- optionMaybe $ tk_sym "("
+  cls  <- tk_class
+  void <- tk_key "for"
+  tp    <- pTypeContext
+  void <- if isJust par then do tk_sym ")" else do { return () }
+  void <- tk_key "with"
+  imp  <- stmt
+  void <- tk_key "end"
   return $ Inst annz{source=pos} cls tp imp
 
 stmt_data :: Parser Stmt
@@ -143,7 +153,7 @@ stmt_data = do
   void <- try $ tk_key "data"
   id   <- tk_data_hier
   --(cls,var) <- pClassFor tk_var
-  with <- option Type0 (tk_key "with" *> pTypeIfc)
+  with <- option Type0 (tk_key "with" *> pTypeContext)
   return $ Data annz{source=pos} id [] with False
 
 stmt_var :: Parser Stmt
@@ -152,7 +162,7 @@ stmt_var = do
   void <- try $ tk_key "var"
   loc  <- pLoc
   void <- tk_sym ":"
-  tp   <- pTypeIfc
+  tp   <- pTypeContext
   --guard (isJust $ matchLocType pos loc tp) <?> "arity match"
   when (isNothing $ matchLocType pos loc tp) $ unexpected "arity mismatch"
   s    <- option (Nop $ annz{source=pos})
@@ -296,7 +306,7 @@ expr_parens = do
 expr_tuple :: Parser Exp
 expr_tuple = do
   pos  <- pos2src <$> getPosition
-  exps <- try $ list expr
+  exps <- try $ list2 expr
   return $ Tuple annz{source=pos} exps
 
 expr' :: Parser Exp
@@ -338,7 +348,7 @@ func :: Source -> Parser (Type, Stmt)
 func pos = do
   loc  <- pLoc
   void <- tk_sym ":"
-  tp   <- pTypeIfc
+  tp   <- pTypeContext
 
   dcls <- let (TypeF tp' _) = tp
               dcls = (matchLocType pos loc tp')
@@ -370,7 +380,7 @@ stmt_funcs = do
   ret  <- case tp_imp of
             Nothing -> do
               void <- tk_sym ":"
-              tp   <- pTypeIfc
+              tp   <- pTypeContext
               return $ Var ann f tp
             Just (tp,imp) -> do
               return $ FuncS ann f tp imp

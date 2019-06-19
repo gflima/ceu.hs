@@ -6,13 +6,13 @@ import Text.Parsec.Prim         ((<|>), (<?>), try)
 import Text.Parsec.Prim         ((<|>), (<?>), try)
 import Text.Parsec.String       (Parser)
 import Text.Parsec.Prim         (many)
-import Text.Parsec.Combinator   (optionMaybe)
+import Text.Parsec.Combinator   (option)
 
 import Ceu.Parser.Common
 import Ceu.Parser.Token         (tk_sym, tk_key, tk_class, tk_var, tk_data_hier)
 
 import Ceu.Grammar.Globals      (ID_Var, ID_Class)
-import Ceu.Grammar.Type         (Type(..))
+import Ceu.Grammar.Type         (Type(..), addConstraint)
 
 singleton x = [x]
 
@@ -29,7 +29,7 @@ type_1 = do
 
 type_N :: Parser Type
 type_N = do
-    tps <- list pType
+    tps <- list2 pType
     return $ TypeN tps
 
 type_F :: Parser Type
@@ -57,21 +57,21 @@ pType :: Parser Type
 pType = type_1 <|> try type_V <|> try type_0 <|> try type_N <|> try type_F
         <|> type_parens <?> "type"
 
-pTypeIfc :: Parser Type
-pTypeIfc = do
+pTypeContext :: Parser Type
+pTypeContext = do
   tp  <- pType
-  ifc <- optionMaybe ((,) <$> (try (tk_key "where") *> ((singleton <$> tk_var) <|> list tk_var)) <*> (tk_key "is" *> ((singleton <$> tk_class) <|> list tk_class)))
-  return $ aux tp ifc
-    where
-      aux :: Type -> Maybe ([ID_Var],[ID_Class]) -> Type
-      aux tp Nothing = tp
-      aux tp (Just (l1,l2)) = aux tp $ assert (length l1 == length l2) (zip l1 l2)
-        where
-          aux :: Type -> [(ID_Var,ID_Class)] -> Type
-          aux tp l = foldr f tp l
+  ctx <- option [] pContext
+  return $ foldr addConstraint tp ctx
 
-          f :: (ID_Var,ID_Class) -> Type -> Type
-          f (var,cls) (TypeV var' []) | var==var' = TypeV var [cls]
-          f (var,cls) (TypeF inp out) = TypeF (f (var,cls) inp) (f (var,cls) out)
-          f (var,cls) (TypeN ts)      = TypeN $ map (f (var,cls)) ts
-          f _         tp              = tp
+pContext :: Parser [(ID_Var,ID_Class)]
+pContext = do
+  void <- try $ tk_key "where"
+  ret  <- (singleton <$> pIs) <|> list1 pIs
+  return ret
+
+pIs :: Parser (ID_Var,ID_Class)
+pIs = do
+  var  <- tk_var
+  void <- tk_key "is"
+  cls  <- tk_class
+  return (var,cls)

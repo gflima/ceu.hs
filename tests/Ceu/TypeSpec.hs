@@ -171,7 +171,7 @@ spec = do
               (TypeD ["Bool"]))
       `shouldBe` Right (TypeF (TypeN [TypeN [TypeD ["Int"],TypeD ["Int"]],TypeN [TypeD ["Int"],TypeD ["Int"]]]) (TypeD ["Bool"]),[("?",TypeD ["Bool"])])
 
-    it "XXX: ((1,2),(1,1))->? SUP (a,a)->Bool" $
+    it "((1,2),(1,1))->? SUP (a,a)->Bool" $
       relates SUP
         (TypeF (TypeN [
                 TypeN [TypeD ["Int","1"],TypeD ["Int","2"]],
@@ -185,7 +185,7 @@ spec = do
               (TypeD ["Bool"]))
       `shouldBe` Right (TypeF (TypeN [TypeV "a" ["IEqualable"],TypeV "a" ["IEqualable"]]) (TypeD ["Bool"]),[("?",TypeD ["Bool"]),("a",TypeN [TypeD ["Int","1"],TypeD ["Int"]])])
 
-    it "YYY: ((1,2),(1,1))->? SUB (a,a)->Bool" $
+    it "((1,2),(1,1))->? SUB (a,a)->Bool" $
       relates SUP
         (TypeF (TypeN [
                 TypeN [TypeD ["Int","1"],TypeD ["Int","2"]],

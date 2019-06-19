@@ -636,11 +636,11 @@ spec = do
           it "IOrd extends IEq" $
             (parse' stmt $
               unlines [
-                "constraint IEq for a with",
+                "constraint (IEq for a) with",
                 "   func == : ((a,a) -> Bool)",
                 "end",
                 "",
-                "constraint (IOrd for a) extends (IEq for a) with",
+                "constraint (IOrd for a) where (a is IEq) with",
                 "   func >= : ((a,a) -> Bool)",
                 "end",
                 "",

@@ -422,7 +422,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "   func === : ((a,a) -> Bool)",
             "end",
             "",
-            "constraint (IOrd for a) extends (IEq for a) with",
+            "constraint (IOrd for a) where (a is IEq) with",
             "   func =>= : ((a,a) -> Bool)",
             "end",
             "",
@@ -438,7 +438,7 @@ $f3$(Int -> Int)$ 10                       // Read
       it "IOrd extends IEq" $
         (run True $
           unlines [
-            "constraint (IOrd for a) extends (IEq for a) with",
+            "constraint IOrd for a where (a is IEq) with",
             "   func =>= : ((a,a) -> Bool)",
             "end",
             "",
@@ -474,7 +474,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "   func =%= : ((a,a) -> Bool)",
             "end",
             "",
-            "constraint (IOrd for a) extends (IEq for a) with",
+            "constraint IOrd for a where (a is IEq) with",
             "   func =$= : ((a,a) -> Bool)",
             "end",
             "",
@@ -570,7 +570,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "   func f : (a -> Bool)",
             "end",
             "",
-            "func g x : (a -> Bool) where a is IFable do",
+            "func g x : (a -> Bool) where (a is IFable) do",
             "   return f x",   -- dont instantiate f bc typeof(x)=a and a is IFable
             "end",  -- declare one g for each instance
             "",
@@ -586,7 +586,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "   func f : (a -> Bool)",
             "end",
             "",
-            "func g x : (a -> Bool) where a is IFable do",
+            "func g x : (a -> Bool) where (a is IFable) do",
             "   return f x",   -- dont instantiate f bc typeof(x)=a and a is IFable
             "end",  -- declare one g for each instance
             "",
@@ -614,7 +614,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "   end",
             "end",
             "",
-            "func g x : (a -> Bool) where a is IFable do",
+            "func g x : (a -> Bool) where (a is IFable) do",
             "   return f x",   -- dont instantiate f bc typeof(x)=a and a is IFable
             "end",  -- declare one g for each instance
             "",
@@ -731,8 +731,8 @@ $f3$(Int -> Int)$ 10                       // Read
           unlines [
             "constraint IFa for a with end",
             --"instance of IFa for (a,b) where (a,b) is (IFa,IFa) with end",
-            "constraint (IFb for a) extends (IFa for a) with end",
-            "instance of IFb for (a,b) where (a,b) is (IFb,IFb) with end",
+            "constraint IFb for a where (a is IFa) with end",
+            "instance of IFb for (a,b) where (a is IFb, b is IFb) with end",
             "return Bool.True"
            ])
         `shouldBe` Left "(line 3, column 1):\ninstance 'IFa for (a,b)' is not declared\n"
@@ -741,9 +741,9 @@ $f3$(Int -> Int)$ 10                       // Read
         (run True $
           unlines [
             "constraint IFa for a with end",
-            "instance of IFa for (c,d) where (c,d) is (IFa,IFa) with end",
-            "constraint (IFb for e) extends (IFa for e) with end",
-            "instance of IFb for (m,n) where (m,n) is (IFb,IFb) with end",
+            "instance of IFa for (c,d) where (c is IFa, d is IFa) with end",
+            "constraint IFb for e where (e is IFa) with end",
+            "instance of IFb for (m,n) where (m is IFb, n is IFb) with end",
             "return Bool.True"
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
@@ -752,11 +752,11 @@ $f3$(Int -> Int)$ 10                       // Read
         (run True $
           unlines [
             "constraint IFa for a with end",
-            "instance of IFa for (c,d) where (c,d) is (IFa,IFa) with end",
-            "constraint (IFb for e) extends (IFa for e) with",
+            "instance of IFa for (c,d) where (c is IFa,d is IFa) with end",
+            "constraint IFb for e where (e is IFa) with",
             "   func f v : (e->()) do end",
             "end",
-            "instance of IFb for (m,n) where (m,n) is (IFb,IFb) with",
+            "instance of IFb for (m,n) where (m is IFb,n is IFb) with",
             "   func f v : ((m,n)->()) do end",
             "end",
             "return Bool.True"
@@ -772,12 +772,12 @@ $f3$(Int -> Int)$ 10                       // Read
             "instance of IGt for Int with",
             "   func gt (x,y) : ((Int,Int) -> Int) do return 1 end",
             "end",
-            "instance of IGt for (m,n) where (m,n) is (IGt,IGt) with",
+            "instance of IGt for (m,n) where (m is IGt,n is IGt) with",
             "   func gt ((x1,x2),(y1,y2)) : (((m,n),(m,n)) -> Int) do",
             "     return (gt(x1,y1)) + (gt(x2,y2))",
             "   end",
             "end",
-            "func gt2 ((x1,x2),(y1,y2)) : (((m,n),(m,n)) -> Int) where (m,n) is (IGt,IGt) do",
+            "func gt2 ((x1,x2),(y1,y2)) : (((m,n),(m,n)) -> Int) where (m is IGt,n is IGt) do",
             "  return (gt(x1,y1)) + (gt(x2,y2))",
             "end",
             "return Bool.True"

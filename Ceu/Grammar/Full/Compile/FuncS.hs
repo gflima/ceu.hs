@@ -12,6 +12,7 @@ compile p = stmt p
 
 addConstraints l tp = foldr f tp l where
                         f (var,[cls]) tp = T.addConstraint (var,cls) tp
+                        --f p tp = error $ show (p,tp)
 
 stmt :: Stmt -> Stmt
 stmt (Class z cls tp@(T.TypeV var _) ifc) = Class z cls tp (stmt $ aux ifc)

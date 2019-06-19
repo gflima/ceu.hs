@@ -142,7 +142,7 @@ spec = do
             "   if `x´ <- y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
-            "instance of IEq for (a,b) where (a,b) is (IEq,IEq) with" ,
+            "instance of IEq for (a,b) where (a is IEq, b is IEq) with" ,
             " func eq ((x,y),(z,w)) : (((a,b),(a,b)) -> Int) do",
             "   if 1 <- (x eq z) then"                 ,   -- eq_a
             "     if 1 <- (y eq w) then"               ,   -- eq_b
@@ -168,7 +168,7 @@ spec = do
             "   if `x´ <- y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
-            "instance of IEq for (a,b) where (a,b) is (IEq,IEq) with" ,
+            "instance of IEq for (a,b) where (a is IEq,b is IEq) with" ,
             " func eq ((x,y),(z,w)) : (((a,b),(a,b)) -> Int) do",
             "   if 1 <- (x eq z) then"                 ,   -- eq_a
             "     if 1 <- (y eq w) then"               ,   -- eq_b
@@ -189,7 +189,7 @@ spec = do
             " var eq  : ((a,a) -> Int)"         ,
             " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
             "end"                               ,
-            "instance of IEq for (a,b) where (a,b) is (IEq,IEq) with" ,
+            "instance of IEq for (a,b) where (a is IEq, b is IEq) with" ,
             " func eq ((x,y),(z,w)) : (((a,b),(a,b)) -> Int) do",
             "   if 1 <- (x eq z) then"                 ,   -- eq_a
             "     if 1 <- (y eq w) then"               ,   -- eq_b
@@ -225,7 +225,7 @@ spec = do
             "   if `x´ <- y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
-            "instance of IEq for (a,b) where (a,b) is (IEq,IEq) with" ,
+            "instance of IEq for (a,b) where (a is IEq, b is IEq) with" ,
             " func eq ((x,y),(z,w)) : (((a,b),(a,b)) -> Int) do",
             "   if 1 <- x eq z then"                 ,   -- eq_a
             "     if 1 <- y eq w then"               ,   -- eq_b
@@ -251,7 +251,7 @@ spec = do
             "   if `x´ <- y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
-            "instance of IEq for (a,b) where (a,b) is (IEq,IEq) with" ,
+            "instance of IEq for (a,b) where (a is IEq, b is IEq) with" ,
             " func eq ((x,y),(z,w)) : (((a,b),(a,b)) -> Int) do",
             "   if 1 <- x eq z then"                 ,   -- eq_a
             "     if 1 <- y eq w then"               ,   -- eq_b
@@ -282,7 +282,7 @@ spec = do
             "   if `x´ <- y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
-            "instance of IEq for (a,b,c) where (a,b,c) is (IEq,IEq,IEq) with" ,
+            "instance of IEq for (a,b,c) where (a is IEq,b is IEq,c is IEq) with" ,
             " func eq ((x,y,z),(i,j,k)) : (((a,b,c),(a,b,c)) -> Int) do",
             "   if 1 <- x eq i then"            ,
             "     if 1 <- y eq j then"          ,
@@ -315,7 +315,7 @@ spec = do
             "   if `x´ <- y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
-            "instance of IEq for (a,b,a) where (a,b,a) is (IEq,IEq,IEq) with" ,
+            "instance of IEq for (a,b,a) where (a is IEq,b is IEq) with" ,
             " func eq ((x,y,z),(i,j,k)) : (((a,b,a),(a,b,a)) -> Int) do",
             "   if 1 <- x eq i then"            ,
             "     if 1 <- y eq j then"          ,
@@ -348,7 +348,7 @@ spec = do
             "   if `x´ <- y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
-            "instance of IEq for (a,b,a) where (a,b,a) is (IEq,IEq,IEq) with" ,
+            "instance of IEq for (a,b,a) where (a is IEq, b is IEq) with" ,
             " func eq ((x,y,z),(i,j,k)) : (((a,b,a),(a,b,a)) -> Int) do",
             "   if 1 <- x eq i then"            ,
             "     if 1 <- y eq j then"          ,
