@@ -25,7 +25,7 @@ keywords = [
     "for",
     "func",
     "if",
-    "implements",
+    "is",
     "instance",
     "loop",
     "of",

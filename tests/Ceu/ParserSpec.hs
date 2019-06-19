@@ -592,11 +592,11 @@ spec = do
             it "Pair a" $
               parse stmt "data Unit for a with a"
               `shouldBe` Left ""
-              parse stmt "data Unit of a where a implements Eq with a"
+              parse stmt "data Unit of a where a is Eq with a"
               parse stmt "data Pair of a with (a,a)"
-              parse stmt "data Pair of (a where a implements Eq) with (a,a)"
+              parse stmt "data Pair of (a where a is Eq) with (a,a)"
               parse stmt "data Pair of (a,b) with (a,b)"
-              parse stmt "data Pair of ((a,b) where (a,b) implements (Eq,Eq)) with (b,a)"
+              parse stmt "data Pair of ((a,b) where (a,b) is (Eq,Eq)) with (b,a)"
 -}
 
         describe "constraint:" $ do
@@ -671,23 +671,23 @@ spec = do
                   (Seq annz (Seq annz (Var annz "x" (TypeV "a" [])) (Seq annz (Var annz "y" (TypeV "a" [])) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"] (Unit annz)))))))
               (Ret annz (Call annz (Read annz ">=") (Tuple annz [Cons annz ["Bool","True"] (Unit annz),Cons annz ["Bool","False"] (Unit annz)])))))))
 
-          it "OK: IFable f ; g a implements IFable" $
-            (parse' stmt $ "var x : a where (a,b) implements IFable") -- (a,b) vs (IFable), arity mismatch
+          it "OK: IFable f ; g a is IFable" $
+            (parse' stmt $ "var x : a where (a,b) is IFable") -- (a,b) vs (IFable), arity mismatch
             `shouldBe` Left "oi"
 
-          it "IFable f ; g a implements IFable" $
+          it "IFable f ; g a is IFable" $
             (parse' stmt $
               unlines [
                 "constraint IFable for a with",
                 "   func f : (a -> Bool)",
                 "end",
                 "",
-                "func g x : (a -> Bool) where a implements IFable do",
+                "func g x : (a -> Bool) where a is IFable do",
                 "   return f x",
                 "end",
                 "",
-                --"var h : (a -> Bool) where a implements IFable",
-                --"set h <- func x : (a -> Bool) where a implements IFable do",
+                --"var h : (a -> Bool) where a is IFable",
+                --"set h <- func x : (a -> Bool) where a is IFable do",
                 --"   return f x",
                 --"end",
                 "",

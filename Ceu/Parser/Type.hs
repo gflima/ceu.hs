@@ -60,18 +60,18 @@ pType = type_1 <|> try type_V <|> try type_0 <|> try type_N <|> try type_F
 pTypeIfc :: Parser Type
 pTypeIfc = do
   tp  <- pType
-  ifc <- optionMaybe ((,) <$> (try (tk_key "where") *> ((singleton <$> tk_var) <|> list tk_var)) <*> (tk_key "implements" *> ((singleton <$> tk_class) <|> list tk_class)))
-  return $ implements tp ifc
+  ifc <- optionMaybe ((,) <$> (try (tk_key "where") *> ((singleton <$> tk_var) <|> list tk_var)) <*> (tk_key "is" *> ((singleton <$> tk_class) <|> list tk_class)))
+  return $ aux tp ifc
+    where
+      aux :: Type -> Maybe ([ID_Var],[ID_Class]) -> Type
+      aux tp Nothing = tp
+      aux tp (Just (l1,l2)) = aux tp $ assert (length l1 == length l2) (zip l1 l2)
+        where
+          aux :: Type -> [(ID_Var,ID_Class)] -> Type
+          aux tp l = foldr f tp l
 
-implements :: Type -> Maybe ([ID_Var],[ID_Class]) -> Type
-implements tp Nothing = tp
-implements tp (Just (l1,l2)) = aux tp $ assert (length l1 == length l2) (zip l1 l2)
-  where
-    aux :: Type -> [(ID_Var,ID_Class)] -> Type
-    aux tp l = foldr f tp l
-
-    f :: (ID_Var,ID_Class) -> Type -> Type
-    f (var,cls) (TypeV var' []) | var==var' = TypeV var [cls]
-    f (var,cls) (TypeF inp out) = TypeF (f (var,cls) inp) (f (var,cls) out)
-    f (var,cls) (TypeN ts)      = TypeN $ map (f (var,cls)) ts
-    f _         tp              = tp
+          f :: (ID_Var,ID_Class) -> Type -> Type
+          f (var,cls) (TypeV var' []) | var==var' = TypeV var [cls]
+          f (var,cls) (TypeF inp out) = TypeF (f (var,cls) inp) (f (var,cls) out)
+          f (var,cls) (TypeN ts)      = TypeN $ map (f (var,cls)) ts
+          f _         tp              = tp

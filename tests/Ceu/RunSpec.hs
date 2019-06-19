@@ -563,14 +563,14 @@ $f3$(Int -> Int)$ 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "IFable f ; g a implements IFable" $
+      it "IFable f ; g a is IFable" $
         (run True $
           unlines [
             "constraint IFable for a with",
             "   func f : (a -> Bool)",
             "end",
             "",
-            "func g x : (a -> Bool) where a implements IFable do",
+            "func g x : (a -> Bool) where a is IFable do",
             "   return f x",   -- dont instantiate f bc typeof(x)=a and a is IFable
             "end",  -- declare one g for each instance
             "",
@@ -579,14 +579,14 @@ $f3$(Int -> Int)$ 10                       // Read
            ])
         `shouldBe` Left "(line 9, column 9):\nvariable 'g' has no associated instance for '(Bool.True -> ?)'\n"
 
-      it "IFable f ; g a implements IFable" $
+      it "IFable f ; g a is IFable" $
         (run True $
           unlines [
             "constraint IFable for a with",
             "   func f : (a -> Bool)",
             "end",
             "",
-            "func g x : (a -> Bool) where a implements IFable do",
+            "func g x : (a -> Bool) where a is IFable do",
             "   return f x",   -- dont instantiate f bc typeof(x)=a and a is IFable
             "end",  -- declare one g for each instance
             "",
@@ -601,7 +601,7 @@ $f3$(Int -> Int)$ 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "IFable f ; g a implements IFable" $
+      it "IFable f ; g a is IFable" $
         (run True $
           unlines [
             "constraint IFable for a with",
@@ -614,7 +614,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "   end",
             "end",
             "",
-            "func g x : (a -> Bool) where a implements IFable do",
+            "func g x : (a -> Bool) where a is IFable do",
             "   return f x",   -- dont instantiate f bc typeof(x)=a and a is IFable
             "end",  -- declare one g for each instance
             "",
@@ -623,7 +623,7 @@ $f3$(Int -> Int)$ 10                       // Read
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "IFable f1/f2/f3 ; g/h a implements IFable" $
+      it "IFable f1/f2/f3 ; g/h a is IFable" $
         (run True $
           unlines [
             "constraint IFable for a with",
@@ -632,7 +632,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "   func f1 x : (a -> Bool) do return f2 x end",
             "end",
             "",
-            "func g x : (a -> Bool) where a implements IFable do",
+            "func g x : (a -> Bool) where a is IFable do",
             "   return f1 x",   -- dont instantiate f1 bc typeof(x)=a and a is IFable
             "end",  -- declare one g for each instance
             "",
@@ -642,7 +642,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "   end",
             "end",
             "",
-            "func h x : (a -> Bool) where a implements IFable do",
+            "func h x : (a -> Bool) where a is IFable do",
             "   return f1 x",
             "end",
             "",
@@ -730,9 +730,9 @@ $f3$(Int -> Int)$ 10                       // Read
         (run True $
           unlines [
             "constraint IFa for a with end",
-            --"instance of IFa for (a,b) where (a,b) implements (IFa,IFa) with end",
+            --"instance of IFa for (a,b) where (a,b) is (IFa,IFa) with end",
             "constraint (IFb for a) extends (IFa for a) with end",
-            "instance of IFb for (a,b) where (a,b) implements (IFb,IFb) with end",
+            "instance of IFb for (a,b) where (a,b) is (IFb,IFb) with end",
             "return Bool.True"
            ])
         `shouldBe` Left "(line 3, column 1):\ninstance 'IFa for (a,b)' is not declared\n"
@@ -741,9 +741,9 @@ $f3$(Int -> Int)$ 10                       // Read
         (run True $
           unlines [
             "constraint IFa for a with end",
-            "instance of IFa for (c,d) where (c,d) implements (IFa,IFa) with end",
+            "instance of IFa for (c,d) where (c,d) is (IFa,IFa) with end",
             "constraint (IFb for e) extends (IFa for e) with end",
-            "instance of IFb for (m,n) where (m,n) implements (IFb,IFb) with end",
+            "instance of IFb for (m,n) where (m,n) is (IFb,IFb) with end",
             "return Bool.True"
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
@@ -752,11 +752,11 @@ $f3$(Int -> Int)$ 10                       // Read
         (run True $
           unlines [
             "constraint IFa for a with end",
-            "instance of IFa for (c,d) where (c,d) implements (IFa,IFa) with end",
+            "instance of IFa for (c,d) where (c,d) is (IFa,IFa) with end",
             "constraint (IFb for e) extends (IFa for e) with",
             "   func f v : (e->()) do end",
             "end",
-            "instance of IFb for (m,n) where (m,n) implements (IFb,IFb) with",
+            "instance of IFb for (m,n) where (m,n) is (IFb,IFb) with",
             "   func f v : ((m,n)->()) do end",
             "end",
             "return Bool.True"
@@ -772,12 +772,12 @@ $f3$(Int -> Int)$ 10                       // Read
             "instance of IGt for Int with",
             "   func gt (x,y) : ((Int,Int) -> Int) do return 1 end",
             "end",
-            "instance of IGt for (m,n) where (m,n) implements (IGt,IGt) with",
+            "instance of IGt for (m,n) where (m,n) is (IGt,IGt) with",
             "   func gt ((x1,x2),(y1,y2)) : (((m,n),(m,n)) -> Int) do",
             "     return (gt(x1,y1)) + (gt(x2,y2))",
             "   end",
             "end",
-            "func gt2 ((x1,x2),(y1,y2)) : (((m,n),(m,n)) -> Int) where (m,n) implements (IGt,IGt) do",
+            "func gt2 ((x1,x2),(y1,y2)) : (((m,n),(m,n)) -> Int) where (m,n) is (IGt,IGt) do",
             "  return (gt(x1,y1)) + (gt(x2,y2))",
             "end",
             "return Bool.True"

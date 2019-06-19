@@ -975,7 +975,7 @@ spec = do
         (run True $
           pre ++ unlines [
             "instance of IEqualable for (a,b) with end",
-            "instance of IOrderable for (a,b) where (a,b) implements (IOrderable,IOrderable) with",
+            "instance of IOrderable for (a,b) where (a,b) is (IOrderable,IOrderable) with",
             "   func @< ((i,j),(x,y)) : (((a,b),(a,b)) -> Bool) do",
             "     return (i @< x) or ((i === x) and (j @< y))",
             "   end",
