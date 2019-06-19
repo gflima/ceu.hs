@@ -45,8 +45,8 @@ data Loc = LAny
 -------------------------------------------------------------------------------
 
 data Stmt
-    = Class  Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] [(Ann,ID_Var,Type,Bool)] Stmt -- new class declaration
-    | Inst   Ann (ID_Class,[Type])                         [(Ann,ID_Var,Type,Bool)] Stmt -- new class instance
+    = Class  Ann ID_Class Type [(Ann,ID_Var,Type,Bool)] Stmt -- new class declaration
+    | Inst   Ann ID_Class Type [(Ann,ID_Var,Type,Bool)] Stmt -- new class instance
     | Data   Ann ID_Data_Hier [ID_Var] Type Bool Stmt -- new type declaration
     | Var    Ann ID_Var Type Stmt             -- variable declaration
     | Match  Ann Bool Loc Exp Stmt Stmt       -- match/assignment/if statement
@@ -91,9 +91,9 @@ show_loc l = show l
 -------------------------------------------------------------------------------
 
 map_stmt :: (Stmt->Stmt, Exp->Exp, Type->Type) -> Stmt -> Stmt
-map_stmt f@(fs,_,ft) (Class z me ext ifc p)     = fs (Class z me ext ifc' (map_stmt f p))
+map_stmt f@(fs,_,ft) (Class z id tp ifc p)     = fs (Class z id tp ifc' (map_stmt f p))
                                                     where ifc' = map (\(x,y,tp,z)->(x,y,ft tp,z)) ifc
-map_stmt f@(fs,_,ft) (Inst  z me imp p)         = fs (Inst  z me imp' (map_stmt f p))
+map_stmt f@(fs,_,ft) (Inst  z cls tp imp p)    = fs (Inst  z cls tp imp' (map_stmt f p))
                                                     where imp' = map (\(x,y,tp,z)->(x,y,ft tp,z)) imp
 map_stmt f@(fs,_,ft) (Data  z me flds tp abs p) = fs (Data  z me flds (ft tp) abs (map_stmt f p))
 map_stmt f@(fs,_,ft) (Var   z id tp p)          = fs (Var   z id (ft tp) (map_stmt f p))
@@ -147,7 +147,7 @@ infixr 1 `sSeq`
 instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
     getAnn (Class z _ _ _ _)   = z
-    getAnn (Inst  z _ _ _)     = z
+    getAnn (Inst  z _ _ _ _)   = z
     getAnn (Data  z _ _ _ _ _) = z
     getAnn (Var   z _ _ _)     = z
     getAnn (Match z _ _ _ _ _) = z

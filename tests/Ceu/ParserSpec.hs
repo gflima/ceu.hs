@@ -19,8 +19,8 @@ import Ceu.Grammar.Full.Eval    (prelude, compile')
 import qualified Ceu.Grammar.Basic as B
 
 clearStmt :: Stmt -> Stmt
-clearStmt (Class _ me ext ifc)       = Class  annz me ext (clearStmt ifc)
-clearStmt (Inst  _ me     imp)       = Inst   annz me     (clearStmt imp)
+clearStmt (Class _ id  tp ifc)       = Class  annz id  tp (clearStmt ifc)
+clearStmt (Inst  _ cls tp imp)       = Inst   annz cls tp (clearStmt imp)
 clearStmt (Data  _ tp vars flds abs) = Data   annz tp  vars flds abs
 clearStmt (Var   _ var tp)           = Var    annz var tp
 clearStmt (FuncS _ var tp p)         = FuncS  annz var tp (clearStmt p)
@@ -588,6 +588,17 @@ spec = do
                 ])
               `shouldBe` Right (Seq annz (Data annz ["Aa"] [] (TypeD ["Int"]) False) (Seq annz (Data annz ["Aa","Bb"] [] Type0 False) (Seq annz (Seq annz (Seq annz (Var annz "b" (TypeD ["Aa","Bb"])) (Nop annz)) (Set annz False (LVar "b") (Cons annz ["Aa","Bb"] (Number annz 1)))) (Seq annz (Seq annz (Seq annz (Var annz "a" (TypeD ["Aa"])) (Nop annz)) (Set annz False (LVar "a") (Read annz "b"))) (Seq annz (Seq annz (Seq annz (Var annz "v" (TypeD ["Int"])) (Nop annz)) (Nop annz)) (Seq annz (Set annz False (LCons ["Aa"] (LVar "v")) (Read annz "b")) (Ret annz (Read annz "v"))))))))
 
+{-
+            it "Pair a" $
+              parse stmt "data Unit for a with a"
+              `shouldBe` Left ""
+              parse stmt "data Unit of a where a implements Eq with a"
+              parse stmt "data Pair of a with (a,a)"
+              parse stmt "data Pair of (a where a implements Eq) with (a,a)"
+              parse stmt "data Pair of (a,b) with (a,b)"
+              parse stmt "data Pair of ((a,b) where (a,b) implements (Eq,Eq)) with (b,a)"
+-}
+
         describe "interface:" $ do
 
           it "Int ; IF3able a ; inst IF3able Int ; return f3 1" $
@@ -605,14 +616,14 @@ spec = do
               ])
             `shouldBe` Right
               (Seq annz{source=("",1,1)}
-              (Class annz{source=("",1,1)} ("IF3able", ["a"]) []
+              (Class annz{source=("",1,1)} "IF3able" (TypeV "a" [])
                 (Seq annz{source=("",2,2)}
                 (Seq annz{source=("",0,0)}
                 (Var annz{source=("",2,2)} "f3" (TypeF (TypeV "a" []) (TypeD ["Int"])))
                 (Nop annz{source=("",0,0)}))
                 (Nop annz{source=("",2,2)})))
               (Seq annz{source=("",1,1)}
-              (Inst annz{source=("",4,1)} ("IF3able", [TypeD ["Int"]])
+              (Inst annz{source=("",4,1)} "IF3able" (TypeD ["Int"])
                 (FuncS annz{source=("",5,2)} "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))
                   (Seq annz{source=("",5,2)}
                   (Seq annz{source=("",0,0)}
@@ -645,17 +656,17 @@ spec = do
               ])
             `shouldBe` Right
               (Seq annz
-              (Class annz ("IEq",["a"]) []
+              (Class annz "IEq" (TypeV "a" [])
                 (Var annz "==" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))))
               (Seq annz
-              (Class annz ("IOrd",["a"]) [("IEq",["a"])]
+              (Class annz "IOrd" (TypeV "a" ["IEq"])
                 (Var annz ">=" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))))
               (Seq annz
-              (Inst annz ("IEq",[TypeD ["Bool"]])
+              (Inst annz "IEq" (TypeD ["Bool"])
                 (FuncS annz "==" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))
                   (Seq annz (Seq annz (Var annz "x" (TypeV "a" [])) (Seq annz (Var annz "y" (TypeV "a" [])) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"] (Unit annz)))))))
               (Seq annz
-              (Inst annz ("IOrd",[TypeD ["Bool"]])
+              (Inst annz "IOrd" (TypeD ["Bool"])
                 (FuncS annz ">=" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))
                   (Seq annz (Seq annz (Var annz "x" (TypeV "a" [])) (Seq annz (Var annz "y" (TypeV "a" [])) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"] (Unit annz)))))))
               (Ret annz (Call annz (Read annz ">=") (Tuple annz [Cons annz ["Bool","True"] (Unit annz),Cons annz ["Bool","False"] (Unit annz)])))))))
@@ -684,7 +695,7 @@ spec = do
                ])
             `shouldBe` Right
               (Seq annz
-                (Class annz ("IFable",["a"]) []
+                (Class annz "IFable" (TypeV "a" [])
                   (Var annz "f" (TypeF (TypeV "a" []) (TypeD ["Bool"]))))
               (Seq annz
                 (FuncS annz "g" (TypeF (TypeV "a" ["IFable"]) (TypeD ["Bool"]))

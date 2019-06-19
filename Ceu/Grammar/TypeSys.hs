@@ -27,17 +27,17 @@ go p = stmt [] p
 
 -------------------------------------------------------------------------------
 
-isClass f (Class _ (id,_) _ _ _) = f id
-isClass _  _                     = False
+isClass f (Class _ id _ _ _)    = f id
+isClass _  _                    = False
 
-isInst  f (Inst  _ (id,_) _ _)   = f id
-isInst  _  _                     = False
+isInst  f (Inst  _ id _ _ _)    = f id
+isInst  _  _                    = False
 
-isData  f (Data  _ hr _ _ _ _)   = f (Type.hier2str hr)
-isData  _  _                     = False
+isData  f (Data  _ hr _ _ _ _)  = f (Type.hier2str hr)
+isData  _  _                    = False
 
-isVar   f (Var   _ id _ _)       = f id
-isVar   _  _                     = False
+isVar   f (Var   _ id _ _)      = f id
+isVar   _  _                    = False
 
 isAny :: (String -> Bool) -> Stmt -> Bool
 isAny f s = isClass f s || isData f s || isVar f s
@@ -58,11 +58,11 @@ findVar z (id,rel,txp) ids =
     f _                 = False
 
 supers :: [Stmt] -> Stmt -> [Stmt]
-supers ids s@(Class z _ exts ifc _) = s :
-  case exts of
-    [(sid,_)] -> case find (isClass $ (==)sid) ids of
-                  Just x    -> supers ids x
-                  otherwise -> []
+supers ids s@(Class z _ (TypeV _ sups) ifc _) = s :
+  case sups of
+    [sup] -> case find (isClass $ (==)sup) ids of
+                Just x    -> supers ids x
+                otherwise -> []
     otherwise -> []
 
 class2table :: [Stmt] -> Stmt -> Table.Map ID_Var (Ann,ID_Var,Type,Bool)
@@ -73,17 +73,17 @@ class2table ids cls = Table.unions $ map f1 (supers ids cls)
     f2 ifc = Table.fromList $ map (\s@(_,id,_,_) -> (id,s)) ifc
 
 inst2table :: [Stmt] -> Stmt -> Table.Map ID_Var (Ann,ID_Var,Type,Bool)
-inst2table ids (Inst z (cls,[tp]) imp _) = Table.union (f2 imp) sups where
+inst2table ids (Inst z cls tp imp _) = Table.union (f2 imp) sups where
   sups =
     case find (isClass $ (==)cls) ids of
-      Just (Class z _ exts _ _) -> Table.unions $ map f exts
+      Just (Class z _ (TypeV _ sups) _ _) -> Table.unions $ map f sups
 
-  f (cls',_) =
+  f sup =
     case find pred ids of
       Just x  -> inst2table ids x
       Nothing -> Table.empty
     where
-      pred (Inst  _ (x,[y]) _ _) = (x==cls' && y==tp)
+      pred (Inst  _ x y _ _) = (x==sup && y==tp)
       pred _ = False
 
   f2 :: [(Ann,ID_Var,Type,Bool)] -> Table.Map ID_Var (Ann,ID_Var,Type,Bool)
@@ -118,11 +118,11 @@ combos' ids clss = combos insts where
       h :: [ID_Class] -> [Type] -- include this instance "s"
       h [cls] = map g $ filter f ids where
         f :: Stmt -> Bool
-        f (Inst _ (cls',[itp']) _ _) = (cls == cls') && (not $ Type.hasAnyConstraint itp')
+        f (Inst _ cls' itp' _ _) = (cls == cls') && (not $ Type.hasAnyConstraint itp')
         f _                          = False
 
         g :: Stmt -> Type
-        g (Inst _ (_,[itp']) _ _)    = itp'  -- types to instantiate
+        g (Inst _ _ itp' _ _)    = itp'  -- types to instantiate
 
 err z = Ret z $ Error z (-2)  -- TODO: -2
 
@@ -155,16 +155,16 @@ getErrsTypesDeclared z ids tp = concatMap aux $ map (\id->(id, find (isData $ (=
 
 stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
 
-stmt ids s@(Class z (id,[var]) exts ifc p) = (esMe ++ esExts ++ es, p') where
+stmt ids s@(Class z id (TypeV _ sups) ifc p) = (esMe ++ esExts ++ es, p') where
   esMe    = errDeclared z Nothing "interface" id ids
-  esExts  = concatMap f exts where
-              f (sup,_) = case find (isClass $ (==)sup) ids of
+  esExts  = concatMap f sups where
+              f sup = case find (isClass $ (==)sup) ids of
                 Nothing -> [toError z $ "interface '" ++ sup ++ "' is not declared"]
                 Just _  -> []
   (es,p') = stmt (s:ids) p
-stmt ids (Class _ (id,vars) _ _ _) = error "not implemented: multiple vars"
+stmt ids (Class _ _ _ _ _) = error "not implemented: multiple vars"
 
-stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
+stmt ids s@(Inst z cls itp imp p) = (es ++ esP, p'') where
   (esP, p'') = stmt (s:ids) p'
   (p',  es)  =
     case find (isClass $ (==)cls) ids of
@@ -172,7 +172,7 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
       Nothing -> (p, [toError z $ "interface '" ++ cls ++ "' is not declared"])
 
       -- class is declared
-      Just k@(Class _ (_,[clss_var]) exts ifc _) ->
+      Just k@(Class _ _ (TypeV clss_var sups) ifc _) ->
 
         case find isSameInst ids of
           -- instance is already declared
@@ -191,13 +191,13 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
             --  implementation (Eq  for Bool)                  <-- so Bool must implement Eq
             --  interface      (Ord for a) extends (Eq for a)  <-- but Ord extends Eq
             --  implementation (Ord for Bool)                  <-- Bool implements Ord
-            es1 = concatMap f exts where
-              f (sup,_) = case find (isInstOf (sup,[itp])) ids of
+            es1 = concatMap f sups where
+              f sup = case find (isInstOf sup itp) ids of
                 Nothing -> [toError z $ "implementation '" ++ sup ++ " for " ++
                             (Type.show' itp) ++ "' is not declared"]
                 Just _  -> []
-              isInstOf (x,[y]) (Inst _ (x',[y']) _ _) = (x'==x && y' `Type.isSupOf` y)
-              isInstOf _  _                           = False
+              isInstOf x y (Inst _ x' y' _ _) = (x'==x && y' `Type.isSupOf` y)
+              isInstOf _ _ _                  = False
 
             ---------------------------------------------------------------------
 
@@ -289,15 +289,13 @@ stmt ids s@(Inst z (cls,[itp]) imp p) = (es ++ esP, p'') where
                     f tps = Type.instantiate (zip (map fst l) tps) itp
                     g :: (ID_Var,[ID_Class]) -> [Type]
                     g (_,[ifc]) = map f $ filter pred ids where
-                                    pred (Inst _ (icls,_) _ _) = ifc==icls
+                                    pred (Inst _ icls _ _ _) = ifc==icls
                                     pred _                     = False
-                                    f    (Inst _ (_,[tp]) _ _) = tp
+                                    f    (Inst _ _ tp _ _) = tp
 
         where
-          isSameInst (Inst _ (id,[tp']) _ _) = (cls==id && [itp]==[tp'])
+          isSameInst (Inst _ id tp' _ _) = (cls==id && [itp]==[tp'])
           isSameInst _                        = False
-
-stmt ids (Inst _ (_,tps) _ _) = error "not implemented: multiple types"
 
 stmt ids s@(Data z hr [] flds abs p) = (es_dcl ++ (errDeclared z Nothing "data" (Type.hier2str hr) ids) ++ es,
                                         s' p')

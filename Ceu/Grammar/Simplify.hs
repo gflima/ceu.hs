@@ -10,16 +10,16 @@ go p = stmt p
 
 stmt :: Stmt -> Stmt
 
-stmt (Class z me ext ifc p) =
+stmt (Class z id tp ifc p) =
   case p' of
     Nop z'    -> Nop z'
-    otherwise -> Class z me ext ifc p'
+    otherwise -> Class z id tp ifc p'
   where p' = stmt p
 
-stmt (Inst z me imp p) =
+stmt (Inst z cls tp imp p) =
   case p' of
     Nop z'    -> Nop z'
-    otherwise -> Inst z me imp p'
+    otherwise -> Inst z cls tp imp p'
   where p' = stmt p
 
 stmt (Data z id vars flds abs p) =

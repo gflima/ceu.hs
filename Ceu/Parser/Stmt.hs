@@ -121,10 +121,10 @@ stmt_class = do
   ifc       <- stmt
   void      <- tk_key "end"
   return $ let exts' = case exts of
-                        Just (sup,var') -> [(sup,[var'])]
+                        Just (sup,var') -> [sup]
                         Nothing         -> []
            in
-            (Class annz{source=pos} (cls,[var]) exts' ifc)
+            (Class annz{source=pos} cls (TypeV var exts') ifc)
 
 stmt_inst :: Parser Stmt
 stmt_inst = do
@@ -135,13 +135,14 @@ stmt_inst = do
   void     <- tk_key "with"
   imp      <- stmt
   void     <- tk_key "end"
-  return $ Inst annz{source=pos} (cls,[tp]) imp
+  return $ Inst annz{source=pos} cls tp imp
 
 stmt_data :: Parser Stmt
 stmt_data = do
   pos  <- pos2src <$> getPosition
   void <- try $ tk_key "data"
   id   <- tk_data_hier
+  --(cls,var) <- pClassFor tk_var
   with <- option Type0 (tk_key "with" *> pTypeIfc)
   return $ Data annz{source=pos} id [] with False
 

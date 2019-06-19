@@ -66,10 +66,10 @@ toBasicLoc (LExp   exp)     = B.LExp (toBasicExp exp)
 -------------------------------------------------------------------------------
 
 data Stmt
-  = Class    Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] Stmt -- new class declaration
-  | Class'   Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] [(Ann,ID_Var,Type,Bool)] -- interface w/ body
-  | Inst     Ann (ID_Class,[Type]) Stmt           -- new class instance
-  | Inst'    Ann (ID_Class,[Type]) [(Ann,ID_Var,Type,Bool)] -- new class instance
+  = Class    Ann ID_Class Type Stmt               -- new class declaration
+  | Class'   Ann ID_Class Type [(Ann,ID_Var,Type,Bool)] -- interface w/ body
+  | Inst     Ann ID_Class Type Stmt               -- new class instance
+  | Inst'    Ann ID_Class Type [(Ann,ID_Var,Type,Bool)] -- new class instance
   | Data     Ann ID_Data_Hier [ID_Var] Type Bool  -- new type declaration
   | Var      Ann ID_Var Type                      -- variable declaration
   | FuncS    Ann ID_Var Type Stmt                 -- function declaration
@@ -84,8 +84,8 @@ data Stmt
   | Nop      Ann                                  -- nop as in basic Grammar
   | Ret      Ann Exp
   -- declarations w/ scope
-  | Class''  Ann (ID_Class,[ID_Var]) [(ID_Class,[ID_Var])] [(Ann,ID_Var,Type,Bool)] Stmt
-  | Inst''   Ann (ID_Class,[Type])                         [(Ann,ID_Var,Type,Bool)] Stmt
+  | Class''  Ann ID_Class Type [(Ann,ID_Var,Type,Bool)] Stmt
+  | Inst''   Ann ID_Class Type [(Ann,ID_Var,Type,Bool)] Stmt
   | Data''   Ann ID_Data_Hier [ID_Var] Type Bool Stmt
   | Var''    Ann ID_Var Type Stmt
   deriving (Eq, Show)
@@ -96,7 +96,7 @@ infixr 1 `sSeq`
 instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
     getAnn (Class    z _ _ _)     = z
-    getAnn (Inst     z _ _)       = z
+    getAnn (Inst     z _ _ _)     = z
     getAnn (Data     z _ _ _ _)   = z
     getAnn (Var      z _ _)       = z
     getAnn (FuncS    z _ _ _)     = z
@@ -110,8 +110,8 @@ instance HasAnn Stmt where
     getAnn (Var''    z _ _ _)     = z
 
 toBasicStmt :: Stmt -> B.Stmt
-toBasicStmt (Class'' z me ext ifc p)       = B.Class z me ext ifc (toBasicStmt p)
-toBasicStmt (Inst''  z me     imp p)       = B.Inst  z me     imp (toBasicStmt p)
+toBasicStmt (Class'' z id  tp ifc p)       = B.Class z id  tp ifc (toBasicStmt p)
+toBasicStmt (Inst''  z cls tp imp p)       = B.Inst  z cls tp imp (toBasicStmt p)
 toBasicStmt (Data''  z tp vars flds abs p) = B.Data  z tp  vars flds abs (toBasicStmt p)
 toBasicStmt (Var''   z var tp p)           = B.Var   z var tp (toBasicStmt p)
 toBasicStmt (Match'  z chk loc exp p1 p2)  = B.Match z chk (toBasicLoc loc) (toBasicExp exp)
@@ -126,8 +126,8 @@ toBasicStmt p                              = error $ "toBasicStmt: unexpected st
 -------------------------------------------------------------------------------
 
 map_stmt :: (Stmt->Stmt, Exp->Exp, Type->Type) -> Stmt -> Stmt
-map_stmt f@(fs,_,_)  (Class z me ext p)       = fs (Class z me ext (map_stmt f p))
-map_stmt f@(fs,_,_)  (Inst  z me     p)       = fs (Inst  z me     (map_stmt f p))
+map_stmt f@(fs,_,_)  (Class z id  tp p)       = fs (Class z id  tp (map_stmt f p))
+map_stmt f@(fs,_,_)  (Inst  z cls tp p)       = fs (Inst  z cls tp (map_stmt f p))
 map_stmt f@(fs,_,ft) (Data  z me flds tp abs) = fs (Data  z me flds (ft tp) abs)
 map_stmt f@(fs,_,ft) (Var   z id tp)          = fs (Var   z id (ft tp))
 map_stmt f@(fs,_,ft) (FuncS z id tp p)        = fs (FuncS z id (ft tp) (map_stmt f p))
