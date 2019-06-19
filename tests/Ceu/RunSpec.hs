@@ -326,7 +326,7 @@ spec = do
           ])
         `shouldBe` Right (Number 10)
 
-    describe "interface:" $ do
+    describe "constraint:" $ do
 
 {-
 $f3$(a -> Int)$ :: IF3able a => a -> Int   // Class/constraint
@@ -341,7 +341,7 @@ $f3$(Int -> Int)$ 10                       // Read
       it "Int ; IF3able a ; inst IF3able Int ; return f3 1" $
         (run True $
           unlines [
-            "interface IF3able for a with"       ,
+            "constraint IF3able for a with"       ,
             " var f3 : (a -> Int)"              ,
             "end"                               ,
             "instance of IF3able for Int with"   ,
@@ -356,7 +356,7 @@ $f3$(Int -> Int)$ 10                       // Read
       it "Int ; Bool ; IF2able a ; inst IF2able Bool/Int ; return f2 1" $
         (run True $
           unlines [
-            "interface IF2able for a with"       ,
+            "constraint IF2able for a with"       ,
             " var f2 : (a -> Int)"              ,
             "end"                               ,
             "instance of IF2able for Bool with"  ,
@@ -377,7 +377,7 @@ $f3$(Int -> Int)$ 10                       // Read
       it "Int ; Bool ; IF2able a ; inst IF2able Bool/Int ; return f2 1" $
         (run True $
           unlines [
-            "interface (IF2able for a) with"    ,
+            "constraint (IF2able for a) with"    ,
             " var f2 : (a -> Int)"              ,
             "end"                               ,
             "instance of IF2able for Int with" ,
@@ -398,7 +398,7 @@ $f3$(Int -> Int)$ 10                       // Read
       it "IEqualable" $
         (run True $
           unlines [
-            "interface IEqualable for a with",
+            "constraint IEqualable for a with",
             "   func === : ((a,a) -> Bool)",
             "   func =/= : ((a,a) -> Bool)",
             "end",
@@ -418,11 +418,11 @@ $f3$(Int -> Int)$ 10                       // Read
       it "IOrd extends IEq" $
         (run True $
           unlines [
-            "interface IEq for a with",
+            "constraint IEq for a with",
             "   func === : ((a,a) -> Bool)",
             "end",
             "",
-            "interface (IOrd for a) extends (IEq for a) with",
+            "constraint (IOrd for a) extends (IEq for a) with",
             "   func =>= : ((a,a) -> Bool)",
             "end",
             "",
@@ -438,7 +438,7 @@ $f3$(Int -> Int)$ 10                       // Read
       it "IOrd extends IEq" $
         (run True $
           unlines [
-            "interface (IOrd for a) extends (IEq for a) with",
+            "constraint (IOrd for a) extends (IEq for a) with",
             "   func =>= : ((a,a) -> Bool)",
             "end",
             "",
@@ -448,12 +448,12 @@ $f3$(Int -> Int)$ 10                       // Read
             "",
             "return (Bool.True) =>= (Bool.False)"
           ])
-        `shouldBe` Left "(line 1, column 1):\ninterface 'IEq' is not declared\n(line 5, column 1):\ninstance 'IEq for Bool' is not declared\n"
+        `shouldBe` Left "(line 1, column 1):\nconstraint 'IEq' is not declared\n(line 5, column 1):\ninstance 'IEq for Bool' is not declared\n"
 
       it "IOrd embeds IEq" $
         (run True $
           unlines [
-            "interface (IOrd for a) with",
+            "constraint (IOrd for a) with",
             "   func =%= : ((a,a) -> Bool)",
             "   func =$= : ((a,a) -> Bool)",
             "end",
@@ -470,11 +470,11 @@ $f3$(Int -> Int)$ 10                       // Read
       it "IOrd extends IEq" $
         (run True $
           unlines [
-            "interface IEq for a with",
+            "constraint IEq for a with",
             "   func =%= : ((a,a) -> Bool)",
             "end",
             "",
-            "interface (IOrd for a) extends (IEq for a) with",
+            "constraint (IOrd for a) extends (IEq for a) with",
             "   func =$= : ((a,a) -> Bool)",
             "end",
             "",
@@ -493,7 +493,7 @@ $f3$(Int -> Int)$ 10                       // Read
       it "f1" $
         (run True $
           unlines [
-            "interface IFable for a with",
+            "constraint IFable for a with",
             "   func f1 : (a -> Bool)",
             "end",
             "instance of IFable for Bool with",
@@ -506,7 +506,7 @@ $f3$(Int -> Int)$ 10                       // Read
       it "f1.x" $
         (run True $
           unlines [
-            "interface IFable for a with",
+            "constraint IFable for a with",
             "   func f1 : (a -> Bool)",
             "end",
             "instance of IFable for Bool with",
@@ -519,7 +519,7 @@ $f3$(Int -> Int)$ 10                       // Read
       it "f1 default" $
         (run True $
           unlines [
-            "interface IFable for a with",
+            "constraint IFable for a with",
             "   func f1 x : (a -> Bool) do return Bool.True end",
             "end",
             "instance of IFable for Bool with",
@@ -531,7 +531,7 @@ $f3$(Int -> Int)$ 10                       // Read
       it "f1/f2" $
         (run True $
           unlines [
-            "interface IFable for a with",
+            "constraint IFable for a with",
             "   func f2 :   (a -> Bool)",
             "   func f1 x : (a -> Bool) do return f2 x end",
             "end",
@@ -548,7 +548,7 @@ $f3$(Int -> Int)$ 10                       // Read
       it "f1/f2/f3" $
         (run True $
           unlines [
-            "interface IFable for a with",
+            "constraint IFable for a with",
             "   func f3 :   (a -> Bool)",
             "   func f2 x : (a -> Bool) do return f3 x end",
             "   func f1 x : (a -> Bool) do return f2 x end",
@@ -566,7 +566,7 @@ $f3$(Int -> Int)$ 10                       // Read
       it "IFable f ; g a implements IFable" $
         (run True $
           unlines [
-            "interface IFable for a with",
+            "constraint IFable for a with",
             "   func f : (a -> Bool)",
             "end",
             "",
@@ -582,7 +582,7 @@ $f3$(Int -> Int)$ 10                       // Read
       it "IFable f ; g a implements IFable" $
         (run True $
           unlines [
-            "interface IFable for a with",
+            "constraint IFable for a with",
             "   func f : (a -> Bool)",
             "end",
             "",
@@ -604,7 +604,7 @@ $f3$(Int -> Int)$ 10                       // Read
       it "IFable f ; g a implements IFable" $
         (run True $
           unlines [
-            "interface IFable for a with",
+            "constraint IFable for a with",
             "   func f : (a -> Bool)",
             "end",
             "",
@@ -626,7 +626,7 @@ $f3$(Int -> Int)$ 10                       // Read
       it "IFable f1/f2/f3 ; g/h a implements IFable" $
         (run True $
           unlines [
-            "interface IFable for a with",
+            "constraint IFable for a with",
             "   func f3 :   (a -> Bool)",
             "   func f2 x : (a -> Bool) do return f3 x end",
             "   func f1 x : (a -> Bool) do return f2 x end",
@@ -678,7 +678,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "   end",
             "end",
             "",
-            "interface IEqualable for a with",
+            "constraint IEqualable for a with",
             "   func === (x,y) : ((a,a) -> Bool) do",
             "     if `x´ <- y then",
             "       if `y´ <- x then",
@@ -729,9 +729,9 @@ $f3$(Int -> Int)$ 10                       // Read
       it "instance for extends of (a,b)" $
         (run True $
           unlines [
-            "interface IFa for a with end",
+            "constraint IFa for a with end",
             --"instance of IFa for (a,b) where (a,b) implements (IFa,IFa) with end",
-            "interface (IFb for a) extends (IFa for a) with end",
+            "constraint (IFb for a) extends (IFa for a) with end",
             "instance of IFb for (a,b) where (a,b) implements (IFb,IFb) with end",
             "return Bool.True"
            ])
@@ -740,9 +740,9 @@ $f3$(Int -> Int)$ 10                       // Read
       it "instance for extends of (a,b)" $
         (run True $
           unlines [
-            "interface IFa for a with end",
+            "constraint IFa for a with end",
             "instance of IFa for (c,d) where (c,d) implements (IFa,IFa) with end",
-            "interface (IFb for e) extends (IFa for e) with end",
+            "constraint (IFb for e) extends (IFa for e) with end",
             "instance of IFb for (m,n) where (m,n) implements (IFb,IFb) with end",
             "return Bool.True"
            ])
@@ -751,9 +751,9 @@ $f3$(Int -> Int)$ 10                       // Read
       it "instance for extends of (a,b)" $
         (run True $
           unlines [
-            "interface IFa for a with end",
+            "constraint IFa for a with end",
             "instance of IFa for (c,d) where (c,d) implements (IFa,IFa) with end",
-            "interface (IFb for e) extends (IFa for e) with",
+            "constraint (IFb for e) extends (IFa for e) with",
             "   func f v : (e->()) do end",
             "end",
             "instance of IFb for (m,n) where (m,n) implements (IFb,IFb) with",
@@ -766,7 +766,7 @@ $f3$(Int -> Int)$ 10                       // Read
       it "instance for extends of (a,b)" $
         (run True $
           unlines [
-            "interface IGt for a with",
+            "constraint IGt for a with",
             "   func gt : ((a,a) -> Int)",
             "end",
             "instance of IGt for Int with",
@@ -853,7 +853,7 @@ $f3$(Int -> Int)$ 10                       // Read
           "   end",
           "end",
           "",
-          "interface IEqualable for a with",
+          "constraint IEqualable for a with",
           "   func === (x,y) : ((a,a) -> Bool) do",
           "     if `x´ <- y then",
           "       if `y´ <- x then",

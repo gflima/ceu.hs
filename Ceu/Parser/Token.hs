@@ -14,6 +14,7 @@ import Text.Parsec.Combinator (many1, notFollowedBy, manyTill, eof)
 keywords = [
     "_",
     "call",
+    "constraint",
     "data",
     "do",
     "else",
@@ -26,7 +27,6 @@ keywords = [
     "if",
     "implements",
     "instance",
-    "interface",
     "loop",
     "of",
     "set",
@@ -87,7 +87,7 @@ tk_class :: Parser String    -- Int, Int_0   // I, II, int, _Int
 tk_class = do
     fst <- char 'I'
     snd <- satisfy isUpper
-    rst <- many $ (digit <|> letter <|> char '_' <?> "interface identifier")
+    rst <- many $ (digit <|> letter <|> char '_' <?> "constraint identifier")
     --guard $ not $ null $ filter (\c -> isLower c) rst
     when (all isUpper rst) $ unexpected "uppercase identifier"
     s

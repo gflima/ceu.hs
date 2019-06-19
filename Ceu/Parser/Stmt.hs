@@ -114,7 +114,7 @@ pClassFor p = do
 stmt_class :: Parser Stmt
 stmt_class = do
   pos       <- pos2src <$> getPosition
-  void      <- try $ tk_key "interface"
+  void      <- try $ tk_key "constraint"
   (cls,var) <- pClassFor tk_var
   exts      <- optionMaybe $ (tk_key "extends" *> pClassFor tk_var)
   void      <- tk_key "with"

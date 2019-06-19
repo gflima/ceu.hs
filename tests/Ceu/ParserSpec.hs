@@ -202,7 +202,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 2):\nunexpected end of input"
             it "III" $
                 parse tk_class "III"
-                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting interface identifier"
+                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting constraint identifier"
 
         describe "tk_key:" $ do
             it "do" $
@@ -599,12 +599,12 @@ spec = do
               parse stmt "data Pair of ((a,b) where (a,b) implements (Eq,Eq)) with (b,a)"
 -}
 
-        describe "interface:" $ do
+        describe "constraint:" $ do
 
           it "Int ; IF3able a ; inst IF3able Int ; return f3 1" $
             (parse stmt $
               unlines [
-                "interface IF3able for a with"  ,
+                "constraint IF3able for a with"  ,
                 " var f3 : (a -> Int)"          ,
                 "end"                           ,
                 "instance of (IF3able for Int) with" ,
@@ -636,11 +636,11 @@ spec = do
           it "IOrd extends IEq" $
             (parse' stmt $
               unlines [
-                "interface IEq for a with",
+                "constraint IEq for a with",
                 "   func == : ((a,a) -> Bool)",
                 "end",
                 "",
-                "interface (IOrd for a) extends (IEq for a) with",
+                "constraint (IOrd for a) extends (IEq for a) with",
                 "   func >= : ((a,a) -> Bool)",
                 "end",
                 "",
@@ -678,7 +678,7 @@ spec = do
           it "IFable f ; g a implements IFable" $
             (parse' stmt $
               unlines [
-                "interface IFable for a with",
+                "constraint IFable for a with",
                 "   func f : (a -> Bool)",
                 "end",
                 "",

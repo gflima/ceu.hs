@@ -156,10 +156,10 @@ getErrsTypesDeclared z ids tp = concatMap aux $ map (\id->(id, find (isData $ (=
 stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
 
 stmt ids s@(Class z id (TypeV _ sups) ifc p) = (esMe ++ esExts ++ es, p') where
-  esMe    = errDeclared z Nothing "interface" id ids
+  esMe    = errDeclared z Nothing "constraint" id ids
   esExts  = concatMap f sups where
               f sup = case find (isClass $ (==)sup) ids of
-                Nothing -> [toError z $ "interface '" ++ sup ++ "' is not declared"]
+                Nothing -> [toError z $ "constraint '" ++ sup ++ "' is not declared"]
                 Just _  -> []
   (es,p') = stmt (s:ids) p
 stmt ids (Class _ _ _ _ _) = error "not implemented: multiple vars"
@@ -169,7 +169,7 @@ stmt ids s@(Inst z cls itp imp p) = (es ++ esP, p'') where
   (p',  es)  =
     case find (isClass $ (==)cls) ids of
       -- class is not declared
-      Nothing -> (p, [toError z $ "interface '" ++ cls ++ "' is not declared"])
+      Nothing -> (p, [toError z $ "constraint '" ++ cls ++ "' is not declared"])
 
       -- class is declared
       Just k@(Class _ _ (TypeV clss_var sups) ifc _) ->
@@ -187,9 +187,9 @@ stmt ids s@(Inst z cls itp imp p) = (es ++ esP, p'') where
             ---------------------------------------------------------------------
 
             -- check extends
-            --  interface      (Eq  for a)
+            --  constraint      (Eq  for a)
             --  instance (Eq  for Bool)                  <-- so Bool must implement Eq
-            --  interface      (Ord for a) extends (Eq for a)  <-- but Ord extends Eq
+            --  constraint      (Ord for a) extends (Eq for a)  <-- but Ord extends Eq
             --  instance (Ord for Bool)                  <-- Bool implements Ord
             es1 = concatMap f sups where
               f sup = case find (isInstOf sup itp) ids of
@@ -231,7 +231,7 @@ stmt ids s@(Inst z cls itp imp p) = (es ++ esP, p'') where
             -- it with HINST type.
             -- Either from default implementations in HCLS or from generic
             -- functions:
-            --    interface IEq for a with
+            --    constraint IEq for a with
             --      var eq  : ((a,a) -> Int)
             --      func neq (x,y) : ((a,a) -> Int) do ... eq(a,a) ... end              -- THIS
             --    end

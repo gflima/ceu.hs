@@ -347,7 +347,7 @@ spec = do
             "   end",
             "end",
             "",
-            "interface IEqualable for a with",
+            "constraint IEqualable for a with",
             "   func ===       : ((a,a) -> Bool)",
             "   func =/= (x,y) : ((a,a) -> Bool) do return not (x === y) end",
             "end",
@@ -665,7 +665,7 @@ spec = do
       it "enum" $         -- pg 38
         (run True $
           pre ++ unlines [
-            "interface IEnumerable for a with",
+            "constraint IEnumerable for a with",
             "   func toEnum   : (a -> Int)",
             "   func fromEnum : (Int -> a)",
             "end",
@@ -749,7 +749,7 @@ spec = do
       it "direction" $         -- pg 41
         (run True $
           pre ++ unlines [
-            "interface IEnumerable for a with",
+            "constraint IEnumerable for a with",
             "   func toEnum   : (a -> Int)",
             "   func fromEnum : (Int -> a)",
             "end",
@@ -807,7 +807,7 @@ spec = do
       it "bool enum" $         -- pg 41
         (run True $
           pre ++ unlines [
-            "interface IEnumerable for a with",
+            "constraint IEnumerable for a with",
             "   func toEnum   : (a -> Int)",
             "   func fromEnum : (Int -> a)",
             "end",
@@ -1020,7 +1020,7 @@ spec = do
           "   end",
           "end",
           "",
-          "interface IEqualable for a with",
+          "constraint IEqualable for a with",
           "   func === (x,y) : ((a,a) -> Bool) do",
           "     if `x´ <- y then",
           "       if `y´ <- x then",
@@ -1049,7 +1049,7 @@ spec = do
           "   end",
           "end",
           "",
-          "interface IOrderable for a extends IEqualable for a with",
+          "constraint IOrderable for a extends IEqualable for a with",
           "  func @<        : ((a,a) -> Bool)",
           "  func @<= (x,y) : ((a,a) -> Bool) do return (x @< y) or (x === y) end",
           "  func @>  (x,y) : ((a,a) -> Bool) do return not (x @<= y)         end",

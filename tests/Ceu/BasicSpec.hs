@@ -497,7 +497,7 @@ spec = do
         (Class annz "X" (TypeV "a" []) []
         (Class annz "X" (TypeV "a" []) []
         (Nop annz))))
-      `shouldBe` ["interface 'X' is already declared"]
+      `shouldBe` ["constraint 'X' is already declared"]
 
     it "X.f ; Y.f" $
       (fst $ TypeSys.go
@@ -619,7 +619,7 @@ spec = do
             (Seq annz
               (Nop annz)
               (Nop annz)))))))))
-      `shouldBe` ["interface 'X' is not declared"]
+      `shouldBe` ["constraint 'X' is not declared"]
 
     it "A ; Xable a ; inst Xable A ; a/=A" $
       (fst $ TypeSys.go

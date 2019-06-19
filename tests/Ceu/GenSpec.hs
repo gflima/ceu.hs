@@ -16,12 +16,12 @@ main = hspec spec
 spec :: Spec
 spec = do
 
-    describe "interface:" $ do
+    describe "constraint:" $ do
 
       it "IEq" $
         (run True $
           unlines [
-            "interface IEq for a with"          ,
+            "constraint IEq for a with"          ,
             " var eq  : ((a,a) -> Int)"         ,
             " var neq : ((a,a) -> Int)"         ,
             "end"                               ,
@@ -32,7 +32,7 @@ spec = do
       it "IEq + default" $
         (run True $
           unlines [
-            "interface IEq for a with"          ,
+            "constraint IEq for a with"          ,
             " var eq  : ((a,a) -> Int)"         ,
             " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
             "end"                               ,
@@ -43,7 +43,7 @@ spec = do
       it "IEq + default + Int" $
         (run True $
           unlines [
-            "interface IEq for a with"          ,
+            "constraint IEq for a with"          ,
             " var eq  : ((a,a) -> Int)"         ,
             " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
             "end"                               ,
@@ -59,7 +59,7 @@ spec = do
       it "IEq + default + Int + f" $
         (run True $
           unlines [
-            "interface IEq for a with"          ,
+            "constraint IEq for a with"          ,
             " var eq  : ((a,a) -> Int)"         ,
             " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
             "end"                               ,
@@ -78,7 +78,7 @@ spec = do
       it "IEq + default + f + Int" $
         (run True $
           unlines [
-            "interface IEq for a with"          ,
+            "constraint IEq for a with"          ,
             " var eq  : ((a,a) -> Int)"         ,
             " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
             "end"                               ,
@@ -97,7 +97,7 @@ spec = do
       it "IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
         (run True $
           unlines [
-            "interface IEq for a with"          ,
+            "constraint IEq for a with"          ,
             " var eq  : ((a,a) -> Int)"         ,
             " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
             "end"                               ,
@@ -106,7 +106,7 @@ spec = do
             "   if `x´ <- y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
-            "interface IXx for a with"          ,
+            "constraint IXx for a with"          ,
             " var f : (a -> Int)"               ,
             "end"                               ,
             "data Dd",
@@ -133,7 +133,7 @@ spec = do
       it "IEq + default + Int + (a,b)" $
         (run True $
           unlines [
-            "interface IEq for a with"          ,
+            "constraint IEq for a with"          ,
             " var eq  : ((a,a) -> Int)"         ,
             " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
             "end"                               ,
@@ -159,7 +159,7 @@ spec = do
       it "IEq + default + Int + (a,b)" $
         (run True $
           unlines [
-            "interface IEq for a with"          ,
+            "constraint IEq for a with"          ,
             " var eq  : ((a,a) -> Int)"         ,
             " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
             "end"                               ,
@@ -185,7 +185,7 @@ spec = do
       it "IEq + default + Int + (a,b)" $ -- CASE-1 eq(a,b) is not SUP of eq(Int)
         (run True $
           unlines [
-            "interface IEq for a with"          ,
+            "constraint IEq for a with"          ,
             " var eq  : ((a,a) -> Int)"         ,
             " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
             "end"                               ,
@@ -211,7 +211,7 @@ spec = do
       it "IEq + default + Int + (a,b) + Bool" $
         (run True $
           unlines [
-            "interface IEq for a with"          ,
+            "constraint IEq for a with"          ,
             " var eq  : ((a,a) -> Int)"         ,
             " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
             "end"                               ,
@@ -242,7 +242,7 @@ spec = do
       it "IEq + default + Int + (a,b) + Bool" $
         (run True $
           unlines [
-            "interface IEq for a with"          ,
+            "constraint IEq for a with"          ,
             " var eq  : ((a,a) -> Int)"         ,
             " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
             "end"                               ,
@@ -273,7 +273,7 @@ spec = do
       it "IEq + default + Int + (a,b,c) + Bool" $
         (run True $
           unlines [
-            "interface IEq for a with"          ,
+            "constraint IEq for a with"          ,
             " var eq  : ((a,a) -> Int)"         ,
             " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
             "end"                               ,
@@ -306,7 +306,7 @@ spec = do
       it "IEq + default + Int + (a,b,a) + Bool" $
         (run True $
           unlines [
-            "interface IEq for a with"          ,
+            "constraint IEq for a with"          ,
             " var eq  : ((a,a) -> Int)"         ,
             " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
             "end"                               ,
@@ -339,7 +339,7 @@ spec = do
       it "IEq + default + Int + (a,b,a) + Bool" $
         (run True $
           unlines [
-            "interface IEq for a with"          ,
+            "constraint IEq for a with"          ,
             " var eq  : ((a,a) -> Int)"         ,
             " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
             "end"                               ,
@@ -399,7 +399,7 @@ spec = do
           "   end",
           "end",
           "",
-          "interface IEqualable for a with",
+          "constraint IEqualable for a with",
           "   func === (x,y) : ((a,a) -> Bool) do",
           "     if `x´ <- y then",
           "       if `y´ <- x then",
