@@ -352,7 +352,7 @@ spec = do
             "   func =/= (x,y) : ((a,a) -> Bool) do return not (x === y) end",
             "end",
             "",
-            "implementation of IEqualable for Bool with",
+            "instance of IEqualable for Bool with",
             "   func === (x,y) : ((Bool,Bool) -> Bool) do",
             "     return (x and y) or ((not x) and (not y))",
             "   end",
@@ -377,7 +377,7 @@ spec = do
             "data Xx.Bb",
             "return (Xx.Aa) @<= (Xx.Bb)"
            ])
-        `shouldBe` Left "(line 78, column 16):\nvariable '@<=' has no associated implementation for '((Xx.Aa,Xx.Bb) -> ?)'\n"
+        `shouldBe` Left "(line 78, column 16):\nvariable '@<=' has no associated instance for '((Xx.Aa,Xx.Bb) -> ?)'\n"
 
       it "leap years" $         -- pg 33
         (run True $
@@ -421,7 +421,7 @@ spec = do
             "data Triangle.Equilateral",
             "data Triangle.Scalene",
             "",
-            "implementation of IEqualable for Triangle with",
+            "instance of IEqualable for Triangle with",
             "end",
             "",
             "func analyse (x,y,z) : ((Int,Int,Int) -> Triangle) do",
@@ -460,7 +460,7 @@ spec = do
             "data Triangle.Equilateral",
             "data Triangle.Scalene",
             "",
-            "implementation of IEqualable for Triangle with",
+            "instance of IEqualable for Triangle with",
             "end",
             "",
             "func analyse (x,y,z) : ((Int,Int,Int) -> Triangle) do",
@@ -510,7 +510,7 @@ spec = do
             "data Triangle.Equilateral",
             "data Triangle.Scalene",
             "",
-            "implementation of IEqualable for Triangle with",
+            "instance of IEqualable for Triangle with",
             "end",
             "",
             "func analyse (x,y,z) : ((Int,Int,Int) -> Triangle) do",
@@ -567,7 +567,7 @@ spec = do
             "data Char.Cc",
             "data Char.Dd",
             "",
-            "implementation of IEqualable for Char with",
+            "instance of IEqualable for Char with",
             "end",
             "",
             "func ord c : (Char -> Int) do",
@@ -614,7 +614,7 @@ spec = do
             " end",
             "end",
             "",
-            "implementation of IOrderable for Char with",
+            "instance of IOrderable for Char with",
             "  func @< (x,y) : ((Char,Char) -> Bool) do",
             "    return (ord x) < (ord y)",
             "  end",
@@ -679,9 +679,9 @@ spec = do
             "data Day.Fri",
             "data Day.Sat",
             "",
-            "implementation of IEqualable for Day with end",
+            "instance of IEqualable for Day with end",
             "",
-            "implementation of IEnumerable for Day with",
+            "instance of IEnumerable for Day with",
             "   func toEnum day : (Day -> Int) do",
             "     if day === Day.Sun then",
             "       return 0",
@@ -719,7 +719,7 @@ spec = do
             "   end",
             "end",
             "",
-            "implementation of IOrderable for Day with",
+            "instance of IOrderable for Day with",
             "  func @< (x,y) : ((Day,Day) -> Bool) do",
             "    return (toEnum x) < (toEnum y)",
             "  end",
@@ -760,9 +760,9 @@ spec = do
             "data Dir.L",
             "data Dir.O",
             "",
-            "implementation of IEqualable for Dir with end",
+            "instance of IEqualable for Dir with end",
             "",
-            "implementation of IEnumerable for Dir with",
+            "instance of IEnumerable for Dir with",
             "   func toEnum dir : (Dir -> Int) do",
             "     if dir === Dir.N then",
             "       return 0",
@@ -812,7 +812,7 @@ spec = do
             "   func fromEnum : (Int -> a)",
             "end",
             "",
-            "implementation of IEnumerable for Bool with",
+            "instance of IEnumerable for Bool with",
             "   func toEnum bool : (Bool -> Int) do",
             "     if bool === (Bool.False) then",
             "       return 0",
@@ -928,7 +928,7 @@ spec = do
       it "roots" $         -- pg 44
         (run True $
           pre ++ unlines [
-            "implementation of IEqualable for (Int,Int) with end",
+            "instance of IEqualable for (Int,Int) with end",
             "func sqrt x : (Int -> Int) do",
             "  if (x === 0) or (x === 1) then",
             "    return x; ",
@@ -966,7 +966,7 @@ spec = do
       it "tuples / eq" $         -- pg 45
         (run True $
           pre ++ unlines [
-            "implementation of IEqualable for (a,b) with end",
+            "instance of IEqualable for (a,b) with end",
             "return (((1,1)===(1,1)) and ((1,2)=/=(1,1)))"
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
@@ -974,8 +974,8 @@ spec = do
       it "tuples / ord" $         -- pg 45
         (run True $
           pre ++ unlines [
-            "implementation of IEqualable for (a,b) with end",
-            "implementation of IOrderable for (a,b) where (a,b) implements (IOrderable,IOrderable) with",
+            "instance of IEqualable for (a,b) with end",
+            "instance of IOrderable for (a,b) where (a,b) implements (IOrderable,IOrderable) with",
             "   func @< ((i,j),(x,y)) : (((a,b),(a,b)) -> Bool) do",
             "     return (i @< x) or ((i === x) and (j @< y))",
             "   end",
@@ -1037,13 +1037,13 @@ spec = do
           "   end",
           "end",
           "",
-          "implementation of IEqualable for Int with",
+          "instance of IEqualable for Int with",
           "   func === (x,y) : ((Int,Int) -> Bool) do",
           "     return x == y",
           "   end",
           "end",
           "",
-          "implementation of IEqualable for Bool with",
+          "instance of IEqualable for Bool with",
           "   func === (x,y) : ((Bool,Bool) -> Bool) do",
           "     return (x and y) or ((not x) and (not y))",
           "   end",
@@ -1056,13 +1056,13 @@ spec = do
           "  func @>= (x,y) : ((a,a) -> Bool) do return (x @> y) or (x === y) end",
           "end",
           "",
-          "implementation of IOrderable for Int with",
+          "instance of IOrderable for Int with",
           "  func @< (x,y) : ((Int,Int) -> Bool) do",
           "    return x < y",
           "  end",
           "end",
           "",
-          "implementation of IOrderable for Bool with",
+          "instance of IOrderable for Bool with",
           "  func @< (x,y) : ((Bool,Bool) -> Bool) do",
           "    if      (Bool.False, Bool.False) <- (x, y) then return Bool.False",
           "    else/if (Bool.False, Bool.True)  <- (x, y) then return Bool.True",

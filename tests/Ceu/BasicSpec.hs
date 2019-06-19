@@ -556,7 +556,7 @@ spec = do
                   (Nop annz)
                   (Nop annz))))
             )))))))
-      `shouldBe` ["implementation 'Xable (A)' is already declared"]
+      `shouldBe` ["instance 'Xable (A)' is already declared"]
 
     it "A ; Xable a ; inst Xable A ; ()/=Int" $
       (fst $ TypeSys.go
@@ -567,7 +567,7 @@ spec = do
           (Seq annz
             (Nop annz)
             (Nop annz)))))))
-      `shouldBe` ["missing implementation of 'fff1'"]
+      `shouldBe` ["missing instance of 'fff1'"]
 
     it "A ; Xable a ; inst Xable A ; ()/=Int" $
       (fst $ TypeSys.go
@@ -580,7 +580,7 @@ spec = do
             (Seq annz
               (Nop annz)
               (Nop annz))))))))
-      `shouldBe` ["missing implementation of 'fff1'","unexpected implementation of 'fff2'"]
+      `shouldBe` ["missing instance of 'fff1'","unexpected instance of 'fff2'"]
 
     it "A ; Xable a ; inst Xable A ; ()/=Int" $
       (fst $ TypeSys.go
@@ -591,7 +591,7 @@ spec = do
           (Seq annz
             (Nop annz)
             (Nop annz)))))))
-      `shouldBe` ["missing implementation of 'fff1'"]
+      `shouldBe` ["missing instance of 'fff1'"]
 
     it "A ; Xable a ; inst Xable A ; ()/=Int" $
       (fst $ TypeSys.go
@@ -682,7 +682,7 @@ spec = do
               (Nop annz)
               (CallS annz (Call annz (Read annz "fff") (Number annz 1)))))))))))
       --`shouldBe` ["types do not match : expected '(Int.1 -> ?)' : found '(A -> ())'"]
-      `shouldBe` ["variable 'fff' has no associated implementation for '(Int.1 -> ?)'"]
+      `shouldBe` ["variable 'fff' has no associated instance for '(Int.1 -> ?)'"]
 
     it "Int ; Bool ; Equalable a ; eq 1 Bool" $
       (fst $ TypeSys.go

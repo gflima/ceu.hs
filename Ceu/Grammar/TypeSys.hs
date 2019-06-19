@@ -176,7 +176,7 @@ stmt ids s@(Inst z cls itp imp p) = (es ++ esP, p'') where
 
         case find isSameInst ids of
           -- instance is already declared
-          Just _  -> (p, [toError z $ "implementation '" ++ cls ++ " (" ++ intercalate "," [Type.show' itp] ++ ")' is already declared"])
+          Just _  -> (p, [toError z $ "instance '" ++ cls ++ " (" ++ intercalate "," [Type.show' itp] ++ ")' is already declared"])
 
           -- instance is not declared
           Nothing -> (p2, es1++ex++ey++ez) where
@@ -188,12 +188,12 @@ stmt ids s@(Inst z cls itp imp p) = (es ++ esP, p'') where
 
             -- check extends
             --  interface      (Eq  for a)
-            --  implementation (Eq  for Bool)                  <-- so Bool must implement Eq
+            --  instance (Eq  for Bool)                  <-- so Bool must implement Eq
             --  interface      (Ord for a) extends (Eq for a)  <-- but Ord extends Eq
-            --  implementation (Ord for Bool)                  <-- Bool implements Ord
+            --  instance (Ord for Bool)                  <-- Bool implements Ord
             es1 = concatMap f sups where
               f sup = case find (isInstOf sup itp) ids of
-                Nothing -> [toError z $ "implementation '" ++ sup ++ " for " ++
+                Nothing -> [toError z $ "instance '" ++ sup ++ " for " ++
                             (Type.show' itp) ++ "' is not declared"]
                 Just _  -> []
               isInstOf x y (Inst _ x' y' _ _) = (x'==x && y' `Type.isSupOf` y)
@@ -203,12 +203,12 @@ stmt ids s@(Inst z cls itp imp p) = (es ++ esP, p'') where
 
             -- funcs in cls (w/o default impl) not in inst
             ex = concatMap f $ Table.keys $ Table.difference (Table.filter g hcls) hinst where
-                    f id = [toError z $ "missing implementation of '" ++ id ++ "'"]
+                    f id = [toError z $ "missing instance of '" ++ id ++ "'"]
                     g (_,_,_,impl) = not impl
 
             -- funcs in inst not in cls
             ey = concatMap f $ Table.keys $ Table.difference hinst hcls where
-                    f id = [toError z $ "unexpected implementation of '" ++ id ++ "'"]
+                    f id = [toError z $ "unexpected instance of '" ++ id ++ "'"]
 
             -- funcs in both: check sigs // check impls
             ez = concat $ Table.elems $ Table.intersectionWith f hcls hinst where
@@ -223,7 +223,7 @@ stmt ids s@(Inst z cls itp imp p) = (es ++ esP, p'') where
                               [toError z $ "types do not match : expected '" ++
                                 (Type.show' itp) ++ "' : found '" ++
                                 (Type.show' tp') ++ "'"]
-                      ++ (bool [toError z2 $ "missing implementation of '" ++ id2 ++ "'"] [] impl)
+                      ++ (bool [toError z2 $ "missing instance of '" ++ id2 ++ "'"] [] impl)
 
             ---------------------------------------------------------------------
 
@@ -236,14 +236,14 @@ stmt ids s@(Inst z cls itp imp p) = (es ++ esP, p'') where
             --      func neq (x,y) : ((a,a) -> Int) do ... eq(a,a) ... end              -- THIS
             --    end
             --    func f x : (a -> Int) where a implements IEq do ... eq(a,a) ... end   -- THIS
-            --    implementation of IEq for Int with
+            --    instance of IEq for Int with
             --      func eq (x,y) : ((Int,Int) -> Int) do ... end
             --    end
             -- <to>
             --    $neq$Int$ ...
             --    $f$Int$ ...
             -- HINST does not have `neq`, so we will copy it from HCLS,
-            -- instantiate with the implementation type, changing all HCLS
+            -- instantiate with the instance type, changing all HCLS
             -- with HINST type.
             p1 = foldr cat p fs where
               cat :: Stmt -> Stmt -> Stmt
@@ -281,7 +281,7 @@ stmt ids s@(Inst z cls itp imp p) = (es ++ esP, p'') where
                       tp' = Type.instantiate [(clss_var,itp)] tp
 
                   -- follow concrete types from generic/constrained implementations:
-                  --    implementation of IEq for a where a implements IXx
+                  --    instance of IEq for a where a implements IXx
                   itps :: [Type]
                   itps = map f $ combos (map g l) where
                     l = Set.toList $ Type.getConstraints itp
@@ -325,7 +325,7 @@ stmt ids s@(Var z id tp p) = (es_data ++ es_id ++ es, f p'') where
   (es,p'') = stmt (s:ids) p'
 
   -- In case of a parametric/generic var with a constraint, instantiate it for
-  -- each implementation of the constraint:
+  -- each instance of the constraint:
   --    f :: (a -> T) where a implements I
   -- <to>
   --    $f$X$
@@ -558,7 +558,7 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
             --[] | tp==tp' -> (id, tp, [])
                -- | otherwise -> error $ show (id, tp, tp')
                -- | otherwise -> (id, tp, [])
-            l  -> case find pred ids of            -- find implementation
+            l  -> case find pred ids of            -- find instance
               Just (Var _ _ tp'' _) ->
                 if Type.hasAnyConstraint tp'' then
                   if Type.hasAnyConstraint txp then
@@ -574,7 +574,7 @@ expr' (rel,txp) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
               pred _              = False
 
               err = [toError z $ "variable '" ++ id ++
-                     "' has no associated implementation for '" ++
+                     "' has no associated instance for '" ++
                      Type.show' txp ++ "'"]
 
 expr' (rel,txp) ids (Call z f exp) = (bool es_exp es_f (null es_exp),

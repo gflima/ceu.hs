@@ -344,7 +344,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "interface IF3able for a with"       ,
             " var f3 : (a -> Int)"              ,
             "end"                               ,
-            "implementation of IF3able for Int with"   ,
+            "instance of IF3able for Int with"   ,
             " func f3 (v) : (Int -> Int) do"    ,
             "   return v"                       ,
             " end"                              ,
@@ -359,12 +359,12 @@ $f3$(Int -> Int)$ 10                       // Read
             "interface IF2able for a with"       ,
             " var f2 : (a -> Int)"              ,
             "end"                               ,
-            "implementation of IF2able for Bool with"  ,
+            "instance of IF2able for Bool with"  ,
             " func f2 (v) : (Bool -> Int) do"   ,
             "   return 0"                       ,
             " end"                              ,
             "end"                               ,
-            "implementation of IF2able for Int with"   ,
+            "instance of IF2able for Int with"   ,
             " func f2 (v) : (Int -> Int) do"    ,
             "   return v+1"                     ,
             " end"                              ,
@@ -380,12 +380,12 @@ $f3$(Int -> Int)$ 10                       // Read
             "interface (IF2able for a) with"    ,
             " var f2 : (a -> Int)"              ,
             "end"                               ,
-            "implementation of IF2able for Int with" ,
+            "instance of IF2able for Int with" ,
             " func f2 (v) : (Int -> Int) do"    ,
             "   return v+1"                     ,
             " end"                              ,
             "end"                               ,
-            "implementation of IF2able for Bool with",
+            "instance of IF2able for Bool with",
             " func f2 (v) : (Bool -> Int) do"   ,
             "   return 0"                       ,
             " end"                              ,
@@ -403,7 +403,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "   func =/= : ((a,a) -> Bool)",
             "end",
             "",
-            "implementation of IEqualable for Bool with",
+            "instance of IEqualable for Bool with",
             "   func === (x,y) : ((Bool,Bool) -> Bool) do",
             "     return x",
             "   end",
@@ -426,14 +426,14 @@ $f3$(Int -> Int)$ 10                       // Read
             "   func =>= : ((a,a) -> Bool)",
             "end",
             "",
-            "implementation of (IOrd for Bool) with",
+            "instance of (IOrd for Bool) with",
             "   func =>= (x,y) : ((Bool,Bool) -> Bool) do return x === y end",
             "end",
             "",
             "return (Bool.True) =>= (Bool.False)"
           ])
-        --`shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated instance for data '((Bool,Bool) -> top)' in class 'IEq'\n"
-        `shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 9, column 1):\nmissing implementation of '==='\n"
+        --`shouldBe` Left "(line 9, column 1):\ninstance 'IEq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated instance for data '((Bool,Bool) -> top)' in class 'IEq'\n"
+        `shouldBe` Left "(line 9, column 1):\ninstance 'IEq for Bool' is not declared\n(line 9, column 1):\nmissing instance of '==='\n"
 
       it "IOrd extends IEq" $
         (run True $
@@ -442,13 +442,13 @@ $f3$(Int -> Int)$ 10                       // Read
             "   func =>= : ((a,a) -> Bool)",
             "end",
             "",
-            "implementation of (IOrd for Bool) with",
+            "instance of (IOrd for Bool) with",
             "   func =>= (x,y) : ((Bool,Bool) -> Bool) do return x end",
             "end",
             "",
             "return (Bool.True) =>= (Bool.False)"
           ])
-        `shouldBe` Left "(line 1, column 1):\ninterface 'IEq' is not declared\n(line 5, column 1):\nimplementation 'IEq for Bool' is not declared\n"
+        `shouldBe` Left "(line 1, column 1):\ninterface 'IEq' is not declared\n(line 5, column 1):\ninstance 'IEq for Bool' is not declared\n"
 
       it "IOrd embeds IEq" $
         (run True $
@@ -458,7 +458,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "   func =$= : ((a,a) -> Bool)",
             "end",
             "",
-            "implementation of (IOrd for Bool) with",
+            "instance of (IOrd for Bool) with",
             "   func =%= (x,y) : ((Bool,Bool) -> Bool) do return y end",
             "   func =$= (x,y) : ((Bool,Bool) -> Bool) do return x =%= y end",
             "end",
@@ -478,11 +478,11 @@ $f3$(Int -> Int)$ 10                       // Read
             "   func =$= : ((a,a) -> Bool)",
             "end",
             "",
-            "implementation of IEq for Bool with",
+            "instance of IEq for Bool with",
             "   func =%= (x,y) : ((Bool,Bool) -> Bool) do return y end",
             "end",
             "",
-            "implementation of (IOrd for Bool) with",
+            "instance of (IOrd for Bool) with",
             "   func =$= (x,y) : ((Bool,Bool) -> Bool) do return x =%= y end",
             "end",
             "",
@@ -496,7 +496,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "interface IFable for a with",
             "   func f1 : (a -> Bool)",
             "end",
-            "implementation of IFable for Bool with",
+            "instance of IFable for Bool with",
             "   func f1 x : (Bool -> Bool) do return Bool.True end",
             "end",
             "return f1 (Bool.True)"
@@ -509,7 +509,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "interface IFable for a with",
             "   func f1 : (a -> Bool)",
             "end",
-            "implementation of IFable for Bool with",
+            "instance of IFable for Bool with",
             "   func f1 x : (Bool -> Bool) do return x end",
             "end",
             "return f1 (Bool.True)"
@@ -522,7 +522,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "interface IFable for a with",
             "   func f1 x : (a -> Bool) do return Bool.True end",
             "end",
-            "implementation of IFable for Bool with",
+            "instance of IFable for Bool with",
             "end",
             "return f1 (Bool.True)"
            ])
@@ -536,7 +536,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "   func f1 x : (a -> Bool) do return f2 x end",
             "end",
             "",
-            "implementation of IFable for Bool with",
+            "instance of IFable for Bool with",
             "   func f2 x : (Bool -> Bool) do",
             "     return x",
             "   end",
@@ -554,7 +554,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "   func f1 x : (a -> Bool) do return f2 x end",
             "end",
             "",
-            "implementation of IFable for Bool with",
+            "instance of IFable for Bool with",
             "   func f3 x : (Bool -> Bool) do",
             "     return x",
             "   end",
@@ -572,12 +572,12 @@ $f3$(Int -> Int)$ 10                       // Read
             "",
             "func g x : (a -> Bool) where a implements IFable do",
             "   return f x",   -- dont instantiate f bc typeof(x)=a and a is IFable
-            "end",  -- declare one g for each implementation
+            "end",  -- declare one g for each instance
             "",
             "return (g (Bool.True))"
                     -- g_Bool->Bool
            ])
-        `shouldBe` Left "(line 9, column 9):\nvariable 'g' has no associated implementation for '(Bool.True -> ?)'\n"
+        `shouldBe` Left "(line 9, column 9):\nvariable 'g' has no associated instance for '(Bool.True -> ?)'\n"
 
       it "IFable f ; g a implements IFable" $
         (run True $
@@ -588,9 +588,9 @@ $f3$(Int -> Int)$ 10                       // Read
             "",
             "func g x : (a -> Bool) where a implements IFable do",
             "   return f x",   -- dont instantiate f bc typeof(x)=a and a is IFable
-            "end",  -- declare one g for each implementation
+            "end",  -- declare one g for each instance
             "",
-            "implementation of IFable for Bool with",
+            "instance of IFable for Bool with",
             "   func f x : (Bool -> Bool) do",
             "     return x",
             "   end",
@@ -608,7 +608,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "   func f : (a -> Bool)",
             "end",
             "",
-            "implementation of IFable for Bool with",
+            "instance of IFable for Bool with",
             "   func f x : (Bool -> Bool) do",
             "     return x",
             "   end",
@@ -616,7 +616,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "",
             "func g x : (a -> Bool) where a implements IFable do",
             "   return f x",   -- dont instantiate f bc typeof(x)=a and a is IFable
-            "end",  -- declare one g for each implementation
+            "end",  -- declare one g for each instance
             "",
             "return (g (Bool.True))"
                     -- g_Bool->Bool
@@ -634,9 +634,9 @@ $f3$(Int -> Int)$ 10                       // Read
             "",
             "func g x : (a -> Bool) where a implements IFable do",
             "   return f1 x",   -- dont instantiate f1 bc typeof(x)=a and a is IFable
-            "end",  -- declare one g for each implementation
+            "end",  -- declare one g for each instance
             "",
-            "implementation of IFable for Bool with",
+            "instance of IFable for Bool with",
             "   func f3 x : (Bool -> Bool) do",
             "     return x",
             "   end",
@@ -695,7 +695,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "   end",
             "end",
             "",
-            "implementation of IEqualable for b with",
+            "instance of IEqualable for b with",
             "end",
             "",
             "return (1===1) and (1=/=2)"
@@ -715,9 +715,9 @@ $f3$(Int -> Int)$ 10                       // Read
       it "tuples" $
         (run True $
           pre ++ unlines [
-            "implementation of IEqualable for b with",
+            "instance of IEqualable for b with",
             "end",
-            --"implementation of IOrderable for (a,b) with",
+            --"instance of IOrderable for (a,b) with",
             --"end",
             --"return (((1,1)===(1,1)) and ((1,2)=/=(1,1))) and ((1,2)@>(1,1))"
             "return (((1,1)===(1,1)) and ((1,2)=/=(1,1)))"
@@ -726,53 +726,53 @@ $f3$(Int -> Int)$ 10                       // Read
 
     describe "extends" $ do
 
-      it "implementation for extends of (a,b)" $
+      it "instance for extends of (a,b)" $
         (run True $
           unlines [
             "interface IFa for a with end",
-            --"implementation of IFa for (a,b) where (a,b) implements (IFa,IFa) with end",
+            --"instance of IFa for (a,b) where (a,b) implements (IFa,IFa) with end",
             "interface (IFb for a) extends (IFa for a) with end",
-            "implementation of IFb for (a,b) where (a,b) implements (IFb,IFb) with end",
+            "instance of IFb for (a,b) where (a,b) implements (IFb,IFb) with end",
             "return Bool.True"
            ])
-        `shouldBe` Left "(line 3, column 1):\nimplementation 'IFa for (a,b)' is not declared\n"
+        `shouldBe` Left "(line 3, column 1):\ninstance 'IFa for (a,b)' is not declared\n"
 
-      it "implementation for extends of (a,b)" $
+      it "instance for extends of (a,b)" $
         (run True $
           unlines [
             "interface IFa for a with end",
-            "implementation of IFa for (c,d) where (c,d) implements (IFa,IFa) with end",
+            "instance of IFa for (c,d) where (c,d) implements (IFa,IFa) with end",
             "interface (IFb for e) extends (IFa for e) with end",
-            "implementation of IFb for (m,n) where (m,n) implements (IFb,IFb) with end",
+            "instance of IFb for (m,n) where (m,n) implements (IFb,IFb) with end",
             "return Bool.True"
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "implementation for extends of (a,b)" $
+      it "instance for extends of (a,b)" $
         (run True $
           unlines [
             "interface IFa for a with end",
-            "implementation of IFa for (c,d) where (c,d) implements (IFa,IFa) with end",
+            "instance of IFa for (c,d) where (c,d) implements (IFa,IFa) with end",
             "interface (IFb for e) extends (IFa for e) with",
             "   func f v : (e->()) do end",
             "end",
-            "implementation of IFb for (m,n) where (m,n) implements (IFb,IFb) with",
+            "instance of IFb for (m,n) where (m,n) implements (IFb,IFb) with",
             "   func f v : ((m,n)->()) do end",
             "end",
             "return Bool.True"
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "implementation for extends of (a,b)" $
+      it "instance for extends of (a,b)" $
         (run True $
           unlines [
             "interface IGt for a with",
             "   func gt : ((a,a) -> Int)",
             "end",
-            "implementation of IGt for Int with",
+            "instance of IGt for Int with",
             "   func gt (x,y) : ((Int,Int) -> Int) do return 1 end",
             "end",
-            "implementation of IGt for (m,n) where (m,n) implements (IGt,IGt) with",
+            "instance of IGt for (m,n) where (m,n) implements (IGt,IGt) with",
             "   func gt ((x1,x2),(y1,y2)) : (((m,n),(m,n)) -> Int) do",
             "     return (gt(x1,y1)) + (gt(x2,y2))",
             "   end",

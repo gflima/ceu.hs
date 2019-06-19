@@ -129,7 +129,7 @@ stmt_class = do
 stmt_inst :: Parser Stmt
 stmt_inst = do
   pos      <- pos2src <$> getPosition
-  void     <- try $ tk_key "implementation"
+  void     <- try $ tk_key "instance"
   void     <- tk_key "of"
   (cls,tp) <- pClassFor pTypeIfc
   void     <- tk_key "with"
