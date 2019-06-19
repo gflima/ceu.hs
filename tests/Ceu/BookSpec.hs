@@ -834,7 +834,7 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "TODO: mkpair" $         -- pg 41
+      it "XXX: TODO: mkpair" $         -- pg 41
         (run True $
           pre ++ unlines [
             "data Pair with (a,b)",
@@ -974,14 +974,13 @@ spec = do
       it "tuples / ord" $         -- pg 45
         (run True $
           pre ++ unlines [
-            -- testes qd esquece o implements
-            "implementation of IEqualable for (a,b) where (a,b) implements (IEqualable,IEqualable) with end",
+            "implementation of IEqualable for (a,b) with end",
             "implementation of IOrderable for (a,b) where (a,b) implements (IOrderable,IOrderable) with",
             "   func @< ((i,j),(x,y)) : (((a,b),(a,b)) -> Bool) do",
             "     return (i @< x) or ((i === x) and (j @< y))",
             "   end",
             "end",
-            "return (((1,1) @< (1,2)) and ((1,2) @< (2,1)))"
+            "return ((1,1) === (1,1)) and (((1,1) @< (1,2)) and ((1,2) @< (2,1)))"
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
