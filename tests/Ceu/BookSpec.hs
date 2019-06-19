@@ -971,14 +971,14 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "XXX: tuples / ord" $         -- pg 45
+      it "tuples / ord" $         -- pg 45
         (run True $
           pre ++ unlines [
             -- testes qd esquece o implements
             "implementation of IEqualable for (a,b) where (a,b) implements (IEqualable,IEqualable) with end",
             "implementation of IOrderable for (a,b) where (a,b) implements (IOrderable,IOrderable) with",
             "   func @< ((i,j),(x,y)) : (((a,b),(a,b)) -> Bool) do",
-            "     return ((i @< x) or (i === x)) and (j @< y)",
+            "     return (i @< x) or ((i === x) and (j @< y))",
             "   end",
             "end",
             "return (((1,1) @< (1,2)) and ((1,2) @< (2,1)))"
