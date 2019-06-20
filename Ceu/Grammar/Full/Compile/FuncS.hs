@@ -15,14 +15,14 @@ addConstraints l tp = foldr f tp l where
                         --f p tp = error $ show (p,tp)
 
 stmt :: Stmt -> Stmt
-stmt (Class z cls tp@(T.TypeV var _) ifc) = Class z cls tp (stmt $ aux ifc)
+stmt (Class z cls ctrs@[(var,_)] ifc) = Class z cls ctrs (stmt $ aux ifc)
   where
     aux (Seq   z p1 p2)     = Seq   z (aux p1) (aux p2)
     aux (Var   z id tp)     = Var   z id (T.addConstraint (var,cls) tp)
     aux (FuncS z id tp imp) = FuncS z id (T.addConstraint (var,cls) tp) imp
     aux p                   = p
 
-stmt (Inst  z cls tp imp)                 = Inst  z cls tp (stmt $ aux imp)
+stmt (Inst  z cls tp imp)             = Inst  z cls tp (stmt $ aux imp)
   where
     aux (Seq   z p1 p2)      = Seq   z (aux p1) (aux p2)
     aux (Var   z id tp')     = Var   z id (addConstraints (T.getConstraints tp) tp')

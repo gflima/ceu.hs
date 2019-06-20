@@ -225,7 +225,7 @@ spec = do
     it "Int ; X a ; inst X Int ; return fff 1" $
       (fst $ TypeSys.go $ Simplify.go
         (Data annz ["Int"] [] Type0 False
-        (Class annz "X" (TypeV "a" []) [(annz,"fff",(TypeF (TypeV "a" ["X"]) (TypeD ["Int"])),False)]
+        (Class annz "X" [("a",[])] [(annz,"fff",(TypeF (TypeV "a" ["X"]) (TypeD ["Int"])),False)]
             (Var annz "fff" (TypeF (TypeV "a" ["X"]) (TypeD ["Int"]))
         (Inst annz "X" (TypeD ["Int"])
             [(annz,"fff",(TypeF (TypeD ["Int"]) (TypeD ["Int"])),True)]
@@ -494,23 +494,23 @@ spec = do
   describe "typeclass:" $ do
     it "X.f ; X.f" $
       (fst $ TypeSys.go
-        (Class annz "X" (TypeV "a" []) []
-        (Class annz "X" (TypeV "a" []) []
+        (Class annz "X" [("a",[])] []
+        (Class annz "X" [("a",[])] []
         (Nop annz))))
       `shouldBe` ["constraint 'X' is already declared"]
 
     it "X.f ; Y.f" $
       (fst $ TypeSys.go
-        (Class annz "X" (TypeV "a" []) []
+        (Class annz "X" [("a",[])] []
         (Var annz "f" (TypeF (TypeV "a" ["X"]) Type0)
-        (Class annz "Y" (TypeV "a" []) []
+        (Class annz "Y" [("a",[])] []
         (Var annz "f" (TypeF (TypeV "a" ["Y"]) Type0)
         (Nop annz))))))
       `shouldBe` ["variable 'f' is already declared"]
 
     it "X.f ; f" $
       (fst $ TypeSys.go
-        (Class annz "X" (TypeV "a" []) []
+        (Class annz "X" [("a",[])] []
         (Var annz "f" (TypeF (TypeV "a" ["X"]) Type0)
         (Var annz "f" (TypeF (TypeV "a" []) Type0)
         (Nop annz)))))
@@ -518,7 +518,7 @@ spec = do
 
     it "~Bool ; Equalable ; (==)" $
       TypeSys.go
-        (Class annz "Equalable" (TypeV "a" []) []
+        (Class annz "Equalable" [("a",[])] []
         (Var annz "==" (TypeF (TypeN [(TypeV "a" []),(TypeV "a" [])]) (TypeD ["Bool"]))
         (Nop annz)))
       `shouldBe` (["data 'Bool' is not declared"],(Var annz "==" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"])) (Nop annz)))
@@ -526,7 +526,7 @@ spec = do
     it "Bool ; Equalable ; (==)" $
       TypeSys.go
         (Data annz ["Bool"] [] Type0 True
-        (Class annz "Equalable" (TypeV "a" []) []
+        (Class annz "Equalable" [("a",[])] []
         (Var annz "==" (TypeF (TypeN [(TypeV "a" []),(TypeV "a" [])]) (TypeD ["Bool"]))
         (Nop annz))))
       `shouldBe` ([],Data annz ["Bool"] [] Type0 True (Var annz "==" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"])) (Nop annz)))
@@ -534,7 +534,7 @@ spec = do
     it "Bool ; Equalable ; (==)" $
       TypeSys.go
         (Data annz ["Bool"] [] Type0 True
-        (Class annz "Equalable" (TypeV "a" []) []
+        (Class annz "Equalable" [("a",[])] []
         (Var annz "==" (TypeF (TypeN [(TypeV "a" ["Equalable"]),(TypeV "a" ["Equalable"])]) (TypeD ["Bool"]))
         (Nop annz))))
       `shouldBe` ([],Data annz ["Bool"] [] Type0 True (Nop annz))
@@ -542,7 +542,7 @@ spec = do
     it "A ; Xable ; inst ; inst" $
       (fst $ TypeSys.go
         (Data annz ["A"] [] Type0 False
-        (Class annz "Xable" (TypeV "a" []) [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
+        (Class annz "Xable" [("a",[])] [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
         (Var annz "fff" (TypeF (TypeV "a" []) Type0)
         (Inst annz "Xable" (TypeD ["A"])
           [(annz, "fff", (TypeF (TypeD ["A"]) Type0), True)]
@@ -561,7 +561,7 @@ spec = do
     it "A ; Xable a ; inst Xable A ; ()/=Int" $
       (fst $ TypeSys.go
         (Data annz ["A"] [] Type0 False
-        (Class annz "Xable" (TypeV "a" []) [(annz,"fff1",(TypeF (TypeV "a" []) Type0),False)]
+        (Class annz "Xable" [("a",[])] [(annz,"fff1",(TypeF (TypeV "a" []) Type0),False)]
         (Var annz "fff1" (TypeF (TypeV "a" []) Type0)
         (Inst annz "Xable" (TypeD ["A"]) []
           (Seq annz
@@ -572,7 +572,7 @@ spec = do
     it "A ; Xable a ; inst Xable A ; ()/=Int" $
       (fst $ TypeSys.go
         (Data annz ["A"] [] Type0 False
-        (Class annz "Xable" (TypeV "a" []) [(annz,"fff1",(TypeF (TypeV "a" []) Type0),False)]
+        (Class annz "Xable" [("a",[])] [(annz,"fff1",(TypeF (TypeV "a" []) Type0),False)]
         (Var annz "fff1" (TypeF (TypeV "a" []) Type0)
         (Inst annz "Xable" (TypeD ["A"])
           [(annz,"fff2",(TypeF (TypeD ["A"]) Type0),True)]
@@ -585,7 +585,7 @@ spec = do
     it "A ; Xable a ; inst Xable A ; ()/=Int" $
       (fst $ TypeSys.go
         (Data annz ["A"] [] Type0 False
-        (Class annz "Xable" (TypeV "a" []) [(annz,"fff1",(TypeF (TypeV "a" []) Type0),False)]
+        (Class annz "Xable" [("a",[])] [(annz,"fff1",(TypeF (TypeV "a" []) Type0),False)]
         (Var annz "fff1" (TypeF (TypeV "a" []) Type0)
         (Inst annz "Xable" (TypeD ["A"]) []
           (Seq annz
@@ -597,7 +597,7 @@ spec = do
       (fst $ TypeSys.go
         (Data annz ["Int"] [] Type0 False
         (Data annz ["A"] [] Type0 False
-        (Class annz "Xable" (TypeV "a" []) [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
+        (Class annz "Xable" [("a",[])] [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
         (Var annz "fff" (TypeF (TypeV "a" []) Type0)
         (Inst annz "Xable" (TypeD ["A"])
           [(annz,"fff",(TypeF (TypeD ["A"]) (TypeD ["Int"])),True)]
@@ -611,7 +611,7 @@ spec = do
       (fst $ TypeSys.go
         (Data annz ["Int"] [] Type0 False
         (Data annz ["A"] [] Type0 False
-        (Class annz "Xable" (TypeV "a" []) [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
+        (Class annz "Xable" [("a",[])] [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
         (Var annz "fff" (TypeF (TypeV "a" []) Type0)
         (Inst annz "X" (TypeD ["A"])
           [(annz,"fff",(TypeF (TypeD ["Int"]) Type0),True)]
@@ -625,7 +625,7 @@ spec = do
       (fst $ TypeSys.go
         (Data annz ["Int"] [] Type0 False
         (Data annz ["A"] [] Type0 False
-        (Class annz "Xable" (TypeV "a" []) [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
+        (Class annz "Xable" [("a",[])] [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
           (Var annz "fff" (TypeF (TypeV "a" []) Type0)        -- a
         (Inst annz "Xable" (TypeD ["A"])                          -- A
           [(annz, "fff", (TypeF (TypeD ["Int"]) Type0), True)]
@@ -638,7 +638,7 @@ spec = do
     it "A ; Xable.fff(a) ; inst Xable A ; fff(A)" $
       (fst $ TypeSys.go
         (Data annz ["A"] [] Type0 False
-        (Class annz "Xable" (TypeV "a" []) [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
+        (Class annz "Xable" [("a",[])] [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
         (Var annz "fff" (TypeF (TypeV "a" []) Type0)
         (Inst annz "Xable" (TypeD ["A"])
           [(annz,"fff",(TypeF (TypeD ["A"]) Type0),True)]
@@ -651,7 +651,7 @@ spec = do
     it "A ; Xable.fff(a) ; Inst Xable (A,A) ; fff(A,A)" $
       TypeSys.go
         (Data annz ["A"] [] Type0 False
-        (Class annz "Xable" (TypeV "a" []) [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
+        (Class annz "Xable" [("a",[])] [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
         (Var annz "fff" (TypeF (TypeV "a" ["Xable"]) Type0)
         (Inst annz "Xable" (TypeN [TypeD ["A"], TypeD ["A"]])
           [(annz, "fff", (TypeF (TypeN [TypeD ["A"], TypeD ["A"]]) Type0), True)]
@@ -673,7 +673,7 @@ spec = do
       (fst $ TypeSys.go
         (Data annz ["Int"] [] Type0 False
         (Data annz ["A"] [] Type0 False
-        (Class annz "Xable" (TypeV "a" []) [(annz,"fff",(TypeF (TypeV "a" ["Xable"]) Type0),False)]
+        (Class annz "Xable" [("a",[])] [(annz,"fff",(TypeF (TypeV "a" ["Xable"]) Type0),False)]
         (Var annz "fff" (TypeF (TypeV "a" ["Xable"]) Type0)
         (Inst annz "Xable" (TypeD ["A"])
           [(annz, "fff", (TypeF (TypeD ["A"]) Type0), True)]
@@ -688,7 +688,7 @@ spec = do
       (fst $ TypeSys.go
         (Data annz ["Int"] [] Type0 False
         (Data annz ["Bool"] [] Type0 False
-        (Class annz "Equalable" (TypeV "a" []) [(annz,"eq",(TypeF (TypeN [(TypeV "a" []),(TypeV "a" [])]) (TypeD ["Bool"])),False)]
+        (Class annz "Equalable" [("a",[])] [(annz,"eq",(TypeF (TypeN [(TypeV "a" []),(TypeV "a" [])]) (TypeD ["Bool"])),False)]
         (Var annz "eq" (TypeF (TypeN [(TypeV "a" []),(TypeV "a" [])]) (TypeD ["Bool"]))
         (CallS annz (Call annz (Read annz "eq") (Tuple annz [(Cons annz ["Bool"] (Unit annz)),(Number annz 1)]))))))))
       `shouldBe` ["types do not match : expected '((Bool,Int.1) -> ?)' : found '((a,a) -> Bool)'",
@@ -698,7 +698,7 @@ spec = do
       (fst $ TypeSys.go
         (Data annz ["Int"] [] Type0 False
         (Data annz ["Bool"] [] Type0 False
-        (Class annz "Xable" (TypeV "a" []) [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
+        (Class annz "Xable" [("a",[])] [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
         (Var annz "fff" (TypeF (TypeV "a" []) Type0)
         (Inst annz "Xable" (TypeD ["Bool"])
           [(annz, "fff", (TypeF (TypeD ["Bool"]) Type0), True)]
@@ -719,7 +719,7 @@ spec = do
       (fst $ TypeSys.go
         (Data annz ["A"] [] Type0 False
         (Data annz ["A","B"] [] Type0 False
-        (Class annz "Xable" (TypeV "a" []) [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
+        (Class annz "Xable" [("a",[])] [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
         (Var annz "fff" (TypeF (TypeV "a" []) Type0)
         (Inst annz "Xable" (TypeD ["A"])
           [(annz, "fff", (TypeF (TypeD ["A"]) Type0), True)]
@@ -733,7 +733,7 @@ spec = do
       (fst $ TypeSys.go
         (Data annz ["A"] [] Type0 False
         (Data annz ["A","B"] [] Type0 False
-        (Class annz "Xable" (TypeV "a" []) [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
+        (Class annz "Xable" [("a",[])] [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
         (Var annz "fff" (TypeF (TypeV "a" []) Type0)
         (Inst annz "Xable" (TypeD ["A"])
           [(annz, "fff", (TypeF (TypeD ["A"]) Type0), True)]
@@ -752,7 +752,7 @@ spec = do
       (fst $ TypeSys.go
         (Data annz ["A"] [] Type0 False
         (Data annz ["A","B"] [] Type0 False
-        (Class annz "Xable" (TypeV "a" []) [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
+        (Class annz "Xable" [("a",[])] [(annz,"fff",(TypeF (TypeV "a" []) Type0),False)]
         (Var annz "fff" (TypeF (TypeV "a" []) Type0)
         (Inst annz "Xable" (TypeD ["A","B"])
           [(annz, "fff", (TypeF (TypeD ["A","B"]) Type0), True)]
@@ -772,7 +772,7 @@ spec = do
     it "B ; X.f:()->b ; inst B.f:()->B ; f()" $
       (fst $ TypeSys.go
         (Data annz ["B"] [] Type0 False
-        (Class annz "X" (TypeV "b" []) [(annz,"fff",(TypeF Type0 (TypeV "b" [])),False)]
+        (Class annz "X" [("b",[])] [(annz,"fff",(TypeF Type0 (TypeV "b" [])),False)]
         (Var annz "fff" (TypeF Type0 (TypeV "b" []))
         (Inst annz "X" (TypeD ["B"])
           [(annz, "fff", (TypeF Type0 (TypeD ["B"])), True)]
@@ -785,7 +785,7 @@ spec = do
     it "B ; X.f:a->b ; inst B.f:a->B ; f()" $
       (fst $ TypeSys.go
         (Data annz ["B"] [] Type0 False
-        (Class annz "X" (TypeV "b" []) [(annz,"fff",(TypeF (TypeV "a" []) (TypeV "b" [])),False)]
+        (Class annz "X" [("b",[])] [(annz,"fff",(TypeF (TypeV "a" []) (TypeV "b" [])),False)]
         (Var annz "fff" (TypeF (TypeV "a" []) (TypeV "b" []))
         (Inst annz "X" (TypeD ["B"])
           [(annz, "fff", (TypeF (TypeV "a" []) (TypeD ["B"])), True)]
@@ -799,7 +799,7 @@ spec = do
       (fst $ TypeSys.go
         (Data annz ["B1"] [] Type0 False
         (Data annz ["B2"] [] Type0 False
-        (Class annz "X" (TypeV "b" []) [(annz,"fff",(TypeF (TypeV "a" []) (TypeV "b" [])),False)]
+        (Class annz "X" [("b",[])] [(annz,"fff",(TypeF (TypeV "a" []) (TypeV "b" [])),False)]
         (Var annz "fff" (TypeF (TypeV "a" []) (TypeV "b" []))
         (Inst annz "X" (TypeD ["B1"])
           [(annz, "fff", (TypeF (TypeV "a" []) (TypeD ["B1"])), True)]
@@ -819,7 +819,7 @@ spec = do
       (fst $ TypeSys.go
         (Data annz ["B1"] [] Type0 False
         (Data annz ["B2"] [] Type0 False
-        (Class annz "X" (TypeV "b" []) [(annz,"fff",(TypeF (TypeV "a" []) (TypeV "b" [])),False)]
+        (Class annz "X" [("b",[])] [(annz,"fff",(TypeF (TypeV "a" []) (TypeV "b" [])),False)]
         (Var annz "fff" (TypeF (TypeV "a" []) (TypeV "b" []))
         (Inst annz "X" (TypeD ["B1"])
           [(annz, "fff", (TypeF (TypeV "a" []) (TypeD ["B1"])), True)]
@@ -840,7 +840,7 @@ spec = do
       (fst $ TypeSys.go
         (Data annz ["B1"] [] Type0 False
         (Data annz ["B2"] [] Type0 False
-        (Class annz "X" (TypeV "b" []) [(annz,"fff",(TypeF (TypeV "a" []) (TypeV "b" [])),False)]
+        (Class annz "X" [("b",[])] [(annz,"fff",(TypeF (TypeV "a" []) (TypeV "b" [])),False)]
         (Var annz "fff" (TypeF (TypeV "a" []) (TypeV "b" [])) 
         (Inst annz "X" (TypeD ["B1"])
           [(annz, "fff", (TypeF (TypeV "a" []) (TypeD ["B1"])), True)]

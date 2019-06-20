@@ -2,7 +2,7 @@ module Ceu.Grammar.Basic where
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann      (Ann, HasAnn(..), annz)
-import Ceu.Grammar.Type     (Type(..), show')
+import Ceu.Grammar.Type     (Type(..), show', Constraint)
 import Data.List            (intercalate)
 
 -------------------------------------------------------------------------------
@@ -45,7 +45,7 @@ data Loc = LAny
 -------------------------------------------------------------------------------
 
 data Stmt
-    = Class  Ann ID_Class Type [(Ann,ID_Var,Type,Bool)] Stmt -- new class declaration
+    = Class  Ann ID_Class [Constraint] [(Ann,ID_Var,Type,Bool)] Stmt -- new class declaration
     | Inst   Ann ID_Class Type [(Ann,ID_Var,Type,Bool)] Stmt -- new class instance
     | Data   Ann ID_Data_Hier [ID_Var] Type Bool Stmt -- new type declaration
     | Var    Ann ID_Var Type Stmt             -- variable declaration
@@ -91,7 +91,7 @@ show_loc l = show l
 -------------------------------------------------------------------------------
 
 map_stmt :: (Stmt->Stmt, Exp->Exp, Type->Type) -> Stmt -> Stmt
-map_stmt f@(fs,_,ft) (Class z id tp ifc p)     = fs (Class z id tp ifc' (map_stmt f p))
+map_stmt f@(fs,_,ft) (Class z id ctr ifc p)    = fs (Class z id ctr ifc' (map_stmt f p))
                                                     where ifc' = map (\(x,y,tp,z)->(x,y,ft tp,z)) ifc
 map_stmt f@(fs,_,ft) (Inst  z cls tp imp p)    = fs (Inst  z cls tp imp' (map_stmt f p))
                                                     where imp' = map (\(x,y,tp,z)->(x,y,ft tp,z)) imp

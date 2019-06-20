@@ -121,7 +121,7 @@ stmt_class = do
                                     | otherwise -> error "TODO: multiple variables"
                         otherwise                -> error "TODO: multiple constraints"
             in
-              Class annz{source=pos} cls (TypeV var sups) ifc where
+              Class annz{source=pos} cls [(var,sups)] ifc where
 
 stmt_inst :: Parser Stmt
 stmt_inst = do

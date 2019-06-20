@@ -21,6 +21,8 @@ data Type = TypeB
 
 data Relation = SUP | SUB | ANY | NONE deriving (Eq, Show)
 
+type Constraint = (ID_Var,[ID_Class])
+
 -------------------------------------------------------------------------------
 
 hier2str = intercalate "."
@@ -48,7 +50,7 @@ getDs (TypeN ts)      = Set.unions $ map getDs ts
 
 -------------------------------------------------------------------------------
 
-getConstraints :: Type -> Set.Set (ID_Var,[ID_Class])
+getConstraints :: Type -> Set.Set Constraint
 
 getConstraints (TypeV _ [])     = Set.empty
 getConstraints (TypeV var clss) = Set.singleton (var,clss)

@@ -30,8 +30,8 @@ idtp id tp = if hasAnyConstraint tp then id else "$" ++ id ++ "$" ++ show' tp ++
 
 stmt :: Stmt -> Stmt
 
-stmt (Class z id  tp ifc)    = Seq z (Class' z id  tp (protos ifc)) ifc
-stmt (Inst  z cls tp imp)    = Seq z (Inst'  z cls tp (protos imp)) (rename imp)
+stmt (Class z id  ctrs ifc)    = Seq z (Class' z id  ctrs (protos ifc)) ifc
+stmt (Inst  z cls tp   imp)    = Seq z (Inst'  z cls tp   (protos imp)) (rename imp)
 stmt (Set   z chk loc exp)   = Set   z chk loc (expr exp)
 stmt (Match z loc exp p1 p2) = Match z loc (expr exp) (stmt p1) (stmt p2)
 stmt (CallS z exp)           = CallS z (expr exp)

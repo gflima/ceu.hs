@@ -58,7 +58,7 @@ findVar z (id,rel,txp) ids =
     f _                 = False
 
 supers :: [Stmt] -> Stmt -> [Stmt]
-supers ids s@(Class z _ (TypeV _ sups) ifc _) = s :
+supers ids s@(Class z _ [(_,sups)] ifc _) = s :
   case sups of
     [sup] -> case find (isClass $ (==)sup) ids of
                 Just x    -> supers ids x
@@ -76,7 +76,7 @@ inst2table :: [Stmt] -> Stmt -> Table.Map ID_Var (Ann,ID_Var,Type,Bool)
 inst2table ids (Inst z cls tp imp _) = Table.union (f2 imp) sups where
   sups =
     case find (isClass $ (==)cls) ids of
-      Just (Class z _ (TypeV _ sups) _ _) -> Table.unions $ map f sups
+      Just (Class z _ [(_,sups)] _ _) -> Table.unions $ map f sups
 
   f sup =
     case find pred ids of
@@ -155,7 +155,7 @@ getErrsTypesDeclared z ids tp = concatMap aux $ map (\id->(id, find (isData $ (=
 
 stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
 
-stmt ids s@(Class z id (TypeV _ sups) ifc p) = (esMe ++ esExts ++ es, p') where
+stmt ids s@(Class z id [(_,sups)] ifc p) = (esMe ++ esExts ++ es, p') where
   esMe    = errDeclared z Nothing "constraint" id ids
   esExts  = concatMap f sups where
               f sup = case find (isClass $ (==)sup) ids of
@@ -172,7 +172,7 @@ stmt ids s@(Inst z cls itp imp p) = (es ++ esP, p'') where
       Nothing -> (p, [toError z $ "constraint '" ++ cls ++ "' is not declared"])
 
       -- class is declared
-      Just k@(Class _ _ (TypeV clss_var sups) ifc _) ->
+      Just k@(Class _ _ [(clss_var,sups)] ifc _) ->
 
         case find isSameInst ids of
           -- instance is already declared

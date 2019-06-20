@@ -19,8 +19,8 @@ import Ceu.Grammar.Full.Eval    (prelude, compile')
 import qualified Ceu.Grammar.Basic as B
 
 clearStmt :: Stmt -> Stmt
-clearStmt (Class _ id  tp ifc)       = Class  annz id  tp (clearStmt ifc)
-clearStmt (Inst  _ cls tp imp)       = Inst   annz cls tp (clearStmt imp)
+clearStmt (Class _ id  ctrs ifc)     = Class  annz id  ctrs (clearStmt ifc)
+clearStmt (Inst  _ cls tp   imp)     = Inst   annz cls tp   (clearStmt imp)
 clearStmt (Data  _ tp vars flds abs) = Data   annz tp  vars flds abs
 clearStmt (Var   _ var tp)           = Var    annz var tp
 clearStmt (FuncS _ var tp p)         = FuncS  annz var tp (clearStmt p)
@@ -616,7 +616,7 @@ spec = do
               ])
             `shouldBe` Right
               (Seq annz{source=("",1,1)}
-              (Class annz{source=("",1,1)} "IF3able" (TypeV "a" [])
+              (Class annz{source=("",1,1)} "IF3able" [("a",[])]
                 (Seq annz{source=("",2,2)}
                 (Seq annz{source=("",0,0)}
                 (Var annz{source=("",2,2)} "f3" (TypeF (TypeV "a" []) (TypeD ["Int"])))
@@ -656,10 +656,10 @@ spec = do
               ])
             `shouldBe` Right
               (Seq annz
-              (Class annz "IEq" (TypeV "a" [])
+              (Class annz "IEq" [("a",[])]
                 (Var annz "==" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))))
               (Seq annz
-              (Class annz "IOrd" (TypeV "a" ["IEq"])
+              (Class annz "IOrd" [("a",["IEq"])]
                 (Var annz ">=" (TypeF (TypeN [TypeV "a" [],TypeV "a" []]) (TypeD ["Bool"]))))
               (Seq annz
               (Inst annz "IEq" (TypeD ["Bool"])
@@ -695,7 +695,7 @@ spec = do
                ])
             `shouldBe` Right
               (Seq annz
-                (Class annz "IFable" (TypeV "a" [])
+                (Class annz "IFable" [("a",[])]
                   (Var annz "f" (TypeF (TypeV "a" []) (TypeD ["Bool"]))))
               (Seq annz
                 (FuncS annz "g" (TypeF (TypeV "a" ["IFable"]) (TypeD ["Bool"]))

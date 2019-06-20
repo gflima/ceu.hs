@@ -102,13 +102,13 @@ spec = do
 
     it "class/inst/1" $ do
       compile (Seq annz
-                (Class annz "F3able" (TypeV "a" [])
+                (Class annz "F3able" [("a",[])]
                   (Var annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))))
                 (Inst annz "F3able" (TypeD ["Int"])
                   (FuncS annz "f3" (TypeF (TypeV "Int" []) (TypeD ["Int"]))
                     (Ret annz (Number annz 10)))))
       `shouldBe`
-        (Class'' annz "F3able" (TypeV "a" [])
+        (Class'' annz "F3able" [("a",[])]
           [(annz,"f3",TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"]),False)]
         (Var'' annz "f3" (TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"]))
         (Inst'' annz "F3able" (TypeD ["Int"])
@@ -118,7 +118,7 @@ spec = do
 
     it "class/inst/2" $ do
       compile (Seq annz
-                (Class annz "F3able" (TypeV "a" [])
+                (Class annz "F3able" [("a",[])]
                   (Var annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"]))))
               (Seq annz
                 (Inst annz "F3able" (TypeD ["Int"])
@@ -126,7 +126,7 @@ spec = do
                     (Ret annz (Number annz 10))))
               (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
       `shouldBe`
-        (Class'' annz "F3able" (TypeV "a" [])
+        (Class'' annz "F3able" [("a",[])]
           [(annz,"f3",TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"]),False)]
         (Var'' annz "f3" (TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"]))
         (Inst'' annz "F3able" (TypeD ["Int"])
@@ -139,7 +139,7 @@ spec = do
               (Ret annz (Error annz (-2))))))))
     it "class/inst/3" $ do
       compile (Seq annz
-                (Class annz "F3able" (TypeV "a" [])
+                (Class annz "F3able" [("a",[])]
                   (Seq annz
                   (Seq annz
                   (Var annz "f3" (TypeF (TypeV "a" []) (TypeD ["Int"])))
@@ -157,7 +157,7 @@ spec = do
                     (Ret annz (Read annz "v"))))))
                 (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
       `shouldBe`
-        (Class'' annz "F3able" (TypeV "a" [])
+        (Class'' annz "F3able" [("a",[])]
           [(annz,"f3",TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"]),False)]
         (Var'' annz "f3" (TypeF (TypeV "a" ["F3able"]) (TypeD ["Int"]))
         (Seq annz
