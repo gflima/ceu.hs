@@ -5,7 +5,7 @@ import Data.List (find, intercalate, unfoldr, unzip4, sortBy)
 import Data.Maybe (isNothing, isJust, fromJust)
 import Data.Bool (bool)
 import Data.Either (isRight)
-import qualified Data.Map as Table
+import qualified Data.Map as Map
 import qualified Data.Set as Set
 
 import Ceu.Grammar.Globals
@@ -64,29 +64,29 @@ supers ids s@(Class z _ [(_,sups)] ifc _) = s :
                 otherwise -> []
     otherwise -> []
 
-class2table :: [Stmt] -> Stmt -> Table.Map ID_Var (Ann,ID_Var,TypeC,Bool)
-class2table ids cls = Table.unions $ map f1 (supers ids cls)
+class2table :: [Stmt] -> Stmt -> Map.Map ID_Var (Ann,ID_Var,TypeC,Bool)
+class2table ids cls = Map.unions $ map f1 (supers ids cls)
   where
     f1 (Class _ _ _ ifc _) = f2 ifc
-    f2 :: [(Ann,ID_Var,TypeC,Bool)] -> Table.Map ID_Var (Ann,ID_Var,TypeC,Bool)
-    f2 ifc = Table.fromList $ map (\s@(_,id,_,_) -> (id,s)) ifc
+    f2 :: [(Ann,ID_Var,TypeC,Bool)] -> Map.Map ID_Var (Ann,ID_Var,TypeC,Bool)
+    f2 ifc = Map.fromList $ map (\s@(_,id,_,_) -> (id,s)) ifc
 
-inst2table :: [Stmt] -> Stmt -> Table.Map ID_Var (Ann,ID_Var,TypeC,Bool)
-inst2table ids (Inst z cls tp imp _) = Table.union (f2 imp) sups where
+inst2table :: [Stmt] -> Stmt -> Map.Map ID_Var (Ann,ID_Var,TypeC,Bool)
+inst2table ids (Inst z cls tp imp _) = Map.union (f2 imp) sups where
   sups =
     case find (isClass $ (==)cls) ids of
-      Just (Class z _ [(_,sups)] _ _) -> Table.unions $ map f sups
+      Just (Class z _ [(_,sups)] _ _) -> Map.unions $ map f sups
 
   f sup =
     case find pred ids of
       Just x  -> inst2table ids x
-      Nothing -> Table.empty
+      Nothing -> Map.empty
     where
       pred (Inst  _ x y _ _) = (x==sup && y==tp)
       pred _ = False
 
-  f2 :: [(Ann,ID_Var,TypeC,Bool)] -> Table.Map ID_Var (Ann,ID_Var,TypeC,Bool)
-  f2 ifc = Table.fromList $ map (\s@(_,id,_,_) -> (id,s)) ifc
+  f2 :: [(Ann,ID_Var,TypeC,Bool)] -> Map.Map ID_Var (Ann,ID_Var,TypeC,Bool)
+  f2 ifc = Map.fromList $ map (\s@(_,id,_,_) -> (id,s)) ifc
 
 wrap insts (Var z id1 (tp_,_) (Match _ False (LVar id2) body _ _)) acc | id1==id2 =
   Var z id' (tp_',[])
@@ -204,16 +204,16 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
             ---------------------------------------------------------------------
 
             -- funcs in cls (w/o default impl) not in inst
-            ex = concatMap f $ Table.keys $ Table.difference (Table.filter g hcls) hinst where
+            ex = concatMap f $ Map.keys $ Map.difference (Map.filter g hcls) hinst where
                     f id = [toError z $ "missing instance of '" ++ id ++ "'"]
                     g (_,_,_,impl) = not impl
 
             -- funcs in inst not in cls
-            ey = concatMap f $ Table.keys $ Table.difference hinst hcls where
+            ey = concatMap f $ Map.keys $ Map.difference hinst hcls where
                     f id = [toError z $ "unexpected instance of '" ++ id ++ "'"]
 
             -- funcs in both: check sigs // check impls
-            ez = concat $ Table.elems $ Table.intersectionWith f hcls hinst where
+            ez = concat $ Map.elems $ Map.intersectionWith f hcls hinst where
                     f (_,_,tp1,_) (z2,id2,tp2,impl) =
                       case relates SUP tp1 tp2 of
                         Left es -> map (toError z2) es
@@ -262,7 +262,7 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
               fs  = filter pred ids where
                       pred (Var _ id1 tp@(_,ctrs) (Match _ False (LVar id2) body _ _)) =
                         id1==id2 && (not inInsts) && (elem [cls] $ map snd $ ctrs) where
-                          inInsts = not $ null $ Table.filter f hinst where
+                          inInsts = not $ null $ Map.filter f hinst where
                                       f (_,id',tp',_) = id1==id' && (isRight $ relates SUP tp' tp)
                                           -- see GenSpec:CASE-1
                       pred _ = False
@@ -275,7 +275,7 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
                       tp' = Type.instantiate [(clss_var,itp)] tp
 
                   -- functions to instantiate
-                  fs = Table.filter pred hcls where
+                  fs = Map.filter pred hcls where
                     pred (_,id,(tp,_),_) = isNothing $ find (isVar $ (==)id') ids where
                       id' = idtp id tp'
                       tp' = Type.instantiate [(clss_var,itp)] tp
