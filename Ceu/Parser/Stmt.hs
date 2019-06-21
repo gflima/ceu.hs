@@ -18,7 +18,7 @@ import Ceu.Parser.Token
 import Ceu.Parser.Type        (pTypeContext,pContext)
 
 import Ceu.Grammar.Globals    (Source, ID_Var, ID_Class)
-import Ceu.Grammar.Type       (Type(..))
+import Ceu.Grammar.Type       (Type(..), TypeC)
 import Ceu.Grammar.Ann        (annz, source, getAnn, Ann(..))
 import Ceu.Grammar.Full.Full
 
@@ -61,22 +61,22 @@ pLoc = lany  <|> lvar <|> try lunit  <|> lnumber <|>
                 exp <- tk_sym "`" *> expr <* tk_sym "´"
                 return $ LExp exp
 
-matchLocType :: Source -> Loc -> Type -> Maybe Stmt
-matchLocType src loc tp = case (aux src loc tp) of
-                            Nothing -> Nothing
-                            Just v  -> Just $ foldr (Seq annz) (Nop annz) v
+matchLocType :: Source -> Loc -> TypeC -> Maybe Stmt
+matchLocType src loc (tp_,ctrs) = case (aux src loc tp_) of
+                                    Nothing -> Nothing
+                                    Just v  -> Just $ foldr (Seq annz) (Nop annz) v
   where
     aux :: Source -> Loc -> Type -> Maybe [Stmt]
     aux pos LAny        _          = Just []
     aux pos LUnit       Type0      = Just []
-    aux pos (LVar var)  tp         = Just [Var annz{source=pos} var tp]
+    aux pos (LVar var)  tp_        = Just [Var annz{source=pos} var (tp_,ctrs)]
     aux pos (LTuple []) (TypeN []) = Just []
     aux pos (LTuple []) _          = Nothing
     aux pos (LTuple _)  (TypeN []) = Nothing
     aux pos (LTuple (v1:vs1)) (TypeN (v2:vs2)) = (fmap (++) (aux pos v1 v2)) <*>
                                                  (aux pos (LTuple vs1) (TypeN vs2))
     aux pos (LTuple _)  _          = Nothing
-    aux pos loc         tp         = error $ show (pos,loc,tp)
+    aux pos loc         tp_        = error $ show (pos,loc,tp_)
 
 -------------------------------------------------------------------------------
 
@@ -116,10 +116,10 @@ stmt_class = do
   ifc  <- stmt
   void <- tk_key "end"
   return $ let sups = case ctx of
-                        []                       -> []
-                        [(var',sup)] | var==var' -> [sup]
-                                    | otherwise -> error "TODO: multiple variables"
-                        otherwise                -> error "TODO: multiple constraints"
+                        []                         -> []
+                        [(var',[sup])] | var==var' -> [sup]
+                                       | otherwise -> error "TODO: multiple variables"
+                        otherwise                  -> error "TODO: multiple constraints"
             in
               Class annz{source=pos} cls [(var,sups)] ifc where
 
@@ -148,7 +148,7 @@ stmt_data = do
   --var  <- tk_var
   --void <- if isJust par then do tk_sym ")" else do { return () }
   --ctx  <- option [] pContext
-  with <- option Type0 (tk_key "with" *> pTypeContext)
+  with <- option (Type0,[]) (tk_key "with" *> pTypeContext)
   return $ Data annz{source=pos} id [] with False
 
 stmt_var :: Parser Stmt
@@ -339,14 +339,14 @@ expr = do
 
 -------------------------------------------------------------------------------
 
-func :: Source -> Parser (Type, Stmt)
+func :: Source -> Parser (TypeC, Stmt)
 func pos = do
   loc  <- pLoc
   void <- tk_sym ":"
   tp   <- pTypeContext
 
-  dcls <- let (TypeF tp' _) = tp
-              dcls = (matchLocType pos loc tp')
+  dcls <- let (TypeF tp' _,ctrs) = tp
+              dcls = (matchLocType pos loc (tp',ctrs))
           in
             case dcls of
               Nothing    -> do { fail "arity mismatch" }

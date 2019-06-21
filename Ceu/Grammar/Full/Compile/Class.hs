@@ -5,13 +5,13 @@ import qualified Data.Set as S
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann      (Ann)
-import Ceu.Grammar.Type     (Type, show', hasAnyConstraint)
+import Ceu.Grammar.Type     (TypeC, show')
 import Ceu.Grammar.Full.Full
 
 compile :: Stmt -> Stmt
 compile p = stmt p
 
-protos :: Stmt -> [(Ann, ID_Var, Type, Bool)]
+protos :: Stmt -> [(Ann, ID_Var, TypeC, Bool)]
 protos (Seq  _ (Var z id tp) (Set _ False (LVar id') _)) | id==id' = [(z,id,tp,True)]
 protos (Seq  _ p1 p2) = (protos p1) ++ (protos p2)
 protos (Var z id tp)  = [(z,id,tp,False)]
@@ -26,7 +26,7 @@ rename (Seq z p1 p2) = Seq  z (rename p1) (rename p2)
 rename (Var z id tp) = Var z (idtp id tp) tp
 rename p             = p
 
-idtp id tp = if hasAnyConstraint tp then id else "$" ++ id ++ "$" ++ show' tp ++ "$"
+idtp id (tp_,ctrs) = if null ctrs then "$" ++ id ++ "$" ++ show' tp_ ++ "$" else id
 
 stmt :: Stmt -> Stmt
 

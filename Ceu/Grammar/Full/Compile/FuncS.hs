@@ -10,31 +10,29 @@ import qualified Ceu.Grammar.Type as T
 compile :: Stmt -> Stmt
 compile p = stmt p
 
-addConstraints l tp = foldr f tp l where
-                        f (var,[cls]) tp = T.addConstraint (var,cls) tp
-                        --f p tp = error $ show (p,tp)
+addConstraints l tp = foldr T.addConstraint tp l where
 
 stmt :: Stmt -> Stmt
 stmt (Class z cls ctrs@[(var,_)] ifc) = Class z cls ctrs (stmt $ aux ifc)
   where
-    aux (Seq   z p1 p2)     = Seq   z (aux p1) (aux p2)
-    aux (Var   z id tp)     = Var   z id (T.addConstraint (var,cls) tp)
-    aux (FuncS z id tp imp) = FuncS z id (T.addConstraint (var,cls) tp) imp
-    aux p                   = p
-
-stmt (Inst  z cls tp imp)             = Inst  z cls tp (stmt $ aux imp)
-  where
+    ctr = (var, [cls])
     aux (Seq   z p1 p2)      = Seq   z (aux p1) (aux p2)
-    aux (Var   z id tp')     = Var   z id (addConstraints (T.getConstraints tp) tp')
-    aux (FuncS z id tp' imp) = FuncS z id (addConstraints (T.getConstraints tp) tp') imp
+    aux (Var   z id tp)      = Var   z id (T.addConstraint ctr tp)
+    aux (FuncS z id tp imp)  = FuncS z id (T.addConstraint ctr tp) imp
     aux p                    = p
 
-stmt (FuncS z k tp imp) = Seq z (Var z k tp) (Set z False (LVar k) (Func z tp (stmt imp')))
+stmt (Inst  z cls tp@(_,ctrs) imp)    = Inst  z cls tp (stmt $ aux imp)
+  where
+    aux (Seq   z p1 p2)      = Seq   z (aux p1) (aux p2)
+    aux (Var   z id tp')     = Var   z id (addConstraints ctrs tp')
+    aux (FuncS z id tp' imp) = FuncS z id (addConstraints ctrs tp') imp
+    aux p                    = p
+
+stmt (FuncS z k tp@(tp_,ctrs) imp) = Seq z (Var z k tp) (Set z False (LVar k) (Func z tp (stmt imp')))
  where
-  imp' = case S.toList $ T.getConstraints tp of
+  imp' = case ctrs of
     [] -> imp
     l  -> map_stmt (id,id,addConstraints l) imp
-    --[(var,[cls])] -> (True,  (map_stmt (id,id,T.addConstraint(var,cls)) imp))
 
 stmt (Var   z id tp)         = Var   z id tp
 stmt (Set   z chk loc exp)   = Set   z chk loc (expr exp)

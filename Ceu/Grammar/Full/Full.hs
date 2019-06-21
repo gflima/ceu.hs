@@ -4,7 +4,7 @@ import Debug.Trace
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann        (Ann, HasAnn(..), annz)
-import Ceu.Grammar.Type       (Type(..), Constraint)
+import Ceu.Grammar.Type       (TypeC, Constraint)
 import qualified Ceu.Grammar.Basic as B
 
 -------------------------------------------------------------------------------
@@ -17,7 +17,7 @@ data Exp
     | Arg    Ann
     | Unit   Ann                -- ()
     | Tuple  Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
-    | Func   Ann Type Stmt      -- function implementation
+    | Func   Ann TypeC Stmt      -- function implementation
     | Call   Ann Exp Exp        -- f a ; f(a) ; f(1,2)
     deriving (Eq, Show)
 
@@ -67,12 +67,12 @@ toBasicLoc (LExp   exp)     = B.LExp (toBasicExp exp)
 
 data Stmt
   = Class    Ann ID_Class [Constraint] Stmt               -- new class declaration
-  | Class'   Ann ID_Class [Constraint] [(Ann,ID_Var,Type,Bool)] -- interface w/ body
-  | Inst     Ann ID_Class Type Stmt               -- new class instance
-  | Inst'    Ann ID_Class Type [(Ann,ID_Var,Type,Bool)] -- new class instance
-  | Data     Ann ID_Data_Hier [ID_Var] Type Bool  -- new type declaration
-  | Var      Ann ID_Var Type                      -- variable declaration
-  | FuncS    Ann ID_Var Type Stmt                 -- function declaration
+  | Class'   Ann ID_Class [Constraint] [(Ann,ID_Var,TypeC,Bool)] -- interface w/ body
+  | Inst     Ann ID_Class TypeC Stmt               -- new class instance
+  | Inst'    Ann ID_Class TypeC [(Ann,ID_Var,TypeC,Bool)] -- new class instance
+  | Data     Ann ID_Data_Hier [ID_Var] TypeC Bool  -- new type declaration
+  | Var      Ann ID_Var TypeC                      -- variable declaration
+  | FuncS    Ann ID_Var TypeC Stmt                 -- function declaration
   | Match    Ann Loc Exp Stmt Stmt                -- match
   | Match'   Ann Bool Loc Exp Stmt Stmt           -- match w/ chk
   | Set      Ann Bool Loc Exp                     -- assignment statement
@@ -84,10 +84,10 @@ data Stmt
   | Nop      Ann                                  -- nop as in basic Grammar
   | Ret      Ann Exp
   -- declarations w/ scope
-  | Class''  Ann ID_Class [Constraint] [(Ann,ID_Var,Type,Bool)] Stmt
-  | Inst''   Ann ID_Class Type [(Ann,ID_Var,Type,Bool)] Stmt
-  | Data''   Ann ID_Data_Hier [ID_Var] Type Bool Stmt
-  | Var''    Ann ID_Var Type Stmt
+  | Class''  Ann ID_Class [Constraint] [(Ann,ID_Var,TypeC,Bool)] Stmt
+  | Inst''   Ann ID_Class TypeC [(Ann,ID_Var,TypeC,Bool)] Stmt
+  | Data''   Ann ID_Data_Hier [ID_Var] TypeC Bool Stmt
+  | Var''    Ann ID_Var TypeC Stmt
   deriving (Eq, Show)
 
 sSeq a b = Seq annz a b
@@ -125,7 +125,7 @@ toBasicStmt p                              = error $ "toBasicStmt: unexpected st
 
 -------------------------------------------------------------------------------
 
-map_stmt :: (Stmt->Stmt, Exp->Exp, Type->Type) -> Stmt -> Stmt
+map_stmt :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Stmt -> Stmt
 map_stmt f@(fs,_,_)  (Class z id  ctrs p)     = fs (Class z id  ctrs (map_stmt f p))
 map_stmt f@(fs,_,_)  (Inst  z cls tp   p)     = fs (Inst  z cls tp   (map_stmt f p))
 map_stmt f@(fs,_,ft) (Data  z me flds tp abs) = fs (Data  z me flds (ft tp) abs)
@@ -141,7 +141,7 @@ map_stmt f@(fs,_,_)  (Scope z p)              = fs (Scope z (map_stmt f p))
 map_stmt f@(fs,_,_)  (Ret   z exp)            = fs (Ret   z (map_exp f exp))
 map_stmt f@(fs,_,_)  (Nop   z)                = fs (Nop   z)
 
-map_exp :: (Stmt->Stmt, Exp->Exp, Type->Type) -> Exp -> Exp
+map_exp :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Exp -> Exp
 map_exp f@(_,fe,_)  (Cons  z id e)  = fe (Cons  z id (map_exp f e))
 map_exp f@(_,fe,_)  (Tuple z es)    = fe (Tuple z (map (map_exp f) es))
 map_exp f@(_,fe,ft) (Func  z tp p)  = fe (Func  z (ft tp) (map_stmt f p))

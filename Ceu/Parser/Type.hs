@@ -12,7 +12,7 @@ import Ceu.Parser.Common
 import Ceu.Parser.Token         (tk_sym, tk_key, tk_class, tk_var, tk_data_hier)
 
 import Ceu.Grammar.Globals      (ID_Var, ID_Class)
-import Ceu.Grammar.Type         (Type(..), addConstraint)
+import Ceu.Grammar.Type         (Type(..), TypeC, Constraint, addConstraint)
 
 singleton x = [x]
 
@@ -44,7 +44,7 @@ type_F = do
 type_V :: Parser Type
 type_V = do
     var <- tk_var
-    return $ TypeV var []
+    return $ TypeV var
 
 type_parens :: Parser Type
 type_parens = do
@@ -57,21 +57,21 @@ pType :: Parser Type
 pType = type_1 <|> try type_V <|> try type_0 <|> try type_N <|> try type_F
         <|> type_parens <?> "type"
 
-pTypeContext :: Parser Type
+pTypeContext :: Parser TypeC
 pTypeContext = do
   tp  <- pType
   ctx <- option [] pContext
-  return $ foldr addConstraint tp ctx
+  return $ foldr addConstraint (tp,[]) ctx
 
-pContext :: Parser [(ID_Var,ID_Class)]
+pContext :: Parser [(ID_Var,[ID_Class])]
 pContext = do
   void <- try $ tk_key "where"
   ret  <- (singleton <$> pIs) <|> list1 pIs
   return ret
 
-pIs :: Parser (ID_Var,ID_Class)
+pIs :: Parser Constraint
 pIs = do
   var  <- tk_var
   void <- tk_key "is"
   cls  <- tk_class
-  return (var,cls)
+  return (var,[cls])

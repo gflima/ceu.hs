@@ -16,19 +16,21 @@ data Type = TypeB
           | TypeD ID_Data_Hier
           | TypeN [Type]    -- (len >= 2)
           | TypeF Type Type
-          | TypeV ID_Var [ID_Class]
+          | TypeV ID_Var
     deriving (Eq,Show)
 
 data Relation = SUP | SUB | ANY | NONE deriving (Eq, Show)
 
 type Constraint = (ID_Var,[ID_Class])
 
+type TypeC = (Type, [Constraint])
+
 -------------------------------------------------------------------------------
 
 hier2str = intercalate "."
 
 show' :: Type -> String
-show' (TypeV id _)    = id
+show' (TypeV id)      = id
 show' TypeT           = "top"
 show' TypeB           = "bot"
 show' Type0           = "()"
@@ -40,7 +42,7 @@ show' (TypeN tps)     = "(" ++ intercalate "," (map show' tps) ++ ")"
 
 getDs :: Type -> Set.Set ID_Data
 
-getDs (TypeV _ _)     = Set.empty
+getDs (TypeV _)       = Set.empty
 getDs TypeT           = Set.empty
 getDs TypeB           = Set.empty
 getDs Type0           = Set.empty
@@ -50,6 +52,10 @@ getDs (TypeN ts)      = Set.unions $ map getDs ts
 
 -------------------------------------------------------------------------------
 
+addConstraint :: Constraint -> TypeC -> TypeC
+addConstraint ctr (tp_,ctrs) = (tp_, ctr:ctrs)
+
+{-
 getConstraints :: Type -> Set.Set Constraint
 
 getConstraints (TypeV _ [])     = Set.empty
@@ -75,6 +81,7 @@ addConstraint (var,cls) (TypeN l)                  = TypeN $ map (addConstraint 
 addConstraint (var,cls) (TypeF inp out)            = TypeF (addConstraint (var,cls) inp) (addConstraint (var,cls) out)
 addConstraint (var,cls) (TypeV var' l) | var==var' = TypeV var' (cls:l)
                                        | otherwise = TypeV var' l
+-}
 
 -------------------------------------------------------------------------------
 
@@ -104,8 +111,8 @@ cat tp1        tp2             = TypeN $ [tp1,tp2]
 -- Type: type of the instantiated variable
 -- [(a,TypeD "Bool"),...] -> TypeV "a" -> TypeD "Bool"
 instantiate :: [(ID_Var,Type)] -> Type -> Type
-instantiate vars (TypeV var clss) = case find (\(var',_) -> var==var') vars of
-                                    Nothing    -> TypeV var clss
+instantiate vars (TypeV var)    = case find (\(var',_) -> var==var') vars of
+                                    Nothing    -> TypeV var
                                     Just (_,v) -> v
 instantiate vars (TypeF inp out) = TypeF (instantiate vars inp) (instantiate vars out)
 instantiate vars (TypeN tps)     = TypeN $ map (instantiate vars) tps
@@ -113,14 +120,24 @@ instantiate _    tp              = tp
 
 -------------------------------------------------------------------------------
 
-isRel :: Relation -> Type -> Type -> Bool
-isRel rel tp1 tp2 = either (const False) (const True) (relates rel tp1 tp2)
+isRel :: Relation -> TypeC -> TypeC -> Bool
+isRel rel (tp1_,_) (tp2_,_) = isRel_ rel tp1_ tp2_
 
-relatesErrors :: Relation -> Type -> Type -> Errors
-relatesErrors rel tp1 tp2 = either id (const []) (relates rel tp1 tp2)
+isRel_ :: Relation -> Type -> Type -> Bool
+isRel_ rel tp1 tp2 = either (const False) (const True) (relates_ rel tp1 tp2)
 
-relates :: Relation -> Type -> Type -> Either Errors (Type, [(ID_Var,Type)])
-relates rel tp1 tp2 =
+relatesErrors :: Relation -> TypeC -> TypeC -> Errors
+relatesErrors rel (tp1_,_) (tp2_,_) = relatesErrors_ rel tp1_ tp2_
+
+relatesErrors_ :: Relation -> Type -> Type -> Errors
+relatesErrors_ rel tp1 tp2 = either id (const []) (relates_ rel tp1 tp2)
+
+-- TODO: relates deve levar em consideracao os ctrs (e depende da REL)
+relates :: Relation -> TypeC -> TypeC -> Either Errors (Type, [(ID_Var,Type)])
+relates rel (tp1_,_) (tp2_,_) = relates_ rel tp1_ tp2_
+
+relates_ :: Relation -> Type -> Type -> Either Errors (Type, [(ID_Var,Type)])
+relates_ rel tp1 tp2 =
   if ret && null esi then Right (tp, right)
                      else Left $ es_tps ++ esi
   where
@@ -146,7 +163,7 @@ relates rel tp1 tp2 =
           -- input
           sups    = comPre' $ map gettp $ filter isSUP l
           supest  = supest' sups
-          sups_ok = all (isSupOf supest) sups
+          sups_ok = all (isSupOf_ supest) sups
 
           -- output
           subs    = comPre' $ map gettp $ filter (not.isSUP) l
@@ -155,7 +172,7 @@ relates rel tp1 tp2 =
 
           ok      = --traceShow (subs,supest, sups,subest)
                     sups_ok && subs_ok &&
-                    (sups==[] || subs==[] || subest `isSupOf` supest)
+                    (sups==[] || subs==[] || subest `isSupOf_` supest)
       in
         if ok then
           ((var, bool subest supest (subs==[])), [])
@@ -178,7 +195,7 @@ relates rel tp1 tp2 =
 
     -- the types have no total order but there should be a min
     --sort' :: Bool -> [Type] -> Type
-    supest' tps = head $ sortBy (\t1 t2 -> bool GT LT (t1 `isSupOf` t2)) tps
+    supest' tps = head $ sortBy (\t1 t2 -> bool GT LT (t1 `isSupOf_` t2)) tps
     subest' tps = head $ sortBy (\t1 t2 -> bool GT LT (t1 `isSubOf` t2)) tps
 
     comPre' :: [Type] -> [Type]
@@ -192,8 +209,8 @@ comPre tps = yyy where
 
   xxx = find isNotV tps
         where
-          isNotV (TypeV _ _) = False
-          isNotV _           = True
+          isNotV (TypeV _) = False
+          isNotV _         = True
 
   yyy = case xxx of
           Nothing -> bool (Just (head tps)) Nothing (null tps)
@@ -250,8 +267,11 @@ comPre tps = yyy where
 
 -------------------------------------------------------------------------------
 
-isSupOf :: Type -> Type -> Bool
-isSupOf sup sub = b where (b,_,_) = sup `supOf` sub
+isSupOf :: TypeC -> TypeC -> Bool
+isSupOf (sup_,_) (sub_,_) = isSupOf_ sup_ sub_
+
+isSupOf_ :: Type -> Type -> Bool
+isSupOf_ sup sub = b where (b,_,_) = sup `supOf` sub
 
 isSubOf :: Type -> Type -> Bool
 isSubOf sub sup = b where (b,_,_) = sup `supOf` sub
@@ -270,9 +290,9 @@ supOf TypeT             sub               = (True,  sub,   [])
 supOf _                 TypeB             = (True,  TypeB, [])
 supOf TypeB             _                 = (False, TypeB, [])
 
-supOf sup@(TypeV a1 _)  sub@(TypeV a2 _)  = (True,  sub,   [(a1,sub,SUP),(a2,sup,SUB)])
-supOf (TypeV a1 _)      sub               = (True,  sub,   [(a1,sub,SUP)])
-supOf sup               sub@(TypeV a2 _)  = (True,  sub,   [(a2,sup,SUB)])
+supOf sup@(TypeV a1)    sub@(TypeV a2)    = (True,  sub,   [(a1,sub,SUP),(a2,sup,SUB)])
+supOf (TypeV a1)        sub               = (True,  sub,   [(a1,sub,SUP)])
+supOf sup               sub@(TypeV a2)    = (True,  sub,   [(a2,sup,SUB)])
 
 supOf Type0             Type0             = (True,  Type0, [])
 supOf Type0             _                 = (False, Type0, [])

@@ -2,7 +2,7 @@ module Ceu.Grammar.Basic where
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann      (Ann, HasAnn(..), annz)
-import Ceu.Grammar.Type     (Type(..), show', Constraint)
+import Ceu.Grammar.Type     (TypeC, Type(..), show', Constraint)
 import Data.List            (intercalate)
 
 -------------------------------------------------------------------------------
@@ -15,7 +15,7 @@ data Exp
     | Read   Ann ID_Var         -- a ; xs
     | Arg    Ann
     | Tuple  Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
-    | Func   Ann Type Stmt      -- function implementation
+    | Func   Ann TypeC Stmt     -- function implementation
     | Call   Ann Exp Exp        -- f a ; f(a) ; f(1,2)
     deriving (Eq, Show)
 
@@ -45,10 +45,10 @@ data Loc = LAny
 -------------------------------------------------------------------------------
 
 data Stmt
-    = Class  Ann ID_Class [Constraint] [(Ann,ID_Var,Type,Bool)] Stmt -- new class declaration
-    | Inst   Ann ID_Class Type [(Ann,ID_Var,Type,Bool)] Stmt -- new class instance
-    | Data   Ann ID_Data_Hier [ID_Var] Type Bool Stmt -- new type declaration
-    | Var    Ann ID_Var Type Stmt             -- variable declaration
+    = Class  Ann ID_Class [Constraint] [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class declaration
+    | Inst   Ann ID_Class TypeC        [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class instance
+    | Data   Ann ID_Data_Hier [ID_Var] TypeC Bool Stmt -- new type declaration
+    | Var    Ann ID_Var TypeC Stmt            -- variable declaration
     | Match  Ann Bool Loc Exp Stmt Stmt       -- match/assignment/if statement
     | CallS  Ann Exp                          -- call function
     | Seq    Ann Stmt Stmt                    -- sequence
@@ -63,7 +63,7 @@ show_stmt :: Int -> Stmt -> String
 --show_stmt spc (Class _ (id,_) _ _ p) = replicate spc ' ' ++ "class "  ++ id ++ "\n" ++ show_stmt spc p
 --show_stmt spc (Inst  _ (id,_) _ p)   = replicate spc ' ' ++ "inst "   ++ id ++ "\n" ++ show_stmt spc p
 show_stmt spc (Data _ id _ _ _ p)     = replicate spc ' ' ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
-show_stmt spc (Var _ id tp p)          = replicate spc ' ' ++ "var "    ++ id ++ ": " ++ show' tp ++ "\n" ++ show_stmt spc p
+show_stmt spc (Var _ id (tp,_) p)     = replicate spc ' ' ++ "var "    ++ id ++ ": " ++ show' tp ++ "\n" ++ show_stmt spc p
 show_stmt spc (CallS _ e)             = replicate spc ' ' ++ "call " ++ show_exp spc e
 show_stmt spc (Ret _ e)               = replicate spc ' ' ++ "return " ++ show_exp spc e
 show_stmt spc (Seq _ p1 p2)           = replicate spc ' ' ++ "--\n" ++ show_stmt (spc+4) p1 ++
@@ -90,7 +90,7 @@ show_loc l = show l
 
 -------------------------------------------------------------------------------
 
-map_stmt :: (Stmt->Stmt, Exp->Exp, Type->Type) -> Stmt -> Stmt
+map_stmt :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Stmt -> Stmt
 map_stmt f@(fs,_,ft) (Class z id ctr ifc p)    = fs (Class z id ctr ifc' (map_stmt f p))
                                                     where ifc' = map (\(x,y,tp,z)->(x,y,ft tp,z)) ifc
 map_stmt f@(fs,_,ft) (Inst  z cls tp imp p)    = fs (Inst  z cls tp imp' (map_stmt f p))
@@ -104,7 +104,7 @@ map_stmt f@(fs,_,_)  (Loop  z p)                = fs (Loop  z (map_stmt f p))
 map_stmt f@(fs,_,_)  (Ret   z exp)              = fs (Ret   z (map_exp f exp))
 map_stmt f@(fs,_,_)  (Nop   z)                  = fs (Nop   z)
 
-map_exp :: (Stmt->Stmt, Exp->Exp, Type->Type) -> Exp -> Exp
+map_exp :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Exp -> Exp
 map_exp f@(_,fe,_)  (Cons  z id e)  = fe (Cons  z id (map_exp f e))
 map_exp f@(_,fe,_)  (Tuple z es)    = fe (Tuple z (map (map_exp f) es))
 map_exp f@(_,fe,ft) (Func  z tp p)  = fe (Func  z (ft tp) (map_stmt f p))
@@ -157,7 +157,7 @@ instance HasAnn Stmt where
     getAnn (Ret   z _)         = z
     getAnn (Nop   z)           = z
 
-prelude z p = (Data z ["Int"]        [] Type0 False
-              (Data z ["Bool"]       [] Type0 False
-              (Data z ["Bool.True"]  [] Type0 False
-              (Data z ["Bool.False"] [] Type0 False p))))
+prelude z p = (Data z ["Int"]        [] (Type0,[]) False
+              (Data z ["Bool"]       [] (Type0,[]) False
+              (Data z ["Bool.True"]  [] (Type0,[]) False
+              (Data z ["Bool.False"] [] (Type0,[]) False p))))

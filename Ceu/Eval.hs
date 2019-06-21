@@ -6,7 +6,7 @@ import Debug.Trace
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann          (type_, getAnn)
-import Ceu.Grammar.Type as Type (Type(..), show', isRel, Relation(..))
+import Ceu.Grammar.Type as Type (Type(..), show', isRel_, Relation(..))
 import qualified Ceu.Grammar.Basic   as B
 import qualified Ceu.Grammar.TypeSys as T
 
@@ -160,7 +160,7 @@ step (Match loc e p q,vars)  = case envEval vars e of
     aux vars LUnit        v = (Right True,            vars)
     aux vars (LNumber x)  v = (Right (Number x == v), vars)
     aux vars (LCons id l)
-             (Cons id' e)   = if isRel SUP (TypeD id) (TypeD id') then
+             (Cons id' e)   = if isRel_ SUP (TypeD id) (TypeD id') then
                                 case envEval vars e of
                                   Error x -> (Left $ Error x, vars)
                                   e'      -> aux vars l e'
