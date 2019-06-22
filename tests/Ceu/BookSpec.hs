@@ -834,14 +834,14 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "XXX: mkpair" $         -- pg 41
+      it "mkpair" $         -- pg 41
         (run True $
           pre ++ unlines [
             "data Pair with (a,b)",
-            "var Pair p1 : Pair (Int,Int) <- Pair (1,2)",
+            "var p1 : Pair (Int,Int) <- Pair (1,2)",
             "return p1"
            ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Right (Cons ["Pair"] (Tuple [Number 1,Number 2]))
 
       it "fst/snd" $         -- pg 41
         (run True $

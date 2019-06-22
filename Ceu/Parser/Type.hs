@@ -25,8 +25,9 @@ type_0 = do
 
 type_D :: Parser Type
 type_D = do
-    tp <- tk_data_hier
-    return $ TypeD tp Type0
+    hier <- tk_data_hier
+    tp   <- option Type0 $ try pType
+    return $ TypeD hier tp
 
 type_N :: Parser Type
 type_N = do
@@ -61,7 +62,7 @@ pType = type_D <|> try type_V <|> try type_0 <|> try type_N <|> try type_F
 pTypeContext :: Parser TypeC
 pTypeContext = do
   tp   <- pType
-  ctxs <- option [] pContext
+  ctxs <- option [] $ try pContext
   return $ (tp, foldr Cs.insert cz ctxs)
 
 pContext :: Parser [Cs.Pair]

@@ -246,13 +246,22 @@ spec = do
             it "int" $
                 parse type_D "int"
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"i\""
+            it "Int ()" $
+                parse type_D "Int ()"
+                `shouldBe` Right (TypeD ["Int"] Type0)
+            it "Int Int Int" $
+                parse type_D "Int Int Int"
+                `shouldBe` Right (TypeD ["Int"] (TypeD ["Int"] (TypeD ["Int"] Type0)))
+            it "Int Int Int" $
+                parse type_D "Tree (Int,Int)"
+                `shouldBe` Right (TypeD ["Tree"] (TypeN [TypeD ["Int"] Type0, TypeD ["Int"] Type0]))
         describe "typeN" $ do
             it "()" $
                 parse type_N "()"
                 `shouldBe` Left "(line 1, column 2):\nunexpected \")\"\nexpecting type"
             it "(Int)" $
                 parse type_N "(Int)"
-                `shouldBe` Left "(line 1, column 5):\nunexpected \")\"\nexpecting data identifier, \".\" or \",\""
+                `shouldBe` Left "(line 1, column 5):\nunexpected \")\"\nexpecting data identifier, \".\", type or \",\""
             it "(Int,Int)" $
                 parse type_N "(Int,Int)"
                 `shouldBe` Right (TypeN [TypeD ["Int"] Type0, TypeD ["Int"] Type0])
@@ -414,7 +423,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 22):\nunexpected arity mismatch\nexpecting \"where\""
             it "var (_,_)):Int" $
                 parse stmt "var (_,_):Int"
-                `shouldBe` Left "(line 1, column 14):\nunexpected arity mismatch\nexpecting data identifier, \".\" or \"where\""
+                `shouldBe` Left "(line 1, column 14):\nunexpected arity mismatch\nexpecting data identifier, \".\", type or \"where\""
 
         describe "write:" $ do
             it "x <- 1" $
@@ -609,9 +618,9 @@ spec = do
               parse' stmt "data Pair with (a,b) where (a is IEq, b is IEq)"
               `shouldBe` Right (Data annz ["Pair"] (TypeN [TypeV "a",TypeV "b"],M.fromList [("a",S.fromList ["IEq"]),("b",S.fromList ["IEq"])]) False)
 
-            it "XXX: Pair (a,a) ; p1:Pair(Int,Int)" $
-              parse' stmt "data Pair with (a,a) ; var Pair p1 : Pair (Int,Int)"
-              `shouldBe` Right (Data annz ["Pair"] (TypeN [TypeV "a",TypeV "a"],M.fromList []) False)
+            it "Pair (a,a) ; p1:Pair(Int,Int)" $
+              parse' stmt "data Pair with (a,a) ; var p1 : Pair (Int,Int)"
+              `shouldBe` Right (Seq annz (Data annz ["Pair"] (TypeN [TypeV "a",TypeV "a"],M.fromList []) False) (Seq annz (Seq annz (Var annz "p1" (TypeD ["Pair"] (TypeN [TypeD ["Int"] Type0,TypeD ["Int"] Type0]),M.fromList [])) (Nop annz)) (Nop annz)))
 
         describe "constraint:" $ do
 
