@@ -17,10 +17,10 @@ import Ceu.Parser.Common
 import Ceu.Parser.Token
 import Ceu.Parser.Type          (pTypeContext,pContext)
 
-import Ceu.Grammar.Globals      (Source, ID_Var, ID_Class)
-import Ceu.Grammar.Constraints  (cz,cv,cvc)
-import Ceu.Grammar.Type         (Type(..), TypeC)
-import Ceu.Grammar.Ann          (annz, source, getAnn, Ann(..))
+import Ceu.Grammar.Globals            (Source, ID_Var, ID_Class)
+import Ceu.Grammar.Constraints as Cs  (cz,cv,cvc)
+import Ceu.Grammar.Type               (Type(..), TypeC)
+import Ceu.Grammar.Ann                (annz, source, getAnn, Ann(..))
 import Ceu.Grammar.Full.Full
 
 -------------------------------------------------------------------------------
@@ -107,12 +107,12 @@ stmt_class :: Parser Stmt
 stmt_class = do
   pos  <- pos2src <$> getPosition
   void <- try $ tk_key "constraint"
-  par  <- optionMaybe $ tk_sym "("
+  par  <- optionMaybe $ try $ tk_sym "("
   cls  <- tk_class
   void <- tk_key "for"
   var  <- tk_var
   void <- if isJust par then do tk_sym ")" else do { return () }
-  ctx  <- option [] pContext
+  ctx  <- option [] $ try pContext
   void <- tk_key "with"
   ifc  <- stmt
   void <- tk_key "end"
@@ -129,7 +129,7 @@ stmt_inst = do
   pos  <- pos2src <$> getPosition
   void <- try $ tk_key "instance"
   void <- tk_key "of"
-  par  <- optionMaybe $ tk_sym "("
+  par  <- optionMaybe $ try $ tk_sym "("
   cls  <- tk_class
   void <- tk_key "for"
   tp   <- pTypeContext
@@ -143,14 +143,13 @@ stmt_data :: Parser Stmt
 stmt_data = do
   pos  <- pos2src <$> getPosition
   void <- try $ tk_key "data"
-  --par  <- optionMaybe $ tk_sym "("
+  par  <- optionMaybe $ try $ tk_sym "("
   id   <- tk_data_hier
-  --var  <- optionMaybe tk_key "for"
-  --var  <- tk_var
-  --void <- if isJust par then do tk_sym ")" else do { return () }
+  var  <- optionMaybe $ try $ tk_key "for" *> tk_var
+  void <- if isJust par then do tk_sym ")" else do { return () }
   --ctx  <- option [] pContext
-  with <- option (Type0,cz) (tk_key "with" *> pTypeContext)
-  return $ Data annz{source=pos} id [] with False
+  tp   <- option (Type0,cz) $ try $ tk_key "with" *> pTypeContext
+  return $ Data annz{source=pos} id tp False
 
 stmt_var :: Parser Stmt
 stmt_var = do
@@ -161,8 +160,8 @@ stmt_var = do
   tp   <- pTypeContext
   --guard (isJust $ matchLocType pos loc tp) <?> "arity match"
   when (isNothing $ matchLocType pos loc tp) $ unexpected "arity mismatch"
-  s    <- option (Nop $ annz{source=pos})
-                 (pSet False loc)
+  s    <- option (Nop $ annz{source=pos}) $
+                 try $ pSet False loc
   --s'   <- fromJust $ matchLocType pos loc tp)
             --Nothing -> do { fail "arity mismatch" }
             --Just v  -> return $ Seq annz{source=pos} v s
@@ -193,7 +192,7 @@ stmt_do = do
   void <- tk_key "end"
   return $ Scope annz{source=pos} s
 
-pMatch pos = option (LExp $ Read annz{source=pos} "_true") (try $ pLoc <* tk_sym "<-")
+pMatch pos = option (LExp $ Read annz{source=pos} "_true") $ try $ pLoc <* tk_sym "<-"
 
 stmt_match :: Parser Stmt
 stmt_match = do
@@ -206,7 +205,7 @@ stmt_match = do
   ss   <- many $ ((,,,) <$> pos2src <$> getPosition <*>
                  (try (tk_key "else/if") *> pMatch pos1) <*> expr <*> (tk_key "then" *> stmt))
   pos2 <- pos2src <$> getPosition
-  s2   <- option (Nop annz{source=pos2}) (try (tk_key "else") *> stmt)
+  s2   <- option (Nop annz{source=pos2}) $ try $ tk_key "else" *> stmt
   void <- tk_key "end"
   return $ foldr (\(p,l,e,s) acc -> Match annz{source=p} l e s acc) s2 ([(pos1,loc,exp,s1)] ++ ss)
 
@@ -239,8 +238,8 @@ stmt1 = do
   return s
 
 stmt_seq :: Source -> Parser Stmt
-stmt_seq src = option (Nop annz{source=src})
-                      (chainr1 stmt1 (do return (\a b->Seq annz{source=src} a b)))
+stmt_seq src = option (Nop annz{source=src}) $
+                      try $ chainr1 stmt1 (do return (\a b->Seq annz{source=src} a b))
 
 stmt :: Parser Stmt
 stmt = do
@@ -269,7 +268,7 @@ expr_cons = do
   pos1 <- pos2src <$> getPosition
   cons <- tk_data_hier
   pos2 <- pos2src <$> getPosition
-  exp  <- option (Unit annz{source=pos2}) expr
+  exp  <- option (Unit annz{source=pos2}) $ try expr
   return $ Cons annz{source=pos1} cons exp
 
 expr_read :: Parser Exp
@@ -322,11 +321,11 @@ expr' =
 expr :: Parser Exp
 expr = do
   e1  <- expr'
-  e2' <- optionMaybe (try expr')
+  e2' <- optionMaybe $ try expr'
   case e2' of
     Nothing -> do { return e1 }               -- case 1
     Just e2 -> do                             -- case 2-4
-      e3' <- optionMaybe (try expr')
+      e3' <- optionMaybe $ try expr'
       return $
         case e3' of                           -- case 4
           Just e3 -> Call (getAnn e2) e2 (Tuple (getAnn e1) [e1,e3])
@@ -371,7 +370,7 @@ stmt_funcs = do
   pos    <- pos2src <$> getPosition
   void   <- tk_key "func"
   f      <- tk_op <|> tk_var
-  tp_imp <- optionMaybe $ func pos
+  tp_imp <- optionMaybe $ try $ func pos
   ann  <- do { return annz{source=pos} }
   ret  <- case tp_imp of
             Nothing -> do

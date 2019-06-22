@@ -19,10 +19,10 @@ import qualified Ceu.Grammar.Full.Compile.FuncS as FuncS
 
 prelude :: Ann -> Stmt -> Stmt
 prelude z p =
-    (Seq z (Data z ["Int"]        [] (Type0,cz) True)
-    (Seq z (Data z ["Bool"]       [] (Type0,cz) True)
-    (Seq z (Data z ["Bool.True"]  [] (Type0,cz) False)
-    (Seq z (Data z ["Bool.False"] [] (Type0,cz) False)
+    (Seq z (Data z ["Int"]        (Type0,cz) True)
+    (Seq z (Data z ["Bool"]       (Type0,cz) True)
+    (Seq z (Data z ["Bool.True"]  (Type0,cz) False)
+    (Seq z (Data z ["Bool.False"] (Type0,cz) False)
     (Seq z (Var  z "_true"  (TypeD ["Bool"],cz))
     (Seq z (Set  z False (LVar "_true") (Cons z ["Bool","True"] (Unit z)))
     (Seq z (Var  z "print"  (TypeF (TypeV "?")                            (TypeV "?"),     cz))

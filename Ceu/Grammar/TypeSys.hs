@@ -33,7 +33,7 @@ isClass _  _                    = False
 isInst  f (Inst  _ id _ _ _)    = f id
 isInst  _  _                    = False
 
-isData  f (Data  _ hr _ _ _ _)  = f (T.hier2str hr)
+isData  f (Data  _ hr _ _ _)    = f (T.hier2str hr)
 isData  _  _                    = False
 
 isVar   f (Var   _ id _ _)      = f id
@@ -301,23 +301,21 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
 
         otherwise  -> error "TODO: multiple vars"
 
-stmt ids s@(Data z hr [] (flds,cz) abs p) = (es_dcl ++ (errDeclared z Nothing "data" (T.hier2str hr) ids) ++ es,
-                                             s' p')
+stmt ids s@(Data z hr (tp_,ctrs) abs p) = (es_dcl ++ (errDeclared z Nothing "data" (T.hier2str hr) ids) ++ es,
+                                           s' p')
   where
-    s'             = Data z hr [] (flds',cz) abs
+    s'             = Data z hr (tp_',ctrs) abs
     (es,p')        = stmt ((s' (Nop annz)):ids) p
-    (flds',es_dcl) =
+    (tp_',es_dcl) =
       case T.getSuper (TypeD hr) of
-        Nothing          -> (flds, [])
-        Just (TypeD sup) -> (T.cat sups flds,
+        Nothing          -> (tp_, [])
+        Just (TypeD sup) -> (T.cat sups tp_,
                              (getErrsTypesDeclared z ids (TypeD sup)) ++
-                             (getErrsTypesDeclared z ids flds))
+                             (getErrsTypesDeclared z ids tp_))
                             where
                               sups = case find (isData $ (==)(T.hier2str sup)) ids of
-                                      Nothing                         -> Type0
-                                      Just (Data _ _ _ (sups',_) _ _) -> sups'
-
-stmt ids s@(Data z hr vars flds abs p) = error "not implemented"
+                                      Nothing                       -> Type0
+                                      Just (Data _ _ (sups',_) _ _) -> sups'
 
 stmt ids s@(Var z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
   es_data = getErrsTypesDeclared z ids tp_
@@ -415,8 +413,8 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
             txp2      = (TypeD (take 1 hr), cz)
             str       = T.hier2str hr
             (tpd,esd) = case find (isData $ (==)str) ids of
-              Just (Data _ _ _ tp _ _) -> (tp,             [])
-              Nothing                  -> ((TypeV "?",cz), [toError z $ "data '" ++ str ++ "' is not declared"])
+              Just (Data _ _ tp _ _) -> (tp,             [])
+              Nothing                -> ((TypeV "?",cz), [toError z $ "data '" ++ str ++ "' is not declared"])
 
             (ese,mexp)      = f (rel,txp') tpexp
             (chk2,esl,l',_) = aux ids z l (Left tpd)
@@ -540,9 +538,9 @@ expr' _ ids (Cons  z hr exp) = (es++es_exp, Cons z{type_=(TypeD hr,cz)} hr exp')
         (tp,es) = case find (isData $ (==)hr_str) ids of
             Nothing                      ->
               ((TypeV "?",cz), [toError z $ "data '" ++ hr_str ++ "' is not declared"])
-            Just (Data _ _ _ tp True  _) ->
+            Just (Data _ _ tp True  _) ->
               (tp,             [toError z $ "data '" ++ hr_str ++ "' is abstract"])
-            Just (Data _ _ _ tp False _) ->
+            Just (Data _ _ tp False _) ->
               (tp,             [])
         (es_exp, exp') = expr z (SUP,tp) ids exp
 
