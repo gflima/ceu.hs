@@ -7,6 +7,7 @@ import Data.Maybe  (fromJust, isJust)
 import Data.Either (isRight)
 import Data.List   (sortBy, groupBy, find, intercalate, isPrefixOf)
 import qualified Data.Set as Set
+import qualified Data.Map as Map
 
 import Ceu.Grammar.Globals
 
@@ -21,9 +22,10 @@ data Type = TypeB
 
 data Relation = SUP | SUB | ANY | NONE deriving (Eq, Show)
 
-type Constraint = (ID_Var,[ID_Class])
+type Constraint  = (ID_Var,ID_Class)
+type Constraints = Map.Map ID_Var (Set.Set ID_Class)
 
-type TypeC = (Type, [Constraint])
+type TypeC = (Type, Constraints)
 
 -------------------------------------------------------------------------------
 
@@ -52,9 +54,23 @@ getDs (TypeN ts)      = Set.unions $ map getDs ts
 
 -------------------------------------------------------------------------------
 
-addConstraint :: Constraint -> TypeC -> TypeC
-addConstraint ctr (tp_,ctrs) = (tp_, ctr:ctrs)
+cz = Map.empty
+cv :: ID_Var -> Constraints
+cv var = Map.singleton var Set.empty
+cvc :: Constraint -> Constraints
+cvc (var,cls) = Map.singleton var $ Set.singleton cls
 
+ctrsToList :: Constraints -> [(ID_Var,[ID_Class])]
+ctrsToList ctrs = map (\(x,y) -> (x,Set.toList y)) $ Map.toList ctrs
+
+ctrsInsert :: Constraint -> Constraints -> Constraints
+ctrsInsert (var',cls') ctrs = Map.insertWith Set.union var' (Set.singleton cls') ctrs
+
+ctrsHasClass :: ID_Class -> Constraints -> Bool
+ctrsHasClass cls ctrs = any (Set.member cls) (Map.elems ctrs)
+
+ctrsUnion :: Constraints -> Constraints -> Constraints
+ctrsUnion ctrs1 ctrs2 = Map.unionWith Set.union ctrs1 ctrs2
 {-
 getConstraints :: Type -> Set.Set Constraint
 

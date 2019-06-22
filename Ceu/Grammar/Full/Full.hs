@@ -4,7 +4,7 @@ import Debug.Trace
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann        (Ann, HasAnn(..), annz)
-import Ceu.Grammar.Type       (TypeC, Constraint)
+import Ceu.Grammar.Type       (TypeC, Constraints)
 import qualified Ceu.Grammar.Basic as B
 
 -------------------------------------------------------------------------------
@@ -66,8 +66,8 @@ toBasicLoc (LExp   exp)     = B.LExp (toBasicExp exp)
 -------------------------------------------------------------------------------
 
 data Stmt
-  = Class    Ann ID_Class [Constraint] Stmt               -- new class declaration
-  | Class'   Ann ID_Class [Constraint] [(Ann,ID_Var,TypeC,Bool)] -- interface w/ body
+  = Class    Ann ID_Class Constraints Stmt               -- new class declaration
+  | Class'   Ann ID_Class Constraints [(Ann,ID_Var,TypeC,Bool)] -- interface w/ body
   | Inst     Ann ID_Class TypeC Stmt               -- new class instance
   | Inst'    Ann ID_Class TypeC [(Ann,ID_Var,TypeC,Bool)] -- new class instance
   | Data     Ann ID_Data_Hier [ID_Var] TypeC Bool  -- new type declaration
@@ -84,7 +84,7 @@ data Stmt
   | Nop      Ann                                  -- nop as in basic Grammar
   | Ret      Ann Exp
   -- declarations w/ scope
-  | Class''  Ann ID_Class [Constraint] [(Ann,ID_Var,TypeC,Bool)] Stmt
+  | Class''  Ann ID_Class Constraints [(Ann,ID_Var,TypeC,Bool)] Stmt
   | Inst''   Ann ID_Class TypeC [(Ann,ID_Var,TypeC,Bool)] Stmt
   | Data''   Ann ID_Data_Hier [ID_Var] TypeC Bool Stmt
   | Var''    Ann ID_Var TypeC Stmt

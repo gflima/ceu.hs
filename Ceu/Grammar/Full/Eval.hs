@@ -2,7 +2,7 @@ module Ceu.Grammar.Full.Eval where
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann      (Ann, getAnn)
-import Ceu.Grammar.Type     (Type(..))
+import Ceu.Grammar.Type     (Type(..), cz)
 import qualified Ceu.Grammar.Basic    as B
 import qualified Ceu.Grammar.TypeSys  as T
 import qualified Ceu.Grammar.Simplify as S
@@ -18,22 +18,22 @@ import qualified Ceu.Grammar.Full.Compile.FuncS as FuncS
 
 prelude :: Ann -> Stmt -> Stmt
 prelude z p =
-    (Seq z (Data z ["Int"]        [] (Type0,[]) True)
-    (Seq z (Data z ["Bool"]       [] (Type0,[]) True)
-    (Seq z (Data z ["Bool.True"]  [] (Type0,[]) False)
-    (Seq z (Data z ["Bool.False"] [] (Type0,[]) False)
-    (Seq z (Var  z "_true"  (TypeD ["Bool"],[]))
+    (Seq z (Data z ["Int"]        [] (Type0,cz) True)
+    (Seq z (Data z ["Bool"]       [] (Type0,cz) True)
+    (Seq z (Data z ["Bool.True"]  [] (Type0,cz) False)
+    (Seq z (Data z ["Bool.False"] [] (Type0,cz) False)
+    (Seq z (Var  z "_true"  (TypeD ["Bool"],cz))
     (Seq z (Set  z False (LVar "_true") (Cons z ["Bool","True"] (Unit z)))
-    (Seq z (Var  z "print"  (TypeF (TypeV "?")                            (TypeV "?"),     []))
-    (Seq z (Var  z "negate" (TypeF (TypeD ["Int"])                        (TypeD ["Int"]), []))
-    (Seq z (Var  z "=="     (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Bool"]),[]))
-    (Seq z (Var  z "<="     (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Bool"]),[]))
-    (Seq z (Var  z "<"      (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Bool"]),[]))
-    (Seq z (Var  z "+"      (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]), []))
-    (Seq z (Var  z "-"      (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]), []))
-    (Seq z (Var  z "/"      (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]), []))
-    (Seq z (Var  z "*"      (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]), []))
-    (Seq z (Var  z "rem"    (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]), []))
+    (Seq z (Var  z "print"  (TypeF (TypeV "?")                            (TypeV "?"),     cz))
+    (Seq z (Var  z "negate" (TypeF (TypeD ["Int"])                        (TypeD ["Int"]), cz))
+    (Seq z (Var  z "=="     (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Bool"]),cz))
+    (Seq z (Var  z "<="     (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Bool"]),cz))
+    (Seq z (Var  z "<"      (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Bool"]),cz))
+    (Seq z (Var  z "+"      (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]), cz))
+    (Seq z (Var  z "-"      (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]), cz))
+    (Seq z (Var  z "/"      (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]), cz))
+    (Seq z (Var  z "*"      (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]), cz))
+    (Seq z (Var  z "rem"    (TypeF (TypeN [TypeD ["Int"], TypeD ["Int"]]) (TypeD ["Int"]), cz))
            p))))))))))))))))
 
 compile :: Stmt -> Stmt

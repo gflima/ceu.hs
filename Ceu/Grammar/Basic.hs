@@ -2,7 +2,7 @@ module Ceu.Grammar.Basic where
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann      (Ann, HasAnn(..), annz)
-import Ceu.Grammar.Type     (TypeC, Type(..), show', Constraint)
+import Ceu.Grammar.Type     (TypeC, Type(..), show', Constraints, cz)
 import Data.List            (intercalate)
 
 -------------------------------------------------------------------------------
@@ -45,8 +45,8 @@ data Loc = LAny
 -------------------------------------------------------------------------------
 
 data Stmt
-    = Class  Ann ID_Class [Constraint] [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class declaration
-    | Inst   Ann ID_Class TypeC        [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class instance
+    = Class  Ann ID_Class Constraints [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class declaration
+    | Inst   Ann ID_Class TypeC       [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class instance
     | Data   Ann ID_Data_Hier [ID_Var] TypeC Bool Stmt -- new type declaration
     | Var    Ann ID_Var TypeC Stmt            -- variable declaration
     | Match  Ann Bool Loc Exp Stmt Stmt       -- match/assignment/if statement
@@ -157,7 +157,7 @@ instance HasAnn Stmt where
     getAnn (Ret   z _)         = z
     getAnn (Nop   z)           = z
 
-prelude z p = (Data z ["Int"]        [] (Type0,[]) False
-              (Data z ["Bool"]       [] (Type0,[]) False
-              (Data z ["Bool.True"]  [] (Type0,[]) False
-              (Data z ["Bool.False"] [] (Type0,[]) False p))))
+prelude z p = (Data z ["Int"]        [] (Type0,cz) False
+              (Data z ["Bool"]       [] (Type0,cz) False
+              (Data z ["Bool.True"]  [] (Type0,cz) False
+              (Data z ["Bool.False"] [] (Type0,cz) False p))))

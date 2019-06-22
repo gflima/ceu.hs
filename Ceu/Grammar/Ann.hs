@@ -1,8 +1,9 @@
 module Ceu.Grammar.Ann where
 
 import Debug.Trace
+
 import Ceu.Grammar.Globals (Source, Errors)
-import Ceu.Grammar.Type    (Type(TypeB),TypeC)
+import Ceu.Grammar.Type    (Type(TypeB),TypeC, cz)
 
 data Ann = Ann { type_  :: TypeC
                , name   :: String
@@ -15,7 +16,7 @@ class HasAnn a where
     getAnn :: a -> Ann
 
 annz :: Ann
-annz = Ann { type_  = (TypeB,[])
+annz = Ann { type_  = (TypeB,cz)
            , name   = ""
            , source = ("",0,0)
            , nn     = (-1)

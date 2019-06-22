@@ -10,29 +10,27 @@ import qualified Ceu.Grammar.Type as T
 compile :: Stmt -> Stmt
 compile p = stmt p
 
-addConstraints l tp = foldr T.addConstraint tp l where
-
 stmt :: Stmt -> Stmt
-stmt (Class z cls ctrs@[(var,_)] ifc) = Class z cls ctrs (stmt $ aux ifc)
-  where
-    ctr = (var, [cls])
-    aux (Seq   z p1 p2)      = Seq   z (aux p1) (aux p2)
-    aux (Var   z id tp)      = Var   z id (T.addConstraint ctr tp)
-    aux (FuncS z id tp imp)  = FuncS z id (T.addConstraint ctr tp) imp
-    aux p                    = p
+stmt (Class z cls ctrs ifc) =
+  case T.ctrsToList ctrs of
+    [(var,_)]  -> Class z cls ctrs (stmt $ aux ifc) where
+      aux (Seq   z p1 p2)              = Seq   z (aux p1) (aux p2)
+      aux (Var   z id (tp_,ctrs))      = Var   z id (tp_, T.ctrsInsert (var,cls) ctrs)
+      aux (FuncS z id (tp_,ctrs) imp)  = FuncS z id (tp_, T.ctrsInsert (var,cls) ctrs) imp
+      aux p                            = p
+    otherwise  -> error "TODO: multiple vars"
 
 stmt (Inst  z cls tp@(_,ctrs) imp)    = Inst  z cls tp (stmt $ aux imp)
   where
-    aux (Seq   z p1 p2)      = Seq   z (aux p1) (aux p2)
-    aux (Var   z id tp')     = Var   z id (addConstraints ctrs tp')
-    aux (FuncS z id tp' imp) = FuncS z id (addConstraints ctrs tp') imp
-    aux p                    = p
+    aux (Seq   z p1 p2)               = Seq   z (aux p1) (aux p2)
+    aux (Var   z id (tp_',ctrs'))     = Var   z id (tp_',T.ctrsUnion ctrs ctrs')
+    aux (FuncS z id (tp_',ctrs') imp) = FuncS z id (tp_',T.ctrsUnion ctrs ctrs') imp
+    aux p                             = p
 
 stmt (FuncS z k tp@(tp_,ctrs) imp) = Seq z (Var z k tp) (Set z False (LVar k) (Func z tp (stmt imp')))
  where
-  imp' = case ctrs of
-    [] -> imp
-    l  -> map_stmt (id,id,addConstraints l) imp
+  imp' = if ctrs == T.cz then imp else
+          map_stmt (id,id,\(tp_,ctrs')->(tp_, T.ctrsUnion ctrs ctrs')) imp
 
 stmt (Var   z id tp)         = Var   z id tp
 stmt (Set   z chk loc exp)   = Set   z chk loc (expr exp)

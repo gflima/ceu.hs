@@ -18,7 +18,7 @@ import Ceu.Parser.Token
 import Ceu.Parser.Type        (pTypeContext,pContext)
 
 import Ceu.Grammar.Globals    (Source, ID_Var, ID_Class)
-import Ceu.Grammar.Type       (Type(..), TypeC)
+import Ceu.Grammar.Type       (Type(..), TypeC, cz,cv,cvc)
 import Ceu.Grammar.Ann        (annz, source, getAnn, Ann(..))
 import Ceu.Grammar.Full.Full
 
@@ -115,13 +115,13 @@ stmt_class = do
   void <- tk_key "with"
   ifc  <- stmt
   void <- tk_key "end"
-  return $ let sups = case ctx of
-                        []                         -> []
-                        [(var',[sup])] | var==var' -> [sup]
-                                       | otherwise -> error "TODO: multiple variables"
-                        otherwise                  -> error "TODO: multiple constraints"
+  return $ let ctrs = case ctx of
+                        []                       -> cv var
+                        [(var',sup)] | var==var' -> cvc (var,sup)
+                                     | otherwise -> error "TODO: multiple variables"
+                        otherwise                -> error "TODO: multiple constraints"
             in
-              Class annz{source=pos} cls [(var,sups)] ifc where
+              Class annz{source=pos} cls ctrs ifc where
 
 stmt_inst :: Parser Stmt
 stmt_inst = do
@@ -148,7 +148,7 @@ stmt_data = do
   --var  <- tk_var
   --void <- if isJust par then do tk_sym ")" else do { return () }
   --ctx  <- option [] pContext
-  with <- option (Type0,[]) (tk_key "with" *> pTypeContext)
+  with <- option (Type0,cz) (tk_key "with" *> pTypeContext)
   return $ Data annz{source=pos} id [] with False
 
 stmt_var :: Parser Stmt
