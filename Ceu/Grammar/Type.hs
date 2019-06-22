@@ -14,7 +14,7 @@ import Ceu.Grammar.Constraints as Cs
 data Type = TypeB
           | TypeT
           | Type0
-          | TypeD ID_Data_Hier
+          | TypeD ID_Data_Hier Type
           | TypeN [Type]    -- (len >= 2)
           | TypeF Type Type
           | TypeV ID_Var
@@ -33,7 +33,7 @@ show' (TypeV id)      = id
 show' TypeT           = "top"
 show' TypeB           = "bot"
 show' Type0           = "()"
-show' (TypeD hier)    = hier2str hier
+show' (TypeD hier _)  = hier2str hier
 show' (TypeF inp out) = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
 show' (TypeN tps)     = "(" ++ intercalate "," (map show' tps) ++ ")"
 
@@ -45,16 +45,15 @@ getDs (TypeV _)       = Set.empty
 getDs TypeT           = Set.empty
 getDs TypeB           = Set.empty
 getDs Type0           = Set.empty
-getDs (TypeD hier)    = Set.singleton $ hier2str hier
+getDs (TypeD hier _)  = Set.singleton $ hier2str hier
 getDs (TypeF inp out) = Set.union (getDs inp) (getDs out)
 getDs (TypeN ts)      = Set.unions $ map getDs ts
 
 -------------------------------------------------------------------------------
 
-getSuper :: Type -> Maybe Type
-getSuper (TypeD [_])  = Nothing
-getSuper (TypeD hier) = Just $ TypeD (init hier)
-getSuper _            = error "bug found : expecting `TypeD`"
+getSuper :: ID_Data_Hier -> Maybe ID_Data_Hier
+getSuper [_]  = Nothing
+getSuper hier = Just $ (init hier)
 
 splitOn :: Eq a => a -> [a] -> [[a]]
 splitOn d [] = []
@@ -171,7 +170,7 @@ relates_ rel tp1 tp2 =
 
 comPre :: [Type] -> Maybe Type
 comPre tps = yyy where
-  l = bool [TypeD pre] [] (null tp1s || null pre)
+  l = bool [TypeD pre Type0] [] (null tp1s || null pre)
 
   xxx = find isNotV tps
         where
@@ -181,9 +180,9 @@ comPre tps = yyy where
   yyy = case xxx of
           Nothing -> bool (Just (head tps)) Nothing (null tps)
           Just tp -> case tp of
-            TypeD _       -> case commonPrefixAll $ map (\(TypeD hr)->hr) $ filter isTypeD tps of
+            TypeD _ _     -> case commonPrefixAll $ map (\(TypeD hr _)->hr) $ filter isTypeD tps of
                               [] -> Nothing
-                              tp -> Just $ TypeD tp
+                              tp -> Just $ TypeD tp Type0
             TypeF inp out -> f $ unzip $ map (\(TypeF inp out)->(inp,out)) $ filter isTypeF tps
                              where
                               f (inps,outs) =
@@ -209,9 +208,9 @@ comPre tps = yyy where
             otherwise     -> Nothing
 
   tp1s = filter isTypeD tps
-  pre  = commonPrefixAll $ map (\(TypeD hr)->hr) tp1s
+  pre  = commonPrefixAll $ map (\(TypeD hr _)->hr) tp1s
 
-  isTypeD (TypeD _)   = True
+  isTypeD (TypeD _ _) = True
   isTypeD _           = False
 
   isTypeF (TypeF _ _) = True
@@ -266,12 +265,12 @@ supOf sup               Type0             = (False, sup,   [])
 
 supOf sup               TypeT             = (False, sup,   [])
 
-supOf sup@(TypeD x)     sub@(TypeD y)
+supOf sup@(TypeD x _)   sub@(TypeD y _)
   | x `isPrefixOf` y                      = (True,  sub,   [])
   | otherwise                             = (False, sup,   [])
 
-supOf sup@(TypeD _)     _                 = (False, sup,   [])
-supOf sup               (TypeD _)         = (False, sup,   [])
+supOf sup@(TypeD _ _)   _                 = (False, sup,   [])
+supOf sup               (TypeD _ _)       = (False, sup,   [])
 
 supOf sup@(TypeF inp1 out1) sub@(TypeF inp2 out2) =
   let (i,_,k) = inp2 `supOf` inp1      -- contravariance on inputs
@@ -289,18 +288,3 @@ supOf sup@(TypeN sups)  (TypeN subs)      = if (length subs) /= (length sups) th
   where
     f (ret, tp, insts) (ret', TypeN tps', insts') =
       (ret&&ret', TypeN (tp:tps'), insts++insts')
-
--------------------------------------------------------------------------------
-
-{-
-reducesToType0 :: Type -> Bool
-reducesToType0 Type0     = True
-reducesToType0 (TypeN l) = foldr (\tp acc -> reducesToType0 tp && acc) True l
-reducesToType0 _         = False
-
-toTypeN :: Type -> Type
-toTypeN (TypeN tps) = TypeN tps
-toTypeN Type0       = TypeN []
-toTypeN (TypeD tp)  = TypeN [TypeD tp]
-toTypeN tp          = error $ show tp
--}

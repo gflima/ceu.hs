@@ -307,15 +307,15 @@ stmt ids s@(Data z hr (tp_,ctrs) abs p) = (es_dcl ++ (errDeclared z Nothing "dat
     s'             = Data z hr (tp_',ctrs) abs
     (es,p')        = stmt ((s' (Nop annz)):ids) p
     (tp_',es_dcl) =
-      case T.getSuper (TypeD hr) of
-        Nothing          -> (tp_, [])
-        Just (TypeD sup) -> (T.cat sups tp_,
-                             (getErrsTypesDeclared z ids (TypeD sup)) ++
-                             (getErrsTypesDeclared z ids tp_))
-                            where
-                              sups = case find (isData $ (==)(T.hier2str sup)) ids of
-                                      Nothing                       -> Type0
-                                      Just (Data _ _ (sups',_) _ _) -> sups'
+      case T.getSuper hr of
+        Nothing  -> (tp_, [])
+        Just sup -> (T.cat sups tp_,
+                      (getErrsTypesDeclared z ids (TypeD sup Type0)) ++
+                      (getErrsTypesDeclared z ids tp_))
+                        where
+                          sups = case find (isData $ (==)(T.hier2str sup)) ids of
+                            Nothing                       -> Type0
+                            Just (Data _ _ (sups',_) _ _) -> sups'
 
 stmt ids s@(Var z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
   es_data = getErrsTypesDeclared z ids tp_
@@ -390,8 +390,8 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
                                                       txp  = (Type0,cz)
                                                       chk' = fchk txp mexp tpexp
         (LNumber v)  -> (chk',  ese, loc, mexp) where (ese,mexp) = f (SUB,txp')  tpexp
-                                                      txp1 = (TypeD ["Int",show v],cz)
-                                                      txp2 = (TypeD ["Int"],cz)
+                                                      txp1 = (TypeD ["Int",show v] Type0,cz)
+                                                      txp2 = (TypeD ["Int"] Type0,cz)
                                                       txp' = case tpexp of
                                                               Right (Number _ _) -> txp1
                                                               otherwise          -> txp2
@@ -409,8 +409,8 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
 
         (LCons hr l) -> (fchk txp1 mexp tpexp || chk1, esd++esl++es'++ese, LCons hr l', mexp)
           where
-            txp1      = (TypeD hr, cz)
-            txp2      = (TypeD (take 1 hr), cz)
+            txp1      = (TypeD hr Type0, cz)
+            txp2      = (TypeD (take 1 hr) Type0, cz)
             str       = T.hier2str hr
             (tpd,esd) = case find (isData $ (==)str) ids of
               Just (Data _ _ tp _ _) -> (tp,             [])
@@ -525,14 +525,14 @@ expr z (rel,txp) ids exp = (es1++es2, exp') where
 expr' :: (Relation,TypeC) -> [Stmt] -> Exp -> (Errors, Exp)
 
 expr' _       _   (Error  z v)     = ([], Error  z{type_=(TypeB,cz)} v)
-expr' _       _   (Number z v)     = ([], Number z{type_=(TypeD ["Int",show v],cz)} v)
+expr' _       _   (Number z v)     = ([], Number z{type_=(TypeD ["Int",show v] Type0,cz)} v)
 expr' _       _   (Unit   z)       = ([], Unit   z{type_=(Type0,cz)})
 expr' (_,txp) _   (Arg    z)       = ([], Arg    z{type_=txp})
 expr' _       ids (Func   z tp p)  = (es, Func   z{type_=tp} tp p')
                                      where
                                       (es,p') = stmt ids p
 
-expr' _ ids (Cons  z hr exp) = (es++es_exp, Cons z{type_=(TypeD hr,cz)} hr exp')
+expr' _ ids (Cons  z hr exp) = (es++es_exp, Cons z{type_=(TypeD hr Type0,cz)} hr exp')
     where
         hr_str = T.hier2str hr
         (tp,es) = case find (isData $ (==)hr_str) ids of
@@ -553,7 +553,7 @@ expr' _ ids (Tuple z exps) = (es, Tuple z{type_=(tps',cz)} exps') where
 
 expr' (rel,txp@(txp_,cxp)) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
   (id', tp, es)
-    | (id == "_INPUT") = (id, (TypeD ["Int"],cz), [])
+    | (id == "_INPUT") = (id, (TypeD ["Int"] Type0,cz), [])
     | otherwise        =
       -- find in top-level ids | id : a
       case findVar z (id,rel,txp) ids of
