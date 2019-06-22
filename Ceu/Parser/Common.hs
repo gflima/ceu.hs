@@ -18,7 +18,7 @@ list :: Bool -> Parser a -> Parser [a]
 list one p = do
     void <- tk_sym "("
     v    <- p
-    vs   <- (bool many1 many one) $ (tk_sym "," *> p)
+    vs   <- (bool many1 many one) $ try $ tk_sym "," *> p
     void <- optional $ try $ tk_sym ","
     void <- tk_sym ")"
     return (v:vs)
