@@ -9,16 +9,16 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Type as Type (Type(..), TypeC, Constraint, show', instantiate, getDs,
-                                 getSuper, cat, hier2str, isSupOf,
-                                 cz, ctrsToList, ctrsHasClass,
-                                 Relation(..), relates, isRel, relatesErrors)
+import Ceu.Grammar.Type as T  (Type(..), TypeC, Constraint, show', instantiate, getDs,
+                               getSuper, cat, hier2str, isSupOf,
+                               cz, ctrsToList, ctrsHasClass,
+                               Relation(..), relates, isRel, relatesErrors)
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
 
 fromLeft (Left v) = v
 
-idtp id tp = "$" ++ id ++ "$" ++ Type.show' tp ++ "$"
+idtp id tp = "$" ++ id ++ "$" ++ T.show' tp ++ "$"
 
 go :: Stmt -> (Errors, Stmt)
 go p = stmt [] p
@@ -33,7 +33,7 @@ isClass _  _                    = False
 isInst  f (Inst  _ id _ _ _)    = f id
 isInst  _  _                    = False
 
-isData  f (Data  _ hr _ _ _ _)  = f (Type.hier2str hr)
+isData  f (Data  _ hr _ _ _ _)  = f (T.hier2str hr)
 isData  _  _                    = False
 
 isVar   f (Var   _ id _ _)      = f id
@@ -59,7 +59,7 @@ findVar z (id,rel,txp) ids =
 
 supers :: [Stmt] -> Stmt -> [Stmt]
 supers ids s@(Class z _ ctrs ifc _) = s :
-  case Type.ctrsToList ctrs of
+  case T.ctrsToList ctrs of
     [(_,[sup])] -> case find (isClass $ (==)sup) ids of
                     Just x    -> supers ids x
                     otherwise -> []
@@ -78,7 +78,7 @@ inst2table ids (Inst z cls tp imp _) = Map.union (f2 imp) sups where
   sups =
     case find (isClass $ (==)cls) ids of
       Just (Class z _ ctrs _ _) ->
-        case Type.ctrsToList ctrs of
+        case T.ctrsToList ctrs of
           [(_,sups)] -> Map.unions $ map f sups
           otherwise  -> error "TODO: multiple vars"
 
@@ -101,10 +101,10 @@ wrap insts (Var z id1 (tp_,_) (Match _ False (LVar id2) body _ _)) acc | id1==id
       (err z))
   where
     id'   = idtp id1 tp_'
-    tp_'  = Type.instantiate insts tp_
+    tp_'  = T.instantiate insts tp_
     body' = map_exp (Prelude.id,Prelude.id,ftp) body
       where
-        ftp (tp_,_) = (Type.instantiate insts tp_,cz)
+        ftp (tp_,_) = (T.instantiate insts tp_,cz)
 
 combos :: [[a]] -> [[a]]
 combos l = foldr g [[]] l where
@@ -150,7 +150,7 @@ errDeclared z chk str id ids =
             Just f  -> f
 
 getErrsTypesDeclared :: Ann -> [Stmt] -> Type -> Errors
-getErrsTypesDeclared z ids tp = concatMap aux $ map (\id->(id, find (isData $ (==)id) ids)) $ Set.toList $ Type.getDs tp
+getErrsTypesDeclared z ids tp = concatMap aux $ map (\id->(id, find (isData $ (==)id) ids)) $ Set.toList $ T.getDs tp
     where
         aux (id, Nothing) = [toError z $ "data '" ++ id ++ "' is not declared"]
         aux (_,  Just _)  = []
@@ -161,7 +161,7 @@ stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
 
 stmt ids s@(Class z id ctrs ifc p) = (esMe ++ esExts ++ es, p') where
   esMe    = errDeclared z Nothing "constraint" id ids
-  esExts  = case Type.ctrsToList ctrs of
+  esExts  = case T.ctrsToList ctrs of
               [(_,sups)] -> concatMap f sups where
                 f sup = case find (isClass $ (==)sup) ids of
                   Nothing -> [toError z $ "constraint '" ++ sup ++ "' is not declared"]
@@ -177,11 +177,11 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
       Nothing -> (p, [toError z $ "constraint '" ++ cls ++ "' is not declared"])
 
       -- class is declared
-      Just k@(Class _ _ ctrs ifc _) -> case Type.ctrsToList ctrs of
+      Just k@(Class _ _ ctrs ifc _) -> case T.ctrsToList ctrs of
         [(clss_var,sups)] ->
           case find isSameInst ids of
             -- instance is already declared
-            Just _  -> (p, [toError z $ "instance '" ++ cls ++ " (" ++ intercalate "," [Type.show' itp] ++ ")' is already declared"])
+            Just _  -> (p, [toError z $ "instance '" ++ cls ++ " (" ++ intercalate "," [T.show' itp] ++ ")' is already declared"])
 
             -- instance is not declared
             Nothing -> (p2, es1++ex++ey++ez) where
@@ -199,9 +199,9 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
               es1 = concatMap f sups where
                 f sup = case find (isInstOf sup xxx) ids of
                   Nothing -> [toError z $ "instance '" ++ sup ++ " for " ++
-                              (Type.show' itp) ++ "' is not declared"]
+                              (T.show' itp) ++ "' is not declared"]
                   Just _  -> []
-                isInstOf x y (Inst _ x' y' _ _) = (x'==x && y' `Type.isSupOf` y)
+                isInstOf x y (Inst _ x' y' _ _) = (x'==x && y' `T.isSupOf` y)
                 isInstOf _ _ _                  = False
 
               ---------------------------------------------------------------------
@@ -221,13 +221,13 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
                         case relates SUP tp1 tp2 of
                           Left es -> map (toError z2) es
                           Right (_,insts) ->
-                            let tp' = Type.instantiate insts (TypeV clss_var) in
+                            let tp' = T.instantiate insts (TypeV clss_var) in
                               if tp' == itp then
                                 []
                               else
                                 [toError z $ "types do not match : expected '" ++
-                                  (Type.show' itp) ++ "' : found '" ++
-                                  (Type.show' tp') ++ "'"]
+                                  (T.show' itp) ++ "' : found '" ++
+                                  (T.show' tp') ++ "'"]
                         ++ (bool [toError z2 $ "missing instance of '" ++ id2 ++ "'"] [] impl)
 
               ---------------------------------------------------------------------
@@ -264,7 +264,7 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
                 fs :: [Stmt]
                 fs  = filter pred ids where
                         pred (Var _ id1 tp@(_,ctrs) (Match _ False (LVar id2) body _ _)) =
-                          id1==id2 && (not inInsts) && (Type.ctrsHasClass cls ctrs) where
+                          id1==id2 && (not inInsts) && (T.ctrsHasClass cls ctrs) where
                             inInsts = not $ null $ Map.filter f hinst where
                                         f (_,id',tp',_) = id1==id' && (isRight $ relates SUP tp' tp)
                                             -- see GenSpec:CASE-1
@@ -275,20 +275,20 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
               p2 = foldr cat p1 fs where
                     cat (_,id,(tp,_),_) acc = foldr cat' acc itps where
                       cat' itp acc = Var z (idtp id tp') (tp',cz) acc where
-                        tp' = Type.instantiate [(clss_var,itp)] tp
+                        tp' = T.instantiate [(clss_var,itp)] tp
 
                     -- functions to instantiate
                     fs = Map.filter pred hcls where
                       pred (_,id,(tp,_),_) = isNothing $ find (isVar $ (==)id') ids where
                         id' = idtp id tp'
-                        tp' = Type.instantiate [(clss_var,itp)] tp
+                        tp' = T.instantiate [(clss_var,itp)] tp
 
                     -- follow concrete types from generic/constrained implementations:
                     --    instance of IEq for a where a implements IXx
                     itps :: [Type]
                     itps = map f $ combos (map g $ map Set.toList $ Map.elems ictrs) where
                       f :: [Type] -> Type
-                      f tps = Type.instantiate (zip (Map.keys ictrs) tps) itp
+                      f tps = T.instantiate (zip (Map.keys ictrs) tps) itp
                       g :: [ID_Class] -> [Type]
                       g [ifc] = map f $ filter pred ids where
                                   pred (Inst _ icls _ _ _) = ifc==icls
@@ -301,19 +301,19 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
 
         otherwise  -> error "TODO: multiple vars"
 
-stmt ids s@(Data z hr [] (flds,cz) abs p) = (es_dcl ++ (errDeclared z Nothing "data" (Type.hier2str hr) ids) ++ es,
+stmt ids s@(Data z hr [] (flds,cz) abs p) = (es_dcl ++ (errDeclared z Nothing "data" (T.hier2str hr) ids) ++ es,
                                              s' p')
   where
     s'             = Data z hr [] (flds',cz) abs
     (es,p')        = stmt ((s' (Nop annz)):ids) p
     (flds',es_dcl) =
-      case Type.getSuper (TypeD hr) of
+      case T.getSuper (TypeD hr) of
         Nothing          -> (flds, [])
-        Just (TypeD sup) -> (Type.cat sups flds,
+        Just (TypeD sup) -> (T.cat sups flds,
                              (getErrsTypesDeclared z ids (TypeD sup)) ++
                              (getErrsTypesDeclared z ids flds))
                             where
-                              sups = case find (isData $ (==)(Type.hier2str sup)) ids of
+                              sups = case find (isData $ (==)(T.hier2str sup)) ids of
                                       Nothing                         -> Type0
                                       Just (Data _ _ _ (sups',_) _ _) -> sups'
 
@@ -413,7 +413,7 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
           where
             txp1      = (TypeD hr, cz)
             txp2      = (TypeD (take 1 hr), cz)
-            str       = Type.hier2str hr
+            str       = T.hier2str hr
             (tpd,esd) = case find (isData $ (==)str) ids of
               Just (Data _ _ _ tp _ _) -> (tp,             [])
               Nothing                  -> ((TypeV "?",cz), [toError z $ "data '" ++ str ++ "' is not declared"])
@@ -536,7 +536,7 @@ expr' _       ids (Func   z tp p)  = (es, Func   z{type_=tp} tp p')
 
 expr' _ ids (Cons  z hr exp) = (es++es_exp, Cons z{type_=(TypeD hr,cz)} hr exp')
     where
-        hr_str = Type.hier2str hr
+        hr_str = T.hier2str hr
         (tp,es) = case find (isData $ (==)hr_str) ids of
             Nothing                      ->
               ((TypeV "?",cz), [toError z $ "data '" ++ hr_str ++ "' is not declared"])
@@ -582,7 +582,7 @@ expr' (rel,txp@(txp_,cxp)) ids (Read z id) = (es, Read z{type_=tp} id') where   
 
               err = [toError z $ "variable '" ++ id ++
                      "' has no associated instance for '" ++
-                     Type.show' txp_ ++ "'"]
+                     T.show' txp_ ++ "'"]
 
 expr' (rel,(txp_,cxp)) ids (Call z f exp) = (bool es_exp es_f (null es_exp),
                                      Call z{type_=tp_out} f' exp')
