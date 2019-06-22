@@ -67,7 +67,7 @@ pTypeContext = do
 pContext :: Parser [Cs.Pair]
 pContext = do
   void <- try $ tk_key "where"
-  ret  <- (singleton <$> pIs) <|> list1 pIs
+  ret  <- try (list1 pIs) <|> (singleton <$> pIs)
   return ret
 
 pIs :: Parser Cs.Pair

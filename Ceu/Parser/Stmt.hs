@@ -143,11 +143,7 @@ stmt_data :: Parser Stmt
 stmt_data = do
   pos  <- pos2src <$> getPosition
   void <- try $ tk_key "data"
-  par  <- optionMaybe $ try $ tk_sym "("
   id   <- tk_data_hier
-  var  <- optionMaybe $ try $ tk_key "for" *> tk_var
-  void <- if isJust par then do tk_sym ")" else do { return () }
-  --ctx  <- option [] pContext
   tp   <- option (Type0,cz) $ try $ tk_key "with" *> pTypeContext
   return $ Data annz{source=pos} id tp False
 

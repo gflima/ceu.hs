@@ -1,6 +1,8 @@
 module Ceu.ParserSpec (main, spec) where
 
 import Test.Hspec
+import Data.Set as S (fromList)
+import Data.Map as M (fromList)
 
 import qualified Text.Parsec as P (eof, parse)
 import Text.Parsec.Prim hiding (Error)
@@ -589,16 +591,23 @@ spec = do
                 ])
               `shouldBe` Right (Seq annz (Data annz ["Aa"] (TypeD ["Int"],cz) False) (Seq annz (Data annz ["Aa","Bb"] (Type0,cz) False) (Seq annz (Seq annz (Seq annz (Var annz "b" (TypeD ["Aa","Bb"],cz)) (Nop annz)) (Set annz False (LVar "b") (Cons annz ["Aa","Bb"] (Number annz 1)))) (Seq annz (Seq annz (Seq annz (Var annz "a" (TypeD ["Aa"],cz)) (Nop annz)) (Set annz False (LVar "a") (Read annz "b"))) (Seq annz (Seq annz (Seq annz (Var annz "v" (TypeD ["Int"],cz)) (Nop annz)) (Nop annz)) (Seq annz (Set annz False (LCons ["Aa"] (LVar "v")) (Read annz "b")) (Ret annz (Read annz "v"))))))))
 
-{-
-            it "XXX: Pair a" $
-              parse stmt "data Unit for a with a"
-              `shouldBe` Left ""
-              parse stmt "data Unit of a where a is Eq with a"
-              parse stmt "data Pair of a with (a,a)"
-              parse stmt "data (Pair of a) where (a is Eq) with (a,a)"
-              parse stmt "data (Pair of (a,b)) with (a,b)"
-              parse stmt "data (Pair of (a,b)) where (a is Eq, b is Eq) with (b,a)"
--}
+        describe "data - constraint:" $ do
+
+            it "Unit a/IEq" $
+              parse' stmt "data Unit with a where a is IEq"
+              `shouldBe` Right (Data annz ["Unit"] (TypeV "a",M.fromList [("a",S.fromList ["IEq"])]) False)
+            it "Pair (a,a)" $
+              parse' stmt "data Pair with (a,a)"
+              `shouldBe` Right (Data annz ["Pair"] (TypeN [TypeV "a",TypeV "a"],M.fromList []) False)
+            it "Pair (a,a)/IEq" $
+              parse' stmt "data Pair with (a,a) where (a is IEq)"
+              `shouldBe` Right (Data annz ["Pair"] (TypeN [TypeV "a",TypeV "a"],M.fromList [("a",S.fromList ["IEq"])]) False)
+            it "Pair (a,b)" $
+              parse' stmt "data Pair with (a,b)"
+              `shouldBe` Right (Data annz ["Pair"] (TypeN [TypeV "a",TypeV "b"],M.fromList []) False)
+            it "Pair (a,b)/IEq" $
+              parse' stmt "data Pair with (a,b) where (a is IEq, b is IEq)"
+              `shouldBe` Right (Data annz ["Pair"] (TypeN [TypeV "a",TypeV "b"],M.fromList [("a",S.fromList ["IEq"]),("b",S.fromList ["IEq"])]) False)
 
         describe "constraint:" $ do
 
