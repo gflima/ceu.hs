@@ -1,7 +1,8 @@
 module Ceu.EvalSpec (main, spec) where
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Type     (Type(..),Constraint,Constraints,cz,cv,cvc)
+import Ceu.Grammar.Constraints  (cz,cv,cvc)
+import Ceu.Grammar.Type         (Type(..))
 import Ceu.Grammar.Ann      (annz)
 import qualified Ceu.Grammar.Basic as B
 import Ceu.Eval

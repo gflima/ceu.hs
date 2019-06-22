@@ -2,8 +2,9 @@ module Ceu.Grammar.Ann where
 
 import Debug.Trace
 
-import Ceu.Grammar.Globals (Source, Errors)
-import Ceu.Grammar.Type    (Type(TypeB),TypeC, cz)
+import Ceu.Grammar.Globals      (Source, Errors)
+import Ceu.Grammar.Type         (Type(TypeB),TypeC)
+import Ceu.Grammar.Constraints  (cz)
 
 data Ann = Ann { type_  :: TypeC
                , name   :: String

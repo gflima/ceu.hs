@@ -5,7 +5,8 @@ import Text.Printf
 import Debug.Trace
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Type     (Type(..), cz,cv,cvc)
+import Ceu.Grammar.Constraints  (cz,cv,cvc)
+import Ceu.Grammar.Type         (Type(..))
 import Ceu.Grammar.Ann      (Ann(type_),annz)
 
 import qualified Ceu.Grammar.Basic as B

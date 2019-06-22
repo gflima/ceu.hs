@@ -3,8 +3,9 @@ module Ceu.Grammar.Full.Full where
 import Debug.Trace
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Ann        (Ann, HasAnn(..), annz)
-import Ceu.Grammar.Type       (TypeC, Constraints)
+import Ceu.Grammar.Ann               (Ann, HasAnn(..), annz)
+import Ceu.Grammar.Constraints as Cs (Map)
+import Ceu.Grammar.Type        as T  (TypeC)
 import qualified Ceu.Grammar.Basic as B
 
 -------------------------------------------------------------------------------
@@ -66,13 +67,13 @@ toBasicLoc (LExp   exp)     = B.LExp (toBasicExp exp)
 -------------------------------------------------------------------------------
 
 data Stmt
-  = Class    Ann ID_Class Constraints Stmt               -- new class declaration
-  | Class'   Ann ID_Class Constraints [(Ann,ID_Var,TypeC,Bool)] -- interface w/ body
-  | Inst     Ann ID_Class TypeC Stmt               -- new class instance
+  = Class    Ann ID_Class Cs.Map Stmt             -- new class declaration
+  | Class'   Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] -- interface w/ body
+  | Inst     Ann ID_Class TypeC Stmt              -- new class instance
   | Inst'    Ann ID_Class TypeC [(Ann,ID_Var,TypeC,Bool)] -- new class instance
-  | Data     Ann ID_Data_Hier [ID_Var] TypeC Bool  -- new type declaration
-  | Var      Ann ID_Var TypeC                      -- variable declaration
-  | FuncS    Ann ID_Var TypeC Stmt                 -- function declaration
+  | Data     Ann ID_Data_Hier [ID_Var] TypeC Bool -- new type declaration
+  | Var      Ann ID_Var TypeC                     -- variable declaration
+  | FuncS    Ann ID_Var TypeC Stmt                -- function declaration
   | Match    Ann Loc Exp Stmt Stmt                -- match
   | Match'   Ann Bool Loc Exp Stmt Stmt           -- match w/ chk
   | Set      Ann Bool Loc Exp                     -- assignment statement
@@ -84,7 +85,7 @@ data Stmt
   | Nop      Ann                                  -- nop as in basic Grammar
   | Ret      Ann Exp
   -- declarations w/ scope
-  | Class''  Ann ID_Class Constraints [(Ann,ID_Var,TypeC,Bool)] Stmt
+  | Class''  Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt
   | Inst''   Ann ID_Class TypeC [(Ann,ID_Var,TypeC,Bool)] Stmt
   | Data''   Ann ID_Data_Hier [ID_Var] TypeC Bool Stmt
   | Var''    Ann ID_Var TypeC Stmt

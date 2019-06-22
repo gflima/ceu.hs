@@ -1,8 +1,9 @@
 module Ceu.Grammar.Full.Eval where
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Ann      (Ann, getAnn)
-import Ceu.Grammar.Type     (Type(..), cz)
+import Ceu.Grammar.Ann          (Ann, getAnn)
+import Ceu.Grammar.Constraints  (cz)
+import Ceu.Grammar.Type         (Type(..))
 import qualified Ceu.Grammar.Basic    as B
 import qualified Ceu.Grammar.TypeSys  as T
 import qualified Ceu.Grammar.Simplify as S

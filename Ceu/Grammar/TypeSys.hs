@@ -9,10 +9,10 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Type as T  (Type(..), TypeC, Constraint, show', instantiate, getDs,
-                               getSuper, cat, hier2str, isSupOf,
-                               cz, ctrsToList, ctrsHasClass,
-                               Relation(..), relates, isRel, relatesErrors)
+import Ceu.Grammar.Constraints as Cs  (Pair, cz, toList, hasClass)
+import Ceu.Grammar.Type        as T   (Type(..), TypeC, show', instantiate, getDs,
+                                       getSuper, cat, hier2str, isSupOf,
+                                       Relation(..), relates, isRel, relatesErrors)
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
 
@@ -59,7 +59,7 @@ findVar z (id,rel,txp) ids =
 
 supers :: [Stmt] -> Stmt -> [Stmt]
 supers ids s@(Class z _ ctrs ifc _) = s :
-  case T.ctrsToList ctrs of
+  case Cs.toList ctrs of
     [(_,[sup])] -> case find (isClass $ (==)sup) ids of
                     Just x    -> supers ids x
                     otherwise -> []
@@ -78,7 +78,7 @@ inst2table ids (Inst z cls tp imp _) = Map.union (f2 imp) sups where
   sups =
     case find (isClass $ (==)cls) ids of
       Just (Class z _ ctrs _ _) ->
-        case T.ctrsToList ctrs of
+        case Cs.toList ctrs of
           [(_,sups)] -> Map.unions $ map f sups
           otherwise  -> error "TODO: multiple vars"
 
@@ -139,7 +139,7 @@ errDeclared z chk str id ids =
             Nothing                 -> []
             Just s@(Var _ _ (_,ctrs) _) ->
               if chk' s then [] else
-                case find (isInst (\id -> ctrsHasClass id ctrs)) ids of
+                case find (isInst (\id -> Cs.hasClass id ctrs)) ids of
                   Just _          -> []
                   Nothing         -> err
             Just _                -> err
@@ -161,7 +161,7 @@ stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
 
 stmt ids s@(Class z id ctrs ifc p) = (esMe ++ esExts ++ es, p') where
   esMe    = errDeclared z Nothing "constraint" id ids
-  esExts  = case T.ctrsToList ctrs of
+  esExts  = case Cs.toList ctrs of
               [(_,sups)] -> concatMap f sups where
                 f sup = case find (isClass $ (==)sup) ids of
                   Nothing -> [toError z $ "constraint '" ++ sup ++ "' is not declared"]
@@ -177,7 +177,7 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
       Nothing -> (p, [toError z $ "constraint '" ++ cls ++ "' is not declared"])
 
       -- class is declared
-      Just k@(Class _ _ ctrs ifc _) -> case T.ctrsToList ctrs of
+      Just k@(Class _ _ ctrs ifc _) -> case Cs.toList ctrs of
         [(clss_var,sups)] ->
           case find isSameInst ids of
             -- instance is already declared
@@ -264,7 +264,7 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
                 fs :: [Stmt]
                 fs  = filter pred ids where
                         pred (Var _ id1 tp@(_,ctrs) (Match _ False (LVar id2) body _ _)) =
-                          id1==id2 && (not inInsts) && (T.ctrsHasClass cls ctrs) where
+                          id1==id2 && (not inInsts) && (Cs.hasClass cls ctrs) where
                             inInsts = not $ null $ Map.filter f hinst where
                                         f (_,id',tp',_) = id1==id' && (isRight $ relates SUP tp' tp)
                                             -- see GenSpec:CASE-1

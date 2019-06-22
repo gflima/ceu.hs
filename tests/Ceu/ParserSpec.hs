@@ -12,7 +12,8 @@ import Ceu.Parser.Type
 import Ceu.Parser.Stmt
 --import Ceu.Grammar.Ann
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Type         (Type(..), cz,cv,cvc)
+import Ceu.Grammar.Constraints  (cz,cv,cvc)
+import Ceu.Grammar.Type         (Type(..))
 import Ceu.Grammar.Ann          (annz,source,type_)
 import Ceu.Grammar.Full.Full    (Stmt(..), Exp(..), Loc(..))
 import Ceu.Grammar.Full.Eval    (prelude, compile')

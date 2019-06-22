@@ -7,9 +7,9 @@ import Data.Maybe  (fromJust, isJust)
 import Data.Either (isRight)
 import Data.List   (sortBy, groupBy, find, intercalate, isPrefixOf)
 import qualified Data.Set as Set
-import qualified Data.Map as Map
 
 import Ceu.Grammar.Globals
+import Ceu.Grammar.Constraints as Cs
 
 data Type = TypeB
           | TypeT
@@ -22,10 +22,7 @@ data Type = TypeB
 
 data Relation = SUP | SUB | ANY | NONE deriving (Eq, Show)
 
-type Constraint  = (ID_Var,ID_Class)
-type Constraints = Map.Map ID_Var (Set.Set ID_Class)
-
-type TypeC = (Type, Constraints)
+type TypeC = (Type, Cs.Map)
 
 -------------------------------------------------------------------------------
 
@@ -51,53 +48,6 @@ getDs Type0           = Set.empty
 getDs (TypeD hier)    = Set.singleton $ hier2str hier
 getDs (TypeF inp out) = Set.union (getDs inp) (getDs out)
 getDs (TypeN ts)      = Set.unions $ map getDs ts
-
--------------------------------------------------------------------------------
-
-cz = Map.empty
-cv :: ID_Var -> Constraints
-cv var = Map.singleton var Set.empty
-cvc :: Constraint -> Constraints
-cvc (var,cls) = Map.singleton var $ Set.singleton cls
-
-ctrsToList :: Constraints -> [(ID_Var,[ID_Class])]
-ctrsToList ctrs = map (\(x,y) -> (x,Set.toList y)) $ Map.toList ctrs
-
-ctrsInsert :: Constraint -> Constraints -> Constraints
-ctrsInsert (var',cls') ctrs = Map.insertWith Set.union var' (Set.singleton cls') ctrs
-
-ctrsHasClass :: ID_Class -> Constraints -> Bool
-ctrsHasClass cls ctrs = any (Set.member cls) (Map.elems ctrs)
-
-ctrsUnion :: Constraints -> Constraints -> Constraints
-ctrsUnion ctrs1 ctrs2 = Map.unionWith Set.union ctrs1 ctrs2
-{-
-getConstraints :: Type -> Set.Set Constraint
-
-getConstraints (TypeV _ [])     = Set.empty
-getConstraints (TypeV var clss) = Set.singleton (var,clss)
-getConstraints TypeT            = Set.empty
-getConstraints TypeB            = Set.empty
-getConstraints Type0            = Set.empty
-getConstraints (TypeD hier)     = Set.empty
-getConstraints (TypeF inp out)  = Set.union (getConstraints inp) (getConstraints out)
-getConstraints (TypeN ts)       = Set.unions $ map getConstraints ts
-
-hasAnyConstraint :: Type -> Bool
-hasAnyConstraint tp = not $ Set.null $ getConstraints tp
-
-hasConstraint :: ID_Class -> Type -> Bool
-hasConstraint cls tp = not $ null $ Set.filter f $ getConstraints tp
-                       where
-                        f (var,clss) = elem cls clss
-
-addConstraint (var,cls) Type0                      = Type0
-addConstraint (var,cls) (TypeD x)                  = TypeD x
-addConstraint (var,cls) (TypeN l)                  = TypeN $ map (addConstraint (var,cls)) l
-addConstraint (var,cls) (TypeF inp out)            = TypeF (addConstraint (var,cls) inp) (addConstraint (var,cls) out)
-addConstraint (var,cls) (TypeV var' l) | var==var' = TypeV var' (cls:l)
-                                       | otherwise = TypeV var' l
--}
 
 -------------------------------------------------------------------------------
 

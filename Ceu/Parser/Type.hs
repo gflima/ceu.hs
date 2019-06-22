@@ -11,8 +11,9 @@ import Text.Parsec.Combinator   (option)
 import Ceu.Parser.Common
 import Ceu.Parser.Token         (tk_sym, tk_key, tk_class, tk_var, tk_data_hier)
 
-import Ceu.Grammar.Globals      (ID_Var, ID_Class)
-import Ceu.Grammar.Type         (Type(..), TypeC, Constraint, ctrsInsert, cz)
+import Ceu.Grammar.Globals            (ID_Var, ID_Class)
+import Ceu.Grammar.Constraints as Cs  (Pair, insert, cz)
+import Ceu.Grammar.Type               (Type(..), TypeC)
 
 singleton x = [x]
 
@@ -61,15 +62,15 @@ pTypeContext :: Parser TypeC
 pTypeContext = do
   tp   <- pType
   ctxs <- option [] pContext
-  return $ (tp, foldr ctrsInsert cz ctxs)
+  return $ (tp, foldr Cs.insert cz ctxs)
 
-pContext :: Parser [Constraint]
+pContext :: Parser [Cs.Pair]
 pContext = do
   void <- try $ tk_key "where"
   ret  <- (singleton <$> pIs) <|> list1 pIs
   return ret
 
-pIs :: Parser Constraint
+pIs :: Parser Cs.Pair
 pIs = do
   var  <- tk_var
   void <- tk_key "is"

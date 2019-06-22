@@ -15,11 +15,12 @@ import Text.Parsec.Combinator (notFollowedBy, many1, chainl, chainl1, chainr1, o
 
 import Ceu.Parser.Common
 import Ceu.Parser.Token
-import Ceu.Parser.Type        (pTypeContext,pContext)
+import Ceu.Parser.Type          (pTypeContext,pContext)
 
-import Ceu.Grammar.Globals    (Source, ID_Var, ID_Class)
-import Ceu.Grammar.Type       (Type(..), TypeC, cz,cv,cvc)
-import Ceu.Grammar.Ann        (annz, source, getAnn, Ann(..))
+import Ceu.Grammar.Globals      (Source, ID_Var, ID_Class)
+import Ceu.Grammar.Constraints  (cz,cv,cvc)
+import Ceu.Grammar.Type         (Type(..), TypeC)
+import Ceu.Grammar.Ann          (annz, source, getAnn, Ann(..))
 import Ceu.Grammar.Full.Full
 
 -------------------------------------------------------------------------------
