@@ -23,8 +23,8 @@ type_0 = do
     void <- tk_sym ")"
     return Type0
 
-type_1 :: Parser Type
-type_1 = do
+type_D :: Parser Type
+type_D = do
     tp <- tk_data_hier
     return $ TypeD tp
 
@@ -55,7 +55,7 @@ type_parens = do
   return tp
 
 pType :: Parser Type
-pType = type_1 <|> try type_V <|> try type_0 <|> try type_N <|> try type_F
+pType = type_D <|> try type_V <|> try type_0 <|> try type_N <|> try type_F
         <|> type_parens <?> "type"
 
 pTypeContext :: Parser TypeC

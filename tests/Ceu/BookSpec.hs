@@ -834,7 +834,7 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "XXX: TODO: mkpair" $         -- pg 41
+      it "XXX: mkpair" $         -- pg 41
         (run True $
           pre ++ unlines [
             "data Pair with (a,b)",

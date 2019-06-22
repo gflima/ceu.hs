@@ -237,14 +237,14 @@ spec = do
                 `shouldBe` Left "(line 1, column 2):\nunexpected \"(\"\nexpecting \")\""
         describe "type1" $ do
             it "Int" $
-                parse type_1 "Int"
+                parse type_D "Int"
                 `shouldBe` Right (TypeD ["Int"])
             it "III" $
-                parse type_1 "III"
+                parse type_D "III"
                 --`shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting data identifier"
                 `shouldBe` Right (TypeD ["III"])
             it "int" $
-                parse type_1 "int"
+                parse type_D "int"
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"i\""
         describe "typeN" $ do
             it "()" $
@@ -608,6 +608,10 @@ spec = do
             it "Pair (a,b)/IEq" $
               parse' stmt "data Pair with (a,b) where (a is IEq, b is IEq)"
               `shouldBe` Right (Data annz ["Pair"] (TypeN [TypeV "a",TypeV "b"],M.fromList [("a",S.fromList ["IEq"]),("b",S.fromList ["IEq"])]) False)
+
+            it "XXX: Pair (a,a) ; p1:Pair(Int,Int)" $
+              parse' stmt "data Pair with (a,a) ; var Pair p1 : Pair (Int,Int)"
+              `shouldBe` Right (Data annz ["Pair"] (TypeN [TypeV "a",TypeV "a"],M.fromList []) False)
 
         describe "constraint:" $ do
 
