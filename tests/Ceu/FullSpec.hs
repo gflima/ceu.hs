@@ -191,7 +191,7 @@ spec = do
                         (Nop annz))
                         (Set annz False (LVar "y") (Cons annz ["Xxx","Yyy"] (Tuple annz [Number annz 1,Number annz 2])))))))
       `shouldBe`
-        (Data''' annz ["Int"] (Type0,fromList []) False (Data''' annz ["Xxx"] (TypeD ["Int"] Type0,fromList []) False (Data''' annz ["Xxx","Yyy"] (TypeD ["Int"] Type0,fromList []) False (Var'' annz "y" (TypeD ["Xxx","Yyy"] (TypeD ["Int"] Type0),fromList []) (Seq annz (Nop annz) (Match' annz False (LVar "y") (Cons annz ["Xxx","Yyy"] (Tuple annz [Number annz 1,Number annz 2])) (Nop annz) (Ret annz (Error annz (-2)))))))))
+        (Data''' annz ["Int"] (Type0,fromList []) False (Data''' annz ["Xxx"] (TypeD ["Int"] Type0,fromList []) False (Data''' annz ["Xxx","Yyy"] (TypeN [TypeD ["Int"] Type0,TypeD ["Int"] Type0],fromList []) False (Var'' annz "y" (TypeD ["Xxx","Yyy"] (TypeD ["Int"] Type0),fromList []) (Seq annz (Nop annz) (Match' annz False (LVar "y") (Cons annz ["Xxx","Yyy"] (Tuple annz [Number annz 1,Number annz 2])) (Nop annz) (Ret annz (Error annz (-2)))))))))
 
   --------------------------------------------------------------------------
 

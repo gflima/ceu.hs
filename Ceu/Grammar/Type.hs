@@ -61,16 +61,6 @@ splitOn d s = x : splitOn d (drop 1 y) where (x,y) = span (/= d) s
 
 -------------------------------------------------------------------------------
 
-cat :: Type -> Type -> Type
-cat Type0      tp              = tp
-cat tp         Type0           = tp
-cat (TypeN l1) (TypeN l2)      = TypeN $ l1 ++ l2
-cat (TypeN l1) tp              = TypeN $ l1 ++ [tp]
-cat tp         (TypeN l2)      = TypeN $ tp :  l2
-cat tp1        tp2             = TypeN $ [tp1,tp2]
-
--------------------------------------------------------------------------------
-
 -- list: list with instantiated pairs (var,Type)
 -- Type: type (possibly TypeV) we want to instantiate
 -- Type: type of the instantiated variable

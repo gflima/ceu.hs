@@ -11,7 +11,7 @@ import qualified Data.Set as Set
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Constraints as Cs  (Pair, cz, toList, hasClass)
 import Ceu.Grammar.Type        as T   (Type(..), TypeC, show', instantiate, getDs,
-                                       getSuper, cat, hier2str, isSupOf,
+                                       getSuper, hier2str, isSupOf,
                                        Relation(..), relates, isRel, relatesErrors)
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
@@ -304,21 +304,16 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
 
         otherwise  -> error "TODO: multiple vars"
 
-stmt ids s@(Data z hr (tp_,ctrs) abs p) = (es_dcl ++ (errDeclared z Nothing "data" (T.hier2str hr) ids) ++ es,
-                                           s' p')
+stmt ids s@(Data z hr tp abs p) = (es_dcl ++ (errDeclared z Nothing "data" (T.hier2str hr) ids) ++ es,
+                                   Data z hr tp abs p')
   where
-    s'             = Data z hr (tp_',ctrs) abs
-    (es,p')        = stmt ((s' (Nop annz)):ids) p
-    (tp_',es_dcl) =
-      case T.getSuper hr of
-        Nothing  -> (tp_, [])
-        Just sup -> (T.cat sups tp_,
-                      (getErrsTypesDeclared z ids (TypeD sup Type0)) ++
-                      (getErrsTypesDeclared z ids tp_))
-                        where
-                          sups = case find (isData $ (==)(T.hier2str sup)) ids of
-                            Nothing                       -> Type0
-                            Just (Data _ _ (sups',_) _ _) -> sups'
+    (es,p') = stmt (s:ids) p
+    es_dcl  = case T.getSuper hr of
+                Nothing  -> []
+                Just sup -> (getErrsTypesDeclared z ids (TypeD sup Type0)) ++
+                            (getErrsTypesDeclared z ids tp_)
+                            where
+                              (tp_,_) = tp
 
 stmt ids s@(Var z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
   es_data = getErrsTypesDeclared z ids tp_

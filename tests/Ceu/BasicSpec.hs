@@ -463,7 +463,7 @@ spec = do
         (Data annz ["X"]   (TypeD ["Int"] Type0,cz) False
         (Data annz ["X","Y"] (TypeD ["Int"] Type0,cz) False
         (Nop annz)))))
-      `shouldBe` ([],Data annz ["Int"] (Type0,cz) False (Data annz ["X"] (TypeD ["Int"] Type0,cz) False (Data annz ["X","Y"] (TypeN [TypeD ["Int"] Type0,TypeD ["Int"] Type0],cz) False (Nop annz))))
+      `shouldBe` ([],Data annz ["Int"] (Type0,cz) False (Data annz ["X"] (TypeD ["Int"] Type0,cz) False (Data annz ["X","Y"] (TypeD ["Int"] Type0,cz) False (Nop annz))))
 
     it "data X with (Int,Int)" $
       (fst $ TypeSys.go
