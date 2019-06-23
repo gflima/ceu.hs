@@ -26,7 +26,7 @@ type_0 = do
 type_D :: Parser Type
 type_D = do
     hier <- tk_data_hier
-    tp   <- option Type0 $ try (tk_key "with" *> pType)
+    tp   <- option Type0 $ try (tk_key "of" *> pType)
     return $ TypeD hier tp
 
 type_N :: Parser Type

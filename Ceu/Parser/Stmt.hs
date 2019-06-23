@@ -23,6 +23,8 @@ import Ceu.Grammar.Type               (Type(..), TypeC)
 import Ceu.Grammar.Ann                (annz, source, getAnn, Ann(..))
 import Ceu.Grammar.Full.Full
 
+singleton x = [x]
+
 -------------------------------------------------------------------------------
 
 pSet :: Bool -> Loc -> Parser Stmt
@@ -144,8 +146,9 @@ stmt_data = do
   pos  <- pos2src <$> getPosition
   void <- try $ tk_key "data"
   id   <- tk_data_hier
+  vars <- option [] $ try $ tk_key "for" *> (try (list1 tk_var) <|> (singleton <$> tk_var))
   tp   <- option (Type0,cz) $ try $ tk_key "with" *> pTypeContext
-  return $ Data annz{source=pos} id tp False
+  return $ Data annz{source=pos} id vars tp False
 
 stmt_var :: Parser Stmt
 stmt_var = do
