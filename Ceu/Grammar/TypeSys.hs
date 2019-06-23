@@ -150,10 +150,13 @@ errDeclared z chk str id ids =
             Just f  -> f
 
 getErrsTypesDeclared :: Ann -> [Stmt] -> Type -> Errors
-getErrsTypesDeclared z ids tp = concatMap aux $ map (\id->(id, find (isData $ (==)id) ids)) $ Set.toList $ T.getDs tp
+getErrsTypesDeclared z ids tp = concatMap f (T.getDs tp) where
+  f :: Type -> Errors
+  f (TypeD hier tp_) = case find (isData $ (==)id) ids of
+    Nothing                 -> [toError z $ "data '" ++ id ++ "' is not declared"]
+    Just (Data _ _ tp' _ _) -> [] --relatesErrors SUP tp' (tp_,cz)
     where
-        aux (id, Nothing) = [toError z $ "data '" ++ id ++ "' is not declared"]
-        aux (_,  Just _)  = []
+      id = hier2str hier
 
 -------------------------------------------------------------------------------
 
@@ -391,7 +394,7 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
                                                       chk' = fchk txp mexp tpexp
         (LNumber v)  -> (chk',  ese, loc, mexp) where (ese,mexp) = f (SUB,txp')  tpexp
                                                       txp1 = (TypeD ["Int",show v] Type0,cz)
-                                                      txp2 = (TypeD ["Int"] Type0,cz)
+                                                      txp2 = (TypeD ["Int"]        Type0,cz)
                                                       txp' = case tpexp of
                                                               Right (Number _ _) -> txp1
                                                               otherwise          -> txp2
@@ -409,10 +412,10 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
 
         (LCons hr l) -> (fchk txp1 mexp tpexp || chk1, esd++esl++es'++ese, LCons hr l', mexp)
           where
-            txp1      = (TypeD hr Type0, cz)
-            txp2      = (TypeD (take 1 hr) Type0, cz)
+            txp1      = (TypeD hr          tpd_, cz)
+            txp2      = (TypeD (take 1 hr) tpd_, cz)
             str       = T.hier2str hr
-            (tpd,esd) = case find (isData $ (==)str) ids of
+            (tpd@(tpd_,_),esd) = case find (isData $ (==)str) ids of
               Just (Data _ _ tp _ _) -> (tp,             [])
               Nothing                -> ((TypeV "?",cz), [toError z $ "data '" ++ str ++ "' is not declared"])
 

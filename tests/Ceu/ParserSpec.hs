@@ -246,14 +246,14 @@ spec = do
             it "int" $
                 parse type_D "int"
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"i\""
-            it "Int ()" $
-                parse type_D "Int ()"
+            it "Int with ()" $
+                parse type_D "Int with ()"
                 `shouldBe` Right (TypeD ["Int"] Type0)
-            it "Int Int Int" $
-                parse type_D "Int Int Int"
+            it "Int with Int with Int" $
+                parse type_D "Int with Int with Int"
                 `shouldBe` Right (TypeD ["Int"] (TypeD ["Int"] (TypeD ["Int"] Type0)))
-            it "Int Int Int" $
-                parse type_D "Tree (Int,Int)"
+            it "Tree with (Int,Int)" $
+                parse type_D "Tree with (Int,Int)"
                 `shouldBe` Right (TypeD ["Tree"] (TypeN [TypeD ["Int"] Type0, TypeD ["Int"] Type0]))
         describe "typeN" $ do
             it "()" $
@@ -261,7 +261,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 2):\nunexpected \")\"\nexpecting type"
             it "(Int)" $
                 parse type_N "(Int)"
-                `shouldBe` Left "(line 1, column 5):\nunexpected \")\"\nexpecting data identifier, \".\", type or \",\""
+                `shouldBe` Left "(line 1, column 5):\nunexpected \")\"\nexpecting data identifier, \".\", \"with\" or \",\""
             it "(Int,Int)" $
                 parse type_N "(Int,Int)"
                 `shouldBe` Right (TypeN [TypeD ["Int"] Type0, TypeD ["Int"] Type0])
@@ -423,7 +423,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 22):\nunexpected arity mismatch\nexpecting \"where\""
             it "var (_,_)):Int" $
                 parse stmt "var (_,_):Int"
-                `shouldBe` Left "(line 1, column 14):\nunexpected arity mismatch\nexpecting data identifier, \".\", type or \"where\""
+                `shouldBe` Left "(line 1, column 14):\nunexpected arity mismatch\nexpecting data identifier, \".\", \"with\" or \"where\""
 
         describe "write:" $ do
             it "x <- 1" $
@@ -569,13 +569,17 @@ spec = do
               (parse' stmt "data Xxx with Int ; var x:Xxx <- Xxx 1")
               `shouldBe` Right (Seq annz (Data annz ["Xxx"] (TypeD ["Int"] Type0,cz) False) (Seq annz (Seq annz (Var annz "x" (TypeD ["Xxx"] Type0,cz)) (Nop annz)) (Set annz False (LVar "x") (Cons annz ["Xxx"] (Number annz 1)))))
 
-            it "TODO-fields: data Xxx with (x,y) : (Int,Int)" $
-              (parse stmt "data Xxx with (x,y) : (Int,Int)")
+            it "TODO-fields: data Xxx (x,y) with (Int,Int)" $
+              (parse stmt "data Xxx (x,y) with (Int,Int)")
               `shouldBe` Left "TODO-fields"
 
             it "Xxx.Yyy" $
-              (compile' $ fromRight' $ parse' stmt "data Int ; data Xxx with Int ; data Xxx.Yyy with Int ; var y:Xxx.Yyy <- Xxx.Yyy (1,2)")
-              `shouldBe` ([],B.Data annz ["Int"] (Type0,cz) False (B.Data annz ["Xxx"] (TypeD ["Int"] Type0,cz) False (B.Data annz ["Xxx","Yyy"] (TypeN [TypeD ["Int"] Type0,TypeD ["Int"] Type0],cz) False (B.Var annz "y" (TypeD ["Xxx","Yyy"] Type0,cz) (B.Match annz False (B.LVar "y") (B.Cons annz{type_=(TypeD ["Xxx","Yyy"] Type0,cz)} ["Xxx","Yyy"] (B.Tuple annz{type_=(TypeN [TypeD ["Int","1"] Type0,TypeD ["Int","2"] Type0],cz)} [B.Number annz{type_=(TypeD ["Int","1"] Type0,cz)} 1,B.Number annz{type_=(TypeD ["Int","2"] Type0,cz)} 2])) (B.Nop annz) (B.Ret annz (B.Error annz (-2))))))))
+              (parse' stmt "data Int ; data Xxx with Int ; data Xxx.Yyy with Int ; var y:Xxx.Yyy with Int <- Xxx.Yyy (1,2)")
+              `shouldBe` Right (Seq annz (Data annz ["Int"] (Type0,M.fromList []) False) (Seq annz (Data annz ["Xxx"] (TypeD ["Int"] Type0,M.fromList []) False) (Seq annz (Data annz ["Xxx","Yyy"] (TypeD ["Int"] Type0,M.fromList []) False) (Seq annz (Seq annz (Var annz "y" (TypeD ["Xxx","Yyy"] (TypeD ["Int"] Type0),M.fromList [])) (Nop annz)) (Set annz False (LVar "y") (Cons annz ["Xxx","Yyy"] (Tuple annz [Number annz 1,Number annz 2])))))))
+
+            it "Xxx.Yyy" $
+              (compile' $ fromRight' $ parse' stmt "data Int ; data Xxx with Int ; data Xxx.Yyy with Int ; var y:Xxx.Yyy (Int,Int) <- Xxx.Yyy (1,2)")
+              `shouldBe` ([],B.Data annz ["Int"] (Type0,cz) False (B.Data annz ["Xxx"] (TypeD ["Int"] Type0,cz) False (B.Data annz ["Xxx","Yyy"] (TypeN [TypeD ["Int"] Type0,TypeD ["Int"] Type0],cz) False (B.Var annz "y" (TypeD ["Xxx","Yyy"] (TypeD ["Int"] Type0),cz) (B.Match annz False (B.LVar "y") (B.Cons annz{type_=(TypeD ["Xxx","Yyy"] Type0,cz)} ["Xxx","Yyy"] (B.Tuple annz{type_=(TypeN [TypeD ["Int","1"] Type0,TypeD ["Int","2"] Type0],cz)} [B.Number annz{type_=(TypeD ["Int","1"] Type0,cz)} 1,B.Number annz{type_=(TypeD ["Int","2"] Type0,cz)} 2])) (B.Nop annz) (B.Ret annz (B.Error annz (-2))))))))
 
             it "data X with Int ; x:Int ; X x <- X 1 ; ret x" $
               (parse' stmt "data Xxx with Int ; var x:Int ; set Xxx x <- Xxx 1 ; return x")
@@ -619,7 +623,7 @@ spec = do
               `shouldBe` Right (Data annz ["Pair"] (TypeN [TypeV "a",TypeV "b"],M.fromList [("a",S.fromList ["IEq"]),("b",S.fromList ["IEq"])]) False)
 
             it "Pair (a,a) ; p1:Pair(Int,Int)" $
-              parse' stmt "data Pair with (a,a) ; var p1 : Pair (Int,Int)"
+              parse' stmt "data Pair with (a,a) ; var p1 : Pair with (Int,Int)"
               `shouldBe` Right (Seq annz (Data annz ["Pair"] (TypeN [TypeV "a",TypeV "a"],M.fromList []) False) (Seq annz (Seq annz (Var annz "p1" (TypeD ["Pair"] (TypeN [TypeD ["Int"] Type0,TypeD ["Int"] Type0]),M.fromList [])) (Nop annz)) (Nop annz)))
 
         describe "constraint:" $ do

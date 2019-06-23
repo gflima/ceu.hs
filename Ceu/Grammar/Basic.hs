@@ -47,7 +47,7 @@ data Loc = LAny
 
 data Stmt
     = Class  Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class declaration
-    | Inst   Ann ID_Class TypeC       [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class instance
+    | Inst   Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class instance
     | Data   Ann ID_Data_Hier TypeC Bool Stmt -- new type declaration
     | Var    Ann ID_Var TypeC Stmt            -- variable declaration
     | Match  Ann Bool Loc Exp Stmt Stmt       -- match/assignment/if statement

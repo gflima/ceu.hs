@@ -39,15 +39,15 @@ show' (TypeN tps)     = "(" ++ intercalate "," (map show' tps) ++ ")"
 
 -------------------------------------------------------------------------------
 
-getDs :: Type -> Set.Set ID_Data
+getDs :: Type -> [Type]
 
-getDs (TypeV _)       = Set.empty
-getDs TypeT           = Set.empty
-getDs TypeB           = Set.empty
-getDs Type0           = Set.empty
-getDs (TypeD hier _)  = Set.singleton $ hier2str hier
-getDs (TypeF inp out) = Set.union (getDs inp) (getDs out)
-getDs (TypeN ts)      = Set.unions $ map getDs ts
+getDs (TypeV _)       = []
+getDs TypeT           = []
+getDs TypeB           = []
+getDs Type0           = []
+getDs tp@(TypeD _ _)  = [tp]
+getDs (TypeF inp out) = (getDs inp) ++ (getDs out)
+getDs (TypeN ts)      = concatMap getDs ts
 
 -------------------------------------------------------------------------------
 
@@ -265,7 +265,8 @@ supOf sup               Type0             = (False, sup,   [])
 
 supOf sup               TypeT             = (False, sup,   [])
 
-supOf sup@(TypeD x _)   sub@(TypeD y _)
+supOf sup@(TypeD x tp1) sub@(TypeD y tp2)
+  -- | x `isPrefixOf` y && tp1 `isSupOf_` tp2 = (True,  sub,   [])
   | x `isPrefixOf` y                      = (True,  sub,   [])
   | otherwise                             = (False, sup,   [])
 
