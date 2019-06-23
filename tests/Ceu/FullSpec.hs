@@ -3,6 +3,7 @@ module Ceu.FullSpec (main, spec) where
 import Test.Hspec
 import Text.Printf
 import Debug.Trace
+import Data.Map as M (fromList)
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Constraints  (cz,cv,cvc)
@@ -181,6 +182,17 @@ spec = do
               (Ret annz (Call annz (Read annz "f3") (Number annz 10))))
             (Ret annz (Error annz (-2))))))))))
 
+    it "Xxx.Yyy" $
+      compile (Seq annz (Data annz ["Int"] [] (Type0,M.fromList []) False)
+              (Seq annz (Data annz ["Xxx"] [] (TypeD ["Int"] Type0,M.fromList []) False)
+              (Seq annz (Data annz ["Xxx","Yyy"] [] (TypeD ["Int"] Type0,M.fromList []) False)
+              (Seq annz
+              (Seq annz (Var annz "y" (TypeD ["Xxx","Yyy"] Type0,M.fromList []))
+                        (Nop annz))
+                        (Set annz False (LVar "y") (Cons annz ["Xxx","Yyy"] (Tuple annz [Number annz 1,Number annz 2])))))))
+      `shouldBe`
+        (Data''' annz ["Int"] (Type0,fromList []) False (Data''' annz ["Xxx"] (TypeD ["Int"] Type0,fromList []) False (Data''' annz ["Xxx","Yyy"] (TypeD ["Int"] Type0,fromList []) False (Var'' annz "y" (TypeD ["Xxx","Yyy"] (TypeD ["Int"] Type0),fromList []) (Seq annz (Nop annz) (Match' annz False (LVar "y") (Cons annz ["Xxx","Yyy"] (Tuple annz [Number annz 1,Number annz 2])) (Nop annz) (Ret annz (Error annz (-2)))))))))
+
   --------------------------------------------------------------------------
 
   describe "go" $ do
@@ -189,7 +201,7 @@ spec = do
       `shouldBe` Right (E.Number 1)
 
     it "data X with Int ; x:Int ; X 1 <- X 2" $ do
-      go (Seq annz (Data annz ["Xxx"] (TypeD ["Int"] Type0,cz) False) (Seq annz (Set annz False (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 2))) (Ret annz (Number annz 2))))
+      go (Seq annz (Data annz ["Xxx"] [] (TypeD ["Int"] Type0,cz) False) (Seq annz (Set annz False (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 2))) (Ret annz (Number annz 2))))
       `shouldBe`
         Left ["types do not match : expected 'Int.1' : found 'Int.2'"]
 

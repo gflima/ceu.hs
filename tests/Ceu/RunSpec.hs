@@ -207,11 +207,7 @@ spec = do
         `shouldBe` Right (Cons ["Xxx","Yyy"] Unit)
 
       it "data Xxx with (Int,Int)" $
-        (run True "data Xxx with (Int,Int) ; var x:Xxx with (Int,Int) <- Xxx (1+1,2+2) ; return x")
-        `shouldBe` Left "types do not match : expected '(Int,Int)' : found '()'\n"
-
-      it "data Xxx with (Int,Int)" $
-        (run True "data Xxx with (Int,Int) ; var x:Xxx with (Int,Int) <- Xxx (1+1,2+2) ; return x")
+        (run True "data Xxx with (Int,Int) ; var x:Xxx <- Xxx (1+1,2+2) ; return x")
         `shouldBe` Right (Cons ["Xxx"] (Tuple [Number 2, Number 4]))
 
       it "data Xxx(Int), Xxx.Yyy(Int), y=Yyy(1,2)" $
@@ -263,8 +259,8 @@ spec = do
       it "Pair (a,b) <- (1,2)" $
         (run True $
           unlines [
-            "data Pair with (a,b)",
-            "var p1 : Pair with (Int,Int) <- Pair (1,2)",
+            "data Pair for (a,b) with (a,b)",
+            "var p1 : Pair of (Int,Int) <- Pair (1,2)",
             "return p1"
            ])
         `shouldBe` Right (Cons ["Pair"] (Tuple [Number 1,Number 2]))
@@ -272,38 +268,38 @@ spec = do
       it "Pair (a,b) <- 1" $
         (run True $
           unlines [
-            "data Pair with (a,b)",
-            "var p1 : Pair with (Int,Int) <- 1",
+            "data Pair for (a,b) with (a,b)",
+            "var p1 : Pair of (Int,Int) <- 1",
             "return p1"
            ])
-        `shouldBe` Left "(line 2, column 30):\ntypes do not match : expected 'Pair' : found 'Int.1'\n"
+        `shouldBe` Left "(line 2, column 28):\ntypes do not match : expected 'Pair' : found 'Int.1'\n"
 
       it "Pair (a,b) <- Pair 1" $
         (run True $
           unlines [
-            "data Pair with (a,b)",
-            "var p1 : Pair with (Int,Int) <- Pair 1",
+            "data Pair for (a,b) with (a,b)",
+            "var p1 : Pair of (Int,Int) <- Pair 1",
             "return p1"
            ])
-        `shouldBe` Left "(line 2, column 33):\ntypes do not match : expected '(a,b)' : found 'Int.1'\n"
+        `shouldBe` Left "(line 2, column 31):\ntypes do not match : expected '(a,b)' : found 'Int.1'\n"
 
       it "Pair (a,Int) ; p: Pair (Int,())" $
         (run True $
           unlines [
-            "data Pair with (a,Int)",
-            "var p1 : Pair with (Int,())",
+            "data Pair for a with (a,Int)",
+            "var p1 : Pair of Int",
             "return p1"
            ])
-        `shouldBe` Left "(line 2, column 28):\ntypes do not match : expected '(a,b)' : found 'Int.1'\n"
+        `shouldBe` Right (Read "p1")
 
       it "Pair (a,b) <- Pair (1,())" $
         (run True $
           unlines [
-            "data Pair with (a,b)",
-            "var p1 : Pair with (Int,Int) <- Pair (1,())",
+            "data Pair for (a,b) with (a,b)",
+            "var p1 : Pair of (Int,Int) <- Pair (1,())",
             "return p1"
            ])
-        `shouldBe` Left "(line 2, column 28):\ntypes do not match : expected '(a,b)' : found 'Int.1'\n"
+        `shouldBe` Left "TODO"
 
     describe "match:" $ do
 
@@ -338,7 +334,7 @@ spec = do
         `shouldBe` Left "(line 1, column 31):\ntypes do not match : expected 'Int.2' : found 'Int.1'\n"
 
       it "x <- (10,2) ; (i,2) <- x" $
-        (run True "data Xxx with (Int,Int) ; var x : Xxx with (Int,Int) <- Xxx (10,2) ; var i : int ; set! Xxx (i,2) <- x ; return i")
+        (run True "data Xxx with (Int,Int) ; var x : Xxx <- Xxx (10,2) ; var i : int ; set! Xxx (i,2) <- x ; return i")
         `shouldBe` Right (Number 10)
 
       it "match/if" $

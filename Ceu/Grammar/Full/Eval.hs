@@ -11,6 +11,7 @@ import qualified Ceu.Eval as E
 import Debug.Trace
 
 import Ceu.Grammar.Full.Full
+import qualified Ceu.Grammar.Full.Compile.Data  as Data
 import qualified Ceu.Grammar.Full.Compile.Scope as Scope
 import qualified Ceu.Grammar.Full.Compile.Seq   as Seq
 import qualified Ceu.Grammar.Full.Compile.Match as Match
@@ -19,10 +20,10 @@ import qualified Ceu.Grammar.Full.Compile.FuncS as FuncS
 
 prelude :: Ann -> Stmt -> Stmt
 prelude z p =
-    (Seq z (Data z ["Int"]        (Type0,cz) True)
-    (Seq z (Data z ["Bool"]       (Type0,cz) True)
-    (Seq z (Data z ["Bool.True"]  (Type0,cz) False)
-    (Seq z (Data z ["Bool.False"] (Type0,cz) False)
+    (Seq z (Data z ["Int"]        [] (Type0,cz) True)
+    (Seq z (Data z ["Bool"]       [] (Type0,cz) True)
+    (Seq z (Data z ["Bool.True"]  [] (Type0,cz) False)
+    (Seq z (Data z ["Bool.False"] [] (Type0,cz) False)
     (Seq z (Var  z "_true"  (TypeD ["Bool"] Type0,cz))
     (Seq z (Set  z False (LVar "_true") (Cons z ["Bool","True"] (Unit z)))
     (Seq z (Var  z "print"  (TypeF (TypeV "?")                                        (TypeV "?"),     cz))
@@ -38,7 +39,7 @@ prelude z p =
            p))))))))))))))))
 
 compile :: Stmt -> Stmt
-compile p = Scope.compile $ Seq.compile $ Match.compile $ Class.compile $ FuncS.compile p
+compile p = Data.compile $ Scope.compile $ Seq.compile $ Match.compile $ Class.compile $ FuncS.compile p
 
 compile' :: Stmt -> (Errors, B.Stmt)
 compile' p = (es4, p4)

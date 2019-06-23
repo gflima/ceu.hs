@@ -71,7 +71,7 @@ data Stmt
   | Class'   Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] -- interface w/ body
   | Inst     Ann ID_Class TypeC Stmt              -- new class instance
   | Inst'    Ann ID_Class TypeC [(Ann,ID_Var,TypeC,Bool)] -- new class instance
-  | Data     Ann ID_Data_Hier TypeC Bool          -- new type declaration
+  | Data     Ann ID_Data_Hier [ID_Var] TypeC Bool -- new type declaration
   | Var      Ann ID_Var TypeC                     -- variable declaration
   | FuncS    Ann ID_Var TypeC Stmt                -- function declaration
   | Match    Ann Loc Exp Stmt Stmt                -- match
@@ -87,7 +87,8 @@ data Stmt
   -- declarations w/ scope
   | Class''  Ann ID_Class     Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt
   | Inst''   Ann ID_Class     TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt
-  | Data''   Ann ID_Data_Hier TypeC  Bool Stmt
+  | Data''   Ann ID_Data_Hier [ID_Var] TypeC  Bool Stmt
+  | Data'''  Ann ID_Data_Hier TypeC  Bool Stmt
   | Var''    Ann ID_Var TypeC Stmt
   deriving (Eq, Show)
 
@@ -98,7 +99,7 @@ instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
     getAnn (Class    z _ _ _)     = z
     getAnn (Inst     z _ _ _)     = z
-    getAnn (Data     z _ _ _)     = z
+    getAnn (Data     z _ _ _ _)   = z
     getAnn (Var      z _ _)       = z
     getAnn (FuncS    z _ _ _)     = z
     getAnn (Match'   z _ _ _ _ _) = z
@@ -107,13 +108,14 @@ instance HasAnn Stmt where
     getAnn (Scope    z _)         = z
     getAnn (Nop      z)           = z
     getAnn (Ret      z _)         = z
-    getAnn (Data''   z _ _ _ _)   = z
+    getAnn (Data''   z _ _ _ _ _) = z
+    getAnn (Data'''  z _ _ _ _)   = z
     getAnn (Var''    z _ _ _)     = z
 
 toBasicStmt :: Stmt -> B.Stmt
 toBasicStmt (Class'' z id  cs ifc p)      = B.Class z id  cs ifc (toBasicStmt p)
 toBasicStmt (Inst''  z cls tp imp p)      = B.Inst  z cls tp imp (toBasicStmt p)
-toBasicStmt (Data''  z id  tp abs p)      = B.Data  z id  tp abs (toBasicStmt p)
+toBasicStmt (Data''' z id  tp abs p)      = B.Data  z id  tp abs (toBasicStmt p)
 toBasicStmt (Var''   z var tp p)          = B.Var   z var tp (toBasicStmt p)
 toBasicStmt (Match'  z chk loc exp p1 p2) = B.Match z chk (toBasicLoc loc) (toBasicExp exp)
                                                           (toBasicStmt p1) (toBasicStmt p2)
@@ -128,8 +130,8 @@ toBasicStmt p                             = error $ "toBasicStmt: unexpected sta
 
 map_stmt :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Stmt -> Stmt
 map_stmt f@(fs,_,_)  (Class z id  cs p)       = fs (Class z id  cs (map_stmt f p))
-map_stmt f@(fs,_,_)  (Inst  z cls tp p)       = fs (Inst  z cls tp (map_stmt f p))
-map_stmt f@(fs,_,ft) (Data  z id  tp abs)     = fs (Data  z id  (ft tp) abs)
+map_stmt f@(fs,_,ft) (Inst  z cls tp p)       = fs (Inst  z cls (ft tp) (map_stmt f p))
+map_stmt f@(fs,_,ft) (Data  z id  vs tp abs)  = fs (Data  z id  vs (ft tp) abs)
 map_stmt f@(fs,_,ft) (Var   z id tp)          = fs (Var   z id (ft tp))
 map_stmt f@(fs,_,ft) (FuncS z id tp p)        = fs (FuncS z id (ft tp) (map_stmt f p))
 map_stmt f@(fs,_,_)  (Match z loc exp p1 p2)  = fs (Match z loc (map_exp f exp) (map_stmt f p1) (map_stmt f p2))
