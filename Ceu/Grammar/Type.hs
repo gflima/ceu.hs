@@ -33,7 +33,7 @@ show' (TypeV id)      = id
 show' TypeT           = "top"
 show' TypeB           = "bot"
 show' Type0           = "()"
-show' (TypeD hier _)  = hier2str hier
+show' (TypeD hier tp) = hier2str hier -- ++ " " ++ show' tp
 show' (TypeF inp out) = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
 show' (TypeN tps)     = "(" ++ intercalate "," (map show' tps) ++ ")"
 
@@ -170,9 +170,9 @@ comPre tps = yyy where
   yyy = case xxx of
           Nothing -> bool (Just (head tps)) Nothing (null tps)
           Just tp -> case tp of
-            TypeD _ _     -> case commonPrefixAll $ map (\(TypeD hr _)->hr) $ filter isTypeD tps of
+            TypeD _ x     -> case commonPrefixAll $ map (\(TypeD hr _)->hr) $ filter isTypeD tps of
                               [] -> Nothing
-                              tp -> Just $ TypeD tp Type0
+                              tp -> Just $ TypeD tp x
             TypeF inp out -> f $ unzip $ map (\(TypeF inp out)->(inp,out)) $ filter isTypeF tps
                              where
                               f (inps,outs) =
@@ -256,9 +256,25 @@ supOf sup               Type0             = (False, sup,   [])
 supOf sup               TypeT             = (False, sup,   [])
 
 supOf sup@(TypeD x tp1) sub@(TypeD y tp2)
-  -- | x `isPrefixOf` y && tp1 `isSupOf_` tp2 = (True,  sub,   [])
-  | x `isPrefixOf` y                      = (True,  sub,   [])
+  | x `isPrefixOf` y && tp1 `sup'` tp2    = (True,  sub,   [])
+  -- | x `isPrefixOf` y                      = (True,  sub,   [])
   | otherwise                             = (False, sup,   [])
+  where
+    -- normalize tp1/tp2 to the same length:
+    -- data X   with Int
+    -- data X.Y with Int
+    -- x(_) <- y(_,_)
+    sup' :: Type -> Type -> Bool
+    sup' tp1 tp2 = case tp1 of
+      TypeN l1   -> case tp2 of
+        TypeN l2 -> (TypeN l1') `isSupOf_` (TypeN l2') where
+                      m   = min (length l1) (length l2)
+                      l1' = take m l1
+                      l2' = take m l2
+        Type0    -> sup' tp1           (TypeN [])
+        _        -> sup' tp1           (TypeN [tp2])
+      Type0      -> sup' (TypeN [])    tp2
+      _          -> sup' (TypeN [tp1]) tp2
 
 supOf sup@(TypeD _ _)   _                 = (False, sup,   [])
 supOf sup               (TypeD _ _)       = (False, sup,   [])

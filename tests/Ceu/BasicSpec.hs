@@ -453,7 +453,7 @@ spec = do
     it "data X with Int" $
       (fst $ TypeSys.go
         (Data annz ["X"] (TypeD ["Int"] Type0,cz) False
-        (Var annz "x" (TypeD ["X"] Type0,cz)
+        (Var annz "x" (TypeD ["X"] (TypeD ["Int"] Type0),cz)
           (Match annz False (LVar "x") (Cons annz ["X"] (Number annz 1)) (Nop annz) (Nop annz)))))
       `shouldBe` []
 
@@ -467,9 +467,10 @@ spec = do
 
     it "data X with (Int,Int)" $
       (fst $ TypeSys.go
+        (Data annz ["Int"] (Type0,cz) False
         (Data annz ["X"] (TypeN [TypeD ["Int"] Type0, TypeD ["Int"] Type0],cz) False
-        (Var annz "x" (TypeD ["X"] Type0,cz)
-          (Match annz False (LVar "x") (Cons annz ["X"] (Tuple annz [Number annz 1, Number annz 2])) (Nop annz) (Nop annz)))))
+        (Var annz "x" (TypeD ["X"] (TypeN [TypeD ["Int"] Type0, TypeD ["Int"] Type0]),cz)
+          (Match annz False (LVar "x") (Cons annz ["X"] (Tuple annz [Number annz 1, Number annz 2])) (Nop annz) (Nop annz))))))
       `shouldBe` []
 
     describe "pattern matching" $ do

@@ -53,8 +53,7 @@ findVar z (id,rel,txp) ids =
         Just (Var _ _ tp' _) -> Left $ map (toError z) es where
                                   Left es = relates rel txp tp'
   where
-    f (Var _ id' tp' _) = id==id' &&
-                          (isRight $ relates rel txp tp')
+    f (Var _ id' tp' _) = id==id' && (isRight $ relates rel txp tp')
     f _                 = False
 
 supers :: [Stmt] -> Stmt -> [Stmt]
@@ -530,7 +529,7 @@ expr' _       ids (Func   z tp p)  = (es, Func   z{type_=tp} tp p')
                                      where
                                       (es,p') = stmt ids p
 
-expr' _ ids (Cons  z hr exp) = (es++es_exp, Cons z{type_=(TypeD hr Type0,cz)} hr exp')
+expr' _ ids (Cons  z hr exp) = (es++es_exp, Cons z{type_=(TypeD hr x,y)} hr exp')
     where
         hr_str = T.hier2str hr
         (tp,es) = case find (isData $ (==)hr_str) ids of
@@ -541,6 +540,8 @@ expr' _ ids (Cons  z hr exp) = (es++es_exp, Cons z{type_=(TypeD hr Type0,cz)} hr
             Just (Data _ _ tp False _) ->
               (tp,             [])
         (es_exp, exp') = expr z (SUP,tp) ids exp
+
+        (x,y) = type_ $ getAnn $ exp'
 
 expr' _ ids (Tuple z exps) = (es, Tuple z{type_=(tps',cz)} exps') where
                               rets :: [(Errors,Exp)]

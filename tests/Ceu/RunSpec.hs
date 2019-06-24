@@ -231,6 +231,18 @@ spec = do
         (run True $
           unlines [
             "data List",
+            "data List.Pair with (Int,List)",
+            "var l1 : List",
+            "var l2 : List.Pair",
+            "set l1   <- l2",
+            "return 1"
+          ])
+        `shouldBe` Right (Number 1)
+
+      it "List" $
+        (run True $
+          unlines [
+            "data List",
             "data List.Empty",
             "data List.Pair with (Int,List)",
             "var l1 : List      <- List",
@@ -283,7 +295,16 @@ spec = do
            ])
         `shouldBe` Left "(line 2, column 31):\ntypes do not match : expected '(a,b)' : found 'Int.1'\n"
 
-      it "Pair (a,Int) ; p: Pair (Int,())" $
+      it "Unit (a) ; p: Unit Int" $
+        (run True $
+          unlines [
+            "data Unit for a with a",
+            "var p1 : Unit of Int",
+            "return p1"
+           ])
+        `shouldBe` Right (Read "p1")
+
+      it "Pair (a,Int) ; p: Pair Int" $
         (run True $
           unlines [
             "data Pair for a with (a,Int)",
@@ -295,11 +316,20 @@ spec = do
       it "Pair (a,b) <- Pair (1,())" $
         (run True $
           unlines [
-            "data Pair for (a,b) with (a,b)",
-            "var p1 : Pair of (Int,Int) <- Pair (1,())",
+            "data Pair with (Int,Int)",
+            "var p1 : Pair <- Pair (1,())",
             "return p1"
            ])
-        `shouldBe` Left "TODO"
+        `shouldBe` Left "(line 2, column 18):\ntypes do not match : expected '(Int,Int)' : found '(Int.1,())'\n"
+
+      it "Pair (a,b) <- Pair (1,())" $
+        (run True $
+          unlines [
+            "data Pair for (a,b) with (a,b)",
+            "var p1 : Pair of (Int,Int) <- Pair (1,())",
+            "return 1"
+           ])
+        `shouldBe` Left "(line 2, column 28):\ntypes do not match : expected 'Pair' : found 'Pair'\n"
 
     describe "match:" $ do
 

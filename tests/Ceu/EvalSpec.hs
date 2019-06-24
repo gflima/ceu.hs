@@ -381,7 +381,7 @@ spec = do
         go
           (B.Data annz ["Int"] (Type0,cz) False
           (B.Data annz ["X"] (TypeD ["Int"] Type0,cz) False
-          (B.Var annz "x" (TypeD ["X"] Type0,cz)
+          (B.Var annz "x" (TypeD ["X"] (TypeD ["Int"] Type0),cz)
           (B.Match annz False (B.LVar "x") (B.Cons annz ["X"] (B.Number annz 1))
             (B.Ret annz (B.Read annz "x"))
             (B.Ret annz (B.Error annz 99))))))
@@ -392,7 +392,7 @@ spec = do
           (B.Data annz ["Int"] (Type0,cz) False
           (B.Var annz "+" (TypeF (TypeN [TypeD ["Int"] Type0, TypeD ["Int"] Type0]) (TypeD ["Int"] Type0),cz)
           (B.Data annz ["X"] (TypeN [TypeD ["Int"] Type0, TypeD ["Int"] Type0],cz) False
-          (B.Var annz "x" (TypeD ["X"] Type0,cz)
+          (B.Var annz "x" (TypeD ["X"] (TypeN [TypeD ["Int"] Type0, TypeD ["Int"] Type0]),cz)
           (B.Match annz False (B.LVar "x") (B.Cons annz ["X"] (B.Tuple annz [B.Call annz (B.Read annz "+") (B.Tuple annz [B.Number annz 1,B.Number annz 2]), B.Number annz 3]))
             (B.Ret annz (B.Read annz "x"))
             (B.Ret annz (B.Error annz 99)))))))

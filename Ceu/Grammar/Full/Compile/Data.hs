@@ -26,16 +26,19 @@ compile p = stmt [] p
 -------------------------------------------------------------------------------
 
 stmt :: [Stmt] -> Stmt -> Stmt
-stmt ds   (Class'' z id  cs ifc p)      = Class'' z id  cs ifc (stmt ds p)
-stmt ds   (Inst''  z cls tp imp p)      = Inst''  z cls tp imp (stmt ds p)
-stmt ds d@(Data''  z id  vs tp abs p)   = Data''' z id  (fdata ds (id,vs) tp) abs (stmt (d:ds) p)
-stmt ds   (Var''   z var tp p)          = Var''   z var (fvar ds tp) (stmt ds p)
-stmt ds   (Match'  z chk loc exp p1 p2) = Match'  z chk loc (expr ds exp) (stmt ds p1) (stmt ds p2)
-stmt ds   (CallS   z exp)               = CallS   z (expr ds exp)
-stmt ds   (Seq     z p1 p2)             = Seq     z (stmt ds p1) (stmt ds p2)
-stmt ds   (Loop    z p)                 = Loop    z (stmt ds p)
-stmt ds   (Ret     z exp)               = Ret     z (expr ds exp)
-stmt _    p                             = p
+stmt ds (Class'' z id  cs ifc p)      = Class'' z id  cs ifc (stmt ds p)
+stmt ds (Inst''  z cls tp imp p)      = Inst''  z cls tp imp (stmt ds p)
+stmt ds (Data''  z id  vs tp abs p)   = Data''' z id  tp' abs (stmt (d':ds) p)
+                                        where
+                                          tp' = fdata ds (id,vs) tp
+                                          d'  = Data'' z id vs tp' abs p
+stmt ds (Var''   z var tp p)          = Var''   z var (fvar ds tp) (stmt ds p)
+stmt ds (Match'  z chk loc exp p1 p2) = Match'  z chk loc (expr ds exp) (stmt ds p1) (stmt ds p2)
+stmt ds (CallS   z exp)               = CallS   z (expr ds exp)
+stmt ds (Seq     z p1 p2)             = Seq     z (stmt ds p1) (stmt ds p2)
+stmt ds (Loop    z p)                 = Loop    z (stmt ds p)
+stmt ds (Ret     z exp)               = Ret     z (expr ds exp)
+stmt _  p                             = p
 
 -------------------------------------------------------------------------------
 
@@ -77,7 +80,10 @@ fvar ds (tp_,ctrs) = (fvar' ds tp_, ctrs)
       case find (\(Data'' _ h' _ _ _ _) -> h'==hier) ds of
         Nothing                             -> fvar' ds tp_
         Just (Data'' _ _ vars (tp_',_) _ _) -> instantiate (zip vars tps_) tp_' where
-                                              TypeN tps_ = fvar' ds tp_
+                                                tps_ = case fvar' ds tp_ of
+                                                  TypeN x -> x
+                                                  Type0   -> []
+                                                  x       -> [x]
     fvar' ds (TypeF inp out)  = TypeF (fvar' ds inp) (fvar' ds out)
     fvar' ds (TypeN tps)      = TypeN $ map (fvar' ds) tps
     fvar' _  tp               = tp
