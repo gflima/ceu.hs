@@ -838,7 +838,7 @@ spec = do
         (run True $
           pre ++ unlines [
             "data Pair with (a,b)",
-            "var p1 : Pair (Int,Int) <- Pair (1,2)",
+            "var p1 : Pair of (Int,Int) <- Pair (1,2)",
             "return p1"
            ])
         `shouldBe` Right (Cons ["Pair"] (Tuple [Number 1,Number 2]))
