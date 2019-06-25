@@ -34,6 +34,7 @@ show' TypeT              = "top"
 show' TypeB              = "bot"
 show' Type0              = "()"
 show' (TypeD hier []  _) = hier2str hier
+show' (TypeD hier [x] _) = "(" ++ hier2str hier ++ " of " ++ show' x ++ ")"
 show' (TypeD hier ofs _) = "(" ++ hier2str hier ++ " of " ++ "(" ++ intercalate "," (map show' ofs) ++ ")" ++ ")"
 show' (TypeF inp out)    = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
 show' (TypeN tps)        = "(" ++ intercalate "," (map show' tps) ++ ")"
