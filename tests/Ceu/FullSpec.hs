@@ -55,16 +55,16 @@ spec = do
         `shouldBe` (Var'' annz "x" (Type0,cz) (Nop annz))
 
       it "var x <- 1 ; (Nop annz)" $ do
-        Scope.compile (Seq annz (Var annz "x" (TypeD ["Int"] Type0,cz)) (Seq annz (Set annz False (LVar "x") (Number annz 1)) (Nop annz)))
-        `shouldBe` (Var'' annz "x" (TypeD ["Int"] Type0,cz) (Seq annz (Set annz False (LVar "x") (Number annz 1)) (Nop annz)))
+        Scope.compile (Seq annz (Var annz "x" (int,cz)) (Seq annz (Set annz False (LVar "x") (Number annz 1)) (Nop annz)))
+        `shouldBe` (Var'' annz "x" (int,cz) (Seq annz (Set annz False (LVar "x") (Number annz 1)) (Nop annz)))
 
       it "scope var x end ; var y" $ do
         Scope.compile (Seq annz (Scope annz (Var annz "x" (Type0,cz))) (Var annz "y" (Type0,cz)))
         `shouldBe` Seq annz (Var'' annz "x" (Type0,cz) (Nop annz)) (Var'' annz "y" (Type0,cz) (Nop annz))
 
       it "scope var x end ; x=1" $ do
-        compile' (Seq annz (Scope annz (Var annz "x" (TypeD ["Int"] Type0,cz))) (Set annz False (LVar "x") (Number annz 1)))
-        `shouldBe` (["data 'Int' is not declared","variable 'x' is not declared"], B.Seq annz (B.Var annz "x" (TypeD ["Int"] Type0,cz) (B.Nop annz)) (B.Match annz False (B.LVar "x") (B.Number (annz{type_=(TypeD ["Int","1"] Type0,cz)}) 1) (B.Nop annz) (B.Ret annz (B.Error annz (-2)))))
+        compile' (Seq annz (Scope annz (Var annz "x" (int,cz))) (Set annz False (LVar "x") (Number annz 1)))
+        `shouldBe` (["data 'Int' is not declared","variable 'x' is not declared"], B.Seq annz (B.Var annz "x" (int,cz) (B.Nop annz)) (B.Match annz False (B.LVar "x") (B.Number (annz{type_=(TypeD ["Int","1"] Type0 Type0,cz)}) 1) (B.Nop annz) (B.Ret annz (B.Error annz (-2)))))
 
   --------------------------------------------------------------------------
 
@@ -75,12 +75,12 @@ spec = do
       `shouldBe` ([], (B.Var annz "x" (Type0,cz) (B.Nop annz)))
 
     it "do var x; x = 1 end" $ do
-      compile' (Var'' annz "x" (TypeD ["Int"] Type0,cz) (Match' annz False (LVar "x") (Number annz 1) (Nop annz) (Nop annz)))
-      `shouldBe` (["data 'Int' is not declared"], (B.Var annz "x" (TypeD ["Int"] Type0,cz) (B.Match annz False (B.LVar "x") (B.Number annz{type_=(TypeD ["Int","1"] Type0,cz)} 1) (B.Nop annz) (B.Nop annz))))
+      compile' (Var'' annz "x" (int,cz) (Match' annz False (LVar "x") (Number annz 1) (Nop annz) (Nop annz)))
+      `shouldBe` (["data 'Int' is not declared"], (B.Var annz "x" (int,cz) (B.Match annz False (B.LVar "x") (B.Number annz{type_=(TypeD ["Int","1"] Type0 Type0,cz)} 1) (B.Nop annz) (B.Nop annz))))
 
     it "do var x; x = 1 end" $ do
-      compile' (Var'' annz "x" (TypeD ["Int"] Type0,cz) (Match' annz False (LVar "x") (Number annz 1) (Nop annz) (Nop annz)))
-      `shouldBe` (["data 'Int' is not declared"], (B.Var annz "x" (TypeD ["Int"] Type0,cz) (B.Match annz False (B.LVar "x") (B.Number annz{type_=(TypeD ["Int","1"] Type0,cz)} 1) (B.Nop annz) (B.Nop annz))))
+      compile' (Var'' annz "x" (int,cz) (Match' annz False (LVar "x") (Number annz 1) (Nop annz) (Nop annz)))
+      `shouldBe` (["data 'Int' is not declared"], (B.Var annz "x" (int,cz) (B.Match annz False (B.LVar "x") (B.Number annz{type_=(TypeD ["Int","1"] Type0 Type0,cz)} 1) (B.Nop annz) (B.Nop annz))))
 
     it "if" $
       compile
@@ -94,48 +94,48 @@ spec = do
       `shouldBe` Seq annz (Match' annz True (LExp (Read annz "_true")) (Cons annz ["Bool","False"] (Unit annz)) (Nop annz) (Nop annz)) (Ret annz (Number annz 10))
 
     it "class/inst/0" $ do
-      compile (Inst annz "F3able" (TypeD ["Int"] Type0,cz)
-                (FuncS annz "f3" (TypeF (TypeV "Int") (TypeD ["Int"] Type0),cz)
+      compile (Inst annz "F3able" (int,cz)
+                (FuncS annz "f3" (TypeF (TypeV "Int") (int),cz)
                   (Ret annz (Number annz 10))))
       `shouldBe`
-        (Inst'' annz "F3able" (TypeD ["Int"] Type0,cz)
-          [(annz,"f3",(TypeF (TypeV "Int") (TypeD ["Int"] Type0),cz),True)]
-        (Var'' annz "$f3$(Int -> Int)$" (TypeF (TypeV "Int") (TypeD ["Int"] Type0),cz)
-          (Match' annz False (LVar "$f3$(Int -> Int)$") (Func annz (TypeF (TypeV "Int") (TypeD ["Int"] Type0),cz) (Ret annz (Number annz 10))) (Nop annz) (Ret annz (Error annz (-2))))))
+        (Inst'' annz "F3able" (int,cz)
+          [(annz,"f3",(TypeF (TypeV "Int") (int),cz),True)]
+        (Var'' annz "$f3$(Int -> Int)$" (TypeF (TypeV "Int") (int),cz)
+          (Match' annz False (LVar "$f3$(Int -> Int)$") (Func annz (TypeF (TypeV "Int") (int),cz) (Ret annz (Number annz 10))) (Nop annz) (Ret annz (Error annz (-2))))))
 
     it "class/inst/1" $ do
       compile (Seq annz
                 (Class annz "F3able" (cv "a")
-                  (Var annz "f3" (TypeF (TypeV "a") (TypeD ["Int"] Type0),cz)))
-                (Inst annz "F3able" (TypeD ["Int"] Type0,cz)
-                  (FuncS annz "f3" (TypeF (TypeV "Int") (TypeD ["Int"] Type0),cz)
+                  (Var annz "f3" (TypeF (TypeV "a") (int),cz)))
+                (Inst annz "F3able" (int,cz)
+                  (FuncS annz "f3" (TypeF (TypeV "Int") (int),cz)
                     (Ret annz (Number annz 10)))))
       `shouldBe`
         (Class'' annz "F3able" (cv "a")
-          [(annz,"f3",(TypeF (TypeV "a") (TypeD ["Int"] Type0),cvc("a","F3able")),False)]
-        (Var'' annz "f3" (TypeF (TypeV "a") (TypeD ["Int"] Type0),cvc("a","F3able"))
-        (Inst'' annz "F3able" (TypeD ["Int"] Type0,cz)
-          [(annz,"f3",(TypeF (TypeV "Int") (TypeD ["Int"] Type0),cz),True)]
-        (Var'' annz "$f3$(Int -> Int)$" (TypeF (TypeV "Int") (TypeD ["Int"] Type0),cz)
-            (Match' annz False (LVar "$f3$(Int -> Int)$") (Func annz (TypeF (TypeV "Int") (TypeD ["Int"] Type0),cz) (Ret annz (Number annz 10))) (Nop annz) (Ret annz (Error annz (-2))))))))
+          [(annz,"f3",(TypeF (TypeV "a") (int),cvc("a","F3able")),False)]
+        (Var'' annz "f3" (TypeF (TypeV "a") (int),cvc("a","F3able"))
+        (Inst'' annz "F3able" (int,cz)
+          [(annz,"f3",(TypeF (TypeV "Int") (int),cz),True)]
+        (Var'' annz "$f3$(Int -> Int)$" (TypeF (TypeV "Int") (int),cz)
+            (Match' annz False (LVar "$f3$(Int -> Int)$") (Func annz (TypeF (TypeV "Int") (int),cz) (Ret annz (Number annz 10))) (Nop annz) (Ret annz (Error annz (-2))))))))
 
     it "class/inst/2" $ do
       compile (Seq annz
                 (Class annz "F3able" (cv "a")
-                  (Var annz "f3" (TypeF (TypeV "a") (TypeD ["Int"] Type0),cz)))
+                  (Var annz "f3" (TypeF (TypeV "a") (int),cz)))
               (Seq annz
-                (Inst annz "F3able" (TypeD ["Int"] Type0,cz)
-                  (FuncS annz "f3" (TypeF (TypeV "Int") (TypeD ["Int"] Type0),cz)
+                (Inst annz "F3able" (int,cz)
+                  (FuncS annz "f3" (TypeF (TypeV "Int") (int),cz)
                     (Ret annz (Number annz 10))))
               (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
       `shouldBe`
         (Class'' annz "F3able" (cv "a")
-          [(annz,"f3",(TypeF (TypeV "a") (TypeD ["Int"] Type0),cvc("a","F3able")),False)]
-        (Var'' annz "f3" (TypeF (TypeV "a") (TypeD ["Int"] Type0),cvc("a","F3able"))
-        (Inst'' annz "F3able" (TypeD ["Int"] Type0,cz)
-          [(annz,"f3",(TypeF (TypeV "Int") (TypeD ["Int"] Type0),cz),True)]
-        (Var'' annz "$f3$(Int -> Int)$" (TypeF (TypeV "Int") (TypeD ["Int"] Type0),cz)
-            (Match' annz False (LVar "$f3$(Int -> Int)$") (Func annz (TypeF (TypeV "Int") (TypeD ["Int"] Type0),cz) (Ret annz (Number annz 10)))
+          [(annz,"f3",(TypeF (TypeV "a") (int),cvc("a","F3able")),False)]
+        (Var'' annz "f3" (TypeF (TypeV "a") (int),cvc("a","F3able"))
+        (Inst'' annz "F3able" (int,cz)
+          [(annz,"f3",(TypeF (TypeV "Int") (int),cz),True)]
+        (Var'' annz "$f3$(Int -> Int)$" (TypeF (TypeV "Int") (int),cz)
+            (Match' annz False (LVar "$f3$(Int -> Int)$") (Func annz (TypeF (TypeV "Int") (int),cz) (Ret annz (Number annz 10)))
               (Seq annz
                 (Nop annz)
                 (Ret annz (Call annz (Read annz "f3") (Number annz 10))))
@@ -145,12 +145,12 @@ spec = do
                 (Class annz "F3able" (cv "a")
                   (Seq annz
                   (Seq annz
-                  (Var annz "f3" (TypeF (TypeV "a") (TypeD ["Int"] Type0),cz))
+                  (Var annz "f3" (TypeF (TypeV "a") (int),cz))
                   (Nop annz))
                   (Nop annz)))
                 (Seq annz
-                (Inst annz "F3able" (TypeD ["Int"] Type0,cz)
-                  (FuncS annz "f3" (TypeF (TypeV "Int") (TypeD ["Int"] Type0),cz)
+                (Inst annz "F3able" (int,cz)
+                  (FuncS annz "f3" (TypeF (TypeV "Int") (int),cz)
                     (Seq annz
                     (Seq annz
                     (Var annz "v" (TypeV "Int",cz))
@@ -161,18 +161,18 @@ spec = do
                 (Ret annz (Call annz (Read annz "f3") (Number annz 10)))))
       `shouldBe`
         (Class'' annz "F3able" (cv "a")
-          [(annz,"f3",(TypeF (TypeV "a") (TypeD ["Int"] Type0),cvc("a","F3able")),False)]
-        (Var'' annz "f3" (TypeF (TypeV "a") (TypeD ["Int"] Type0),cvc("a","F3able"))
+          [(annz,"f3",(TypeF (TypeV "a") (int),cvc("a","F3able")),False)]
+        (Var'' annz "f3" (TypeF (TypeV "a") (int),cvc("a","F3able"))
         (Seq annz
         (Nop annz)
         (Seq annz
         (Nop annz)
-        (Inst'' annz "F3able" (TypeD ["Int"] Type0,cz)
-          [(annz,"f3",(TypeF (TypeV "Int") (TypeD ["Int"] Type0),cz),True)]
-          (Var'' annz "$f3$(Int -> Int)$" (TypeF (TypeV "Int") (TypeD ["Int"] Type0),cz)
+        (Inst'' annz "F3able" (int,cz)
+          [(annz,"f3",(TypeF (TypeV "Int") (int),cz),True)]
+          (Var'' annz "$f3$(Int -> Int)$" (TypeF (TypeV "Int") (int),cz)
           (Match' annz False
             (LVar "$f3$(Int -> Int)$")
-            (Func annz (TypeF (TypeV "Int") (TypeD ["Int"] Type0),cz)
+            (Func annz (TypeF (TypeV "Int") (int),cz)
               (Var'' annz "v" (TypeV "Int",cz)
               (Seq annz
               (Nop annz)
@@ -183,15 +183,15 @@ spec = do
             (Ret annz (Error annz (-2))))))))))
 
     it "Xxx.Yyy" $
-      compile (Seq annz (Data annz ["Int"] [] (Type0,M.fromList []) False)
-              (Seq annz (Data annz ["Xxx"] [] (TypeD ["Int"] Type0,M.fromList []) False)
-              (Seq annz (Data annz ["Xxx","Yyy"] [] (TypeD ["Int"] Type0,M.fromList []) False)
+      compile (Seq annz (Data annz (int,                            M.fromList []) False)
+              (Seq annz (Data annz (TypeD ["Xxx"]       Type0 int,  M.fromList []) False)
+              (Seq annz (Data annz (TypeD ["Xxx","Yyy"] Type0 int,  M.fromList []) False)
               (Seq annz
-              (Seq annz (Var annz "y" (TypeD ["Xxx","Yyy"] Type0,M.fromList []))
+              (Seq annz (Var annz "y" (TypeD ["Xxx","Yyy"] Type0 Type0,M.fromList []))
                         (Nop annz))
                         (Set annz False (LVar "y") (Cons annz ["Xxx","Yyy"] (Tuple annz [Number annz 1,Number annz 2])))))))
       `shouldBe`
-        (Data''' annz ["Int"] (Type0,fromList []) False (Data''' annz ["Xxx"] (TypeD ["Int"] Type0,fromList []) False (Data''' annz ["Xxx","Yyy"] (TypeN [TypeD ["Int"] Type0,TypeD ["Int"] Type0],fromList []) False (Var'' annz "y" (TypeD ["Xxx","Yyy"] (TypeN [TypeD ["Int"] Type0,TypeD ["Int"] Type0]),fromList []) (Seq annz (Nop annz) (Match' annz False (LVar "y") (Cons annz ["Xxx","Yyy"] (Tuple annz [Number annz 1,Number annz 2])) (Nop annz) (Ret annz (Error annz (-2)))))))))
+        (Data'' annz (TypeD ["Int"] Type0 Type0,fromList []) False (Data'' annz (TypeD ["Xxx"] Type0 int,fromList []) False (Data'' annz (TypeD ["Xxx","Yyy"] Type0 (TypeN [int,int]),fromList []) False (Var'' annz "y" (TypeD ["Xxx","Yyy"] Type0 (TypeN [int,int]),fromList []) (Seq annz (Nop annz) (Match' annz False (LVar "y") (Cons annz ["Xxx","Yyy"] (Tuple annz [Number annz 1,Number annz 2])) (Nop annz) (Ret annz (Error annz (-2)))))))))
 
   --------------------------------------------------------------------------
 
@@ -201,7 +201,7 @@ spec = do
       `shouldBe` Right (E.Number 1)
 
     it "data X with Int ; x:Int ; X 1 <- X 2" $ do
-      go (Seq annz (Data annz ["Xxx"] [] (TypeD ["Int"] Type0,cz) False) (Seq annz (Set annz False (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 2))) (Ret annz (Number annz 2))))
+      go (Seq annz (Data annz (TypeD ["Xxx"] Type0 int,cz) False) (Seq annz (Set annz False (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 2))) (Ret annz (Number annz 2))))
       `shouldBe`
         Left ["types do not match : expected 'Int.1' : found 'Int.2'"]
 
@@ -216,7 +216,7 @@ spec = do
     it "ret (func () : (() -> Int) do ret 10 end) ()" $ do
       go (Ret annz
             (Call annz
-              (Func annz (TypeF Type0 (TypeD ["Int"] Type0),cz)
+              (Func annz (TypeF Type0 (int),cz)
                 (Ret annz (Number annz 10)))
               (Unit annz)))
       `shouldBe` Right (E.Number 10)

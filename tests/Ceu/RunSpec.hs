@@ -284,7 +284,7 @@ spec = do
             "var p1 : Pair of (Int,Int) <- 1",
             "return p1"
            ])
-        `shouldBe` Left "(line 2, column 28):\ntypes do not match : expected 'Pair' : found 'Int.1'\n"
+        `shouldBe` Left "(line 2, column 28):\ntypes do not match : expected '(Pair of (Int,Int))' : found 'Int.1'\n"
 
       it "Pair (a,b) <- Pair 1" $
         (run True $

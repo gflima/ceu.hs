@@ -33,8 +33,8 @@ isClass _  _                    = False
 isInst  f (Inst  _ id _ _ _)    = f id
 isInst  _  _                    = False
 
-isData  f (Data  _ hr _ _ _)    = f (T.hier2str hr)
-isData  _  _                    = False
+isData  f (Data  _ (TypeD hr _ _,_) _ _) = f (T.hier2str hr)
+isData  _  _                           = False
 
 isVar   f (Var   _ id _ _)      = f id
 isVar   _  _                    = False
@@ -118,7 +118,7 @@ combos' ids clss = combos insts where
   insts :: [[Type]]
   insts = map h clss
     where
-      h :: [ID_Class] -> [Type] -- include this instance "s"
+      h :: [ID_Class] -> [Type]
       h [cls] = map g $ filter f ids where
         f :: Stmt -> Bool
         f (Inst _ cls' (_,ctrs') _ _) = (cls == cls') && (null ctrs')
@@ -151,9 +151,10 @@ errDeclared z chk str id ids =
 getErrsTypesDeclared :: Ann -> [Stmt] -> Type -> Errors
 getErrsTypesDeclared z ids tp = concatMap f (T.getDs tp) where
   f :: Type -> Errors
-  f (TypeD hier tp_) = case find (isData $ (==)id) ids of
-    Nothing                 -> [toError z $ "data '" ++ id ++ "' is not declared"]
-    Just (Data _ _ tp' _ _) -> [] --relatesErrors SUP tp' (tp_,cz)
+  f (TypeD hier _ tp_) = case find (isData $ (==)id) ids of
+    Nothing               -> [toError z $ "data '" ++ id ++ "' is not declared"]
+    Just (Data _ tp' _ _) -> [] --relatesErrors SUP tp' (tp_,cz)
+-- TODO
     where
       id = hier2str hier
 
@@ -257,7 +258,7 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
                 cat f@(Var _ _ (_,ctrs) _) acc = foldr cat' acc itpss where
                   itpss :: [[Type]] -- only combos with new itp (others are already instantiated)
                   itpss = filter (\l -> elem itp l) $ combos' (s:ids) (map Set.toList $ Map.elems ctrs)
-
+                                                              -- include this instance "s"
                   cat' :: [Type] -> Stmt -> Stmt
                   cat' itps acc = wrap (zip (Map.keys ctrs) itps) f acc
 
@@ -303,16 +304,14 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
 
         otherwise  -> error "TODO: multiple vars"
 
-stmt ids s@(Data z hr tp abs p) = (es_dcl ++ (errDeclared z Nothing "data" (T.hier2str hr) ids) ++ es,
-                                   Data z hr tp abs p')
+stmt ids s@(Data z tp@(TypeD hr _ tpst_,_) abs p) = (es_dcl ++ (errDeclared z Nothing "data" (T.hier2str hr) ids) ++ es,
+                                                     Data z tp abs p')
   where
     (es,p') = stmt (s:ids) p
     es_dcl  = case T.getSuper hr of
                 Nothing  -> []
-                Just sup -> (getErrsTypesDeclared z ids (TypeD sup Type0)) ++
-                            (getErrsTypesDeclared z ids tp_)
-                            where
-                              (tp_,_) = tp
+                Just sup -> (getErrsTypesDeclared z ids (TypeD sup Type0 Type0)) ++
+                            (getErrsTypesDeclared z ids tpst_)
 
 stmt ids s@(Var z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
   es_data = getErrsTypesDeclared z ids tp_
@@ -387,8 +386,8 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
                                                       txp  = (Type0,cz)
                                                       chk' = fchk txp mexp tpexp
         (LNumber v)  -> (chk',  ese, loc, mexp) where (ese,mexp) = f (SUB,txp')  tpexp
-                                                      txp1 = (TypeD ["Int",show v] Type0,cz)
-                                                      txp2 = (TypeD ["Int"]        Type0,cz)
+                                                      txp1 = (TypeD ["Int",show v] Type0 Type0,cz)
+                                                      txp2 = (TypeD ["Int"]        Type0 Type0,cz)
                                                       txp' = case tpexp of
                                                               Right (Number _ _) -> txp1
                                                               otherwise          -> txp2
@@ -406,15 +405,16 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
 
         (LCons hr l) -> (fchk txp1 mexp tpexp || chk1, esd++esl++es'++ese, LCons hr l', mexp)
           where
-            txp1      = (TypeD hr          tpd_, cz)
-            txp2      = (TypeD (take 1 hr) tpd_, cz)
-            str       = T.hier2str hr
-            (tpd@(tpd_,_),esd) = case find (isData $ (==)str) ids of
-              Just (Data _ _ tp _ _) -> (tp,             [])
-              Nothing                -> ((TypeV "?",cz), [toError z $ "data '" ++ str ++ "' is not declared"])
+            txp1 = (TypeD hr          tpof tpst, cz)
+            txp2 = (TypeD (take 1 hr) tpof tpst, cz)
+            str  = T.hier2str hr
+            (tpd@(TypeD _ tpof tpst,ctrs),esd) = case find (isData $ (==)str) ids of
+              Just (Data _ tp _ _) -> (tp, [])
+              Nothing              -> ((TypeD [""] Type0 Type0,cz),
+                                       [toError z $ "data '" ++ str ++ "' is not declared"])
 
             (ese,mexp)      = f (rel,txp') tpexp
-            (chk2,esl,l',_) = aux ids z l (Left tpd)
+            (chk2,esl,l',_) = aux ids z l (Left (tpst,ctrs))
 
             -- if any errors found, ignore all this
             (rel,chk1,es',txp') = case tpexp of
@@ -522,24 +522,23 @@ expr z (rel,txp) ids exp = (es1++es2, exp') where
 expr' :: (Relation,TypeC) -> [Stmt] -> Exp -> (Errors, Exp)
 
 expr' _       _   (Error  z v)     = ([], Error  z{type_=(TypeB,cz)} v)
-expr' _       _   (Number z v)     = ([], Number z{type_=(TypeD ["Int",show v] Type0,cz)} v)
+expr' _       _   (Number z v)     = ([], Number z{type_=(TypeD ["Int",show v] Type0 Type0,cz)} v)
 expr' _       _   (Unit   z)       = ([], Unit   z{type_=(Type0,cz)})
 expr' (_,txp) _   (Arg    z)       = ([], Arg    z{type_=txp})
 expr' _       ids (Func   z tp p)  = (es, Func   z{type_=tp} tp p')
                                      where
                                       (es,p') = stmt ids p
 
-expr' _ ids (Cons  z hr exp) = (es++es_exp, Cons z{type_=(TypeD hr x,y)} hr exp')
+expr' _ ids (Cons  z hr exp) = (es++es_exp, Cons z{type_=(TypeD hr tpof x,y)} hr exp')
     where
         hr_str = T.hier2str hr
         (tp,es) = case find (isData $ (==)hr_str) ids of
-            Nothing                      ->
-              ((TypeV "?",cz), [toError z $ "data '" ++ hr_str ++ "' is not declared"])
-            Just (Data _ _ tp True  _) ->
-              (tp,             [toError z $ "data '" ++ hr_str ++ "' is abstract"])
-            Just (Data _ _ tp False _) ->
-              (tp,             [])
-        (es_exp, exp') = expr z (SUP,tp) ids exp
+            Nothing                  -> ((TypeD [""] Type0 (TypeV "?"),cz),
+                                         [toError z $ "data '" ++ hr_str ++ "' is not declared"])
+            Just (Data _ tp True  _) -> (tp, [toError z $ "data '" ++ hr_str ++ "' is abstract"])
+            Just (Data _ tp False _) -> (tp, [])
+        (es_exp, exp') = expr z (SUP,(tpst,ctrs)) ids exp
+        (TypeD _ tpof tpst,ctrs) = tp
 
         (x,y) = type_ $ getAnn $ exp'
 
@@ -552,7 +551,7 @@ expr' _ ids (Tuple z exps) = (es, Tuple z{type_=(tps',cz)} exps') where
 
 expr' (rel,txp@(txp_,cxp)) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
   (id', tp, es)
-    | (id == "_INPUT") = (id, (TypeD ["Int"] Type0,cz), [])
+    | (id == "_INPUT") = (id, (TypeD ["Int"] Type0 Type0,cz), [])
     | otherwise        =
       -- find in top-level ids | id : a
       case findVar z (id,rel,txp) ids of

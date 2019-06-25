@@ -420,12 +420,12 @@ instance of IGable for (X of a) where (a is IFable) with
     return f v
   end
 end
-var x2 : X of Y   <- X Y
+var x2 : X of Y <- X Y
 return (g x2)
 |])
-        `shouldBe` Left "(line 23, column 9):\nvariable 'g' has no associated instance for '((X Y) -> ?)'\n"
+        `shouldBe` Left "(line 23, column 9):\nvariable 'g' has no associated instance for '((X of Y) -> ?)'\n"
 
-      it "XXX: X for a w/o a" $
+      it "X for a w/o a" $
         (run True $ [r|
 data X   for a
 data X.Y with a
@@ -456,7 +456,7 @@ return (g x1) + (g x2)
 |])
         `shouldBe` Right (Number 10)
 
-      it "XXX: X for a w/o a" $
+      it "X for a w/o a" $
         (run True $ [r|
 data X   for a
 data X.Y with a
@@ -484,9 +484,9 @@ instance of IGable for (X of a) where (a is IFable) with
 end
 var x1 : X of Z <- X.Y Z
 var x2 : X of Z <- X
-return (g x1) // + (g x2)
+return (g x1) + (g x2)
 |])
-        `shouldBe` Right (Number 10)
+        `shouldBe` Left "(line 28, column 9):\nvariable 'g' has no associated instance for '((X of Z) -> ?)'\n(line 28, column 18):\nvariable 'g' has no associated instance for '((X of Z) -> ?)'\n"
 
 -------------------------------------------------------------------------------
 

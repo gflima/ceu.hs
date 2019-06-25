@@ -4,7 +4,7 @@ import Debug.Trace
 import Data.List (find)
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Type               (Type(..),TypeC,instantiate,getSuper)
+import Ceu.Grammar.Type               (Type(..),TypeC,instantiate,getSuper,getVs)
 import Ceu.Grammar.Constraints as Cs
 import Ceu.Grammar.Full.Full
 
@@ -28,10 +28,10 @@ compile p = stmt [] p
 stmt :: [Stmt] -> Stmt -> Stmt
 stmt ds (Class'' z id  cs ifc p)      = Class'' z id  cs ifc (stmt ds p)
 stmt ds (Inst''  z cls tp imp p)      = Inst''  z cls tp imp (stmt ds p)
-stmt ds (Data''  z id  vs tp abs p)   = Data''' z id  tp' abs (stmt (d':ds) p)
+stmt ds (Data''  z tp abs p)          = Data''  z tp' abs (stmt (d':ds) p)
                                         where
-                                          tp' = fdata ds (id,vs) tp
-                                          d'  = Data'' z id vs tp' abs p
+                                          tp' = fdata ds tp
+                                          d'  = Data'' z tp' abs p
 stmt ds (Var''   z var tp p)          = Var''   z var (fvar ds tp) (stmt ds p)
 stmt ds (Match'  z chk loc exp p1 p2) = Match'  z chk loc (expr ds exp) (stmt ds p1) (stmt ds p2)
 stmt ds (CallS   z exp)               = CallS   z (expr ds exp)
@@ -49,26 +49,23 @@ expr _  e                               = e
 
 -------------------------------------------------------------------------------
 
-fdata :: [Stmt] -> (ID_Data_Hier,[ID_Var]) -> TypeC -> TypeC
-fdata ds (id,vars) tp = case getSuper id of
+fdata :: [Stmt] -> TypeC -> TypeC
+fdata ds tp@(TypeD id tpof tpst, ctrs) = case getSuper id of
   Nothing  -> tp
-  Just sup -> case find (\(Data'' _ id' _ _ _ _) -> id'==sup) ds of
-                Nothing                         -> tp
-                Just (Data'' _ _ vars' tp' _ _) ->
-                  case any (\v2 -> elem v2 vars) vars' of
+  Just sup -> case find (\(Data'' _ (TypeD id' _ _,_) _ _) -> id'==sup) ds of
+                Nothing -> tp
+                Just (Data'' _ (TypeD _ tpof' tpst',ctrs') _ _) ->
+                  case any (\v2 -> elem v2 (getVs tpof)) (getVs tpof') of
                     True  -> error $ "TODO: repeated variables"
-                    False -> cat tp tp'
+                    False -> (TypeD id (cat tpof tpof') (cat tpst tpst'), Cs.union ctrs ctrs')
   where
-    cat :: TypeC -> TypeC -> TypeC
-    cat (tp1_,ctrs1) (tp2_,ctrs2) = (cat' tp1_ tp2_, Cs.union ctrs1 ctrs2)
-
-    cat' :: Type -> Type -> Type
-    cat' Type0      tp              = tp
-    cat' tp         Type0           = tp
-    cat' (TypeN l1) (TypeN l2)      = TypeN $ l1 ++ l2
-    cat' (TypeN l1) tp              = TypeN $ l1 ++ [tp]
-    cat' tp         (TypeN l2)      = TypeN $ tp :  l2
-    cat' tp1        tp2             = TypeN $ [tp1,tp2]
+    cat :: Type -> Type -> Type
+    cat Type0      tp              = tp
+    cat tp         Type0           = tp
+    cat (TypeN l1) (TypeN l2)      = TypeN $ l1 ++ l2
+    cat (TypeN l1) tp              = TypeN $ l1 ++ [tp]
+    cat tp         (TypeN l2)      = TypeN $ tp :  l2
+    cat tp1        tp2             = TypeN $ [tp1,tp2]
 
 -------------------------------------------------------------------------------
 
@@ -76,14 +73,16 @@ fvar :: [Stmt] -> TypeC -> TypeC
 fvar ds (tp_,ctrs) = (fvar' ds tp_, ctrs)
   where
     fvar' :: [Stmt] -> Type -> Type
-    fvar' ds (TypeD hier tp_) = TypeD hier $
-      case find (\(Data'' _ h' _ _ _ _) -> h'==hier) ds of
-        Nothing                             -> fvar' ds tp_
-        Just (Data'' _ _ vars (tp_',_) _ _) -> instantiate (zip vars tps_) tp_' where
-                                                tps_ = case fvar' ds tp_ of
-                                                  TypeN x -> x
-                                                  Type0   -> []
-                                                  x       -> [x]
+    fvar' ds (TypeD hier x tpst) = TypeD hier x $
+      case find (\(Data'' _ (TypeD h' _ _,_) _ _) -> h'==hier) ds of
+        Nothing -> fvar' ds tpst
+        Just (Data'' _ (TypeD _ tpof' tpst',_) _ _)
+                -> instantiate (zip (getVs tpof') tps_) tpst'
+                   where
+                     tps_ = case fvar' ds tpst of
+                       TypeN x -> x
+                       Type0   -> []
+                       x       -> [x]
     fvar' ds (TypeF inp out)  = TypeF (fvar' ds inp) (fvar' ds out)
     fvar' ds (TypeN tps)      = TypeN $ map (fvar' ds) tps
     fvar' _  tp               = tp

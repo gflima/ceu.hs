@@ -146,9 +146,9 @@ stmt_data = do
   pos  <- pos2src <$> getPosition
   void <- try $ tk_key "data"
   id   <- tk_data_hier
-  vars <- option [] $ try $ tk_key "for" *> (try (list1 tk_var) <|> (singleton <$> tk_var))
-  tp   <- option (Type0,cz) $ try $ tk_key "with" *> pTypeContext
-  return $ Data annz{source=pos} id vars tp False
+  tpof <- option Type0 $ try $ tk_key "for" *> (TypeN . (map TypeV) <$> (try (list1 tk_var) <|> (singleton <$> tk_var)))
+  (tpst,ctrs) <- option (Type0,cz) $ try $ tk_key "with" *> pTypeContext
+  return $ Data annz{source=pos} (TypeD id tpof tpst, ctrs) False
 
 stmt_var :: Parser Stmt
 stmt_var = do

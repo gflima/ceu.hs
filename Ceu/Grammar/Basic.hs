@@ -48,7 +48,7 @@ data Loc = LAny
 data Stmt
     = Class  Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class declaration
     | Inst   Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class instance
-    | Data   Ann ID_Data_Hier TypeC Bool Stmt -- new type declaration
+    | Data   Ann TypeC Bool Stmt              -- new type declaration
     | Var    Ann ID_Var TypeC Stmt            -- variable declaration
     | Match  Ann Bool Loc Exp Stmt Stmt       -- match/assignment/if statement
     | CallS  Ann Exp                          -- call function
@@ -63,7 +63,7 @@ data Stmt
 show_stmt :: Int -> Stmt -> String
 --show_stmt spc (Class _ (id,_) _ _ p) = replicate spc ' ' ++ "class "  ++ id ++ "\n" ++ show_stmt spc p
 --show_stmt spc (Inst  _ (id,_) _ p)   = replicate spc ' ' ++ "inst "   ++ id ++ "\n" ++ show_stmt spc p
-show_stmt spc (Data _ id _ _ p)       = replicate spc ' ' ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
+show_stmt spc (Data _ (TypeD id _ _,_) _ p) = replicate spc ' ' ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
 show_stmt spc (Var _ id (tp,_) p)     = replicate spc ' ' ++ "var "    ++ id ++ ": " ++ T.show' tp ++ "\n" ++ show_stmt spc p
 show_stmt spc (CallS _ e)             = replicate spc ' ' ++ "call " ++ show_exp spc e
 show_stmt spc (Ret _ e)               = replicate spc ' ' ++ "return " ++ show_exp spc e
@@ -92,11 +92,11 @@ show_loc l = show l
 -------------------------------------------------------------------------------
 
 map_stmt :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Stmt -> Stmt
-map_stmt f@(fs,_,ft) (Class z id ctr ifc p)    = fs (Class z id ctr ifc' (map_stmt f p))
+map_stmt f@(fs,_,ft) (Class z id ctr ifc p)     = fs (Class z id ctr ifc' (map_stmt f p))
                                                     where ifc' = map (\(x,y,tp,z)->(x,y,ft tp,z)) ifc
-map_stmt f@(fs,_,ft) (Inst  z cls tp imp p)    = fs (Inst  z cls tp imp' (map_stmt f p))
+map_stmt f@(fs,_,ft) (Inst  z cls tp imp p)     = fs (Inst  z cls tp imp' (map_stmt f p))
                                                     where imp' = map (\(x,y,tp,z)->(x,y,ft tp,z)) imp
-map_stmt f@(fs,_,ft) (Data  z id tp abs p)      = fs (Data  z id (ft tp) abs (map_stmt f p))
+map_stmt f@(fs,_,ft) (Data  z tp abs p)         = fs (Data  z (ft tp) abs (map_stmt f p))
 map_stmt f@(fs,_,ft) (Var   z id tp p)          = fs (Var   z id (ft tp) (map_stmt f p))
 map_stmt f@(fs,_,_)  (Match z b loc exp p1 p2)  = fs (Match z b loc (map_exp f exp) (map_stmt f p1) (map_stmt f p2))
 map_stmt f@(fs,_,_)  (CallS z exp)              = fs (CallS z (map_exp f exp))
@@ -149,7 +149,7 @@ instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
     getAnn (Class z _ _ _ _)   = z
     getAnn (Inst  z _ _ _ _)   = z
-    getAnn (Data  z _ _ _ _)   = z
+    getAnn (Data  z _ _ _)     = z
     getAnn (Var   z _ _ _)     = z
     getAnn (Match z _ _ _ _ _) = z
     getAnn (CallS z _)         = z
@@ -158,7 +158,7 @@ instance HasAnn Stmt where
     getAnn (Ret   z _)         = z
     getAnn (Nop   z)           = z
 
-prelude z p = (Data z ["Int"]        (Type0,cz) False
-              (Data z ["Bool"]       (Type0,cz) False
-              (Data z ["Bool.True"]  (Type0,cz) False
-              (Data z ["Bool.False"] (Type0,cz) False p))))
+prelude z p = (Data z (TypeD ["Int"]          Type0 Type0,cz) False
+              (Data z (TypeD ["Bool"]         Type0 Type0,cz) False
+              (Data z (TypeD ["Bool","True"]  Type0 Type0,cz) False
+              (Data z (TypeD ["Bool","False"] Type0 Type0,cz) False p))))

@@ -14,7 +14,7 @@ import Ceu.Grammar.Constraints as Cs
 data Type = TypeB
           | TypeT
           | Type0
-          | TypeD ID_Data_Hier Type
+          | TypeD ID_Data_Hier Type Type    -- X of Y with (Y,Int)
           | TypeN [Type]    -- (len >= 2)
           | TypeF Type Type
           | TypeV ID_Var
@@ -29,26 +29,34 @@ type TypeC = (Type, Cs.Map)
 hier2str = intercalate "."
 
 show' :: Type -> String
-show' (TypeV id)         = id
-show' TypeT              = "top"
-show' TypeB              = "bot"
-show' Type0              = "()"
-show' (TypeD hier Type0) = hier2str hier
-show' (TypeD hier tp)    = "(" ++ hier2str hier ++ " " ++ show' tp ++ ")"
-show' (TypeF inp out)    = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
-show' (TypeN tps)        = "(" ++ intercalate "," (map show' tps) ++ ")"
+show' (TypeV id)           = id
+show' TypeT                = "top"
+show' TypeB                = "bot"
+show' Type0                = "()"
+show' (TypeD hier Type0 _) = hier2str hier
+show' (TypeD hier tp    _) = "(" ++ hier2str hier ++ " of " ++ show' tp ++ ")"
+show' (TypeF inp out)      = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
+show' (TypeN tps)          = "(" ++ intercalate "," (map show' tps) ++ ")"
 
 -------------------------------------------------------------------------------
 
 getDs :: Type -> [Type]
+getDs (TypeV _)              = []
+getDs TypeT                  = []
+getDs TypeB                  = []
+getDs Type0                  = []
+getDs tp@(TypeD _ tpof tpst) = [tp] ++ getDs tpof ++ getDs tpst
+getDs (TypeF inp out)        = getDs inp ++ getDs out
+getDs (TypeN ts)             = concatMap getDs ts
 
-getDs (TypeV _)       = []
-getDs TypeT           = []
-getDs TypeB           = []
-getDs Type0           = []
-getDs tp@(TypeD _ _)  = [tp]
-getDs (TypeF inp out) = (getDs inp) ++ (getDs out)
-getDs (TypeN ts)      = concatMap getDs ts
+getVs :: Type -> [ID_Var]
+getVs (TypeV var)            = [var]
+getVs TypeT                  = []
+getVs TypeB                  = []
+getVs Type0                  = []
+getVs tp@(TypeD _ tpof tpst) = getVs tpof ++ getVs tpst
+getVs (TypeF inp out)        = getVs inp ++ getVs out
+getVs (TypeN ts)             = concatMap getVs ts
 
 -------------------------------------------------------------------------------
 
@@ -70,7 +78,7 @@ instantiate :: [(ID_Var,Type)] -> Type -> Type
 instantiate vars (TypeV var)    = case find (\(var',_) -> var==var') vars of
                                     Nothing    -> TypeV var
                                     Just (_,v) -> v
-instantiate vars (TypeD hier tp) = TypeD hier (instantiate vars tp)
+instantiate vars (TypeD hier tp1 tp2) = TypeD hier (instantiate vars tp1) (instantiate vars tp2)
 instantiate vars (TypeF inp out) = TypeF (instantiate vars inp) (instantiate vars out)
 instantiate vars (TypeN tps)     = TypeN $ map (instantiate vars) tps
 instantiate _    tp              = tp
@@ -162,7 +170,7 @@ relates_ rel tp1 tp2 =
 
 comPre :: [Type] -> Maybe Type
 comPre tps = yyy where
-  l = bool [TypeD pre Type0] [] (null tp1s || null pre)
+  l = bool [TypeD pre Type0 Type0] [] (null tp1s || null pre)
 
   xxx = find isNotV tps
         where
@@ -172,9 +180,9 @@ comPre tps = yyy where
   yyy = case xxx of
           Nothing -> bool (Just (head tps)) Nothing (null tps)
           Just tp -> case tp of
-            TypeD _ x     -> case commonPrefixAll $ map (\(TypeD hr _)->hr) $ filter isTypeD tps of
+            TypeD _ x y   -> case commonPrefixAll $ map (\(TypeD hr _ _)->hr) $ filter isTypeD tps of
                               [] -> Nothing
-                              tp -> Just $ TypeD tp x
+                              tp -> Just $ TypeD tp x y
             TypeF inp out -> f $ unzip $ map (\(TypeF inp out)->(inp,out)) $ filter isTypeF tps
                              where
                               f (inps,outs) =
@@ -200,16 +208,16 @@ comPre tps = yyy where
             otherwise     -> Nothing
 
   tp1s = filter isTypeD tps
-  pre  = commonPrefixAll $ map (\(TypeD hr _)->hr) tp1s
+  pre  = commonPrefixAll $ map (\(TypeD hr _ _)->hr) tp1s
 
-  isTypeD (TypeD _ _) = True
-  isTypeD _           = False
+  isTypeD (TypeD _ _ _) = True
+  isTypeD _             = False
 
-  isTypeF (TypeF _ _) = True
-  isTypeF _           = False
+  isTypeF (TypeF _ _)   = True
+  isTypeF _             = False
 
-  isTypeN (TypeN _)   = True
-  isTypeN _           = False
+  isTypeN (TypeN _)     = True
+  isTypeN _             = False
 
   -- https://stackoverflow.com/questions/21717646/longest-common-prefix-in-haskell
   commonPrefixAll :: (Eq a) => [[a]] -> [a]
@@ -257,8 +265,8 @@ supOf sup               Type0             = (False, sup,   [])
 
 supOf sup               TypeT             = (False, sup,   [])
 
-supOf sup@(TypeD x tp1) sub@(TypeD y tp2)
-  | x `isPrefixOf` y && tp1 `sup'` tp2    = (True,  sub,   [])
+supOf sup@(TypeD x tp11 tp12) sub@(TypeD y tp21 tp22)
+  | x `isPrefixOf` y && tp11 `isSupOf_` tp21 && tp12 `sup'` tp22  = (True,  sub,   [])
   -- | x `isPrefixOf` y                      = (True,  sub,   [])
   | otherwise                             = (False, sup,   [])
   where
@@ -278,8 +286,8 @@ supOf sup@(TypeD x tp1) sub@(TypeD y tp2)
       Type0      -> sup' (TypeN [])    tp2
       _          -> sup' (TypeN [tp1]) tp2
 
-supOf sup@(TypeD _ _)   _                 = (False, sup,   [])
-supOf sup               (TypeD _ _)       = (False, sup,   [])
+supOf sup@(TypeD _ _ _) _                 = (False, sup,   [])
+supOf sup               (TypeD _ _ _)     = (False, sup,   [])
 
 supOf sup@(TypeF inp1 out1) sub@(TypeF inp2 out2) =
   let (i,_,k) = inp2 `supOf` inp1      -- contravariance on inputs
