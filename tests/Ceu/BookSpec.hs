@@ -840,7 +840,7 @@ spec = do
       it "mkpair" $         -- pg 41
         (run True $
           pre ++ unlines [
-            "data Pair with (a,b)",
+            "data Pair for (a,b) with (a,b)",
             "var p1 : Pair of (Int,Int) <- Pair (1,2)",
             "return p1"
            ])
@@ -990,13 +990,25 @@ spec = do
       it "Triple" $         -- pg 45
         (run True $
           pre ++ unlines [
-            "data Triple with (a,b,c)",
+            "data Triple for (a,b,c) with (a,b,c)",
+            "instance of IEqualable for Triple of (a,b,c) with end",
+            "var t0 : Triple of (Int,Int,Int) <- Triple (1,0,3)",
+            "var t1 : Triple of (Int,Int,Int) <- Triple (1,2,3)",
+            "var t2 : Triple of (Int,Int,Int) <- Triple (1,2,3)",
+            "return (t1 === t2) and (t0 =/= t1)"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "Triple" $         -- pg 45
+        (run True $
+          pre ++ unlines [
+            "data Triple for (a,b,c) with (a,b,c)",
             "instance of IEqualable for Triple with end",
             "var t1 : Triple of (Int,Int,Int)    <- Triple (1,2,3)",
             "var t2 : Triple of (Bool,Bool,Bool) <- Triple (Bool.True,Bool.False,Bool.True)",
             "return t1 =/= t2"
            ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Left "(line 79, column 11):\ntypes do not match : expected '(((Triple of (Int,Int,Int)),(Triple of (Bool,Bool,Bool))) -> ?)' : found '((a,a) -> Bool)'\n(line 79, column 11):\nambigous instances for 'a' : '(Triple of (Int,Int,Int))', '(Triple of (Bool,Bool,Bool))'\n"
 
       it "Date - age" $         -- pg 45
         (run True $
@@ -1043,8 +1055,8 @@ return (l,r)
 data Either for (a,b)
 data Either.Left  with a
 data Either.Right with b
-var l : Either.Left  of Bool <- Either.Left  Bool.True
-var r : Either.Right of Int  <- Either.Right 10
+var l : Either.Left  of (Bool,Int) <- Either.Left  Bool.True
+var r : Either.Right of (Bool,Int) <- Either.Right 10
 return (l,r)
 |])
         `shouldBe` Right (Tuple [Cons ["Either","Left"] (Cons ["Bool","True"] Unit),Cons ["Either","Right"] (Number 10)])
@@ -1074,8 +1086,8 @@ func g (v) : (Int -> Int) do
   return 10
 end
 
-var l : Either.Left  of Bool <- Either.Left  Bool.True
-var r : Either.Right of Int  <- Either.Right 10
+var l : Either.Left  of (Bool,Int) <- Either.Left  Bool.True
+var r : Either.Right of (Bool,Int) <- Either.Right 10
 
 return (case ((f,g),l)) + (case ((f,g),r))
 |])
@@ -1088,16 +1100,18 @@ data Either for (a,b)
 data Either.Left  with a
 data Either.Right with b
 
-instance of IEqualable for Either with end
+instance of IEqualable for Either of (a,b) with end
 
-var l : Either.Left  of Bool <- Either.Left  Bool.True
-var r : Either.Right of Int  <- Either.Right 10
+var l : Either.Left  of (Bool,Int) <- Either.Left  Bool.True
+var r : Either.Right of (Bool,Int) <- Either.Right 10
 
-return (l === l) and (l =/= r)
+var l_ : Either of (Bool,Int) <- l
+
+return (l_ === l) and (l_ =/= r)
 |])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "Either / IOrd" $         -- pg 47
+      it "XXX: Either / IOrd" $         -- pg 47
         (run True $
           pre ++ [r|
 data Either for (a,b)
@@ -1125,11 +1139,15 @@ instance of IOrderable for Either of (a,b) where (a is IOrderable, b is IOrderab
   end
 end
 
-var f : Either.Left  of Bool <- Either.Left  Bool.False
-var l : Either.Left  of Bool <- Either.Left  Bool.True
-var r : Either.Right of Int  <- Either.Right 10
+var f : Either.Left  of (Bool,Int) <- Either.Left  Bool.False
+var l : Either.Left  of (Bool,Int) <- Either.Left  Bool.True
+var r : Either.Right of (Bool,Int) <- Either.Right 10
 
-return (f @<= f) and (((f @< l) and (l @< r)) and (r @>= r))
+var f_ : Either of (Bool,Int) <- f
+var l_ : Either of (Bool,Int) <- l
+var r_ : Either of (Bool,Int) <- r
+
+return (f_ @<= f) and (((f @< l_) and (l @< r_)) and (r_ @>= r))
 |])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 

@@ -73,16 +73,11 @@ fvar :: [Stmt] -> TypeC -> TypeC
 fvar ds (tp_,ctrs) = (fvar' ds tp_, ctrs)
   where
     fvar' :: [Stmt] -> Type -> Type
-    fvar' ds (TypeD hier x st) = TypeD hier x $
+    fvar' ds (TypeD hier ofs st) = TypeD hier ofs $
       case find (\(Data'' _ (TypeD h' _ _,_) _ _) -> h'==hier) ds of
         Nothing -> fvar' ds st
         Just (Data'' _ (TypeD _ ofs' st',_) _ _)
-                -> instantiate (zip (map (\(TypeV v)->v) ofs') tps_) st'
-                   where
-                     tps_ = case fvar' ds st of
-                       TypeN x -> x
-                       Type0   -> []
-                       x       -> [x]
+                -> instantiate (zip (map (\(TypeV v)->v) ofs') ofs) st'
     fvar' ds (TypeF inp out)  = TypeF (fvar' ds inp) (fvar' ds out)
     fvar' ds (TypeN tps)      = TypeN $ map (fvar' ds) tps
     fvar' _  tp               = tp
