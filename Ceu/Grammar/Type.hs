@@ -29,13 +29,14 @@ type TypeC = (Type, Cs.Map)
 hier2str = intercalate "."
 
 show' :: Type -> String
-show' (TypeV id)      = id
-show' TypeT           = "top"
-show' TypeB           = "bot"
-show' Type0           = "()"
-show' (TypeD hier tp) = hier2str hier -- ++ " " ++ show' tp
-show' (TypeF inp out) = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
-show' (TypeN tps)     = "(" ++ intercalate "," (map show' tps) ++ ")"
+show' (TypeV id)         = id
+show' TypeT              = "top"
+show' TypeB              = "bot"
+show' Type0              = "()"
+show' (TypeD hier Type0) = hier2str hier
+show' (TypeD hier tp)    = "(" ++ hier2str hier ++ " " ++ show' tp ++ ")"
+show' (TypeF inp out)    = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
+show' (TypeN tps)        = "(" ++ intercalate "," (map show' tps) ++ ")"
 
 -------------------------------------------------------------------------------
 
@@ -69,6 +70,7 @@ instantiate :: [(ID_Var,Type)] -> Type -> Type
 instantiate vars (TypeV var)    = case find (\(var',_) -> var==var') vars of
                                     Nothing    -> TypeV var
                                     Just (_,v) -> v
+instantiate vars (TypeD hier tp) = TypeD hier (instantiate vars tp)
 instantiate vars (TypeF inp out) = TypeF (instantiate vars inp) (instantiate vars out)
 instantiate vars (TypeN tps)     = TypeN $ map (instantiate vars) tps
 instantiate _    tp              = tp

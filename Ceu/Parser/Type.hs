@@ -37,9 +37,9 @@ type_N = do
 type_F :: Parser Type
 type_F = do
     void <- tk_sym "("
-    inp   <- pType
+    inp  <- pType
     void <- tk_sym "->"
-    out   <- pType
+    out  <- pType
     void <- tk_sym ")"
     return $ TypeF inp out
 

@@ -1,6 +1,9 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 module Ceu.GenSpec (main, spec) where
 
 import Test.Hspec
+import Text.RawString.QQ
 import Data.Bool             (bool)
 import Debug.Trace
 import Text.Parsec           (parse)
@@ -368,6 +371,122 @@ spec = do
             "return eq((20,10,Bool.True),(20,10,Bool.True))"
           ])
         `shouldBe` Left "(line 27, column 8):\nvariable 'eq' has no associated instance for '(((Int.20,Int.10,Bool.True),(Int.20,Int.10,Bool.True)) -> ?)'\n"
+
+      it "X for a with a" $
+        (run True $ [r|
+data X for a with a
+constraint IFable for a with
+  func f : (a -> Int)
+end
+constraint IGable for a with
+  func g : (a -> Int)
+end
+instance of IFable for Int with
+  func f (x) : (Int -> Int) do
+    return x
+  end
+end
+instance of IGable for (X of a) where (a is IFable) with
+  func g (x) : ((X of a) -> Int) do
+    var v : a
+    set X v <- x
+    return f v
+  end
+end
+var x1 : X of Int <- X 10
+return (g x1)
+|])
+        `shouldBe` Right (Number 10)
+
+      it "X for a with a" $
+        (run True $ [r|
+data X for a with a
+data Y
+constraint IFable for a with
+  func f : (a -> Int)
+end
+constraint IGable for a with
+  func g : (a -> Int)
+end
+instance of IFable for Int with
+  func f (x) : (Int -> Int) do
+    return x
+  end
+end
+instance of IGable for (X of a) where (a is IFable) with
+  func g (x) : ((X of a) -> Int) do
+    var v : a
+    set X v <- x
+    return f v
+  end
+end
+var x2 : X of Y   <- X Y
+return (g x2)
+|])
+        `shouldBe` Left "(line 23, column 9):\nvariable 'g' has no associated instance for '((X Y) -> ?)'\n"
+
+      it "XXX: X for a w/o a" $
+        (run True $ [r|
+data X   for a
+data X.Y with a
+constraint IFable for a with
+  func f : (a -> Int)
+end
+constraint IGable for a with
+  func g : (a -> Int)
+end
+instance of IFable for Int with
+  func f (x) : (Int -> Int) do
+    return x
+  end
+end
+instance of IGable for (X of a) where (a is IFable) with
+  func g (x) : ((X of a) -> Int) do
+    var v : a
+    if X.Y v <- x then
+      return f v
+    else
+      return 0
+    end
+  end
+end
+var x1 : X of Int <- X.Y 10
+var x2 : X of Int <- X
+return (g x1) + (g x2)
+|])
+        `shouldBe` Right (Number 10)
+
+      it "XXX: X for a w/o a" $
+        (run True $ [r|
+data X   for a
+data X.Y with a
+data Z
+constraint IFable for a with
+  func f : (a -> Int)
+end
+constraint IGable for a with
+  func g : (a -> Int)
+end
+instance of IFable for Int with
+  func f (x) : (Int -> Int) do
+    return x
+  end
+end
+instance of IGable for (X of a) where (a is IFable) with
+  func g (x) : ((X of a) -> Int) do
+    var v : a
+    if X.Y v <- x then
+      return f v
+    else
+      return 0
+    end
+  end
+end
+var x1 : X of Z <- X.Y Z
+var x2 : X of Z <- X
+return (g x1) // + (g x2)
+|])
+        `shouldBe` Right (Number 10)
 
 -------------------------------------------------------------------------------
 

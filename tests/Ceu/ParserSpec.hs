@@ -1,6 +1,9 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 module Ceu.ParserSpec (main, spec) where
 
 import Test.Hspec
+import Text.RawString.QQ
 import Data.Set as S (fromList)
 import Data.Map as M (fromList)
 
@@ -33,6 +36,7 @@ clearStmt (If    _ exp p1 p2)      = If    annz (clearExp exp) (clearStmt p1) (c
 clearStmt (Seq   _ p1 p2)          = Seq   annz (clearStmt p1) (clearStmt p2)
 clearStmt (Loop  _ p)              = Loop  annz (clearStmt p)
 clearStmt (Nop   _)                = Nop   annz
+clearStmt (Scope  _ p)             = Scope annz (clearStmt p)
 clearStmt (Ret   _ exp)            = Ret   annz (clearExp exp)
 clearStmt p                        = error $ "clearStmt: unexpected statement: " ++ (show p)
 
@@ -622,6 +626,10 @@ spec = do
               parse' stmt "data Pair for a with (a,a) ; var p1 : Pair of Int"
               `shouldBe` Right (Seq annz (Data annz ["Pair"] ["a"] (TypeN [TypeV "a",TypeV "a"],M.fromList []) False) (Seq annz (Seq annz (Var annz "p1" (TypeD ["Pair"] (TypeD ["Int"] Type0),M.fromList [])) (Nop annz)) (Nop annz)))
 
+            it "Either" $
+              parse' stmt "data Either for (a,b) ; data Either.Left  with a ; data Either.Right with b"
+              `shouldBe` Right (Seq annz (Data annz ["Either"] ["a","b"] (Type0,M.fromList []) False) (Seq annz (Data annz ["Either","Left"] [] (TypeV "a",M.fromList []) False) (Data annz ["Either","Right"] [] (TypeV "b",M.fromList []) False)))
+
         describe "constraint:" $ do
 
           it "Int ; IF3able a ; inst IF3able Int ; return f3 1" $
@@ -726,6 +734,27 @@ spec = do
                   (Seq annz
                     (Var annz "x" (TypeV "a",cvc("a","IFable"))) (Nop annz))
                   (Seq annz (Set annz False (LVar "x") (Arg annz)) (Ret annz (Call annz (Read annz "f") (Read annz "x")))))) (Ret annz (Call annz (Read annz "g") (Cons annz ["Bool","True"] (Unit annz))))))
+
+          it "XXX: Either" $
+            (parse' prog $
+              [r|
+data X for a with a
+
+constraint IFable for a with
+  func f : (a -> Int)
+end
+
+instance of IFable for X with
+  func f : (X -> Int) do
+    return 1
+  end
+end
+
+var x : X of Int <- X 10
+
+return f X
+|])
+            `shouldBe` Left ""
 
         describe "seq:" $ do
             it "x <- k k <- 1" $

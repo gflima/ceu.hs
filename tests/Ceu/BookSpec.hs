@@ -1,8 +1,11 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 module Ceu.BookSpec (main, spec) where
 
 import Test.Hspec
 import Data.Bool             (bool)
 import Debug.Trace
+import Text.RawString.QQ
 import Text.Parsec           (parse)
 
 import Ceu.Eval              (Exp(..))
@@ -984,6 +987,152 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
+      it "Triple" $         -- pg 45
+        (run True $
+          pre ++ unlines [
+            "data Triple with (a,b,c)",
+            "instance of IEqualable for Triple with end",
+            "var t1 : Triple of (Int,Int,Int)    <- Triple (1,2,3)",
+            "var t2 : Triple of (Bool,Bool,Bool) <- Triple (Bool.True,Bool.False,Bool.True)",
+            "return t1 =/= t2"
+           ])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "Date - age" $         -- pg 45
+        (run True $
+          pre ++ unlines [
+            "instance of IEqualable for (a,b) with end",
+            "instance of IOrderable for (a,b) where (a is IOrderable,b is IOrderable) with",
+            "   func @< ((i,j),(x,y)) : (((a,b),(a,b)) -> Bool) do",
+            "     return (i @< x) or ((i === x) and (j @< y))",
+            "   end",
+            "end",
+            "data Date with (Int,Int,Int)",
+            "func age (now,person) : ((Date,Date) -> Int) do",
+            "   var (d1,m1,y1) : (Int,Int,Int)",
+            "   var (d2,m2,y2) : (Int,Int,Int)",
+            "   set Date (d2,m2,y2) <- now",
+            "   set Date (d1,m1,y1) <- person",
+            "   if (d1,m1) @< (d2,m2) then",
+            "     return (y2-y1)-1",
+            "   else",
+            "     return y2-y1",
+            "   end",
+            "end",
+            "return ( (age(Date(4,6,2019), Date(3,6,1979))) +",
+            "         (age(Date(3,6,2019), Date(3,6,1979))) ) +",
+            "         (age(Date(2,6,2019), Date(3,6,1979)))"
+           ])
+        `shouldBe` Right (Number 119)
+
+      it "Either" $         -- pg 46
+        (run True $
+          pre ++ [r|
+data Either
+data Either.Left  with Bool
+data Either.Right with Int
+var l : Either.Left  <- Either.Left  Bool.True
+var r : Either.Right <- Either.Right 10
+return (l,r)
+|])
+        `shouldBe` Right (Tuple [Cons ["Either","Left"] (Cons ["Bool","True"] Unit),Cons ["Either","Right"] (Number 10)])
+
+      it "Either a b" $         -- pg 46
+        (run True $
+          pre ++ [r|
+data Either for (a,b)
+data Either.Left  with a
+data Either.Right with b
+var l : Either.Left  of Bool <- Either.Left  Bool.True
+var r : Either.Right of Int  <- Either.Right 10
+return (l,r)
+|])
+        `shouldBe` Right (Tuple [Cons ["Either","Left"] (Cons ["Bool","True"] Unit),Cons ["Either","Right"] (Number 10)])
+
+      it "case" $         -- pg 46
+        (run True $
+          pre ++ [r|
+data Either for (a,b)
+data Either.Left  with a
+data Either.Right with b
+
+func case ((f,g),v) : ((((a->r),(b->r)), Either of (a,b)) -> r) do
+  var x : a
+  var y : b
+  if (Either.Left x) <- v then
+    return f x
+  else/if (Either.Right x) <- v then
+    return g y
+  end
+end
+
+func f (v) : (Bool -> Int) do
+  return 1
+end
+
+func g (v) : (Int -> Int) do
+  return 10
+end
+
+var l : Either.Left  of Bool <- Either.Left  Bool.True
+var r : Either.Right of Int  <- Either.Right 10
+
+return (case ((f,g),l)) + (case ((f,g),r))
+|])
+        `shouldBe` Right (Number 11)
+
+      it "Either / IEq" $         -- pg 47
+        (run True $
+          pre ++ [r|
+data Either for (a,b)
+data Either.Left  with a
+data Either.Right with b
+
+instance of IEqualable for Either with end
+
+var l : Either.Left  of Bool <- Either.Left  Bool.True
+var r : Either.Right of Int  <- Either.Right 10
+
+return (l === l) and (l =/= r)
+|])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "Either / IOrd" $         -- pg 47
+        (run True $
+          pre ++ [r|
+data Either for (a,b)
+data Either.Left  with a
+data Either.Right with b
+
+instance of IEqualable for Either of (a,b) with end
+instance of IOrderable for Either of (a,b) where (a is IOrderable, b is IOrderable) with
+  func @< (x,y) : ((Either of (a,b), Either of (a,b)) -> Bool) do
+    var (xl,yl) : (a,a)
+    var (xr,yr) : (b,b)
+    if Either.Left xl <- x then
+      if Either.Left yl <- y then
+        return xl @< yl
+      else
+        return Bool.True
+      end
+    else/if Either.Right xr <- x then
+      if Either.Right yr <- y then
+        return xr @< yr
+      else
+        return Bool.False
+      end
+    end
+  end
+end
+
+var f : Either.Left  of Bool <- Either.Left  Bool.False
+var l : Either.Left  of Bool <- Either.Left  Bool.True
+var r : Either.Right of Int  <- Either.Right 10
+
+return (f @<= f) and (((f @< l) and (l @< r)) and (r @>= r))
+|])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
 -------------------------------------------------------------------------------
 
     where
@@ -997,79 +1146,78 @@ spec = do
                         (Right exp) -> Right exp
                     (Left  v') -> Left (show v')
 
-        pre = unlines [
-          "func not (x) : (Bool->Bool) do",
-          "   if Bool.True <- x then",
-          "     return Bool.False",
-          "   else",
-          "     return Bool.True",
-          "   end",
-          "end",
-          "func and (x,y) : ((Bool,Bool)->Bool) do",
-          "   if Bool.False <- x then",
-          "     return Bool.False",
-          "   else",
-          "     return y",
-          "   end",
-          "end",
-          "func or (x,y) : ((Bool,Bool)->Bool) do",
-          "   if Bool.True <- x then",
-          "     return Bool.True",
-          "   else",
-          "     return y",
-          "   end",
-          "end",
-          "",
-          "constraint IEqualable for a with",
-          "   func === (x,y) : ((a,a) -> Bool) do",
-          "     if `x´ <- y then",
-          "       if `y´ <- x then",
-          "         return Bool.True",
-          "       else",
-          "         return Bool.False",
-          "       end",
-          "     else",
-          "       return Bool.False",
-          "     end",
-          "   end",
-          "   func =/= (x,y) : ((a,a) -> Bool) do",
-          "     return not (x === y)",
-          "   end",
-          "end",
-          "",
-          "instance of IEqualable for Int with",
-          "   func === (x,y) : ((Int,Int) -> Bool) do",
-          "     return x == y",
-          "   end",
-          "end",
-          "",
-          "instance of IEqualable for Bool with",
-          "   func === (x,y) : ((Bool,Bool) -> Bool) do",
-          "     return (x and y) or ((not x) and (not y))",
-          "   end",
-          "end",
-          "",
-          "constraint IOrderable for a where (a is IEqualable) with",
-          "  func @<        : ((a,a) -> Bool)",
-          "  func @<= (x,y) : ((a,a) -> Bool) do return (x @< y) or (x === y) end",
-          "  func @>  (x,y) : ((a,a) -> Bool) do return not (x @<= y)         end",
-          "  func @>= (x,y) : ((a,a) -> Bool) do return (x @> y) or (x === y) end",
-          "end",
-          "",
-          "instance of IOrderable for Int with",
-          "  func @< (x,y) : ((Int,Int) -> Bool) do",
-          "    return x < y",
-          "  end",
-          "end",
-          "",
-          "instance of IOrderable for Bool with",
-          "  func @< (x,y) : ((Bool,Bool) -> Bool) do",
-          "    if      (Bool.False, Bool.False) <- (x, y) then return Bool.False",
-          "    else/if (Bool.False, Bool.True)  <- (x, y) then return Bool.True",
-          "    else/if (Bool.True,  Bool.False) <- (x, y) then return Bool.False",
-          "    else/if (Bool.True,  Bool.True)  <- (x, y) then return Bool.False",
-          "    end",
-          "  end",
-          "end",
-          ""
-         ]
+        pre = [r|
+func not (x) : (Bool->Bool) do
+  if Bool.True <- x then
+    return Bool.False
+  else
+    return Bool.True
+  end
+end
+func and (x,y) : ((Bool,Bool)->Bool) do
+  if Bool.False <- x then
+    return Bool.False
+  else
+    return y
+  end
+end
+func or (x,y) : ((Bool,Bool)->Bool) do
+  if Bool.True <- x then
+    return Bool.True
+  else
+    return y
+  end
+end
+
+constraint IEqualable for a with
+  func === (x,y) : ((a,a) -> Bool) do
+    if `x´ <- y then
+      if `y´ <- x then
+        return Bool.True
+      else
+        return Bool.False
+      end
+    else
+      return Bool.False
+    end
+  end
+  func =/= (x,y) : ((a,a) -> Bool) do
+    return not (x === y)
+  end
+end
+
+instance of IEqualable for Int with
+  func === (x,y) : ((Int,Int) -> Bool) do
+    return x == y
+  end
+end
+
+instance of IEqualable for Bool with
+  func === (x,y) : ((Bool,Bool) -> Bool) do
+    return (x and y) or ((not x) and (not y))
+  end
+end
+
+constraint IOrderable for a where (a is IEqualable) with
+  func @<        : ((a,a) -> Bool)
+  func @<= (x,y) : ((a,a) -> Bool) do return (x @< y) or (x === y) end
+  func @>  (x,y) : ((a,a) -> Bool) do return not (x @<= y)         end
+  func @>= (x,y) : ((a,a) -> Bool) do return (x @> y) or (x === y) end
+end
+
+instance of IOrderable for Int with
+  func @< (x,y) : ((Int,Int) -> Bool) do
+    return x < y
+  end
+end
+
+instance of IOrderable for Bool with
+  func @< (x,y) : ((Bool,Bool) -> Bool) do
+    if      (Bool.False, Bool.False) <- (x, y) then return Bool.False
+    else/if (Bool.False, Bool.True)  <- (x, y) then return Bool.True
+    else/if (Bool.True,  Bool.False) <- (x, y) then return Bool.False
+    else/if (Bool.True,  Bool.True)  <- (x, y) then return Bool.False
+    end
+  end
+end
+|]
