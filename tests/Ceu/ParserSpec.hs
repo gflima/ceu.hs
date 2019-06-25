@@ -53,8 +53,8 @@ clearExp (Call   _ e1 e2) = Call   annz (clearExp e1) (clearExp e2)
 fromRight' :: Either a b -> b
 fromRight' (Right x) = x
 
-int  = TypeD ["Int"]  Type0 Type0
-bool = TypeD ["Bool"] Type0 Type0
+int  = TypeD ["Int"]  [] Type0
+bool = TypeD ["Bool"] [] Type0
 
 main :: IO ()
 main = hspec spec
@@ -249,7 +249,7 @@ spec = do
             it "III" $
                 parse type_D "III"
                 --`shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting data identifier"
-                `shouldBe` Right (TypeD ["III"] Type0 Type0)
+                `shouldBe` Right (TypeD ["III"] [] Type0)
             it "int" $
                 parse type_D "int"
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"i\""
@@ -258,10 +258,10 @@ spec = do
                 `shouldBe` Right (int)
             it "Int of Int of Int" $
                 parse type_D "Int of Int of Int"
-                `shouldBe` Right (TypeD ["Int"] (TypeD ["Int"] int Type0) Type0)
+                `shouldBe` Right (TypeD ["Int"] [TypeD ["Int"] [int] Type0] Type0)
             it "Tree of (Int,Int)" $
                 parse type_D "Tree of (Int,Int)"
-                `shouldBe` Right (TypeD ["Tree"] (TypeN [int, int]) Type0)
+                `shouldBe` Right (TypeD ["Tree"] [int, int] Type0)
         describe "typeN" $ do
             it "()" $
                 parse type_N "()"
@@ -549,32 +549,32 @@ spec = do
 
             it "data Xxx" $
               (parse stmt "data Xxx")
-              `shouldBe` Right (Data annz{source=("",1,1)} (TypeD ["Xxx"] Type0 Type0,cz) False)
+              `shouldBe` Right (Data annz{source=("",1,1)} (TypeD ["Xxx"] [] Type0,cz) False)
             it "data Xxx ; var x = Xxx" $
               (parse' stmt "data Xxx ; var x:Xxx <- Xxx")
-              `shouldBe` Right (Seq annz (Data annz (TypeD ["Xxx"] Type0 Type0,cz) False) (Seq annz (Seq annz (Var annz "x" (TypeD ["Xxx"] Type0 Type0,cz)) (Nop annz)) (Set annz False (LVar "x") (Cons annz ["Xxx"] (Unit annz)))))
+              `shouldBe` Right (Seq annz (Data annz (TypeD ["Xxx"] [] Type0,cz) False) (Seq annz (Seq annz (Var annz "x" (TypeD ["Xxx"] [] Type0,cz)) (Nop annz)) (Set annz False (LVar "x") (Cons annz ["Xxx"] (Unit annz)))))
             it "data Xxx.Yyy" $
               (parse stmt "data Xxx.Yyy")
-              `shouldBe` Right (Data annz{source=("",1,1)} (TypeD ["Xxx","Yyy"] Type0 Type0,cz) False)
+              `shouldBe` Right (Data annz{source=("",1,1)} (TypeD ["Xxx","Yyy"] [] Type0,cz) False)
             it "data Xxx.Yyy" $
               (parse stmt "data Xxx.Yyy")
-              `shouldBe` Right (Data annz{source=("",1,1)} (TypeD ["Xxx","Yyy"] Type0 Type0,cz) False)
+              `shouldBe` Right (Data annz{source=("",1,1)} (TypeD ["Xxx","Yyy"] [] Type0,cz) False)
 
             it "data Xxx with ()" $
               (parse stmt "data Xxx with ()")
-              `shouldBe` Right (Data annz{source=("",1,1)} (TypeD ["Xxx"] Type0 Type0,cz) False)
+              `shouldBe` Right (Data annz{source=("",1,1)} (TypeD ["Xxx"] [] Type0,cz) False)
 
             it "data Xxx with (Int,Int)" $
               (parse stmt "data Xxx with (Int,Int)")
-              `shouldBe` Right (Data annz{source=("",1,1)} (TypeD ["Xxx"] Type0 (TypeN [int,int]),cz) False)
+              `shouldBe` Right (Data annz{source=("",1,1)} (TypeD ["Xxx"] [] (TypeN [int,int]),cz) False)
 
             it "data Xxx with (Int)" $
               (parse' stmt "data Xxx with (Int)")
-              `shouldBe` Right (Data annz (TypeD ["Xxx"] Type0 int,cz) False)
+              `shouldBe` Right (Data annz (TypeD ["Xxx"] [] int,cz) False)
 
             it "data Xxx with Int ; x<-Xxx(1,1)" $
               (parse' stmt "data Xxx with Int ; var x:Xxx <- Xxx 1")
-              `shouldBe` Right (Seq annz (Data annz (TypeD ["Xxx"] Type0 int,cz) False) (Seq annz (Seq annz (Var annz "x" (TypeD ["Xxx"] Type0 Type0,cz)) (Nop annz)) (Set annz False (LVar "x") (Cons annz ["Xxx"] (Number annz 1)))))
+              `shouldBe` Right (Seq annz (Data annz (TypeD ["Xxx"] [] int,cz) False) (Seq annz (Seq annz (Var annz "x" (TypeD ["Xxx"] [] Type0,cz)) (Nop annz)) (Set annz False (LVar "x") (Cons annz ["Xxx"] (Number annz 1)))))
 
             it "TODO-fields: data Xxx (x,y) with (Int,Int)" $
               (parse stmt "data Xxx (x,y) with (Int,Int)")
@@ -582,17 +582,17 @@ spec = do
 
             it "Xxx.Yyy" $
               (parse' stmt "data Int ; data Xxx with Int ; data Xxx.Yyy with Int ; var y:Xxx.Yyy <- Xxx.Yyy (1,2)")
-              `shouldBe` Right (Seq annz (Data annz (TypeD ["Int"] Type0 Type0,M.fromList []) False) (Seq annz (Data annz (TypeD ["Xxx"] Type0 int,M.fromList []) False) (Seq annz (Data annz (TypeD ["Xxx","Yyy"] Type0 int,M.fromList []) False) (Seq annz (Seq annz (Var annz "y" (TypeD ["Xxx","Yyy"] Type0 Type0,M.fromList [])) (Nop annz)) (Set annz False (LVar "y") (Cons annz ["Xxx","Yyy"] (Tuple annz [Number annz 1,Number annz 2])))))))
+              `shouldBe` Right (Seq annz (Data annz (TypeD ["Int"] [] Type0,M.fromList []) False) (Seq annz (Data annz (TypeD ["Xxx"] [] int,M.fromList []) False) (Seq annz (Data annz (TypeD ["Xxx","Yyy"] [] int,M.fromList []) False) (Seq annz (Seq annz (Var annz "y" (TypeD ["Xxx","Yyy"] [] Type0,M.fromList [])) (Nop annz)) (Set annz False (LVar "y") (Cons annz ["Xxx","Yyy"] (Tuple annz [Number annz 1,Number annz 2])))))))
 
             it "data X with Int ; x:Int ; X x <- X 1 ; ret x" $
               (parse' stmt "data Xxx with Int ; var x:Int ; set Xxx x <- Xxx 1 ; return x")
-              `shouldBe` Right (Seq annz (Data annz (TypeD ["Xxx"] Type0 int,cz) False) (Seq annz (Seq annz (Seq annz (Var annz "x" (int,cz)) (Nop annz)) (Nop annz)) (Seq annz (Set annz False (LCons ["Xxx"] (LVar "x")) (Cons annz ["Xxx"] (Number annz 1))) (Ret annz (Read annz "x")))))
+              `shouldBe` Right (Seq annz (Data annz (TypeD ["Xxx"] [] int,cz) False) (Seq annz (Seq annz (Seq annz (Var annz "x" (int,cz)) (Nop annz)) (Nop annz)) (Seq annz (Set annz False (LCons ["Xxx"] (LVar "x")) (Cons annz ["Xxx"] (Number annz 1))) (Ret annz (Read annz "x")))))
             it "data X with Int ; X 1 <- X 1 ; return 1" $
               (parse' stmt "data Xxx with Int ; set Xxx 1 <- Xxx 1 ; return 1")
-              `shouldBe` Right (Seq annz (Data annz (TypeD ["Xxx"] Type0 int,cz) False) (Seq annz (Set annz False (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 1))) (Ret annz (Number annz 1))))
+              `shouldBe` Right (Seq annz (Data annz (TypeD ["Xxx"] [] int,cz) False) (Seq annz (Set annz False (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 1))) (Ret annz (Number annz 1))))
             it "data X with Int ; x:Int ; X 1 <- X 2" $
               (parse' stmt "data Xxx with Int ; set Xxx 1 <- Xxx 2 ; return 2")
-              `shouldBe` Right (Seq annz (Data annz (TypeD ["Xxx"] Type0 int,cz) False) (Seq annz (Set annz False (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 2))) (Ret annz (Number annz 2))))
+              `shouldBe` Right (Seq annz (Data annz (TypeD ["Xxx"] [] int,cz) False) (Seq annz (Set annz False (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 2))) (Ret annz (Number annz 2))))
 
             it "Aa <- Aa.Bb" $
               (parse' stmt $
@@ -605,33 +605,33 @@ spec = do
                   "set (Aa v) <- b",
                   "return v"
                 ])
-              `shouldBe` Right (Seq annz (Data annz (TypeD ["Aa"] Type0 int,cz) False) (Seq annz (Data annz (TypeD ["Aa","Bb"] Type0 Type0,cz) False) (Seq annz (Seq annz (Seq annz (Var annz "b" (TypeD ["Aa","Bb"] Type0 Type0,cz)) (Nop annz)) (Set annz False (LVar "b") (Cons annz ["Aa","Bb"] (Number annz 1)))) (Seq annz (Seq annz (Seq annz (Var annz "a" (TypeD ["Aa"] Type0 Type0,cz)) (Nop annz)) (Set annz False (LVar "a") (Read annz "b"))) (Seq annz (Seq annz (Seq annz (Var annz "v" (int,cz)) (Nop annz)) (Nop annz)) (Seq annz (Set annz False (LCons ["Aa"] (LVar "v")) (Read annz "b")) (Ret annz (Read annz "v"))))))))
+              `shouldBe` Right (Seq annz (Data annz (TypeD ["Aa"] [] int,cz) False) (Seq annz (Data annz (TypeD ["Aa","Bb"] [] Type0,cz) False) (Seq annz (Seq annz (Seq annz (Var annz "b" (TypeD ["Aa","Bb"] [] Type0,cz)) (Nop annz)) (Set annz False (LVar "b") (Cons annz ["Aa","Bb"] (Number annz 1)))) (Seq annz (Seq annz (Seq annz (Var annz "a" (TypeD ["Aa"] [] Type0,cz)) (Nop annz)) (Set annz False (LVar "a") (Read annz "b"))) (Seq annz (Seq annz (Seq annz (Var annz "v" (int,cz)) (Nop annz)) (Nop annz)) (Seq annz (Set annz False (LCons ["Aa"] (LVar "v")) (Read annz "b")) (Ret annz (Read annz "v"))))))))
 
         describe "data - constraint:" $ do
 
             it "Unit a/IEq" $
               parse' stmt "data Unit for a with a where a is IEq"
-              `shouldBe` Right (Data annz (TypeD ["Unit"] (TypeN [TypeV "a"]) (TypeV "a"),M.fromList [("a",S.fromList ["IEq"])]) False)
+              `shouldBe` Right (Data annz (TypeD ["Unit"] [TypeV "a"] (TypeV "a"),M.fromList [("a",S.fromList ["IEq"])]) False)
             it "Pair (a,a)" $
               parse' stmt "data Pair for a with (a,a)"
-              `shouldBe` Right (Data annz (TypeD ["Pair"] (TypeN [TypeV "a"]) (TypeN [TypeV "a",TypeV "a"]),M.fromList []) False)
+              `shouldBe` Right (Data annz (TypeD ["Pair"] [TypeV "a"] (TypeN [TypeV "a",TypeV "a"]),M.fromList []) False)
             it "Pair (a,a)/IEq" $
               parse' stmt "data Pair for a with (a,a) where (a is IEq)"
-              `shouldBe` Right (Data annz (TypeD ["Pair"] (TypeN [TypeV "a"]) (TypeN [TypeV "a",TypeV "a"]),M.fromList [("a",S.fromList ["IEq"])]) False)
+              `shouldBe` Right (Data annz (TypeD ["Pair"] [TypeV "a"] (TypeN [TypeV "a",TypeV "a"]),M.fromList [("a",S.fromList ["IEq"])]) False)
             it "Pair (a,b)" $
               parse' stmt "data Pair for (a,b) with (a,b)"
-              `shouldBe` Right (Data annz (TypeD ["Pair"] (TypeN [TypeV "a",TypeV "b"]) (TypeN [TypeV "a",TypeV "b"]),M.fromList []) False)
+              `shouldBe` Right (Data annz (TypeD ["Pair"] [TypeV "a",TypeV "b"] (TypeN [TypeV "a",TypeV "b"]),M.fromList []) False)
             it "Pair (a,b)/IEq" $
               parse' stmt "data Pair for (a,b) with (a,b) where (a is IEq, b is IEq)"
-              `shouldBe` Right (Data annz (TypeD ["Pair"] (TypeN [TypeV "a",TypeV "b"]) (TypeN [TypeV "a",TypeV "b"]),M.fromList [("a",S.fromList ["IEq"]),("b",S.fromList ["IEq"])]) False)
+              `shouldBe` Right (Data annz (TypeD ["Pair"] [TypeV "a",TypeV "b"] (TypeN [TypeV "a",TypeV "b"]),M.fromList [("a",S.fromList ["IEq"]),("b",S.fromList ["IEq"])]) False)
 
             it "Pair (a,a) ; p1:Pair(Int,Int)" $
               parse' stmt "data Pair for a with (a,a) ; var p1 : Pair of Int"
-              `shouldBe` Right (Seq annz (Data annz (TypeD ["Pair"] (TypeN [TypeV "a"]) (TypeN [TypeV "a",TypeV "a"]),M.fromList []) False) (Seq annz (Seq annz (Var annz "p1" (TypeD ["Pair"] int Type0,M.fromList [])) (Nop annz)) (Nop annz)))
+              `shouldBe` Right (Seq annz (Data annz (TypeD ["Pair"] [TypeV "a"] (TypeN [TypeV "a",TypeV "a"]),M.fromList []) False) (Seq annz (Seq annz (Var annz "p1" (TypeD ["Pair"] [int] Type0,M.fromList [])) (Nop annz)) (Nop annz)))
 
             it "Either" $
               parse' stmt "data Either for (a,b) ; data Either.Left  with a ; data Either.Right with b"
-              `shouldBe` Right (Seq annz (Data annz (TypeD ["Either"] (TypeN [TypeV "a",TypeV "b"]) Type0,M.fromList []) False) (Seq annz (Data annz (TypeD ["Either","Left"] Type0 (TypeV "a"),M.fromList []) False) (Data annz (TypeD ["Either","Right"] Type0 (TypeV "b"),M.fromList []) False)))
+              `shouldBe` Right (Seq annz (Data annz (TypeD ["Either"] [TypeV "a",TypeV "b"] Type0,M.fromList []) False) (Seq annz (Data annz (TypeD ["Either","Left"] [] (TypeV "a"),M.fromList []) False) (Data annz (TypeD ["Either","Right"] [] (TypeV "b"),M.fromList []) False)))
 
         describe "constraint:" $ do
 

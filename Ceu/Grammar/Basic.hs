@@ -158,7 +158,7 @@ instance HasAnn Stmt where
     getAnn (Ret   z _)         = z
     getAnn (Nop   z)           = z
 
-prelude z p = (Data z (TypeD ["Int"]          Type0 Type0,cz) False
-              (Data z (TypeD ["Bool"]         Type0 Type0,cz) False
-              (Data z (TypeD ["Bool","True"]  Type0 Type0,cz) False
-              (Data z (TypeD ["Bool","False"] Type0 Type0,cz) False p))))
+prelude z p = (Data z (TypeD ["Int"]          [] Type0,cz) False
+              (Data z (TypeD ["Bool"]         [] Type0,cz) False
+              (Data z (TypeD ["Bool","True"]  [] Type0,cz) False
+              (Data z (TypeD ["Bool","False"] [] Type0,cz) False p))))

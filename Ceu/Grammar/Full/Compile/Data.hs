@@ -4,7 +4,7 @@ import Debug.Trace
 import Data.List (find)
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Type               (Type(..),TypeC,instantiate,getSuper,getVs)
+import Ceu.Grammar.Type               (Type(..),TypeC,instantiate,getSuper)
 import Ceu.Grammar.Constraints as Cs
 import Ceu.Grammar.Full.Full
 
@@ -50,14 +50,14 @@ expr _  e                               = e
 -------------------------------------------------------------------------------
 
 fdata :: [Stmt] -> TypeC -> TypeC
-fdata ds tp@(TypeD id tpof tpst, ctrs) = case getSuper id of
+fdata ds tp@(TypeD id ofs st, ctrs) = case getSuper id of
   Nothing  -> tp
   Just sup -> case find (\(Data'' _ (TypeD id' _ _,_) _ _) -> id'==sup) ds of
                 Nothing -> tp
-                Just (Data'' _ (TypeD _ tpof' tpst',ctrs') _ _) ->
-                  case any (\v2 -> elem v2 (getVs tpof)) (getVs tpof') of
+                Just (Data'' _ (TypeD _ ofs' st',ctrs') _ _) ->
+                  case any (\v2 -> elem v2 ofs) ofs' of
                     True  -> error $ "TODO: repeated variables"
-                    False -> (TypeD id (cat tpof tpof') (cat tpst tpst'), Cs.union ctrs ctrs')
+                    False -> (TypeD id (ofs ++ ofs') (cat st st'), Cs.union ctrs ctrs')
   where
     cat :: Type -> Type -> Type
     cat Type0      tp              = tp
@@ -73,13 +73,13 @@ fvar :: [Stmt] -> TypeC -> TypeC
 fvar ds (tp_,ctrs) = (fvar' ds tp_, ctrs)
   where
     fvar' :: [Stmt] -> Type -> Type
-    fvar' ds (TypeD hier x tpst) = TypeD hier x $
+    fvar' ds (TypeD hier x st) = TypeD hier x $
       case find (\(Data'' _ (TypeD h' _ _,_) _ _) -> h'==hier) ds of
-        Nothing -> fvar' ds tpst
-        Just (Data'' _ (TypeD _ tpof' tpst',_) _ _)
-                -> instantiate (zip (getVs tpof') tps_) tpst'
+        Nothing -> fvar' ds st
+        Just (Data'' _ (TypeD _ ofs' st',_) _ _)
+                -> instantiate (zip (map (\(TypeV v)->v) ofs') tps_) st'
                    where
-                     tps_ = case fvar' ds tpst of
+                     tps_ = case fvar' ds st of
                        TypeN x -> x
                        Type0   -> []
                        x       -> [x]

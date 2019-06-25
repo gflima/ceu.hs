@@ -14,7 +14,7 @@ import Ceu.Grammar.Constraints as Cs
 data Type = TypeB
           | TypeT
           | Type0
-          | TypeD ID_Data_Hier Type Type    -- X of Y with (Y,Int)
+          | TypeD ID_Data_Hier [Type] Type    -- X of [Y] with (Y,Int)
           | TypeN [Type]    -- (len >= 2)
           | TypeF Type Type
           | TypeV ID_Var
@@ -29,34 +29,25 @@ type TypeC = (Type, Cs.Map)
 hier2str = intercalate "."
 
 show' :: Type -> String
-show' (TypeV id)           = id
-show' TypeT                = "top"
-show' TypeB                = "bot"
-show' Type0                = "()"
-show' (TypeD hier Type0 _) = hier2str hier
-show' (TypeD hier tp    _) = "(" ++ hier2str hier ++ " of " ++ show' tp ++ ")"
-show' (TypeF inp out)      = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
-show' (TypeN tps)          = "(" ++ intercalate "," (map show' tps) ++ ")"
+show' (TypeV id)         = id
+show' TypeT              = "top"
+show' TypeB              = "bot"
+show' Type0              = "()"
+show' (TypeD hier []  _) = hier2str hier
+show' (TypeD hier ofs _) = "(" ++ hier2str hier ++ " of " ++ "(" ++ intercalate "," (map show' ofs) ++ ")" ++ ")"
+show' (TypeF inp out)    = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
+show' (TypeN tps)        = "(" ++ intercalate "," (map show' tps) ++ ")"
 
 -------------------------------------------------------------------------------
 
 getDs :: Type -> [Type]
-getDs (TypeV _)              = []
-getDs TypeT                  = []
-getDs TypeB                  = []
-getDs Type0                  = []
-getDs tp@(TypeD _ tpof tpst) = [tp] ++ getDs tpof ++ getDs tpst
-getDs (TypeF inp out)        = getDs inp ++ getDs out
-getDs (TypeN ts)             = concatMap getDs ts
-
-getVs :: Type -> [ID_Var]
-getVs (TypeV var)            = [var]
-getVs TypeT                  = []
-getVs TypeB                  = []
-getVs Type0                  = []
-getVs tp@(TypeD _ tpof tpst) = getVs tpof ++ getVs tpst
-getVs (TypeF inp out)        = getVs inp ++ getVs out
-getVs (TypeN ts)             = concatMap getVs ts
+getDs (TypeV _)           = []
+getDs TypeT               = []
+getDs TypeB               = []
+getDs Type0               = []
+getDs tp@(TypeD _ ofs st) = [tp] ++ concatMap getDs ofs ++ getDs st
+getDs (TypeF inp out)     = getDs inp ++ getDs out
+getDs (TypeN ts)          = concatMap getDs ts
 
 -------------------------------------------------------------------------------
 
@@ -78,7 +69,7 @@ instantiate :: [(ID_Var,Type)] -> Type -> Type
 instantiate vars (TypeV var)    = case find (\(var',_) -> var==var') vars of
                                     Nothing    -> TypeV var
                                     Just (_,v) -> v
-instantiate vars (TypeD hier tp1 tp2) = TypeD hier (instantiate vars tp1) (instantiate vars tp2)
+instantiate vars (TypeD hier ofs st) = TypeD hier (map (instantiate vars) ofs) (instantiate vars st)
 instantiate vars (TypeF inp out) = TypeF (instantiate vars inp) (instantiate vars out)
 instantiate vars (TypeN tps)     = TypeN $ map (instantiate vars) tps
 instantiate _    tp              = tp
@@ -170,7 +161,7 @@ relates_ rel tp1 tp2 =
 
 comPre :: [Type] -> Maybe Type
 comPre tps = yyy where
-  l = bool [TypeD pre Type0 Type0] [] (null tp1s || null pre)
+  l = bool [TypeD pre [] Type0] [] (null tp1s || null pre)
 
   xxx = find isNotV tps
         where
@@ -265,8 +256,8 @@ supOf sup               Type0             = (False, sup,   [])
 
 supOf sup               TypeT             = (False, sup,   [])
 
-supOf sup@(TypeD x tp11 tp12) sub@(TypeD y tp21 tp22)
-  | x `isPrefixOf` y && tp11 `isSupOf_` tp21 && tp12 `sup'` tp22  = (True,  sub,   [])
+supOf sup@(TypeD x ofs1 st1) sub@(TypeD y ofs2 st2)
+  | x `isPrefixOf` y && (TypeN ofs1) `isSupOf_` (TypeN ofs2) && st1 `sup'` st2  = (True,  sub,   [])
   -- | x `isPrefixOf` y                      = (True,  sub,   [])
   | otherwise                             = (False, sup,   [])
   where

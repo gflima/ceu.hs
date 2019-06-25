@@ -64,7 +64,7 @@ spec = do
 
       it "scope var x end ; x=1" $ do
         compile' (Seq annz (Scope annz (Var annz "x" (int,cz))) (Set annz False (LVar "x") (Number annz 1)))
-        `shouldBe` (["data 'Int' is not declared","variable 'x' is not declared"], B.Seq annz (B.Var annz "x" (int,cz) (B.Nop annz)) (B.Match annz False (B.LVar "x") (B.Number (annz{type_=(TypeD ["Int","1"] Type0 Type0,cz)}) 1) (B.Nop annz) (B.Ret annz (B.Error annz (-2)))))
+        `shouldBe` (["data 'Int' is not declared","variable 'x' is not declared"], B.Seq annz (B.Var annz "x" (int,cz) (B.Nop annz)) (B.Match annz False (B.LVar "x") (B.Number (annz{type_=(TypeD ["Int","1"] [] Type0,cz)}) 1) (B.Nop annz) (B.Ret annz (B.Error annz (-2)))))
 
   --------------------------------------------------------------------------
 
@@ -76,11 +76,11 @@ spec = do
 
     it "do var x; x = 1 end" $ do
       compile' (Var'' annz "x" (int,cz) (Match' annz False (LVar "x") (Number annz 1) (Nop annz) (Nop annz)))
-      `shouldBe` (["data 'Int' is not declared"], (B.Var annz "x" (int,cz) (B.Match annz False (B.LVar "x") (B.Number annz{type_=(TypeD ["Int","1"] Type0 Type0,cz)} 1) (B.Nop annz) (B.Nop annz))))
+      `shouldBe` (["data 'Int' is not declared"], (B.Var annz "x" (int,cz) (B.Match annz False (B.LVar "x") (B.Number annz{type_=(TypeD ["Int","1"] [] Type0,cz)} 1) (B.Nop annz) (B.Nop annz))))
 
     it "do var x; x = 1 end" $ do
       compile' (Var'' annz "x" (int,cz) (Match' annz False (LVar "x") (Number annz 1) (Nop annz) (Nop annz)))
-      `shouldBe` (["data 'Int' is not declared"], (B.Var annz "x" (int,cz) (B.Match annz False (B.LVar "x") (B.Number annz{type_=(TypeD ["Int","1"] Type0 Type0,cz)} 1) (B.Nop annz) (B.Nop annz))))
+      `shouldBe` (["data 'Int' is not declared"], (B.Var annz "x" (int,cz) (B.Match annz False (B.LVar "x") (B.Number annz{type_=(TypeD ["Int","1"] [] Type0,cz)} 1) (B.Nop annz) (B.Nop annz))))
 
     it "if" $
       compile
@@ -184,14 +184,14 @@ spec = do
 
     it "Xxx.Yyy" $
       compile (Seq annz (Data annz (int,                            M.fromList []) False)
-              (Seq annz (Data annz (TypeD ["Xxx"]       Type0 int,  M.fromList []) False)
-              (Seq annz (Data annz (TypeD ["Xxx","Yyy"] Type0 int,  M.fromList []) False)
+              (Seq annz (Data annz (TypeD ["Xxx"]       [] int,  M.fromList []) False)
+              (Seq annz (Data annz (TypeD ["Xxx","Yyy"] [] int,  M.fromList []) False)
               (Seq annz
-              (Seq annz (Var annz "y" (TypeD ["Xxx","Yyy"] Type0 Type0,M.fromList []))
+              (Seq annz (Var annz "y" (TypeD ["Xxx","Yyy"] [] Type0,M.fromList []))
                         (Nop annz))
                         (Set annz False (LVar "y") (Cons annz ["Xxx","Yyy"] (Tuple annz [Number annz 1,Number annz 2])))))))
       `shouldBe`
-        (Data'' annz (TypeD ["Int"] Type0 Type0,fromList []) False (Data'' annz (TypeD ["Xxx"] Type0 int,fromList []) False (Data'' annz (TypeD ["Xxx","Yyy"] Type0 (TypeN [int,int]),fromList []) False (Var'' annz "y" (TypeD ["Xxx","Yyy"] Type0 (TypeN [int,int]),fromList []) (Seq annz (Nop annz) (Match' annz False (LVar "y") (Cons annz ["Xxx","Yyy"] (Tuple annz [Number annz 1,Number annz 2])) (Nop annz) (Ret annz (Error annz (-2)))))))))
+        (Data'' annz (TypeD ["Int"] [] Type0,fromList []) False (Data'' annz (TypeD ["Xxx"] [] int,fromList []) False (Data'' annz (TypeD ["Xxx","Yyy"] [] (TypeN [int,int]),fromList []) False (Var'' annz "y" (TypeD ["Xxx","Yyy"] [] (TypeN [int,int]),fromList []) (Seq annz (Nop annz) (Match' annz False (LVar "y") (Cons annz ["Xxx","Yyy"] (Tuple annz [Number annz 1,Number annz 2])) (Nop annz) (Ret annz (Error annz (-2)))))))))
 
   --------------------------------------------------------------------------
 
@@ -201,7 +201,7 @@ spec = do
       `shouldBe` Right (E.Number 1)
 
     it "data X with Int ; x:Int ; X 1 <- X 2" $ do
-      go (Seq annz (Data annz (TypeD ["Xxx"] Type0 int,cz) False) (Seq annz (Set annz False (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 2))) (Ret annz (Number annz 2))))
+      go (Seq annz (Data annz (TypeD ["Xxx"] [] int,cz) False) (Seq annz (Set annz False (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 2))) (Ret annz (Number annz 2))))
       `shouldBe`
         Left ["types do not match : expected 'Int.1' : found 'Int.2'"]
 

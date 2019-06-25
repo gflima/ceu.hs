@@ -9,13 +9,13 @@ import Ceu.Grammar.Type
 main :: IO ()
 main = hspec spec
 
-int  = TypeD ["Int"] Type0 Type0
-int1 = TypeD ["Int","1"] Type0 Type0
-int2 = TypeD ["Int","2"] Type0 Type0
+int  = TypeD ["Int"]     [] Type0
+int1 = TypeD ["Int","1"] [] Type0
+int2 = TypeD ["Int","2"] [] Type0
 
-bool  = TypeD ["Bool"]         Type0 Type0
-boolf = TypeD ["Bool","False"] Type0 Type0
-boolt = TypeD ["Bool","True"]  Type0 Type0
+bool  = TypeD ["Bool"]         [] Type0
+boolf = TypeD ["Bool","False"] [] Type0
+boolt = TypeD ["Bool","True"]  [] Type0
 
 spec :: Spec
 spec = do
@@ -56,8 +56,8 @@ spec = do
       `shouldBe` Right ((TypeF (int) (int)), [("a", int)])
 
     it "(a -> b) > (A -> B)" $
-      relates_ SUP (TypeF (TypeV "a") (TypeV "b")) (TypeF (TypeD ["A"] Type0 Type0) (TypeD ["B"] Type0 Type0))
-      `shouldBe` Right ((TypeF (TypeD ["A"] Type0 Type0) (TypeD ["B"] Type0 Type0)), [("a", TypeD ["A"] Type0 Type0), ("b", TypeD ["B"] Type0 Type0)])
+      relates_ SUP (TypeF (TypeV "a") (TypeV "b")) (TypeF (TypeD ["A"] [] Type0) (TypeD ["B"] [] Type0))
+      `shouldBe` Right ((TypeF (TypeD ["A"] [] Type0) (TypeD ["B"] [] Type0)), [("a", TypeD ["A"] [] Type0), ("b", TypeD ["B"] [] Type0)])
 
     it "(a -> a) > (Int -> ())" $
       relates_ SUP (TypeF (TypeV "a") (TypeV "a")) (TypeF (int) Type0)
@@ -103,15 +103,15 @@ spec = do
       relates_ SUP
       (TypeF (TypeN [TypeV "a", TypeV "a"])
              Type0)
-      (TypeF (TypeN [TypeD ["X"] Type0 Type0, TypeD ["X","A"] Type0 Type0])
+      (TypeF (TypeN [TypeD ["X"] [] Type0, TypeD ["X","A"] [] Type0])
              Type0)
-      `shouldBe` Right (TypeF (TypeN [TypeD ["X"] Type0 Type0,TypeD ["X","A"] Type0 Type0]) Type0,[("a",TypeD ["X","A"] Type0 Type0)])
+      `shouldBe` Right (TypeF (TypeN [TypeD ["X"] [] Type0,TypeD ["X","A"] [] Type0]) Type0,[("a",TypeD ["X","A"] [] Type0)])
 
     it "((a,a) -> ()) > ((Y,X.A) -> ()" $
       relates_ SUP
       (TypeF (TypeN [TypeV "a", TypeV "a"])
              Type0)
-      (TypeF (TypeN [TypeD ["Y"] Type0 Type0, TypeD ["X","A"] Type0 Type0])
+      (TypeF (TypeN [TypeD ["Y"] [] Type0, TypeD ["X","A"] [] Type0])
              Type0)
       `shouldBe` Left ["types do not match : expected '((a,a) -> ())' : found '((Y,X.A) -> ())'","ambigous instances for 'a' : 'Y', 'X.A'"]
 
@@ -119,14 +119,14 @@ spec = do
       relates_ SUP
       (TypeF (TypeN [TypeV "a", TypeV "a"])
              (TypeN [TypeV "a", TypeV "a"]))
-      (TypeF (TypeN [TypeD ["X"] Type0 Type0,     TypeD ["X","A"] Type0 Type0])
-             (TypeN [TypeD ["X","A"] Type0 Type0, TypeD ["X","A","B"] Type0 Type0]))
-      `shouldBe` Right (TypeF (TypeN [TypeD ["X"] Type0 Type0,TypeD ["X","A"] Type0 Type0]) (TypeN [TypeD ["X","A"] Type0 Type0,TypeD ["X","A","B"] Type0 Type0]),[("a",TypeD ["X","A"] Type0 Type0)])
+      (TypeF (TypeN [TypeD ["X"] [] Type0,     TypeD ["X","A"] [] Type0])
+             (TypeN [TypeD ["X","A"] [] Type0, TypeD ["X","A","B"] [] Type0]))
+      `shouldBe` Right (TypeF (TypeN [TypeD ["X"] [] Type0,TypeD ["X","A"] [] Type0]) (TypeN [TypeD ["X","A"] [] Type0,TypeD ["X","A","B"] [] Type0]),[("a",TypeD ["X","A"] [] Type0)])
 
     it "((X,X.A)->(X.A,X.A.B) SUP ((a,a)->(a,a))" $
       relates_ SUP
-      (TypeF (TypeN [TypeD ["X"] Type0 Type0,     TypeD ["X","A"] Type0 Type0])
-             (TypeN [TypeD ["X","A"] Type0 Type0, TypeD ["X","A","B"] Type0 Type0]))
+      (TypeF (TypeN [TypeD ["X"] [] Type0,     TypeD ["X","A"] [] Type0])
+             (TypeN [TypeD ["X","A"] [] Type0, TypeD ["X","A","B"] [] Type0]))
       (TypeF (TypeN [TypeV "a", TypeV "a"])
              (TypeN [TypeV "a", TypeV "a"]))
       `shouldBe` Left ["types do not match : expected '((X,X.A) -> (X.A,X.A.B))' : found '((a,a) -> (a,a))'","type variance does not match : 'X.A.B' should be supertype of 'X'"]
@@ -135,26 +135,26 @@ spec = do
       relates_ SUP
       (TypeF (TypeN [TypeV "a", TypeV "a"])
              (TypeN [TypeV "a", TypeV "a"]))
-      (TypeF (TypeN [TypeD ["X"] Type0 Type0, TypeD ["X","A"] Type0 Type0])
-             (TypeN [TypeD ["X"] Type0 Type0, TypeD ["X","A","B"] Type0 Type0]))
+      (TypeF (TypeN [TypeD ["X"] [] Type0, TypeD ["X","A"] [] Type0])
+             (TypeN [TypeD ["X"] [] Type0, TypeD ["X","A","B"] [] Type0]))
       `shouldBe` Left ["types do not match : expected '((a,a) -> (a,a))' : found '((X,X.A) -> (X,X.A.B))'","type variance does not match : 'X.A' should be supertype of 'X'"]
 
     it "(True,False)->() > (a,a)->()" $
       relates_ SUP
-      (TypeF (TypeN [TypeD ["X","Bool","True"] Type0 Type0, TypeD ["X","Bool","False"] Type0 Type0]) Type0)
+      (TypeF (TypeN [TypeD ["X","Bool","True"] [] Type0, TypeD ["X","Bool","False"] [] Type0]) Type0)
       (TypeF (TypeN [TypeV "a",                 TypeV "a"])                  Type0)
-      `shouldBe` Right (TypeF (TypeN [TypeV "a",TypeV "a"]) Type0,[("a",TypeD ["X","Bool"] Type0 Type0)])
+      `shouldBe` Right (TypeF (TypeN [TypeV "a",TypeV "a"]) Type0,[("a",TypeD ["X","Bool"] [] Type0)])
 
     it "()->(True,False) SUP ()->(a,a)" $
       relates_ SUP
-      (TypeF Type0 (TypeN [TypeD ["X","Bool","True"] Type0 Type0, TypeD ["X","Bool","False"] Type0 Type0]))
+      (TypeF Type0 (TypeN [TypeD ["X","Bool","True"] [] Type0, TypeD ["X","Bool","False"] [] Type0]))
       (TypeF Type0 (TypeN [TypeV "a",                 TypeV "a"]))
       `shouldBe` Left ["types do not match : expected '(() -> (X.Bool.True,X.Bool.False))' : found '(() -> (a,a))'","ambigous instances for 'a' : 'X.Bool.True', 'X.Bool.False'"]
 
     it "(True,False)->(True,False) SUP (a,a)->(a,a)" $
       relates_ SUP
-      (TypeF (TypeN [TypeD ["X","Bool","True"] Type0 Type0, TypeD ["X","Bool","False"] Type0 Type0])
-             (TypeN [TypeD ["X","Bool","True"] Type0 Type0, TypeD ["X","Bool","False"] Type0 Type0]))
+      (TypeF (TypeN [TypeD ["X","Bool","True"] [] Type0, TypeD ["X","Bool","False"] [] Type0])
+             (TypeN [TypeD ["X","Bool","True"] [] Type0, TypeD ["X","Bool","False"] [] Type0]))
       (TypeF (TypeN [TypeV "a", TypeV "a"])
              (TypeN [TypeV "a", TypeV "a"]))
       `shouldBe` Left ["types do not match : expected '((X.Bool.True,X.Bool.False) -> (X.Bool.True,X.Bool.False))' : found '((a,a) -> (a,a))'","ambigous instances for 'a' : 'X.Bool.True', 'X.Bool.False', 'X.Bool.True', 'X.Bool.False'"]
@@ -237,16 +237,16 @@ spec = do
   describe "instantiate" $ do
 
     it "A in [...] ~> A" $
-      instantiate [("a",TypeD ["A"] Type0 Type0), ("b",TypeD ["B"] Type0 Type0)] (TypeD ["A"] Type0 Type0)
-      `shouldBe` (TypeD ["A"] Type0 Type0)
+      instantiate [("a",TypeD ["A"] [] Type0), ("b",TypeD ["B"] [] Type0)] (TypeD ["A"] [] Type0)
+      `shouldBe` (TypeD ["A"] [] Type0)
 
     it "(a,b) in [(a,A),(b,B)] ~> (A,B)" $
-      instantiate [("a",TypeD ["A"] Type0 Type0), ("b",TypeD ["B"] Type0 Type0)] (TypeN [TypeV "a", TypeV "b"])
-      `shouldBe` (TypeN [TypeD ["A"] Type0 Type0, TypeD ["B"] Type0 Type0])
+      instantiate [("a",TypeD ["A"] [] Type0), ("b",TypeD ["B"] [] Type0)] (TypeN [TypeV "a", TypeV "b"])
+      `shouldBe` (TypeN [TypeD ["A"] [] Type0, TypeD ["B"] [] Type0])
 
     it "(a->C) in [(a,A),(b,B)] ~> (A->C)" $
-      instantiate [("a",TypeD ["A"] Type0 Type0), ("b",TypeD ["B"] Type0 Type0)] (TypeF (TypeV "a") (TypeD ["C"] Type0 Type0))
-      `shouldBe` (TypeF (TypeD ["A"] Type0 Type0) (TypeD ["C"] Type0 Type0))
+      instantiate [("a",TypeD ["A"] [] Type0), ("b",TypeD ["B"] [] Type0)] (TypeF (TypeV "a") (TypeD ["C"] [] Type0))
+      `shouldBe` (TypeF (TypeD ["A"] [] Type0) (TypeD ["C"] [] Type0))
 
     it "Int : (Int ~ Int) ~> Int" $
       inst' (int) (int, int)
@@ -287,32 +287,32 @@ spec = do
   describe "comPre" $ do
 
     it "[A.1,A.1]" $
-      comPre [TypeD ["A","1"] Type0 Type0, TypeD ["A","1"] Type0 Type0]
-      `shouldBe` Just (TypeD ["A","1"] Type0 Type0)
+      comPre [TypeD ["A","1"] [] Type0, TypeD ["A","1"] [] Type0]
+      `shouldBe` Just (TypeD ["A","1"] [] Type0)
 
     it "[A.1,A.2]" $
-      comPre [TypeD ["A","1"] Type0 Type0, TypeD ["A","2"] Type0 Type0]
-      `shouldBe` Just (TypeD ["A"] Type0 Type0)
+      comPre [TypeD ["A","1"] [] Type0, TypeD ["A","2"] [] Type0]
+      `shouldBe` Just (TypeD ["A"] [] Type0)
 
     it "[A.1,A.2,a]" $
-      comPre [TypeD ["A","1"] Type0 Type0, TypeD ["A","2"] Type0 Type0, TypeV "a"]
-      `shouldBe` Just (TypeD ["A"] Type0 Type0)
+      comPre [TypeD ["A","1"] [] Type0, TypeD ["A","2"] [] Type0, TypeV "a"]
+      `shouldBe` Just (TypeD ["A"] [] Type0)
 
     it "[A.1,A.2,a,(A.1,a),(A.2,a)]" $
-      comPre [TypeD ["A","1"] Type0 Type0, TypeD ["A","2"] Type0 Type0, TypeV "a",
-              TypeN [TypeD ["A","1"] Type0 Type0, TypeV "a"], TypeN [TypeD ["A","2"] Type0 Type0, TypeV "a"] ]
-      `shouldBe` Just (TypeD ["A"] Type0 Type0)
+      comPre [TypeD ["A","1"] [] Type0, TypeD ["A","2"] [] Type0, TypeV "a",
+              TypeN [TypeD ["A","1"] [] Type0, TypeV "a"], TypeN [TypeD ["A","2"] [] Type0, TypeV "a"] ]
+      `shouldBe` Just (TypeD ["A"] [] Type0)
 
     it "[(A.1->A.2), (A.2->a)]" $
-      comPre [TypeF (TypeD ["A","1"] Type0 Type0) (TypeD ["A","2"] Type0 Type0),
-              TypeF (TypeD ["A","2"] Type0 Type0) (TypeV "a")]
-      `shouldBe` Just (TypeF (TypeD ["A"] Type0 Type0) (TypeD ["A","2"] Type0 Type0))
+      comPre [TypeF (TypeD ["A","1"] [] Type0) (TypeD ["A","2"] [] Type0),
+              TypeF (TypeD ["A","2"] [] Type0) (TypeV "a")]
+      `shouldBe` Just (TypeF (TypeD ["A"] [] Type0) (TypeD ["A","2"] [] Type0))
 
     it "[a,(A.1,a),(A.2,a)]" $
       comPre [ TypeV "a",
-               TypeN [TypeD ["A","1"] Type0 Type0, TypeV "a"],
-               TypeN [TypeD ["A","2"] Type0 Type0, TypeV "a"] ]
-      `shouldBe` Just (TypeN [TypeD ["A"] Type0 Type0,TypeV "a"])
+               TypeN [TypeD ["A","1"] [] Type0, TypeV "a"],
+               TypeN [TypeD ["A","2"] [] Type0, TypeV "a"] ]
+      `shouldBe` Just (TypeN [TypeD ["A"] [] Type0,TypeV "a"])
 
     it "[ [True,False] ]" $
       comPre [TypeN [boolt,boolf]]

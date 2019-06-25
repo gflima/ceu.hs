@@ -12,8 +12,8 @@ import Test.Hspec
 import Text.Printf
 import Debug.Trace
 
-int  = TypeD ["Int"]  Type0 Type0
-bool = TypeD ["Bool"] Type0 Type0
+int  = TypeD ["Int"]  [] Type0
+bool = TypeD ["Bool"] [] Type0
 
 main :: IO ()
 main = hspec spec
@@ -383,8 +383,8 @@ spec = do
       it "data X with Int ; x <- X 1 ; return x" $
         go
           (B.Data annz (int,cz) False
-          (B.Data annz (TypeD ["X"] Type0 int,cz) False
-          (B.Var annz "x" (TypeD ["X"] Type0 (int),cz)
+          (B.Data annz (TypeD ["X"] [] int,cz) False
+          (B.Var annz "x" (TypeD ["X"] [] (int),cz)
           (B.Match annz False (B.LVar "x") (B.Cons annz ["X"] (B.Number annz 1))
             (B.Ret annz (B.Read annz "x"))
             (B.Ret annz (B.Error annz 99))))))
@@ -394,8 +394,8 @@ spec = do
         go
           (B.Data annz (int,cz) False
           (B.Var annz "+" (TypeF (TypeN [int, int]) (int),cz)
-          (B.Data annz (TypeD ["X"] Type0 (TypeN [int, int]),cz) False
-          (B.Var annz "x" (TypeD ["X"] Type0 (TypeN [int, int]),cz)
+          (B.Data annz (TypeD ["X"] [] (TypeN [int, int]),cz) False
+          (B.Var annz "x" (TypeD ["X"] [] (TypeN [int, int]),cz)
           (B.Match annz False (B.LVar "x") (B.Cons annz ["X"] (B.Tuple annz [B.Call annz (B.Read annz "+") (B.Tuple annz [B.Number annz 1,B.Number annz 2]), B.Number annz 3]))
             (B.Ret annz (B.Read annz "x"))
             (B.Ret annz (B.Error annz 99)))))))
@@ -405,8 +405,8 @@ spec = do
         go
           (B.Data annz (int,cz) False
           (B.Var annz "+" (TypeF (TypeN [int, int]) (int),cz)
-          (B.Data annz (TypeD ["X"] Type0 (TypeN [int, int]),cz) False
-          (B.Var annz "x" (TypeD ["X"] Type0 Type0,cz)
+          (B.Data annz (TypeD ["X"] [] (TypeN [int, int]),cz) False
+          (B.Var annz "x" (TypeD ["X"] [] Type0,cz)
           (B.Match annz False (B.LVar "x") (B.Cons annz ["X"] (B.Tuple annz [B.Number annz 1,B.Number annz 2]))
             (B.Ret annz (B.Call annz (B.Read annz "+") (B.Read annz "x")))
             (B.Ret annz (B.Error annz 99)))))))
@@ -415,7 +415,7 @@ spec = do
       it "data X with Int ; x:Int ; X x <- X 1" $
         go
           (B.Data  annz (int,cz) False
-          (B.Data  annz (TypeD ["X"] Type0 int,cz) False
+          (B.Data  annz (TypeD ["X"] [] int,cz) False
           (B.Var   annz "x" (int,cz)
           (B.Match annz False (B.LCons ["X"] (B.LVar "x")) (B.Cons annz ["X"] (B.Number annz 1))
             (B.Ret   annz (B.Read annz "x"))
@@ -425,7 +425,7 @@ spec = do
       it "OK: data X with Int ; x:Int ; X 1 <- X 2" $
         go
           (B.Data  annz (int,cz) False
-          (B.Data  annz (TypeD ["X"] Type0 int,cz) False
+          (B.Data  annz (TypeD ["X"] [] int,cz) False
           (B.Var   annz "x" (int,cz)
           (B.Match annz True (B.LCons ["X"] (B.LNumber 1)) (B.Cons annz ["X"] (B.Number annz 2))
             (B.Ret   annz (B.Read annz "x"))

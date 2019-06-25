@@ -23,11 +23,16 @@ type_0 = do
     void <- tk_sym ")"
     return Type0
 
+f tp = case tp of
+  Type0   -> []
+  TypeN l -> l
+  _       -> [tp]
+
 type_D :: Parser Type
 type_D = do
     hier <- tk_data_hier
-    tp   <- option Type0 $ try (tk_key "of" *> pType)
-    return $ TypeD hier tp Type0
+    ofs  <- option Type0 $ try (tk_key "of" *> pType)
+    return $ TypeD hier (f ofs) Type0
 
 type_N :: Parser Type
 type_N = do

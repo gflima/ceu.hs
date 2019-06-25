@@ -160,7 +160,7 @@ step (Match loc e p q,vars)  = case envEval vars e of
     aux vars LUnit        v = (Right True,            vars)
     aux vars (LNumber x)  v = (Right (Number x == v), vars)
     aux vars (LCons id l)
-             (Cons id' e)   = if T.isRel_ T.SUP (TypeD id Type0 Type0) (TypeD id' Type0 Type0) then
+             (Cons id' e)   = if T.isRel_ T.SUP (TypeD id [] Type0) (TypeD id' [] Type0) then
                                 case envEval vars e of
                                   Error x -> (Left $ Error x, vars)
                                   e'      -> aux vars l e'

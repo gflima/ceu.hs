@@ -18,10 +18,10 @@ import qualified Ceu.Grammar.Full.Compile.Match as Match
 import qualified Ceu.Grammar.Full.Compile.Class as Class
 import qualified Ceu.Grammar.Full.Compile.FuncS as FuncS
 
-int   = TypeD ["Int"]        Type0 Type0
-bool  = TypeD ["Bool"]       Type0 Type0
-boolf = TypeD ["Bool.False"] Type0 Type0
-boolt = TypeD ["Bool.True"]  Type0 Type0
+int   = TypeD ["Int"]        [] Type0
+bool  = TypeD ["Bool"]       [] Type0
+boolf = TypeD ["Bool.False"] [] Type0
+boolt = TypeD ["Bool.True"]  [] Type0
 
 prelude :: Ann -> Stmt -> Stmt
 prelude z p =
