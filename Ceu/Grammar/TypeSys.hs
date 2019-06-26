@@ -1,6 +1,5 @@
 module Ceu.Grammar.TypeSys where
 
-import Debug.Trace
 import Data.List (find, intercalate, unfoldr, unzip4, sortBy)
 import Data.Maybe (isNothing, isJust, fromJust)
 import Data.Bool (bool)
@@ -8,6 +7,7 @@ import Data.Either (isRight)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
+import Ceu.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Constraints as Cs  (Pair, cz, toList, hasClass)
 import Ceu.Grammar.Type        as T   (Type(..), TypeC, show', instantiate, getDs,
@@ -105,6 +105,10 @@ wrap insts (Var z id1 (tp_,_) (Match _ False (LVar id2) body _ _)) acc | id1==id
       where
         ftp (tp_,_) = (T.instantiate insts tp_,cz)
 
+-- All possible combinations between members of each group:
+--    G1        G2        G3
+-- [ [1,10], [2,20,200], [3], ... ]
+-- [ [1,2,3,...], [1,20,3,...], [1,200,3,...], ... ]
 combos :: [[a]] -> [[a]]
 combos l = foldr g [[]] l where
     g :: [a] -> [[a]] -> [[a]]
@@ -113,19 +117,31 @@ combos l = foldr g [[]] l where
     h :: a -> [[a]] -> [[a]]
     h v combos = map (\combo -> v:combo) combos
 
-combos' :: [Stmt] -> [[ID_Class]] -> [[Type]]
-combos' ids clss = combos insts where
+-- [ [Ia], [Ib], ... ]
+-- [ [A1,A2,...], [B1,B2,...], ... ]
+-- [ [A1,B1,...], [A1,B2,...], ... ]
+combos' :: Int -> [Stmt] -> [[ID_Class]] -> [[Type]]
+combos' lvl ids clss = combos insts where
   insts :: [[Type]]
   insts = map h clss
     where
       h :: [ID_Class] -> [Type]
-      h [cls] = map g $ filter f ids where
+      h [cls] = concatMap h $ map g $ filter f ids where
         f :: Stmt -> Bool
-        f (Inst _ cls' (_,ctrs') _ _) = (cls == cls') && (null ctrs')
+        f (Inst _ cls' (_,ctrs') _ _) = (cls == cls') && (lvl>0 || null ctrs')
         f _                           = False
 
-        g :: Stmt -> Type
-        g (Inst _ _ (itp',cz) _ _) = itp'  -- types to instantiate
+        g :: Stmt -> TypeC
+        g (Inst _ _ tp _ _) = tp  -- types to instantiate
+
+        -- expand types with constraints to multiple types
+        -- TODO: currently refuse another level of constraints
+        -- Int    -> [Int]
+        -- X of a -> [X of Int, ...]
+        h :: TypeC -> [Type]
+        h tp@(tp_, ctrs) = if null ctrs then [tp_] else insts where
+          tpss  = combos' (lvl-1) ids (map Set.toList $ Map.elems ctrs)
+          insts = map (flip T.instantiate tp_) $ map (zip (Map.keys ctrs)) tpss
 
 err z = Ret z $ Error z (-2)  -- TODO: -2
 
@@ -255,10 +271,11 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
               -- with HINST type.
               p1 = foldr cat p fs where
                 cat :: Stmt -> Stmt -> Stmt
-                cat f@(Var _ _ (_,ctrs) _) acc = foldr cat' acc itpss where
+                cat f@(Var _ id (_,ctrs) _) acc = foldr cat' acc itpss where
                   itpss :: [[Type]] -- only combos with new itp (others are already instantiated)
-                  itpss = filter (\l -> elem itp l) $ combos' (s:ids) (map Set.toList $ Map.elems ctrs)
-                                                              -- include this instance "s"
+                  itpss = combos' 1 (s:ids) (map Set.toList $ Map.elems $ ctrs)
+                                     -- include this instance "s"
+                  --itpss = filter (\l -> elem itp l) $ combos' 1 (s:ids) (map Set.toList $ Map.elems ctrs)
                   cat' :: [Type] -> Stmt -> Stmt
                   cat' itps acc = wrap (zip (Map.keys ctrs) itps) f acc
 
@@ -337,7 +354,7 @@ stmt ids s@(Var z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
       _   -> (Prelude.id, p)                  -- just ignore parametric declarations
       where
         funcs :: Stmt -> Stmt
-        funcs p = foldr cat p (combos' ids (map Set.toList $ Map.elems ctrs)) where
+        funcs p = foldr cat p (combos' 1 ids (map Set.toList $ Map.elems ctrs)) where
                     cat :: [Type] -> Stmt -> Stmt
                     cat itps acc = wrap (zip (Map.keys ctrs) itps) s acc
 

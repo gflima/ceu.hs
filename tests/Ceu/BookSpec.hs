@@ -1111,7 +1111,7 @@ return (l_ === l) and (l_ =/= r)
 |])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
-      it "XXX: Either / IOrd" $         -- pg 47
+      it "Either / IOrd" $         -- pg 47
         (run True $
           pre ++ [r|
 data Either for (a,b)

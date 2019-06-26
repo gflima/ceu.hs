@@ -185,6 +185,93 @@ spec = do
           ])
         `shouldBe` Right (Number 1)
 
+      it "IAa / Int / X a" $
+        (run True $ [r|
+constraint IAa for a with
+  var f : (a -> Int)
+  func g (x) : (a -> Int) do
+    return f x
+  end
+end
+
+instance of IAa for Int with
+  func f (x) : (Int -> Int) do
+    return x
+  end
+end
+
+data X for a with a
+
+instance of IAa for (X of a) where (a is IAa) with
+  func f (x) : (X of a -> Int) do
+    var v : a
+    set (X v) <- x
+    return f v
+  end
+end
+
+return (((f 10) + (g 10)) + (f (X 10))) + (g (X 10))
+|])
+        `shouldBe` Right (Number 40)
+
+      it "IAa / Int / X a a" $
+        (run True $ [r|
+constraint IAa for a with
+  var f : (a -> Int)
+  func g (x) : (a -> Int) do
+    return f x
+  end
+end
+
+instance of IAa for Int with
+  func f (x) : (Int -> Int) do
+    return x
+  end
+end
+
+data X for a with (a,a)
+
+instance of IAa for (X of a) where (a is IAa) with
+  func f (x) : (X of a -> Int) do
+    var (v1,v2) : (a,a)
+    set X (v1,v2) <- x
+    return (f v1) + (f v2)
+  end
+end
+
+return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
+|])
+        `shouldBe` Right (Number 80)
+
+      it "IAa / X a a / Int" $
+        (run True $ [r|
+constraint IAa for a with
+  var f : (a -> Int)
+  func g (x) : (a -> Int) do
+    return f x
+  end
+end
+
+data X for a with (a,a)
+
+instance of IAa for (X of a) where (a is IAa) with
+  func f (x) : (X of a -> Int) do
+    var (v1,v2) : (a,a)
+    set X (v1,v2) <- x
+    return (f v1) + (f v2)
+  end
+end
+
+instance of IAa for Int with
+  func f (x) : (Int -> Int) do
+    return x
+  end
+end
+
+return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
+|])
+        `shouldBe` Right (Number 80)
+
       it "IEq + default + Int + (a,b)" $ -- CASE-1 eq(a,b) is not SUP of eq(Int)
         (run True $
           unlines [
@@ -207,9 +294,9 @@ spec = do
             "   if `x´ <- y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
-            "return eq((10,20),(30,40))"
+            "return (eq((10,20),(30,40))) + (neq((10,20),(30,40)))"
           ])
-        `shouldBe` Right (Number 0)
+        `shouldBe` Right (Number 1)
 
       it "IEq + default + Int + (a,b) + Bool" $
         (run True $
@@ -242,7 +329,7 @@ spec = do
           ])
         `shouldBe` Right (Number 1)
 
-      it "IEq + default + Int + (a,b) + Bool" $
+      it "YYY: IEq + default + Int + (a,b) + Bool" $
         (run True $
           unlines [
             "constraint IEq for a with"          ,
@@ -273,7 +360,7 @@ spec = do
           ])
         `shouldBe` Right (Number 0)
 
-      it "IEq + default + Int + (a,b,c) + Bool" $
+      it "XXX: IEq + default + Int + (a,b,c) + Bool" $
         (run True $
           unlines [
             "constraint IEq for a with"          ,
@@ -306,7 +393,7 @@ spec = do
           ])
         `shouldBe` Right (Number 1)
 
-      it "IEq + default + Int + (a,b,a) + Bool" $
+      it "YYY: IEq + default + Int + (a,b,a) + Bool" $
         (run True $
           unlines [
             "constraint IEq for a with"          ,
@@ -339,7 +426,7 @@ spec = do
           ])
         `shouldBe` Right (Number 1)
 
-      it "IEq + default + Int + (a,b,a) + Bool" $
+      it "YYY: IEq + default + Int + (a,b,a) + Bool" $
         (run True $
           unlines [
             "constraint IEq for a with"          ,
@@ -391,6 +478,32 @@ instance of IGable for (X of a) where (a is IFable) with
     var v : a
     set X v <- x
     return f v
+  end
+end
+var x1 : X of Int <- X 10
+return (g x1)
+|])
+        `shouldBe` Right (Number 10)
+
+      it "X for a with a" $
+        (run True $ [r|
+data X for a with a
+constraint IFable for a with
+  func f : (a -> Int)
+end
+constraint IGable for a with
+  func g : (a -> Int)
+end
+instance of IGable for (X of a) where (a is IFable) with
+  func g (x) : ((X of a) -> Int) do
+    var v : a
+    set X v <- x
+    return f v
+  end
+end
+instance of IFable for Int with
+  func f (x) : (Int -> Int) do
+    return x
   end
 end
 var x1 : X of Int <- X 10
