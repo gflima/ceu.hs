@@ -323,6 +323,39 @@ spec = do
                TypeN [boolt] ]
       `shouldBe` Just (TypeN [boolt,boolf])
 
+  describe "sort" $ do
+
+    it "(Bool,Bool) <= Bool" $
+      TypeN [TypeD ["Bool"] [] Type0, TypeD ["Bool"] [] Type0] <= TypeD ["Bool"] [] Type0
+      `shouldBe` False
+    it "Bool <= (Bool,Bool)" $
+      TypeD ["Bool"] [] Type0 <= TypeN [TypeD ["Bool"] [] Type0, TypeD ["Bool"] [] Type0]
+      `shouldBe` True
+    it "((Int,(Bool,Int)) <= (Bool,Int)" $
+      TypeN [int, TypeN [bool,int]] <= TypeN [bool, int]
+      `shouldBe` False
+    it "(Bool,Int) <= ((Int,(Bool,Int))" $
+      TypeN [bool, int] <= TypeN [int, TypeN [bool,int]]
+      `shouldBe` True
+    it "[Bool,Int] <= [Int,(Int,Int)]" $
+      TypeN [bool, int] <= TypeN [int, TypeN [int,int]]
+      `shouldBe` True
+    it "list" $
+      sort' [
+        [TypeN [TypeD ["Bool"] [] Type0,TypeD ["Bool"] [] Type0],TypeN [TypeD ["Bool"] [] Type0,TypeD ["Int"] [] Type0]],
+        [TypeD ["Int"] [] Type0,TypeN [TypeD ["Bool"] [] Type0,TypeD ["Int"] [] Type0]]
+       ]
+      `shouldBe` [[TypeD ["Int"] [] Type0,TypeN [TypeD ["Bool"] [] Type0,TypeD ["Int"] [] Type0]],[TypeN [TypeD ["Bool"] [] Type0,TypeD ["Bool"] [] Type0],TypeN [TypeD ["Bool"] [] Type0,TypeD ["Int"] [] Type0]]]
+    it "list" $
+      sort' [
+        [TypeD ["Int"]  [] Type0,TypeN [TypeD ["Int"]  [] Type0,TypeD ["Int"] [] Type0]],
+        [TypeD ["Int"]  [] Type0,TypeD ["Int"] [] Type0]
+       ]
+      `shouldBe` [
+        [TypeD ["Int"]  [] Type0,TypeD ["Int"] [] Type0],
+        [TypeD ["Int"]  [] Type0,TypeN [TypeD ["Int"]  [] Type0,TypeD ["Int"] [] Type0]]
+       ]
+
   where
     inst' :: Type -> (Type,Type) -> Type
     inst' tp (sup,sub) =

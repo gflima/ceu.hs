@@ -329,7 +329,7 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
           ])
         `shouldBe` Right (Number 1)
 
-      it "YYY: IEq + default + Int + (a,b) + Bool" $
+      it "IEq + default + Int + (a,b) + Bool" $
         (run True $
           unlines [
             "constraint IEq for a with"          ,
@@ -393,7 +393,7 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
           ])
         `shouldBe` Right (Number 1)
 
-      it "YYY: IEq + default + Int + (a,b,a) + Bool" $
+      it "IEq + default + Int + (a,b,a) + Bool" $
         (run True $
           unlines [
             "constraint IEq for a with"          ,
@@ -426,7 +426,7 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
           ])
         `shouldBe` Right (Number 1)
 
-      it "YYY: IEq + default + Int + (a,b,a) + Bool" $
+      it "IEq + default + Int + (a,b,a) + Bool" $
         (run True $
           unlines [
             "constraint IEq for a with"          ,

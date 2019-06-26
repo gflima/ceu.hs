@@ -1,6 +1,6 @@
 module Ceu.Grammar.TypeSys where
 
-import Data.List (find, intercalate, unfoldr, unzip4, sortBy)
+import Data.List (find, intercalate, unzip4)
 import Data.Maybe (isNothing, isJust, fromJust)
 import Data.Bool (bool)
 import Data.Either (isRight)
@@ -10,7 +10,7 @@ import qualified Data.Set as Set
 import Ceu.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Constraints as Cs  (Pair, cz, toList, hasClass)
-import Ceu.Grammar.Type        as T   (Type(..), TypeC, show', instantiate, getDs,
+import Ceu.Grammar.Type        as T   (Type(..), TypeC, show', sort', instantiate, getDs,
                                        getSuper, hier2str, isSupOf,
                                        Relation(..), relates, isRel, relatesErrors)
 import Ceu.Grammar.Ann
@@ -273,7 +273,7 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
                 cat :: Stmt -> Stmt -> Stmt
                 cat f@(Var _ id (_,ctrs) _) acc = foldr cat' acc itpss where
                   itpss :: [[Type]] -- only combos with new itp (others are already instantiated)
-                  itpss = combos' 1 (s:ids) (map Set.toList $ Map.elems $ ctrs)
+                  itpss = T.sort' $ combos' 1 (s:ids) (map Set.toList $ Map.elems $ ctrs)
                                      -- include this instance "s"
                   --itpss = filter (\l -> elem itp l) $ combos' 1 (s:ids) (map Set.toList $ Map.elems ctrs)
                   cat' :: [Type] -> Stmt -> Stmt
@@ -349,12 +349,11 @@ stmt ids s@(Var z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
   (f,p') = if ctrs == cz then (Var z id tp, p) else -- normal concrete declarations
     case p of
       Match z2 False (LVar id') body t f
-        -- | id/=id' -> (Prelude.id, p)          -- just ignore parametric declarations
         | id==id' -> (Prelude.id, funcs t)    -- instantiate for all available implementations
       _   -> (Prelude.id, p)                  -- just ignore parametric declarations
       where
         funcs :: Stmt -> Stmt
-        funcs p = foldr cat p (combos' 1 ids (map Set.toList $ Map.elems ctrs)) where
+        funcs p = foldr cat p (T.sort' $ combos' 1 ids (map Set.toList $ Map.elems ctrs)) where
                     cat :: [Type] -> Stmt -> Stmt
                     cat itps acc = wrap (zip (Map.keys ctrs) itps) s acc
 

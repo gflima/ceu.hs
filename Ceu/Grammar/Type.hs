@@ -1,13 +1,13 @@
 module Ceu.Grammar.Type where
 
 import Control.Exception (assert)
-import Debug.Trace
 import Data.Bool   (bool)
 import Data.Maybe  (fromJust, isJust)
 import Data.Either (isRight)
-import Data.List   (sortBy, groupBy, find, intercalate, isPrefixOf)
+import Data.List   (sort, sortBy, groupBy, find, intercalate, isPrefixOf)
 import qualified Data.Set as Set
 
+import Ceu.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Constraints as Cs
 
@@ -38,6 +38,33 @@ show' (TypeD hier [x] _) = "(" ++ hier2str hier ++ " of " ++ show' x ++ ")"
 show' (TypeD hier ofs _) = "(" ++ hier2str hier ++ " of " ++ "(" ++ intercalate "," (map show' ofs) ++ ")" ++ ")"
 show' (TypeF inp out)    = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
 show' (TypeN tps)        = "(" ++ intercalate "," (map show' tps) ++ ")"
+
+-------------------------------------------------------------------------------
+
+instance Ord Type where
+  (<=) TypeT               _                   = True
+  (<=) _                   TypeT               = False
+  (<=) TypeB               _                   = True
+  (<=) _                   TypeB               = False
+  (<=) Type0               _                   = True
+  (<=) _                   Type0               = False
+  (<=) (TypeD h1 ofs1 st1) (TypeD h2 ofs2 st2) = h1 `isPrefixOf` h2 -- || ofs1>ofs2 || st1>st2
+  (<=) (TypeD _  _    _)   _                   = True
+  (<=) _                   (TypeD _  _    _)   = False
+  (<=) (TypeF inp1 out1)   (TypeF inp2 out2)   = inp1<=inp2 && out1<=out2
+  (<=) (TypeF _    _)      _                   = True
+  (<=) _                   (TypeF _    _)      = False
+  (<=) (TypeN [])          (TypeN l2)          = True
+  (<=) (TypeN l1)          (TypeN [])          = False
+  (<=) (TypeN (v1:l1))     (TypeN (v2:l2))     | v2<v1     = False
+                                               | v1<v2     = True
+                                               | otherwise = (TypeN l1 <= TypeN l2)
+  (<=) (TypeN _)           _                   = True
+  (<=) _                   (TypeN _)           = False
+  (<=) (TypeV v1)          (TypeV v2)          = v1<=v2
+
+sort' :: [[Type]] -> [[Type]]
+sort' ts = map (\(TypeN l)->l) $ sort $ map TypeN ts
 
 -------------------------------------------------------------------------------
 
