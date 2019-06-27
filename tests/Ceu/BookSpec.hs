@@ -25,9 +25,11 @@ spec = do
 
     -- TODO-3-20: square : Float -> Float
 
-    describe "Chapter 1:" $ do
+  describe "Chapter 1 - Fundamental Concepts:" $ do           -- pg 1
 
-      it "square" $           -- pg 2
+    describe "Chapter 1.1 - Sessions and Scripts:" $ do       -- pg 1
+
+      it "square" $                   -- pg 2
         (run True $
           unlines [
             "func square (x) : (Int -> Int) do",
@@ -37,7 +39,7 @@ spec = do
            ])
         `shouldBe` Right (Number 9)
 
-      it "smaller" $          -- pg 2
+      it "smaller" $                  -- pg 2
         (run True $
           unlines [
             "func smaller (x,y) : ((Int,Int) -> Int) do",
@@ -51,7 +53,7 @@ spec = do
            ])
         `shouldBe` Right (Number 6)
 
-      it "square/smaller" $   -- pg 3
+      it "square/smaller" $           -- pg 3
         (run True $
           unlines [
             "func square (x) : (Int -> Int) do",
@@ -67,6 +69,8 @@ spec = do
             "return square (smaller (5, 3+4))"
            ])
         `shouldBe` Right (Number 25)
+
+    describe "Chapter 1.2 - Evaluation:" $ do                 -- pg 4
 
       -- TODO-3
 
@@ -103,6 +107,8 @@ spec = do
            ])
         `shouldBe` Right (Error (-1))
 
+    describe "Chapter 1.3 - Values:" $ do                     -- pg 7
+
       it "multiply 3 4" $     -- pg 9
         (run True $
           unlines [
@@ -134,6 +140,8 @@ spec = do
            ])
         `shouldBe` Right (Error (-1))
 
+    describe "Chapter 1.4 - Functions:" $ do                  -- pg 9
+
       it "twice" $            -- pg 12
         (run True $
           unlines [
@@ -150,6 +158,8 @@ spec = do
             "return 1 + (+ (2,3))"
            ])
         `shouldBe` Right (Number 6)
+
+    describe "Chapter 1.5 - Definitions:" $ do                -- pg 17
 
       it "signum" $           -- pg 18
         (run True $
@@ -221,7 +231,13 @@ spec = do
 
       -- TODO-20
 
-    describe "Chapter 2:" $ do
+    --describe "Chapter 1.6 - Types:" $ do                      -- pg 21
+
+    --describe "Chapter 1.7 - Specifications:" $ do             -- pg 25
+
+  describe "Chapter 2 - Simple Datatypes:" $ do               -- pg 29
+
+    describe "Chapter 2.1 - Booleans:" $ do                   -- pg 29
 
       it "data" $             -- pg 29
         (run True $
@@ -557,6 +573,8 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
+    describe "Chapter 2.2 - Characters:" $ do                 -- pg 35
+
       it "char" $         -- pg 36
         (run True $
           pre ++ unlines [
@@ -664,6 +682,8 @@ spec = do
             "return (((((eq and gt) and cs) and low) and (cp1 and cp2)) and nx) and (sum == 10)"
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+    describe "Chapter 2.3 - Enumerations:" $ do                 -- pg 38
 
       it "enum" $         -- pg 38
         (run True $
@@ -836,6 +856,8 @@ spec = do
             "return fromEnum ((toEnum (Bool.False)) + 1)"
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+    describe "Chapter 2.4 - Tuples:" $ do                     -- pg 41
 
       it "mkpair" $         -- pg 41
         (run True $
@@ -1037,6 +1059,8 @@ spec = do
            ])
         `shouldBe` Right (Number 119)
 
+    describe "Chapter 2.5 - Other Types:" $ do                  -- pg 46
+
       it "Either" $         -- pg 46
         (run True $
           pre ++ [r|
@@ -1150,6 +1174,8 @@ var r_ : Either of (Bool,Int) <- r
 return (f_ @<= f) and (((f @< l_) and (l @< r_)) and (r_ @>= r))
 |])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+    describe "Chapter 2.6 - Type Synonyms:" $ do                -- pg 48
 
       it "Roots/Coefs" $         -- pg 48
         (run True $
@@ -1278,10 +1304,14 @@ return ((Distance 10) === (Distance 11), (Distance 11) === (Distance 10),
 |])
         `shouldBe` Right (Tuple [Cons ["Bool","True"] Unit,Cons ["Bool","True"] Unit,Cons ["Bool","True"] Unit,Cons ["Bool","True"] Unit])
 
+    describe "Chapter 2.7 - Strings:" $ do                      -- pg 50
+
       it "TODO: STRINGS" $    -- pg 50
         (1 `shouldBe` 2)
 
-    describe "Chapter 3:" $ do    -- pg 57
+  describe "Chapter 3 - Numbers:" $ do                          -- pg 50
+
+    describe "Chapter 3.1 - Natural Numbers:" $ do              -- pg 50
 
       it "Nat" $              -- pg 57
         (run True $
@@ -1428,17 +1458,17 @@ return (zr === zr, zr =/= um, um =/= zr, um === um, um =/= um)
 -------------------------------------------------------------------------------
 
     where
-        run :: Bool -> String -> Either String Exp
-        run withPrelude input =
-            let v = parse prog "" input in
-                case v of
-                    (Right p) ->
-                      case go $ bool Prelude.id (prelude annz) withPrelude $ p of
-                        (Left errs) -> Left $ concatMap (\s->s++"\n") errs
-                        (Right exp) -> Right exp
-                    (Left  v') -> Left (show v')
+      run :: Bool -> String -> Either String Exp
+      run withPrelude input =
+        let v = parse prog "" input in
+          case v of
+            (Right p) ->
+              case go $ bool Prelude.id (prelude annz) withPrelude $ p of
+                (Left errs) -> Left $ concatMap (\s->s++"\n") errs
+                (Right exp) -> Right exp
+            (Left  v') -> Left (show v')
 
-        pre = [r|
+      pre = [r|
 func not (x) : (Bool->Bool) do
   if Bool.True <- x then
     return Bool.False
