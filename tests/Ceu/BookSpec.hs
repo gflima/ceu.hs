@@ -27,6 +27,8 @@ spec = do
 
   describe "Chapter 1 - Fundamental Concepts:" $ do           -- pg 1
 
+-------------------------------------------------------------------------------
+
     describe "Chapter 1.1 - Sessions and Scripts:" $ do       -- pg 1
 
       it "square" $                   -- pg 2
@@ -70,6 +72,8 @@ spec = do
            ])
         `shouldBe` Right (Number 25)
 
+-------------------------------------------------------------------------------
+
     describe "Chapter 1.2 - Evaluation:" $ do                 -- pg 4
 
       -- TODO-3
@@ -107,6 +111,8 @@ spec = do
            ])
         `shouldBe` Right (Error (-1))
 
+-------------------------------------------------------------------------------
+
     describe "Chapter 1.3 - Values:" $ do                     -- pg 7
 
       it "multiply 3 4" $     -- pg 9
@@ -140,6 +146,8 @@ spec = do
            ])
         `shouldBe` Right (Error (-1))
 
+-------------------------------------------------------------------------------
+
     describe "Chapter 1.4 - Functions:" $ do                  -- pg 9
 
       it "twice" $            -- pg 12
@@ -158,6 +166,8 @@ spec = do
             "return 1 + (+ (2,3))"
            ])
         `shouldBe` Right (Number 6)
+
+-------------------------------------------------------------------------------
 
     describe "Chapter 1.5 - Definitions:" $ do                -- pg 17
 
@@ -231,11 +241,19 @@ spec = do
 
       -- TODO-20
 
+-------------------------------------------------------------------------------
+
     --describe "Chapter 1.6 - Types:" $ do                      -- pg 21
+
+-------------------------------------------------------------------------------
 
     --describe "Chapter 1.7 - Specifications:" $ do             -- pg 25
 
+-------------------------------------------------------------------------------
+
   describe "Chapter 2 - Simple Datatypes:" $ do               -- pg 29
+
+-------------------------------------------------------------------------------
 
     describe "Chapter 2.1 - Booleans:" $ do                   -- pg 29
 
@@ -573,6 +591,8 @@ spec = do
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
+-------------------------------------------------------------------------------
+
     describe "Chapter 2.2 - Characters:" $ do                 -- pg 35
 
       it "char" $         -- pg 36
@@ -682,6 +702,8 @@ spec = do
             "return (((((eq and gt) and cs) and low) and (cp1 and cp2)) and nx) and (sum == 10)"
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+-------------------------------------------------------------------------------
 
     describe "Chapter 2.3 - Enumerations:" $ do                 -- pg 38
 
@@ -856,6 +878,8 @@ spec = do
             "return fromEnum ((toEnum (Bool.False)) + 1)"
            ])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+-------------------------------------------------------------------------------
 
     describe "Chapter 2.4 - Tuples:" $ do                     -- pg 41
 
@@ -1059,6 +1083,8 @@ spec = do
            ])
         `shouldBe` Right (Number 119)
 
+-------------------------------------------------------------------------------
+
     describe "Chapter 2.5 - Other Types:" $ do                  -- pg 46
 
       it "Either" $         -- pg 46
@@ -1174,6 +1200,8 @@ var r_ : Either of (Bool,Int) <- r
 return (f_ @<= f) and (((f @< l_) and (l @< r_)) and (r_ @>= r))
 |])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+-------------------------------------------------------------------------------
 
     describe "Chapter 2.6 - Type Synonyms:" $ do                -- pg 48
 
@@ -1304,12 +1332,18 @@ return ((Distance 10) === (Distance 11), (Distance 11) === (Distance 10),
 |])
         `shouldBe` Right (Tuple [Cons ["Bool","True"] Unit,Cons ["Bool","True"] Unit,Cons ["Bool","True"] Unit,Cons ["Bool","True"] Unit])
 
+-------------------------------------------------------------------------------
+
     describe "Chapter 2.7 - Strings:" $ do                      -- pg 50
 
       it "TODO: STRINGS" $    -- pg 50
         (1 `shouldBe` 2)
 
+-------------------------------------------------------------------------------
+
   describe "Chapter 3 - Numbers:" $ do                          -- pg 50
+
+-------------------------------------------------------------------------------
 
     describe "Chapter 3.1 - Natural Numbers:" $ do              -- pg 50
 
@@ -1538,6 +1572,118 @@ end
 return fib (um ++ (um ++ (um ++ (um ++ (um ++ um)))))
 |])
         `shouldBe` Right (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Zero"] Unit)))))))))
+
+      it "convert" $            -- pg 62
+        (run True $
+          nat ++ [r|
+func convert (x) : (Nat -> Int) do
+  if Nat.Zero <- x then
+    return 0
+  else
+    var z : Nat
+    set! Nat.Succ z <- x
+    return 1 + (convert z)
+  end
+end
+
+return convert (um ++ (um ++ (um ++ (um ++ (um ++ um)))))
+|])
+        `shouldBe` Right (Number 6)
+
+      it "Nat -" $            -- pg 60
+        (run True $
+          [r|
+data Nat
+data Nat.Zero
+data Nat.Succ with Nat
+
+func -- (x,y) : ((Nat,Nat) -> Nat) do
+  if Nat.Zero <- y then
+    return x
+  else/if Nat.Zero <- x then
+    return x
+  else
+    var (x_,y_) : (Nat,Nat)
+    set! Nat.Succ x_ <- x
+    set! Nat.Succ y_ <- y
+    return Nat.Succ (x_ -- y_)
+  end
+end
+
+var zr : Nat <- Nat.Zero
+var um : Nat <- Nat.Succ (Nat.Zero)
+
+return zr--um
+|])
+        `shouldBe` Right (Cons ["Nat","Zero"] Unit)
+
+      it "Nat +/*" $            -- pg 58
+        (run True $
+          [r|
+data Nat
+data Nat.Zero
+data Nat.Succ with Nat
+
+func ++ (x,y) : ((Nat,Nat) -> Nat) do
+  if Nat.Zero <- x then
+    return y
+  else
+    var z : Nat
+    set! Nat.Succ z <- x
+    return Nat.Succ (y ++ z)
+  end
+end
+
+func ** (x,y) : ((Nat,Nat) -> Nat) do
+  if Nat.Zero <- x then
+    return Nat.Zero
+  else
+    var z : Nat
+    set! Nat.Succ z <- x
+    return (y ** z) ++ y
+  end
+end
+
+var zr : Nat <- Nat.Zero
+var um : Nat <- Nat.Succ (Nat.Zero)
+
+return ((Nat.Zero) ++ (Nat.Succ (Nat.Zero)),
+        ((zr ** um) ++ (um ** um)) ++ ((um++um) ** (um++um)))
+|])
+        `shouldBe` Right (Tuple [Cons ["Nat","Succ"] (Cons ["Nat","Zero"] Unit),Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Zero"] Unit)))))])
+
+-------------------------------------------------------------------------------
+
+  --describe "Chapter 3.2 - Induction:" $ do                  -- pg 63
+
+-------------------------------------------------------------------------------
+
+  describe "Chapter 3.3 - The fold Function:" $ do            -- pg 70
+
+      it "foldn" $            -- pg 58
+        (run True $
+          nat ++ [r|
+func foldn (h,c,n) : (((a -> a), a, Nat) -> a) do
+  if Nat.Zero <- n then
+    return c
+  else
+    var n_ : Nat
+    set! Nat.Succ n_ <- n
+    return h (foldn (h,c,n_))
+  end
+end
+
+func +++ (x,y) : ((Nat,Nat) -> Nat) do
+  return foldn ( (func (n) : (Nat -> Nat) do return Nat.Succ n end), x, y)
+end
+
+return um +++ (um +++ um)
+|])
+        `shouldBe` Right (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Zero"] Unit))))
+
+-------------------------------------------------------------------------------
+
+  --describe "Chapter X - Xxx:" $ do           -- pg X
 
 -------------------------------------------------------------------------------
 
