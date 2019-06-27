@@ -61,7 +61,7 @@ spec = do
 
     it "(a -> a) > (Int -> ())" $
       relates_ SUP (TypeF (TypeV "a") (TypeV "a")) (TypeF (int) Type0)
-      `shouldBe` Left ["types do not match : expected '(a -> a)' : found '(Int -> ())'","ambigous instances for 'a' : 'Int', '()'"]
+      `shouldBe` Left ["types do not match : expected '(a -> a)' : found '(Int -> ())'","ambiguous instances for 'a' : 'Int', '()'"]
 
     it "(a,b) > (Int,())" $
       relates_ SUP (TypeN [(TypeV "a"),(TypeV "b")]) (TypeN [(int),Type0])
@@ -113,7 +113,7 @@ spec = do
              Type0)
       (TypeF (TypeN [TypeD ["Y"] [] Type0, TypeD ["X","A"] [] Type0])
              Type0)
-      `shouldBe` Left ["types do not match : expected '((a,a) -> ())' : found '((Y,X.A) -> ())'","ambigous instances for 'a' : 'Y', 'X.A'"]
+      `shouldBe` Left ["types do not match : expected '((a,a) -> ())' : found '((Y,X.A) -> ())'","ambiguous instances for 'a' : 'Y', 'X.A'"]
 
     it "((a,a)->(a,a)) SUP ((X,X.A)->(X.A,X.A.B)" $
       relates_ SUP
@@ -149,7 +149,7 @@ spec = do
       relates_ SUP
       (TypeF Type0 (TypeN [TypeD ["X","Bool","True"] [] Type0, TypeD ["X","Bool","False"] [] Type0]))
       (TypeF Type0 (TypeN [TypeV "a",                 TypeV "a"]))
-      `shouldBe` Left ["types do not match : expected '(() -> (X.Bool.True,X.Bool.False))' : found '(() -> (a,a))'","ambigous instances for 'a' : 'X.Bool.True', 'X.Bool.False'"]
+      `shouldBe` Left ["types do not match : expected '(() -> (X.Bool.True,X.Bool.False))' : found '(() -> (a,a))'","ambiguous instances for 'a' : 'X.Bool.True', 'X.Bool.False'"]
 
     it "(True,False)->(True,False) SUP (a,a)->(a,a)" $
       relates_ SUP
@@ -157,7 +157,7 @@ spec = do
              (TypeN [TypeD ["X","Bool","True"] [] Type0, TypeD ["X","Bool","False"] [] Type0]))
       (TypeF (TypeN [TypeV "a", TypeV "a"])
              (TypeN [TypeV "a", TypeV "a"]))
-      `shouldBe` Left ["types do not match : expected '((X.Bool.True,X.Bool.False) -> (X.Bool.True,X.Bool.False))' : found '((a,a) -> (a,a))'","ambigous instances for 'a' : 'X.Bool.True', 'X.Bool.False', 'X.Bool.True', 'X.Bool.False'"]
+      `shouldBe` Left ["types do not match : expected '((X.Bool.True,X.Bool.False) -> (X.Bool.True,X.Bool.False))' : found '((a,a) -> (a,a))'","ambiguous instances for 'a' : 'X.Bool.True', 'X.Bool.False', 'X.Bool.True', 'X.Bool.False'"]
 
     it "(True,False)->top SUP (a,a)->a" $
       relates_ SUP

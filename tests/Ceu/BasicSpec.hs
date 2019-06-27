@@ -200,8 +200,8 @@ spec = do
     it "func first :: (a,a)->a ; var a::Int ; a = first((),1)" $
       (fst $ TypeSys.go (prelude annz (Var annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a"),cz) (Var annz "a" (int,cz) (Match annz False (LVar "a") (Call annz (Read annz "first") (Tuple annz [(Unit annz),(Number annz 1)])) (Nop annz) (Nop annz))))))
         `shouldBe`
-      --["types do not match : expected '(a,a)' : found '((),Int)'","ambigous instances for 'a' : '()', 'Int'"]
-          ["types do not match : expected '(((),Int.1) -> Int)' : found '((a,a) -> a)'","ambigous instances for 'a' : '()', 'Int.1', 'Int'"]
+      --["types do not match : expected '(a,a)' : found '((),Int)'","ambiguous instances for 'a' : '()', 'Int'"]
+          ["types do not match : expected '(((),Int.1) -> Int)' : found '((a,a) -> a)'","ambiguous instances for 'a' : '()', 'Int.1', 'Int'"]
 
 {-
     checkCheckIt (prelude annz (Var annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a"),cz) (Var annz "a" (int,cz) (Match annz False (LVar "a") (Call annz (Read annz "first") (Tuple annz [(Number annz 1),(Number annz 1)])) (Nop annz) (Nop annz))))) []
@@ -702,7 +702,7 @@ spec = do
         (Var annz "eq" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (bool),cz)
         (CallS annz (Call annz (Read annz "eq") (Tuple annz [(Cons annz ["Bool"] (Unit annz)),(Number annz 1)]))))))))
       `shouldBe` ["types do not match : expected '((Bool,Int.1) -> ?)' : found '((a,a) -> Bool)'",
-                  "ambigous instances for 'a' : 'Bool', 'Int.1'"]
+                  "ambiguous instances for 'a' : 'Bool', 'Int.1'"]
 
     it "Int ; Bool ; Xable a ; inst Xable Bool/Int ; fff 1 ; fff Bool" $
       (fst $ TypeSys.go
