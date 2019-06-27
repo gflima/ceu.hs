@@ -322,7 +322,7 @@ spec = do
            ])
         `shouldBe` Left "(line 2, column 18):\ntypes do not match : expected '(Int,Int)' : found '(Int.1,())'\n"
 
-      it "XXX: Pair (a,b) <- Pair (1,())" $
+      it "Pair (a,b) <- Pair (1,())" $
         (run True $
           unlines [
             "data Pair for (a,b) with (a,b)",

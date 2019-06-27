@@ -1256,6 +1256,175 @@ return ((Angle 370) === (Angle 10)) and (a1 === a2)
 |])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
+      it "Distance" $         -- pg 50
+        (run True $
+          pre ++ [r|
+data Distance with Int
+
+instance of IEqualable for Distance with
+  func === (d1,d2) : ((Distance,Distance) -> Bool) do
+    var (d1_,d2_) : (Int,Int)
+    set (Distance d1_, Distance d2_) <- (d1,d2)
+    if d2_ < d1_ then
+      return (d1_-d2_) < 10
+    else
+      return (d2_-d1_) < 10
+    end
+  end
+end
+
+return ((Distance 10) === (Distance 11), (Distance 11) === (Distance 10),
+        (Distance 20) =/= (Distance 10), (Distance 10) =/= (Distance 20))
+|])
+        `shouldBe` Right (Tuple [Cons ["Bool","True"] Unit,Cons ["Bool","True"] Unit,Cons ["Bool","True"] Unit,Cons ["Bool","True"] Unit])
+
+      it "TODO: STRINGS" $    -- pg 50
+        (1 `shouldBe` 2)
+
+    describe "Chapter 3:" $ do    -- pg 57
+
+      it "Nat" $              -- pg 57
+        (run True $
+          [r|
+data Nat
+data Nat.Zero
+data Nat.Succ with Nat
+return Nat.Succ (Nat.Zero)
+|])
+        `shouldBe` Right (Cons ["Nat","Succ"] (Cons ["Nat","Zero"] Unit))
+
+      it "Nat +" $            -- pg 58
+        (run True $
+          [r|
+data Nat
+data Nat.Zero
+data Nat.Succ with Nat
+
+func ++ (x,y) : ((Nat,Nat) -> Nat) do
+  if Nat.Zero <- y then
+    return x
+  else
+    var z : Nat
+    set! Nat.Succ z <- y
+    return Nat.Succ (x ++ z)
+  end
+end
+
+return (Nat.Zero) ++ (Nat.Succ (Nat.Zero))
+|])
+        `shouldBe` Right (Cons ["Nat","Succ"] (Cons ["Nat","Zero"] Unit))
+
+      it "Nat *" $            -- pg 59
+        (run True $
+          [r|
+data Nat
+data Nat.Zero
+data Nat.Succ with Nat
+
+func ++ (x,y) : ((Nat,Nat) -> Nat) do
+  if Nat.Zero <- y then
+    return x
+  else
+    var z : Nat
+    set! Nat.Succ z <- y
+    return Nat.Succ (x ++ z)
+  end
+end
+
+func ** (x,y) : ((Nat,Nat) -> Nat) do
+  if Nat.Zero <- y then
+    return Nat.Zero
+  else
+    var z : Nat
+    set! Nat.Succ z <- y
+    return (x ** z) ++ x
+  end
+end
+
+var zr : Nat <- Nat.Zero
+var um : Nat <- Nat.Succ (Nat.Zero)
+
+return ((zr ** um) ++ (um ** um)) ++ ((um++um) ** (um++um))
+|])
+        `shouldBe` Right (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Zero"] Unit))))))
+
+      it "Nat ^" $            -- pg 59
+        (run True $
+          [r|
+data Nat
+data Nat.Zero
+data Nat.Succ with Nat
+
+func ++ (x,y) : ((Nat,Nat) -> Nat) do
+  if Nat.Zero <- y then
+    return x
+  else
+    var z : Nat
+    set! Nat.Succ z <- y
+    return Nat.Succ (x ++ z)
+  end
+end
+
+func ** (x,y) : ((Nat,Nat) -> Nat) do
+  if Nat.Zero <- y then
+    return Nat.Zero
+  else
+    var z : Nat
+    set! Nat.Succ z <- y
+    return (x ** z) ++ x
+  end
+end
+
+func ^^ (x,y) : ((Nat,Nat) -> Nat) do
+  if Nat.Zero <- y then
+    return Nat.Succ (Nat.Zero)
+  else
+    var z : Nat
+    set! Nat.Succ z <- y
+    return (x ^^ z) ** x
+  end
+end
+
+var zr : Nat <- Nat.Zero
+var um : Nat <- Nat.Succ (Nat.Zero)
+
+return ((um++um) ^^ zr) ++ ((um++um) ^^ ((um++um)++um))
+|])
+        `shouldBe` Right (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Zero"] Unit))))))))))
+
+      it "Nat : Eq" $            -- pg 59
+        (run True $
+          pre ++ [r|
+data Nat
+data Nat.Zero
+data Nat.Succ with Nat
+
+instance of IEqualable for Nat with
+  func === (x,y) : ((Nat,Nat) -> Bool) do
+    if Nat.Zero <- x then
+      if Nat.Zero <- y then
+        return Bool.True
+      else
+        return Bool.False
+      end
+    else/if Nat.Zero <- y then
+        return Bool.False
+    else
+      var (x_,y_) : (Nat,Nat)
+      set! Nat.Succ x_ <- x
+      set! Nat.Succ y_ <- y
+      return x_ === y_
+    end
+  end
+end
+
+var zr : Nat <- Nat.Zero
+var um : Nat <- Nat.Succ (Nat.Zero)
+
+return (zr === zr, zr =/= um, um =/= zr, um === um, um =/= um)
+|])
+        `shouldBe` Right (Tuple [Cons ["Bool","True"] Unit,Cons ["Bool","True"] Unit,Cons ["Bool","True"] Unit,Cons ["Bool","True"] Unit,Cons ["Bool","False"] Unit])
+
 -------------------------------------------------------------------------------
 
     where
