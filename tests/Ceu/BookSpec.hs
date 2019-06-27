@@ -1346,65 +1346,14 @@ return (Nat.Zero) ++ (Nat.Succ (Nat.Zero))
 
       it "Nat *" $            -- pg 59
         (run True $
-          [r|
-data Nat
-data Nat.Zero
-data Nat.Succ with Nat
-
-func ++ (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero <- y then
-    return x
-  else
-    var z : Nat
-    set! Nat.Succ z <- y
-    return Nat.Succ (x ++ z)
-  end
-end
-
-func ** (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero <- y then
-    return Nat.Zero
-  else
-    var z : Nat
-    set! Nat.Succ z <- y
-    return (x ** z) ++ x
-  end
-end
-
-var zr : Nat <- Nat.Zero
-var um : Nat <- Nat.Succ (Nat.Zero)
-
+          nat ++ [r|
 return ((zr ** um) ++ (um ** um)) ++ ((um++um) ** (um++um))
 |])
         `shouldBe` Right (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Zero"] Unit))))))
 
       it "Nat ^" $            -- pg 59
         (run True $
-          [r|
-data Nat
-data Nat.Zero
-data Nat.Succ with Nat
-
-func ++ (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero <- y then
-    return x
-  else
-    var z : Nat
-    set! Nat.Succ z <- y
-    return Nat.Succ (x ++ z)
-  end
-end
-
-func ** (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero <- y then
-    return Nat.Zero
-  else
-    var z : Nat
-    set! Nat.Succ z <- y
-    return (x ** z) ++ x
-  end
-end
-
+          nat ++ [r|
 func ^^ (x,y) : ((Nat,Nat) -> Nat) do
   if Nat.Zero <- y then
     return Nat.Succ (Nat.Zero)
@@ -1414,9 +1363,6 @@ func ^^ (x,y) : ((Nat,Nat) -> Nat) do
     return (x ^^ z) ** x
   end
 end
-
-var zr : Nat <- Nat.Zero
-var um : Nat <- Nat.Succ (Nat.Zero)
 
 return ((um++um) ^^ zr) ++ ((um++um) ^^ ((um++um)++um))
 |])
@@ -1455,6 +1401,144 @@ return (zr === zr, zr =/= um, um =/= zr, um === um, um =/= um)
 |])
         `shouldBe` Right (Tuple [Cons ["Bool","True"] Unit,Cons ["Bool","True"] Unit,Cons ["Bool","True"] Unit,Cons ["Bool","True"] Unit,Cons ["Bool","False"] Unit])
 
+      it "Nat : Ord" $            -- pg 59
+        (run True $
+          pre ++ [r|
+data Nat
+data Nat.Zero
+data Nat.Succ with Nat
+
+instance of IEqualable for Nat with
+  func === (x,y) : ((Nat,Nat) -> Bool) do
+    if Nat.Zero <- x then
+      if Nat.Zero <- y then
+        return Bool.True
+      else
+        return Bool.False
+      end
+    else/if Nat.Zero <- y then
+        return Bool.False
+    else
+      var (x_,y_) : (Nat,Nat)
+      set! Nat.Succ x_ <- x
+      set! Nat.Succ y_ <- y
+      return x_ === y_
+    end
+  end
+end
+
+instance of IOrderable for Nat with
+  func @< (x,y) : ((Nat,Nat) -> Bool) do
+    if Nat.Zero <- x then
+      if Nat.Zero <- y then
+        return Bool.False
+      else
+        return Bool.True
+      end
+    else/if Nat.Zero <- y then
+        return Bool.False
+    else
+      var (x_,y_) : (Nat,Nat)
+      set! Nat.Succ x_ <- x
+      set! Nat.Succ y_ <- y
+      return x_ @< y_
+    end
+  end
+end
+
+var zr : Nat <- Nat.Zero
+var um : Nat <- Nat.Succ (Nat.Zero)
+
+return (zr @< zr, zr @<= zr, zr @< um, um @< zr, um @> um, um @>= um)
+|])
+        `shouldBe` Right (Tuple [Cons ["Bool","False"] Unit,Cons ["Bool","True"] Unit,Cons ["Bool","True"] Unit,Cons ["Bool","False"] Unit,Cons ["Bool","False"] Unit,Cons ["Bool","True"] Unit])
+
+      it "Nat -" $            -- pg 60
+        (run True $
+          [r|
+data Nat
+data Nat.Zero
+data Nat.Succ with Nat
+
+func -- (x,y) : ((Nat,Nat) -> Nat) do
+  if Nat.Zero <- y then
+    return x
+  else
+    var (x_,y_) : (Nat,Nat)
+    set! Nat.Succ x_ <- x
+    set! Nat.Succ y_ <- y
+    return Nat.Succ (x_ -- y_)
+  end
+end
+
+var zr : Nat <- Nat.Zero
+var um : Nat <- Nat.Succ (Nat.Zero)
+
+return um--zr
+|])
+        `shouldBe` Right (Cons ["Nat","Succ"] (Cons ["Nat","Zero"] Unit))
+
+      it "Nat -" $            -- pg 60
+        (run True $
+          [r|
+data Nat
+data Nat.Zero
+data Nat.Succ with Nat
+
+func -- (x,y) : ((Nat,Nat) -> Nat) do
+  if Nat.Zero <- y then
+    return x
+  else
+    var (x_,y_) : (Nat,Nat)
+    set! Nat.Succ x_ <- x
+    set! Nat.Succ y_ <- y
+    return Nat.Succ (x_ -- y_)
+  end
+end
+
+var zr : Nat <- Nat.Zero
+var um : Nat <- Nat.Succ (Nat.Zero)
+
+return zr--um
+|])
+        `shouldBe` Right (Error (-2))
+
+      it "fact" $            -- pg 60
+        (run True $
+          nat ++ [r|
+func fact (x) : (Nat -> Nat) do
+  if `zr´ <- x then
+    return um
+  else
+    var z : Nat
+    set! Nat.Succ z <- x
+    return x ** (fact z)
+  end
+end
+
+return fact (um ++ (um ++ um))
+|])
+        `shouldBe` Right (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Zero"] Unit)))))))
+
+      it "fib" $            -- pg 61
+        (run True $
+          nat ++ [r|
+func fib (x) : (Nat -> Nat) do
+  if `zr´ <- x then
+    return zr
+  else/if `um´ <- x then
+    return um
+  else
+    var z : Nat
+    set! Nat.Succ (Nat.Succ z) <- x
+    return (fib (Nat.Succ z)) ++ (fib z)
+  end
+end
+
+return fib (um ++ (um ++ (um ++ (um ++ (um ++ um)))))
+|])
+        `shouldBe` Right (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Succ"] (Cons ["Nat","Zero"] Unit)))))))))
+
 -------------------------------------------------------------------------------
 
     where
@@ -1467,6 +1551,35 @@ return (zr === zr, zr =/= um, um =/= zr, um === um, um =/= um)
                 (Left errs) -> Left $ concatMap (\s->s++"\n") errs
                 (Right exp) -> Right exp
             (Left  v') -> Left (show v')
+
+      nat = [r|
+data Nat
+data Nat.Zero
+data Nat.Succ with Nat
+
+func ++ (x,y) : ((Nat,Nat) -> Nat) do
+  if Nat.Zero <- y then
+    return x
+  else
+    var z : Nat
+    set! Nat.Succ z <- y
+    return Nat.Succ (x ++ z)
+  end
+end
+
+func ** (x,y) : ((Nat,Nat) -> Nat) do
+  if Nat.Zero <- y then
+    return Nat.Zero
+  else
+    var z : Nat
+    set! Nat.Succ z <- y
+    return (x ** z) ++ x
+  end
+end
+
+var zr : Nat <- Nat.Zero
+var um : Nat <- Nat.Succ (Nat.Zero)
+|]
 
       pre = [r|
 func not (x) : (Bool->Bool) do
