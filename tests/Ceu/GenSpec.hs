@@ -360,7 +360,8 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
           ])
         `shouldBe` Right (Number 0)
 
-      it "XXX: IEq + default + Int + (a,b,c) + Bool" $
+{-
+      it "TODO-TIME: IEq + default + Int + (a,b,c) + Bool" $
         (run True $
           unlines [
             "constraint IEq for a with"          ,
@@ -392,6 +393,7 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "return eq((20,Bool.True,10),(20,Bool.True,10))"
           ])
         `shouldBe` Right (Number 1)
+-}
 
       it "IEq + default + Int + (a,b,a) + Bool" $
         (run True $

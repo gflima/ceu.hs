@@ -1151,6 +1151,111 @@ return (f_ @<= f) and (((f @< l_) and (l @< r_)) and (r_ @>= r))
 |])
         `shouldBe` Right (Cons ["Bool","True"] Unit)
 
+      it "Roots/Coefs" $         -- pg 48
+        (run True $
+          pre ++ [r|
+data Coefs with (Int,Int,Int)
+data Roots with (Int,Int)
+
+instance of IEqualable for Roots with end
+
+func sqrt x : (Int -> Int) do
+  if (x === 0) or (x === 1) then
+    return x;
+  end
+
+  var i : Int <- 1
+  var r : Int <- 1
+  loop do
+    if r @> x then
+      return i - 1
+    else
+      set i <- i + 1
+      set r <- i * i
+    end
+  end
+end
+
+func roots (cs) : (Coefs -> Roots) do
+  var (a,b,c) : (Int,Int,Int)
+  set Coefs (a,b,c) <- cs
+  var e : Int <- (b*b) - (4 * (a*c))
+  if a === 0 then
+    return Roots (0,0)
+  else/if e @< 0 then
+    return Roots (-1,-1)
+  else
+    var d : Int <- 2 * a
+    var r : Int <- sqrt e
+    return Roots (((-b)-r)/d, ((-b)+r)/d)
+  end
+end
+
+return (((roots(Coefs (3,4,5))) === (Roots (-1,-1))) and ((roots(Coefs (2,-16,-18))) === (Roots (-1,9)))) and ((roots(Coefs (0,1,1))) === (Roots (0,0)))
+|])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
+      it "move" $         -- pg 48
+        (run True $
+          pre ++ [r|
+data Position with (Int,Int)
+data Angle    with Int
+data Distance with Int
+
+func move (d_,a_,p_) : ((Distance,Angle,Position) -> Position) do
+  var (d,a,x,y) : (Int,Int,Int,Int)
+  set Distance d     <- d_
+  set Angle a        <- a_
+  set Position (x,y) <- p_
+  return Position (x+(d*a), y+(d*(-a)))  // TODO: sin/cos
+end
+
+return move(Distance 10,Angle 2,Position(0,0))
+|])
+        `shouldBe` Right (Cons ["Position"] (Tuple [Number 20,Number (-20)]))
+
+      it "OneTwo" $         -- pg 49
+        (run True $
+          [r|
+data Pair   for a with (a,a)
+data OneTwo for a
+data OneTwo.One with a
+data OneTwo.Two with Pair of a
+return (OneTwo.One 10, OneTwo.Two (Pair (10,20)))
+|])
+        `shouldBe` Right (Tuple [Cons ["OneTwo","One"] (Number 10),Cons ["OneTwo","Two"] (Cons ["Pair"] (Tuple [Number 10,Number 20]))])
+
+      it "OneTwo" $         -- pg 49
+        (run True $
+          [r|
+data Pair   for a with (a,a)
+data OneTwo for a
+data OneTwo.One with a
+data OneTwo.Two with Pair of a
+return (OneTwo.One 10, OneTwo.Two (Pair (10,())))
+|])
+        `shouldBe` Left "(line 6, column 36):\ntypes do not match : expected '(a,a)' : found '(Int.10,())'\n(line 6, column 36):\nambigous instances for 'a' : 'Int.10', '()'\n"
+
+      it "XXX: Angle" $         -- pg 49
+        (run True $
+          pre ++ [r|
+data Angle with Int
+
+instance of IEqualable for Angle with
+  func === (a1,a2) : ((Angle,Angle) -> Bool) do
+    var (a1_,a2_) : (Int,Int)
+    set (Angle a1_, Angle a2_) <- (a1,a2)
+    return (a1_ rem 360) == (a2_ rem 360)
+  end
+end
+
+var a1 : Angle <- Angle 370
+var a2 : Angle <- Angle  10
+//return a1 === a2
+return ((Angle 370) === (Angle 10)) and (a1 === a2)
+|])
+        `shouldBe` Right (Cons ["Bool","True"] Unit)
+
 -------------------------------------------------------------------------------
 
     where
