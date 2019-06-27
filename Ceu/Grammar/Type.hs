@@ -142,7 +142,7 @@ relates_ rel tp1 tp2 =
     right   = map       fst final
 
     f :: [(ID_Var,Type,Relation)] -> ((ID_Var,Type), Errors)
-    f l@((var,_,_):_) = --traceShow l $
+    f l@((var,_,_):_) =
       let
           -- input
           sups    = comPre' $ map gettp $ filter isSUP l
@@ -152,7 +152,7 @@ relates_ rel tp1 tp2 =
           -- output
           subs    = comPre' $ map gettp $ filter (not.isSUP) l
           subest  = subest' subs
-          subs_ok = all (isSubOf subest) subs
+          subs_ok = all (isSubOf_ subest) subs
 
           ok      = --traceShow (subs,supest, sups,subest)
                     sups_ok && subs_ok &&
@@ -164,7 +164,7 @@ relates_ rel tp1 tp2 =
           --traceShow (rel, tp1, tp2, sups_ok, ret,tp,insts) $
           --traceShow (sups_ok,grouped) $
           ((var,TypeB),
-            if sups_ok && subs_ok && sups/=[] && subs/=[] && (subest `isSubOf` supest) then
+            if sups_ok && subs_ok && sups/=[] && subs/=[] && (subest `isSubOf_` supest) then
               ["type variance does not match : '" ++ show' subest ++
                "' should be supertype of '" ++ show' supest ++ "'"]
             else
@@ -180,7 +180,7 @@ relates_ rel tp1 tp2 =
     -- the types have no total order but there should be a min
     --sort' :: Bool -> [Type] -> Type
     supest' tps = head $ sortBy (\t1 t2 -> bool GT LT (t1 `isSupOf_` t2)) tps
-    subest' tps = head $ sortBy (\t1 t2 -> bool GT LT (t1 `isSubOf` t2)) tps
+    subest' tps = head $ sortBy (\t1 t2 -> bool GT LT (t1 `isSubOf_` t2)) tps
 
     comPre' :: [Type] -> [Type]
     comPre' tps = case comPre tps of
@@ -201,7 +201,12 @@ comPre tps = yyy where
           Just tp -> case tp of
             TypeD _ x y   -> case commonPrefixAll $ map (\(TypeD hr _ _)->hr) $ filter isTypeD tps of
                               [] -> Nothing
+{-
                               tp -> Just $ TypeD tp x y
+-}
+                              tp -> case comPre $ map (\(TypeD _ _ st)->st) $ filter isTypeD tps of
+                                Nothing  -> Just $ TypeD tp x y
+                                Just tp' -> Just $ TypeD tp x tp'
             TypeF inp out -> f $ unzip $ map (\(TypeF inp out)->(inp,out)) $ filter isTypeF tps
                              where
                               f (inps,outs) =
@@ -257,8 +262,8 @@ isSupOf (sup_,_) (sub_,_) = isSupOf_ sup_ sub_
 isSupOf_ :: Type -> Type -> Bool
 isSupOf_ sup sub = b where (b,_,_) = sup `supOf` sub
 
-isSubOf :: Type -> Type -> Bool
-isSubOf sub sup = b where (b,_,_) = sup `supOf` sub
+isSubOf_ :: Type -> Type -> Bool
+isSubOf_ sub sup = b where (b,_,_) = sup `supOf` sub
 
 -- Is first argument a supertype of second argument?
 --  * Bool: whether it is or not

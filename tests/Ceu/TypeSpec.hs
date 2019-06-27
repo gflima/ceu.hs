@@ -207,13 +207,25 @@ spec = do
               (bool))
       `shouldBe` Right (TypeF (TypeN [TypeV "a",TypeV "a"]) (bool),[("?",bool),("a",TypeN [int1,int])])
 
+    it "(a,a) > (370,10)" $
+      relates_ SUP
+        (TypeN [TypeV "a",                   TypeV "a"])
+        (TypeN [TypeD ["Int","370"] [] Type0,TypeD ["Int","10"] [] Type0])
+      `shouldBe` Right (TypeN [TypeD ["Int","370"] [] Type0,TypeD ["Int","10"] [] Type0],[("a",TypeD ["Int"] [] Type0)])
+
+    it "(a,a) > (X 370,X 10)" $
+      relates_ SUP
+        (TypeN [TypeV "a",                                     TypeV "a"])
+        (TypeN [TypeD ["X"] [] $ TypeD ["Int","370"] [] Type0, TypeD ["X"] [] $ TypeD ["Int","10"] [] Type0])
+      `shouldBe` Right (TypeN [TypeD ["X"] [] (TypeD ["Int","370"] [] Type0),TypeD ["X"] [] (TypeD ["Int","10"] [] Type0)],[("a",TypeD ["X"] [] (TypeD ["Int"] [] Type0))])
+
   describe "isSupOf / isSubOf" $ do
 
     it "(bot -> top) > (bot -> top)" $
       TypeF TypeB TypeT `isSupOf_` TypeF TypeB TypeT
       `shouldBe` True
     it "(bot -> top) < (bot -> top)" $
-      TypeF TypeB TypeT `isSubOf` TypeF TypeB TypeT
+      TypeF TypeB TypeT `isSubOf_` TypeF TypeB TypeT
       `shouldBe` True
 
     it "(bot -> top) > (bot -> bot)" $
