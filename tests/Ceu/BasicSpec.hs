@@ -291,7 +291,7 @@ spec = do
         (Var annz "a" (Type0,cz) (Match annz True (LExp $ Read annz "a") (Number annz 1) (Nop annz) (Nop annz))))
       `shouldBe` (["types do not match : expected '()' : found 'Int.1'"],Data annz (int,cz) False (Data annz (bool,cz) False (Data annz (boolt,cz) False (Data annz (boolf,cz) False (Var annz "a" (Type0,cz) (Match annz True (LExp $ Read annz{type_ = (Type0,cz)} "a") (Number annz{type_=(TypeD ["Int","1"] [] Type0,cz)} 1) (Nop annz) (Nop annz)))))))
 
-    it "data X with Int ; x:Int ; X 1 <- X 2" $
+    it "data X with Int ; X 1 <- X 2" $
       (fst $ TypeSys.go (prelude annz
         (Data annz (TypeD ["Xxx"] [] int,cz) False (Match annz True (LCons ["Xxx"] (LNumber 1)) (Call annz (Cons annz ["Xxx"]) (Number annz 2)) (Ret annz (Number annz 2)) (Nop annz)))))
       `shouldBe` ["types do not match : expected 'Int.1' : found 'Int.2'"]
@@ -454,7 +454,8 @@ spec = do
         (Data annz (TypeD ["X"] [] int,cz) False
         (Var annz "x" (TypeD ["X"] [] Type0,cz)
           (Match annz False (LVar "x") (Cons annz ["X"]) (Nop annz) (Nop annz)))))
-      `shouldBe` ["types do not match : expected 'Int' : found '()'"]
+      `shouldBe` ["types do not match : expected 'X' : found '(Int -> X)'"]
+      --["types do not match : expected 'Int' : found '()'"]
       -- ["types do not match : 'Int' is not supertype of '()'"]
 
     it "data X with Int" $
@@ -496,7 +497,8 @@ spec = do
           (Data annz (TypeD ["X"] [] int,cz) False
           (Var annz "x" (int,cz)
           (Match annz False (LCons ["X"] (LVar "x")) (Cons annz ["X"]) (Nop annz) (Nop annz))))))
-        `shouldBe` ["types do not match : expected 'Int' : found '()'"]
+        `shouldBe` ["types do not match : expected 'X' : found '(Int -> X)'"]
+        --["types do not match : expected 'Int' : found '()'"]
 
   --------------------------------------------------------------------------
 

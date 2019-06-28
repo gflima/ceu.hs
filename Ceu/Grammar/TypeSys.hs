@@ -439,6 +439,12 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
                             let (chk',es',_,_) = aux ids z l (Right e) in (chk',es')
                            else
                             (chk2,[]) -- use chk2 -> chk1
+              Right (Cons z _) -> (SUP,chk,es,txp1) where
+                e = Unit z
+                (chk,es) = if null esl && null ese then
+                            let (chk',es',_,_) = aux ids z l (Right e) in (chk',es')
+                           else
+                            (chk2,[]) -- use chk2 -> chk1
               otherwise          -> (SUP,chk2,[],txp2)
 
         (LTuple ls)  -> (or chks, concat esls ++ ese, LTuple ls', toexp mexps'')
