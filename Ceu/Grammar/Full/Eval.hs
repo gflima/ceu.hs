@@ -18,10 +18,10 @@ import qualified Ceu.Grammar.Full.Compile.Match as Match
 import qualified Ceu.Grammar.Full.Compile.Class as Class
 import qualified Ceu.Grammar.Full.Compile.FuncS as FuncS
 
-int   = TypeD ["Int"]        [] Type0
-bool  = TypeD ["Bool"]       [] Type0
-boolf = TypeD ["Bool.False"] [] Type0
-boolt = TypeD ["Bool.True"]  [] Type0
+int   = TypeD ["Int"]          [] Type0
+bool  = TypeD ["Bool"]         [] Type0
+boolf = TypeD ["Bool","False"] [] Type0
+boolt = TypeD ["Bool","True"]  [] Type0
 
 prelude :: Ann -> Stmt -> Stmt
 prelude z p =
@@ -30,7 +30,7 @@ prelude z p =
     (Seq z (Data z (boolf,cz) False)
     (Seq z (Data z (boolt,cz) False)
     (Seq z (Var  z "_true"  (bool,cz))
-    (Seq z (Set  z False (LVar "_true") (Cons z ["Bool","True"] (Unit z)))
+    (Seq z (Set  z False (LVar "_true") (Cons z ["Bool","True"]))
     (Seq z (Var  z "print"  (TypeF (TypeV "?")        (TypeV "?"), cz))
     (Seq z (Var  z "negate" (TypeF int                int,         cz))
     (Seq z (Var  z "=="     (TypeF (TypeN [int, int]) bool,        cz))

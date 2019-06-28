@@ -12,7 +12,7 @@ data Exp
     = Error  Ann Int
     | Unit   Ann                -- ()
     | Number Ann Int            -- 1
-    | Cons   Ann ID_Data_Hier Exp  -- Bool.True ; Tree.Node (Tree.Leaf,1,Tree.Leaf)
+    | Cons   Ann ID_Data_Hier   -- Bool.True ; Tree.Node
     | Read   Ann ID_Var         -- a ; xs
     | Arg    Ann
     | Tuple  Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
@@ -24,7 +24,7 @@ instance HasAnn Exp where
     --getAnn :: Exp -> Ann
     getAnn (Error  z _)   = z
     getAnn (Number z _)   = z
-    getAnn (Cons   z _ _) = z
+    getAnn (Cons   z _)   = z
     getAnn (Read   z _)   = z
     getAnn (Arg    z)     = z
     getAnn (Unit   z)     = z
@@ -75,7 +75,7 @@ show_stmt spc p = error $ show p
 
 show_exp :: Int -> Exp -> String
 show_exp spc (Number _ n)   = show n
-show_exp spc (Cons _ _ _)   = "cons"
+show_exp spc (Cons _ _)     = "cons"
 show_exp spc (Read _ id)    = id
 show_exp spc (Arg _)        = "arg"
 show_exp spc (Tuple _ es)   = "(" ++ intercalate "," (map (show_exp spc) es) ++ ")"
@@ -106,7 +106,7 @@ map_stmt f@(fs,_,_)  (Ret   z exp)              = fs (Ret   z (map_exp f exp))
 map_stmt f@(fs,_,_)  (Nop   z)                  = fs (Nop   z)
 
 map_exp :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Exp -> Exp
-map_exp f@(_,fe,_)  (Cons  z id e)  = fe (Cons  z id (map_exp f e))
+map_exp f@(_,fe,_)  (Cons  z id)    = fe (Cons  z id)
 map_exp f@(_,fe,_)  (Tuple z es)    = fe (Tuple z (map (map_exp f) es))
 map_exp f@(_,fe,ft) (Func  z tp p)  = fe (Func  z (ft tp) (map_stmt f p))
 map_exp f@(_,fe,_)  (Call  z e1 e2) = fe (Call  z (map_exp f e1) (map_exp f e2))

@@ -190,29 +190,29 @@ spec = do
             "end",
             "return fst (Bool.True, Bool.False)"
           ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Right (Cons' ["Bool","True"] Unit)
 
     describe "data:" $ do
 
       it "data Xxx" $
         (run False "data Xxx ; var x:Xxx <- Xxx ; return x")
-        `shouldBe` Right (Cons ["Xxx"] Unit)
+        `shouldBe` Right (Cons' ["Xxx"] Unit)
 
       it "data Xxx.Yyy" $
         (run False "data Xxx ; data Xxx.Yyy ; var x:Xxx.Yyy <- Xxx.Yyy ; return x")
-        `shouldBe` Right (Cons ["Xxx","Yyy"] Unit)
+        `shouldBe` Right (Cons' ["Xxx","Yyy"] Unit)
 
       it "data Xxx.Yyy" $
         (run False "data Xxx ; data Xxx.Yyy ; var x:Xxx <- Xxx.Yyy ; return x")
-        `shouldBe` Right (Cons ["Xxx","Yyy"] Unit)
+        `shouldBe` Right (Cons' ["Xxx","Yyy"] Unit)
 
       it "data Xxx with (Int,Int)" $
         (run True "data Xxx with (Int,Int) ; var x:Xxx <- Xxx (1+1,2+2) ; return x")
-        `shouldBe` Right (Cons ["Xxx"] (Tuple [Number 2, Number 4]))
+        `shouldBe` Right (Cons' ["Xxx"] (Tuple [Number 2, Number 4]))
 
       it "data Xxx(Int), Xxx.Yyy(Int), y=Yyy(1,2)" $
         (run True "data Xxx with Int ; data Xxx.Yyy with Int ; var y:Xxx.Yyy <- Xxx.Yyy (1,2) ; return y")
-        `shouldBe` Right (Cons ["Xxx","Yyy"] (Tuple [Number 1,Number 2]))
+        `shouldBe` Right (Cons' ["Xxx","Yyy"] (Tuple [Number 1,Number 2]))
 
       it "Aa <- Aa.Bb" $
         (run True $
@@ -275,7 +275,7 @@ spec = do
             "var p1 : Pair of (Int,Int) <- Pair (1,2)",
             "return p1"
            ])
-        `shouldBe` Right (Cons ["Pair"] (Tuple [Number 1,Number 2]))
+        `shouldBe` Right (Cons' ["Pair"] (Tuple [Number 1,Number 2]))
 
       it "Pair (a,b) <- 1" $
         (run True $
@@ -488,7 +488,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "end",
             "return ((Bool.True) === (Bool.True)) =/= Bool.False"
            ])
-        `shouldBe` Right (Cons ["Bool","False"] Unit)
+        `shouldBe` Right (Cons' ["Bool","False"] Unit)
 
       it "IOrd extends IEq" $
         (run True $
@@ -540,7 +540,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "",
             "return (Bool.True) =$= (Bool.False)"
           ])
-        `shouldBe` Right (Cons ["Bool","False"] Unit)
+        `shouldBe` Right (Cons' ["Bool","False"] Unit)
 
       it "IOrd extends IEq" $
         (run True $
@@ -563,7 +563,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "",
             "return (Bool.True) =$= (Bool.False)"
           ])
-        `shouldBe` Right (Cons ["Bool","False"] Unit)
+        `shouldBe` Right (Cons' ["Bool","False"] Unit)
 
       it "f1" $
         (run True $
@@ -576,7 +576,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "end",
             "return f1 (Bool.True)"
            ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Right (Cons' ["Bool","True"] Unit)
 
       it "f1.x" $
         (run True $
@@ -589,7 +589,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "end",
             "return f1 (Bool.True)"
            ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Right (Cons' ["Bool","True"] Unit)
 
       it "f1 default" $
         (run True $
@@ -601,7 +601,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "end",
             "return f1 (Bool.True)"
            ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Right (Cons' ["Bool","True"] Unit)
 
       it "f1/f2" $
         (run True $
@@ -618,7 +618,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "end",
             "return f1 (Bool.True)"
            ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Right (Cons' ["Bool","True"] Unit)
 
       it "f1/f2/f3" $
         (run True $
@@ -636,7 +636,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "end",
             "return f1 (Bool.True)"
            ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Right (Cons' ["Bool","True"] Unit)
 
       it "IFable f ; g a is IFable" $
         (run True $
@@ -674,7 +674,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "return (g (Bool.True))"
                     -- g_Bool->Bool
            ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Right (Cons' ["Bool","True"] Unit)
 
       it "IFable f ; g a is IFable" $
         (run True $
@@ -696,7 +696,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "return (g (Bool.True))"
                     -- g_Bool->Bool
            ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Right (Cons' ["Bool","True"] Unit)
 
       it "IFable f1/f2/f3 ; g/h a is IFable" $
         (run True $
@@ -732,7 +732,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "return (g (Bool.True)) or (h (Bool.False))"
                     -- g_Bool->Bool
            ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Right (Cons' ["Bool","True"] Unit)
 
       it "params" $
         (run True $
@@ -775,7 +775,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "",
             "return (1===1) and (1=/=2)"
            ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Right (Cons' ["Bool","True"] Unit)
 
       it "tuples" $
         (run True $
@@ -785,7 +785,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "end",
             "return (1,2) f (1,1)"
            ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Right (Cons' ["Bool","True"] Unit)
 
       it "tuples" $
         (run True $
@@ -797,7 +797,7 @@ $f3$(Int -> Int)$ 10                       // Read
             --"return (((1,1)===(1,1)) and ((1,2)=/=(1,1))) and ((1,2)@>(1,1))"
             "return (((1,1)===(1,1)) and ((1,2)=/=(1,1)))"
            ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Right (Cons' ["Bool","True"] Unit)
 
     describe "extends" $ do
 
@@ -821,7 +821,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "instance of IFb for (m,n) where (m is IFb, n is IFb) with end",
             "return Bool.True"
            ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Right (Cons' ["Bool","True"] Unit)
 
       it "instance for extends of (a,b)" $
         (run True $
@@ -836,7 +836,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "end",
             "return Bool.True"
            ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Right (Cons' ["Bool","True"] Unit)
 
       it "instance for extends of (a,b)" $
         (run True $
@@ -857,7 +857,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "end",
             "return Bool.True"
            ])
-        `shouldBe` Right (Cons ["Bool","True"] Unit)
+        `shouldBe` Right (Cons' ["Bool","True"] Unit)
 
 -------------------------------------------------------------------------------
 

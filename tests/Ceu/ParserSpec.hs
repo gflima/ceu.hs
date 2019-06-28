@@ -42,7 +42,7 @@ clearStmt p                        = error $ "clearStmt: unexpected statement: "
 
 clearExp :: Exp -> Exp
 clearExp (Number _ v)     = Number annz v
-clearExp (Cons   _ v e)   = Cons   annz v (clearExp e)
+clearExp (Cons   _ v)     = Cons   annz v
 clearExp (Read   _ v)     = Read   annz v
 clearExp (Arg    _)       = Arg    annz
 clearExp (Unit   _)       = Unit   annz
@@ -543,7 +543,7 @@ spec = do
                   "end",
                   "return (Bool.True) and (Bool.True)"
                  ])
-              `shouldBe` Right (Seq annz (FuncS annz "and" (TypeF (TypeN [bool,bool]) (bool),cz) (Seq annz (Seq annz (Var annz "x" (bool,cz)) (Seq annz (Var annz "y" (bool,cz)) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","False"] (Unit annz)))))) (Ret annz (Call annz (Read annz "and") (Tuple annz [Cons annz ["Bool","True"] (Unit annz),Cons annz ["Bool","True"] (Unit annz)]))))
+              `shouldBe` Right (Seq annz (FuncS annz "and" (TypeF (TypeN [bool,bool]) (bool),cz) (Seq annz (Seq annz (Var annz "x" (bool,cz)) (Seq annz (Var annz "y" (bool,cz)) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","False"]))))) (Ret annz (Call annz (Read annz "and") (Tuple annz [Cons annz ["Bool","True"],Cons annz ["Bool","True"]]))))
 
         describe "data" $ do
 
@@ -552,7 +552,7 @@ spec = do
               `shouldBe` Right (Data annz{source=("",1,1)} (TypeD ["Xxx"] [] Type0,cz) False)
             it "data Xxx ; var x = Xxx" $
               (parse' stmt "data Xxx ; var x:Xxx <- Xxx")
-              `shouldBe` Right (Seq annz (Data annz (TypeD ["Xxx"] [] Type0,cz) False) (Seq annz (Seq annz (Var annz "x" (TypeD ["Xxx"] [] Type0,cz)) (Nop annz)) (Set annz False (LVar "x") (Cons annz ["Xxx"] (Unit annz)))))
+              `shouldBe` Right (Seq annz (Data annz (TypeD ["Xxx"] [] Type0,cz) False) (Seq annz (Seq annz (Var annz "x" (TypeD ["Xxx"] [] Type0,cz)) (Nop annz)) (Set annz False (LVar "x") (Cons annz ["Xxx"]))))
             it "data Xxx.Yyy" $
               (parse stmt "data Xxx.Yyy")
               `shouldBe` Right (Data annz{source=("",1,1)} (TypeD ["Xxx","Yyy"] [] Type0,cz) False)
@@ -574,7 +574,7 @@ spec = do
 
             it "data Xxx with Int ; x<-Xxx(1,1)" $
               (parse' stmt "data Xxx with Int ; var x:Xxx <- Xxx 1")
-              `shouldBe` Right (Seq annz (Data annz (TypeD ["Xxx"] [] int,cz) False) (Seq annz (Seq annz (Var annz "x" (TypeD ["Xxx"] [] Type0,cz)) (Nop annz)) (Set annz False (LVar "x") (Cons annz ["Xxx"] (Number annz 1)))))
+              `shouldBe` Right (Seq annz (Data annz (TypeD ["Xxx"] [] int,cz) False) (Seq annz (Seq annz (Var annz "x" (TypeD ["Xxx"] [] Type0,cz)) (Nop annz)) (Set annz False (LVar "x") (Call annz (Cons annz ["Xxx"]) (Number annz 1)))))
 
             it "TODO-fields: data Xxx (x,y) with (Int,Int)" $
               (parse stmt "data Xxx (x,y) with (Int,Int)")
@@ -582,17 +582,17 @@ spec = do
 
             it "Xxx.Yyy" $
               (parse' stmt "data Int ; data Xxx with Int ; data Xxx.Yyy with Int ; var y:Xxx.Yyy <- Xxx.Yyy (1,2)")
-              `shouldBe` Right (Seq annz (Data annz (TypeD ["Int"] [] Type0,M.fromList []) False) (Seq annz (Data annz (TypeD ["Xxx"] [] int,M.fromList []) False) (Seq annz (Data annz (TypeD ["Xxx","Yyy"] [] int,M.fromList []) False) (Seq annz (Seq annz (Var annz "y" (TypeD ["Xxx","Yyy"] [] Type0,M.fromList [])) (Nop annz)) (Set annz False (LVar "y") (Cons annz ["Xxx","Yyy"] (Tuple annz [Number annz 1,Number annz 2])))))))
+              `shouldBe` Right (Seq annz (Data annz (TypeD ["Int"] [] Type0,M.fromList []) False) (Seq annz (Data annz (TypeD ["Xxx"] [] int,M.fromList []) False) (Seq annz (Data annz (TypeD ["Xxx","Yyy"] [] int,M.fromList []) False) (Seq annz (Seq annz (Var annz "y" (TypeD ["Xxx","Yyy"] [] Type0,M.fromList [])) (Nop annz)) (Set annz False (LVar "y") (Call annz (Cons annz ["Xxx","Yyy"]) (Tuple annz [Number annz 1,Number annz 2])))))))
 
             it "data X with Int ; x:Int ; X x <- X 1 ; ret x" $
               (parse' stmt "data Xxx with Int ; var x:Int ; set Xxx x <- Xxx 1 ; return x")
-              `shouldBe` Right (Seq annz (Data annz (TypeD ["Xxx"] [] int,cz) False) (Seq annz (Seq annz (Seq annz (Var annz "x" (int,cz)) (Nop annz)) (Nop annz)) (Seq annz (Set annz False (LCons ["Xxx"] (LVar "x")) (Cons annz ["Xxx"] (Number annz 1))) (Ret annz (Read annz "x")))))
+              `shouldBe` Right (Seq annz (Data annz (TypeD ["Xxx"] [] int,cz) False) (Seq annz (Seq annz (Seq annz (Var annz "x" (int,cz)) (Nop annz)) (Nop annz)) (Seq annz (Set annz False (LCons ["Xxx"] (LVar "x")) (Call annz (Cons annz ["Xxx"]) (Number annz 1))) (Ret annz (Read annz "x")))))
             it "data X with Int ; X 1 <- X 1 ; return 1" $
               (parse' stmt "data Xxx with Int ; set Xxx 1 <- Xxx 1 ; return 1")
-              `shouldBe` Right (Seq annz (Data annz (TypeD ["Xxx"] [] int,cz) False) (Seq annz (Set annz False (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 1))) (Ret annz (Number annz 1))))
+              `shouldBe` Right (Seq annz (Data annz (TypeD ["Xxx"] [] int,cz) False) (Seq annz (Set annz False (LCons ["Xxx"] (LNumber 1)) (Call annz (Cons annz ["Xxx"]) (Number annz 1))) (Ret annz (Number annz 1))))
             it "data X with Int ; x:Int ; X 1 <- X 2" $
               (parse' stmt "data Xxx with Int ; set Xxx 1 <- Xxx 2 ; return 2")
-              `shouldBe` Right (Seq annz (Data annz (TypeD ["Xxx"] [] int,cz) False) (Seq annz (Set annz False (LCons ["Xxx"] (LNumber 1)) (Cons annz ["Xxx"] (Number annz 2))) (Ret annz (Number annz 2))))
+              `shouldBe` Right (Seq annz (Data annz (TypeD ["Xxx"] [] int,cz) False) (Seq annz (Set annz False (LCons ["Xxx"] (LNumber 1)) (Call annz (Cons annz ["Xxx"]) (Number annz 2))) (Ret annz (Number annz 2))))
 
             it "Aa <- Aa.Bb" $
               (parse' stmt $
@@ -605,7 +605,7 @@ spec = do
                   "set (Aa v) <- b",
                   "return v"
                 ])
-              `shouldBe` Right (Seq annz (Data annz (TypeD ["Aa"] [] int,cz) False) (Seq annz (Data annz (TypeD ["Aa","Bb"] [] Type0,cz) False) (Seq annz (Seq annz (Seq annz (Var annz "b" (TypeD ["Aa","Bb"] [] Type0,cz)) (Nop annz)) (Set annz False (LVar "b") (Cons annz ["Aa","Bb"] (Number annz 1)))) (Seq annz (Seq annz (Seq annz (Var annz "a" (TypeD ["Aa"] [] Type0,cz)) (Nop annz)) (Set annz False (LVar "a") (Read annz "b"))) (Seq annz (Seq annz (Seq annz (Var annz "v" (int,cz)) (Nop annz)) (Nop annz)) (Seq annz (Set annz False (LCons ["Aa"] (LVar "v")) (Read annz "b")) (Ret annz (Read annz "v"))))))))
+              `shouldBe` Right (Seq annz (Data annz (TypeD ["Aa"] [] int,cz) False) (Seq annz (Data annz (TypeD ["Aa","Bb"] [] Type0,cz) False) (Seq annz (Seq annz (Seq annz (Var annz "b" (TypeD ["Aa","Bb"] [] Type0,cz)) (Nop annz)) (Set annz False (LVar "b") (Call annz (Cons annz ["Aa","Bb"]) (Number annz 1)))) (Seq annz (Seq annz (Seq annz (Var annz "a" (TypeD ["Aa"] [] Type0,cz)) (Nop annz)) (Set annz False (LVar "a") (Read annz "b"))) (Seq annz (Seq annz (Seq annz (Var annz "v" (int,cz)) (Nop annz)) (Nop annz)) (Seq annz (Set annz False (LCons ["Aa"] (LVar "v")) (Read annz "b")) (Ret annz (Read annz "v"))))))))
 
         describe "data - constraint:" $ do
 
@@ -698,12 +698,12 @@ spec = do
               (Seq annz
               (Inst annz "IEq" (bool,cz)
                 (FuncS annz "==" (TypeF (TypeN [TypeV "a",TypeV "a"]) (bool),cz)
-                  (Seq annz (Seq annz (Var annz "x" (TypeV "a",cz)) (Seq annz (Var annz "y" (TypeV "a",cz)) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"] (Unit annz)))))))
+                  (Seq annz (Seq annz (Var annz "x" (TypeV "a",cz)) (Seq annz (Var annz "y" (TypeV "a",cz)) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"]))))))
               (Seq annz
               (Inst annz "IOrd" (bool,cz)
                 (FuncS annz ">=" (TypeF (TypeN [TypeV "a",TypeV "a"]) (bool),cz)
-                  (Seq annz (Seq annz (Var annz "x" (TypeV "a",cz)) (Seq annz (Var annz "y" (TypeV "a",cz)) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"] (Unit annz)))))))
-              (Ret annz (Call annz (Read annz ">=") (Tuple annz [Cons annz ["Bool","True"] (Unit annz),Cons annz ["Bool","False"] (Unit annz)])))))))
+                  (Seq annz (Seq annz (Var annz "x" (TypeV "a",cz)) (Seq annz (Var annz "y" (TypeV "a",cz)) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"]))))))
+              (Ret annz (Call annz (Read annz ">=") (Tuple annz [Cons annz ["Bool","True"],Cons annz ["Bool","False"]])))))))
 
           it "OK: IFable f ; g a is IFable" $
             (parse' stmt $ "var x : a where (a,b) is IFable") -- (a,b) vs (IFable), arity mismatch
@@ -736,7 +736,7 @@ spec = do
                   (Seq annz
                   (Seq annz
                     (Var annz "x" (TypeV "a",cvc("a","IFable"))) (Nop annz))
-                  (Seq annz (Set annz False (LVar "x") (Arg annz)) (Ret annz (Call annz (Read annz "f") (Read annz "x")))))) (Ret annz (Call annz (Read annz "g") (Cons annz ["Bool","True"] (Unit annz))))))
+                  (Seq annz (Set annz False (LVar "x") (Arg annz)) (Ret annz (Call annz (Read annz "f") (Read annz "x")))))) (Ret annz (Call annz (Read annz "g") (Cons annz ["Bool","True"])))))
 
         describe "seq:" $ do
             it "x <- k k <- 1" $

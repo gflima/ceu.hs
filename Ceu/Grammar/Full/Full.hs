@@ -13,7 +13,7 @@ import qualified Ceu.Grammar.Basic as B
 data Exp
     = Error  Ann Int            -- 1
     | Number Ann Int            -- 1
-    | Cons   Ann ID_Data_Hier Exp  -- True
+    | Cons   Ann ID_Data_Hier   -- True
     | Read   Ann ID_Var         -- a ; xs
     | Arg    Ann
     | Unit   Ann                -- ()
@@ -25,7 +25,7 @@ data Exp
 toBasicExp :: Exp -> B.Exp
 toBasicExp (Error  z v)     = B.Error  z v
 toBasicExp (Number z v)     = B.Number z v
-toBasicExp (Cons   z v e)   = B.Cons   z v (toBasicExp e)
+toBasicExp (Cons   z v)     = B.Cons   z v
 toBasicExp (Read   z v)     = B.Read   z v
 toBasicExp (Arg    z)       = B.Arg    z
 toBasicExp (Unit   z)       = B.Unit   z
@@ -37,7 +37,7 @@ instance HasAnn Exp where
     --getAnn :: Exp -> Ann
     getAnn (Error  z _)   = z
     getAnn (Number z _)   = z
-    getAnn (Cons   z _ _) = z
+    getAnn (Cons   z _)   = z
     getAnn (Read   z _)   = z
     getAnn (Arg    z)     = z
     getAnn (Unit   z)     = z
@@ -143,7 +143,7 @@ map_stmt f@(fs,_,_)  (Ret   z exp)            = fs (Ret   z (map_exp f exp))
 map_stmt f@(fs,_,_)  (Nop   z)                = fs (Nop   z)
 
 map_exp :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Exp -> Exp
-map_exp f@(_,fe,_)  (Cons  z id e)  = fe (Cons  z id (map_exp f e))
+map_exp f@(_,fe,_)  (Cons  z id)    = fe (Cons  z id)
 map_exp f@(_,fe,_)  (Tuple z es)    = fe (Tuple z (map (map_exp f) es))
 map_exp f@(_,fe,ft) (Func  z tp p)  = fe (Func  z (ft tp) (map_stmt f p))
 map_exp f@(_,fe,_)  (Call  z e1 e2) = fe (Call  z (map_exp f e1) (map_exp f e2))

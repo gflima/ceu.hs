@@ -2,8 +2,8 @@ module Ceu.Eval where
 
 import Data.List  (find, intercalate)
 import Data.Bool  (bool)
-import Debug.Trace
 
+import Ceu.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann        (type_, getAnn)
 import Ceu.Grammar.Type as T  (Type(..), isRel_, Relation(..))
@@ -20,8 +20,9 @@ error_match     = -2
 
 data Exp
     = Error  Int
-    | Number Int            -- 1
-    | Cons   ID_Data_Hier Exp  -- True
+    | Number Int                -- 1
+    | Cons'  ID_Data_Hier Exp   -- True, X v (constants)
+    | Cons   ID_Data_Hier       -- X         (functions)
     | Read   ID_Var         -- a ; xs
     | Unit                  -- ()
     | Tuple  [Exp]          -- (1,2) ; ((1),2) ; ((1,2),3) ; ((),()) // (len >= 2)
@@ -53,7 +54,9 @@ infixr 1 `Seq`
 fromExp :: B.Exp -> Exp
 fromExp (B.Error  _ v)    = Error  v
 fromExp (B.Number _ v)    = Number v
-fromExp (B.Cons   _ id e) = Cons id (fromExp e)
+fromExp (B.Cons   z id)   = case type_ z of
+                              (TypeD _ _ Type0, _) -> Cons' id Unit
+                              otherwise            -> Cons id
 fromExp (B.Arg    _)      = Read "_arg"
 fromExp (B.Unit   _)      = Unit
 fromExp (B.Tuple  _ vs)   = Tuple (map fromExp vs)
@@ -106,9 +109,6 @@ envRead vars var =
 
 envEval :: Vars -> Exp -> Exp
 envEval vars e = case e of
-    Cons  id e' -> case envEval vars e' of
-                    Error x -> Error x
-                    e       -> Cons id e
     Read  var   -> envRead vars var
     Tuple es    -> let exps = map (envEval vars) es in
                     case find isError exps of
@@ -129,11 +129,12 @@ envEval vars e = case e of
         (Read "*",      Tuple [Number x, Number y]) -> Number (x*y)
         (Read "/",      Tuple [Number x, Number y]) -> Number (x `div` y)
         (Read "rem",    Tuple [Number x, Number y]) -> Number (x `rem` y)
-        (Read "==",     Tuple [Number x, Number y]) -> Cons (bool ["Bool","False"] ["Bool","True"] (x == y)) Unit
-        (Read "<=",     Tuple [Number x, Number y]) -> Cons (bool ["Bool","False"] ["Bool","True"] (x <= y)) Unit
-        (Read "<",      Tuple [Number x, Number y]) -> Cons (bool ["Bool","False"] ["Bool","True"] (x < y)) Unit
+        (Read "==",     Tuple [Number x, Number y]) -> Cons' (bool ["Bool","False"] ["Bool","True"] (x == y)) Unit
+        (Read "<=",     Tuple [Number x, Number y]) -> Cons' (bool ["Bool","False"] ["Bool","True"] (x <= y)) Unit
+        (Read "<",      Tuple [Number x, Number y]) -> Cons' (bool ["Bool","False"] ["Bool","True"] (x < y))  Unit
+        (Cons id,       e)                          -> Cons' id (envEval vars e)
         (Func p,        arg)                        -> steps (p, ("_arg",Just arg):vars)
-        otherwise                                   -> error $ show (f,e',vars)
+        x                                           -> error $ show (x,f,e',vars)
 
     e         -> e
 
@@ -160,7 +161,7 @@ step (Match loc e p q,vars)  = case envEval vars e of
     aux vars LUnit        v = (Right True,            vars)
     aux vars (LNumber x)  v = (Right (Number x == v), vars)
     aux vars (LCons id l)
-             (Cons id' e)   = if T.isRel_ T.SUP (TypeD id [] Type0) (TypeD id' [] Type0) then
+             (Cons' id' e)  = if T.isRel_ T.SUP (TypeD id [] Type0) (TypeD id' [] Type0) then
                                 case envEval vars e of
                                   Error x -> (Left $ Error x, vars)
                                   e'      -> aux vars l e'

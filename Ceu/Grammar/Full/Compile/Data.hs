@@ -43,7 +43,6 @@ stmt _  p                             = p
 -------------------------------------------------------------------------------
 
 expr :: [Stmt] -> Exp -> Exp
-expr ds (Cons  z id e)                = Cons  z id (expr ds e)
 expr ds (Tuple z es)                  = Tuple z (map (expr ds) es)
 expr ds (Call  z e1 e2)               = Call  z (expr ds e1) (expr ds e2)
 expr ds (Func  z tp p)                = Func  z tp (stmt ds p)

@@ -389,7 +389,6 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
     --  LAny          <- x      # match  # BOT   SUB x
     --  LUnit         <- x      # match  # unit  SUB x
     --  LNumber a     <- x      # match  # Int.X SUB x
-    --  LCons   a b   <- Cons x # match  # a     SUP Cons x | b match x
     --  LCons   a.* b <- x      # match  # a     SUP x      | b match x
     --  LTuple  (a,b) <- (x,y)  # match  # (B,B) SUB (x,y)  | a match x,  b match y
     --  LTuple  (a,b) <- x      # match  # (B,B) SUB x      | a match x1, b match x2
@@ -402,12 +401,12 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
                                                       txp  = (Type0,cz)
                                                       chk' = fchk txp mexp tpexp
         (LNumber v)  -> (chk',  ese, loc, mexp) where (ese,mexp) = f (SUB,txp')  tpexp
-                                                      txp1 = (TypeD ["Int",show v] [] Type0,cz)
-                                                      txp2 = (TypeD ["Int"]        [] Type0,cz)
+                                                      txpB = (TypeD ["Int",show v] [] Type0,cz)
+                                                      txpT = (TypeD ["Int"]        [] Type0,cz)
                                                       txp' = case tpexp of
-                                                              Right (Number _ _) -> txp1
-                                                              otherwise          -> txp2
-                                                      chk' = fchk txp1 mexp tpexp
+                                                              Right (Number _ _) -> txpB
+                                                              otherwise          -> txpT
+                                                      chk' = fchk txpB mexp tpexp
         (LVar var)   -> (False, esl++ese, loc, mexp)
           where
             (tpl,esl)  = case find (isVar $ (==)var) ids of
@@ -419,27 +418,18 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
             (ese,mexp) = f (SUP, type_ $ getAnn e') tpexp
             (es, e')   = expr z (SUP,(TypeV "?",cz)) ids e
 
-        (LCons hr l) -> (fchk txp1 mexp tpexp || chk1, esd++esl++es'++ese, LCons hr l', mexp)
+        (LCons hr l) -> (fchk txpB mexp tpexp || chk, esd++esl++ese, LCons hr l', mexp)
           where
-            txp1 = (TypeD hr          ofs st, cz)
-            txp2 = (TypeD (take 1 hr) ofs st, cz)
+            txpB = (TypeD hr          ofs st, cz)
+            txpT = (TypeD (take 1 hr) ofs st, cz)
             str  = T.hier2str hr
             (tpd@(TypeD _ ofs st,ctrs),esd) = case find (isData $ (==)str) ids of
               Just (Data _ tp _ _) -> (tp, [])
               Nothing              -> ((TypeD [""] [] Type0,cz),
                                        [toError z $ "data '" ++ str ++ "' is not declared"])
 
-            (ese,mexp)      = f (rel,txp') tpexp
-            (chk2,esl,l',_) = aux ids z l (Left (st,ctrs))
-
-            -- if any errors found, ignore all this
-            (rel,chk1,es',txp') = case tpexp of
-              Right (Cons _ _ e) -> (SUP,chk,es,txp1) where
-                (chk,es) = if null esl && null ese then
-                            let (chk',es',_,_) = aux ids z l (Right e) in (chk',es')
-                           else
-                            (chk2,[]) -- use chk2 -> chk1
-              otherwise          -> (SUP,chk2,[],txp2)
+            (ese,mexp)      = f (SUP,txpT) tpexp
+            (chk,esl,l',_) = aux ids z l (Left (st,ctrs))
 
         (LTuple ls)  -> (or chks, concat esls ++ ese, LTuple ls', toexp mexps'')
           where
@@ -545,18 +535,17 @@ expr' _       ids (Func   z tp p)  = (es, Func   z{type_=tp} tp p')
                                      where
                                       (es,p') = stmt ids p
 
-expr' _ ids (Cons  z hr exp) = (es++es_exp, Cons z{type_=(TypeD hr ofs x,y)} hr exp')
+expr' _ ids (Cons z hr) = (es, Cons z{type_=tp} hr)
     where
         hr_str = T.hier2str hr
         (tp,es) = case find (isData $ (==)hr_str) ids of
-            Nothing                  -> ((TypeD [""] [] (TypeV "?"),cz),
+            Nothing                  -> ((TypeV "?",cz),
                                          [toError z $ "data '" ++ hr_str ++ "' is not declared"])
-            Just (Data _ tp True  _) -> (tp, [toError z $ "data '" ++ hr_str ++ "' is abstract"])
-            Just (Data _ tp False _) -> (tp, [])
-        (es_exp, exp') = expr z (SUP,(tpst,ctrs)) ids exp
-        (TypeD _ ofs tpst,ctrs) = tp
+            Just (Data _ tp True  _) -> (f tp, [toError z $ "data '" ++ hr_str ++ "' is abstract"])
+            Just (Data _ tp False _) -> (f tp, [])
 
-        (x,y) = type_ $ getAnn $ exp'
+        f (tp_@(TypeD _ ofs Type0), ctrs) = (tp_,            ctrs)
+        f (tp_@(TypeD _ ofs tpst),  ctrs) = (TypeF tpst tp_, ctrs)
 
 expr' _ ids (Tuple z exps) = (es, Tuple z{type_=(tps',cz)} exps') where
                               rets :: [(Errors,Exp)]
