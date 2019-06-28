@@ -203,7 +203,7 @@ spec = do
     it "data X with Int ; x:Int ; X 1 <- X 2" $ do
       go (Seq annz (Data annz (TypeD ["Xxx"] [] int,cz) False) (Seq annz (Set annz False (LCons ["Xxx"] (LNumber 1)) (Call annz (Cons annz ["Xxx"]) (Number annz 2))) (Ret annz (Number annz 2))))
       `shouldBe`
-        Left ["types do not match : expected 'Int.1' : found 'Int.2'"]
+        Left ["match never succeeds : constant mismatch"] --["types do not match : expected 'Int.1' : found 'Int.2'"]
 
     it "call (func () : (() -> ()) do end)" $ do
       go (Seq annz

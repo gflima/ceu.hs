@@ -1298,7 +1298,7 @@ data OneTwo.One with a
 data OneTwo.Two with Pair of a
 return (OneTwo.One 10, OneTwo.Two (Pair (10,())))
 |])
-        `shouldBe` Left "(line 6, column 36):\ntypes do not match : expected '(a,a)' : found '(Int.10,())'\n(line 6, column 36):\nambiguous instances for 'a' : 'Int.10', '()'\n"
+        `shouldBe` Left "(line 6, column 36):\ntypes do not match : expected '((Int.10,()) -> ?)' : found '((a,a) -> (Pair of a))'\n(line 6, column 36):\nambiguous instances for 'a' : 'Int.10', '()'\n"
 
       it "Angle" $         -- pg 49
         (run True $

@@ -361,11 +361,11 @@ stmt ids s@(Var z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
 -------------------------------------------------------------------------------
 
 stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') where
-  es'               = esl ++ esc ++ ese ++ es1 ++ es2
-  (esl, _, loc')    = fLoc loc
-  (es1, p1')        = stmt ids p1
-  (es2, p2')        = stmt ids p2
-  (chk', ese, exp') = fExp loc' exp
+  es'              = esl ++ esc ++ ese ++ es1 ++ es2
+  (esl, _, loc')   = fLoc loc
+  (es1, p1')       = stmt ids p1
+  (es2, p2')       = stmt ids p2
+  (may, ese, exp') = fExp loc' exp
 
   -----------------------------------------------------------------------------
 
@@ -374,9 +374,9 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
   -- if   1 <- x    // chk=true
   esc = if null ese then
           if chk then
-            bool [toError z "match never fails"] [] chk'
+            bool [toError z "match never fails"] [] may
           else
-            bool [toError z "match might fail"]  [] (not chk')
+            bool [toError z "match might fail"]  [] (not may || tLoc loc' `isSupOf` (type_ $ getAnn exp'))
         else
           []
 
@@ -426,15 +426,15 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
   fExp l@LUnit         e@(Unit   _)    = (False, [], e') where
                                           ([],e') = expr (getAnn e) (SUP,tLoc l) ids e
   fExp l@(LNumber v1)  e@(Number _ v2) = (False, es, e') where
-                                          es = bool ["match never succeeds : constant mismatch"] [] (v1==v2)
+                                          es = bool [toError z "match never succeeds : constant mismatch"] [] (v1==v2)
                                           (_,e') = expr (getAnn e) (SUP,tLoc l) ids e
   fExp l@(LCons _ _)   e@(Cons z _)    = fExp l (Call z e (Unit z))
   fExp (LCons hr1 loc)
        (Call _ (Cons z hr2) exp)       = (chk, es++ese, Call z (Cons z hr2) exp') where -- TODO: complete z{type_=...}
-                                          es = bool ["match never succeeds : constructor mismatch"] [] (hr1 `isPrefixOf` hr2)
+                                          es = bool [toError z "match never succeeds : constructor mismatch"] [] (hr1 `isPrefixOf` hr2)
                                           (chk, ese, exp') = fExp loc exp
   fExp (LTuple ls)     (Tuple z exps)  = (or chks, concat eses ++ es, Tuple z{type_=tp'} exps'') where
-                                          es    = bool ["match never succeeds : arity mismatch"] [] (lenl==lene)
+                                          es    = bool [toError z "match never succeeds : arity mismatch"] [] (lenl==lene)
                                           lenl  = length ls
                                           lene  = length exps
                                           ls'   = ls   ++ replicate (lene - lenl) LAny
@@ -452,7 +452,7 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
   fExp l@(LCons hr loc) exp            = (True, ese, exp') where
                                           (ese,exp') = expr (getAnn exp) (SUP,tp') ids exp
                                           (TypeD _ ofs st, ctrs) = tLoc l
-                                          tp' = (TypeD (take 1 hr) ofs st, ctrs)
+                                          tp' = (TypeD (take 1 hr) ofs st, ctrs)  -- contra on hr (constant)
   fExp l@(LExp _)       exp            = (True, ese, exp') where
                                           (ese,exp') = expr (getAnn exp) (SUP,tLoc l) ids exp
   fExp l                exp            = (False, ese, exp') where

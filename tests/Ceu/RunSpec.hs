@@ -284,7 +284,7 @@ spec = do
             "var p1 : Pair of (Int,Int) <- 1",
             "return p1"
            ])
-        `shouldBe` Left "(line 2, column 28):\ntypes do not match : expected '(Pair of (Int,Int))' : found 'Int.1'\n"
+        `shouldBe` Left "(line 2, column 31):\ntypes do not match : expected '(Pair of (Int,Int))' : found 'Int.1'\n"
 
       it "Pair (a,b) <- Pair 1" $
         (run True $
@@ -293,7 +293,8 @@ spec = do
             "var p1 : Pair of (Int,Int) <- Pair 1",
             "return p1"
            ])
-        `shouldBe` Left "(line 2, column 31):\ntypes do not match : expected '(a,b)' : found 'Int.1'\n"
+        `shouldBe` Left "(line 2, column 31):\ntypes do not match : expected '(Int.1 -> (Pair of (Int,Int)))' : found '((a,b) -> (Pair of (a,b)))'\n"
+                -- Left "(line 2, column 31):\ntypes do not match : expected '(a,b)' : found 'Int.1'\n"
 
       it "Unit (a) ; p: Unit Int" $
         (run True $
@@ -320,7 +321,8 @@ spec = do
             "var p1 : Pair <- Pair (1,())",
             "return p1"
            ])
-        `shouldBe` Left "(line 2, column 18):\ntypes do not match : expected '(Int,Int)' : found '(Int.1,())'\n"
+        `shouldBe` Left "(line 2, column 18):\ntypes do not match : expected '((Int.1,()) -> Pair)' : found '((Int,Int) -> Pair)'\n"
+                -- Left "(line 2, column 18):\ntypes do not match : expected '(Int,Int)' : found '(Int.1,())'\n"
 
       it "Pair (a,b) <- Pair (1,())" $
         (run True $
@@ -338,7 +340,7 @@ spec = do
         `shouldBe` Right (Number 1)
       it "1 <- 2" $
         (run True "set 1 <- 2 ; return 2")
-        `shouldBe` Left "(line 1, column 7):\ntypes do not match : expected 'Int.1' : found 'Int.2'\n"
+        `shouldBe` Left "(line 1, column 7):\nmatch never succeeds : constant mismatch\n"
 
       it "x1 <- 1" $
         (run True "var x:Int <- 1 ; set `x´ <- 1 ; return 1")
@@ -361,7 +363,7 @@ spec = do
         `shouldBe` Right (Number 1)
       it "data X with Int ; X 2 <- X 1" $
         (run True "data Xxx with Int ; set Xxx 2 <- Xxx 1 ; return 1")
-        `shouldBe` Left "(line 1, column 31):\ntypes do not match : expected 'Int.2' : found 'Int.1'\n"
+        `shouldBe` Left "(line 1, column 31):\nmatch never succeeds : constant mismatch\n"
 
       it "x <- (10,2) ; (i,2) <- x" $
         (run True "data Xxx with (Int,Int) ; var x : Xxx <- Xxx (10,2) ; var i : int ; set! Xxx (i,2) <- x ; return i")
@@ -881,7 +883,7 @@ $f3$(Int -> Int)$ 10                       // Read
     describe "if-then-else/if-else" $ do
         it "if 0 then return 0 else return 1 end" $
             run True "if 0 then return 0 else return 1 end"
-            `shouldBe` Left "(line 1, column 1):\ntypes do not match : expected 'Bool' : found 'Int.0'\n"
+            `shouldBe` Left "(line 1, column 4):\ntypes do not match : expected 'Bool' : found 'Int.0'\n"
         it "if 0==1 then return 0 else return 1 end" $
             run True "if 0==1 then return 0 else return 1 end"
             `shouldBe` Right (Number 1)
