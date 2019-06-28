@@ -1,6 +1,6 @@
 module Ceu.Grammar.TypeSys where
 
-import Data.List (find, intercalate, unzip4)
+import Data.List (find, intercalate, unzip3, isPrefixOf)
 import Data.Maybe (isNothing, isJust, fromJust)
 import Data.Bool (bool)
 import Data.Either (isRight)
@@ -357,136 +357,108 @@ stmt ids s@(Var z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
                     cat :: [Type] -> Stmt -> Stmt
                     cat itps acc = wrap (zip (Map.keys ctrs) itps) s acc
 
-stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fromJust mexp) p1' p2')
-  where
-    (es1, p1') = stmt ids p1
-    (es2, p2') = stmt ids p2
-    (chk', esa, loc', mexp) = aux ids z loc (Right exp)
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 
-    -- set  x <- 1    // chk=false
-    -- set! 1 <- x    // chk=true
-    -- if   1 <- x    // chk=true
-    esc = if null esa then
-            if chk then
-              bool [toError z "match never fails"] [] chk'
-            else
-              bool [toError z "match might fail"]  [] (not chk')
+stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') where
+  es'               = esl ++ esc ++ ese ++ es1 ++ es2
+  (esl, _, loc')    = fLoc loc
+  (es1, p1')        = stmt ids p1
+  (es2, p2')        = stmt ids p2
+  (chk', ese, exp') = fExp loc' exp
+
+  -----------------------------------------------------------------------------
+
+  -- set  x <- 1    // chk=false
+  -- set! 1 <- x    // chk=true
+  -- if   1 <- x    // chk=true
+  esc = if null ese then
+          if chk then
+            bool [toError z "match never fails"] [] chk'
           else
-            []
+            bool [toError z "match might fail"]  [] (not chk')
+        else
+          []
 
-    f :: (Relation,TypeC) -> Either TypeC Exp -> (Errors, Maybe Exp)
-    f (rel,txp) tpexp =
-      case tpexp of
-        Left  tp  -> (map (toError z) (relatesErrors rel txp tp), Nothing)
-        Right exp -> (es, Just exp') where (es,exp') = expr z (rel,txp) ids exp
+  -----------------------------------------------------------------------------
 
-    fchk :: TypeC -> Maybe Exp -> Either TypeC Exp -> Bool
-    fchk txp mexp tpexp = not $ isRel SUP txp (maybe (fromLeft tpexp) (type_.getAnn) mexp)
+  fLoc :: Loc -> (Errors,TypeC,Loc)
+  fLoc LAny          = ([], (TypeV "?",cz), LAny)
+  fLoc LUnit         = ([], (Type0,    cz), LUnit)
+  fLoc (LVar    id)  = case find (isVar $ (==)id) ids of
+                        Just (Var _ _ tp _) -> ([], tp, LVar id)
+                        otherwise           -> ([toError z $ "variable '" ++ id ++ "' is not declared"],
+                                                (TypeV "?",cz), LVar id)
+  fLoc (LNumber v)   = ([], (TypeD ["Int",show v] [] Type0, cz), LNumber v)
+  fLoc (LCons   h l) = (esl++esh, tph, LCons h l') where
+                        (esl,(tpl,csl),l') = fLoc l
+                        (esh,tph) = case find (isData $ (==)(hier2str h)) ids of
+                          Nothing -> ([toError z $ "data '" ++ (hier2str h) ++ "' is not declared"],
+                                      (TypeD [] [] (TypeV "?"),cz))
+                          Just (Data _ tp _ _) -> case tp of
+                            (TypeD _ ofs _, ctrs) -> (es,tp') where
+                              tp' = (TypeD h ofs tpl, csl)
+                              es  = map (toError z) (relatesErrors SUP tp tp')
+  fLoc (LTuple  ls)  = (concat ess, (TypeN (map fst tps),cz), LTuple ls') where   -- TODO: cz should be union of all snd
+                        (ess, tps, ls') = unzip3 $ map fLoc ls
+  fLoc (LExp    e)   = (ese, type_ $ getAnn e', LExp e') where
+                        (ese,e') = expr z (SUP,(TypeV "?",cz)) ids e
 
-    -- Match must be covariant on variables and contravariant on constants:
-    --  LVar    a     <- x      # assign # a     SUP x
-    --  LExp    a     <- x      # match  # a     SUP x
-    --  LAny          <- x      # match  # BOT   SUB x
-    --  LUnit         <- x      # match  # unit  SUB x
-    --  LNumber a     <- x      # match  # Int.X SUB x
-    --  LCons   a b   <- Cons x # match  # a     SUP Cons x | b match x
-    --  LCons   a.* b <- x      # match  # a     SUP x      | b match x
-    --  LTuple  (a,b) <- (x,y)  # match  # (B,B) SUB (x,y)  | a match x,  b match y
-    --  LTuple  (a,b) <- x      # match  # (B,B) SUB x      | a match x1, b match x2
+  tLoc :: Loc -> TypeC
+  tLoc loc = tp where (_,tp,_) = fLoc loc
 
-    aux :: [Stmt] -> Ann -> Loc -> Either TypeC Exp -> (Bool, Errors, Loc, Maybe Exp)
-    aux ids z loc tpexp =
-      case loc of
-        LAny         -> (False, ese, loc, mexp) where (ese,mexp) = f (SUB,(TypeB,cz)) tpexp
-        LUnit        -> (chk',  ese, loc, mexp) where (ese,mexp) = f (SUB,txp)        tpexp
-                                                      txp  = (Type0,cz)
-                                                      chk' = fchk txp mexp tpexp
-        (LNumber v)  -> (chk',  ese, loc, mexp) where (ese,mexp) = f (SUB,txp')  tpexp
-                                                      txpB = (TypeD ["Int",show v] [] Type0,cz)
-                                                      txpT = (TypeD ["Int"]        [] Type0,cz)
-                                                      txp' = case tpexp of
-                                                              Right (Number _ _) -> txpB
-                                                              otherwise          -> txpT
-                                                      chk' = fchk txpB mexp tpexp
-        (LVar var)   -> (False, esl++ese, loc, mexp)
-          where
-            (tpl,esl)  = case find (isVar $ (==)var) ids of
-              (Just (Var _ _ tp _)) -> (tp,             [])
-              Nothing               -> ((TypeV "?",cz), [toError z $ "variable '" ++ var ++ "' is not declared"])
-            (ese,mexp) = f (SUP,tpl) tpexp
-        (LExp e)     -> (True, es++ese, LExp e', mexp)
-          where
-            (ese,mexp) = f (SUP, type_ $ getAnn e') tpexp
-            (es, e')   = expr z (SUP,(TypeV "?",cz)) ids e
+  -----------------------------------------------------------------------------
 
-        (LCons hr l) -> (fchk txpB mexp tpexp || chk1, esd++esl++es'++ese, LCons hr l', mexp)
-          where
-            txpB = (TypeD hr          ofs st, cz)
-            txpT = (TypeD (take 1 hr) ofs st, cz)
-            str  = T.hier2str hr
-            (tpd@(TypeD _ ofs st,ctrs),esd) = case find (isData $ (==)str) ids of
-              Just (Data _ tp _ _) -> (tp, [])
-              Nothing              -> ((TypeD [""] [] Type0,cz),
-                                       [toError z $ "data '" ++ str ++ "' is not declared"])
+  -- Match must be covariant on variables and contravariant on constants:
+  --  LVar    a     <- x      # assign # a     SUP x
+  --  LExp    a     <- x      # match  # a     SUP x
+  --  LAny          <- x      # match  # BOT   SUB x
+  --  LUnit         <- x      # match  # unit  SUB x
+  --  LNumber a     <- x      # match  # Int.X SUB x
+  --  LCons   a b   <- Cons x # match  # a     SUP Cons x | b match x
+  --  LCons   a.* b <- x      # match  # a     SUP x      | b match x
+  --  LTuple  (a,b) <- (x,y)  # match  # (B,B) SUB (x,y)  | a match x,  b match y
+  --  LTuple  (a,b) <- x      # match  # (B,B) SUB x      | a match x1, b match x2
 
-            (ese,mexp)      = f (rel,txp') tpexp
-            (chk2,esl,l',_) = aux ids z l (Left (st,ctrs))
+  fExp :: Loc -> Exp -> (Bool, Errors, Exp)
 
-            -- if any errors found, ignore all this
-            (rel,chk1,es',txp') = case tpexp of
-              Right (Call _ (Cons _ _) e) -> (SUP,chk,es,txpB) where
-                (chk,es) = if null esl && null ese then
-                            let (chk',es',_,_) = aux ids z l (Right e) in (chk',es')
-                           else
-                            (chk2,[]) -- use chk2 -> chk1
--- TODO: refactor repeated code
-              Right (Cons z _) -> (SUP,chk,es,txpB) where
-                e = Unit z
-                (chk,es) = if null esl && null ese then
-                            let (chk',es',_,_) = aux ids z l (Right e) in (chk',es')
-                           else
-                            (chk2,[]) -- use chk2 -> chk1
-              otherwise          -> (SUP,chk2,[],txpT)
+  -- structural match
+  fExp l@LUnit         e@(Unit   _)    = (False, [], e') where
+                                          ([],e') = expr (getAnn e) (SUP,tLoc l) ids e
+  fExp l@(LNumber v1)  e@(Number _ v2) = (False, es, e') where
+                                          es = bool ["match never succeeds : constant mismatch"] [] (v1==v2)
+                                          (_,e') = expr (getAnn e) (SUP,tLoc l) ids e
+  fExp l@(LCons _ _)   e@(Cons z _)    = fExp l (Call z e (Unit z))
+  fExp (LCons hr1 loc)
+       (Call _ (Cons z hr2) exp)       = (chk, es++ese, Call z (Cons z hr2) exp') where -- TODO: complete z{type_=...}
+                                          es = bool ["match never succeeds : constructor mismatch"] [] (hr1 `isPrefixOf` hr2)
+                                          (chk, ese, exp') = fExp loc exp
+  fExp (LTuple ls)     (Tuple z exps)  = (or chks, concat eses ++ es, Tuple z{type_=tp'} exps'') where
+                                          es    = bool ["match never succeeds : arity mismatch"] [] (lenl==lene)
+                                          lenl  = length ls
+                                          lene  = length exps
+                                          ls'   = ls   ++ replicate (lene - lenl) LAny
+                                          exps' = exps ++ replicate (lenl - lene) (Error z (-2))
+                                          (chks, eses, exps'') = unzip3 $ zipWith fExp ls' exps'
+                                          tp'   = (TypeN (map (fst.type_.getAnn) exps''), cz)   -- TODO: cz should be union of all snd
 
-        (LTuple ls)  -> (or chks, concat esls ++ ese, LTuple ls', toexp mexps'')
-          where
-            (ese,mexp) = f (SUB,(TypeN $ map (const $ TypeV "?") ls,cz)) tpexp
-            (chks, esls, ls'', mexps'') = unzip4 $ zipWith (aux ids z) ls' mexps'
-            mexps' :: [Either TypeC Exp]
-            mexps' = map f mexps_' where
-                      f (Left tp) = Left (tp,cz)
-                      f (Right x) = Right x
-            (ls', mexps_', toexp) = case tpexp of
-              Right exp ->
-                case exp of
-                  -- (a,b,c) <- (x,y,z)
-                  (Tuple z' exps) -> (ls', exps', toexp) where
-                    toexp :: [Maybe Exp] -> Maybe Exp
-                    toexp exps = Just $ Tuple z'{type_=(TypeN (map (fst.type_.getAnn) exps'),cz)} exps'
-                                 where
-                                  exps' = map fromJust exps
-                    exps' = map Right exps ++
-                            replicate (length ls - length exps) (Left $ TypeV "?")
-                    ls'   = ls ++ replicate (length exps - length ls) LAny
+  -- contravariant on constants (SUB)
+  fExp l@LUnit          exp            = (True, ese, exp') where
+                                           (ese,exp') = expr (getAnn exp) (SUB,tLoc l) ids exp
+  fExp l@(LNumber v)    exp            = (True, ese, exp') where
+                                          (ese,exp') = expr (getAnn exp) (SUB,tLoc l) ids exp
 
-                  -- (a,b,c) <- x
-                  otherwise -> (ls', tps', \_->mexp) where
-                    tps' = map Left tps ++
-                           replicate (length ls - length tps) (Left $ TypeV "?")
-                    ls'  = ls ++ replicate (length tps - length ls) LAny
-                    tps  = case fst $ type_ $ getAnn $ fromJust mexp of
-                      (TypeN x) -> x
-                      x         -> [x]
+  -- covariant on non-constants (SUP): LExp,LCons (fail), LAny,LVar (succ)
+  fExp l@(LCons hr loc) exp            = (True, ese, exp') where
+                                          (ese,exp') = expr (getAnn exp) (SUP,tp') ids exp
+                                          (TypeD _ ofs st, ctrs) = tLoc l
+                                          tp' = (TypeD (take 1 hr) ofs st, ctrs)
+  fExp l@(LExp _)       exp            = (True, ese, exp') where
+                                          (ese,exp') = expr (getAnn exp) (SUP,tLoc l) ids exp
+  fExp l                exp            = (False, ese, exp') where
+                                          (ese,exp') = expr (getAnn exp) (SUP,tLoc l) ids exp
 
-              -- (k, (a,b,c)) <- x
-              Left tp -> (ls', tps', \_->Nothing) where
-                tps' = map Left tps ++
-                       replicate (length ls - length tps) (Left $ TypeV "?")
-                ls'  = ls ++ replicate (length tps - length ls) LAny
-                tps  = case fst $ fromLeft tpexp of
-                  (TypeN x) -> x
-                  x         -> [x]
-
+-------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
 stmt ids (CallS z exp) = (ese++esf, CallS z exp') where
@@ -494,16 +466,6 @@ stmt ids (CallS z exp) = (ese++esf, CallS z exp') where
                          esf = case exp' of
                           Call _ _ _ -> []
                           otherwise  -> [toError z "expected call"]
-
-
-{-
-stmt ids (If z exp p1 p2)   = (ese ++ es1 ++ es2, If z exp' p1' p2')
-                              where
-                                (ese,exp') = expr z (TypeD ["Bool"]) ids exp
-                                  -- VAR: I expect exp.type to be a subtype of Bool
-                                (es1,p1') = stmt ids p1
-                                (es2,p2') = stmt ids p2
--}
 
 stmt ids (Seq z p1 p2)      = (es1++es2, Seq z p1' p2')
                               where
@@ -603,26 +565,8 @@ expr' (rel,txp@(txp_,cxp)) ids (Read z id) = (es, Read z{type_=tp} id') where   
                      "' has no associated instance for '" ++
                      T.show' txp_ ++ "'"]
 
--- TODO: refactor repeated code
-expr' _ ids (Call z1 (Cons z2 hr) exp) = (es++es_exp, Call z1{type_=(tp_',y)} (Cons z2{type_=(tp_'',y)} hr) exp')
-    where
-        hr_str = T.hier2str hr
-        (tp,es) = case find (isData $ (==)hr_str) ids of
-            Nothing                  -> ((TypeD [""] [] (TypeV "?"),cz),
-                                         [toError z2 $ "data '" ++ hr_str ++ "' is not declared"])
-            Just (Data _ tp True  _) -> (tp, [toError z2 $ "data '" ++ hr_str ++ "' is abstract"])
-            Just (Data _ tp False _) -> (tp, [])
-
-        (es_exp, exp') = expr z1 (SUP,(tpst,ctrs)) ids exp
-        (TypeD _ ofs tpst,ctrs) = tp
-
-        (x,y) = type_ $ getAnn $ exp'
-
-        tp_'  = TypeD hr ofs x
-        tp_'' = TypeF x tp_'
-
 expr' (rel,(txp_,cxp)) ids (Call z f exp) = (bool es_exp es_f (null es_exp),
-                                     Call z{type_=tp_out} f' exp')
+                                             Call z{type_=tp_out} f' exp')
   where
     (es_exp, exp') = expr z (rel, (TypeV "?",cz)) ids exp
     (es_f,   f')   = expr z (rel, (TypeF (fst$type_$getAnn$exp') txp_, cxp)) ids f

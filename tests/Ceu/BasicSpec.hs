@@ -149,7 +149,8 @@ spec = do
         (Var annz "a" (TypeT,cz)
         (Var annz "b" (TypeT,cz)
         (Match annz False (LTuple [LVar "a",LVar "b"]) (Tuple annz [Number annz 1,Number annz 2,Number annz 3]) (Nop annz) (Nop annz))))))
-        `shouldBe` ["types do not match : expected '(?,?)' : found '(Int.1,Int.2,Int.3)'"]
+        `shouldBe` ["match never succeeds : arity mismatch"]
+          --["types do not match : expected '(?,?)' : found '(Int.1,Int.2,Int.3)'"]
     it "(a,b,c) = (1,2)" $
       (fst $ TypeSys.go
         (Data annz (int,cz) False
@@ -157,7 +158,8 @@ spec = do
         (Var annz "b" (TypeT,cz)
         (Var annz "c" (TypeT,cz)
         (Match annz False (LTuple [LVar "a",LVar "b",LVar "c"]) (Tuple annz [Number annz 1,Number annz 2]) (Nop annz) (Nop annz)))))))
-        `shouldBe` ["types do not match : expected '(?,?,?)' : found '(Int.1,Int.2)'"]
+        `shouldBe` ["match never succeeds : arity mismatch"]
+          --["types do not match : expected '(?,?,?)' : found '(Int.1,Int.2)'"]
     it "ret = f()" $
       (fst $ TypeSys.go
         (Data annz (int,cz) False
@@ -255,7 +257,7 @@ spec = do
       `shouldBe` ([],Match annz{type_=(TypeB,cz)} False (LNumber 1) (Number annz{type_=(TypeD ["Int","1"] [] Type0,cz)} 1) (Nop annz) (Nop annz))
     it "1 <- 2" $
       TypeSys.go (Match annz True (LNumber 1) (Number annz 2) (Nop annz) (Nop annz))
-      `shouldBe` (["types do not match : expected 'Int.1' : found 'Int.2'"],Match annz True (LNumber 1) (Number (annz {type_ = (TypeD ["Int","2"] [] Type0,cz)}) 2) (Nop annz) (Nop annz))
+      `shouldBe` (["match never succeeds : constant mismatch"],Match annz True (LNumber 1) (Number (annz {type_ = (TypeD ["Int","2"] [] Type0,cz)}) 2) (Nop annz) (Nop annz))
     it "_ = 1" $
       TypeSys.go (Match annz False LAny (Number annz 1) (Nop annz) (Nop annz))
       `shouldBe` ([],Match annz{type_=(TypeB,cz)} False LAny (Number annz{type_=(TypeD ["Int","1"] [] Type0,cz)} 1) (Nop annz) (Nop annz))
@@ -263,7 +265,7 @@ spec = do
       TypeSys.go (prelude annz
             (Var annz "x" (int,cz)
               (Match annz False (LTuple [LVar "x", LAny]) (Number annz 1) (Nop annz) (Nop annz))))
-      `shouldBe` (["types do not match : expected '(?,?)' : found 'Int.1'"],Data annz (int,cz) False (Data annz (bool,cz) False (Data annz (boolt,cz) False (Data annz (boolf,cz) False (Var annz{type_=(TypeB,cz)} "x" (int,cz) (Match annz{type_=(TypeB,cz)} False (LTuple [LVar "x",LAny]) (Number annz{type_=(TypeD ["Int","1"] [] Type0,cz)} 1) (Nop annz) (Nop annz)))))))
+      `shouldBe` (["types do not match : expected '(Int,?)' : found 'Int.1'"],Data annz (int,cz) False (Data annz (bool,cz) False (Data annz (boolt,cz) False (Data annz (boolf,cz) False (Var annz{type_=(TypeB,cz)} "x" (int,cz) (Match annz{type_=(TypeB,cz)} False (LTuple [LVar "x",LAny]) (Number annz{type_=(TypeD ["Int","1"] [] Type0,cz)} 1) (Nop annz) (Nop annz)))))))
 
     it "(x,_) = (1,1)" $
       TypeSys.go (prelude annz
@@ -294,7 +296,8 @@ spec = do
     it "data X with Int ; X 1 <- X 2" $
       (fst $ TypeSys.go (prelude annz
         (Data annz (TypeD ["Xxx"] [] int,cz) False (Match annz True (LCons ["Xxx"] (LNumber 1)) (Call annz (Cons annz ["Xxx"]) (Number annz 2)) (Ret annz (Number annz 2)) (Nop annz)))))
-      `shouldBe` ["types do not match : expected 'Int.1' : found 'Int.2'"]
+      `shouldBe` ["match never succeeds : constant mismatch"]
+        --["types do not match : expected 'Int.1' : found 'Int.2'"]
 
     it "A <- 1" $
       (fst $ TypeSys.go (Match annz True (LCons ["A"] LUnit) (Number annz 1) (Nop annz) (Nop annz)))
@@ -320,7 +323,8 @@ spec = do
         (Data annz (TypeD ["A"]     [] Type0,cz) False
         (Data annz (TypeD ["A","B"] [] Type0,cz) True
         (Match annz True (LCons ["A","B"] LAny) (Cons annz ["A"]) (Nop annz) (Nop annz)))))
-      `shouldBe` ["types do not match : expected 'A.B' : found 'A'"]
+      `shouldBe` ["match never succeeds : constructor mismatch"]
+        --["types do not match : expected 'A.B' : found 'A'"]
 
     it "A ; A <- 1" $
       (fst $ TypeSys.go (Data annz (TypeD ["A"] [] Type0,cz) True (Match annz True (LCons ["A"] LUnit) (Number annz 1) (Nop annz) (Nop annz))))
@@ -332,7 +336,7 @@ spec = do
 
     it "A ; A 1 <- A" $
       (fst $ TypeSys.go (Data annz (TypeD ["A"] [] Type0,cz) False (Match annz False (LCons ["A"] (LNumber 1)) (Cons annz ["A"]) (Nop annz) (Nop annz))))
-      `shouldBe` ["types do not match : expected 'Int' : found '()'"]
+      `shouldBe` ["types do not match : expected 'Int.1' : found '()'"]
 
     it "A ; A.B ; x:(Int,A.B) ; (1,A) <- x" $
       (fst $ TypeSys.go
@@ -497,8 +501,7 @@ spec = do
           (Data annz (TypeD ["X"] [] int,cz) False
           (Var annz "x" (int,cz)
           (Match annz False (LCons ["X"] (LVar "x")) (Cons annz ["X"]) (Nop annz) (Nop annz))))))
-        `shouldBe` ["types do not match : expected 'X' : found '(Int -> X)'"]
-        --["types do not match : expected 'Int' : found '()'"]
+        `shouldBe` ["types do not match : expected 'Int' : found '()'"]
 
   --------------------------------------------------------------------------
 
