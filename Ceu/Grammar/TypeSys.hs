@@ -402,12 +402,12 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
                                                       txp  = (Type0,cz)
                                                       chk' = fchk txp mexp tpexp
         (LNumber v)  -> (chk',  ese, loc, mexp) where (ese,mexp) = f (SUB,txp')  tpexp
-                                                      txp1 = (TypeD ["Int",show v] [] Type0,cz)
-                                                      txp2 = (TypeD ["Int"]        [] Type0,cz)
+                                                      txpB = (TypeD ["Int",show v] [] Type0,cz)
+                                                      txpT = (TypeD ["Int"]        [] Type0,cz)
                                                       txp' = case tpexp of
-                                                              Right (Number _ _) -> txp1
-                                                              otherwise          -> txp2
-                                                      chk' = fchk txp1 mexp tpexp
+                                                              Right (Number _ _) -> txpB
+                                                              otherwise          -> txpT
+                                                      chk' = fchk txpB mexp tpexp
         (LVar var)   -> (False, esl++ese, loc, mexp)
           where
             (tpl,esl)  = case find (isVar $ (==)var) ids of
@@ -419,10 +419,10 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
             (ese,mexp) = f (SUP, type_ $ getAnn e') tpexp
             (es, e')   = expr z (SUP,(TypeV "?",cz)) ids e
 
-        (LCons hr l) -> (fchk txp1 mexp tpexp || chk1, esd++esl++es'++ese, LCons hr l', mexp)
+        (LCons hr l) -> (fchk txpB mexp tpexp || chk1, esd++esl++es'++ese, LCons hr l', mexp)
           where
-            txp1 = (TypeD hr          ofs st, cz)
-            txp2 = (TypeD (take 1 hr) ofs st, cz)
+            txpB = (TypeD hr          ofs st, cz)
+            txpT = (TypeD (take 1 hr) ofs st, cz)
             str  = T.hier2str hr
             (tpd@(TypeD _ ofs st,ctrs),esd) = case find (isData $ (==)str) ids of
               Just (Data _ tp _ _) -> (tp, [])
@@ -434,18 +434,19 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
 
             -- if any errors found, ignore all this
             (rel,chk1,es',txp') = case tpexp of
-              Right (Call _ (Cons _ _) e) -> (SUP,chk,es,txp1) where
+              Right (Call _ (Cons _ _) e) -> (SUP,chk,es,txpB) where
                 (chk,es) = if null esl && null ese then
                             let (chk',es',_,_) = aux ids z l (Right e) in (chk',es')
                            else
                             (chk2,[]) -- use chk2 -> chk1
-              Right (Cons z _) -> (SUP,chk,es,txp1) where
+-- TODO: refactor repeated code
+              Right (Cons z _) -> (SUP,chk,es,txpB) where
                 e = Unit z
                 (chk,es) = if null esl && null ese then
                             let (chk',es',_,_) = aux ids z l (Right e) in (chk',es')
                            else
                             (chk2,[]) -- use chk2 -> chk1
-              otherwise          -> (SUP,chk2,[],txp2)
+              otherwise          -> (SUP,chk2,[],txpT)
 
         (LTuple ls)  -> (or chks, concat esls ++ ese, LTuple ls', toexp mexps'')
           where
@@ -486,13 +487,13 @@ stmt ids (Match z chk loc exp p1 p2) = (esc++esa++es1++es2, Match z chk loc' (fr
                   (TypeN x) -> x
                   x         -> [x]
 
+-------------------------------------------------------------------------------
+
 stmt ids (CallS z exp) = (ese++esf, CallS z exp') where
                          (ese, exp') = expr z (SUP, (TypeV "?",cz)) ids exp
                          esf = case exp' of
                           Call _ _ _ -> []
                           otherwise  -> [toError z "expected call"]
-
--------------------------------------------------------------------------------
 
 
 {-
@@ -602,6 +603,7 @@ expr' (rel,txp@(txp_,cxp)) ids (Read z id) = (es, Read z{type_=tp} id') where   
                      "' has no associated instance for '" ++
                      T.show' txp_ ++ "'"]
 
+-- TODO: refactor repeated code
 expr' _ ids (Call z1 (Cons z2 hr) exp) = (es++es_exp, Call z1{type_=(tp_',y)} (Cons z2{type_=(tp_'',y)} hr) exp')
     where
         hr_str = T.hier2str hr
