@@ -3,8 +3,10 @@ module Ceu.Trace where
 import qualified Debug.Trace as T
 
 traceShow   :: Show a => a -> b -> b
-traceShowId :: Show a => a -> a 
+traceShow  = T.traceShow
 
-traceShow       = T.traceShow
-traceShowId     = T.traceShowId
+traceShowId :: Show a => a -> a 
+traceShowId = T.traceShowId
+
+traceShowX :: (Show a,Show b) => a -> b -> b
 traceShowX v id = traceShow (v, "==>", id) id
