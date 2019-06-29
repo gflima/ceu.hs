@@ -281,7 +281,7 @@ supOf TypeB             _                 = (False, TypeB, [])
 
 supOf sup@(TypeV a1)    sub@(TypeV a2)    = (True,  sub,   [(a1,sub,SUP),(a2,sup,SUB)])
 supOf (TypeV a1)        sub               = (True,  sub,   [(a1,sub,SUP)])
-supOf sup               sub@(TypeV a2)    = (True,  sub,   [(a2,sup,SUB)])
+supOf sup               sub@(TypeV a2)    = (True,  sup,   [(a2,sup,SUB)])
 
 supOf Type0             Type0             = (True,  Type0, [])
 supOf Type0             _                 = (False, Type0, [])
@@ -290,25 +290,27 @@ supOf sup               Type0             = (False, sup,   [])
 supOf sup               TypeT             = (False, sup,   [])
 
 supOf sup@(TypeD x ofs1 st1) sub@(TypeD y ofs2 st2)
-  | x `isPrefixOf` y && (TypeN ofs1) `isSupOf_` (TypeN ofs2) && st1 `sup'` st2  = (True,  sub,   [])
-  -- | x `isPrefixOf` y                      = (True,  sub,   [])
-  | otherwise                             = (False, sup,   [])
+  | not $ x `isPrefixOf` y                     = (False, sup,   [])
+  | not $ (TypeN ofs1) `isSupOf_` (TypeN ofs2) = (False, sup,   [])
+  | otherwise                                  = (ret, TypeD x ofs1 sup, es)
   where
+    (ret,sup,es) = f st1 st2
+
     -- normalize tp1/tp2 to the same length:
     -- data X   with Int
     -- data X.Y with Int
     -- x(_) <- y(_,_)
-    sup' :: Type -> Type -> Bool
-    sup' tp1 tp2 = case tp1 of
+    f :: Type -> Type -> (Bool, Type, [(ID_Var,Type,Relation)])
+    f tp1 tp2 = case tp1 of
       TypeN l1   -> case tp2 of
-        TypeN l2 -> (TypeN l1') `isSupOf_` (TypeN l2') where
+        TypeN l2 -> (TypeN l1') `supOf` (TypeN l2') where
                       m   = min (length l1) (length l2)
                       l1' = take m l1
                       l2' = take m l2
-        Type0    -> sup' tp1           (TypeN [])
-        _        -> sup' tp1           (TypeN [tp2])
-      Type0      -> sup' (TypeN [])    tp2
-      _          -> sup' (TypeN [tp1]) tp2
+        Type0    -> f tp1           (TypeN [])
+        _        -> f tp1           (TypeN [tp2])
+      Type0      -> f (TypeN [])    tp2
+      _          -> f (TypeN [tp1]) tp2
 
 supOf sup@(TypeD _ _ _) _                 = (False, sup,   [])
 supOf sup               (TypeD _ _ _)     = (False, sup,   [])

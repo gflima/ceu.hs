@@ -219,6 +219,27 @@ spec = do
         (TypeN [TypeD ["X"] [] $ TypeD ["Int","370"] [] Type0, TypeD ["X"] [] $ TypeD ["Int","10"] [] Type0])
       `shouldBe` Right (TypeN [TypeD ["X"] [] (TypeD ["Int","370"] [] Type0),TypeD ["X"] [] (TypeD ["Int","10"] [] Type0)],[("a",TypeD ["X"] [] (TypeD ["Int"] [] Type0))])
 
+    it "Int > a" $
+      supOf (TypeD ["Int"] [] Type0) (TypeV "a")
+      `shouldBe` (True,TypeD ["Int"] [] Type0,[("a",TypeD ["Int"] [] Type0,SUB)])
+
+    it "[I] > [a]" $
+      supOf
+        (TypeN [TypeD ["Int"] [] Type0]) (TypeN [TypeV "a"])
+      `shouldBe` (True,TypeN [TypeD ["Int"] [] Type0],[("a",TypeD ["Int"] [] Type0,SUB)])
+
+    it "P I > P a" $
+      supOf
+        (TypeD ["Pair"] [TypeD ["Int"] [] Type0] (TypeN [TypeD ["Int"] [] Type0]))
+        (TypeD ["Pair"] [TypeV "a"]              (TypeN [TypeV "a"]))
+      `shouldBe` (True,TypeD ["Pair"] [TypeD ["Int"] [] Type0] (TypeN [TypeD ["Int"] [] Type0]),[("a",TypeD ["Int"] [] Type0,SUB)])
+
+    it "P I I > P a a" $
+      supOf
+        (TypeD ["Pair"] [TypeD ["Int"] [] Type0,TypeD ["Int"] [] Type0] (TypeN [TypeD ["Int"] [] Type0,TypeD ["Int"] [] Type0]))
+        (TypeD ["Pair"] [TypeV "a",TypeV "b"] (TypeN [TypeV "a",TypeV "b"]))
+      `shouldBe` (True,TypeD ["Pair"] [TypeD ["Int"] [] Type0,TypeD ["Int"] [] Type0] (TypeN [TypeD ["Int"] [] Type0,TypeD ["Int"] [] Type0]),[("a",TypeD ["Int"] [] Type0,SUB),("b",TypeD ["Int"] [] Type0,SUB)])
+
   describe "isSupOf / isSubOf" $ do
 
     it "(bot -> top) > (bot -> top)" $
@@ -330,10 +351,12 @@ spec = do
       comPre [TypeN [boolt,boolf]]
       `shouldBe` Just (TypeN [boolt,boolf])
 
+{-
     it "OK: [ [True,False], [True] ]" $ -- arity mismatch
       comPre [ TypeN [boolt,boolf],
                TypeN [boolt] ]
       `shouldBe` Just (TypeN [boolt,boolf])
+-}
 
   describe "sort" $ do
 

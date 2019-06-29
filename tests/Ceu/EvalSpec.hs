@@ -206,14 +206,6 @@ spec = do
             (B.Ret annz (B.Error annz 99))))
           `shouldBe` (Number 2)
 
-      it "OK: 1 <- 2" $
-        go
-          (B.Data annz (int,cz) False
-          (B.Match annz True (B.LNumber 1) (B.Number annz 2)
-            (B.Ret annz (B.Number annz 1))
-            (B.Ret annz (B.Error annz 99))))
-          `shouldBe` (Number 99)
-
       it "a <- 1 ; `a` <- 1" $
         go
           (B.Data  annz (int,cz) False
@@ -418,16 +410,6 @@ spec = do
           (B.Data  annz (TypeD ["X"] [] int,cz) False
           (B.Var   annz "x" (int,cz)
           (B.Match annz False (B.LCons ["X"] (B.LVar "x")) (B.Call annz (B.Cons annz ["X"]) (B.Number annz 1))
-            (B.Ret   annz (B.Read annz "x"))
-            (B.Ret   annz (B.Error annz 99))))))
-        `shouldBe` (Number 1)
-
-      it "OK: data X with Int ; x:Int ; X 1 <- X 2" $
-        go
-          (B.Data  annz (int,cz) False
-          (B.Data  annz (TypeD ["X"] [] int,cz) False
-          (B.Var   annz "x" (int,cz)
-          (B.Match annz True (B.LCons ["X"] (B.LNumber 1)) (B.Call annz (B.Cons annz ["X"]) (B.Number annz 2))
             (B.Ret   annz (B.Read annz "x"))
             (B.Ret   annz (B.Error annz 99))))))
         `shouldBe` (Number 1)

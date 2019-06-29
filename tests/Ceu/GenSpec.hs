@@ -243,7 +243,7 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
 |])
         `shouldBe` Right (Number 80)
 
-      it "IAa / X a a / Int" $
+      it "XXX: IAa / X a a / Int" $
         (run True $ [r|
 constraint IAa for a with
   var f : (a -> Int)

@@ -705,9 +705,9 @@ spec = do
                   (Seq annz (Seq annz (Var annz "x" (TypeV "a",cz)) (Seq annz (Var annz "y" (TypeV "a",cz)) (Nop annz))) (Seq annz (Set annz False (LTuple [LVar "x",LVar "y"]) (Arg annz)) (Ret annz (Cons annz ["Bool","True"]))))))
               (Ret annz (Call annz (Read annz ">=") (Tuple annz [Cons annz ["Bool","True"],Cons annz ["Bool","False"]])))))))
 
-          it "OK: IFable f ; g a is IFable" $
-            (parse' stmt $ "var x : a where (a,b) is IFable") -- (a,b) vs (IFable), arity mismatch
-            `shouldBe` Left "oi"
+          it "IFable f ; g a is IFable" $
+            (parse' stmt $ "var x : a where (a is IFable,b is IFable)") -- (a,b) vs (IFable), arity mismatch
+            `shouldBe` Right (Seq annz (Seq annz (Var annz "x" (TypeV "a",M.fromList [("a",S.fromList ["IFable"]),("b",S.fromList ["IFable"])])) (Nop annz)) (Nop annz))
 
           it "IFable f ; g a is IFable" $
             (parse' stmt $

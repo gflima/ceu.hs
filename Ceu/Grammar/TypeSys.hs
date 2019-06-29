@@ -1,6 +1,6 @@
 module Ceu.Grammar.TypeSys where
 
-import Data.List (find, intercalate, unzip3, isPrefixOf)
+import Data.List (find, intercalate, unzip, unzip3, isPrefixOf)
 import Data.Maybe (isNothing, isJust, fromJust)
 import Data.Bool (bool)
 import Data.Either (isRight)
@@ -361,22 +361,24 @@ stmt ids s@(Var z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
 -------------------------------------------------------------------------------
 
 stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') where
-  es'              = esl ++ esc ++ ese ++ es1 ++ es2
-  (esl, _, loc')   = fLoc loc
+  es'              = esl ++ esc ++ esem ++ es1 ++ es2
+  (esl, tpl, loc') = fLoc loc
   (es1, p1')       = stmt ids p1
   (es2, p2')       = stmt ids p2
-  (may, ese, exp') = fExp loc' exp
+  (ese, exp')      = expr z (SUP,tpl) ids exp
+  (may, esm)       = match loc' exp'
+  esem             = bool esm ese (null esm)    -- hide ese if esm
 
   -----------------------------------------------------------------------------
 
   -- set  x <- 1    // chk=false
   -- set! 1 <- x    // chk=true
   -- if   1 <- x    // chk=true
-  esc = if null ese then
+  esc = if null esem then
           if chk then
             bool [toError z "match never fails"] [] may
           else
-            bool [toError z "match might fail"]  [] (not may || tLoc loc' `isSupOf` (type_ $ getAnn exp'))
+            bool [toError z "match might fail"]  [] (not may)
         else
           []
 
@@ -389,7 +391,7 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
                         Just (Var _ _ tp _) -> ([], tp, LVar id)
                         otherwise           -> ([toError z $ "variable '" ++ id ++ "' is not declared"],
                                                 (TypeV "?",cz), LVar id)
-  fLoc (LNumber v)   = ([], (TypeD ["Int",show v] [] Type0, cz), LNumber v)
+  fLoc (LNumber v)   = ([], (TypeD ["Int"] [] Type0, cz), LNumber v)
   fLoc (LCons   h l) = (esl++esh, tph, LCons h l') where
                         (esl,(tpl,csl),l') = fLoc l
                         (esh,tph) = case find (isData $ (==)(hier2str h)) ids of
@@ -397,15 +399,15 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
                                       (TypeD [] [] (TypeV "?"),cz))
                           Just (Data _ tp _ _) -> case tp of
                             (TypeD _ ofs _, ctrs) -> (es,tp') where
-                              tp' = (TypeD h ofs tpl, csl)
-                              es  = map (toError z) (relatesErrors SUP tp tp')
+                              tp' = (TypeD (take 1 h) ofs tpl, csl)
+                              es  = map (toError z) (relatesErrors SUB tp tp')
   fLoc (LTuple  ls)  = (concat ess, (TypeN (map fst tps),cz), LTuple ls') where   -- TODO: cz should be union of all snd
                         (ess, tps, ls') = unzip3 $ map fLoc ls
   fLoc (LExp    e)   = (ese, type_ $ getAnn e', LExp e') where
                         (ese,e') = expr z (SUP,(TypeV "?",cz)) ids e
 
-  tLoc :: Loc -> TypeC
-  tLoc loc = tp where (_,tp,_) = fLoc loc
+  --tLoc :: Loc -> TypeC
+  --tLoc loc = tp where (_,tp,_) = fLoc loc
 
   -----------------------------------------------------------------------------
 
@@ -420,45 +422,81 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
   --  LTuple  (a,b) <- (x,y)  # match  # (B,B) SUB (x,y)  | a match x,  b match y
   --  LTuple  (a,b) <- x      # match  # (B,B) SUB x      | a match x1, b match x2
 
-  fExp :: Loc -> Exp -> (Bool, Errors, Exp)
+  match :: Loc -> Exp -> (Bool, Errors)
+
+  match _               (Arg _)        = (False, [])
 
   -- structural match
-  fExp l@LUnit         e@(Unit   _)    = (False, [], e') where
-                                          ([],e') = expr (getAnn e) (SUP,tLoc l) ids e
-  fExp l@(LNumber v1)  e@(Number _ v2) = (False, es, e') where
+  match LUnit           (Unit   _)     = (False, [])
+  match (LNumber v1)    (Number _ v2)  = (False, es) where
                                           es = bool [toError z "match never succeeds : constant mismatch"] [] (v1==v2)
-                                          (_,e') = expr (getAnn e) (SUP,tLoc l) ids e
-  fExp l@(LCons _ _)   e@(Cons z _)    = fExp l (Call z e (Unit z))
-  fExp (LCons hr1 loc)
-       (Call _ (Cons z hr2) exp)       = (chk, es++ese, Call z (Cons z hr2) exp') where -- TODO: complete z{type_=...}
-                                          es = bool [toError z "match never succeeds : constructor mismatch"] [] (hr1 `isPrefixOf` hr2)
-                                          (chk, ese, exp') = fExp loc exp
-  fExp (LTuple ls)     (Tuple z exps)  = (or chks, concat eses ++ es, Tuple z{type_=tp'} exps'') where
-                                          es    = bool [toError z "match never succeeds : arity mismatch"] [] (lenl==lene)
+  match (LCons hr1 loc)
+        (Call _ (Cons z hr2) exp)      = (may, es++es') where
+                                          es = if hr1 `isPrefixOf` hr2 then [] else
+                                                [toError z "match never succeeds : constructor mismatch"]
+                                          (may, es') = match loc exp
+  match (LTuple ls)     (Tuple z exps) = (or mays, concat eses ++ es) where
+                                          es = if lenl == lene then [] else
+                                                [toError z "match never succeeds : arity mismatch"]
+                                          (mays, eses) = unzip $ zipWith match ls' exps' where
+                                            ls'   = ls   ++ replicate (lene - lenl) LAny
+                                            exps' = exps ++ replicate (lenl - lene) (Error z (-2))
                                           lenl  = length ls
                                           lene  = length exps
-                                          ls'   = ls   ++ replicate (lene - lenl) LAny
-                                          exps' = exps ++ replicate (lenl - lene) (Error z (-2))
-                                          (chks, eses, exps'') = unzip3 $ zipWith fExp ls' exps'
-                                          tp'   = (TypeN (map (fst.type_.getAnn) exps''), cz)   -- TODO: cz should be union of all snd
+  match l@(LCons _ _)   e@(Cons z _)    = match l (Call z e (Unit z))
+
+  -- structural fail
+  match l e | (isL l && isE e) = (False, ["match never succeeds"]) where
+    isL LUnit       = True
+    isL (LNumber _) = True
+    isL (LCons _ _) = True
+    isL (LTuple _)  = True
+    isL _           = False
+
+    isE (Unit   _)   = True
+    isE (Number _ _) = True
+    isE (Tuple  _ _) = True
+    isE (Cons   _ _) = True
+    isE (Call   _ (Cons _ _) _) = True
+    isE _            = False
 
   -- contravariant on constants (SUB)
-  fExp l@LUnit          exp            = (True, ese, exp') where
-                                           (ese,exp') = expr (getAnn exp) (SUB,tLoc l) ids exp
-  fExp l@(LNumber v)    exp            = (True, ese, exp') where
-                                          (ese,exp') = expr (getAnn exp) (SUB,tLoc l) ids exp
+  match LUnit           exp            = (True, es) where
+                                          es = map (toError $ getAnn exp)
+                                                   (relatesErrors SUB (Type0,cz) (type_ $ getAnn exp))
+  match (LNumber v)     exp            = (True, es) where
+                                          es = map (toError $ getAnn exp)
+                                                   (relatesErrors SUB (TypeD ["Int",show v] [] Type0,cz) (type_ $ getAnn exp))
 
-  -- covariant on non-constants (SUP): LExp,LCons (fail), LAny,LVar (succ)
-  fExp l@(LCons hr loc) exp            = (True, ese, exp') where
-                                          (ese,exp') = expr (getAnn exp) (SUP,tp') ids exp
-                                          (TypeD _ ofs st, ctrs) = tLoc l
-                                          tp' = (TypeD (take 1 hr) ofs st, ctrs)  -- contra on hr (constant)
-  fExp l@(LExp _)       exp            = (True, ese, exp') where
-                                          (ese,exp') = expr (getAnn exp) (SUP,tLoc l) ids exp
-  fExp l                exp            = (False, ese, exp') where
-                                          (ese,exp') = expr (getAnn exp) (SUP,tLoc l) ids exp
+  -- non-constants: LAny,LVar (no fail) // LExp (may fail)
+  match (LVar _)        _              = (False, [])
+  match LAny            _              = (False, [])
+  match (LExp _)        _              = (True,  [])
 
--------------------------------------------------------------------------------
+  -- rec
+  match loc             exp            = match' loc (type_ $ getAnn exp) where
+
+    z = getAnn exp
+
+    match' :: Loc -> TypeC -> (Bool, Errors)
+    match' LUnit        tp  = (False, es) where
+                                es = [] --map (toError z) (relatesErrors SUB (Type0,cz) tp)
+    match' (LNumber v)   tp = (True, es) where
+                                es = map (toError z) (relatesErrors SUB (TypeD ["Int",show v] [] Type0,cz) tp)
+    match' (LVar _)      _  = (False, [])
+    match' LAny          _  = (False, [])
+    match' (LExp _)      _  = (True,  [])
+    match' (LCons hr1 l) tp = case tp of
+                              (TypeD hr2 _ st, ctrs) -> (may' || may, es) where
+                                                          may'     = (hr2 `isPrefixOf` hr1) && (hr1 /= hr2)
+                                                          (may,es) = match' l (st,ctrs)
+                              otherwise            -> (False, [])
+    match' (LTuple ls)  tp = case tp of
+                              (TypeN tps, ctrs)    -> (or mays, concat ess) where
+                                                        (mays, ess) = unzip $ zipWith match' ls (map f tps)
+                                                        f tp = (tp,ctrs)
+                              otherwise            -> (False, [])
+
 -------------------------------------------------------------------------------
 
 stmt ids (CallS z exp) = (ese++esf, CallS z exp') where

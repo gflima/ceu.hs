@@ -284,7 +284,7 @@ spec = do
             "var p1 : Pair of (Int,Int) <- 1",
             "return p1"
            ])
-        `shouldBe` Left "(line 2, column 31):\ntypes do not match : expected '(Pair of (Int,Int))' : found 'Int.1'\n"
+        `shouldBe` Left "(line 2, column 28):\ntypes do not match : expected '(Pair of (Int,Int))' : found 'Int.1'\n"
 
       it "Pair (a,b) <- Pair 1" $
         (run True $
@@ -324,12 +324,12 @@ spec = do
         `shouldBe` Left "(line 2, column 18):\ntypes do not match : expected '((Int.1,()) -> Pair)' : found '((Int,Int) -> Pair)'\n"
                 -- Left "(line 2, column 18):\ntypes do not match : expected '(Int,Int)' : found '(Int.1,())'\n"
 
-      it "Pair (a,b) <- Pair (1,())" $
+      it "XXX: Pair (a,b) <- Pair (1,())" $
         (run True $
           unlines [
             "data Pair for (a,b) with (a,b)",
             "var p1 : Pair of (Int,Int) <- Pair (1,())",
-            "return 1"
+            "return p1"
            ])
         `shouldBe` Left "(line 2, column 28):\ntypes do not match : expected '(Pair of (Int,Int))' : found '(Pair of (a,b))'\n"
 
@@ -883,7 +883,7 @@ $f3$(Int -> Int)$ 10                       // Read
     describe "if-then-else/if-else" $ do
         it "if 0 then return 0 else return 1 end" $
             run True "if 0 then return 0 else return 1 end"
-            `shouldBe` Left "(line 1, column 4):\ntypes do not match : expected 'Bool' : found 'Int.0'\n"
+            `shouldBe` Left "(line 1, column 1):\ntypes do not match : expected 'Bool' : found 'Int.0'\n"
         it "if 0==1 then return 0 else return 1 end" $
             run True "if 0==1 then return 0 else return 1 end"
             `shouldBe` Right (Number 1)
