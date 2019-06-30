@@ -43,9 +43,9 @@ stmt _  p                             = p
 -------------------------------------------------------------------------------
 
 expr :: [Stmt] -> Exp -> Exp
-expr ds (Tuple z es)                  = Tuple z (map (expr ds) es)
-expr ds (Call  z e1 e2)               = Call  z (expr ds e1) (expr ds e2)
-expr ds (Func  z tp p)                = Func  z tp (stmt ds p)
+expr ds (ETuple z es)                 = ETuple z (map (expr ds) es)
+expr ds (ECall  z e1 e2)              = ECall  z (expr ds e1) (expr ds e2)
+expr ds (EFunc  z tp p)               = EFunc  z tp (stmt ds p)
 expr _  e                             = e
 
 -------------------------------------------------------------------------------
@@ -63,9 +63,9 @@ fdata ds tp@(TData id ofs st, ctrs) = case getSuper id of
     cat :: Type -> Type -> Type
     cat TUnit      tp              = tp
     cat tp         TUnit           = tp
-    cat (TTuple l1) (TTuple l2)      = TTuple $ l1 ++ l2
-    cat (TTuple l1) tp              = TTuple $ l1 ++ [tp]
-    cat tp         (TTuple l2)      = TTuple $ tp :  l2
+    cat (TTuple l1) (TTuple l2)    = TTuple $ l1 ++ l2
+    cat (TTuple l1) tp             = TTuple $ l1 ++ [tp]
+    cat tp         (TTuple l2)     = TTuple $ tp :  l2
     cat tp1        tp2             = TTuple $ [tp1,tp2]
 
 -------------------------------------------------------------------------------

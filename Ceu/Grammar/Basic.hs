@@ -9,26 +9,30 @@ import Data.List                      (intercalate)
 -------------------------------------------------------------------------------
 
 data Exp
-    = Error  Ann Int
-    | Unit   Ann                -- ()
-    | Cons   Ann ID_Data_Hier   -- Bool.True ; Int.1 ; Tree.Node
-    | Read   Ann ID_Var         -- a ; xs
-    | Arg    Ann
-    | Tuple  Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
-    | Func   Ann TypeC Stmt     -- function implementation
-    | Call   Ann Exp Exp        -- f a ; f(a) ; f(1,2)
+    = EError Ann Int
+    | EVar   Ann ID_Var         -- a ; xs
+    | EUnit  Ann                -- ()
+    | EData  Ann ID_Data_Hier   -- Bool.True ; Int.1 ; Tree.Node
+    | ETuple Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
+    | EFunc  Ann TypeC Stmt     -- function implementation
+    | ECall  Ann Exp Exp        -- f a ; f(a) ; f(1,2)
+    | EAny   Ann
+    | EArg   Ann
+    | EExp   Ann Exp
     deriving (Eq, Show)
 
 instance HasAnn Exp where
     --getAnn :: Exp -> Ann
-    getAnn (Error  z _)   = z
-    getAnn (Cons   z _)   = z
-    getAnn (Read   z _)   = z
-    getAnn (Arg    z)     = z
-    getAnn (Unit   z)     = z
-    getAnn (Tuple  z _)   = z
-    getAnn (Func   z _ _) = z
-    getAnn (Call   z _ _) = z
+    getAnn (EError z _)   = z
+    getAnn (EVar   z _)   = z
+    getAnn (EUnit  z)     = z
+    getAnn (EData  z _)   = z
+    getAnn (ETuple z _)   = z
+    getAnn (EFunc  z _ _) = z
+    getAnn (ECall  z _ _) = z
+    getAnn (EAny   z)     = z
+    getAnn (EArg   z)     = z
+    getAnn (EExp   z _)   = z
 
 -------------------------------------------------------------------------------
 
@@ -71,13 +75,13 @@ show_stmt spc (Nop _)                 = replicate spc ' ' ++ "nop"
 show_stmt spc p = error $ show p
 
 show_exp :: Int -> Exp -> String
-show_exp spc (Cons _ ["Int",n]) = n
-show_exp spc (Cons _ id)    = hier2str id
-show_exp spc (Read _ id)    = id
-show_exp spc (Arg _)        = "arg"
-show_exp spc (Tuple _ es)   = "(" ++ intercalate "," (map (show_exp spc) es) ++ ")"
-show_exp spc (Func _ _ p)   = "func" ++ "\n" ++ show_stmt (spc+4) p
-show_exp spc (Call _ e1 e2) = "call" ++ " " ++ show_exp spc e1 ++ " " ++ show_exp spc e2
+show_exp spc (EData _ ["Int",n]) = n
+show_exp spc (EData _ id)    = hier2str id
+show_exp spc (EVar _ id)    = id
+show_exp spc (EArg _)        = "arg"
+show_exp spc (ETuple _ es)   = "(" ++ intercalate "," (map (show_exp spc) es) ++ ")"
+show_exp spc (EFunc _ _ p)   = "func" ++ "\n" ++ show_stmt (spc+4) p
+show_exp spc (ECall _ e1 e2) = "call" ++ " " ++ show_exp spc e1 ++ " " ++ show_exp spc e2
 show_exp spc e              = show e
 
 show_loc :: Loc -> String
@@ -103,10 +107,10 @@ map_stmt f@(fs,_,_)  (Ret   z exp)              = fs (Ret   z (map_exp f exp))
 map_stmt f@(fs,_,_)  (Nop   z)                  = fs (Nop   z)
 
 map_exp :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Exp -> Exp
-map_exp f@(_,fe,_)  (Cons  z id)    = fe (Cons  z id)
-map_exp f@(_,fe,_)  (Tuple z es)    = fe (Tuple z (map (map_exp f) es))
-map_exp f@(_,fe,ft) (Func  z tp p)  = fe (Func  z (ft tp) (map_stmt f p))
-map_exp f@(_,fe,_)  (Call  z e1 e2) = fe (Call  z (map_exp f e1) (map_exp f e2))
+map_exp f@(_,fe,_)  (EData  z id)    = fe (EData  z id)
+map_exp f@(_,fe,_)  (ETuple z es)    = fe (ETuple z (map (map_exp f) es))
+map_exp f@(_,fe,ft) (EFunc  z tp p)  = fe (EFunc  z (ft tp) (map_stmt f p))
+map_exp f@(_,fe,_)  (ECall  z e1 e2) = fe (ECall  z (map_exp f e1) (map_exp f e2))
 map_exp f@(_,fe,_)  exp             = fe exp
 
 --  class Equalable a where
@@ -135,7 +139,7 @@ map_exp f@(_,fe,_)  exp             = fe exp
 -- Expected layout of Inst.imp:
 --  (Var _ "f" tp
 --    (Seq _
---      (Write _ (LVar "f") (Func ...))   -- or (Nop _) // no implementation
+--      (Write _ (LVar "f") (EFunc ...))   -- or (Nop _) // no implementation
 --      (Var _ "g" tp                     -- or (Nop _) // eof
 --        ...
 

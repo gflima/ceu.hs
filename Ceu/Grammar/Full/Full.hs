@@ -11,36 +11,36 @@ import qualified Ceu.Grammar.Basic as B
 -------------------------------------------------------------------------------
 
 data Exp
-    = Error  Ann Int            -- 1
-    | Cons   Ann ID_Data_Hier   -- True
-    | Read   Ann ID_Var         -- a ; xs
-    | Arg    Ann
-    | Unit   Ann                -- ()
-    | Tuple  Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
-    | Func   Ann TypeC Stmt      -- function implementation
-    | Call   Ann Exp Exp        -- f a ; f(a) ; f(1,2)
+    = EError  Ann Int            -- 1
+    | EData   Ann ID_Data_Hier   -- True
+    | EVar   Ann ID_Var         -- a ; xs
+    | EArg    Ann
+    | EUnit   Ann                -- ()
+    | ETuple  Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
+    | EFunc   Ann TypeC Stmt      -- function implementation
+    | ECall   Ann Exp Exp        -- f a ; f(a) ; f(1,2)
     deriving (Eq, Show)
 
 toBasicExp :: Exp -> B.Exp
-toBasicExp (Error  z v)     = B.Error  z v
-toBasicExp (Cons   z v)     = B.Cons   z v
-toBasicExp (Read   z v)     = B.Read   z v
-toBasicExp (Arg    z)       = B.Arg    z
-toBasicExp (Unit   z)       = B.Unit   z
-toBasicExp (Tuple  z es)    = B.Tuple  z (map toBasicExp es)
-toBasicExp (Func   z tp p)  = B.Func   z tp (toBasicStmt p)
-toBasicExp (Call   z e1 e2) = B.Call   z (toBasicExp e1) (toBasicExp e2)
+toBasicExp (EError  z v)     = B.EError  z v
+toBasicExp (EData   z v)     = B.EData   z v
+toBasicExp (EVar   z v)     = B.EVar   z v
+toBasicExp (EArg    z)       = B.EArg    z
+toBasicExp (EUnit   z)       = B.EUnit   z
+toBasicExp (ETuple  z es)    = B.ETuple  z (map toBasicExp es)
+toBasicExp (EFunc   z tp p)  = B.EFunc   z tp (toBasicStmt p)
+toBasicExp (ECall   z e1 e2) = B.ECall   z (toBasicExp e1) (toBasicExp e2)
 
 instance HasAnn Exp where
     --getAnn :: Exp -> Ann
-    getAnn (Error  z _)   = z
-    getAnn (Cons   z _)   = z
-    getAnn (Read   z _)   = z
-    getAnn (Arg    z)     = z
-    getAnn (Unit   z)     = z
-    getAnn (Tuple  z _)   = z
-    getAnn (Func   z _ _) = z
-    getAnn (Call   z _ _) = z
+    getAnn (EError  z _)   = z
+    getAnn (EData   z _)   = z
+    getAnn (EVar   z _)   = z
+    getAnn (EArg    z)     = z
+    getAnn (EUnit   z)     = z
+    getAnn (ETuple  z _)   = z
+    getAnn (EFunc   z _ _) = z
+    getAnn (ECall   z _ _) = z
 
 -------------------------------------------------------------------------------
 
@@ -138,8 +138,8 @@ map_stmt f@(fs,_,_)  (Ret   z exp)            = fs (Ret   z (map_exp f exp))
 map_stmt f@(fs,_,_)  (Nop   z)                = fs (Nop   z)
 
 map_exp :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Exp -> Exp
-map_exp f@(_,fe,_)  (Cons  z id)    = fe (Cons  z id)
-map_exp f@(_,fe,_)  (Tuple z es)    = fe (Tuple z (map (map_exp f) es))
-map_exp f@(_,fe,ft) (Func  z tp p)  = fe (Func  z (ft tp) (map_stmt f p))
-map_exp f@(_,fe,_)  (Call  z e1 e2) = fe (Call  z (map_exp f e1) (map_exp f e2))
+map_exp f@(_,fe,_)  (EData  z id)    = fe (EData  z id)
+map_exp f@(_,fe,_)  (ETuple z es)    = fe (ETuple z (map (map_exp f) es))
+map_exp f@(_,fe,ft) (EFunc  z tp p)  = fe (EFunc  z (ft tp) (map_stmt f p))
+map_exp f@(_,fe,_)  (ECall  z e1 e2) = fe (ECall  z (map_exp f e1) (map_exp f e2))
 map_exp f@(_,fe,_)  exp             = fe exp

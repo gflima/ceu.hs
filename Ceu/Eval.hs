@@ -19,14 +19,14 @@ error_terminate = -1
 error_match     = -2
 
 data Exp
-    = Error  Int
-    | Cons'  ID_Data_Hier Exp   -- True, X v (constants)
-    | Cons   ID_Data_Hier       -- X         (functions)
-    | Read   ID_Var         -- a ; xs
-    | Unit                  -- ()
-    | Tuple  [Exp]          -- (1,2) ; ((1),2) ; ((1,2),3) ; ((),()) // (len >= 2)
-    | Func   Stmt
-    | Call   Exp Exp        -- f a ; f(a) ; f(1,2)
+    = EError  Int
+    | EData'  ID_Data_Hier Exp   -- True, X v (constants)
+    | EData   ID_Data_Hier       -- X         (functions)
+    | EVar   ID_Var         -- a ; xs
+    | EUnit                  -- ()
+    | ETuple  [Exp]          -- (1,2) ; ((1),2) ; ((1,2),3) ; ((),()) // (len >= 2)
+    | EFunc   Stmt
+    | ECall   Exp Exp        -- f a ; f(a) ; f(1,2)
     deriving (Eq, Show)
 
 data Loc = LAny
@@ -50,16 +50,16 @@ data Stmt
 infixr 1 `Seq`
 
 fromExp :: B.Exp -> Exp
-fromExp (B.Error  _ v)    = Error  v
-fromExp (B.Cons   z id)   = case type_ z of
-                              (TData _ _ TUnit, _) -> Cons' id Unit
-                              otherwise            -> Cons id
-fromExp (B.Arg    _)      = Read "_arg"
-fromExp (B.Unit   _)      = Unit
-fromExp (B.Tuple  _ vs)   = Tuple (map fromExp vs)
-fromExp (B.Call   _ f e)  = Call (fromExp f) (fromExp e)
-fromExp (B.Func   _ z p)  = Func (fromStmt p)
-fromExp (B.Read   z id)   = Read id --' where
+fromExp (B.EError  _ v)    = EError  v
+fromExp (B.EData   z id)   = case type_ z of
+                              (TData _ _ TUnit, _) -> EData' id EUnit
+                              otherwise            -> EData id
+fromExp (B.EArg    _)      = EVar "_arg"
+fromExp (B.EUnit   _)      = EUnit
+fromExp (B.ETuple  _ vs)   = ETuple (map fromExp vs)
+fromExp (B.ECall   _ f e)  = ECall (fromExp f) (fromExp e)
+fromExp (B.EFunc   _ z p)  = EFunc (fromStmt p)
+fromExp (B.EVar   z id)   = EVar id --' where
                               --id' = case type_ z of
                                 --tp@(TypeF _ _) -> id ++ "__" ++ T.show' tp
                                 --otherwise      -> id
@@ -101,46 +101,46 @@ envRead vars var =
     Nothing      -> error ("envRead: undeclared variable: " ++ var)
     Just (_,val) -> case val of
       Just val' -> val'
-      Nothing   -> Read var   -- keep original (Read "+")
+      Nothing   -> EVar var   -- keep original (EVar "+")
 
 read' :: String -> Int
 read' x = read x
 
 envEval :: Vars -> Exp -> Exp
 envEval vars e = case e of
-    Read  var   -> envRead vars var
-    Tuple es    -> let exps = map (envEval vars) es in
+    EVar  var   -> envRead vars var
+    ETuple es    -> let exps = map (envEval vars) es in
                     case find isError exps of
-                      Nothing  -> Tuple exps
+                      Nothing  -> ETuple exps
                       Just exp -> exp
                     where
-                      isError (Error _) = True
+                      isError (EError _) = True
                       isError _         = False
 
-    Call  f e'  ->
+    ECall  f e'  ->
       case (envEval vars f, envEval vars e') of
-        (Error x, _)                                  -> Error x
-        (_, Error x)                                  -> Error x
-        (Read "print",  x)                            -> traceShowId x
-        (Read "negate", Cons' ["Int",x] Unit)         -> Cons' ["Int",show (- (read x))] Unit
-        (Read "+",      Tuple [Cons' ["Int",x] Unit,
-                               Cons' ["Int",y] Unit]) -> Cons' ["Int",show (read x   +   read y)] Unit
-        (Read "-",      Tuple [Cons' ["Int",x] Unit,
-                               Cons' ["Int",y] Unit]) -> Cons' ["Int",show (read x   -   read y)] Unit
-        (Read "*",      Tuple [Cons' ["Int",x] Unit,
-                               Cons' ["Int",y] Unit]) -> Cons' ["Int",show (read x   *   read y)] Unit
-        (Read "/",      Tuple [Cons' ["Int",x] Unit,
-                               Cons' ["Int",y] Unit]) -> Cons' ["Int",show (read x `div` read y)] Unit
-        (Read "rem",    Tuple [Cons' ["Int",x] Unit,
-                               Cons' ["Int",y] Unit]) -> Cons' ["Int",show (read x `rem` read y)] Unit
-        (Read "==",     Tuple [Cons' ["Int",x] Unit,
-                               Cons' ["Int",y] Unit]) -> Cons' (bool ["Bool","False"] ["Bool","True"] (read' x == read' y)) Unit
-        (Read "<=",     Tuple [Cons' ["Int",x] Unit,
-                               Cons' ["Int",y] Unit]) -> Cons' (bool ["Bool","False"] ["Bool","True"] (read' x <= read' y)) Unit
-        (Read "<",      Tuple [Cons' ["Int",x] Unit,
-                               Cons' ["Int",y] Unit]) -> Cons' (bool ["Bool","False"] ["Bool","True"] (read' x < read' y))  Unit
-        (Cons id,       e)                            -> Cons' id (envEval vars e)
-        (Func p,        arg)                          -> steps (p, ("_arg",Just arg):vars)
+        (EError x, _)                                  -> EError x
+        (_, EError x)                                  -> EError x
+        (EVar "print",  x)                            -> traceShowId x
+        (EVar "negate", EData' ["Int",x] EUnit)         -> EData' ["Int",show (- (read x))] EUnit
+        (EVar "+",      ETuple [EData' ["Int",x] EUnit,
+                               EData' ["Int",y] EUnit]) -> EData' ["Int",show (read x   +   read y)] EUnit
+        (EVar "-",      ETuple [EData' ["Int",x] EUnit,
+                               EData' ["Int",y] EUnit]) -> EData' ["Int",show (read x   -   read y)] EUnit
+        (EVar "*",      ETuple [EData' ["Int",x] EUnit,
+                               EData' ["Int",y] EUnit]) -> EData' ["Int",show (read x   *   read y)] EUnit
+        (EVar "/",      ETuple [EData' ["Int",x] EUnit,
+                               EData' ["Int",y] EUnit]) -> EData' ["Int",show (read x `div` read y)] EUnit
+        (EVar "rem",    ETuple [EData' ["Int",x] EUnit,
+                               EData' ["Int",y] EUnit]) -> EData' ["Int",show (read x `rem` read y)] EUnit
+        (EVar "==",     ETuple [EData' ["Int",x] EUnit,
+                               EData' ["Int",y] EUnit]) -> EData' (bool ["Bool","False"] ["Bool","True"] (read' x == read' y)) EUnit
+        (EVar "<=",     ETuple [EData' ["Int",x] EUnit,
+                               EData' ["Int",y] EUnit]) -> EData' (bool ["Bool","False"] ["Bool","True"] (read' x <= read' y)) EUnit
+        (EVar "<",      ETuple [EData' ["Int",x] EUnit,
+                               EData' ["Int",y] EUnit]) -> EData' (bool ["Bool","False"] ["Bool","True"] (read' x < read' y))  EUnit
+        (EData id,       e)                            -> EData' id (envEval vars e)
+        (EFunc p,        arg)                          -> steps (p, ("_arg",Just arg):vars)
         x                                             -> error $ show (x,f,e',vars)
 
     e         -> e
@@ -156,33 +156,33 @@ step (Var vv p,       vars)  = (Var vv' p', vars') where (p',vv':vars') = step (
 step (CallS e,        vars)  = (p,          vars) where
                                 ret = envEval vars e
                                 p   = case ret of
-                                        Error v   -> Ret ret
+                                        EError v   -> Ret ret
                                         otherwise -> Nop
 
 step (Match loc e p q,vars)  = case envEval vars e of
-                                Error x -> (Ret (Error x), vars)
+                                EError x -> (Ret (EError x), vars)
                                 e'      -> f $ aux vars loc e'
   where
     aux vars LAny         _ = (Right True,            vars)
     aux vars (LVar id)    v = (Right True,            envWrite vars id v)
     aux vars LUnit        v = (Right True,            vars)
     aux vars (LCons id l)
-             (Cons' id' e)  = if T.isRel_ T.SUP (TData id [] TUnit) (TData id' [] TUnit) then
+             (EData' id' e)  = if T.isRel_ T.SUP (TData id [] TUnit) (TData id' [] TUnit) then
                                 case envEval vars e of
-                                  Error x -> (Left $ Error x, vars)
+                                  EError x -> (Left $ EError x, vars)
                                   e'      -> aux vars l e'
                               else
                                 (Right False, vars)
     aux vars (LTuple ls)
-             (Tuple es)     = foldr (\(loc,e) (b1,vars1) ->
+             (ETuple es)     = foldr (\(loc,e) (b1,vars1) ->
                                       if b1/=(Right True) then (b1,vars1) else
                                         case envEval vars1 e of
-                                          Error x -> (Left $ Error x, vars)
+                                          EError x -> (Left $ EError x, vars)
                                           e'      -> aux vars1 loc e')
                                     (Right True, vars)
                                     (zip ls es)
     aux vars (LExp x)     v = case envEval vars x of
-                                Error x -> (Left  $ Error x, vars)
+                                EError x -> (Left  $ EError x, vars)
                                 e'      -> (Right $ e' == v, vars)
 
     --aux x y z = error $ show (y,z)
@@ -208,14 +208,14 @@ step p =  error $ "step: cannot advance : " ++ (show p)
 
 steps :: Desc -> Exp
 steps (Ret e, vars) = envEval vars e
-steps d             = if (envRead vars "_steps") == (Cons' ["Int",show 1000] Unit) then
-                        Error error_terminate
+steps d             = if (envRead vars "_steps") == (EData' ["Int",show 1000] EUnit) then
+                        EError error_terminate
                       else
                         steps (step d') where
                           (s,vars)             = d
                           d'                   = (s,vars')
-                          vars'                = envWrite vars "_steps" (Cons' ["Int", show (read v+1)] Unit)
-                          Cons' ["Int",v] Unit = envRead  vars "_steps"
+                          vars'                = envWrite vars "_steps" (EData' ["Int", show (read v+1)] EUnit)
+                          EData' ["Int",v] EUnit = envRead  vars "_steps"
 
 go :: B.Stmt -> Exp
 go p = case T.go p of
@@ -223,4 +223,4 @@ go p = case T.go p of
     (es, _) -> error $ "compile error : " ++ show es
 
 go' :: B.Stmt -> Exp
-go' p = steps (fromStmt p, [("_steps",Just $ Cons' ["Int","0"] Unit)])
+go' p = steps (fromStmt p, [("_steps",Just $ EData' ["Int","0"] EUnit)])

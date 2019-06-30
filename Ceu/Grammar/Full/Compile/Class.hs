@@ -30,8 +30,8 @@ idtp id (tp_,ctrs) = if null ctrs then "$" ++ id ++ "$" ++ show' tp_ ++ "$" else
 
 stmt :: Stmt -> Stmt
 
-stmt (Class z id  ctrs ifc)    = Seq z (Class' z id  ctrs (protos ifc)) ifc
-stmt (Inst  z cls tp   imp)    = Seq z (Inst'  z cls tp   (protos imp)) (rename imp)
+stmt (Class z id  ctrs ifc)  = Seq z (Class' z id  ctrs (protos ifc)) ifc
+stmt (Inst  z cls tp   imp)  = Seq z (Inst'  z cls tp   (protos imp)) (rename imp)
 stmt (Set   z chk loc exp)   = Set   z chk loc (expr exp)
 stmt (Match z loc exp p1 p2) = Match z loc (expr exp) (stmt p1) (stmt p2)
 stmt (CallS z exp)           = CallS z (expr exp)
@@ -43,7 +43,7 @@ stmt (Ret   z exp)           = Ret   z (expr exp)
 stmt p                       = p
 
 expr :: Exp -> Exp
-expr (Tuple z es)            = Tuple z (map expr es)
-expr (Call  z e1 e2)         = Call  z (expr e1) (expr e2)
-expr (Func  z tp p)          = Func  z tp (stmt p)
+expr (ETuple z es)           = ETuple z (map expr es)
+expr (ECall  z e1 e2)        = ECall  z (expr e1) (expr e2)
+expr (EFunc  z tp p)         = EFunc  z tp (stmt p)
 expr e                       = e

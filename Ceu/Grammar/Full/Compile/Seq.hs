@@ -21,7 +21,7 @@ stmt (Ret    z exp)                = Ret  z (expr exp)
 stmt p                             = p
 
 expr :: Exp -> Exp
-expr (Tuple z es)               = Tuple z (map expr es)
-expr (Call  z e1 e2)            = Call  z (expr e1) (expr e2)
-expr (Func  z tp p)             = Func  z tp (stmt p)
+expr (ETuple z es)              = ETuple z (map expr es)
+expr (ECall  z e1 e2)           = ECall  z (expr e1) (expr e2)
+expr (EFunc  z tp p)            = EFunc  z tp (stmt p)
 expr e                          = e

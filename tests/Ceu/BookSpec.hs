@@ -39,7 +39,7 @@ spec = do
             "end",
             "return square 3"
            ])
-        `shouldBe` Right (Cons' ["Int","9"] Unit)
+        `shouldBe` Right (EData' ["Int","9"] EUnit)
 
       it "smaller" $                  -- pg 2
         (run True $
@@ -53,7 +53,7 @@ spec = do
             "end",
             "return (smaller(10,5)) + (smaller(1,4))"
            ])
-        `shouldBe` Right (Cons' ["Int","6"] Unit)
+        `shouldBe` Right (EData' ["Int","6"] EUnit)
 
       it "square/smaller" $           -- pg 3
         (run True $
@@ -70,7 +70,7 @@ spec = do
             "end",
             "return square (smaller (5, 3+4))"
            ])
-        `shouldBe` Right (Cons' ["Int","25"] Unit)
+        `shouldBe` Right (EData' ["Int","25"] EUnit)
 
 -------------------------------------------------------------------------------
 
@@ -86,7 +86,7 @@ spec = do
             "end",
             "return three 10"
            ])
-        `shouldBe` Right (Cons' ["Int","3"] Unit)
+        `shouldBe` Right (EData' ["Int","3"] EUnit)
 
       it "infinity" $         -- pg 5
         (run True $
@@ -96,7 +96,7 @@ spec = do
             "end",
             "return infinity ()"
            ])
-        `shouldBe` Right (Error (-1))
+        `shouldBe` Right (EError (-1))
 
       it "three/infinity" $   -- pg 5
         (run True $
@@ -109,7 +109,7 @@ spec = do
             "end",
             "return three (infinity ())"
            ])
-        `shouldBe` Right (Error (-1))
+        `shouldBe` Right (EError (-1))
 
 -------------------------------------------------------------------------------
 
@@ -127,7 +127,7 @@ spec = do
             "end",
             "return multiply (3,4)"
            ])
-        `shouldBe` Right (Cons' ["Int","12"] Unit)
+        `shouldBe` Right (EData' ["Int","12"] EUnit)
 
       it "multiply 3 infinity" $  -- pg 9
         (run True $
@@ -144,7 +144,7 @@ spec = do
             "end",
             "return multiply (3,infinity())"
            ])
-        `shouldBe` Right (Error (-1))
+        `shouldBe` Right (EError (-1))
 
 -------------------------------------------------------------------------------
 
@@ -158,14 +158,14 @@ spec = do
             "end",
             "return twice (negate,3)"
            ])
-        `shouldBe` Right (Cons' ["Int","3"] Unit)
+        `shouldBe` Right (EData' ["Int","3"] EUnit)
 
       it "+" $                -- pg 12
         (run True $
           unlines [
             "return 1 + (+ (2,3))"
            ])
-        `shouldBe` Right (Cons' ["Int","6"] Unit)
+        `shouldBe` Right (EData' ["Int","6"] EUnit)
 
 -------------------------------------------------------------------------------
 
@@ -185,7 +185,7 @@ spec = do
             "end",
             "return (signum 1) + ((signum (-10)) + (signum (10-10)))"
            ])
-        `shouldBe` Right (Cons' ["Int","0"] Unit)
+        `shouldBe` Right (EData' ["Int","0"] EUnit)
 
       it "fact" $             -- pg 19
         (run True $
@@ -199,7 +199,7 @@ spec = do
             "end",
             "return fact 5"
            ])
-        `shouldBe` Right (Cons' ["Int","120"] Unit)
+        `shouldBe` Right (EData' ["Int","120"] EUnit)
 
       it "fact - error" $     -- pg 20
         (run True $
@@ -215,7 +215,7 @@ spec = do
             "end",
             "return fact (-5)"
            ])
-        `shouldBe` Right (Error 1)
+        `shouldBe` Right (EError 1)
 
       it "locals" $           -- pg 20
         (run True $
@@ -226,7 +226,7 @@ spec = do
             "end",
             "return f (2,3)"
            ])
-        `shouldBe` Right (Cons' ["Int","42"] Unit)
+        `shouldBe` Right (EData' ["Int","42"] EUnit)
 
       it "locals" $           -- pg 21
         (run True $
@@ -237,7 +237,7 @@ spec = do
             "end",
             "return f (2,3)"
            ])
-        `shouldBe` Right (Cons' ["Int","48"] Unit)
+        `shouldBe` Right (EData' ["Int","48"] EUnit)
 
       -- TODO-20
 
@@ -265,7 +265,7 @@ spec = do
             "data Bool_.True_",
             "return Bool_.True_"
           ])
-        `shouldBe` Right (Cons' ["Bool_","True_"] Unit)
+        `shouldBe` Right (EData' ["Bool_","True_"] EUnit)
 
       it "not" $              -- pg 30
         (run True $
@@ -279,7 +279,7 @@ spec = do
             "end",
             "return not Bool.False"
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "and-1" $            -- pg 30
         (run True $
@@ -295,7 +295,7 @@ spec = do
             "end",
             "return and (Bool.True,Bool.False)"
            ])
-        `shouldBe` Right (Cons' ["Bool","False"] Unit)
+        `shouldBe` Right (EData' ["Bool","False"] EUnit)
 
       it "and-2" $            -- pg 30
         (run True $
@@ -309,7 +309,7 @@ spec = do
             "end",
             "return (Bool.True) and (Bool.True)"
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "or" $               -- pg 30
         (run True $
@@ -323,7 +323,7 @@ spec = do
             "end",
             "return (Bool.True) or (Bool.False)"
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "===, =/=" $         -- pg 31
         (run True $
@@ -357,7 +357,7 @@ spec = do
             "end",
             "return ((Bool.True) === (Bool.True)) =/= Bool.False"
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "IEqualable: default =/=" $   -- pg 32
         (run True $
@@ -396,7 +396,7 @@ spec = do
             "end",
             "return ((Bool.True) === (Bool.True)) =/= Bool.False"
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "IOrderable" $        -- pg 32
         (run True $
@@ -404,7 +404,7 @@ spec = do
             "return ((((Bool.True)  @>  (Bool.False))  and ((Bool.True) @>= (Bool.True))) and",
             "         ((Bool.False) @<= (Bool.False))) and ((Bool.False) @< (Bool.True))"
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "@<=" $
         (run True $
@@ -428,7 +428,7 @@ spec = do
             "end",
             "return (((not (leapyear 1979)) and (leapyear 1980)) and (not (leapyear 100))) and (leapyear 400)"
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "analyse triangles" $         -- pg 33
         (run True $
@@ -447,7 +447,7 @@ spec = do
             "return ((((analyse (10,20,30)) == 0) and ((analyse (10,20,25)) == 3))",
             "   and ((analyse (10,20,20)) == 2)) and ((analyse (10,10,10)) == 1)"
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "analyse triangles" $         -- pg 33
         (run True $
@@ -475,7 +475,7 @@ spec = do
             "return ((((analyse (10,20,30)) === (Triangle.Failure)) and ((analyse (10,20,25)) === (Triangle.Scalene)))",
             "   and ((analyse (10,20,20)) === (Triangle.Isosceles))) and ((analyse (10,10,10)) === (Triangle.Equilateral))"
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "implication" $         -- pg 34
         (run True $
@@ -486,7 +486,7 @@ spec = do
             "return (((impl (Bool.False,Bool.True)) and (impl (Bool.True,Bool.True)))",
             "  and (impl (Bool.False,Bool.False))) and (not (impl (Bool.True,Bool.False)))"
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "analyse triangles" $         -- pg 35
         (run True $
@@ -536,7 +536,7 @@ spec = do
             "return ((((analyse2 (30,20,10)) === (Triangle.Failure)) and ((analyse2 (10,25,20)) === (Triangle.Scalene)))",
             "   and ((analyse2 (10,20,20)) === (Triangle.Isosceles))) and ((analyse2 (10,10,10)) === (Triangle.Equilateral))"
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "sort3" $         -- pg 35
         (run True $
@@ -589,7 +589,7 @@ spec = do
             "         ((analyse (sort3 (10,20,20))) === (Triangle.Isosceles))) and",
             "         ((analyse (sort3 (10,10,10))) === (Triangle.Equilateral))"
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
 -------------------------------------------------------------------------------
 
@@ -701,7 +701,7 @@ spec = do
             "var sum : Int  <- (((ord c1) + (ord c2)) + (ord (Char.CC))) + (ord (Char.DD))",
             "return (((((eq and gt) and cs) and low) and (cp1 and cp2)) and nx) and (sum == 10)"
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
 -------------------------------------------------------------------------------
 
@@ -789,7 +789,7 @@ spec = do
             "var sum : Int  <- (((toEnum d1) + (toEnum d2)) + (toEnum (Day.Sat))) + (toEnum (Day.Wed))",
             "return ((((eq and gt) and (sum == 10)) and ((fromEnum(toEnum(Day.Sat))) === Day.Sat)) and ((not wd1) and wd2)) and aft"
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "direction" $         -- pg 41
         (run True $
@@ -847,7 +847,7 @@ spec = do
             "",
             "return (reverse (Dir.O)) === (Dir.L)"
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "bool enum" $         -- pg 41
         (run True $
@@ -877,7 +877,7 @@ spec = do
             "",
             "return fromEnum ((toEnum (Bool.False)) + 1)"
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
 -------------------------------------------------------------------------------
 
@@ -890,7 +890,7 @@ spec = do
             "var p1 : Pair of (Int,Int) <- Pair (1,2)",
             "return p1"
            ])
-        `shouldBe` Right (Cons' ["Pair"] (Tuple [Cons' ["Int","1"] Unit,Cons' ["Int","2"] Unit]))
+        `shouldBe` Right (EData' ["Pair"] (ETuple [EData' ["Int","1"] EUnit,EData' ["Int","2"] EUnit]))
 
       it "mkpair" $         -- pg 41
         (run True $
@@ -900,7 +900,7 @@ spec = do
             "var p1 : Pair of (Int,Int) <- mkPair (1,2)",
             "return p1"
            ])
-        `shouldBe` Right (Cons' ["Pair"] (Tuple [Cons' ["Int","1"] Unit,Cons' ["Int","2"] Unit]))
+        `shouldBe` Right (EData' ["Pair"] (ETuple [EData' ["Int","1"] EUnit,EData' ["Int","2"] EUnit]))
 
       it "fst/snd" $         -- pg 41
         (run True $
@@ -913,7 +913,7 @@ spec = do
             "end",
             "return (((fst (1,-1)) + (snd (1,-1))) === 0) and (snd (Bool.False, Bool.True))"
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "pair" $         -- pg 42
         (run True $
@@ -929,7 +929,7 @@ spec = do
             "end",
             "return pair ((f,g), 3)"
            ])
-        `shouldBe` Right (Tuple [Cons' ["Bool","True"] Unit,Cons' ["Int","6"] Unit])
+        `shouldBe` Right (ETuple [EData' ["Bool","True"] EUnit,EData' ["Int","6"] EUnit])
 
       it "TODO: compose" $         -- pg 42
         (run True $
@@ -950,7 +950,7 @@ spec = do
             "end",
             "return (compose (dec, compose(dup,inc))) 10"
            ])
-        `shouldBe` Right (Cons' ["Int","21"] Unit)
+        `shouldBe` Right (EData' ["Int","21"] EUnit)
 
       it "cross" $         -- pg 42
         (run True $
@@ -972,7 +972,7 @@ spec = do
             "end",
             "return cross ((f,g), (3,4))"
            ])
-        `shouldBe` Right (Tuple [Cons' ["Bool","True"] Unit,Cons' ["Int","8"] Unit])
+        `shouldBe` Right (ETuple [EData' ["Bool","True"] EUnit,EData' ["Int","8"] EUnit])
 
       it "pi" $         -- pg 44
         (run True $
@@ -982,7 +982,7 @@ spec = do
             "end",
             "return pifun ()"
            ])
-        `shouldBe` Right (Cons' ["Int","314"] Unit)
+        `shouldBe` Right (EData' ["Int","314"] EUnit)
 
       it "roots" $         -- pg 44
         (run True $
@@ -1020,7 +1020,7 @@ spec = do
             "//return (roots (2,-16,-18))",
             ""
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "tuples / eq" $         -- pg 45
         (run True $
@@ -1028,7 +1028,7 @@ spec = do
             "instance of IEqualable for (a,b) with end",
             "return (((1,1)===(1,1)) and ((1,2)=/=(1,1)))"
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "tuples / ord" $         -- pg 45
         (run True $
@@ -1041,7 +1041,7 @@ spec = do
             "end",
             "return ((1,1) === (1,1)) and (((1,1) @< (1,2)) and ((1,2) @< (2,1)))"
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "Triple" $         -- pg 45
         (run True $
@@ -1053,7 +1053,7 @@ spec = do
             "var t2 : Triple of (Int,Int,Int) <- Triple (1,2,3)",
             "return (t1 === t2) and (t0 =/= t1)"
            ])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "Triple" $         -- pg 45
         (run True $
@@ -1091,7 +1091,7 @@ spec = do
             "         (age(Date(3,6,2019), Date(3,6,1979))) ) +",
             "         (age(Date(2,6,2019), Date(3,6,1979)))"
            ])
-        `shouldBe` Right (Cons' ["Int","119"] Unit)
+        `shouldBe` Right (EData' ["Int","119"] EUnit)
 
 -------------------------------------------------------------------------------
 
@@ -1107,7 +1107,7 @@ var l : Either.Left  <- Either.Left  Bool.True
 var r : Either.Right <- Either.Right 10
 return (l,r)
 |])
-        `shouldBe` Right (Tuple [Cons' ["Either","Left"] (Cons' ["Bool","True"] Unit),Cons' ["Either","Right"] (Cons' ["Int","10"] Unit)])
+        `shouldBe` Right (ETuple [EData' ["Either","Left"] (EData' ["Bool","True"] EUnit),EData' ["Either","Right"] (EData' ["Int","10"] EUnit)])
 
       it "Either a b" $         -- pg 46
         (run True $
@@ -1119,7 +1119,7 @@ var l : Either.Left  of (Bool,Int) <- Either.Left  Bool.True
 var r : Either.Right of (Bool,Int) <- Either.Right 10
 return (l,r)
 |])
-        `shouldBe` Right (Tuple [Cons' ["Either","Left"] (Cons' ["Bool","True"] Unit),Cons' ["Either","Right"] (Cons' ["Int","10"] Unit)])
+        `shouldBe` Right (ETuple [EData' ["Either","Left"] (EData' ["Bool","True"] EUnit),EData' ["Either","Right"] (EData' ["Int","10"] EUnit)])
 
       it "case" $         -- pg 46
         (run True $
@@ -1151,7 +1151,7 @@ var r : Either.Right of (Bool,Int) <- Either.Right 10
 
 return (case ((f,g),l)) + (case ((f,g),r))
 |])
-        `shouldBe` Right (Cons' ["Int","11"] Unit)
+        `shouldBe` Right (EData' ["Int","11"] EUnit)
 
       it "Either / IEq" $         -- pg 47
         (run True $
@@ -1169,7 +1169,7 @@ var l_ : Either of (Bool,Int) <- l
 
 return (l_ === l) and (l_ =/= r)
 |])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "Either / IOrd" $         -- pg 47
         (run True $
@@ -1209,7 +1209,7 @@ var r_ : Either of (Bool,Int) <- r
 
 return (f_ @<= f) and (((f @< l_) and (l @< r_)) and (r_ @>= r))
 |])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
 -------------------------------------------------------------------------------
 
@@ -1257,7 +1257,7 @@ end
 
 return (((roots(Coefs (3,4,5))) === (Roots (-1,-1))) and ((roots(Coefs (2,-16,-18))) === (Roots (-1,9)))) and ((roots(Coefs (0,1,1))) === (Roots (0,0)))
 |])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "move" $         -- pg 48
         (run True $
@@ -1276,7 +1276,7 @@ end
 
 return move(Distance 10,Angle 2,Position(0,0))
 |])
-        `shouldBe` Right (Cons' ["Position"] (Tuple [Cons' ["Int","20"] Unit,Cons' ["Int","-20"] Unit]))
+        `shouldBe` Right (EData' ["Position"] (ETuple [EData' ["Int","20"] EUnit,EData' ["Int","-20"] EUnit]))
 
       it "OneTwo" $         -- pg 49
         (run True $
@@ -1287,7 +1287,7 @@ data OneTwo.One with a
 data OneTwo.Two with Pair of a
 return (OneTwo.One 10, OneTwo.Two (Pair (10,20)))
 |])
-        `shouldBe` Right (Tuple [Cons' ["OneTwo","One"] (Cons' ["Int","10"] Unit),Cons' ["OneTwo","Two"] (Cons' ["Pair"] (Tuple [Cons' ["Int","10"] Unit,Cons' ["Int","20"] Unit]))])
+        `shouldBe` Right (ETuple [EData' ["OneTwo","One"] (EData' ["Int","10"] EUnit),EData' ["OneTwo","Two"] (EData' ["Pair"] (ETuple [EData' ["Int","10"] EUnit,EData' ["Int","20"] EUnit]))])
 
       it "OneTwo" $         -- pg 49
         (run True $
@@ -1318,7 +1318,7 @@ var a2 : Angle <- Angle  10
 //return a1 === a2
 return ((Angle 370) === (Angle 10)) and (a1 === a2)
 |])
-        `shouldBe` Right (Cons' ["Bool","True"] Unit)
+        `shouldBe` Right (EData' ["Bool","True"] EUnit)
 
       it "Distance" $         -- pg 50
         (run True $
@@ -1340,7 +1340,7 @@ end
 return ((Distance 10) === (Distance 11), (Distance 11) === (Distance 10),
         (Distance 20) =/= (Distance 10), (Distance 10) =/= (Distance 20))
 |])
-        `shouldBe` Right (Tuple [Cons' ["Bool","True"] Unit,Cons' ["Bool","True"] Unit,Cons' ["Bool","True"] Unit,Cons' ["Bool","True"] Unit])
+        `shouldBe` Right (ETuple [EData' ["Bool","True"] EUnit,EData' ["Bool","True"] EUnit,EData' ["Bool","True"] EUnit,EData' ["Bool","True"] EUnit])
 
 -------------------------------------------------------------------------------
 
@@ -1365,7 +1365,7 @@ data Nat.Zero
 data Nat.Succ with Nat
 return Nat.Succ (Nat.Zero)
 |])
-        `shouldBe` Right (Cons' ["Nat","Succ"] (Cons' ["Nat","Zero"] Unit))
+        `shouldBe` Right (EData' ["Nat","Succ"] (EData' ["Nat","Zero"] EUnit))
 
       it "Nat +" $            -- pg 58
         (run True $
@@ -1386,14 +1386,14 @@ end
 
 return (Nat.Zero) ++ (Nat.Succ (Nat.Zero))
 |])
-        `shouldBe` Right (Cons' ["Nat","Succ"] (Cons' ["Nat","Zero"] Unit))
+        `shouldBe` Right (EData' ["Nat","Succ"] (EData' ["Nat","Zero"] EUnit))
 
       it "Nat *" $            -- pg 59
         (run True $
           nat ++ [r|
 return ((zr ** um) ++ (um ** um)) ++ ((um++um) ** (um++um))
 |])
-        `shouldBe` Right (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Zero"] Unit))))))
+        `shouldBe` Right (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Zero"] EUnit))))))
 
       it "Nat ^" $            -- pg 59
         (run True $
@@ -1410,7 +1410,7 @@ end
 
 return ((um++um) ^^ zr) ++ ((um++um) ^^ ((um++um)++um))
 |])
-        `shouldBe` Right (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Zero"] Unit))))))))))
+        `shouldBe` Right (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Zero"] EUnit))))))))))
 
       it "Nat : Eq" $            -- pg 59
         (run True $
@@ -1443,7 +1443,7 @@ var um : Nat <- Nat.Succ (Nat.Zero)
 
 return (zr === zr, zr =/= um, um =/= zr, um === um, um =/= um)
 |])
-        `shouldBe` Right (Tuple [Cons' ["Bool","True"] Unit,Cons' ["Bool","True"] Unit,Cons' ["Bool","True"] Unit,Cons' ["Bool","True"] Unit,Cons' ["Bool","False"] Unit])
+        `shouldBe` Right (ETuple [EData' ["Bool","True"] EUnit,EData' ["Bool","True"] EUnit,EData' ["Bool","True"] EUnit,EData' ["Bool","True"] EUnit,EData' ["Bool","False"] EUnit])
 
       it "Nat : Ord" $            -- pg 59
         (run True $
@@ -1495,7 +1495,7 @@ var um : Nat <- Nat.Succ (Nat.Zero)
 
 return (zr @< zr, zr @<= zr, zr @< um, um @< zr, um @> um, um @>= um)
 |])
-        `shouldBe` Right (Tuple [Cons' ["Bool","False"] Unit,Cons' ["Bool","True"] Unit,Cons' ["Bool","True"] Unit,Cons' ["Bool","False"] Unit,Cons' ["Bool","False"] Unit,Cons' ["Bool","True"] Unit])
+        `shouldBe` Right (ETuple [EData' ["Bool","False"] EUnit,EData' ["Bool","True"] EUnit,EData' ["Bool","True"] EUnit,EData' ["Bool","False"] EUnit,EData' ["Bool","False"] EUnit,EData' ["Bool","True"] EUnit])
 
       it "Nat -" $            -- pg 60
         (run True $
@@ -1520,7 +1520,7 @@ var um : Nat <- Nat.Succ (Nat.Zero)
 
 return um--zr
 |])
-        `shouldBe` Right (Cons' ["Nat","Succ"] (Cons' ["Nat","Zero"] Unit))
+        `shouldBe` Right (EData' ["Nat","Succ"] (EData' ["Nat","Zero"] EUnit))
 
       it "Nat -" $            -- pg 60
         (run True $
@@ -1545,7 +1545,7 @@ var um : Nat <- Nat.Succ (Nat.Zero)
 
 return zr--um
 |])
-        `shouldBe` Right (Error (-2))
+        `shouldBe` Right (EError (-2))
 
       it "fact" $            -- pg 60
         (run True $
@@ -1562,7 +1562,7 @@ end
 
 return fact (um ++ (um ++ um))
 |])
-        `shouldBe` Right (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Zero"] Unit)))))))
+        `shouldBe` Right (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Zero"] EUnit)))))))
 
       it "fib" $            -- pg 61
         (run True $
@@ -1581,7 +1581,7 @@ end
 
 return fib (um ++ (um ++ (um ++ (um ++ (um ++ um)))))
 |])
-        `shouldBe` Right (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Zero"] Unit)))))))))
+        `shouldBe` Right (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Zero"] EUnit)))))))))
 
       it "convert" $            -- pg 62
         (run True $
@@ -1598,7 +1598,7 @@ end
 
 return convert (um ++ (um ++ (um ++ (um ++ (um ++ um)))))
 |])
-        `shouldBe` Right (Cons' ["Int","6"] Unit)
+        `shouldBe` Right (EData' ["Int","6"] EUnit)
 
       it "Nat -" $            -- pg 60
         (run True $
@@ -1625,7 +1625,7 @@ var um : Nat <- Nat.Succ (Nat.Zero)
 
 return zr--um
 |])
-        `shouldBe` Right (Cons' ["Nat","Zero"] Unit)
+        `shouldBe` Right (EData' ["Nat","Zero"] EUnit)
 
       it "Nat +/*" $            -- pg 58
         (run True $
@@ -1660,7 +1660,7 @@ var um : Nat <- Nat.Succ (Nat.Zero)
 return ((Nat.Zero) ++ (Nat.Succ (Nat.Zero)),
         ((zr ** um) ++ (um ** um)) ++ ((um++um) ** (um++um)))
 |])
-        `shouldBe` Right (Tuple [Cons' ["Nat","Succ"] (Cons' ["Nat","Zero"] Unit),Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Zero"] Unit)))))])
+        `shouldBe` Right (ETuple [EData' ["Nat","Succ"] (EData' ["Nat","Zero"] EUnit),EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Zero"] EUnit)))))])
 
 -------------------------------------------------------------------------------
 
@@ -1689,7 +1689,7 @@ end
 
 return um +++ (um +++ um)
 |])
-        `shouldBe` Right (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Zero"] Unit))))
+        `shouldBe` Right (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Zero"] EUnit))))
 
       it "foldn" $            -- pg 58
         (run True $
@@ -1710,7 +1710,7 @@ end
 
 return um +++ (um +++ um)
 |])
-        `shouldBe` Right (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Succ"] (Cons' ["Nat","Zero"] Unit))))
+        `shouldBe` Right (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Succ"] (EData' ["Nat","Zero"] EUnit))))
 
 -------------------------------------------------------------------------------
 

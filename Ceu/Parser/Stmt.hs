@@ -100,8 +100,8 @@ stmt_error = do
   pos  <- pos2src <$> getPosition
   void <- try $ tk_key "error"
   e    <- expr_number
-  return $ let (Cons z ["Int",n]) = e in
-            Ret annz{source=pos} (Error z $ read n)
+  return $ let (EData z ["Int",n]) = e in
+            Ret annz{source=pos} (EError z $ read n)
 
 -------------------------------------------------------------------------------
 
@@ -191,7 +191,7 @@ stmt_do = do
   void <- tk_key "end"
   return $ Scope annz{source=pos} s
 
-pMatch pos = option (LExp $ Read annz{source=pos} "_true") $ try $ pLoc <* tk_sym "<-"
+pMatch pos = option (LExp $ EVar annz{source=pos} "_true") $ try $ pLoc <* tk_sym "<-"
 
 stmt_match :: Parser Stmt
 stmt_match = do
@@ -260,33 +260,33 @@ expr_number :: Parser Exp
 expr_number = do
   pos <- pos2src <$> getPosition
   num <- tk_num
-  return $ Cons annz{source=pos} ["Int", show num]
+  return $ EData annz{source=pos} ["Int", show num]
 
 expr_cons :: Parser Exp
 expr_cons = do
   pos  <- pos2src <$> getPosition
   cons <- tk_data_hier
-  return $ Cons annz{source=pos} cons
+  return $ EData annz{source=pos} cons
 
 expr_read :: Parser Exp
 expr_read = do
   pos <- pos2src <$> getPosition
   str <- try tk_var <|> tk_op
-  return $ Read annz{source=pos} str
+  return $ EVar annz{source=pos} str
 
 expr_func :: Parser Exp
 expr_func = do
   pos      <- pos2src <$> getPosition
   void     <- try $ tk_key "func"
   (tp,imp) <- func pos
-  return $ Func annz{source=pos} tp imp
+  return $ EFunc annz{source=pos} tp imp
 
 expr_unit :: Parser Exp
 expr_unit = do
   pos  <- pos2src <$> getPosition
   void <- tk_sym "("
   void <- tk_sym ")"
-  return $ Unit annz{source=pos}
+  return $ EUnit annz{source=pos}
 
 expr_parens :: Parser Exp
 expr_parens = do
@@ -299,7 +299,7 @@ expr_tuple :: Parser Exp
 expr_tuple = do
   pos  <- pos2src <$> getPosition
   exps <- try $ list2 expr
-  return $ Tuple annz{source=pos} exps
+  return $ ETuple annz{source=pos} exps
 
 expr' :: Parser Exp
 expr' =
@@ -312,9 +312,9 @@ expr' =
   expr_func       <?> "expression"
 
 -- 1:   e             e                 1
--- 2:   e1  op        Call op e1        a?  5!
--- 3:   e1  e2        Call e1 e2        -1  +(2,3)  add(2,3)
--- 4:   e1  e2  e3    Call e2 (e1,e3)   1+1  t1 isSupOf t2
+-- 2:   e1  op        ECall op e1        a?  5!
+-- 3:   e1  e2        ECall e1 e2        -1  +(2,3)  add(2,3)
+-- 4:   e1  e2  e3    ECall e2 (e1,e3)   1+1  t1 isSupOf t2
 expr :: Parser Exp
 expr = do
   e1  <- expr'
@@ -325,13 +325,13 @@ expr = do
       e3' <- optionMaybe $ try expr'
       return $
         case e3' of                           -- case 4
-          Just e3 -> Call (getAnn e2) e2 (Tuple (getAnn e1) [e1,e3])
-          Nothing -> Call (getAnn f)  f  e    -- case 2-3
+          Just e3 -> ECall (getAnn e2) e2 (ETuple (getAnn e1) [e1,e3])
+          Nothing -> ECall (getAnn f)  f  e    -- case 2-3
                       where
                         (f,e) = bool (neg e1,e2) (e2,e1) (isOp e2)
-                        isOp (Read _ (c:op)) = not $ isLower c
+                        isOp (EVar _ (c:op)) = not $ isLower c
                         isOp _               = False
-                        neg  (Read z "-")    = Read z "negate"
+                        neg  (EVar z "-")    = EVar z "negate"
                         neg  e               = e
 
 -------------------------------------------------------------------------------
@@ -359,7 +359,7 @@ func pos = do
             Seq ann
                 dcls
                 (Seq ann
-                  (Set ann False loc (Arg ann))
+                  (Set ann False loc (EArg ann))
                   imp))
 
 stmt_funcs :: Parser Stmt

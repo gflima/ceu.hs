@@ -28,7 +28,7 @@ stmt (Inst  z cls tp@(_,ctrs) imp)    = Inst  z cls tp (stmt $ aux imp)
     aux (FuncS z id (tp_',ctrs') imp) = FuncS z id (tp_',Cs.union ctrs ctrs') imp
     aux p                             = p
 
-stmt (FuncS z k tp@(tp_,ctrs) imp) = Seq z (Var z k tp) (Set z False (LVar k) (Func z tp (stmt imp')))
+stmt (FuncS z k tp@(tp_,ctrs) imp) = Seq z (Var z k tp) (Set z False (LVar k) (EFunc z tp (stmt imp')))
  where
   imp' = if ctrs == Cs.cz then imp else
           map_stmt (id,id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) imp
@@ -45,7 +45,7 @@ stmt (Ret   z exp)           = Ret   z (expr exp)
 stmt p                       = p
 
 expr :: Exp -> Exp
-expr (Tuple z es)            = Tuple z (map expr es)
-expr (Call  z e1 e2)         = Call  z (expr e1) (expr e2)
-expr (Func  z tp p)          = Func  z tp (stmt p)
+expr (ETuple z es)           = ETuple z (map expr es)
+expr (ECall  z e1 e2)        = ECall  z (expr e1) (expr e2)
+expr (EFunc  z tp p)         = EFunc  z tp (stmt p)
 expr e                       = e

@@ -138,7 +138,7 @@ combos' lvl ids clss = combos insts where
           tpss  = combos' (lvl-1) ids (map Set.toList $ Map.elems ctrs)
           insts = map (flip T.instantiate tp_) $ map (zip (Map.keys ctrs)) tpss
 
-err z = Ret z $ Error z (-2)  -- TODO: -2
+err z = Ret z $ EError z (-2)  -- TODO: -2
 
 -------------------------------------------------------------------------------
 
@@ -417,31 +417,31 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
   --  LExp    a     <- x      # match  # a     SUP x
   --  LAny          <- x      # match  # BOT   SUB x
   --  LUnit         <- x      # match  # unit  SUB x
-  --  LCons   a b   <- Cons x # match  # a     SUP Cons x | b match x
+  --  LCons   a b   <- EData x # match  # a     SUP EData x | b match x
   --  LCons   a.* b <- x      # match  # a     SUP x      | b match x
   --  LTuple  (a,b) <- (x,y)  # match  # (B,B) SUB (x,y)  | a match x,  b match y
   --  LTuple  (a,b) <- x      # match  # (B,B) SUB x      | a match x1, b match x2
 
   match :: Loc -> Exp -> (Bool, Errors)
 
-  match _               (Arg _)        = (False, [])
+  match _               (EArg _)        = (False, [])
 
   -- structural match
-  match LUnit           (Unit   _)     = (False, [])
+  match LUnit           (EUnit   _)     = (False, [])
   match (LCons hr1 loc)
-        (Call _ (Cons z hr2) exp)      = (may, es++es') where
+        (ECall _ (EData z hr2) exp)      = (may, es++es') where
                                           es = if hr1 `isPrefixOf` hr2 then [] else
                                                 [toError z "match never succeeds : data mismatch"]
                                           (may, es') = match loc exp
-  match (LTuple ls)     (Tuple z exps) = (or mays, concat eses ++ es) where
+  match (LTuple ls)     (ETuple z exps) = (or mays, concat eses ++ es) where
                                           es = if lenl == lene then [] else
                                                 [toError z "match never succeeds : arity mismatch"]
                                           (mays, eses) = unzip $ zipWith match ls' exps' where
                                             ls'   = ls   ++ replicate (lene - lenl) LAny
-                                            exps' = exps ++ replicate (lenl - lene) (Error z (-2))
+                                            exps' = exps ++ replicate (lenl - lene) (EError z (-2))
                                           lenl  = length ls
                                           lene  = length exps
-  match l@(LCons _ _)   e@(Cons z _)    = match l (Call z e (Unit z))
+  match l@(LCons _ _)   e@(EData z _)    = match l (ECall z e (EUnit z))
 
   -- structural fail
   match l e | (isL l && isE e) = (False, ["match never succeeds"]) where
@@ -450,10 +450,10 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
     isL (LTuple _)  = True
     isL _           = False
 
-    isE (Unit   _)   = True
-    isE (Tuple  _ _) = True
-    isE (Cons   _ _) = True
-    isE (Call   _ (Cons _ _) _) = True
+    isE (EUnit   _)   = True
+    isE (ETuple  _ _) = True
+    isE (EData   _ _) = True
+    isE (ECall   _ (EData _ _) _) = True
     isE _            = False
 
   -- contravariant on constants (SUB)
@@ -493,7 +493,7 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
 stmt ids (CallS z exp) = (ese++esf, CallS z exp') where
                          (ese, exp') = expr z (SUP, (TAny "?",cz)) ids exp
                          esf = case exp' of
-                          Call _ _ _ -> []
+                          ECall _ _ _ -> []
                           otherwise  -> [toError z "expected call"]
 
 stmt ids (Seq z p1 p2)      = (es1++es2, Seq z p1' p2')
@@ -535,14 +535,14 @@ expr z (rel,txp) ids exp = (es1++es2, exp') where
 
 expr' :: (Relation,TypeC) -> [Stmt] -> Exp -> (Errors, Exp)
 
-expr' _       _   (Error  z v)     = ([], Error  z{type_=(TBot,cz)} v)
-expr' _       _   (Unit   z)       = ([], Unit   z{type_=(TUnit,cz)})
-expr' (_,txp) _   (Arg    z)       = ([], Arg    z{type_=txp})
-expr' _       ids (Func   z tp p)  = (es, Func   z{type_=tp} tp p')
+expr' _       _   (EError  z v)     = ([], EError  z{type_=(TBot,cz)} v)
+expr' _       _   (EUnit   z)       = ([], EUnit   z{type_=(TUnit,cz)})
+expr' (_,txp) _   (EArg    z)       = ([], EArg    z{type_=txp})
+expr' _       ids (EFunc   z tp p)  = (es, EFunc   z{type_=tp} tp p')
                                      where
                                       (es,p') = stmt ids p
 
-expr' (rel,txp) ids (Cons z hr) = (es1++es2, Cons z{type_=tp2} hr)
+expr' (rel,txp) ids (EData z hr) = (es1++es2, EData z{type_=tp2} hr)
     where
         hr_str = T.hier2str hr
         (tp1,es1) = case find (isData hr_str) ids of
@@ -558,14 +558,14 @@ expr' (rel,txp) ids (Cons z hr) = (es1++es2, Cons z{type_=tp2} hr)
           Left es       -> (map (toError z) es,tp1)
           Right (tp_,_) -> ([],(tp_,ctrs)) where (_,ctrs)=tp1
 
-expr' _ ids (Tuple z exps) = (es, Tuple z{type_=(tps',cz)} exps') where
+expr' _ ids (ETuple z exps) = (es, ETuple z{type_=(tps',cz)} exps') where
                               rets :: [(Errors,Exp)]
                               rets  = map (\e -> expr z (SUP,(TAny "?",cz)) ids e) exps
                               es    = concat $ map fst rets
                               exps' = map snd rets
                               tps'  = TTuple (map (fst.type_.getAnn) exps')
 
-expr' (rel,txp@(txp_,cxp)) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
+expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, EVar z{type_=tp} id') where    -- EVar x
   (id', tp, es)
     | (id == "_INPUT") = (id, (TData ["Int"] [] TUnit,cz), [])
     | otherwise        =
@@ -596,8 +596,8 @@ expr' (rel,txp@(txp_,cxp)) ids (Read z id) = (es, Read z{type_=tp} id') where   
                      "' has no associated instance for '" ++
                      T.show' txp_ ++ "'"]
 
-expr' (rel,(txp_,cxp)) ids (Call z f exp) = (bool ese esf (null ese),
-                                             Call z{type_=tp_out} f' exp')
+expr' (rel,(txp_,cxp)) ids (ECall z f exp) = (bool ese esf (null ese),
+                                             ECall z{type_=tp_out} f' exp')
   where
     (ese, exp') = expr z (rel, (TAny "?",cz)) ids exp
     (esf, f')   = expr z (rel, (TFunc (fst$type_$getAnn$exp') txp_, cxp)) ids f

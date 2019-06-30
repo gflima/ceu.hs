@@ -62,6 +62,6 @@ stmt p = p
 
 expr :: Exp -> Exp
 
-expr (Call z e1 e2) = Call z (expr e1) (expr e2)
-expr (Func z tp p)  = Func z tp (stmt p)
+expr (ECall z e1 e2) = ECall z (expr e1) (expr e2)
+expr (EFunc z tp p)  = EFunc z tp (stmt p)
 expr e              = e
