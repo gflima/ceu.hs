@@ -122,7 +122,7 @@ relates rel (tp1_,_) (tp2_,_) = relates_ rel tp1_ tp2_
 
 relates_ :: Relation -> Type -> Type -> Either Errors (Type, [(ID_Var,Type)])
 relates_ rel tp1 tp2 =
-  if ret && null esi then Right (tp, right)
+  if ret && null esi then Right (instantiate right tp, right)
                      else Left $ es_tps ++ esi
   where
     (ret, tp, insts) = case rel of
@@ -307,19 +307,23 @@ supOf sup@(TypeD x ofs1 st1) sub@(TypeD y ofs2 st2)
                       m   = min (length l1) (length l2)
                       l1' = take m l1
                       l2' = take m l2
-        Type0    -> f tp1           (TypeN [])
-        _        -> f tp1           (TypeN [tp2])
-      Type0      -> f (TypeN [])    tp2
-      _          -> f (TypeN [tp1]) tp2
+        Type0    -> g $ f tp1           (TypeN [])
+        _        -> g $ f tp1           (TypeN [tp2])
+      Type0      -> g $ f (TypeN [])    tp2
+      _          -> g $ f (TypeN [tp1]) tp2
+
+    g :: (Bool, Type, [(ID_Var,Type,Relation)]) -> (Bool, Type, [(ID_Var,Type,Relation)])
+    g (b, TypeN [],   l) = (b, Type0, l)
+    g (b, TypeN [tp], l) = (b, tp,    l)
+    g x                  = x
 
 supOf sup@(TypeD _ _ _) _                 = (False, sup,   [])
 supOf sup               (TypeD _ _ _)     = (False, sup,   [])
 
-supOf sup@(TypeF inp1 out1) sub@(TypeF inp2 out2) =
-  let (i,_,k) = inp2 `supOf` inp1      -- contravariance on inputs
-      (x,_,z) = out1 `supOf` out2 in
-    if i && x then                           (True,  sub,   k++z)
-              else                           (False, sup,   k++z)
+supOf (TypeF inp1 out1) (TypeF inp2 out2) = (ret, TypeF inp out, k++z) where
+  (i,inp,k) = inp2 `supOf` inp1      -- contravariance on inputs
+  (x,out,z) = out1 `supOf` out2
+  ret = i && x
 
 supOf sup@(TypeF _ _)   _                 = (False, sup,   [])
 supOf sup               (TypeF _ _)       = (False, sup,   [])

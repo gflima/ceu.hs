@@ -45,6 +45,27 @@ spec = do
     it "b > b" $
       TypeV "b" `supOf` TypeV "b" `shouldBe` (True,TypeV "b",[("b",TypeV "b",SUP),("b",TypeV "b",SUB)])
 
+    it "Int > a" $
+      supOf (TypeD ["Int"] [] Type0) (TypeV "a")
+      `shouldBe` (True,TypeD ["Int"] [] Type0,[("a",TypeD ["Int"] [] Type0,SUB)])
+
+    it "[I] > [a]" $
+      supOf
+        (TypeN [TypeD ["Int"] [] Type0]) (TypeN [TypeV "a"])
+      `shouldBe` (True,TypeN [TypeD ["Int"] [] Type0],[("a",TypeD ["Int"] [] Type0,SUB)])
+
+    it "P I > P a" $
+      supOf
+        (TypeD ["Pair"] [TypeD ["Int"] [] Type0] (TypeN [TypeD ["Int"] [] Type0]))
+        (TypeD ["Pair"] [TypeV "a"]              (TypeN [TypeV "a"]))
+      `shouldBe` (True,TypeD ["Pair"] [TypeD ["Int"] [] Type0] (TypeN [TypeD ["Int"] [] Type0]),[("a",TypeD ["Int"] [] Type0,SUB)])
+
+    it "P I I > P a a" $
+      supOf
+        (TypeD ["Pair"] [TypeD ["Int"] [] Type0,TypeD ["Int"] [] Type0] (TypeN [TypeD ["Int"] [] Type0,TypeD ["Int"] [] Type0]))
+        (TypeD ["Pair"] [TypeV "a",TypeV "b"] (TypeN [TypeV "a",TypeV "b"]))
+      `shouldBe` (True,TypeD ["Pair"] [TypeD ["Int"] [] Type0,TypeD ["Int"] [] Type0] (TypeN [TypeD ["Int"] [] Type0,TypeD ["Int"] [] Type0]),[("a",TypeD ["Int"] [] Type0,SUB),("b",TypeD ["Int"] [] Type0,SUB)])
+
   describe "relates_" $ do
 
     it "b > b" $
@@ -89,7 +110,7 @@ spec = do
 
     it "(Int.1 -> Int) > (a -> a)" $
       relates_ SUP (TypeF (int1) (int)) (TypeF (TypeV "a") (TypeV "a"))
-      `shouldBe` Right (TypeF (TypeV "a") (TypeV "a"),[("a",int)])
+      `shouldBe` Right (TypeF int1 int,[("a",int)])
 
     it "(True -> Bool) > (Bool -> Bool)" $
       relates_ SUP (TypeF (boolt) (bool)) (TypeF (bool) (bool))
@@ -97,7 +118,7 @@ spec = do
 
     it "(True -> Bool) > (Bool -> True)" $
       relates_ SUP (TypeF (boolt) (bool)) (TypeF (bool) (boolt))
-      `shouldBe` Right (TypeF (bool) (boolt),[])
+      `shouldBe` Right (TypeF (bool) (bool),[])
 
     it "((a,a) -> ()) > ((X,X.A) -> ()" $
       relates_ SUP
@@ -142,8 +163,8 @@ spec = do
     it "(True,False)->() > (a,a)->()" $
       relates_ SUP
       (TypeF (TypeN [TypeD ["X","Bool","True"] [] Type0, TypeD ["X","Bool","False"] [] Type0]) Type0)
-      (TypeF (TypeN [TypeV "a",                 TypeV "a"])                  Type0)
-      `shouldBe` Right (TypeF (TypeN [TypeV "a",TypeV "a"]) Type0,[("a",TypeD ["X","Bool"] [] Type0)])
+      (TypeF (TypeN [TypeV "a",                          TypeV "a"])                           Type0)
+      `shouldBe` Right (TypeF (TypeN [TypeD ["X","Bool","True"] [] Type0,TypeD ["X","Bool","False"] [] Type0]) Type0,[("a",TypeD ["X","Bool"] [] Type0)])
 
     it "()->(True,False) SUP ()->(a,a)" $
       relates_ SUP
@@ -161,9 +182,9 @@ spec = do
 
     it "(True,False)->top SUP (a,a)->a" $
       relates_ SUP
-      (TypeF (TypeN [boolt, boolf]) TypeT)
-      (TypeF (TypeN [TypeV "a",             TypeV "a"])              (TypeV "a"))
-      `shouldBe` Right (TypeF (TypeN [TypeV "a",TypeV "a"]) (TypeV "a"),[("a",bool)])
+      (TypeF (TypeN [boolt,     boolf])     TypeT)
+      (TypeF (TypeN [TypeV "a", TypeV "a"]) (TypeV "a"))
+      `shouldBe` Right (TypeF (TypeN [boolt,boolf]) bool,[("a",bool)])
 
     it "((1,2),(1,1))->? SUP (Int,Int)->Bool" $
       relates_ SUP
@@ -191,7 +212,7 @@ spec = do
                 TypeV "a"
               ])
               (bool))
-      `shouldBe` Right (TypeF (TypeN [TypeV "a",TypeV "a"]) (bool),[("?",bool),("a",TypeN [int1,int])])
+      `shouldBe` Right (TypeF (TypeN [TypeN [int1,int2],TypeN [int1,int1]]) (bool),[("?",bool),("a",TypeN [int1,int])])
 
     it "((1,2),(1,1))->? SUB (a,a)->Bool" $
       relates_ SUP
@@ -205,7 +226,7 @@ spec = do
                 TypeV "a"
               ])
               (bool))
-      `shouldBe` Right (TypeF (TypeN [TypeV "a",TypeV "a"]) (bool),[("?",bool),("a",TypeN [int1,int])])
+      `shouldBe` Right (TypeF (TypeN [TypeN [int1,int2],TypeN [int1,int1]]) (bool),[("?",bool),("a",TypeN [int1,int])])
 
     it "(a,a) > (370,10)" $
       relates_ SUP
@@ -219,26 +240,17 @@ spec = do
         (TypeN [TypeD ["X"] [] $ TypeD ["Int","370"] [] Type0, TypeD ["X"] [] $ TypeD ["Int","10"] [] Type0])
       `shouldBe` Right (TypeN [TypeD ["X"] [] (TypeD ["Int","370"] [] Type0),TypeD ["X"] [] (TypeD ["Int","10"] [] Type0)],[("a",TypeD ["X"] [] (TypeD ["Int"] [] Type0))])
 
-    it "Int > a" $
-      supOf (TypeD ["Int"] [] Type0) (TypeV "a")
-      `shouldBe` (True,TypeD ["Int"] [] Type0,[("a",TypeD ["Int"] [] Type0,SUB)])
+    it "X of a" $
+      relates_ SUP
+        (TypeF Type0       (TypeV "?"))
+        (TypeF (TypeV "a") (TypeD ["X"] [TypeV "a"] (TypeV "a")))
+        `shouldBe` Right (TypeF Type0 (TypeD ["X"] [Type0] (Type0)),[("?",TypeD ["X"] [TypeV "a"] (TypeV "a")),("a",Type0)])
 
-    it "[I] > [a]" $
-      supOf
-        (TypeN [TypeD ["Int"] [] Type0]) (TypeN [TypeV "a"])
-      `shouldBe` (True,TypeN [TypeD ["Int"] [] Type0],[("a",TypeD ["Int"] [] Type0,SUB)])
-
-    it "P I > P a" $
-      supOf
-        (TypeD ["Pair"] [TypeD ["Int"] [] Type0] (TypeN [TypeD ["Int"] [] Type0]))
-        (TypeD ["Pair"] [TypeV "a"]              (TypeN [TypeV "a"]))
-      `shouldBe` (True,TypeD ["Pair"] [TypeD ["Int"] [] Type0] (TypeN [TypeD ["Int"] [] Type0]),[("a",TypeD ["Int"] [] Type0,SUB)])
-
-    it "P I I > P a a" $
-      supOf
-        (TypeD ["Pair"] [TypeD ["Int"] [] Type0,TypeD ["Int"] [] Type0] (TypeN [TypeD ["Int"] [] Type0,TypeD ["Int"] [] Type0]))
-        (TypeD ["Pair"] [TypeV "a",TypeV "b"] (TypeN [TypeV "a",TypeV "b"]))
-      `shouldBe` (True,TypeD ["Pair"] [TypeD ["Int"] [] Type0,TypeD ["Int"] [] Type0] (TypeN [TypeD ["Int"] [] Type0,TypeD ["Int"] [] Type0]),[("a",TypeD ["Int"] [] Type0,SUB),("b",TypeD ["Int"] [] Type0,SUB)])
+    it "X of a" $
+      relates_ SUP
+        (TypeN [Type0,     TypeV "?"])
+        (TypeN [TypeV "a", (TypeD ["X"] [TypeV "a"] (TypeV "a"))])
+        `shouldBe` Right (TypeN [Type0, TypeD ["X"] [Type0] (Type0)],[("?",TypeD ["X"] [TypeV "a"] (TypeV "a")),("a",Type0)])
 
   describe "isSupOf / isSubOf" $ do
 
