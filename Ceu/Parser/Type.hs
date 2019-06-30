@@ -21,23 +21,23 @@ type_0 :: Parser Type
 type_0 = do
     void <- tk_sym "("
     void <- tk_sym ")"
-    return Type0
+    return TUnit
 
 f tp = case tp of
-  Type0   -> []
-  TypeN l -> l
+  TUnit   -> []
+  TTuple l -> l
   _       -> [tp]
 
 type_D :: Parser Type
 type_D = do
     hier <- tk_data_hier
-    ofs  <- option Type0 $ try (tk_key "of" *> pType)
-    return $ TypeD hier (f ofs) Type0
+    ofs  <- option TUnit $ try (tk_key "of" *> pType)
+    return $ TData hier (f ofs) TUnit
 
 type_N :: Parser Type
 type_N = do
     tps <- list2 pType
-    return $ TypeN tps
+    return $ TTuple tps
 
 type_F :: Parser Type
 type_F = do
@@ -46,12 +46,12 @@ type_F = do
     void <- tk_sym "->"
     out  <- pType
     void <- tk_sym ")"
-    return $ TypeF inp out
+    return $ TFunc inp out
 
 type_V :: Parser Type
 type_V = do
     var <- tk_var
-    return $ TypeV var
+    return $ TAny var
 
 type_parens :: Parser Type
 type_parens = do

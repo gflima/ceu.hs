@@ -3,7 +3,7 @@ module Ceu.Grammar.Ann where
 import Debug.Trace
 
 import Ceu.Grammar.Globals      (Source, Errors)
-import Ceu.Grammar.Type         (Type(TypeB),TypeC)
+import Ceu.Grammar.Type         (Type(TBot),TypeC)
 import Ceu.Grammar.Constraints  (cz)
 
 data Ann = Ann { type_  :: TypeC
@@ -17,7 +17,7 @@ class HasAnn a where
     getAnn :: a -> Ann
 
 annz :: Ann
-annz = Ann { type_  = (TypeB,cz)
+annz = Ann { type_  = (TBot,cz)
            , name   = ""
            , source = ("",0,0)
            , nn     = (-1)

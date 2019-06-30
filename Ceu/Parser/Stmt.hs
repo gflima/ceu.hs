@@ -71,13 +71,13 @@ matchLocType src loc (tp_,ctrs) = case (aux src loc tp_) of
   where
     aux :: Source -> Loc -> Type -> Maybe [Stmt]
     aux pos LAny        _          = Just []
-    aux pos LUnit       Type0      = Just []
+    aux pos LUnit       TUnit      = Just []
     aux pos (LVar var)  tp_        = Just [Var annz{source=pos} var (tp_,ctrs)]
-    aux pos (LTuple []) (TypeN []) = Just []
+    aux pos (LTuple []) (TTuple []) = Just []
     aux pos (LTuple []) _          = Nothing
-    aux pos (LTuple _)  (TypeN []) = Nothing
-    aux pos (LTuple (v1:vs1)) (TypeN (v2:vs2)) = (fmap (++) (aux pos v1 v2)) <*>
-                                                 (aux pos (LTuple vs1) (TypeN vs2))
+    aux pos (LTuple _)  (TTuple []) = Nothing
+    aux pos (LTuple (v1:vs1)) (TTuple (v2:vs2)) = (fmap (++) (aux pos v1 v2)) <*>
+                                                 (aux pos (LTuple vs1) (TTuple vs2))
     aux pos (LTuple _)  _          = Nothing
     aux pos loc         tp_        = error $ show (pos,loc,tp_)
 
@@ -146,9 +146,9 @@ stmt_data = do
   pos     <- pos2src <$> getPosition
   void    <- try $ tk_key "data"
   id      <- tk_data_hier
-  ofs     <- option [] $ try $ tk_key "for" *> (map TypeV <$> (try (list1 tk_var) <|> (singleton <$> tk_var)))
-  (st,cs) <- option (Type0,cz) $ try $ tk_key "with" *> pTypeContext
-  return $ Data annz{source=pos} (TypeD id ofs st, cs) False
+  ofs     <- option [] $ try $ tk_key "for" *> (map TAny <$> (try (list1 tk_var) <|> (singleton <$> tk_var)))
+  (st,cs) <- option (TUnit,cz) $ try $ tk_key "with" *> pTypeContext
+  return $ Data annz{source=pos} (TData id ofs st, cs) False
 
 stmt_var :: Parser Stmt
 stmt_var = do
@@ -342,7 +342,7 @@ func pos = do
   void <- tk_sym ":"
   tp   <- pTypeContext
 
-  dcls <- let (TypeF tp' _,ctrs) = tp
+  dcls <- let (TFunc tp' _,ctrs) = tp
               dcls = (matchLocType pos loc (tp',ctrs))
           in
             case dcls of

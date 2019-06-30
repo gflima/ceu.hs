@@ -30,7 +30,7 @@ go p = stmt [] p
 isClass id1 (Class _ id2 _ _ _) = (id1 == id2)
 isClass _   _                   = False
 
-isData  hr1 (Data  _ (TypeD hr2 _ _,_) _ _) = (hr1' == T.hier2str hr2) where
+isData  hr1 (Data  _ (TData hr2 _ _,_) _ _) = (hr1' == T.hier2str hr2) where
                                                 hr1' = bool hr1 "Int" (take 4 hr1 == "Int.")
 isData  _   _                               = False
 
@@ -169,7 +169,7 @@ errDeclared z chk str id ids =
 getErrsTypesDeclared :: Ann -> [Stmt] -> Type -> Errors
 getErrsTypesDeclared z ids tp = concatMap f (T.getDs tp) where
   f :: Type -> Errors
-  f (TypeD hier _ tp_) = case find (isData id) ids of
+  f (TData hier _ tp_) = case find (isData id) ids of
     Nothing               -> [toError z $ "data '" ++ id ++ "' is not declared"]
     Just (Data _ tp' _ _) -> [] --relatesErrors SUP tp' (tp_,cz)
 -- TODO
@@ -242,7 +242,7 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
                         case relates SUP tp1 tp2 of
                           Left es -> map (toError z2) es
                           Right (_,insts) ->
-                            let tp' = T.instantiate insts (TypeV clss_var) in
+                            let tp' = T.instantiate insts (TAny clss_var) in
                               if tp' == itp then
                                 []
                               else
@@ -323,21 +323,21 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
 
         otherwise  -> error "TODO: multiple vars"
 
-stmt ids s@(Data z tp@(TypeD hr _ st,_) abs p) = (es_dcl ++ (errDeclared z Nothing "data" (T.hier2str hr) ids) ++ es,
+stmt ids s@(Data z tp@(TData hr _ st,_) abs p) = (es_dcl ++ (errDeclared z Nothing "data" (T.hier2str hr) ids) ++ es,
                                                      Data z tp abs p')
   where
     (es,p') = stmt (s:ids) p
     es_dcl  = case T.getSuper hr of
                 Nothing  -> []
-                Just sup -> (getErrsTypesDeclared z ids (TypeD sup [] Type0)) ++
+                Just sup -> (getErrsTypesDeclared z ids (TData sup [] TUnit)) ++
                             (getErrsTypesDeclared z ids st)
 
 stmt ids s@(Var z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
   es_data = getErrsTypesDeclared z ids tp_
   es_id   = errDeclared z (Just chk) "variable" id ids where
               chk :: Stmt -> Bool
-              chk (Var _ id1 tp'@(TypeF _ _,_) (Match _ False (LVar id2) _ _ _)) = (id1 /= id2)
-              chk (Var _ id1 tp'@(TypeF _ _,_) _) = (tp == tp') -- function prototype
+              chk (Var _ id1 tp'@(TFunc _ _,_) (Match _ False (LVar id2) _ _ _)) = (id1 /= id2)
+              chk (Var _ id1 tp'@(TFunc _ _,_) _) = (tp == tp') -- function prototype
               chk _ = False
   (es,p'') = stmt (s:ids) p'
 
@@ -387,25 +387,25 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
   -----------------------------------------------------------------------------
 
   fLoc :: Loc -> (Errors,TypeC,Loc)
-  fLoc LAny          = ([], (TypeV "?",cz), LAny)
-  fLoc LUnit         = ([], (Type0,    cz), LUnit)
+  fLoc LAny          = ([], (TAny "?",cz), LAny)
+  fLoc LUnit         = ([], (TUnit,    cz), LUnit)
   fLoc (LVar    id)  = case find (isVar id) ids of
                         Just (Var _ _ tp _) -> ([], tp, LVar id)
                         otherwise           -> ([toError z $ "variable '" ++ id ++ "' is not declared"],
-                                                (TypeV "?",cz), LVar id)
+                                                (TAny "?",cz), LVar id)
   fLoc (LCons   h l) = (esl++esh, tph, LCons h l') where
                         (esl,(tpl,csl),l') = fLoc l
                         (esh,tph) = case find (isData $ hier2str h) ids of
                           Nothing -> ([toError z $ "data '" ++ (hier2str h) ++ "' is not declared"],
-                                      (TypeD [] [] (TypeV "?"),cz))
+                                      (TData [] [] (TAny "?"),cz))
                           Just (Data _ tp _ _) -> case tp of
-                            (TypeD _ ofs _, ctrs) -> (es,tp') where
-                              tp' = (TypeD (take 1 h) ofs tpl, csl)
+                            (TData _ ofs _, ctrs) -> (es,tp') where
+                              tp' = (TData (take 1 h) ofs tpl, csl)
                               es  = map (toError z) (relatesErrors SUB tp tp')
-  fLoc (LTuple  ls)  = (concat ess, (TypeN (map fst tps),cz), LTuple ls') where   -- TODO: cz should be union of all snd
+  fLoc (LTuple  ls)  = (concat ess, (TTuple (map fst tps),cz), LTuple ls') where   -- TODO: cz should be union of all snd
                         (ess, tps, ls') = unzip3 $ map fLoc ls
   fLoc (LExp    e)   = (ese, type_ $ getAnn e', LExp e') where
-                        (ese,e') = expr z (SUP,(TypeV "?",cz)) ids e
+                        (ese,e') = expr z (SUP,(TAny "?",cz)) ids e
 
   --tLoc :: Loc -> TypeC
   --tLoc loc = tp where (_,tp,_) = fLoc loc
@@ -459,7 +459,7 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
   -- contravariant on constants (SUB)
   match LUnit           exp            = (True, es) where
                                           es = map (toError $ getAnn exp)
-                                                   (relatesErrors SUB (Type0,cz) (type_ $ getAnn exp))
+                                                   (relatesErrors SUB (TUnit,cz) (type_ $ getAnn exp))
 
   -- non-constants: LAny,LVar (no fail) // LExp (may fail)
   match (LVar _)        _              = (False, [])
@@ -473,17 +473,17 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
 
     match' :: Loc -> TypeC -> (Bool, Errors)
     match' LUnit        tp  = (False, es) where
-                                es = [] --map (toError z) (relatesErrors SUB (Type0,cz) tp)
+                                es = [] --map (toError z) (relatesErrors SUB (TUnit,cz) tp)
     match' (LVar _)      _  = (False, [])
     match' LAny          _  = (False, [])
     match' (LExp _)      _  = (True,  [])
     match' (LCons hr1 l) tp = case tp of
-                              (TypeD hr2 _ st, ctrs) -> (may' || may, es) where
+                              (TData hr2 _ st, ctrs) -> (may' || may, es) where
                                                           may'     = (hr2 `isPrefixOf` hr1) && (hr1 /= hr2)
                                                           (may,es) = match' l (st,ctrs)
                               otherwise            -> (False, [])
     match' (LTuple ls)  tp = case tp of
-                              (TypeN tps, ctrs)    -> (or mays, concat ess) where
+                              (TTuple tps, ctrs)    -> (or mays, concat ess) where
                                                         (mays, ess) = unzip $ zipWith match' ls (map f tps)
                                                         f tp = (tp,ctrs)
                               otherwise            -> (False, [])
@@ -491,7 +491,7 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
 -------------------------------------------------------------------------------
 
 stmt ids (CallS z exp) = (ese++esf, CallS z exp') where
-                         (ese, exp') = expr z (SUP, (TypeV "?",cz)) ids exp
+                         (ese, exp') = expr z (SUP, (TAny "?",cz)) ids exp
                          esf = case exp' of
                           Call _ _ _ -> []
                           otherwise  -> [toError z "expected call"]
@@ -506,7 +506,7 @@ stmt ids (Loop z p)         = (es, Loop z p')
 
 stmt ids (Ret z exp)        = (es, Ret z exp')
                               where
-                                (es,exp') = expr z (SUP,(TypeV "?",cz)) ids exp
+                                (es,exp') = expr z (SUP,(TAny "?",cz)) ids exp
                                   -- VAR: I expect exp.type to be a subtype of Top (any type)
 
 stmt _   (Nop z)            = ([], Nop z)
@@ -515,8 +515,8 @@ stmt _   (Nop z)            = ([], Nop z)
 
 expr :: Ann -> (Relation,TypeC) -> [Stmt] -> Exp -> (Errors, Exp)
 expr z (rel,txp) ids exp = (es1++es2, exp') where
-  --(es1, exp') = expr' (rel,bool (TypeV "?" []) txp (rel/=ANY)) ids exp
-  --(es1, exp') = expr' (rel,bool (TypeV "?" []) txp (rel==SUP)) ids exp
+  --(es1, exp') = expr' (rel,bool (TAny "?" []) txp (rel/=ANY)) ids exp
+  --(es1, exp') = expr' (rel,bool (TAny "?" []) txp (rel==SUP)) ids exp
                            -- only force expected type on SUP
   (es1, exp') = expr' (rel,txp) ids exp
   es2 = if not.null $ es1 then [] else
@@ -535,8 +535,8 @@ expr z (rel,txp) ids exp = (es1++es2, exp') where
 
 expr' :: (Relation,TypeC) -> [Stmt] -> Exp -> (Errors, Exp)
 
-expr' _       _   (Error  z v)     = ([], Error  z{type_=(TypeB,cz)} v)
-expr' _       _   (Unit   z)       = ([], Unit   z{type_=(Type0,cz)})
+expr' _       _   (Error  z v)     = ([], Error  z{type_=(TBot,cz)} v)
+expr' _       _   (Unit   z)       = ([], Unit   z{type_=(TUnit,cz)})
 expr' (_,txp) _   (Arg    z)       = ([], Arg    z{type_=txp})
 expr' _       ids (Func   z tp p)  = (es, Func   z{type_=tp} tp p')
                                      where
@@ -546,13 +546,13 @@ expr' (rel,txp) ids (Cons z hr) = (es1++es2, Cons z{type_=tp2} hr)
     where
         hr_str = T.hier2str hr
         (tp1,es1) = case find (isData hr_str) ids of
-            Nothing                  -> ((TypeV "?",cz),
+            Nothing                  -> ((TAny "?",cz),
                                          [toError z $ "data '" ++ hr_str ++ "' is not declared"])
             Just (Data _ tp True  _) -> (f tp, [toError z $ "data '" ++ hr_str ++ "' is abstract"])
             Just (Data _ tp False _) -> (f tp, [])
 
-        f (tp_@(TypeD _ ofs Type0), ctrs) = (tp_,            ctrs)
-        f (tp_@(TypeD _ ofs tpst),  ctrs) = (TypeF tpst tp_, ctrs)
+        f (tp_@(TData _ ofs TUnit), ctrs) = (tp_,            ctrs)
+        f (tp_@(TData _ ofs tpst),  ctrs) = (TFunc tpst tp_, ctrs)
 
         (es2,tp2) = case relates SUP txp tp1 of
           Left es       -> (map (toError z) es,tp1)
@@ -560,18 +560,18 @@ expr' (rel,txp) ids (Cons z hr) = (es1++es2, Cons z{type_=tp2} hr)
 
 expr' _ ids (Tuple z exps) = (es, Tuple z{type_=(tps',cz)} exps') where
                               rets :: [(Errors,Exp)]
-                              rets  = map (\e -> expr z (SUP,(TypeV "?",cz)) ids e) exps
+                              rets  = map (\e -> expr z (SUP,(TAny "?",cz)) ids e) exps
                               es    = concat $ map fst rets
                               exps' = map snd rets
-                              tps'  = TypeN (map (fst.type_.getAnn) exps')
+                              tps'  = TTuple (map (fst.type_.getAnn) exps')
 
 expr' (rel,txp@(txp_,cxp)) ids (Read z id) = (es, Read z{type_=tp} id') where    -- Read x
   (id', tp, es)
-    | (id == "_INPUT") = (id, (TypeD ["Int"] [] Type0,cz), [])
+    | (id == "_INPUT") = (id, (TData ["Int"] [] TUnit,cz), [])
     | otherwise        =
       -- find in top-level ids | id : a
       case findVar z (id,rel,txp) ids of
-        Left  es -> (id, (TypeV "?",cz), es)
+        Left  es -> (id, (TAny "?",cz), es)
         Right (Var _ id' tp@(_,ctrs) _,(tp',_)) ->
           if ctrs == cz then (id, tp, []) else
             --[] | tp==tp' -> (id, tp, [])
@@ -583,10 +583,10 @@ expr' (rel,txp@(txp_,cxp)) ids (Read z id) = (es, Read z{type_=tp} id') where   
                   (idtp id tp_'', tp'', [])
                 else
                   if null cxp then
-                    (id, (TypeV "?",cz), err)
+                    (id, (TAny "?",cz), err)
                   else
                     (id, tp'', [])
-              Nothing -> (id, (TypeV "?",cz), err)
+              Nothing -> (id, (TAny "?",cz), err)
             where
               pred :: Stmt -> Bool
               pred (Var _ k tp@(tp_,_) _) = (idtp id tp_ == k) && (isRight $ relates SUP txp tp)
@@ -599,10 +599,10 @@ expr' (rel,txp@(txp_,cxp)) ids (Read z id) = (es, Read z{type_=tp} id') where   
 expr' (rel,(txp_,cxp)) ids (Call z f exp) = (bool ese esf (null ese),
                                              Call z{type_=tp_out} f' exp')
   where
-    (ese, exp') = expr z (rel, (TypeV "?",cz)) ids exp
-    (esf, f')   = expr z (rel, (TypeF (fst$type_$getAnn$exp') txp_, cxp)) ids f
+    (ese, exp') = expr z (rel, (TAny "?",cz)) ids exp
+    (esf, f')   = expr z (rel, (TFunc (fst$type_$getAnn$exp') txp_, cxp)) ids f
                                   -- TODO: ctrs of exp'
 
     tp_out = case type_ $ getAnn f' of
-      (TypeF _ out_,ctrs) -> (out_,ctrs)
+      (TFunc _ out_,ctrs) -> (out_,ctrs)
       otherwise           -> (txp_,cxp)

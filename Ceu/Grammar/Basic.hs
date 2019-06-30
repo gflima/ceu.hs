@@ -60,7 +60,7 @@ data Stmt
 show_stmt :: Int -> Stmt -> String
 --show_stmt spc (Class _ (id,_) _ _ p) = replicate spc ' ' ++ "class "  ++ id ++ "\n" ++ show_stmt spc p
 --show_stmt spc (Inst  _ (id,_) _ p)   = replicate spc ' ' ++ "inst "   ++ id ++ "\n" ++ show_stmt spc p
-show_stmt spc (Data _ (TypeD id _ _,_) _ p) = replicate spc ' ' ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
+show_stmt spc (Data _ (TData id _ _,_) _ p) = replicate spc ' ' ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
 show_stmt spc (Var _ id (tp,_) p)     = replicate spc ' ' ++ "var "    ++ id ++ ": " ++ T.show' tp ++ "\n" ++ show_stmt spc p
 show_stmt spc (CallS _ e)             = replicate spc ' ' ++ "call " ++ show_exp spc e
 show_stmt spc (Ret _ e)               = replicate spc ' ' ++ "return " ++ show_exp spc e
@@ -155,7 +155,7 @@ instance HasAnn Stmt where
     getAnn (Ret   z _)         = z
     getAnn (Nop   z)           = z
 
-prelude z p = (Data z (TypeD ["Int"]          [] Type0,cz) False
-              (Data z (TypeD ["Bool"]         [] Type0,cz) False
-              (Data z (TypeD ["Bool","True"]  [] Type0,cz) False
-              (Data z (TypeD ["Bool","False"] [] Type0,cz) False p))))
+prelude z p = (Data z (TData ["Int"]          [] TUnit,cz) False
+              (Data z (TData ["Bool"]         [] TUnit,cz) False
+              (Data z (TData ["Bool","True"]  [] TUnit,cz) False
+              (Data z (TData ["Bool","False"] [] TUnit,cz) False p))))

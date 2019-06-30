@@ -52,7 +52,7 @@ infixr 1 `Seq`
 fromExp :: B.Exp -> Exp
 fromExp (B.Error  _ v)    = Error  v
 fromExp (B.Cons   z id)   = case type_ z of
-                              (TypeD _ _ Type0, _) -> Cons' id Unit
+                              (TData _ _ TUnit, _) -> Cons' id Unit
                               otherwise            -> Cons id
 fromExp (B.Arg    _)      = Read "_arg"
 fromExp (B.Unit   _)      = Unit
@@ -167,7 +167,7 @@ step (Match loc e p q,vars)  = case envEval vars e of
     aux vars (LVar id)    v = (Right True,            envWrite vars id v)
     aux vars LUnit        v = (Right True,            vars)
     aux vars (LCons id l)
-             (Cons' id' e)  = if T.isRel_ T.SUP (TypeD id [] Type0) (TypeD id' [] Type0) then
+             (Cons' id' e)  = if T.isRel_ T.SUP (TData id [] TUnit) (TData id' [] TUnit) then
                                 case envEval vars e of
                                   Error x -> (Left $ Error x, vars)
                                   e'      -> aux vars l e'

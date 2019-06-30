@@ -11,10 +11,10 @@ import Ceu.Grammar.Basic
 import qualified Ceu.Grammar.Simplify as Simplify
 import qualified Ceu.Grammar.TypeSys  as TypeSys
 
-int   = TypeD ["Int"]          [] Type0
-bool  = TypeD ["Bool"]         [] Type0
-boolf = TypeD ["Bool","False"] [] Type0
-boolt = TypeD ["Bool","True"]  [] Type0
+int   = TData ["Int"]          [] TUnit
+bool  = TData ["Bool"]         [] TUnit
+boolf = TData ["Bool","False"] [] TUnit
+boolt = TData ["Bool","True"]  [] TUnit
 
 main :: IO ()
 main = hspec spec
@@ -37,7 +37,7 @@ spec = do
         (Data annz (bool,cz) True
         (Data annz (boolt,cz) False
         (Data annz (boolf,cz) False
-        (Var annz "==" (TypeF (TypeN [(bool),(bool)]) (bool),cz)
+        (Var annz "==" (TFunc (TTuple [(bool),(bool)]) (bool),cz)
             (CallS annz (Call annz (Read annz "==")
               (Tuple annz
                 [Cons annz ["Bool","True"],
@@ -49,7 +49,7 @@ spec = do
         (Data annz (bool,cz) True
         (Data annz (boolt,cz) False
         (Data annz (boolf,cz) False
-        (Var annz "==" (TypeF (TypeN [(bool),(bool)]) (bool),cz)
+        (Var annz "==" (TFunc (TTuple [(bool),(bool)]) (bool),cz)
           (Match annz True
             (LCons ["Bool","True"] LUnit)
             (Call annz (Read annz "==")
@@ -69,16 +69,16 @@ spec = do
   describe "checkTypeSys -- declarations" $ do
 
     checkCheckIt (Nop annz)                  []
-    checkCheckIt (prelude annz (Var annz "a" (TypeN [int,int],cz) (Match annz False (LVar "a") (Cons annz ["Int","1"]) (Nop annz) (Nop annz)))) ["types do not match : expected '(Int,Int)' : found 'Int'"]
-    --checkCheckIt (Var annz "a" Type0 (Match annz False (LVar "a") (Cons annz ["Int","1"]) (Nop annz) (Nop annz))) ["types do not match"]
-    checkCheckIt (prelude annz (Var annz "a" (Type0,cz) (Match annz False (LVar "a") (Cons annz ["Int","1"]) (Nop annz) (Nop annz)))) ["types do not match : expected '()' : found 'Int'"]
+    checkCheckIt (prelude annz (Var annz "a" (TTuple [int,int],cz) (Match annz False (LVar "a") (Cons annz ["Int","1"]) (Nop annz) (Nop annz)))) ["types do not match : expected '(Int,Int)' : found 'Int'"]
+    --checkCheckIt (Var annz "a" TUnit (Match annz False (LVar "a") (Cons annz ["Int","1"]) (Nop annz) (Nop annz))) ["types do not match"]
+    checkCheckIt (prelude annz (Var annz "a" (TUnit,cz) (Match annz False (LVar "a") (Cons annz ["Int","1"]) (Nop annz) (Nop annz)))) ["types do not match : expected '()' : found 'Int'"]
 
     it "a <- 1" $
       (fst $ TypeSys.go (prelude annz (Var annz "a" (int,cz) (Match annz False (LVar "a") (Cons annz ["Int","1"]) (Nop annz) (Nop annz)))))
         `shouldBe` []
 
     it "a:() ; True <- a" $
-      (fst $ TypeSys.go (prelude annz (Var annz "a" (Type0,cz) (Match annz True (LCons ["Bool","True"] LUnit) (Read annz "a") (Nop annz) (Nop annz)))))
+      (fst $ TypeSys.go (prelude annz (Var annz "a" (TUnit,cz) (Match annz True (LCons ["Bool","True"] LUnit) (Read annz "a") (Nop annz) (Nop annz)))))
         `shouldBe` ["types do not match : expected 'Bool' : found '()'"]
     it "a:Int ; True <- a" $
       (fst $ TypeSys.go (prelude annz (Var annz "a" (int,cz) (Match annz True (LCons ["Bool","True"] LUnit) (Read annz "a") (Nop annz) (Nop annz)))))
@@ -91,17 +91,17 @@ spec = do
       (fst $ TypeSys.go (prelude annz (Var annz "a" (bool,cz) (Match annz False (LCons ["Bool","True"] LUnit) (Read annz "a") (Nop annz) (Nop annz)))))
         `shouldBe` ["match might fail"]
 
-    checkCheckIt (Var annz "a" (Type0,cz) (Var annz "a" (Type0,cz) (Nop annz)))  ["variable 'a' is already declared"]
+    checkCheckIt (Var annz "a" (TUnit,cz) (Var annz "a" (TUnit,cz) (Nop annz)))  ["variable 'a' is already declared"]
     checkCheckIt (prelude annz $ Match annz False (LVar "a") (Cons annz ["Int","1"]) (Nop annz) (Nop annz))        ["variable 'a' is not declared"]
 
-    checkCheckIt (prelude annz (Var annz "umn" (TypeF (int) (int),cz) (Var annz "a" (int,cz) (Match annz False (LVar "a") (Call annz (Read annz "umn") (Read annz "b")) (Nop annz) (Nop annz))))) ["variable 'b' is not declared"]
+    checkCheckIt (prelude annz (Var annz "umn" (TFunc (int) (int),cz) (Var annz "a" (int,cz) (Match annz False (LVar "a") (Call annz (Read annz "umn") (Read annz "b")) (Nop annz) (Nop annz))))) ["variable 'b' is not declared"]
 
 
     it "a:() ; a <- -1" $
       (fst $ TypeSys.go
         (prelude annz
-        (Var annz "umn" (TypeF (int) (int),cz)
-        (Var annz "a" (Type0,cz)
+        (Var annz "umn" (TFunc (int) (int),cz)
+        (Var annz "a" (TUnit,cz)
         (Match annz False (LVar "a") (Call annz (Read annz "umn") (Cons annz ["Int","1"])) (Nop annz) (Nop annz))))))
       `shouldBe` ["types do not match : expected '(Int -> ())' : found '(Int -> Int)'"]
       --`shouldBe` ["types do not match : expected '()' : found 'Int'"]
@@ -109,66 +109,66 @@ spec = do
     it "a:() ; a <- -b" $
       (fst $ TypeSys.go
         (prelude annz
-        (Var annz "umn" (TypeF (int) (int),cz)
-        (Var annz "a" (Type0,cz)
+        (Var annz "umn" (TFunc (int) (int),cz)
+        (Var annz "a" (TUnit,cz)
         (Match annz False (LVar "a") (Call annz (Read annz "umn") (Read annz "b")) (Nop annz) (Nop annz))))))
       `shouldBe` ["variable 'b' is not declared"]
       --`shouldBe` ["types do not match : expected '()' : found 'Int'", "variable 'b' is not declared"]
 
   checkCheckIt (prelude annz $ Match annz False (LVar "a") (Call annz (Read annz "f") (Cons annz ["Int","1"])) (Nop annz) (Nop annz)) ["variable 'a' is not declared","variable 'f' is not declared"]
-  checkCheckIt (Var annz "x" (TypeN [Type0,Type0],cz) (Match annz False (LVar "x") (Unit annz) (Nop annz) (Nop annz)))  ["types do not match : expected '((),())' : found '()'"]
+  checkCheckIt (Var annz "x" (TTuple [TUnit,TUnit],cz) (Match annz False (LVar "x") (Unit annz) (Nop annz) (Nop annz)))  ["types do not match : expected '((),())' : found '()'"]
   checkCheckIt (prelude annz (Var annz "x" (int,cz) (Match annz False (LVar "x") (Unit annz) (Nop annz) (Nop annz)))) ["types do not match : expected 'Int' : found '()'"]
-  checkCheckIt (prelude annz (Var annz "identity" (TypeF (TypeV "a") (TypeV "a"),cz) (Var annz "a" (int,cz) (Match annz False (LVar "a") (Call annz (Read annz "identity") (Cons annz ["Int","1"])) (Nop annz) (Nop annz))))) []
+  checkCheckIt (prelude annz (Var annz "identity" (TFunc (TAny "a") (TAny "a"),cz) (Var annz "a" (int,cz) (Match annz False (LVar "a") (Call annz (Read annz "identity") (Cons annz ["Int","1"])) (Nop annz) (Nop annz))))) []
 
   describe "write" $ do
     it "ret = 1" $
       (fst $ TypeSys.go
         (Data annz (int,cz) False
-        (Var annz "ret" (TypeT,cz)
+        (Var annz "ret" (TTop,cz)
         (Match annz False (LVar "ret") (Cons annz ["Int","1"]) (Nop annz) (Nop annz)))))
         `shouldBe` []
     it "ret = 1" $
       (fst $ TypeSys.go
         (Data annz (int,cz) False
-        (Var annz "ret" (TypeT,cz)
+        (Var annz "ret" (TTop,cz)
         (Match annz True (LVar "ret") (Cons annz ["Int","1"]) (Nop annz) (Nop annz)))))
         `shouldBe` ["match never fails"]
     it "(a,b) = (1,2)" $
       (fst $ TypeSys.go
         (Data annz (int,cz) False
-        (Var annz "a" (TypeT,cz)
-        (Var annz "b" (TypeT,cz)
+        (Var annz "a" (TTop,cz)
+        (Var annz "b" (TTop,cz)
         (Match annz False (LTuple [LVar "a",LVar "b"]) (Tuple annz [Cons annz ["Int","1"],Cons annz ["Int","2"]]) (Nop annz) (Nop annz))))))
         `shouldBe` []
     it "(a,b) = (1,2)" $
       (fst $ TypeSys.go
         (Data annz (int,cz) False
-        (Var annz "a" (TypeT,cz)
-        (Var annz "b" (TypeT,cz)
+        (Var annz "a" (TTop,cz)
+        (Var annz "b" (TTop,cz)
         (Match annz True (LTuple [LVar "a",LVar "b"]) (Tuple annz [Cons annz ["Int","1"],Cons annz ["Int","2"]]) (Nop annz) (Nop annz))))))
         `shouldBe` ["match never fails"]
     it "(a,b) = (1,2,3)" $
       (fst $ TypeSys.go
         (Data annz (int,cz) False
-        (Var annz "a" (TypeT,cz)
-        (Var annz "b" (TypeT,cz)
+        (Var annz "a" (TTop,cz)
+        (Var annz "b" (TTop,cz)
         (Match annz False (LTuple [LVar "a",LVar "b"]) (Tuple annz [Cons annz ["Int","1"],Cons annz ["Int","2"],Cons annz ["Int","3"]]) (Nop annz) (Nop annz))))))
         `shouldBe` ["match never succeeds : arity mismatch"]
           --["types do not match : expected '(?,?)' : found '(Int.1,Int.2,Int.3)'"]
     it "(a,b,c) = (1,2)" $
       (fst $ TypeSys.go
         (Data annz (int,cz) False
-        (Var annz "a" (TypeT,cz)
-        (Var annz "b" (TypeT,cz)
-        (Var annz "c" (TypeT,cz)
+        (Var annz "a" (TTop,cz)
+        (Var annz "b" (TTop,cz)
+        (Var annz "c" (TTop,cz)
         (Match annz False (LTuple [LVar "a",LVar "b",LVar "c"]) (Tuple annz [Cons annz ["Int","1"],Cons annz ["Int","2"]]) (Nop annz) (Nop annz)))))))
         `shouldBe` ["match never succeeds : arity mismatch"]
           --["types do not match : expected '(?,?,?)' : found '(Int.1,Int.2)'"]
     it "ret = f()" $
       (fst $ TypeSys.go
         (Data annz (int,cz) False
-        (Var annz "f" (TypeF Type0 (int),cz)
-        (Var annz "ret" (TypeT,cz)
+        (Var annz "f" (TFunc TUnit (int),cz)
+        (Var annz "ret" (TTop,cz)
         (Match annz False (LVar "ret") (Call annz (Read annz "f") (Unit annz)) (Nop annz) (Nop annz))))))
         `shouldBe` []
 
@@ -188,29 +188,29 @@ spec = do
 
   describe "functions" $ do
     it "func ~Int" $
-      (fst $ TypeSys.go (Var annz "f" (TypeF Type0 (int),cz) (Nop annz)))
+      (fst $ TypeSys.go (Var annz "f" (TFunc TUnit (int),cz) (Nop annz)))
         `shouldBe` ["data 'Int' is not declared"]
 
     it "func f; func f" $
-      TypeSys.go (Var annz "f" (TypeF Type0 Type0,cz) (Var annz "f" (TypeF Type0 Type0,cz) (Nop annz)))
-        `shouldBe` ([],Var annz "f" (TypeF Type0 Type0,cz) (Var annz "f" (TypeF Type0 Type0,cz) (Nop annz)))
+      TypeSys.go (Var annz "f" (TFunc TUnit TUnit,cz) (Var annz "f" (TFunc TUnit TUnit,cz) (Nop annz)))
+        `shouldBe` ([],Var annz "f" (TFunc TUnit TUnit,cz) (Var annz "f" (TFunc TUnit TUnit,cz) (Nop annz)))
 
     it "func f[a]; func f[0]" $
-      TypeSys.go (Var annz "f" (TypeF (TypeV "a") (TypeV "a"),cz) (Var annz "f" (TypeF Type0 Type0,cz) (Nop annz)))
-        `shouldBe` (["variable 'f' is already declared"],Var annz "f" (TypeF (TypeV "a") (TypeV "a"),cz) (Var annz "f" (TypeF Type0 Type0,cz) (Nop annz)))
+      TypeSys.go (Var annz "f" (TFunc (TAny "a") (TAny "a"),cz) (Var annz "f" (TFunc TUnit TUnit,cz) (Nop annz)))
+        `shouldBe` (["variable 'f' is already declared"],Var annz "f" (TFunc (TAny "a") (TAny "a"),cz) (Var annz "f" (TFunc TUnit TUnit,cz) (Nop annz)))
 
     it "func f; func ~f" $
-      TypeSys.go (Var annz "f" (TypeF Type0 Type0,cz) (Var annz "f" (TypeF Type0 TypeT,cz) (Nop annz)))
-        `shouldBe` (["variable 'f' is already declared"],Var annz "f" (TypeF Type0 Type0,cz) (Var annz "f" (TypeF Type0 TypeT,cz) (Nop annz)))
+      TypeSys.go (Var annz "f" (TFunc TUnit TUnit,cz) (Var annz "f" (TFunc TUnit TTop,cz) (Nop annz)))
+        `shouldBe` (["variable 'f' is already declared"],Var annz "f" (TFunc TUnit TUnit,cz) (Var annz "f" (TFunc TUnit TTop,cz) (Nop annz)))
 
     it "func first :: (a,a)->a ; var a::Int ; a = first((),1)" $
-      (fst $ TypeSys.go (prelude annz (Var annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a"),cz) (Var annz "a" (int,cz) (Match annz False (LVar "a") (Call annz (Read annz "first") (Tuple annz [(Unit annz),(Cons annz ["Int","1"])])) (Nop annz) (Nop annz))))))
+      (fst $ TypeSys.go (prelude annz (Var annz "first" (TFunc (TTuple [(TAny "a"),(TAny "a")]) (TAny "a"),cz) (Var annz "a" (int,cz) (Match annz False (LVar "a") (Call annz (Read annz "first") (Tuple annz [(Unit annz),(Cons annz ["Int","1"])])) (Nop annz) (Nop annz))))))
         `shouldBe`
       --["types do not match : expected '(a,a)' : found '((),Int)'","ambiguous instances for 'a' : '()', 'Int'"]
           ["types do not match : expected '(((),Int) -> Int)' : found '((a,a) -> a)'","ambiguous instances for 'a' : '()', 'Int', 'Int'"]
 
 {-
-    checkCheckIt (prelude annz (Var annz "first" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (TypeV "a"),cz) (Var annz "a" (int,cz) (Match annz False (LVar "a") (Call annz (Read annz "first") (Tuple annz [(Cons annz ["Int","1"]),(Cons annz ["Int","1"])])) (Nop annz) (Nop annz))))) []
+    checkCheckIt (prelude annz (Var annz "first" (TFunc (TTuple [(TAny "a"),(TAny "a")]) (TAny "a"),cz) (Var annz "a" (int,cz) (Match annz False (LVar "a") (Call annz (Read annz "first") (Tuple annz [(Cons annz ["Int","1"]),(Cons annz ["Int","1"])])) (Nop annz) (Nop annz))))) []
 -}
 
     it "() <- Arg" $
@@ -220,9 +220,9 @@ spec = do
 
     it "f <- func x = x" $
       (fst $ TypeSys.go
-        (Var annz "f" (TypeF Type0 Type0,cz)
+        (Var annz "f" (TFunc TUnit TUnit,cz)
         (Match annz False (LVar "f")
-          (Func annz (TypeF Type0 Type0,cz)
+          (Func annz (TFunc TUnit TUnit,cz)
             (Ret annz (Arg annz)))
           (Nop annz)
           (Nop annz))))
@@ -230,28 +230,28 @@ spec = do
 
     it "f : () -> a ; return f()" $
       (fst $ TypeSys.go
-        (Var annz "f" (TypeF Type0 (TypeV "a"),cz)
+        (Var annz "f" (TFunc TUnit (TAny "a"),cz)
         (Ret annz (Call annz (Read annz "f") (Unit annz)))))
         `shouldBe` []
 
     it "f : a -> Int ; return f(1)" $
       (fst $ TypeSys.go
         (Data annz (int,cz) False
-        (Var annz "f" (TypeF (TypeV "a") (int),cz)
+        (Var annz "f" (TFunc (TAny "a") (int),cz)
         (Ret annz (Call annz (Read annz "f") (Cons annz ["Int","1"]))))))
         `shouldBe` []
 
     it "Int ; X a ; inst X Int ; return fff 1" $
       (fst $ TypeSys.go $ Simplify.go
         (Data annz (int,cz) False
-        (Class annz "X" (cv "a") [(annz,"fff",(TypeF (TypeV "a") (int),cvc ("a","X")),False)]
-            (Var annz "fff" (TypeF (TypeV "a") (int),cvc ("a","X"))
+        (Class annz "X" (cv "a") [(annz,"fff",(TFunc (TAny "a") (int),cvc ("a","X")),False)]
+            (Var annz "fff" (TFunc (TAny "a") (int),cvc ("a","X"))
         (Inst annz "X" (int,cz)
-            [(annz,"fff",(TypeF (int) (int),cz),True)]
-            (Var annz "fff" (TypeF (int) (int),cz)
+            [(annz,"fff",(TFunc (int) (int),cz),True)]
+            (Var annz "fff" (TFunc (int) (int),cz)
             (Match annz False
               (LVar "fff")
-              (Func annz (TypeF (int) (int),cz)
+              (Func annz (TFunc (int) (int),cz)
                 (Ret annz (Cons annz ["Int","1"])))
               (Seq annz
                 (Nop annz)
@@ -263,48 +263,48 @@ spec = do
   describe "pattern matching" $ do
     it "1 = 1" $
       TypeSys.go (prelude annz $ Match annz False (LCons ["Int","1"] LUnit) (Cons annz ["Int","1"]) (Nop annz) (Nop annz))
-      `shouldBe` ([],Data annz (TypeD ["Int"] [] Type0,cz) False (Data annz (TypeD ["Bool"] [] Type0,cz) False (Data annz (TypeD ["Bool","True"] [] Type0,cz) False (Data annz (TypeD ["Bool","False"] [] Type0,cz) False (Match annz{type_=(TypeB,cz)} False (LCons ["Int","1"] LUnit) (Cons annz{type_=(TypeD ["Int"] [] Type0,cz)} ["Int","1"]) (Nop annz) (Nop annz))))))
+      `shouldBe` ([],Data annz (TData ["Int"] [] TUnit,cz) False (Data annz (TData ["Bool"] [] TUnit,cz) False (Data annz (TData ["Bool","True"] [] TUnit,cz) False (Data annz (TData ["Bool","False"] [] TUnit,cz) False (Match annz{type_=(TBot,cz)} False (LCons ["Int","1"] LUnit) (Cons annz{type_=(TData ["Int"] [] TUnit,cz)} ["Int","1"]) (Nop annz) (Nop annz))))))
     it "1 <- 2" $
       TypeSys.go (prelude annz $ Match annz True (LCons ["Int","1"] LUnit) (Cons annz ["Int","2"]) (Nop annz) (Nop annz))
-      `shouldBe` (["match never succeeds : data mismatch"],Data annz (TypeD ["Int"] [] Type0,cz) False (Data annz (TypeD ["Bool"] [] Type0,cz) False (Data annz (TypeD ["Bool","True"] [] Type0,cz) False (Data annz (TypeD ["Bool","False"] [] Type0,cz) False (Match annz True (LCons ["Int","1"] LUnit) (Cons (annz {type_ = (TypeD ["Int"] [] Type0,cz)}) ["Int","2"]) (Nop annz) (Nop annz))))))
+      `shouldBe` (["match never succeeds : data mismatch"],Data annz (TData ["Int"] [] TUnit,cz) False (Data annz (TData ["Bool"] [] TUnit,cz) False (Data annz (TData ["Bool","True"] [] TUnit,cz) False (Data annz (TData ["Bool","False"] [] TUnit,cz) False (Match annz True (LCons ["Int","1"] LUnit) (Cons (annz {type_ = (TData ["Int"] [] TUnit,cz)}) ["Int","2"]) (Nop annz) (Nop annz))))))
     it "_ = 1" $
       TypeSys.go (Match annz False LAny (Cons annz ["Int","1"]) (Nop annz) (Nop annz))
-      `shouldBe` (["data 'Int.1' is not declared"],Match annz{type_=(TypeB,cz)} False LAny (Cons annz{type_=(TypeV "?",cz)} ["Int","1"]) (Nop annz) (Nop annz))
+      `shouldBe` (["data 'Int.1' is not declared"],Match annz{type_=(TBot,cz)} False LAny (Cons annz{type_=(TAny "?",cz)} ["Int","1"]) (Nop annz) (Nop annz))
     it "(x,_) = 1" $
       TypeSys.go (prelude annz
             (Var annz "x" (int,cz)
               (Match annz False (LTuple [LVar "x", LAny]) (Cons annz ["Int","1"]) (Nop annz) (Nop annz))))
-      `shouldBe` (["match never succeeds"],Data annz (int,cz) False (Data annz (bool,cz) False (Data annz (boolt,cz) False (Data annz (boolf,cz) False (Var annz{type_=(TypeB,cz)} "x" (int,cz) (Match annz{type_=(TypeB,cz)} False (LTuple [LVar "x",LAny]) (Cons annz{type_=(TypeD ["Int"] [] Type0,cz)} ["Int","1"]) (Nop annz) (Nop annz)))))))
+      `shouldBe` (["match never succeeds"],Data annz (int,cz) False (Data annz (bool,cz) False (Data annz (boolt,cz) False (Data annz (boolf,cz) False (Var annz{type_=(TBot,cz)} "x" (int,cz) (Match annz{type_=(TBot,cz)} False (LTuple [LVar "x",LAny]) (Cons annz{type_=(TData ["Int"] [] TUnit,cz)} ["Int","1"]) (Nop annz) (Nop annz)))))))
 
     it "(x,_) = (1,1)" $
       TypeSys.go (prelude annz
             (Var annz "x" (int,cz)
               (Match annz False (LTuple [LVar "x", LAny]) (Tuple annz [Cons annz ["Int","1"], Cons annz ["Int","1"]]) (Nop annz) (Nop annz))))
-      `shouldBe` ([],Data annz (int,cz) False (Data annz (bool,cz) False (Data annz (boolt,cz) False (Data annz (boolf,cz) False (Var (annz{type_ = (TypeB,cz)}) "x" (int,cz) (Match (annz{type_ = (TypeB,cz)}) False (LTuple [LVar "x",LAny]) (Tuple (annz{type_ = (TypeN [TypeD ["Int"] [] Type0,TypeD ["Int"] [] Type0],cz)}) [Cons (annz{type_ = (TypeD ["Int"] [] Type0,cz)}) ["Int","1"],Cons (annz{type_ = (TypeD ["Int"] [] Type0,cz)}) ["Int","1"]]) (Nop annz) (Nop annz)))))))
+      `shouldBe` ([],Data annz (int,cz) False (Data annz (bool,cz) False (Data annz (boolt,cz) False (Data annz (boolf,cz) False (Var (annz{type_ = (TBot,cz)}) "x" (int,cz) (Match (annz{type_ = (TBot,cz)}) False (LTuple [LVar "x",LAny]) (Tuple (annz{type_ = (TTuple [TData ["Int"] [] TUnit,TData ["Int"] [] TUnit],cz)}) [Cons (annz{type_ = (TData ["Int"] [] TUnit,cz)}) ["Int","1"],Cons (annz{type_ = (TData ["Int"] [] TUnit,cz)}) ["Int","1"]]) (Nop annz) (Nop annz)))))))
 
     it "((_,x),_) = (y,1)" $
       TypeSys.go (prelude annz
             (Var annz "x" (int,cz)
-              (Var annz "y" (TypeN [Type0, int],cz)
+              (Var annz "y" (TTuple [TUnit, int],cz)
                 (Match annz False
                   (LTuple [LTuple [LAny,LVar "x"], LAny])
                   (Tuple annz [Read annz "y", Cons annz ["Int","1"]])
                   (Nop annz)
                   (Nop annz)))))
-      `shouldBe` ([],Data annz (int,cz) False (Data annz (bool,cz) False (Data annz (boolt,cz) False (Data annz (boolf,cz) False (Var (annz{type_ = (TypeB,cz)}) "x" (int,cz) (Var (annz{type_ = (TypeB,cz)}) "y" (TypeN [Type0,int],cz) (Match (annz{type_ = (TypeB,cz)}) False (LTuple [LTuple [LAny,LVar "x"],LAny]) (Tuple (annz{type_ = (TypeN [TypeN [Type0,int],TypeD ["Int"] [] Type0],cz)}) [Read (annz{type_ = (TypeN [Type0,int],cz)}) "y",Cons annz{type_ = (TypeD ["Int"] [] Type0,cz)} ["Int","1"]]) (Nop annz) (Nop annz))))))))
+      `shouldBe` ([],Data annz (int,cz) False (Data annz (bool,cz) False (Data annz (boolt,cz) False (Data annz (boolf,cz) False (Var (annz{type_ = (TBot,cz)}) "x" (int,cz) (Var (annz{type_ = (TBot,cz)}) "y" (TTuple [TUnit,int],cz) (Match (annz{type_ = (TBot,cz)}) False (LTuple [LTuple [LAny,LVar "x"],LAny]) (Tuple (annz{type_ = (TTuple [TTuple [TUnit,int],TData ["Int"] [] TUnit],cz)}) [Read (annz{type_ = (TTuple [TUnit,int],cz)}) "y",Cons annz{type_ = (TData ["Int"] [] TUnit,cz)} ["Int","1"]]) (Nop annz) (Nop annz))))))))
 
     it "`a` = 1" $
       TypeSys.go (prelude annz
         (Var annz "a" (int,cz) (Match annz True (LExp $ Read annz "a") (Cons annz ["Int","1"]) (Nop annz) (Nop annz))))
-      `shouldBe` ([],Data annz (int,cz) False (Data annz (bool,cz) False (Data annz (boolt,cz) False (Data annz (boolf,cz) False (Var annz "a" (int,cz) (Match annz True (LExp $ Read annz{type_ = (int,cz)} "a") (Cons annz{type_=(TypeD ["Int"] [] Type0,cz)} ["Int","1"]) (Nop annz) (Nop annz)))))))
+      `shouldBe` ([],Data annz (int,cz) False (Data annz (bool,cz) False (Data annz (boolt,cz) False (Data annz (boolf,cz) False (Var annz "a" (int,cz) (Match annz True (LExp $ Read annz{type_ = (int,cz)} "a") (Cons annz{type_=(TData ["Int"] [] TUnit,cz)} ["Int","1"]) (Nop annz) (Nop annz)))))))
     it "`a` = 1" $
       TypeSys.go (prelude annz
-        (Var annz "a" (Type0,cz) (Match annz True (LExp $ Read annz "a") (Cons annz ["Int","1"]) (Nop annz) (Nop annz))))
-      `shouldBe` (["types do not match : expected '()' : found 'Int'"],Data annz (int,cz) False (Data annz (bool,cz) False (Data annz (boolt,cz) False (Data annz (boolf,cz) False (Var annz "a" (Type0,cz) (Match annz True (LExp $ Read annz{type_ = (Type0,cz)} "a") (Cons annz{type_=(TypeD ["Int"] [] Type0,cz)} ["Int","1"]) (Nop annz) (Nop annz)))))))
+        (Var annz "a" (TUnit,cz) (Match annz True (LExp $ Read annz "a") (Cons annz ["Int","1"]) (Nop annz) (Nop annz))))
+      `shouldBe` (["types do not match : expected '()' : found 'Int'"],Data annz (int,cz) False (Data annz (bool,cz) False (Data annz (boolt,cz) False (Data annz (boolf,cz) False (Var annz "a" (TUnit,cz) (Match annz True (LExp $ Read annz{type_ = (TUnit,cz)} "a") (Cons annz{type_=(TData ["Int"] [] TUnit,cz)} ["Int","1"]) (Nop annz) (Nop annz)))))))
 
     it "data X with Int ; X 1 <- X 2" $
       (fst $ TypeSys.go (prelude annz
-        (Data annz (TypeD ["Xxx"] [] int,cz) False (Match annz True (LCons ["Xxx"] (LCons ["Int","1"] LUnit)) (Call annz (Cons annz ["Xxx"]) (Cons annz ["Int","2"])) (Ret annz (Cons annz ["Int","2"])) (Nop annz)))))
+        (Data annz (TData ["Xxx"] [] int,cz) False (Match annz True (LCons ["Xxx"] (LCons ["Int","1"] LUnit)) (Call annz (Cons annz ["Xxx"]) (Cons annz ["Int","2"])) (Ret annz (Cons annz ["Int","2"])) (Nop annz)))))
       `shouldBe` ["match never succeeds : data mismatch"]
         --["types do not match : expected 'Int.1' : found 'Int.2'"]
 
@@ -314,45 +314,45 @@ spec = do
 
     it "A ; A.B ; A <- A.B" $
       (fst $ TypeSys.go
-        (Data annz (TypeD ["A"] [] Type0,cz) True
-        (Data annz (TypeD ["A","B"] [] Type0,cz) False
+        (Data annz (TData ["A"] [] TUnit,cz) True
+        (Data annz (TData ["A","B"] [] TUnit,cz) False
         (Match annz False (LCons ["A"] LAny) (Cons annz ["A","B"]) (Nop annz) (Nop annz)))))
       `shouldBe` []
 
     it "A ; A.B ; x:A.B ; A <- x" $
       (fst $ TypeSys.go
-        (Data annz (TypeD ["A"]     [] Type0,cz) True
-        (Data annz (TypeD ["A","B"] [] Type0,cz) False
-        (Var  annz "x" (TypeD ["A","B"] [] Type0,cz)
+        (Data annz (TData ["A"]     [] TUnit,cz) True
+        (Data annz (TData ["A","B"] [] TUnit,cz) False
+        (Var  annz "x" (TData ["A","B"] [] TUnit,cz)
         (Match annz False (LCons ["A"] LAny) (Cons annz ["A","B"]) (Nop annz) (Nop annz))))))
       `shouldBe` []
 
     it "A ; A.B ; A.B <- A" $
       (fst $ TypeSys.go
-        (Data annz (TypeD ["A"]     [] Type0,cz) False
-        (Data annz (TypeD ["A","B"] [] Type0,cz) True
+        (Data annz (TData ["A"]     [] TUnit,cz) False
+        (Data annz (TData ["A","B"] [] TUnit,cz) True
         (Match annz True (LCons ["A","B"] LAny) (Cons annz ["A"]) (Nop annz) (Nop annz)))))
       `shouldBe` ["match never succeeds : data mismatch"]
         --["types do not match : expected 'A.B' : found 'A'"]
 
     it "A ; A <- 1" $
-      (fst $ TypeSys.go (Data annz (TypeD ["A"] [] Type0,cz) True (Match annz True (LCons ["A"] LUnit) (Cons annz ["Int","1"]) (Nop annz) (Nop annz))))
+      (fst $ TypeSys.go (Data annz (TData ["A"] [] TUnit,cz) True (Match annz True (LCons ["A"] LUnit) (Cons annz ["Int","1"]) (Nop annz) (Nop annz))))
       `shouldBe` ["match never succeeds : data mismatch"] --["types do not match : expected 'A' : found 'Int.1'"]
 
     it "A ; A <- A 1" $
-      (fst $ TypeSys.go (Data annz (TypeD ["A"] [] Type0,cz) False (Match annz False (LCons ["A"] LUnit) (Call annz (Cons annz ["A"]) (Cons annz ["Int","1"])) (Nop annz) (Nop annz))))
+      (fst $ TypeSys.go (Data annz (TData ["A"] [] TUnit,cz) False (Match annz False (LCons ["A"] LUnit) (Call annz (Cons annz ["A"]) (Cons annz ["Int","1"])) (Nop annz) (Nop annz))))
       `shouldBe` ["match never succeeds"] --["types do not match : expected '()' : found 'Int.1'"]
 
     it "A ; A 1 <- A" $
-      (fst $ TypeSys.go (prelude annz $ Data annz (TypeD ["A"] [] Type0,cz) False (Match annz False (LCons ["A"] (LCons ["Int","1"] LUnit)) (Cons annz ["A"]) (Nop annz) (Nop annz))))
+      (fst $ TypeSys.go (prelude annz $ Data annz (TData ["A"] [] TUnit,cz) False (Match annz False (LCons ["A"] (LCons ["Int","1"] LUnit)) (Cons annz ["A"]) (Nop annz) (Nop annz))))
       `shouldBe` ["match never succeeds"] --["types do not match : expected 'Int.1' : found '()'"]
 
     it "A ; A.B ; x:(Int,A.B) ; (1,A) <- x" $
       (fst $ TypeSys.go
         (Data annz (int,cz) False
-        (Data annz (TypeD ["A"] [] Type0,cz) True
-        (Data annz (TypeD ["A","B"] [] Type0,cz) False
-        (Var  annz "x" (TypeN [int, TypeD ["A","B"] [] Type0],cz)
+        (Data annz (TData ["A"] [] TUnit,cz) True
+        (Data annz (TData ["A","B"] [] TUnit,cz) False
+        (Var  annz "x" (TTuple [int, TData ["A","B"] [] TUnit],cz)
         (Match annz True (LTuple [LCons ["Int","1"] LUnit, LCons ["A"] LUnit]) (Read annz "x") (Nop annz) (Nop annz)))))))
       `shouldBe` []
 
@@ -379,7 +379,7 @@ spec = do
 
     it "Bool.True (w/o Bool)" $
       (fst $ TypeSys.go
-        (Data annz (TypeD ["Bool","True","Xxx"] [] Type0,cz) False (Nop annz)))
+        (Data annz (TData ["Bool","True","Xxx"] [] TUnit,cz) False (Nop annz)))
       `shouldBe` ["data 'Bool.True' is not declared"]
 
     it "Int/Int" $
@@ -415,7 +415,7 @@ spec = do
         (Data annz (bool,cz) True
         (Data annz (boolt,cz) False
         (Data annz (boolf,cz) False
-        (Var annz "==" (TypeF (TypeN [(bool),(bool)]) (bool),cz)
+        (Var annz "==" (TFunc (TTuple [(bool),(bool)]) (bool),cz)
             (CallS annz (Call annz (Read annz "==")
               (Tuple annz
                 [Cons annz ["Bool","True"],
@@ -427,7 +427,7 @@ spec = do
         (Data annz (bool,cz) True
         (Data annz (boolt,cz) False
         (Data annz (boolf,cz) False
-        (Var annz "==" (TypeF (TypeN [(bool),(bool)]) (bool),cz)
+        (Var annz "==" (TFunc (TTuple [(bool),(bool)]) (bool),cz)
           (Match annz True
             (LCons ["Bool","True"] LUnit)
             (Call annz (Read annz "==")
@@ -444,7 +444,7 @@ spec = do
         (Data annz (bool,cz) True
         (Data annz (boolt,cz) False
         (Data annz (boolf,cz) False
-        (Var annz "==" (TypeF (TypeN [(int),(int)]) (bool),cz)
+        (Var annz "==" (TFunc (TTuple [(int),(int)]) (bool),cz)
           (Match annz True
             (LCons ["Bool","True"] LUnit)
             (Call annz (Read annz "==")
@@ -464,8 +464,8 @@ spec = do
 
     it "data X with Int ; x <- X ()" $
       (fst $ TypeSys.go
-        (Data annz (TypeD ["X"] [] int,cz) False
-        (Var annz "x" (TypeD ["X"] [] Type0,cz)
+        (Data annz (TData ["X"] [] int,cz) False
+        (Var annz "x" (TData ["X"] [] TUnit,cz)
           (Match annz False (LVar "x") (Cons annz ["X"]) (Nop annz) (Nop annz)))))
       `shouldBe` ["types do not match : expected 'X' : found '(Int -> X)'"]
       --["types do not match : expected 'Int' : found '()'"]
@@ -473,24 +473,24 @@ spec = do
 
     it "data X with Int" $
       (fst $ TypeSys.go
-        (Data annz (TypeD ["X"] [] int,cz) False
-        (Var annz "x" (TypeD ["X"] [] (int),cz)
+        (Data annz (TData ["X"] [] int,cz) False
+        (Var annz "x" (TData ["X"] [] (int),cz)
           (Match annz False (LVar "x") (Call annz (Cons annz ["X"]) (Cons annz ["Int","1"])) (Nop annz) (Nop annz)))))
       `shouldBe` ["data 'Int' is not declared","data 'Int.1' is not declared"]
 
     it "data X with Int ; data X.Y with Int" $
       (TypeSys.go
         (Data annz (int,cz) False
-        (Data annz (TypeD ["X"]     [] int,cz) False
-        (Data annz (TypeD ["X","Y"] [] int,cz) False
+        (Data annz (TData ["X"]     [] int,cz) False
+        (Data annz (TData ["X","Y"] [] int,cz) False
         (Nop annz)))))
-      `shouldBe` ([],Data annz (int,cz) False (Data annz (TypeD ["X"] [] int,cz) False (Data annz (TypeD ["X","Y"] [] int,cz) False (Nop annz))))
+      `shouldBe` ([],Data annz (int,cz) False (Data annz (TData ["X"] [] int,cz) False (Data annz (TData ["X","Y"] [] int,cz) False (Nop annz))))
 
     it "data X with (Int,Int)" $
       (fst $ TypeSys.go
         (Data annz (int,cz) False
-        (Data annz (TypeD ["X"] [] (TypeN [int, int]),cz) False
-        (Var annz "x" (TypeD ["X"] [] (TypeN [int, int]),cz)
+        (Data annz (TData ["X"] [] (TTuple [int, int]),cz) False
+        (Var annz "x" (TData ["X"] [] (TTuple [int, int]),cz)
           (Match annz False (LVar "x") (Call annz (Cons annz ["X"]) (Tuple annz [Cons annz ["Int","1"], Cons annz ["Int","2"]])) (Nop annz) (Nop annz))))))
       `shouldBe` []
 
@@ -499,7 +499,7 @@ spec = do
       it "data X with Int ; x:Int ; X x <- X 1" $
         (fst $ TypeSys.go
           (Data annz (int,cz) False
-          (Data annz (TypeD ["X"] [] int,cz) False
+          (Data annz (TData ["X"] [] int,cz) False
           (Var annz "x" (int,cz)
           (Match annz False (LCons ["X"] (LVar "x")) (Call annz (Cons annz ["X"]) (Cons annz ["Int","1"])) (Nop annz) (Nop annz))))))
         `shouldBe` []
@@ -507,7 +507,7 @@ spec = do
       it "data X with Int ; x:Int ; X x <- X ()" $
         (fst $ TypeSys.go
           (Data annz (int,cz) False
-          (Data annz (TypeD ["X"] [] int,cz) False
+          (Data annz (TData ["X"] [] int,cz) False
           (Var annz "x" (int,cz)
           (Match annz False (LCons ["X"] (LVar "x")) (Cons annz ["X"]) (Nop annz) (Nop annz))))))
         `shouldBe` ["types do not match : expected 'X' : found '(Int -> X)'"]
@@ -526,56 +526,56 @@ spec = do
     it "X.f ; Y.f" $
       (fst $ TypeSys.go
         (Class annz "X" (cv "a") []
-        (Var annz "f" (TypeF (TypeV "a") Type0,cvc ("a","X"))
+        (Var annz "f" (TFunc (TAny "a") TUnit,cvc ("a","X"))
         (Class annz "Y" (cv "a") []
-        (Var annz "f" (TypeF (TypeV "a") Type0,cvc ("a","Y"))
+        (Var annz "f" (TFunc (TAny "a") TUnit,cvc ("a","Y"))
         (Nop annz))))))
       `shouldBe` ["variable 'f' is already declared"]
 
     it "X.f ; f" $
       (fst $ TypeSys.go
         (Class annz "X" (cv "a") []
-        (Var annz "f" (TypeF (TypeV "a") Type0, cvc ("a","X"))
-        (Var annz "f" (TypeF (TypeV "a") Type0,cz)
+        (Var annz "f" (TFunc (TAny "a") TUnit, cvc ("a","X"))
+        (Var annz "f" (TFunc (TAny "a") TUnit,cz)
         (Nop annz)))))
       `shouldBe` ["variable 'f' is already declared"]
 
     it "~Bool ; Equalable ; (==)" $
       TypeSys.go
         (Class annz "Equalable" (cv "a") []
-        (Var annz "==" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (bool),cz)
+        (Var annz "==" (TFunc (TTuple [(TAny "a"),(TAny "a")]) (bool),cz)
         (Nop annz)))
-      `shouldBe` (["data 'Bool' is not declared"],(Var annz "==" (TypeF (TypeN [TypeV "a",TypeV "a"]) (bool),cz) (Nop annz)))
+      `shouldBe` (["data 'Bool' is not declared"],(Var annz "==" (TFunc (TTuple [TAny "a",TAny "a"]) (bool),cz) (Nop annz)))
 
     it "Bool ; Equalable ; (==)" $
       TypeSys.go
         (Data annz (bool,cz) True
         (Class annz "Equalable" (cv "a") []
-        (Var annz "==" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (bool),cz)
+        (Var annz "==" (TFunc (TTuple [(TAny "a"),(TAny "a")]) (bool),cz)
         (Nop annz))))
-      `shouldBe` ([],Data annz (bool,cz) True (Var annz "==" (TypeF (TypeN [TypeV "a",TypeV "a"]) (bool),cz) (Nop annz)))
+      `shouldBe` ([],Data annz (bool,cz) True (Var annz "==" (TFunc (TTuple [TAny "a",TAny "a"]) (bool),cz) (Nop annz)))
 
     it "Bool ; Equalable ; (==)" $
       TypeSys.go
         (Data annz (bool,cz) True
         (Class annz "Equalable" (cv "a") []
-        (Var annz "==" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (bool), cvc ("a","Equalable"))
+        (Var annz "==" (TFunc (TTuple [(TAny "a"),(TAny "a")]) (bool), cvc ("a","Equalable"))
         (Nop annz))))
       `shouldBe` ([],Data annz (bool,cz) True (Nop annz))
 
     it "A ; Xable ; inst ; inst" $
       (fst $ TypeSys.go
-        (Data annz (TypeD ["A"] [] Type0,cz) False
-        (Class annz "Xable" (cv "a") [(annz,"fff",(TypeF (TypeV "a") Type0,cz),False)]
-        (Var annz "fff" (TypeF (TypeV "a") Type0,cz)
-        (Inst annz "Xable" (TypeD ["A"] [] Type0,cz)
-          [(annz, "fff", (TypeF (TypeD ["A"] [] Type0) Type0,cz), True)]
-          (func "$fff$(A -> ())$" (TypeF (TypeD ["A"] [] Type0) Type0,cz)
+        (Data annz (TData ["A"] [] TUnit,cz) False
+        (Class annz "Xable" (cv "a") [(annz,"fff",(TFunc (TAny "a") TUnit,cz),False)]
+        (Var annz "fff" (TFunc (TAny "a") TUnit,cz)
+        (Inst annz "Xable" (TData ["A"] [] TUnit,cz)
+          [(annz, "fff", (TFunc (TData ["A"] [] TUnit) TUnit,cz), True)]
+          (func "$fff$(A -> ())$" (TFunc (TData ["A"] [] TUnit) TUnit,cz)
             (Seq annz
               (Nop annz)
-              (Inst annz "Xable" (TypeD ["A"] [] Type0,cz)
-                [(annz,"fff",(TypeF (TypeD ["A"] [] Type0) Type0,cz),True)]
-                (Var annz "$fff$(A -> ())$" (TypeF (TypeD ["A"] [] Type0) Type0,cz)
+              (Inst annz "Xable" (TData ["A"] [] TUnit,cz)
+                [(annz,"fff",(TFunc (TData ["A"] [] TUnit) TUnit,cz),True)]
+                (Var annz "$fff$(A -> ())$" (TFunc (TData ["A"] [] TUnit) TUnit,cz)
                 (Seq annz
                   (Nop annz)
                   (Nop annz))))
@@ -584,10 +584,10 @@ spec = do
 
     it "A ; Xable a ; inst Xable A ; ()/=Int" $
       (fst $ TypeSys.go
-        (Data annz (TypeD ["A"] [] Type0,cz) False
-        (Class annz "Xable" (cv "a") [(annz,"fff1",(TypeF (TypeV "a") Type0,cz),False)]
-        (Var annz "fff1" (TypeF (TypeV "a") Type0,cz)
-        (Inst annz "Xable" (TypeD ["A"] [] Type0,cz) []
+        (Data annz (TData ["A"] [] TUnit,cz) False
+        (Class annz "Xable" (cv "a") [(annz,"fff1",(TFunc (TAny "a") TUnit,cz),False)]
+        (Var annz "fff1" (TFunc (TAny "a") TUnit,cz)
+        (Inst annz "Xable" (TData ["A"] [] TUnit,cz) []
           (Seq annz
             (Nop annz)
             (Nop annz)))))))
@@ -595,12 +595,12 @@ spec = do
 
     it "A ; Xable a ; inst Xable A ; ()/=Int" $
       (fst $ TypeSys.go
-        (Data annz (TypeD ["A"] [] Type0,cz) False
-        (Class annz "Xable" (cv "a") [(annz,"fff1",(TypeF (TypeV "a") Type0,cz),False)]
-        (Var annz "fff1" (TypeF (TypeV "a") Type0,cz)
-        (Inst annz "Xable" (TypeD ["A"] [] Type0,cz)
-          [(annz,"fff2",(TypeF (TypeD ["A"] [] Type0) Type0,cz),True)]
-          (func "fff2" (TypeF (TypeD ["A"] [] Type0) Type0,cz)
+        (Data annz (TData ["A"] [] TUnit,cz) False
+        (Class annz "Xable" (cv "a") [(annz,"fff1",(TFunc (TAny "a") TUnit,cz),False)]
+        (Var annz "fff1" (TFunc (TAny "a") TUnit,cz)
+        (Inst annz "Xable" (TData ["A"] [] TUnit,cz)
+          [(annz,"fff2",(TFunc (TData ["A"] [] TUnit) TUnit,cz),True)]
+          (func "fff2" (TFunc (TData ["A"] [] TUnit) TUnit,cz)
             (Seq annz
               (Nop annz)
               (Nop annz))))))))
@@ -608,10 +608,10 @@ spec = do
 
     it "A ; Xable a ; inst Xable A ; ()/=Int" $
       (fst $ TypeSys.go
-        (Data annz (TypeD ["A"] [] Type0,cz) False
-        (Class annz "Xable" (cv "a") [(annz,"fff1",(TypeF (TypeV "a") Type0,cz),False)]
-        (Var annz "fff1" (TypeF (TypeV "a") Type0,cz)
-        (Inst annz "Xable" (TypeD ["A"] [] Type0,cz) []
+        (Data annz (TData ["A"] [] TUnit,cz) False
+        (Class annz "Xable" (cv "a") [(annz,"fff1",(TFunc (TAny "a") TUnit,cz),False)]
+        (Var annz "fff1" (TFunc (TAny "a") TUnit,cz)
+        (Inst annz "Xable" (TData ["A"] [] TUnit,cz) []
           (Seq annz
             (Nop annz)
             (Nop annz)))))))
@@ -620,12 +620,12 @@ spec = do
     it "A ; Xable a ; inst Xable A ; ()/=Int" $
       (fst $ TypeSys.go
         (Data annz (int,cz) False
-        (Data annz (TypeD ["A"] [] Type0,cz) False
-        (Class annz "Xable" (cv "a") [(annz,"fff",(TypeF (TypeV "a") Type0,cz),False)]
-        (Var annz "fff" (TypeF (TypeV "a") Type0,cz)
-        (Inst annz "Xable" (TypeD ["A"] [] Type0,cz)
-          [(annz,"fff",(TypeF (TypeD ["A"] [] Type0) (int),cz),True)]
-          (func "$fff$(A -> ())$" (TypeF (TypeD ["A"] [] Type0) (int),cz)
+        (Data annz (TData ["A"] [] TUnit,cz) False
+        (Class annz "Xable" (cv "a") [(annz,"fff",(TFunc (TAny "a") TUnit,cz),False)]
+        (Var annz "fff" (TFunc (TAny "a") TUnit,cz)
+        (Inst annz "Xable" (TData ["A"] [] TUnit,cz)
+          [(annz,"fff",(TFunc (TData ["A"] [] TUnit) (int),cz),True)]
+          (func "$fff$(A -> ())$" (TFunc (TData ["A"] [] TUnit) (int),cz)
             (Seq annz
               (Nop annz)
               (Nop annz)))))))))
@@ -634,12 +634,12 @@ spec = do
     it "A ; Xable a ; inst X A" $
       (fst $ TypeSys.go
         (Data annz (int,cz) False
-        (Data annz (TypeD ["A"] [] Type0,cz) False
-        (Class annz "Xable" (cv "a") [(annz,"fff",(TypeF (TypeV "a") Type0,cz),False)]
-        (Var annz "fff" (TypeF (TypeV "a") Type0,cz)
-        (Inst annz "X" (TypeD ["A"] [] Type0,cz)
-          [(annz,"fff",(TypeF (int) Type0,cz),True)]
-          (func "$fff$(Int -> ())$" (TypeF (int) Type0,cz)
+        (Data annz (TData ["A"] [] TUnit,cz) False
+        (Class annz "Xable" (cv "a") [(annz,"fff",(TFunc (TAny "a") TUnit,cz),False)]
+        (Var annz "fff" (TFunc (TAny "a") TUnit,cz)
+        (Inst annz "X" (TData ["A"] [] TUnit,cz)
+          [(annz,"fff",(TFunc (int) TUnit,cz),True)]
+          (func "$fff$(Int -> ())$" (TFunc (int) TUnit,cz)
             (Seq annz
               (Nop annz)
               (Nop annz)))))))))
@@ -648,12 +648,12 @@ spec = do
     it "A ; Xable a ; inst Xable A ; a/=A" $
       (fst $ TypeSys.go
         (Data annz (int,cz) False
-        (Data annz (TypeD ["A"] [] Type0,cz) False
-        (Class annz "Xable" (cv "a") [(annz,"fff",(TypeF (TypeV "a") Type0,cz),False)]
-          (Var annz "fff" (TypeF (TypeV "a") Type0,cz)        -- a
-        (Inst annz "Xable" (TypeD ["A"] [] Type0,cz)                          -- A
-          [(annz, "fff", (TypeF (int) Type0,cz), True)]
-          (func "$fff$(Int -> ())$" (TypeF (int) Type0,cz)  -- Int
+        (Data annz (TData ["A"] [] TUnit,cz) False
+        (Class annz "Xable" (cv "a") [(annz,"fff",(TFunc (TAny "a") TUnit,cz),False)]
+          (Var annz "fff" (TFunc (TAny "a") TUnit,cz)        -- a
+        (Inst annz "Xable" (TData ["A"] [] TUnit,cz)                          -- A
+          [(annz, "fff", (TFunc (int) TUnit,cz), True)]
+          (func "$fff$(Int -> ())$" (TFunc (int) TUnit,cz)  -- Int
             (Seq annz
               (Nop annz)
               (Nop annz)))))))))
@@ -661,12 +661,12 @@ spec = do
 
     it "A ; Xable.fff(a) ; inst Xable A ; fff(A)" $
       (fst $ TypeSys.go
-        (Data annz (TypeD ["A"] [] Type0,cz) False
-        (Class annz "Xable" (cv "a") [(annz,"fff",(TypeF (TypeV "a") Type0,cz),False)]
-        (Var annz "fff" (TypeF (TypeV "a") Type0,cz)
-        (Inst annz "Xable" (TypeD ["A"] [] Type0,cz)
-          [(annz,"fff",(TypeF (TypeD ["A"] [] Type0) Type0,cz),True)]
-          (func "$fff$(A -> ())$" (TypeF (TypeD ["A"] [] Type0) Type0,cz)
+        (Data annz (TData ["A"] [] TUnit,cz) False
+        (Class annz "Xable" (cv "a") [(annz,"fff",(TFunc (TAny "a") TUnit,cz),False)]
+        (Var annz "fff" (TFunc (TAny "a") TUnit,cz)
+        (Inst annz "Xable" (TData ["A"] [] TUnit,cz)
+          [(annz,"fff",(TFunc (TData ["A"] [] TUnit) TUnit,cz),True)]
+          (func "$fff$(A -> ())$" (TFunc (TData ["A"] [] TUnit) TUnit,cz)
             (Seq annz
               (Nop annz)
               (CallS annz (Call annz (Read annz "fff") (Cons annz ["A"]))))))))))
@@ -674,35 +674,35 @@ spec = do
 
     it "A ; Xable.fff(a) ; Inst Xable (A,A) ; fff(A,A)" $
       TypeSys.go
-        (Data annz (TypeD ["A"] [] Type0,cz) False
-        (Class annz "Xable" (cv "a") [(annz,"fff",(TypeF (TypeV "a") Type0,cz),False)]
-        (Var annz "fff" (TypeF (TypeV "a") Type0, cvc ("a","Xable"))
-        (Inst annz "Xable" (TypeN [TypeD ["A"] [] Type0, TypeD ["A"] [] Type0],cz)
-          [(annz, "fff", (TypeF (TypeN [TypeD ["A"] [] Type0, TypeD ["A"] [] Type0]) Type0,cz), True)]
-          (func "$fff$((A,A) -> ())$" (TypeF (TypeN [TypeD ["A"] [] Type0, TypeD ["A"] [] Type0]) Type0,cz)
+        (Data annz (TData ["A"] [] TUnit,cz) False
+        (Class annz "Xable" (cv "a") [(annz,"fff",(TFunc (TAny "a") TUnit,cz),False)]
+        (Var annz "fff" (TFunc (TAny "a") TUnit, cvc ("a","Xable"))
+        (Inst annz "Xable" (TTuple [TData ["A"] [] TUnit, TData ["A"] [] TUnit],cz)
+          [(annz, "fff", (TFunc (TTuple [TData ["A"] [] TUnit, TData ["A"] [] TUnit]) TUnit,cz), True)]
+          (func "$fff$((A,A) -> ())$" (TFunc (TTuple [TData ["A"] [] TUnit, TData ["A"] [] TUnit]) TUnit,cz)
             (CallS annz (Call annz (Read annz "fff") (Tuple annz [(Cons annz ["A"]),(Cons annz ["A"])]))))))))
       `shouldBe` ([],
-        Data annz (TypeD ["A"] [] Type0,cz) False
-        (Var annz "$fff$((A,A) -> ())$" (TypeF (TypeN [TypeD ["A"] [] Type0,TypeD ["A"] [] Type0]) Type0,cz)
-        (Var annz "$fff$((A,A) -> ())$" (TypeF (TypeN [TypeD ["A"] [] Type0,TypeD ["A"] [] Type0]) Type0,cz)
+        Data annz (TData ["A"] [] TUnit,cz) False
+        (Var annz "$fff$((A,A) -> ())$" (TFunc (TTuple [TData ["A"] [] TUnit,TData ["A"] [] TUnit]) TUnit,cz)
+        (Var annz "$fff$((A,A) -> ())$" (TFunc (TTuple [TData ["A"] [] TUnit,TData ["A"] [] TUnit]) TUnit,cz)
         (Match annz False (LVar "$fff$((A,A) -> ())$")
-          (Func (annz {type_ = (TypeF (TypeN [TypeD ["A"] [] Type0,TypeD ["A"] [] Type0]) Type0,cz)}) (TypeF (TypeN [TypeD ["A"] [] Type0,TypeD ["A"] [] Type0]) Type0,cz) (Ret annz (Error annz 99)))
+          (Func (annz {type_ = (TFunc (TTuple [TData ["A"] [] TUnit,TData ["A"] [] TUnit]) TUnit,cz)}) (TFunc (TTuple [TData ["A"] [] TUnit,TData ["A"] [] TUnit]) TUnit,cz) (Ret annz (Error annz 99)))
           (CallS annz
-            (Call (annz {type_ = (Type0,cz)})
-              (Read (annz {type_ = (TypeF (TypeN [TypeD ["A"] [] Type0,TypeD ["A"] [] Type0]) Type0,cz)}) "$fff$((A,A) -> ())$")
+            (Call (annz {type_ = (TUnit,cz)})
+              (Read (annz {type_ = (TFunc (TTuple [TData ["A"] [] TUnit,TData ["A"] [] TUnit]) TUnit,cz)}) "$fff$((A,A) -> ())$")
               (Tuple
-                (annz {type_ = (TypeN [TypeD ["A"] [] Type0,TypeD ["A"] [] Type0],cz)}) [Cons (annz {type_ = (TypeD ["A"] [] Type0,cz)}) ["A"],Cons (annz {type_ = (TypeD ["A"] [] Type0,cz)}) ["A"]])))
+                (annz {type_ = (TTuple [TData ["A"] [] TUnit,TData ["A"] [] TUnit],cz)}) [Cons (annz {type_ = (TData ["A"] [] TUnit,cz)}) ["A"],Cons (annz {type_ = (TData ["A"] [] TUnit,cz)}) ["A"]])))
           (Ret annz (Error annz 99))))))
 
     it "Int ; A ; Xable a ; inst Xable A ; fff 1" $
       (fst $ TypeSys.go
         (Data annz (int,cz) False
-        (Data annz (TypeD ["A"] [] Type0,cz) False
-        (Class annz "Xable" (cv "a") [(annz,"fff",(TypeF (TypeV "a") Type0, cvc ("a","Xable")),False)]
-        (Var annz "fff" (TypeF (TypeV "a") Type0, cvc ("a","Xable"))
-        (Inst annz "Xable" (TypeD ["A"] [] Type0,cz)
-          [(annz, "fff", (TypeF (TypeD ["A"] [] Type0) Type0,cz), True)]
-          (func "$fff$(A -> ())$" (TypeF (TypeD ["A"] [] Type0) Type0,cz)
+        (Data annz (TData ["A"] [] TUnit,cz) False
+        (Class annz "Xable" (cv "a") [(annz,"fff",(TFunc (TAny "a") TUnit, cvc ("a","Xable")),False)]
+        (Var annz "fff" (TFunc (TAny "a") TUnit, cvc ("a","Xable"))
+        (Inst annz "Xable" (TData ["A"] [] TUnit,cz)
+          [(annz, "fff", (TFunc (TData ["A"] [] TUnit) TUnit,cz), True)]
+          (func "$fff$(A -> ())$" (TFunc (TData ["A"] [] TUnit) TUnit,cz)
             (Seq annz
               (Nop annz)
               (CallS annz (Call annz (Read annz "fff") (Cons annz ["Int","1"])))))))))))
@@ -713,8 +713,8 @@ spec = do
       (fst $ TypeSys.go
         (Data annz (int,cz) False
         (Data annz (bool,cz) False
-        (Class annz "Equalable" (cv "a") [(annz,"eq",(TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (bool),cz),False)]
-        (Var annz "eq" (TypeF (TypeN [(TypeV "a"),(TypeV "a")]) (bool),cz)
+        (Class annz "Equalable" (cv "a") [(annz,"eq",(TFunc (TTuple [(TAny "a"),(TAny "a")]) (bool),cz),False)]
+        (Var annz "eq" (TFunc (TTuple [(TAny "a"),(TAny "a")]) (bool),cz)
         (CallS annz (Call annz (Read annz "eq") (Tuple annz [(Cons annz ["Bool"]),(Cons annz ["Int","1"])]))))))))
       `shouldBe` ["types do not match : expected '((Bool,Int) -> ?)' : found '((a,a) -> Bool)'",
                   "ambiguous instances for 'a' : 'Bool', 'Int'"]
@@ -723,70 +723,70 @@ spec = do
       (fst $ TypeSys.go
         (Data annz (int,cz) False
         (Data annz (bool,cz) False
-        (Class annz "Xable" (cv "a") [(annz,"fff",(TypeF (TypeV "a") Type0,cz),False)]
-        (Var annz "fff" (TypeF (TypeV "a") Type0,cz)
+        (Class annz "Xable" (cv "a") [(annz,"fff",(TFunc (TAny "a") TUnit,cz),False)]
+        (Var annz "fff" (TFunc (TAny "a") TUnit,cz)
         (Inst annz "Xable" (bool,cz)
-          [(annz, "fff", (TypeF (bool) Type0,cz), True)]
-          (func "$fff$(Bool -> ())$" (TypeF (bool) Type0,cz)
+          [(annz, "fff", (TFunc (bool) TUnit,cz), True)]
+          (func "$fff$(Bool -> ())$" (TFunc (bool) TUnit,cz)
             (Seq annz
               (Nop annz)
               (Inst annz "Xable" (int,cz)
-                [(annz, "fff", (TypeF (int) Type0,cz), True)]
-                (func "$fff$(Int -> ())$" (TypeF (int) Type0,cz)
+                [(annz, "fff", (TFunc (int) TUnit,cz), True)]
+                (func "$fff$(Int -> ())$" (TFunc (int) TUnit,cz)
                   (Seq annz
                     (Nop annz)
                     (Seq annz
                       (CallS annz (Call annz (Read annz "fff") (Cons annz ["Int","1"])))
                       (CallS annz (Call annz (Read annz "fff") (Cons annz ["Bool"])))))))))))))))
-      `shouldBe` [] --,Data annz ["Int"] [] [] Type0 False (Data annz ["Bool"] [] [] Type0 False (Var annz "fff" (TypeF (TypeV "a" ["Xable"]) Type0) (Var annz "fff$(Bool -> ())" (TypeF (TypeD ["Bool"]) Type0) (Var annz "fff$(Int -> ())" (TypeF (TypeD ["Int"]) Type0) (Seq annz (CallS annz (Call (annz {type_ = (Type0,[]}) (Read (annz {type_ = (TypeF (TypeD ["Int"]) Type0,[]}) "fff$(Int -> ())") (Cons (annz {type_ = (TypeD ["Int","1"],[]}) ["Int","1"]))) (CallS annz (Call (annz {type_ = (Type0,[]}) (Read (annz {type_ = (TypeF (TypeD ["Bool"]) Type0,[]}) "fff$(Bool -> ())") (Cons (annz {type_ = (TypeD ["Bool"],[]}) ["Bool"] (Unit (annz {type_ = (Type0,[]})))))))))))
+      `shouldBe` [] --,Data annz ["Int"] [] [] TUnit False (Data annz ["Bool"] [] [] TUnit False (Var annz "fff" (TFunc (TAny "a" ["Xable"]) TUnit) (Var annz "fff$(Bool -> ())" (TFunc (TData ["Bool"]) TUnit) (Var annz "fff$(Int -> ())" (TFunc (TData ["Int"]) TUnit) (Seq annz (CallS annz (Call (annz {type_ = (TUnit,[]}) (Read (annz {type_ = (TFunc (TData ["Int"]) TUnit,[]}) "fff$(Int -> ())") (Cons (annz {type_ = (TData ["Int","1"],[]}) ["Int","1"]))) (CallS annz (Call (annz {type_ = (TUnit,[]}) (Read (annz {type_ = (TFunc (TData ["Bool"]) TUnit,[]}) "fff$(Bool -> ())") (Cons (annz {type_ = (TData ["Bool"],[]}) ["Bool"] (Unit (annz {type_ = (TUnit,[]})))))))))))
 
     it "A ; A.B ; Xable a ; inst Xable A ; fff A.B (must use A.fff)" $
       (fst $ TypeSys.go
-        (Data annz (TypeD ["A"] [] Type0,cz) False
-        (Data annz (TypeD ["A","B"] [] Type0,cz) False
-        (Class annz "Xable" (cv "a") [(annz,"fff",(TypeF (TypeV "a") Type0,cz),False)]
-        (Var annz "fff" (TypeF (TypeV "a") Type0,cz)
-        (Inst annz "Xable" (TypeD ["A"] [] Type0,cz)
-          [(annz, "fff", (TypeF (TypeD ["A"] [] Type0) Type0,cz), True)]
-          (func "$fff$(A -> ())$" (TypeF (TypeD ["A"] [] Type0) Type0,cz)
+        (Data annz (TData ["A"] [] TUnit,cz) False
+        (Data annz (TData ["A","B"] [] TUnit,cz) False
+        (Class annz "Xable" (cv "a") [(annz,"fff",(TFunc (TAny "a") TUnit,cz),False)]
+        (Var annz "fff" (TFunc (TAny "a") TUnit,cz)
+        (Inst annz "Xable" (TData ["A"] [] TUnit,cz)
+          [(annz, "fff", (TFunc (TData ["A"] [] TUnit) TUnit,cz), True)]
+          (func "$fff$(A -> ())$" (TFunc (TData ["A"] [] TUnit) TUnit,cz)
             (Seq annz
               (Nop annz)
               (CallS annz (Call annz (Read annz "fff") (Cons annz ["A","B"])))))))))))
-      `shouldBe` [] --,Data annz ["A"] [] [] Type0 False (Data annz ["A","B"] [] [] Type0 False (Var annz "fff" (TypeF (TypeV "a" ["Xable"]) Type0) (Var annz "fff$(A -> ())" (TypeF (TypeD ["A"]) Type0) (CallS annz (Call (annz {type_ = (Type0,[]}) (Read (annz {type_ = (TypeF (TypeD ["A"]) Type0,[]}) "fff$(A -> ())") (Cons (annz {type_ = (TypeD ["A","B"],[]}) ["A","B"] (Unit (annz {type_ = (Type0,[]})))))))))
+      `shouldBe` [] --,Data annz ["A"] [] [] TUnit False (Data annz ["A","B"] [] [] TUnit False (Var annz "fff" (TFunc (TAny "a" ["Xable"]) TUnit) (Var annz "fff$(A -> ())" (TFunc (TData ["A"]) TUnit) (CallS annz (Call (annz {type_ = (TUnit,[]}) (Read (annz {type_ = (TFunc (TData ["A"]) TUnit,[]}) "fff$(A -> ())") (Cons (annz {type_ = (TData ["A","B"],[]}) ["A","B"] (Unit (annz {type_ = (TUnit,[]})))))))))
 
     it "A ; A.B ; Xable a ; inst Xable A/A.B ; fff A.B ; (must use A.B.fff)" $
       (fst $ TypeSys.go
-        (Data annz (TypeD ["A"]     [] Type0,cz) False
-        (Data annz (TypeD ["A","B"] [] Type0,cz) False
-        (Class annz "Xable" (cv "a") [(annz,"fff",(TypeF (TypeV "a") Type0,cz),False)]
-        (Var annz "fff" (TypeF (TypeV "a") Type0,cz)
-        (Inst annz "Xable" (TypeD ["A"] [] Type0,cz)
-          [(annz, "fff", (TypeF (TypeD ["A"] [] Type0) Type0,cz), True)]
-          (func "$fff$(A -> ())$" (TypeF (TypeD ["A"] [] Type0) Type0,cz)
+        (Data annz (TData ["A"]     [] TUnit,cz) False
+        (Data annz (TData ["A","B"] [] TUnit,cz) False
+        (Class annz "Xable" (cv "a") [(annz,"fff",(TFunc (TAny "a") TUnit,cz),False)]
+        (Var annz "fff" (TFunc (TAny "a") TUnit,cz)
+        (Inst annz "Xable" (TData ["A"] [] TUnit,cz)
+          [(annz, "fff", (TFunc (TData ["A"] [] TUnit) TUnit,cz), True)]
+          (func "$fff$(A -> ())$" (TFunc (TData ["A"] [] TUnit) TUnit,cz)
             (Seq annz
               (Nop annz)
-              (Inst annz "Xable" (TypeD ["A","B"] [] Type0,cz)
-                [(annz, "fff", (TypeF (TypeD ["A","B"] [] Type0) Type0,cz), True)]
-                (func "$fff$((A,B) -> ())$" (TypeF (TypeD ["A","B"] [] Type0) Type0,cz)
+              (Inst annz "Xable" (TData ["A","B"] [] TUnit,cz)
+                [(annz, "fff", (TFunc (TData ["A","B"] [] TUnit) TUnit,cz), True)]
+                (func "$fff$((A,B) -> ())$" (TFunc (TData ["A","B"] [] TUnit) TUnit,cz)
                   (Seq annz
                     (Nop annz)
                     (CallS annz (Call annz (Read annz "fff") (Cons annz ["A","B"]))))))))))))))
-      `shouldBe` [] --,Data annz ["A"] [] [] Type0 False (Data annz ["A","B"] [] [] Type0 False (Var annz "fff" (TypeF (TypeV "a" ["Xable"]) Type0) (Var annz "fff$(A -> ())" (TypeF (TypeD ["A"]) Type0) (Var annz "fff$(A.B -> ())" (TypeF (TypeD ["A","B"]) Type0) (CallS annz (Call (annz {type_ = (Type0,[]}) (Read (annz {type_ = (TypeF (TypeD ["A","B"]) Type0,[]}) "fff$(A.B -> ())") (Cons (annz {type_ = (TypeD ["A","B"],[]}) ["A","B"] (Unit (annz {type_ = (Type0,[]}))))))))))
+      `shouldBe` [] --,Data annz ["A"] [] [] TUnit False (Data annz ["A","B"] [] [] TUnit False (Var annz "fff" (TFunc (TAny "a" ["Xable"]) TUnit) (Var annz "fff$(A -> ())" (TFunc (TData ["A"]) TUnit) (Var annz "fff$(A.B -> ())" (TFunc (TData ["A","B"]) TUnit) (CallS annz (Call (annz {type_ = (TUnit,[]}) (Read (annz {type_ = (TFunc (TData ["A","B"]) TUnit,[]}) "fff$(A.B -> ())") (Cons (annz {type_ = (TData ["A","B"],[]}) ["A","B"] (Unit (annz {type_ = (TUnit,[]}))))))))))
 
     it "TODO: A ; A.B ; Xable a ; inst Xable A.B/A ; fff A.B ; (must use A.B.fff)" $
       (fst $ TypeSys.go
-        (Data annz (TypeD ["A"] [] Type0,cz) False
-        (Data annz (TypeD ["A","B"] [] Type0,cz) False
-        (Class annz "Xable" (cv "a") [(annz,"fff",(TypeF (TypeV "a") Type0,cz),False)]
-        (Var annz "fff" (TypeF (TypeV "a") Type0,cz)
-        (Inst annz "Xable" (TypeD ["A","B"] [] Type0,cz)
-          [(annz, "fff", (TypeF (TypeD ["A","B"] [] Type0) Type0,cz), True)]
-          (func "$fff$((A,B) -> ())$" (TypeF (TypeD ["A","B"] [] Type0) Type0,cz)
+        (Data annz (TData ["A"] [] TUnit,cz) False
+        (Data annz (TData ["A","B"] [] TUnit,cz) False
+        (Class annz "Xable" (cv "a") [(annz,"fff",(TFunc (TAny "a") TUnit,cz),False)]
+        (Var annz "fff" (TFunc (TAny "a") TUnit,cz)
+        (Inst annz "Xable" (TData ["A","B"] [] TUnit,cz)
+          [(annz, "fff", (TFunc (TData ["A","B"] [] TUnit) TUnit,cz), True)]
+          (func "$fff$((A,B) -> ())$" (TFunc (TData ["A","B"] [] TUnit) TUnit,cz)
             (Seq annz
               (Nop annz)
-              (Inst annz "Xable" (TypeD ["A"] [] Type0,cz)
-                [(annz, "fff", (TypeF (TypeD ["A"] [] Type0) Type0,cz), True)]
-                (func "$fff$(A -> ())$" (TypeF (TypeD ["A"] [] Type0) Type0,cz)
+              (Inst annz "Xable" (TData ["A"] [] TUnit,cz)
+                [(annz, "fff", (TFunc (TData ["A"] [] TUnit) TUnit,cz), True)]
+                (func "$fff$(A -> ())$" (TFunc (TData ["A"] [] TUnit) TUnit,cz)
                   (Seq annz
                     (Nop annz)
                     (CallS annz (Call annz (Read annz "fff") (Cons annz ["A","B"]))))))))))))))
@@ -796,91 +796,91 @@ spec = do
 
     it "B ; X.f:()->b ; inst B.f:()->B ; f()" $
       (fst $ TypeSys.go
-        (Data annz (TypeD ["B"] [] Type0,cz) False
-        (Class annz "X" (cv "b") [(annz,"fff",(TypeF Type0 (TypeV "b"),cz),False)]
-        (Var annz "fff" (TypeF Type0 (TypeV "b"),cz)
-        (Inst annz "X" (TypeD ["B"] [] Type0,cz)
-          [(annz, "fff", (TypeF Type0 (TypeD ["B"] [] Type0),cz), True)]
-          (func "$fff$(() -> B)$" (TypeF Type0 (TypeD ["B"] [] Type0),cz)
+        (Data annz (TData ["B"] [] TUnit,cz) False
+        (Class annz "X" (cv "b") [(annz,"fff",(TFunc TUnit (TAny "b"),cz),False)]
+        (Var annz "fff" (TFunc TUnit (TAny "b"),cz)
+        (Inst annz "X" (TData ["B"] [] TUnit,cz)
+          [(annz, "fff", (TFunc TUnit (TData ["B"] [] TUnit),cz), True)]
+          (func "$fff$(() -> B)$" (TFunc TUnit (TData ["B"] [] TUnit),cz)
             (Seq annz
               (Nop annz)
               (CallS annz (Call annz (Read annz "fff") (Unit annz))))))))))
-      `shouldBe` [] --,Data annz ["B"] [] [] Type0 False (Var annz "fff" (TypeF Type0 (TypeV "b" ["X"])) (Var annz "fff$(() -> B)" (TypeF Type0 (TypeD ["B"])) (CallS annz (Call (annz {type_ = (TypeD ["B"],[]}) (Read (annz {type_ = (TypeF Type0 (TypeD ["B"]),[]}) "fff$(() -> B)") (Unit (annz {type_ = (Type0,[]})))))))
+      `shouldBe` [] --,Data annz ["B"] [] [] TUnit False (Var annz "fff" (TFunc TUnit (TAny "b" ["X"])) (Var annz "fff$(() -> B)" (TFunc TUnit (TData ["B"])) (CallS annz (Call (annz {type_ = (TData ["B"],[]}) (Read (annz {type_ = (TFunc TUnit (TData ["B"]),[]}) "fff$(() -> B)") (Unit (annz {type_ = (TUnit,[]})))))))
 
     it "B ; X.f:a->b ; inst B.f:a->B ; f()" $
       (fst $ TypeSys.go
-        (Data annz (TypeD ["B"] [] Type0,cz) False
-        (Class annz "X" (cv "b") [(annz,"fff",(TypeF (TypeV "a") (TypeV "b"),cz),False)]
-        (Var annz "fff" (TypeF (TypeV "a") (TypeV "b"),cz)
-        (Inst annz "X" (TypeD ["B"] [] Type0,cz)
-          [(annz, "fff", (TypeF (TypeV "a") (TypeD ["B"] [] Type0),cz), True)]
-          (func "$fff$(a -> B)$" (TypeF (TypeV "a") (TypeD ["B"] [] Type0),cz)
+        (Data annz (TData ["B"] [] TUnit,cz) False
+        (Class annz "X" (cv "b") [(annz,"fff",(TFunc (TAny "a") (TAny "b"),cz),False)]
+        (Var annz "fff" (TFunc (TAny "a") (TAny "b"),cz)
+        (Inst annz "X" (TData ["B"] [] TUnit,cz)
+          [(annz, "fff", (TFunc (TAny "a") (TData ["B"] [] TUnit),cz), True)]
+          (func "$fff$(a -> B)$" (TFunc (TAny "a") (TData ["B"] [] TUnit),cz)
             (Seq annz
               (Nop annz)
               (CallS annz (Call annz (Read annz "fff") (Unit annz))))))))))
-      `shouldBe` [] --,Data annz ["B"] [] [] Type0 False (Var annz "fff" (TypeF (TypeV "a" []) (TypeV "b" ["X"])) (Var annz "fff$(a -> B)" (TypeF (TypeV "a" []) (TypeD ["B"])) (CallS annz (Call (annz {type_ = (TypeD ["B"],[]}) (Read (annz {type_ = (TypeF (TypeV "a" []) (TypeD ["B"]),[]}) "fff$(a -> B)") (Unit (annz {type_ = (Type0,[]})))))))
+      `shouldBe` [] --,Data annz ["B"] [] [] TUnit False (Var annz "fff" (TFunc (TAny "a" []) (TAny "b" ["X"])) (Var annz "fff$(a -> B)" (TFunc (TAny "a" []) (TData ["B"])) (CallS annz (Call (annz {type_ = (TData ["B"],[]}) (Read (annz {type_ = (TFunc (TAny "a" []) (TData ["B"]),[]}) "fff$(a -> B)") (Unit (annz {type_ = (TUnit,[]})))))))
 
     it "B1 ; B2 ; X.f:a->b ; inst B1.f:a->B1 ; inst B2.f:a->B2 ; f()" $
       (fst $ TypeSys.go
-        (Data annz (TypeD ["B1"] [] Type0,cz) False
-        (Data annz (TypeD ["B2"] [] Type0,cz) False
-        (Class annz "X" (cv "b") [(annz,"fff",(TypeF (TypeV "a") (TypeV "b"),cz),False)]
-        (Var annz "fff" (TypeF (TypeV "a") (TypeV "b"),cz)
-        (Inst annz "X" (TypeD ["B1"] [] Type0,cz)
-          [(annz, "fff", (TypeF (TypeV "a") (TypeD ["B1"] [] Type0),cz), True)]
-          (func "$fff$(a -> B)$" (TypeF (TypeV "a") (TypeD ["B1"] [] Type0),cz)
+        (Data annz (TData ["B1"] [] TUnit,cz) False
+        (Data annz (TData ["B2"] [] TUnit,cz) False
+        (Class annz "X" (cv "b") [(annz,"fff",(TFunc (TAny "a") (TAny "b"),cz),False)]
+        (Var annz "fff" (TFunc (TAny "a") (TAny "b"),cz)
+        (Inst annz "X" (TData ["B1"] [] TUnit,cz)
+          [(annz, "fff", (TFunc (TAny "a") (TData ["B1"] [] TUnit),cz), True)]
+          (func "$fff$(a -> B)$" (TFunc (TAny "a") (TData ["B1"] [] TUnit),cz)
             (Seq annz
               (Nop annz)
-              (Inst annz "X" (TypeD ["B2"] [] Type0,cz)
-                [(annz, "fff", (TypeF (TypeV "a") (TypeD ["B2"] [] Type0),cz), True)]
-                (func "$fff$(a -> B2)$" (TypeF (TypeV "a") (TypeD ["B2"] [] Type0),cz)
+              (Inst annz "X" (TData ["B2"] [] TUnit,cz)
+                [(annz, "fff", (TFunc (TAny "a") (TData ["B2"] [] TUnit),cz), True)]
+                (func "$fff$(a -> B2)$" (TFunc (TAny "a") (TData ["B2"] [] TUnit),cz)
                   (Seq annz
                     (Nop annz)
                     (CallS annz (Call annz (Read annz "fff") (Unit annz))))))))))))))
                   -- the problem is that CallS accept any return data
-      `shouldBe` [] --,Data annz ["B1"] [] [] Type0 False (Data annz ["B2"] [] [] Type0 False (Var annz "fff" (TypeF (TypeV "a" []) (TypeV "b" ["X"])) (Var annz "fff$(a -> B1)" (TypeF (TypeV "a" []) (TypeD ["B1"])) (Var annz "fff$(a -> B2)" (TypeF (TypeV "a" []) (TypeD ["B2"])) (CallS annz (Call (annz {type_ = (TypeD ["B2"],[]}) (Read (annz {type_ = (TypeF (TypeV "a" []) (TypeD ["B2"]),[]}) "fff$(a -> B2)") (Unit (annz {type_ = (Type0,[]})))))))))
+      `shouldBe` [] --,Data annz ["B1"] [] [] TUnit False (Data annz ["B2"] [] [] TUnit False (Var annz "fff" (TFunc (TAny "a" []) (TAny "b" ["X"])) (Var annz "fff$(a -> B1)" (TFunc (TAny "a" []) (TData ["B1"])) (Var annz "fff$(a -> B2)" (TFunc (TAny "a" []) (TData ["B2"])) (CallS annz (Call (annz {type_ = (TData ["B2"],[]}) (Read (annz {type_ = (TFunc (TAny "a" []) (TData ["B2"]),[]}) "fff$(a -> B2)") (Unit (annz {type_ = (TUnit,[]})))))))))
 
     it "B1 ; B2 ; X.f:a->b ; inst B1.f:a->B1 ; inst B2.f:a->B2 ; b1=f()" $
       (fst $ TypeSys.go
-        (Data annz (TypeD ["B1"] [] Type0,cz) False
-        (Data annz (TypeD ["B2"] [] Type0,cz) False
-        (Class annz "X" (cv "b") [(annz,"fff",(TypeF (TypeV "a") (TypeV "b"),cz),False)]
-        (Var annz "fff" (TypeF (TypeV "a") (TypeV "b"),cz)
-        (Inst annz "X" (TypeD ["B1"] [] Type0,cz)
-          [(annz, "fff", (TypeF (TypeV "a") (TypeD ["B1"] [] Type0),cz), True)]
-          (func "$fff$(a -> B1)$" (TypeF (TypeV "a") (TypeD ["B1"] [] Type0),cz)
+        (Data annz (TData ["B1"] [] TUnit,cz) False
+        (Data annz (TData ["B2"] [] TUnit,cz) False
+        (Class annz "X" (cv "b") [(annz,"fff",(TFunc (TAny "a") (TAny "b"),cz),False)]
+        (Var annz "fff" (TFunc (TAny "a") (TAny "b"),cz)
+        (Inst annz "X" (TData ["B1"] [] TUnit,cz)
+          [(annz, "fff", (TFunc (TAny "a") (TData ["B1"] [] TUnit),cz), True)]
+          (func "$fff$(a -> B1)$" (TFunc (TAny "a") (TData ["B1"] [] TUnit),cz)
             (Seq annz
               (Nop annz)
-              (Inst annz "X" (TypeD ["B2"] [] Type0,cz)
-                [(annz, "fff", (TypeF (TypeV "a") (TypeD ["B2"] [] Type0),cz), True)]
-                (func "$fff$(a -> B2)$" (TypeF (TypeV "a") (TypeD ["B2"] [] Type0),cz)
+              (Inst annz "X" (TData ["B2"] [] TUnit,cz)
+                [(annz, "fff", (TFunc (TAny "a") (TData ["B2"] [] TUnit),cz), True)]
+                (func "$fff$(a -> B2)$" (TFunc (TAny "a") (TData ["B2"] [] TUnit),cz)
                   (Seq annz
                     (Nop annz)
-                    (Var annz "b1" (TypeD ["B1"] [] Type0,cz)
+                    (Var annz "b1" (TData ["B1"] [] TUnit,cz)
                     (Match annz False (LVar "b1")
                       (Call annz (Read annz "fff") (Unit annz)) (Nop annz) (Nop annz))))))))))))))
-      `shouldBe` [] --,Data annz ["B1"] [] [] Type0 False (Data annz ["B2"] [] [] Type0 False (Var annz "fff" (TypeF (TypeV "a" []) (TypeV "b" ["X"])) (Var annz "fff$(a -> B1)" (TypeF (TypeV "a" []) (TypeD ["B1"])) (Var annz "fff$(a -> B2)" (TypeF (TypeV "a" []) (TypeD ["B2"])) (Var annz "b1" (TypeD ["B1"]) (Match annz False (LVar "b1") (Call (annz {type_ = (TypeD ["B1"],[]}) (Read (annz {type_ = (TypeF (TypeV "a" []) (TypeD ["B1"]),[]}) "fff$(a -> B1)") (Unit (annz {type_ = (Type0,[]}))) (Nop annz) (Nop annz))))))))
+      `shouldBe` [] --,Data annz ["B1"] [] [] TUnit False (Data annz ["B2"] [] [] TUnit False (Var annz "fff" (TFunc (TAny "a" []) (TAny "b" ["X"])) (Var annz "fff$(a -> B1)" (TFunc (TAny "a" []) (TData ["B1"])) (Var annz "fff$(a -> B2)" (TFunc (TAny "a" []) (TData ["B2"])) (Var annz "b1" (TData ["B1"]) (Match annz False (LVar "b1") (Call (annz {type_ = (TData ["B1"],[]}) (Read (annz {type_ = (TFunc (TAny "a" []) (TData ["B1"]),[]}) "fff$(a -> B1)") (Unit (annz {type_ = (TUnit,[]}))) (Nop annz) (Nop annz))))))))
 
     it "B1 ; B2 ; X.f:a->b ; inst B1.f:a->B1 ; inst B2.f:a->B2 ; b2=f()" $
       (fst $ TypeSys.go
-        (Data annz (TypeD ["B1"] [] Type0,cz) False
-        (Data annz (TypeD ["B2"] [] Type0,cz) False
-        (Class annz "X" (cv "b") [(annz,"fff",(TypeF (TypeV "a") (TypeV "b"),cz),False)]
-        (Var annz "fff" (TypeF (TypeV "a") (TypeV "b"),cz)
-        (Inst annz "X" (TypeD ["B1"] [] Type0,cz)
-          [(annz, "fff", (TypeF (TypeV "a") (TypeD ["B1"] [] Type0),cz), True)]
-          (func "$fff$(a -> B1)$" (TypeF (TypeV "a") (TypeD ["B1"] [] Type0),cz)
+        (Data annz (TData ["B1"] [] TUnit,cz) False
+        (Data annz (TData ["B2"] [] TUnit,cz) False
+        (Class annz "X" (cv "b") [(annz,"fff",(TFunc (TAny "a") (TAny "b"),cz),False)]
+        (Var annz "fff" (TFunc (TAny "a") (TAny "b"),cz)
+        (Inst annz "X" (TData ["B1"] [] TUnit,cz)
+          [(annz, "fff", (TFunc (TAny "a") (TData ["B1"] [] TUnit),cz), True)]
+          (func "$fff$(a -> B1)$" (TFunc (TAny "a") (TData ["B1"] [] TUnit),cz)
             (Seq annz
               (Nop annz)
-              (Inst annz "X" (TypeD ["B2"] [] Type0,cz)
-                [(annz, "fff", (TypeF (TypeV "a") (TypeD ["B2"] [] Type0),cz), True)]
-                (func "$fff$(a -> B2)$" (TypeF (TypeV "a") (TypeD ["B2"] [] Type0),cz)
+              (Inst annz "X" (TData ["B2"] [] TUnit,cz)
+                [(annz, "fff", (TFunc (TAny "a") (TData ["B2"] [] TUnit),cz), True)]
+                (func "$fff$(a -> B2)$" (TFunc (TAny "a") (TData ["B2"] [] TUnit),cz)
                   (Seq annz
                     (Nop annz)
-                    (Var annz "b2" (TypeD ["B2"] [] Type0,cz)
+                    (Var annz "b2" (TData ["B2"] [] TUnit,cz)
                     (Match annz False (LVar "b2")
                       (Call annz (Read annz "fff") (Unit annz)) (Nop annz) (Nop annz))))))))))))))
-      `shouldBe` [] --,Data annz ["B1"] [] [] Type0 False (Data annz ["B2"] [] [] Type0 False (Var annz "fff" (TypeF (TypeV "a" []) (TypeV "b" ["X"])) (Var annz "fff$(a -> B1)" (TypeF (TypeV "a" []) (TypeD ["B1"])) (Var annz "fff$(a -> B2)" (TypeF (TypeV "a" []) (TypeD ["B2"])) (Var annz "b2" (TypeD ["B2"]) (Match annz False (LVar "b2") (Call (annz {type_ = (TypeD ["B2"],[]}) (Read (annz {type_ = (TypeF (TypeV "a" []) (TypeD ["B2"]),[]}) "fff$(a -> B2)") (Unit (annz {type_ = (Type0,[]}))) (Nop annz) (Nop annz))))))))
+      `shouldBe` [] --,Data annz ["B1"] [] [] TUnit False (Data annz ["B2"] [] [] TUnit False (Var annz "fff" (TFunc (TAny "a" []) (TAny "b" ["X"])) (Var annz "fff$(a -> B1)" (TFunc (TAny "a" []) (TData ["B1"])) (Var annz "fff$(a -> B2)" (TFunc (TAny "a" []) (TData ["B2"])) (Var annz "b2" (TData ["B2"]) (Match annz False (LVar "b2") (Call (annz {type_ = (TData ["B2"],[]}) (Read (annz {type_ = (TFunc (TAny "a" []) (TData ["B2"]),[]}) "fff$(a -> B2)") (Unit (annz {type_ = (TUnit,[]}))) (Nop annz) (Nop annz))))))))
 
   --------------------------------------------------------------------------
 

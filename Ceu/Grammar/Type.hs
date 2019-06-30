@@ -11,13 +11,13 @@ import Ceu.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Constraints as Cs
 
-data Type = TypeB
-          | TypeT
-          | Type0
-          | TypeD ID_Data_Hier [Type] Type    -- X of [Y] with (Y,Int)
-          | TypeN [Type]    -- (len >= 2)
-          | TypeF Type Type
-          | TypeV ID_Var
+data Type = TBot
+          | TTop
+          | TUnit
+          | TData ID_Data_Hier [Type] Type    -- X of [Y] with (Y,Int)
+          | TTuple [Type]    -- (len >= 2)
+          | TFunc Type Type
+          | TAny ID_Var
     deriving (Eq,Show)
 
 data Relation = SUP | SUB | ANY | NONE deriving (Eq, Show)
@@ -29,53 +29,53 @@ type TypeC = (Type, Cs.Map)
 hier2str = intercalate "."
 
 show' :: Type -> String
-show' (TypeV id)         = id
-show' TypeT              = "top"
-show' TypeB              = "bot"
-show' Type0              = "()"
-show' (TypeD hier []  _) = hier2str hier
-show' (TypeD hier [x] _) = "(" ++ hier2str hier ++ " of " ++ show' x ++ ")"
-show' (TypeD hier ofs _) = "(" ++ hier2str hier ++ " of " ++ "(" ++ intercalate "," (map show' ofs) ++ ")" ++ ")"
-show' (TypeF inp out)    = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
-show' (TypeN tps)        = "(" ++ intercalate "," (map show' tps) ++ ")"
+show' (TAny id)         = id
+show' TTop              = "top"
+show' TBot              = "bot"
+show' TUnit              = "()"
+show' (TData hier []  _) = hier2str hier
+show' (TData hier [x] _) = "(" ++ hier2str hier ++ " of " ++ show' x ++ ")"
+show' (TData hier ofs _) = "(" ++ hier2str hier ++ " of " ++ "(" ++ intercalate "," (map show' ofs) ++ ")" ++ ")"
+show' (TFunc inp out)    = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
+show' (TTuple tps)        = "(" ++ intercalate "," (map show' tps) ++ ")"
 
 -------------------------------------------------------------------------------
 
 instance Ord Type where
-  (<=) TypeT               _                   = True
-  (<=) _                   TypeT               = False
-  (<=) TypeB               _                   = True
-  (<=) _                   TypeB               = False
-  (<=) Type0               _                   = True
-  (<=) _                   Type0               = False
-  (<=) (TypeD h1 ofs1 st1) (TypeD h2 ofs2 st2) = h1 `isPrefixOf` h2 -- || ofs1>ofs2 || st1>st2
-  (<=) (TypeD _  _    _)   _                   = True
-  (<=) _                   (TypeD _  _    _)   = False
-  (<=) (TypeF inp1 out1)   (TypeF inp2 out2)   = inp1<=inp2 && out1<=out2
-  (<=) (TypeF _    _)      _                   = True
-  (<=) _                   (TypeF _    _)      = False
-  (<=) (TypeN [])          (TypeN l2)          = True
-  (<=) (TypeN l1)          (TypeN [])          = False
-  (<=) (TypeN (v1:l1))     (TypeN (v2:l2))     | v2<v1     = False
+  (<=) TTop               _                   = True
+  (<=) _                   TTop               = False
+  (<=) TBot               _                   = True
+  (<=) _                   TBot               = False
+  (<=) TUnit               _                   = True
+  (<=) _                   TUnit               = False
+  (<=) (TData h1 ofs1 st1) (TData h2 ofs2 st2) = h1 `isPrefixOf` h2 -- || ofs1>ofs2 || st1>st2
+  (<=) (TData _  _    _)   _                   = True
+  (<=) _                   (TData _  _    _)   = False
+  (<=) (TFunc inp1 out1)   (TFunc inp2 out2)   = inp1<=inp2 && out1<=out2
+  (<=) (TFunc _    _)      _                   = True
+  (<=) _                   (TFunc _    _)      = False
+  (<=) (TTuple [])          (TTuple l2)          = True
+  (<=) (TTuple l1)          (TTuple [])          = False
+  (<=) (TTuple (v1:l1))     (TTuple (v2:l2))     | v2<v1     = False
                                                | v1<v2     = True
-                                               | otherwise = (TypeN l1 <= TypeN l2)
-  (<=) (TypeN _)           _                   = True
-  (<=) _                   (TypeN _)           = False
-  (<=) (TypeV v1)          (TypeV v2)          = v1<=v2
+                                               | otherwise = (TTuple l1 <= TTuple l2)
+  (<=) (TTuple _)           _                   = True
+  (<=) _                   (TTuple _)           = False
+  (<=) (TAny v1)          (TAny v2)          = v1<=v2
 
 sort' :: [[Type]] -> [[Type]]
-sort' ts = map (\(TypeN l)->l) $ sort $ map TypeN ts
+sort' ts = map (\(TTuple l)->l) $ sort $ map TTuple ts
 
 -------------------------------------------------------------------------------
 
 getDs :: Type -> [Type]
-getDs (TypeV _)           = []
-getDs TypeT               = []
-getDs TypeB               = []
-getDs Type0               = []
-getDs tp@(TypeD _ ofs st) = [tp] ++ concatMap getDs ofs ++ getDs st
-getDs (TypeF inp out)     = getDs inp ++ getDs out
-getDs (TypeN ts)          = concatMap getDs ts
+getDs (TAny _)           = []
+getDs TTop               = []
+getDs TBot               = []
+getDs TUnit               = []
+getDs tp@(TData _ ofs st) = [tp] ++ concatMap getDs ofs ++ getDs st
+getDs (TFunc inp out)     = getDs inp ++ getDs out
+getDs (TTuple ts)          = concatMap getDs ts
 
 -------------------------------------------------------------------------------
 
@@ -90,16 +90,16 @@ splitOn d s = x : splitOn d (drop 1 y) where (x,y) = span (/= d) s
 -------------------------------------------------------------------------------
 
 -- list: list with instantiated pairs (var,Type)
--- Type: type (possibly TypeV) we want to instantiate
+-- Type: type (possibly TAny) we want to instantiate
 -- Type: type of the instantiated variable
--- [(a,TypeD "Bool"),...] -> TypeV "a" -> TypeD "Bool"
+-- [(a,TData "Bool"),...] -> TAny "a" -> TData "Bool"
 instantiate :: [(ID_Var,Type)] -> Type -> Type
-instantiate vars (TypeV var)    = case find (\(var',_) -> var==var') vars of
-                                    Nothing    -> TypeV var
+instantiate vars (TAny var)    = case find (\(var',_) -> var==var') vars of
+                                    Nothing    -> TAny var
                                     Just (_,v) -> v
-instantiate vars (TypeD hier ofs st) = TypeD hier (map (instantiate vars) ofs) (instantiate vars st)
-instantiate vars (TypeF inp out) = TypeF (instantiate vars inp) (instantiate vars out)
-instantiate vars (TypeN tps)     = TypeN $ map (instantiate vars) tps
+instantiate vars (TData hier ofs st) = TData hier (map (instantiate vars) ofs) (instantiate vars st)
+instantiate vars (TFunc inp out) = TFunc (instantiate vars inp) (instantiate vars out)
+instantiate vars (TTuple tps)     = TTuple $ map (instantiate vars) tps
 instantiate _    tp              = tp
 
 -------------------------------------------------------------------------------
@@ -163,7 +163,7 @@ relates_ rel tp1 tp2 =
         else
           --traceShow (rel, tp1, tp2, sups_ok, ret,tp,insts) $
           --traceShow (sups_ok,grouped) $
-          ((var,TypeB),
+          ((var,TBot),
             if sups_ok && subs_ok && sups/=[] && subs/=[] && (subest `isSubOf_` supest) then
               ["type variance does not match : '" ++ show' subest ++
                "' should be supertype of '" ++ show' supest ++ "'"]
@@ -189,41 +189,41 @@ relates_ rel tp1 tp2 =
 
 comPre :: [Type] -> Maybe Type
 comPre tps = yyy where
-  l = bool [TypeD pre [] Type0] [] (null tp1s || null pre)
+  l = bool [TData pre [] TUnit] [] (null tp1s || null pre)
 
   xxx = find isNotV tps
         where
-          isNotV (TypeV _) = False
+          isNotV (TAny _) = False
           isNotV _         = True
 
   yyy = case xxx of
           Nothing -> bool (Just (head tps)) Nothing (null tps)
           Just tp -> case tp of
-            TypeD _ x y   -> case commonPrefixAll $ map (\(TypeD hr _ _)->hr) $ filter isTypeD tps of
+            TData _ x y   -> case commonPrefixAll $ map (\(TData hr _ _)->hr) $ filter isTData tps of
                               [] -> Nothing
 {-
-                              tp -> Just $ TypeD tp x y
+                              tp -> Just $ TData tp x y
 -}
-                              tp -> case comPre $ map (\(TypeD _ _ st)->st) $ filter isTypeD tps of
-                                Nothing  -> Just $ TypeD tp x y
-                                Just tp' -> Just $ TypeD tp x tp'
-            TypeF inp out -> f $ unzip $ map (\(TypeF inp out)->(inp,out)) $ filter isTypeF tps
+                              tp -> case comPre $ map (\(TData _ _ st)->st) $ filter isTData tps of
+                                Nothing  -> Just $ TData tp x y
+                                Just tp' -> Just $ TData tp x tp'
+            TFunc inp out -> f $ unzip $ map (\(TFunc inp out)->(inp,out)) $ filter isTFunc tps
                              where
                               f (inps,outs) =
                                 case (comPre inps, comPre outs) of
-                                  (Just inp, Just out) -> Just $ TypeF inp out
+                                  (Just inp, Just out) -> Just $ TFunc inp out
                                   otherwise            -> Nothing
 
-            TypeN ts      -> if all isJust yyy then
-                              Just $ TypeN (map fromJust yyy)
+            TTuple ts      -> if all isJust yyy then
+                              Just $ TTuple (map fromJust yyy)
                              else
                               Nothing
                              where
                               yyy = map comPre xxx                   -- [ com1,      com2 ]
                               xxx = foldr (zipWith (:)) (rep l) l    -- [ [a,c,...], [b,d,...] ]
                               rep l = assert (ass l) $ replicate (length (head l)) [] -- [ [], [] ]
-                              l = map (\(TypeN tps)->tps)            -- [ [a,b], [c,d], ... ]
-                                    $ filter isTypeN tps             -- [ tn1,   tn2,   ... ]
+                              l = map (\(TTuple tps)->tps)            -- [ [a,b], [c,d], ... ]
+                                    $ filter isTTuple tps             -- [ tn1,   tn2,   ... ]
                               ass l = and $ map (== head l') (tail l')  -- all lists have same length
                                       where
                                         l' = map length l
@@ -231,17 +231,17 @@ comPre tps = yyy where
 
             otherwise     -> Nothing
 
-  tp1s = filter isTypeD tps
-  pre  = commonPrefixAll $ map (\(TypeD hr _ _)->hr) tp1s
+  tp1s = filter isTData tps
+  pre  = commonPrefixAll $ map (\(TData hr _ _)->hr) tp1s
 
-  isTypeD (TypeD _ _ _) = True
-  isTypeD _             = False
+  isTData (TData _ _ _) = True
+  isTData _             = False
 
-  isTypeF (TypeF _ _)   = True
-  isTypeF _             = False
+  isTFunc (TFunc _ _)   = True
+  isTFunc _             = False
 
-  isTypeN (TypeN _)     = True
-  isTypeN _             = False
+  isTTuple (TTuple _)     = True
+  isTTuple _             = False
 
   -- https://stackoverflow.com/questions/21717646/longest-common-prefix-in-haskell
   commonPrefixAll :: (Eq a) => [[a]] -> [a]
@@ -274,25 +274,25 @@ supOf :: Type -> Type -> (Bool, Type, [(ID_Var,Type,Relation)])
                                         -- "a" >= tp (True)
                                         -- "a" <= tp (False)
 
-supOf TypeT             sub               = (True,  sub,   [])
+supOf TTop             sub               = (True,  sub,   [])
 
-supOf _                 TypeB             = (True,  TypeB, [])
-supOf TypeB             _                 = (False, TypeB, [])
+supOf _                 TBot             = (True,  TBot, [])
+supOf TBot             _                 = (False, TBot, [])
 
-supOf sup@(TypeV a1)    sub@(TypeV a2)    = (True,  sub,   [(a1,sub,SUP),(a2,sup,SUB)])
-supOf (TypeV a1)        sub               = (True,  sub,   [(a1,sub,SUP)])
-supOf sup               sub@(TypeV a2)    = (True,  sup,   [(a2,sup,SUB)])
+supOf sup@(TAny a1)    sub@(TAny a2)    = (True,  sub,   [(a1,sub,SUP),(a2,sup,SUB)])
+supOf (TAny a1)        sub               = (True,  sub,   [(a1,sub,SUP)])
+supOf sup               sub@(TAny a2)    = (True,  sup,   [(a2,sup,SUB)])
 
-supOf Type0             Type0             = (True,  Type0, [])
-supOf Type0             _                 = (False, Type0, [])
-supOf sup               Type0             = (False, sup,   [])
+supOf TUnit             TUnit             = (True,  TUnit, [])
+supOf TUnit             _                 = (False, TUnit, [])
+supOf sup               TUnit             = (False, sup,   [])
 
-supOf sup               TypeT             = (False, sup,   [])
+supOf sup               TTop             = (False, sup,   [])
 
-supOf sup@(TypeD x ofs1 st1) sub@(TypeD y ofs2 st2)
+supOf sup@(TData x ofs1 st1) sub@(TData y ofs2 st2)
   | not $ x `isPrefixOf` y                     = (False, sup,   [])
-  | not $ (TypeN ofs1) `isSupOf_` (TypeN ofs2) = (False, sup,   [])
-  | otherwise                                  = (ret, TypeD x ofs1 sup, es)
+  | not $ (TTuple ofs1) `isSupOf_` (TTuple ofs2) = (False, sup,   [])
+  | otherwise                                  = (ret, TData x ofs1 sup, es)
   where
     (ret,sup,es) = f st1 st2
 
@@ -302,36 +302,36 @@ supOf sup@(TypeD x ofs1 st1) sub@(TypeD y ofs2 st2)
     -- x(_) <- y(_,_)
     f :: Type -> Type -> (Bool, Type, [(ID_Var,Type,Relation)])
     f tp1 tp2 = case tp1 of
-      TypeN l1   -> case tp2 of
-        TypeN l2 -> (TypeN l1') `supOf` (TypeN l2') where
+      TTuple l1   -> case tp2 of
+        TTuple l2 -> (TTuple l1') `supOf` (TTuple l2') where
                       m   = min (length l1) (length l2)
                       l1' = take m l1
                       l2' = take m l2
-        Type0    -> g $ f tp1           (TypeN [])
-        _        -> g $ f tp1           (TypeN [tp2])
-      Type0      -> g $ f (TypeN [])    tp2
-      _          -> g $ f (TypeN [tp1]) tp2
+        TUnit    -> g $ f tp1           (TTuple [])
+        _        -> g $ f tp1           (TTuple [tp2])
+      TUnit      -> g $ f (TTuple [])    tp2
+      _          -> g $ f (TTuple [tp1]) tp2
 
     g :: (Bool, Type, [(ID_Var,Type,Relation)]) -> (Bool, Type, [(ID_Var,Type,Relation)])
-    g (b, TypeN [],   l) = (b, Type0, l)
-    g (b, TypeN [tp], l) = (b, tp,    l)
+    g (b, TTuple [],   l) = (b, TUnit, l)
+    g (b, TTuple [tp], l) = (b, tp,    l)
     g x                  = x
 
-supOf sup@(TypeD _ _ _) _                 = (False, sup,   [])
-supOf sup               (TypeD _ _ _)     = (False, sup,   [])
+supOf sup@(TData _ _ _) _                 = (False, sup,   [])
+supOf sup               (TData _ _ _)     = (False, sup,   [])
 
-supOf (TypeF inp1 out1) (TypeF inp2 out2) = (ret, TypeF inp out, k++z) where
+supOf (TFunc inp1 out1) (TFunc inp2 out2) = (ret, TFunc inp out, k++z) where
   (i,inp,k) = inp2 `supOf` inp1      -- contravariance on inputs
   (x,out,z) = out1 `supOf` out2
   ret = i && x
 
-supOf sup@(TypeF _ _)   _                 = (False, sup,   [])
-supOf sup               (TypeF _ _)       = (False, sup,   [])
+supOf sup@(TFunc _ _)   _                 = (False, sup,   [])
+supOf sup               (TFunc _ _)       = (False, sup,   [])
 
-supOf sup@(TypeN sups)  (TypeN subs)      = if (length subs) /= (length sups) then
+supOf sup@(TTuple sups)  (TTuple subs)      = if (length subs) /= (length sups) then
                                               (False, sup, [])
                                             else
-                                              foldr f (True, TypeN [], []) $ zipWith supOf sups subs
+                                              foldr f (True, TTuple [], []) $ zipWith supOf sups subs
   where
-    f (ret, tp, insts) (ret', TypeN tps', insts') =
-      (ret&&ret', TypeN (tp:tps'), insts++insts')
+    f (ret, tp, insts) (ret', TTuple tps', insts') =
+      (ret&&ret', TTuple (tp:tps'), insts++insts')

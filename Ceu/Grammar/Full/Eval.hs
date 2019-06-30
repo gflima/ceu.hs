@@ -18,10 +18,10 @@ import qualified Ceu.Grammar.Full.Compile.Match as Match
 import qualified Ceu.Grammar.Full.Compile.Class as Class
 import qualified Ceu.Grammar.Full.Compile.FuncS as FuncS
 
-int   = TypeD ["Int"]          [] Type0
-bool  = TypeD ["Bool"]         [] Type0
-boolf = TypeD ["Bool","False"] [] Type0
-boolt = TypeD ["Bool","True"]  [] Type0
+int   = TData ["Int"]          [] TUnit
+bool  = TData ["Bool"]         [] TUnit
+boolf = TData ["Bool","False"] [] TUnit
+boolt = TData ["Bool","True"]  [] TUnit
 
 prelude :: Ann -> Stmt -> Stmt
 prelude z p =
@@ -31,16 +31,16 @@ prelude z p =
     (Seq z (Data z (boolt,cz) False)
     (Seq z (Var  z "_true"  (bool,cz))
     (Seq z (Set  z False (LVar "_true") (Cons z ["Bool","True"]))
-    (Seq z (Var  z "print"  (TypeF (TypeV "?")        (TypeV "?"), cz))
-    (Seq z (Var  z "negate" (TypeF int                int,         cz))
-    (Seq z (Var  z "=="     (TypeF (TypeN [int, int]) bool,        cz))
-    (Seq z (Var  z "<="     (TypeF (TypeN [int, int]) bool,        cz))
-    (Seq z (Var  z "<"      (TypeF (TypeN [int, int]) bool,        cz))
-    (Seq z (Var  z "+"      (TypeF (TypeN [int, int]) int,         cz))
-    (Seq z (Var  z "-"      (TypeF (TypeN [int, int]) int,         cz))
-    (Seq z (Var  z "/"      (TypeF (TypeN [int, int]) int,         cz))
-    (Seq z (Var  z "*"      (TypeF (TypeN [int, int]) int,         cz))
-    (Seq z (Var  z "rem"    (TypeF (TypeN [int, int]) int,         cz))
+    (Seq z (Var  z "print"  (TFunc (TAny "?")        (TAny "?"), cz))
+    (Seq z (Var  z "negate" (TFunc int                int,         cz))
+    (Seq z (Var  z "=="     (TFunc (TTuple [int, int]) bool,        cz))
+    (Seq z (Var  z "<="     (TFunc (TTuple [int, int]) bool,        cz))
+    (Seq z (Var  z "<"      (TFunc (TTuple [int, int]) bool,        cz))
+    (Seq z (Var  z "+"      (TFunc (TTuple [int, int]) int,         cz))
+    (Seq z (Var  z "-"      (TFunc (TTuple [int, int]) int,         cz))
+    (Seq z (Var  z "/"      (TFunc (TTuple [int, int]) int,         cz))
+    (Seq z (Var  z "*"      (TFunc (TTuple [int, int]) int,         cz))
+    (Seq z (Var  z "rem"    (TFunc (TTuple [int, int]) int,         cz))
            p))))))))))))))))
 
 compile :: Stmt -> Stmt

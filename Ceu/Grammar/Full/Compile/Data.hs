@@ -11,7 +11,7 @@ import Ceu.Grammar.Full.Full
 compile :: Stmt -> Stmt
 compile p = stmt [] p
 
--- Instantiates variable declarations of TypeD with their complete types:
+-- Instantiates variable declarations of TData with their complete types:
 --
 -- data Pair with (Int,Int)
 --    var p : Pair
@@ -51,22 +51,22 @@ expr _  e                             = e
 -------------------------------------------------------------------------------
 
 fdata :: [Stmt] -> TypeC -> TypeC
-fdata ds tp@(TypeD id ofs st, ctrs) = case getSuper id of
+fdata ds tp@(TData id ofs st, ctrs) = case getSuper id of
   Nothing  -> tp
-  Just sup -> case find (\(Data'' _ (TypeD id' _ _,_) _ _) -> id'==sup) ds of
+  Just sup -> case find (\(Data'' _ (TData id' _ _,_) _ _) -> id'==sup) ds of
                 Nothing -> tp
-                Just (Data'' _ (TypeD _ ofs' st',ctrs') _ _) ->
+                Just (Data'' _ (TData _ ofs' st',ctrs') _ _) ->
                   case any (\v2 -> elem v2 ofs) ofs' of
                     True  -> error $ "TODO: repeated variables"
-                    False -> (TypeD id (ofs ++ ofs') (cat st st'), Cs.union ctrs ctrs')
+                    False -> (TData id (ofs ++ ofs') (cat st st'), Cs.union ctrs ctrs')
   where
     cat :: Type -> Type -> Type
-    cat Type0      tp              = tp
-    cat tp         Type0           = tp
-    cat (TypeN l1) (TypeN l2)      = TypeN $ l1 ++ l2
-    cat (TypeN l1) tp              = TypeN $ l1 ++ [tp]
-    cat tp         (TypeN l2)      = TypeN $ tp :  l2
-    cat tp1        tp2             = TypeN $ [tp1,tp2]
+    cat TUnit      tp              = tp
+    cat tp         TUnit           = tp
+    cat (TTuple l1) (TTuple l2)      = TTuple $ l1 ++ l2
+    cat (TTuple l1) tp              = TTuple $ l1 ++ [tp]
+    cat tp         (TTuple l2)      = TTuple $ tp :  l2
+    cat tp1        tp2             = TTuple $ [tp1,tp2]
 
 -------------------------------------------------------------------------------
 
@@ -74,11 +74,11 @@ fvar :: [Stmt] -> TypeC -> TypeC
 fvar ds (tp_,ctrs) = (fvar' ds tp_, ctrs)
   where
     fvar' :: [Stmt] -> Type -> Type
-    fvar' ds (TypeD hier ofs st) = TypeD hier ofs $
-      case find (\(Data'' _ (TypeD h' _ _,_) _ _) -> h'==hier) ds of
+    fvar' ds (TData hier ofs st) = TData hier ofs $
+      case find (\(Data'' _ (TData h' _ _,_) _ _) -> h'==hier) ds of
         Nothing -> fvar' ds st
-        Just (Data'' _ (TypeD _ ofs' st',_) _ _)
-                -> instantiate (zip (map (\(TypeV v)->v) ofs') ofs) st'
-    fvar' ds (TypeF inp out)  = TypeF (fvar' ds inp) (fvar' ds out)
-    fvar' ds (TypeN tps)      = TypeN $ map (fvar' ds) tps
+        Just (Data'' _ (TData _ ofs' st',_) _ _)
+                -> instantiate (zip (map (\(TAny v)->v) ofs') ofs) st'
+    fvar' ds (TFunc inp out)  = TFunc (fvar' ds inp) (fvar' ds out)
+    fvar' ds (TTuple tps)      = TTuple $ map (fvar' ds) tps
     fvar' _  tp               = tp
