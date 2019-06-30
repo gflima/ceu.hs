@@ -3,7 +3,7 @@ module Ceu.Grammar.Basic where
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann                (Ann, HasAnn(..), annz)
 import Ceu.Grammar.Constraints as Cs  (Map, cz)
-import Ceu.Grammar.Type        as T   (TypeC, Type(..), show')
+import Ceu.Grammar.Type        as T   (TypeC, Type(..), show', hier2str)
 import Data.List                      (intercalate)
 
 -------------------------------------------------------------------------------
@@ -11,8 +11,7 @@ import Data.List                      (intercalate)
 data Exp
     = Error  Ann Int
     | Unit   Ann                -- ()
-    | Number Ann Int            -- 1
-    | Cons   Ann ID_Data_Hier   -- Bool.True ; Tree.Node
+    | Cons   Ann ID_Data_Hier   -- Bool.True ; Int.1 ; Tree.Node
     | Read   Ann ID_Var         -- a ; xs
     | Arg    Ann
     | Tuple  Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
@@ -23,7 +22,6 @@ data Exp
 instance HasAnn Exp where
     --getAnn :: Exp -> Ann
     getAnn (Error  z _)   = z
-    getAnn (Number z _)   = z
     getAnn (Cons   z _)   = z
     getAnn (Read   z _)   = z
     getAnn (Arg    z)     = z
@@ -37,7 +35,6 @@ instance HasAnn Exp where
 data Loc = LAny
          | LVar ID_Var
          | LUnit
-         | LNumber Int
          | LCons ID_Data_Hier Loc
          | LTuple [Loc]
          | LExp Exp
@@ -74,8 +71,8 @@ show_stmt spc (Nop _)                 = replicate spc ' ' ++ "nop"
 show_stmt spc p = error $ show p
 
 show_exp :: Int -> Exp -> String
-show_exp spc (Number _ n)   = show n
-show_exp spc (Cons _ _)     = "cons"
+show_exp spc (Cons _ ["Int",n]) = n
+show_exp spc (Cons _ id)    = hier2str id
 show_exp spc (Read _ id)    = id
 show_exp spc (Arg _)        = "arg"
 show_exp spc (Tuple _ es)   = "(" ++ intercalate "," (map (show_exp spc) es) ++ ")"

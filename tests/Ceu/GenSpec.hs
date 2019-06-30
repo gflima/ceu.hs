@@ -30,7 +30,7 @@ spec = do
             "end"                               ,
             "return 1"
           ])
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
 
       it "IEq + default" $
         (run True $
@@ -41,7 +41,7 @@ spec = do
             "end"                               ,
             "return 1"
           ])
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
 
       it "IEq + default + Int" $
         (run True $
@@ -57,7 +57,7 @@ spec = do
             "end"                               ,
             "return neq(10,20)"
           ])
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
 
       it "IEq + default + Int + f" $
         (run True $
@@ -76,7 +76,7 @@ spec = do
             "end",
             "return f 1"  -- eq_a=eq_Int
            ])
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
 
       it "IEq + default + f + Int" $
         (run True $
@@ -95,7 +95,7 @@ spec = do
             "end"                               ,
             "return f 1"  -- eq_a=eq_Int
            ])
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
 
       it "IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
         (run True $
@@ -131,7 +131,7 @@ spec = do
             "end"                               ,
             "return (eq(Dd,Dd)) + (eq(Ee,Ee))"
           ])
-        `shouldBe` Right (Number 4)
+        `shouldBe` Right (Cons' ["Int","4"] Unit)
 
       it "IEq + default + Int + (a,b)" $
         (run True $
@@ -157,7 +157,7 @@ spec = do
             "end"                               ,
             "return eq( eq(10,10), eq((10,20),(10,20)) )"            -- eq_a=eq_Int, eq_b=eq_Int
           ])
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
 
       it "IEq + default + Int + (a,b)" $
         (run True $
@@ -183,7 +183,7 @@ spec = do
             "end"                               ,
             "return eq( eq(10,20), eq((10,20),(30,40)) )"            -- eq_a=eq_Int, eq_b=eq_Int
           ])
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
 
       it "IAa / Int / X a" $
         (run True $ [r|
@@ -212,7 +212,7 @@ end
 
 return (((f 10) + (g 10)) + (f (X 10))) + (g (X 10))
 |])
-        `shouldBe` Right (Number 40)
+        `shouldBe` Right (Cons' ["Int","40"] Unit)
 
       it "IAa / Int / X a a" $
         (run True $ [r|
@@ -241,7 +241,7 @@ end
 
 return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
 |])
-        `shouldBe` Right (Number 80)
+        `shouldBe` Right (Cons' ["Int","80"] Unit)
 
       it "IAa / X a a / Int" $
         (run True $ [r|
@@ -267,7 +267,7 @@ end
 
 return f (X ())
 |])
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
 
       it "IAa / X a a / Int" $
         (run True $ [r|
@@ -296,7 +296,7 @@ end
 
 return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
 |])
-        `shouldBe` Right (Number 80)
+        `shouldBe` Right (Cons' ["Int","80"] Unit)
 
       it "IEq + default + Int + (a,b)" $ -- CASE-1 eq(a,b) is not SUP of eq(Int)
         (run True $
@@ -322,7 +322,7 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "return (eq((10,20),(30,40))) + (neq((10,20),(30,40)))"
           ])
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
 
       it "IEq + default + Int + (a,b) + Bool" $
         (run True $
@@ -353,7 +353,7 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "return eq((10,Bool.True),(10,Bool.True))"
           ])
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
 
       it "IEq + default + Int + (a,b) + Bool" $
         (run True $
@@ -384,7 +384,7 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "return eq((10,Bool.True),(20,Bool.False))"
           ])
-        `shouldBe` Right (Number 0)
+        `shouldBe` Right (Cons' ["Int","0"] Unit)
 
 {-
       it "TODO-TIME: IEq + default + Int + (a,b,c) + Bool" $
@@ -418,7 +418,7 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "return eq((20,Bool.True,10),(20,Bool.True,10))"
           ])
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
 -}
 
       it "IEq + default + Int + (a,b,a) + Bool" $
@@ -452,7 +452,7 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "return eq((20,Bool.True,10),(20,Bool.True,10))"
           ])
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
 
       it "IEq + default + Int + (a,b,a) + Bool" $
         (run True $
@@ -485,7 +485,7 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "return eq((20,10,Bool.True),(20,10,Bool.True))"
           ])
-        `shouldBe` Left "(line 27, column 8):\nvariable 'eq' has no associated instance for '(((Int.20,Int.10,Bool.True),(Int.20,Int.10,Bool.True)) -> ?)'\n"
+        `shouldBe` Left "(line 27, column 8):\nvariable 'eq' has no associated instance for '(((Int,Int,Bool.True),(Int,Int,Bool.True)) -> ?)'\n"
 
       it "X for a with a" $
         (run True $ [r|
@@ -511,7 +511,7 @@ end
 var x1 : X of Int <- X 10
 return (g x1)
 |])
-        `shouldBe` Right (Number 10)
+        `shouldBe` Right (Cons' ["Int","10"] Unit)
 
       it "X for a with a" $
         (run True $ [r|
@@ -537,7 +537,7 @@ end
 var x1 : X of Int <- X 10
 return (g x1)
 |])
-        `shouldBe` Right (Number 10)
+        `shouldBe` Right (Cons' ["Int","10"] Unit)
 
       it "X for a with a" $
         (run True $ [r|
@@ -595,7 +595,7 @@ var x1 : X of Int <- X.Y 10
 var x2 : X of Int <- X
 return (g x1) + (g x2)
 |])
-        `shouldBe` Right (Number 10)
+        `shouldBe` Right (Cons' ["Int","10"] Unit)
 
       it "X for a w/o a" $
         (run True $ [r|

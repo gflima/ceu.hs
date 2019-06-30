@@ -25,7 +25,7 @@ boolt = TypeD ["Bool","True"]  [] Type0
 
 prelude :: Ann -> Stmt -> Stmt
 prelude z p =
-    (Seq z (Data z (int,  cz) True)
+    (Seq z (Data z (int,  cz) False)  -- TODO: should be abstract
     (Seq z (Data z (bool, cz) True)
     (Seq z (Data z (boolf,cz) False)
     (Seq z (Data z (boolt,cz) False)

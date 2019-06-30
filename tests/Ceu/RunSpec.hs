@@ -21,7 +21,7 @@ spec = do
     describe "return:" $ do
         it "return 1" $
             run True "return 1"
-            `shouldBe` Right (Number 1)
+            `shouldBe` Right (Cons' ["Int","1"] Unit)
         it "return a" $
             run True "return a"
             `shouldBe` Left "(line 1, column 8):\nvariable 'a' is not declared\n"
@@ -32,34 +32,34 @@ spec = do
     describe "exps:" $ do
         it "return -1" $
             run True "return -1"
-            `shouldBe` Right (Number (-1))
+            `shouldBe` Right (Cons' ["Int","-1"] Unit)
         it "return - (-1)" $
             run True "return - (-1)"
-            `shouldBe` Right (Number 1)
+            `shouldBe` Right (Cons' ["Int","1"] Unit)
         it "return -( - 1)" $
             run True "return -(-  1)"
-            `shouldBe` Right (Number 1)
+            `shouldBe` Right (Cons' ["Int","1"] Unit)
         it "return ((1))" $
             run True "return ((1))"
-            `shouldBe` Right (Number 1)
+            `shouldBe` Right (Cons' ["Int","1"] Unit)
         it "return ((-9999))" $
             run True "return ((-9999))"
-            `shouldBe` Right (Number (-9999))
+            `shouldBe` Right (Cons' ["Int","-9999"] Unit)
         it "(1+2)*3" $
             run True "return (1+2)*3"
-            `shouldBe` Right (Number 9)
+            `shouldBe` Right (Cons' ["Int","9"] Unit)
         it "(1+2)*3" $
             run True "return (1+2)*3"
-            `shouldBe` Right (Number 9)
+            `shouldBe` Right (Cons' ["Int","9"] Unit)
         it "(1+2)-3" $
             run True "return (1+2)-3"
-            `shouldBe` Right (Number 0)
+            `shouldBe` Right (Cons' ["Int","0"] Unit)
         it "((1+2)*3)/4" $
             run True "return ((1+2)*3)/4"
-            `shouldBe` Right (Number 2)
+            `shouldBe` Right (Cons' ["Int","2"] Unit)
         it "+ (1 2)" $
             run True "return + (1,2)"
-            `shouldBe` Right (Number 3)
+            `shouldBe` Right (Cons' ["Int","3"] Unit)
 
     describe "vars:" $ do
         it "var Int a,b" $
@@ -70,22 +70,22 @@ spec = do
             `shouldBe` Left "(line 1, column 7):\nvariable 'a' is not declared\n(line 1, column 20):\nvariable 'a' is not declared\n"
         it "var a  : Int <- 1; return a;" $
             run True "var a  : Int <- 1; return a"
-            `shouldBe` Right (Number 1)
+            `shouldBe` Right (Cons' ["Int","1"] Unit)
         it "var a:Int ; a <- 1" $
             run True "var a :Int ; set a <- 1 ; return a"
-            `shouldBe` Right (Number 1)
+            `shouldBe` Right (Cons' ["Int","1"] Unit)
         it "var x :Int; x<-1; return x" $
             run True "var x:Int; set x <- 1 ;return x"
-            `shouldBe` Right (Number 1)
+            `shouldBe` Right (Cons' ["Int","1"] Unit)
         it "hide a" $
             run True "var a :Int ; var a :Int ; return 0"
             `shouldBe` Left "(line 1, column 14):\nvariable 'a' is already declared\n"
         it "TODO-index-tuples" $
             run True "var x:(Int,()) <- (1,()) ; var y:(Int,()) <- x ; return 1"
-            `shouldBe` Right (Number 1)
+            `shouldBe` Right (Cons' ["Int","1"] Unit)
         it "var x:(Int,Int) <- (1,2) ; return '+ x | (TODO: no RT support for tuples)" $
             run True "var x:(Int,Int) <- (1,2) ; return + x"
-            `shouldBe` Right (Number 3)
+            `shouldBe` Right (Cons' ["Int","3"] Unit)
 
 -------------------------------------------------------------------------------
 
@@ -93,23 +93,23 @@ spec = do
 
       it "f1 ; return f1 1" $
         run True "func f1 () : (() -> Int) do return 1 end ; return f1()"
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
 
       it "return 1+2" $
         run True "return 1+2"
-        `shouldBe` Right (Number 3)
+        `shouldBe` Right (Cons' ["Int","3"] Unit)
 
       it "return +(1,2)" $
         run True "return +(1,2)"
-        `shouldBe` Right (Number 3)
+        `shouldBe` Right (Cons' ["Int","3"] Unit)
 
       it "Int ; + ; return 1+2" $
         run False "data Int ; func + : ((Int,Int)->Int) ; return 1+2"
-        `shouldBe` Right (Number 3)
+        `shouldBe` Right (Cons' ["Int","3"] Unit)
 
       it "Int ; + ; return +(1,2)" $
         run False "data Int ; func + : ((Int,Int)->Int) ; return +(1,2)"
-        `shouldBe` Right (Number 3)
+        `shouldBe` Right (Cons' ["Int","3"] Unit)
 
       it "(f,g) <- (+,c) ; return f(g 1, g 2)" $
         (run True $
@@ -120,7 +120,7 @@ spec = do
             "set (f,g) <- (+,c)",
             "return f (g 1, g 2)"
            ])
-        `shouldBe` Right (Number 3)
+        `shouldBe` Right (Cons' ["Int","3"] Unit)
 
       it "glb <- 1 ; f () -> glb ; ret glb" $
         (run True $
@@ -132,7 +132,7 @@ spec = do
             "end",
             "return f()"
           ])
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
 
       it "glb <- 1 ; f() -> g() -> glb ; ret f()()" $
         (run True $
@@ -143,7 +143,7 @@ spec = do
             "end",
             "return (f())()"
           ])
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
 
       it "call 1" $
         (run True $ "call 1")
@@ -151,7 +151,7 @@ spec = do
 
       it "call print" $
         (run True $ "call print 1 ; return print 2")
-        `shouldBe` Right (Number 2)
+        `shouldBe` Right (Cons' ["Int","2"] Unit)
 
       it "recursion" $
         (run True $
@@ -165,7 +165,7 @@ spec = do
             "end",
             "return fat 5"
            ])
-        `shouldBe` Right (Number 120)
+        `shouldBe` Right (Cons' ["Int","120"] Unit)
 
       it "dynamic scope" $
         (run True $
@@ -208,11 +208,11 @@ spec = do
 
       it "data Xxx with (Int,Int)" $
         (run True "data Xxx with (Int,Int) ; var x:Xxx <- Xxx (1+1,2+2) ; return x")
-        `shouldBe` Right (Cons' ["Xxx"] (Tuple [Number 2, Number 4]))
+        `shouldBe` Right (Cons' ["Xxx"] (Tuple [Cons' ["Int","2"] Unit, Cons' ["Int","4"] Unit]))
 
       it "data Xxx(Int), Xxx.Yyy(Int), y=Yyy(1,2)" $
         (run True "data Xxx with Int ; data Xxx.Yyy with Int ; var y:Xxx.Yyy <- Xxx.Yyy (1,2) ; return y")
-        `shouldBe` Right (Cons' ["Xxx","Yyy"] (Tuple [Number 1,Number 2]))
+        `shouldBe` Right (Cons' ["Xxx","Yyy"] (Tuple [Cons' ["Int","1"] Unit,Cons' ["Int","2"] Unit]))
 
       it "Aa <- Aa.Bb" $
         (run True $
@@ -225,7 +225,7 @@ spec = do
             "set (Aa v) <- b",
             "return v"
           ])
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
 
       it "List" $
         (run True $
@@ -237,7 +237,7 @@ spec = do
             "set l1   <- l2",
             "return 1"
           ])
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
 
       it "List" $
         (run True $
@@ -253,7 +253,7 @@ spec = do
             "set List.Pair (x,_) <- l2",
             "return x"
           ])
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
 
       it "List" $
         (run True $
@@ -266,7 +266,7 @@ spec = do
             "set! List.Pair(x1,_) <- l1",
             "return x1"
           ])
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
 
       it "Pair (a,b) <- (1,2)" $
         (run True $
@@ -275,7 +275,7 @@ spec = do
             "var p1 : Pair of (Int,Int) <- Pair (1,2)",
             "return p1"
            ])
-        `shouldBe` Right (Cons' ["Pair"] (Tuple [Number 1,Number 2]))
+        `shouldBe` Right (Cons' ["Pair"] (Tuple [Cons' ["Int","1"] Unit,Cons' ["Int","2"] Unit]))
 
       it "Pair (a,b) <- 1" $
         (run True $
@@ -284,7 +284,7 @@ spec = do
             "var p1 : Pair of (Int,Int) <- 1",
             "return p1"
            ])
-        `shouldBe` Left "(line 2, column 28):\ntypes do not match : expected '(Pair of (Int,Int))' : found 'Int.1'\n"
+        `shouldBe` Left "(line 2, column 31):\ntypes do not match : expected '(Pair of (Int,Int))' : found 'Int'\n"
 
       it "Pair (a,b) <- Pair 1" $
         (run True $
@@ -293,7 +293,7 @@ spec = do
             "var p1 : Pair of (Int,Int) <- Pair 1",
             "return p1"
            ])
-        `shouldBe` Left "(line 2, column 31):\ntypes do not match : expected '(Int.1 -> (Pair of (Int,Int)))' : found '((a,b) -> (Pair of (a,b)))'\n"
+        `shouldBe` Left "(line 2, column 31):\ntypes do not match : expected '(Int -> (Pair of (Int,Int)))' : found '((a,b) -> (Pair of (a,b)))'\n"
                 -- Left "(line 2, column 31):\ntypes do not match : expected '(a,b)' : found 'Int.1'\n"
 
       it "Unit (a) ; p: Unit Int" $
@@ -321,7 +321,7 @@ spec = do
             "var p1 : Pair <- Pair (1,())",
             "return p1"
            ])
-        `shouldBe` Left "(line 2, column 18):\ntypes do not match : expected '((Int.1,()) -> Pair)' : found '((Int,Int) -> Pair)'\n"
+        `shouldBe` Left "(line 2, column 18):\ntypes do not match : expected '((Int,()) -> Pair)' : found '((Int,Int) -> Pair)'\n"
                 -- Left "(line 2, column 18):\ntypes do not match : expected '(Int,Int)' : found '(Int.1,())'\n"
 
       it "Pair (a,b) <- Pair (1,())" $
@@ -331,43 +331,43 @@ spec = do
             "var p1 : Pair of (Int,Int) <- Pair (1,())",
             "return p1"
            ])
-        `shouldBe` Left "(line 2, column 31):\ntypes do not match : expected '((Int.1,()) -> (Pair of (Int,Int)))' : found '((a,b) -> (Pair of (a,b)))'\n(line 2, column 31):\nambiguous instances for 'b' : '()', 'Int'\n"
+        `shouldBe` Left "(line 2, column 31):\ntypes do not match : expected '((Int,()) -> (Pair of (Int,Int)))' : found '((a,b) -> (Pair of (a,b)))'\n(line 2, column 31):\nambiguous instances for 'b' : '()', 'Int'\n"
 
     describe "match:" $ do
 
       it "1 <- 1" $
         (run True "set 1 <- 1 ; return 1")
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
       it "1 <- 2" $
         (run True "set 1 <- 2 ; return 2")
-        `shouldBe` Left "(line 1, column 7):\nmatch never succeeds : constant mismatch\n"
+        `shouldBe` Left "(line 1, column 10):\nmatch never succeeds : data mismatch\n"
 
       it "x1 <- 1" $
         (run True "var x:Int <- 1 ; set `x´ <- 1 ; return 1")
         `shouldBe` Left "(line 1, column 26):\nmatch might fail\n"
       it "x1 <- 1" $
         (run True "var x:Int <- 1 ; set! `x´ <- 1 ; return 1")
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
       it "x1 <- 2" $
         (run True "var x:Int <- 1 ; set! `x´ <- 2 ; return 2")
         `shouldBe` Right (Error (-2))
       it "1 <- x" $
         (run True "var x:Int <- 1 ; set! 1 <- x ; return x")
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
 
       it "data X with Int ; x:Int ; X x <- X 1" $
         (run True "data Xxx with Int ; var x:Int ; set Xxx x <- Xxx 1 ; return x")
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
       it "data X with Int ; X 1 <- X 1" $
         (run True "data Xxx with Int ; set Xxx 1 <- Xxx 1 ; return 1")
-        `shouldBe` Right (Number 1)
+        `shouldBe` Right (Cons' ["Int","1"] Unit)
       it "data X with Int ; X 2 <- X 1" $
         (run True "data Xxx with Int ; set Xxx 2 <- Xxx 1 ; return 1")
-        `shouldBe` Left "(line 1, column 31):\nmatch never succeeds : constant mismatch\n"
+        `shouldBe` Left "(line 1, column 38):\nmatch never succeeds : data mismatch\n"
 
       it "x <- (10,2) ; (i,2) <- x" $
         (run True "data Xxx with (Int,Int) ; var x : Xxx <- Xxx (10,2) ; var i : int ; set! Xxx (i,2) <- x ; return i")
-        `shouldBe` Right (Number 10)
+        `shouldBe` Right (Cons' ["Int","10"] Unit)
 
       it "match/if" $
         (run True $
@@ -381,7 +381,7 @@ spec = do
             "   return 0",
             "end"
           ])
-        `shouldBe` Right (Number 10)
+        `shouldBe` Right (Cons' ["Int","10"] Unit)
 
       it "if" $
         (run True $
@@ -391,7 +391,7 @@ spec = do
             "end",
             "return 10"
           ])
-        `shouldBe` Right (Number 10)
+        `shouldBe` Right (Cons' ["Int","10"] Unit)
 
       it "if" $
         (run True $
@@ -401,7 +401,7 @@ spec = do
             "end",
             "return 10"
           ])
-        `shouldBe` Right (Number 10)
+        `shouldBe` Right (Cons' ["Int","10"] Unit)
 
     describe "constraint:" $ do
 
@@ -428,7 +428,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "end"                               ,
             "return f3(10)"
           ])
-        `shouldBe` Right (Number 10)
+        `shouldBe` Right (Cons' ["Int","10"] Unit)
 
       it "Int ; Bool ; IF2able a ; inst IF2able Bool/Int ; return f2 1" $
         (run True $
@@ -449,7 +449,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "var ret : Int <- f2(1)"            ,
             "return ret"
           ])
-        `shouldBe` Right (Number 2)
+        `shouldBe` Right (Cons' ["Int","2"] Unit)
 
       it "Int ; Bool ; IF2able a ; inst IF2able Bool/Int ; return f2 1" $
         (run True $
@@ -470,7 +470,7 @@ $f3$(Int -> Int)$ 10                       // Read
             "var ret : Int <- f2(1)"            ,
             "return ret"
           ])
-        `shouldBe` Right (Number 2)
+        `shouldBe` Right (Cons' ["Int","2"] Unit)
 
       it "IEqualable" $
         (run True $
@@ -866,39 +866,39 @@ $f3$(Int -> Int)$ 10                       // Read
     describe "do-end:" $ do
         it "do return 1 end" $
             run True "do return 1; end"
-            `shouldBe` Right (Number 1)
+            `shouldBe` Right (Cons' ["Int","1"] Unit)
         it "do end return 1" $
             run True "do end return 1;"
-            `shouldBe` Right (Number 1)
+            `shouldBe` Right (Cons' ["Int","1"] Unit)
         it "do do do do return 1 end end end end" $
             run True "do do do do return 1 end end end end"
-            `shouldBe` Right (Number 1)
+            `shouldBe` Right (Cons' ["Int","1"] Unit)
         it "do do do do end end end end return 1" $
             run True "do do do; do end ; end end end ;return 1"
-            `shouldBe` Right (Number 1)
+            `shouldBe` Right (Cons' ["Int","1"] Unit)
         it "do ... end" $ do
             run True "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end return 1"
-            `shouldBe` Right (Number 1)
+            `shouldBe` Right (Cons' ["Int","1"] Unit)
 
     describe "if-then-else/if-else" $ do
         it "if 0 then return 0 else return 1 end" $
             run True "if 0 then return 0 else return 1 end"
-            `shouldBe` Left "(line 1, column 1):\ntypes do not match : expected 'Bool' : found 'Int.0'\n"
+            `shouldBe` Left "(line 1, column 4):\ntypes do not match : expected 'Bool' : found 'Int'\n"
         it "if 0==1 then return 0 else return 1 end" $
             run True "if 0==1 then return 0 else return 1 end"
-            `shouldBe` Right (Number 1)
+            `shouldBe` Right (Cons' ["Int","1"] Unit)
         it "if then (if then else end) end" $
             run True "if 1==1 then if 0==1 then return 999 else return 1 end ; end ; return 999; "
-            `shouldBe` Right (Number 1)
+            `shouldBe` Right (Cons' ["Int","1"] Unit)
         it "if then (if then end) else end" $
             run True "if 0==1 then ; if 0==1 then end ; else return 1 end ; return 999"
-            `shouldBe` Right (Number 1)
+            `shouldBe` Right (Cons' ["Int","1"] Unit)
         it "if 1==1 then a=1; a=2; if 1==1 then return a end end" $
             run True "if 1==1 then var a:Int <-1 ; set a<-2; if 1==1 then return a end end ; return 999"
-            `shouldBe` Right (Number 2)
+            `shouldBe` Right (Cons' ["Int","2"] Unit)
         it "if 0==1 then . else/if 1==1 then return 1 else ." $
             run True "if 0==1 then return 0 else/if 1==1 then return 1 else return 0 end"
-            `shouldBe` Right (Number 1)
+            `shouldBe` Right (Cons' ["Int","1"] Unit)
 
 -------------------------------------------------------------------------------
 

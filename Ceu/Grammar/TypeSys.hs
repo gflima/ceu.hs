@@ -27,20 +27,15 @@ go p = stmt [] p
 
 -------------------------------------------------------------------------------
 
-isClass f (Class _ id _ _ _)    = f id
-isClass _  _                    = False
+isClass id1 (Class _ id2 _ _ _) = (id1 == id2)
+isClass _   _                   = False
 
-isInst  f (Inst  _ id _ _ _)    = f id
-isInst  _  _                    = False
+isData  hr1 (Data  _ (TypeD hr2 _ _,_) _ _) = (hr1' == T.hier2str hr2) where
+                                                hr1' = bool hr1 "Int" (take 4 hr1 == "Int.")
+isData  _   _                               = False
 
-isData  f (Data  _ (TypeD hr _ _,_) _ _) = f (T.hier2str hr)
-isData  _  _                           = False
-
-isVar   f (Var   _ id _ _)      = f id
-isVar   _  _                    = False
-
-isAny :: (String -> Bool) -> Stmt -> Bool
-isAny f s = isClass f s || isData f s || isVar f s
+isVar   id1 (Var   _ id2 _ _)   = (id1 == id2)
+isVar   _   _                   = False
 
 findVar :: Ann -> (ID_Var,Relation,TypeC) -> [Stmt] -> Either Errors (Stmt, (Type, [(ID_Var,Type)]))
 findVar z (id,rel,txp) ids =
@@ -48,7 +43,7 @@ findVar z (id,rel,txp) ids =
     Just s@(Var _ _ tp' _)   -> Right (s, ret) where
                                   Right ret = relates rel txp tp'
     Nothing ->
-      case find (isVar $ (==)id) ids of
+      case find (isVar id) ids of
         Nothing              -> Left $ [toError z $ "variable '" ++ id ++ "' is not declared"]
         Just (Var _ _ tp' _) -> Left $ map (toError z) es where
                                   Left es = relates rel txp tp'
@@ -59,7 +54,7 @@ findVar z (id,rel,txp) ids =
 supers :: [Stmt] -> Stmt -> [Stmt]
 supers ids s@(Class z _ ctrs ifc _) = s :
   case Cs.toList ctrs of
-    [(_,[sup])] -> case find (isClass $ (==)sup) ids of
+    [(_,[sup])] -> case find (isClass sup) ids of
                     Just x    -> supers ids x
                     otherwise -> []
     [(_,[])]    -> []
@@ -75,7 +70,7 @@ class2table ids cls = Map.unions $ map f1 (supers ids cls)
 inst2table :: [Stmt] -> Stmt -> Map.Map ID_Var (Ann,ID_Var,TypeC,Bool)
 inst2table ids (Inst z cls tp imp _) = Map.union (f2 imp) sups where
   sups =
-    case find (isClass $ (==)cls) ids of
+    case find (isClass cls) ids of
       Just (Class z _ ctrs _ _) ->
         case Cs.toList ctrs of
           [(_,sups)] -> Map.unions $ map f sups
@@ -150,7 +145,7 @@ err z = Ret z $ Error z (-2)  -- TODO: -2
 errDeclared :: Ann -> Maybe (Stmt->Bool) -> String -> String -> [Stmt] -> Errors
 errDeclared z chk str id ids =
     if (take 1 id == "_") || (take 1 id == "$") then [] else    -- nested _ret, __and (par/and)
-        case find (isAny $ (==)id) ids of
+        case find (isAny id) ids of
             Nothing                 -> []
             Just s@(Var _ _ (_,ctrs) _) ->
               if chk' s then [] else
@@ -160,14 +155,21 @@ errDeclared z chk str id ids =
             Just _                -> err
         where
           err = [toError z $ str ++ " '" ++ id ++ "' is already declared"]
+
           chk' = case chk of
             Nothing -> const False
             Just f  -> f
 
+          isInst  f (Inst  _ id _ _ _)    = f id
+          isInst  _  _                    = False
+
+          isAny :: String -> Stmt -> Bool
+          isAny id s = isClass id s || isData id s || isVar id s
+
 getErrsTypesDeclared :: Ann -> [Stmt] -> Type -> Errors
 getErrsTypesDeclared z ids tp = concatMap f (T.getDs tp) where
   f :: Type -> Errors
-  f (TypeD hier _ tp_) = case find (isData $ (==)id) ids of
+  f (TypeD hier _ tp_) = case find (isData id) ids of
     Nothing               -> [toError z $ "data '" ++ id ++ "' is not declared"]
     Just (Data _ tp' _ _) -> [] --relatesErrors SUP tp' (tp_,cz)
 -- TODO
@@ -182,7 +184,7 @@ stmt ids s@(Class z id ctrs ifc p) = (esMe ++ esExts ++ es, p') where
   esMe    = errDeclared z Nothing "constraint" id ids
   esExts  = case Cs.toList ctrs of
               [(_,sups)] -> concatMap f sups where
-                f sup = case find (isClass $ (==)sup) ids of
+                f sup = case find (isClass sup) ids of
                   Nothing -> [toError z $ "constraint '" ++ sup ++ "' is not declared"]
                   Just _  -> []
               otherwise  -> error "TODO: multiple vars"
@@ -191,7 +193,7 @@ stmt ids s@(Class z id ctrs ifc p) = (esMe ++ esExts ++ es, p') where
 stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
   (esP, p'') = stmt (s:ids) p'
   (p',  es)  =
-    case find (isClass $ (==)cls) ids of
+    case find (isClass cls) ids of
       -- class is not declared
       Nothing -> (p, [toError z $ "constraint '" ++ cls ++ "' is not declared"])
 
@@ -299,7 +301,7 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
 
                     -- functions to instantiate
                     fs = Map.filter pred hcls where
-                      pred (_,id,(tp,_),_) = isNothing $ find (isVar $ (==)id') ids where
+                      pred (_,id,(tp,_),_) = isNothing $ find (isVar id') ids where
                         id' = idtp id tp'
                         tp' = T.instantiate [(clss_var,itp)] tp
 
@@ -387,14 +389,13 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
   fLoc :: Loc -> (Errors,TypeC,Loc)
   fLoc LAny          = ([], (TypeV "?",cz), LAny)
   fLoc LUnit         = ([], (Type0,    cz), LUnit)
-  fLoc (LVar    id)  = case find (isVar $ (==)id) ids of
+  fLoc (LVar    id)  = case find (isVar id) ids of
                         Just (Var _ _ tp _) -> ([], tp, LVar id)
                         otherwise           -> ([toError z $ "variable '" ++ id ++ "' is not declared"],
                                                 (TypeV "?",cz), LVar id)
-  fLoc (LNumber v)   = ([], (TypeD ["Int"] [] Type0, cz), LNumber v)
   fLoc (LCons   h l) = (esl++esh, tph, LCons h l') where
                         (esl,(tpl,csl),l') = fLoc l
-                        (esh,tph) = case find (isData $ (==)(hier2str h)) ids of
+                        (esh,tph) = case find (isData $ hier2str h) ids of
                           Nothing -> ([toError z $ "data '" ++ (hier2str h) ++ "' is not declared"],
                                       (TypeD [] [] (TypeV "?"),cz))
                           Just (Data _ tp _ _) -> case tp of
@@ -416,7 +417,6 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
   --  LExp    a     <- x      # match  # a     SUP x
   --  LAny          <- x      # match  # BOT   SUB x
   --  LUnit         <- x      # match  # unit  SUB x
-  --  LNumber a     <- x      # match  # Int.X SUB x
   --  LCons   a b   <- Cons x # match  # a     SUP Cons x | b match x
   --  LCons   a.* b <- x      # match  # a     SUP x      | b match x
   --  LTuple  (a,b) <- (x,y)  # match  # (B,B) SUB (x,y)  | a match x,  b match y
@@ -428,12 +428,10 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
 
   -- structural match
   match LUnit           (Unit   _)     = (False, [])
-  match (LNumber v1)    (Number _ v2)  = (False, es) where
-                                          es = bool [toError z "match never succeeds : constant mismatch"] [] (v1==v2)
   match (LCons hr1 loc)
         (Call _ (Cons z hr2) exp)      = (may, es++es') where
                                           es = if hr1 `isPrefixOf` hr2 then [] else
-                                                [toError z "match never succeeds : constructor mismatch"]
+                                                [toError z "match never succeeds : data mismatch"]
                                           (may, es') = match loc exp
   match (LTuple ls)     (Tuple z exps) = (or mays, concat eses ++ es) where
                                           es = if lenl == lene then [] else
@@ -448,13 +446,11 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
   -- structural fail
   match l e | (isL l && isE e) = (False, ["match never succeeds"]) where
     isL LUnit       = True
-    isL (LNumber _) = True
     isL (LCons _ _) = True
     isL (LTuple _)  = True
     isL _           = False
 
     isE (Unit   _)   = True
-    isE (Number _ _) = True
     isE (Tuple  _ _) = True
     isE (Cons   _ _) = True
     isE (Call   _ (Cons _ _) _) = True
@@ -464,9 +460,6 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
   match LUnit           exp            = (True, es) where
                                           es = map (toError $ getAnn exp)
                                                    (relatesErrors SUB (Type0,cz) (type_ $ getAnn exp))
-  match (LNumber v)     exp            = (True, es) where
-                                          es = map (toError $ getAnn exp)
-                                                   (relatesErrors SUB (TypeD ["Int",show v] [] Type0,cz) (type_ $ getAnn exp))
 
   -- non-constants: LAny,LVar (no fail) // LExp (may fail)
   match (LVar _)        _              = (False, [])
@@ -481,8 +474,6 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
     match' :: Loc -> TypeC -> (Bool, Errors)
     match' LUnit        tp  = (False, es) where
                                 es = [] --map (toError z) (relatesErrors SUB (Type0,cz) tp)
-    match' (LNumber v)   tp = (True, es) where
-                                es = map (toError z) (relatesErrors SUB (TypeD ["Int",show v] [] Type0,cz) tp)
     match' (LVar _)      _  = (False, [])
     match' LAny          _  = (False, [])
     match' (LExp _)      _  = (True,  [])
@@ -545,7 +536,6 @@ expr z (rel,txp) ids exp = (es1++es2, exp') where
 expr' :: (Relation,TypeC) -> [Stmt] -> Exp -> (Errors, Exp)
 
 expr' _       _   (Error  z v)     = ([], Error  z{type_=(TypeB,cz)} v)
-expr' _       _   (Number z v)     = ([], Number z{type_=(TypeD ["Int",show v] [] Type0,cz)} v)
 expr' _       _   (Unit   z)       = ([], Unit   z{type_=(Type0,cz)})
 expr' (_,txp) _   (Arg    z)       = ([], Arg    z{type_=txp})
 expr' _       ids (Func   z tp p)  = (es, Func   z{type_=tp} tp p')
@@ -555,7 +545,7 @@ expr' _       ids (Func   z tp p)  = (es, Func   z{type_=tp} tp p')
 expr' (rel,txp) ids (Cons z hr) = (es1++es2, Cons z{type_=tp2} hr)
     where
         hr_str = T.hier2str hr
-        (tp1,es1) = case find (isData $ (==)hr_str) ids of
+        (tp1,es1) = case find (isData hr_str) ids of
             Nothing                  -> ((TypeV "?",cz),
                                          [toError z $ "data '" ++ hr_str ++ "' is not declared"])
             Just (Data _ tp True  _) -> (f tp, [toError z $ "data '" ++ hr_str ++ "' is abstract"])

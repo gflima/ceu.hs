@@ -12,7 +12,6 @@ import qualified Ceu.Grammar.Basic as B
 
 data Exp
     = Error  Ann Int            -- 1
-    | Number Ann Int            -- 1
     | Cons   Ann ID_Data_Hier   -- True
     | Read   Ann ID_Var         -- a ; xs
     | Arg    Ann
@@ -24,7 +23,6 @@ data Exp
 
 toBasicExp :: Exp -> B.Exp
 toBasicExp (Error  z v)     = B.Error  z v
-toBasicExp (Number z v)     = B.Number z v
 toBasicExp (Cons   z v)     = B.Cons   z v
 toBasicExp (Read   z v)     = B.Read   z v
 toBasicExp (Arg    z)       = B.Arg    z
@@ -36,7 +34,6 @@ toBasicExp (Call   z e1 e2) = B.Call   z (toBasicExp e1) (toBasicExp e2)
 instance HasAnn Exp where
     --getAnn :: Exp -> Ann
     getAnn (Error  z _)   = z
-    getAnn (Number z _)   = z
     getAnn (Cons   z _)   = z
     getAnn (Read   z _)   = z
     getAnn (Arg    z)     = z
@@ -50,7 +47,6 @@ instance HasAnn Exp where
 data Loc = LAny
          | LVar ID_Var
          | LUnit
-         | LNumber Int
          | LCons ID_Data_Hier Loc
          | LTuple [Loc]
          | LExp Exp
@@ -59,7 +55,6 @@ data Loc = LAny
 toBasicLoc LAny             = B.LAny
 toBasicLoc (LVar   id)      = B.LVar id
 toBasicLoc LUnit            = B.LUnit
-toBasicLoc (LNumber n)      = B.LNumber n
 toBasicLoc (LCons  tps loc) = B.LCons tps (toBasicLoc loc)
 toBasicLoc (LTuple locs)    = B.LTuple $ map toBasicLoc locs
 toBasicLoc (LExp   exp)     = B.LExp (toBasicExp exp)

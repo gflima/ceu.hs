@@ -52,7 +52,7 @@ pLoc = lany  <|> lvar <|> try lunit  <|> lnumber <|>
                 return LUnit
     lnumber = do
                 num <- tk_num
-                return $ LNumber num
+                return $ LCons ["Int", show num] LUnit
     lcons   = do
                 cons <- tk_data_hier
                 loc  <- option LUnit pLoc
@@ -100,8 +100,8 @@ stmt_error = do
   pos  <- pos2src <$> getPosition
   void <- try $ tk_key "error"
   e    <- expr_number
-  return $ let (Number z n) = e in
-            Ret annz{source=pos} (Error z n)
+  return $ let (Cons z ["Int",n]) = e in
+            Ret annz{source=pos} (Error z $ read n)
 
 -------------------------------------------------------------------------------
 
@@ -260,7 +260,7 @@ expr_number :: Parser Exp
 expr_number = do
   pos <- pos2src <$> getPosition
   num <- tk_num
-  return $ Number annz{source=pos} num
+  return $ Cons annz{source=pos} ["Int", show num]
 
 expr_cons :: Parser Exp
 expr_cons = do

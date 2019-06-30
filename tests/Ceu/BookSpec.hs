@@ -39,7 +39,7 @@ spec = do
             "end",
             "return square 3"
            ])
-        `shouldBe` Right (Number 9)
+        `shouldBe` Right (Cons' ["Int","9"] Unit)
 
       it "smaller" $                  -- pg 2
         (run True $
@@ -53,7 +53,7 @@ spec = do
             "end",
             "return (smaller(10,5)) + (smaller(1,4))"
            ])
-        `shouldBe` Right (Number 6)
+        `shouldBe` Right (Cons' ["Int","6"] Unit)
 
       it "square/smaller" $           -- pg 3
         (run True $
@@ -70,7 +70,7 @@ spec = do
             "end",
             "return square (smaller (5, 3+4))"
            ])
-        `shouldBe` Right (Number 25)
+        `shouldBe` Right (Cons' ["Int","25"] Unit)
 
 -------------------------------------------------------------------------------
 
@@ -86,7 +86,7 @@ spec = do
             "end",
             "return three 10"
            ])
-        `shouldBe` Right (Number 3)
+        `shouldBe` Right (Cons' ["Int","3"] Unit)
 
       it "infinity" $         -- pg 5
         (run True $
@@ -127,7 +127,7 @@ spec = do
             "end",
             "return multiply (3,4)"
            ])
-        `shouldBe` Right (Number 12)
+        `shouldBe` Right (Cons' ["Int","12"] Unit)
 
       it "multiply 3 infinity" $  -- pg 9
         (run True $
@@ -158,14 +158,14 @@ spec = do
             "end",
             "return twice (negate,3)"
            ])
-        `shouldBe` Right (Number 3)
+        `shouldBe` Right (Cons' ["Int","3"] Unit)
 
       it "+" $                -- pg 12
         (run True $
           unlines [
             "return 1 + (+ (2,3))"
            ])
-        `shouldBe` Right (Number 6)
+        `shouldBe` Right (Cons' ["Int","6"] Unit)
 
 -------------------------------------------------------------------------------
 
@@ -185,7 +185,7 @@ spec = do
             "end",
             "return (signum 1) + ((signum (-10)) + (signum (10-10)))"
            ])
-        `shouldBe` Right (Number 0)
+        `shouldBe` Right (Cons' ["Int","0"] Unit)
 
       it "fact" $             -- pg 19
         (run True $
@@ -199,7 +199,7 @@ spec = do
             "end",
             "return fact 5"
            ])
-        `shouldBe` Right (Number 120)
+        `shouldBe` Right (Cons' ["Int","120"] Unit)
 
       it "fact - error" $     -- pg 20
         (run True $
@@ -226,7 +226,7 @@ spec = do
             "end",
             "return f (2,3)"
            ])
-        `shouldBe` Right (Number 42)
+        `shouldBe` Right (Cons' ["Int","42"] Unit)
 
       it "locals" $           -- pg 21
         (run True $
@@ -237,7 +237,7 @@ spec = do
             "end",
             "return f (2,3)"
            ])
-        `shouldBe` Right (Number 48)
+        `shouldBe` Right (Cons' ["Int","48"] Unit)
 
       -- TODO-20
 
@@ -890,7 +890,7 @@ spec = do
             "var p1 : Pair of (Int,Int) <- Pair (1,2)",
             "return p1"
            ])
-        `shouldBe` Right (Cons' ["Pair"] (Tuple [Number 1,Number 2]))
+        `shouldBe` Right (Cons' ["Pair"] (Tuple [Cons' ["Int","1"] Unit,Cons' ["Int","2"] Unit]))
 
       it "mkpair" $         -- pg 41
         (run True $
@@ -900,7 +900,7 @@ spec = do
             "var p1 : Pair of (Int,Int) <- mkPair (1,2)",
             "return p1"
            ])
-        `shouldBe` Right (Cons' ["Pair"] (Tuple [Number 1,Number 2]))
+        `shouldBe` Right (Cons' ["Pair"] (Tuple [Cons' ["Int","1"] Unit,Cons' ["Int","2"] Unit]))
 
       it "fst/snd" $         -- pg 41
         (run True $
@@ -929,7 +929,7 @@ spec = do
             "end",
             "return pair ((f,g), 3)"
            ])
-        `shouldBe` Right (Tuple [Cons' ["Bool","True"] Unit,Number 6])
+        `shouldBe` Right (Tuple [Cons' ["Bool","True"] Unit,Cons' ["Int","6"] Unit])
 
       it "TODO: compose" $         -- pg 42
         (run True $
@@ -950,7 +950,7 @@ spec = do
             "end",
             "return (compose (dec, compose(dup,inc))) 10"
            ])
-        `shouldBe` Right (Number 21)
+        `shouldBe` Right (Cons' ["Int","21"] Unit)
 
       it "cross" $         -- pg 42
         (run True $
@@ -972,7 +972,7 @@ spec = do
             "end",
             "return cross ((f,g), (3,4))"
            ])
-        `shouldBe` Right (Tuple [Cons' ["Bool","True"] Unit,Number 8])
+        `shouldBe` Right (Tuple [Cons' ["Bool","True"] Unit,Cons' ["Int","8"] Unit])
 
       it "pi" $         -- pg 44
         (run True $
@@ -982,7 +982,7 @@ spec = do
             "end",
             "return pifun ()"
            ])
-        `shouldBe` Right (Number 314)
+        `shouldBe` Right (Cons' ["Int","314"] Unit)
 
       it "roots" $         -- pg 44
         (run True $
@@ -1091,7 +1091,7 @@ spec = do
             "         (age(Date(3,6,2019), Date(3,6,1979))) ) +",
             "         (age(Date(2,6,2019), Date(3,6,1979)))"
            ])
-        `shouldBe` Right (Number 119)
+        `shouldBe` Right (Cons' ["Int","119"] Unit)
 
 -------------------------------------------------------------------------------
 
@@ -1107,7 +1107,7 @@ var l : Either.Left  <- Either.Left  Bool.True
 var r : Either.Right <- Either.Right 10
 return (l,r)
 |])
-        `shouldBe` Right (Tuple [Cons' ["Either","Left"] (Cons' ["Bool","True"] Unit),Cons' ["Either","Right"] (Number 10)])
+        `shouldBe` Right (Tuple [Cons' ["Either","Left"] (Cons' ["Bool","True"] Unit),Cons' ["Either","Right"] (Cons' ["Int","10"] Unit)])
 
       it "Either a b" $         -- pg 46
         (run True $
@@ -1119,7 +1119,7 @@ var l : Either.Left  of (Bool,Int) <- Either.Left  Bool.True
 var r : Either.Right of (Bool,Int) <- Either.Right 10
 return (l,r)
 |])
-        `shouldBe` Right (Tuple [Cons' ["Either","Left"] (Cons' ["Bool","True"] Unit),Cons' ["Either","Right"] (Number 10)])
+        `shouldBe` Right (Tuple [Cons' ["Either","Left"] (Cons' ["Bool","True"] Unit),Cons' ["Either","Right"] (Cons' ["Int","10"] Unit)])
 
       it "case" $         -- pg 46
         (run True $
@@ -1151,7 +1151,7 @@ var r : Either.Right of (Bool,Int) <- Either.Right 10
 
 return (case ((f,g),l)) + (case ((f,g),r))
 |])
-        `shouldBe` Right (Number 11)
+        `shouldBe` Right (Cons' ["Int","11"] Unit)
 
       it "Either / IEq" $         -- pg 47
         (run True $
@@ -1276,7 +1276,7 @@ end
 
 return move(Distance 10,Angle 2,Position(0,0))
 |])
-        `shouldBe` Right (Cons' ["Position"] (Tuple [Number 20,Number (-20)]))
+        `shouldBe` Right (Cons' ["Position"] (Tuple [Cons' ["Int","20"] Unit,Cons' ["Int","-20"] Unit]))
 
       it "OneTwo" $         -- pg 49
         (run True $
@@ -1287,7 +1287,7 @@ data OneTwo.One with a
 data OneTwo.Two with Pair of a
 return (OneTwo.One 10, OneTwo.Two (Pair (10,20)))
 |])
-        `shouldBe` Right (Tuple [Cons' ["OneTwo","One"] (Number 10),Cons' ["OneTwo","Two"] (Cons' ["Pair"] (Tuple [Number 10,Number 20]))])
+        `shouldBe` Right (Tuple [Cons' ["OneTwo","One"] (Cons' ["Int","10"] Unit),Cons' ["OneTwo","Two"] (Cons' ["Pair"] (Tuple [Cons' ["Int","10"] Unit,Cons' ["Int","20"] Unit]))])
 
       it "OneTwo" $         -- pg 49
         (run True $
@@ -1298,7 +1298,7 @@ data OneTwo.One with a
 data OneTwo.Two with Pair of a
 return (OneTwo.One 10, OneTwo.Two (Pair (10,())))
 |])
-        `shouldBe` Left "(line 6, column 36):\ntypes do not match : expected '((Int.10,()) -> ?)' : found '((a,a) -> (Pair of a))'\n(line 6, column 36):\nambiguous instances for 'a' : 'Int.10', '()'\n"
+        `shouldBe` Left "(line 6, column 36):\ntypes do not match : expected '((Int,()) -> ?)' : found '((a,a) -> (Pair of a))'\n(line 6, column 36):\nambiguous instances for 'a' : 'Int', '()'\n"
 
       it "Angle" $         -- pg 49
         (run True $
@@ -1598,7 +1598,7 @@ end
 
 return convert (um ++ (um ++ (um ++ (um ++ (um ++ um)))))
 |])
-        `shouldBe` Right (Number 6)
+        `shouldBe` Right (Cons' ["Int","6"] Unit)
 
       it "Nat -" $            -- pg 60
         (run True $

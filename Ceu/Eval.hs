@@ -20,7 +20,6 @@ error_match     = -2
 
 data Exp
     = Error  Int
-    | Number Int                -- 1
     | Cons'  ID_Data_Hier Exp   -- True, X v (constants)
     | Cons   ID_Data_Hier       -- X         (functions)
     | Read   ID_Var         -- a ; xs
@@ -33,7 +32,6 @@ data Exp
 data Loc = LAny
          | LVar ID_Var
          | LUnit
-         | LNumber Int
          | LCons ID_Data_Hier Loc
          | LTuple [Loc]
          | LExp Exp
@@ -53,7 +51,6 @@ infixr 1 `Seq`
 
 fromExp :: B.Exp -> Exp
 fromExp (B.Error  _ v)    = Error  v
-fromExp (B.Number _ v)    = Number v
 fromExp (B.Cons   z id)   = case type_ z of
                               (TypeD _ _ Type0, _) -> Cons' id Unit
                               otherwise            -> Cons id
@@ -72,7 +69,6 @@ fromExp (B.Read   z id)   = Read id --' where
 fromLoc B.LAny             = LAny
 fromLoc (B.LVar   id)      = LVar id
 fromLoc B.LUnit            = LUnit
-fromLoc (B.LNumber n)      = LNumber n
 fromLoc (B.LCons  tps loc) = LCons tps (fromLoc loc)
 fromLoc (B.LTuple locs)    = LTuple $ map fromLoc locs
 fromLoc (B.LExp   exp)     = LExp (fromExp exp)
@@ -107,6 +103,9 @@ envRead vars var =
       Just val' -> val'
       Nothing   -> Read var   -- keep original (Read "+")
 
+read' :: String -> Int
+read' x = read x
+
 envEval :: Vars -> Exp -> Exp
 envEval vars e = case e of
     Read  var   -> envRead vars var
@@ -120,21 +119,29 @@ envEval vars e = case e of
 
     Call  f e'  ->
       case (envEval vars f, envEval vars e') of
-        (Error x, _)                                -> Error x
-        (_, Error x)                                -> Error x
-        (Read "print",  x)                          -> traceShowId x
-        (Read "negate", Number x)                   -> Number (-x)
-        (Read "+",      Tuple [Number x, Number y]) -> Number (x+y)
-        (Read "-",      Tuple [Number x, Number y]) -> Number (x-y)
-        (Read "*",      Tuple [Number x, Number y]) -> Number (x*y)
-        (Read "/",      Tuple [Number x, Number y]) -> Number (x `div` y)
-        (Read "rem",    Tuple [Number x, Number y]) -> Number (x `rem` y)
-        (Read "==",     Tuple [Number x, Number y]) -> Cons' (bool ["Bool","False"] ["Bool","True"] (x == y)) Unit
-        (Read "<=",     Tuple [Number x, Number y]) -> Cons' (bool ["Bool","False"] ["Bool","True"] (x <= y)) Unit
-        (Read "<",      Tuple [Number x, Number y]) -> Cons' (bool ["Bool","False"] ["Bool","True"] (x < y))  Unit
-        (Cons id,       e)                          -> Cons' id (envEval vars e)
-        (Func p,        arg)                        -> steps (p, ("_arg",Just arg):vars)
-        x                                           -> error $ show (x,f,e',vars)
+        (Error x, _)                                  -> Error x
+        (_, Error x)                                  -> Error x
+        (Read "print",  x)                            -> traceShowId x
+        (Read "negate", Cons' ["Int",x] Unit)         -> Cons' ["Int",show (- (read x))] Unit
+        (Read "+",      Tuple [Cons' ["Int",x] Unit,
+                               Cons' ["Int",y] Unit]) -> Cons' ["Int",show (read x   +   read y)] Unit
+        (Read "-",      Tuple [Cons' ["Int",x] Unit,
+                               Cons' ["Int",y] Unit]) -> Cons' ["Int",show (read x   -   read y)] Unit
+        (Read "*",      Tuple [Cons' ["Int",x] Unit,
+                               Cons' ["Int",y] Unit]) -> Cons' ["Int",show (read x   *   read y)] Unit
+        (Read "/",      Tuple [Cons' ["Int",x] Unit,
+                               Cons' ["Int",y] Unit]) -> Cons' ["Int",show (read x `div` read y)] Unit
+        (Read "rem",    Tuple [Cons' ["Int",x] Unit,
+                               Cons' ["Int",y] Unit]) -> Cons' ["Int",show (read x `rem` read y)] Unit
+        (Read "==",     Tuple [Cons' ["Int",x] Unit,
+                               Cons' ["Int",y] Unit]) -> Cons' (bool ["Bool","False"] ["Bool","True"] (read' x == read' y)) Unit
+        (Read "<=",     Tuple [Cons' ["Int",x] Unit,
+                               Cons' ["Int",y] Unit]) -> Cons' (bool ["Bool","False"] ["Bool","True"] (read' x <= read' y)) Unit
+        (Read "<",      Tuple [Cons' ["Int",x] Unit,
+                               Cons' ["Int",y] Unit]) -> Cons' (bool ["Bool","False"] ["Bool","True"] (read' x < read' y))  Unit
+        (Cons id,       e)                            -> Cons' id (envEval vars e)
+        (Func p,        arg)                          -> steps (p, ("_arg",Just arg):vars)
+        x                                             -> error $ show (x,f,e',vars)
 
     e         -> e
 
@@ -159,7 +166,6 @@ step (Match loc e p q,vars)  = case envEval vars e of
     aux vars LAny         _ = (Right True,            vars)
     aux vars (LVar id)    v = (Right True,            envWrite vars id v)
     aux vars LUnit        v = (Right True,            vars)
-    aux vars (LNumber x)  v = (Right (Number x == v), vars)
     aux vars (LCons id l)
              (Cons' id' e)  = if T.isRel_ T.SUP (TypeD id [] Type0) (TypeD id' [] Type0) then
                                 case envEval vars e of
@@ -202,13 +208,14 @@ step p =  error $ "step: cannot advance : " ++ (show p)
 
 steps :: Desc -> Exp
 steps (Ret e, vars) = envEval vars e
-steps d             = if (envRead vars "_steps") == (Number 1000) then
+steps d             = if (envRead vars "_steps") == (Cons' ["Int",show 1000] Unit) then
                         Error error_terminate
                       else
-                        steps (step d') where (s,vars) = d
-                                              d'       = (s,vars')
-                                              vars'    = envWrite vars "_steps" (Number $ v+1)
-                                              Number v = envRead vars "_steps"
+                        steps (step d') where
+                          (s,vars)             = d
+                          d'                   = (s,vars')
+                          vars'                = envWrite vars "_steps" (Cons' ["Int", show (read v+1)] Unit)
+                          Cons' ["Int",v] Unit = envRead  vars "_steps"
 
 go :: B.Stmt -> Exp
 go p = case T.go p of
@@ -216,4 +223,4 @@ go p = case T.go p of
     (es, _) -> error $ "compile error : " ++ show es
 
 go' :: B.Stmt -> Exp
-go' p = steps (fromStmt p, [("_steps",Just $ Number 0)])
+go' p = steps (fromStmt p, [("_steps",Just $ Cons' ["Int","0"] Unit)])
