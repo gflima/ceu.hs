@@ -552,10 +552,10 @@ expr' _       ids (Func   z tp p)  = (es, Func   z{type_=tp} tp p')
                                      where
                                       (es,p') = stmt ids p
 
-expr' _ ids (Cons z hr) = (es, Cons z{type_=tp} hr)
+expr' (rel,txp) ids (Cons z hr) = (es1++es2, Cons z{type_=tp2} hr)
     where
         hr_str = T.hier2str hr
-        (tp,es) = case find (isData $ (==)hr_str) ids of
+        (tp1,es1) = case find (isData $ (==)hr_str) ids of
             Nothing                  -> ((TypeV "?",cz),
                                          [toError z $ "data '" ++ hr_str ++ "' is not declared"])
             Just (Data _ tp True  _) -> (f tp, [toError z $ "data '" ++ hr_str ++ "' is abstract"])
@@ -564,6 +564,9 @@ expr' _ ids (Cons z hr) = (es, Cons z{type_=tp} hr)
         f (tp_@(TypeD _ ofs Type0), ctrs) = (tp_,            ctrs)
         f (tp_@(TypeD _ ofs tpst),  ctrs) = (TypeF tpst tp_, ctrs)
 
+        (es2,tp2) = case relates SUP txp tp1 of
+          Left es       -> (map (toError z) es,tp1)
+          Right (tp_,_) -> ([],(tp_,ctrs)) where (_,ctrs)=tp1
 
 expr' _ ids (Tuple z exps) = (es, Tuple z{type_=(tps',cz)} exps') where
                               rets :: [(Errors,Exp)]
@@ -603,11 +606,11 @@ expr' (rel,txp@(txp_,cxp)) ids (Read z id) = (es, Read z{type_=tp} id') where   
                      "' has no associated instance for '" ++
                      T.show' txp_ ++ "'"]
 
-expr' (rel,(txp_,cxp)) ids (Call z f exp) = (bool es_exp es_f (null es_exp),
+expr' (rel,(txp_,cxp)) ids (Call z f exp) = (bool ese esf (null ese),
                                              Call z{type_=tp_out} f' exp')
   where
-    (es_exp, exp') = expr z (rel, (TypeV "?",cz)) ids exp
-    (es_f,   f')   = expr z (rel, (TypeF (fst$type_$getAnn$exp') txp_, cxp)) ids f
+    (ese, exp') = expr z (rel, (TypeV "?",cz)) ids exp
+    (esf, f')   = expr z (rel, (TypeF (fst$type_$getAnn$exp') txp_, cxp)) ids f
                                   -- TODO: ctrs of exp'
 
     tp_out = case type_ $ getAnn f' of

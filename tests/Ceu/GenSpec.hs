@@ -243,7 +243,33 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
 |])
         `shouldBe` Right (Number 80)
 
-      it "XXX: IAa / X a a / Int" $
+      it "IAa / X a a / Int" $
+        (run True $ [r|
+constraint IAa for a with
+  var f : (a -> Int)
+end
+
+data X for a with a
+
+instance of IAa for (X of a) where (a is IAa) with
+  func f (x) : (X of a -> Int) do
+    var v1 : a
+    set X v1 <- x
+    return (f v1)
+  end
+end
+
+instance of IAa for () with
+  func f (x) : (() -> Int) do
+    return 1
+  end
+end
+
+return f (X ())
+|])
+        `shouldBe` Right (Number 1)
+
+      it "IAa / X a a / Int" $
         (run True $ [r|
 constraint IAa for a with
   var f : (a -> Int)

@@ -324,14 +324,14 @@ spec = do
         `shouldBe` Left "(line 2, column 18):\ntypes do not match : expected '((Int.1,()) -> Pair)' : found '((Int,Int) -> Pair)'\n"
                 -- Left "(line 2, column 18):\ntypes do not match : expected '(Int,Int)' : found '(Int.1,())'\n"
 
-      it "XXX: Pair (a,b) <- Pair (1,())" $
+      it "Pair (a,b) <- Pair (1,())" $
         (run True $
           unlines [
             "data Pair for (a,b) with (a,b)",
             "var p1 : Pair of (Int,Int) <- Pair (1,())",
             "return p1"
            ])
-        `shouldBe` Left "(line 2, column 28):\ntypes do not match : expected '(Pair of (Int,Int))' : found '(Pair of (a,b))'\n"
+        `shouldBe` Left "(line 2, column 31):\ntypes do not match : expected '((Int.1,()) -> (Pair of (Int,Int)))' : found '((a,b) -> (Pair of (a,b)))'\n(line 2, column 31):\nambiguous instances for 'b' : '()', 'Int'\n"
 
     describe "match:" $ do
 
