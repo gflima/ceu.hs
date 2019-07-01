@@ -1771,6 +1771,8 @@ return ()
 |])
         `shouldBe` Right EUnit
 
+    describe "Chapter 3.5 - Example: the rationals:" $ do            -- pg 78
+
       it "Rational" $                           -- pg 78 (TODO: show)
         (run True $
           pre ++ [r|
@@ -1924,8 +1926,82 @@ return (neg ((((mkRat (10,2)) -- (mkRat (0,1))) ++ (mkRat (1,-5))) ** (mkRat (-5
         `shouldBe` Right (EData ["Rational"] (ETuple [EData ["Int","-1"] EUnit,EData ["Int","1"] EUnit]))
 
 -------------------------------------------------------------------------------
+    --describe "Chapter 3.6 - Example: linear and binary search:" $ do -- pg 81
+    --describe "Chapter 3.7 - Church numbers:" $ do                   -- pg 86
+-------------------------------------------------------------------------------
 
-  --describe "Chapter X - Xxx:" $ do           -- pg X
+  describe "Chapter 4 - Lists:" $ do           -- pg 91
+
+-------------------------------------------------------------------------------
+
+    describe "Chapter 4.1 - List notation:" $ do       -- pg 91
+
+    describe "XXX: Chapter 4.1.1 - List as a datatype:" $ do       -- pg 92
+
+      it "List" $                   -- pg 2
+        (run True $
+          [r|
+data List for a
+data List.Nil
+data List.Cons with (a, List of a)
+return 10 (List.Cons) List.Nil
+|])
+        `shouldBe` Right (EData ["List","Cons"] (ETuple [EData ["Int","10"] EUnit,EData ["List","Nil"] EUnit]))
+
+      it "List" $                   -- pg 2
+        (run True $
+          [r|
+data List for a
+data List.Nil
+data List.Cons with (a, List of a)
+return List.Cons (10, List.Nil)
+|])
+        `shouldBe` Right (EData ["List","Cons"] (ETuple [EData ["Int","10"] EUnit,EData ["List","Nil"] EUnit]))
+
+      it "TODO: List `:´" $                   -- pg 2
+        (run True $
+          [r|
+data List for a
+data List.Nil
+data List.Cons with (a, List of a)
+func :: : (a -> List of a)
+set :: <- List.Cons
+return 10 :: (List.Nil)
+|])
+        `shouldBe` Right (EData ["List","Cons"] (ETuple [EData ["Int","10"] EUnit,EData ["List","Nil"] EUnit]))
+
+      it "List: ==" $                   -- pg 2
+        (run True $
+          pre ++ [r|
+data List for a
+data List.Nil
+data List.Cons with (a, List of a)
+
+instance of IEqualable for List of a where (a is IEqualable) with end
+
+func eq (l1,l2) : ((List of a, List of a) -> Bool) do
+  if List.Nil <- l1 then
+    if List.Nil <- l2 then
+      return Bool.True
+    else
+      return Bool.False
+    end
+  else/if List.Nil <- l2 then
+      return Bool.False
+  else
+      var (v1 ,v2 ) : (a,         a)
+      var (l1_,l2_) : (List of a, List of a)
+      set! List.Cons (v1,l1_) <- l1
+      set! List.Cons (v2,l2_) <- l2
+      return (v1 === v2) and (l1_ === l2_)
+  end
+end
+
+return ((10 (List.Cons) List.Nil) =/= (List.Cons (10, List.Nil)),
+        (10 (List.Cons) List.Nil) eq  (List.Cons (10, List.Nil)),
+        (10 (List.Cons) List.Nil) eq  (List.Cons (11, List.Nil)))
+|])
+        `shouldBe` Right (ETuple [EData ["Bool","False"] EUnit,EData ["Bool","True"] EUnit,EData ["Bool","False"] EUnit])
 
 -------------------------------------------------------------------------------
 
