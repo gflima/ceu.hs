@@ -1668,7 +1668,7 @@ return ((Nat.Zero) ++ (Nat.Succ (Nat.Zero)),
 
 -------------------------------------------------------------------------------
 
-  describe "Chapter 3.3 - The fold Function:" $ do            -- pg 70
+    describe "Chapter 3.3 - The fold Function:" $ do            -- pg 70
 
       it "fold : +" $            -- pg 71
         (run True $
@@ -1712,12 +1712,216 @@ return one +++ (one +++ one)
 |])
         `shouldBe` Right (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Zero"] EUnit))))
 
-      it "TODO: closures : fold : +/*/^" $            -- pg 71
+      it "TODO: closures : fold : +/*/^ / more examples" $            -- pg 71
         (run True $
           nat ++ [r|
 error 1
 |])
         `shouldBe` Right (EData ["Nat","Zero"] EUnit)
+
+-------------------------------------------------------------------------------
+
+    describe "Chapter 3.4 - Haskell Numbers:" $ do            -- pg 75
+
+      it "data Integer / Positive" $            -- pg 75
+        (run True $
+          [r|
+data Positive
+data Positive.One
+data Positive.Succ with Positive
+
+data Integer
+data Integer.Zero
+data Integer.Neg with Positive
+data Integer.Pos with Positive
+
+return (Integer.Neg (Positive.One), Integer.Zero, Integer.Pos (Positive.Succ (Positive.One)))
+|])
+        `shouldBe` Right (ETuple [EData ["Integer","Neg"] (EData ["Positive","One"] EUnit),EData ["Integer","Zero"] EUnit,EData ["Integer","Pos"] (EData ["Positive","Succ"] (EData ["Positive","One"] EUnit))])
+
+      it "INumeric" $                           -- pg 76
+        (run True $
+          pre ++ [r|
+constraint INumeric for a where (a is IEqualable) with
+  func ++  : ((a,a) -> a)
+  func **  : ((a,a) -> a)
+  func neg : (a -> a)
+
+  func -- (x,y) : ((a,a) -> a) do
+    return x + (neg y)
+  end
+end
+
+constraint IReal for a where (a is INumeric) with // TODO: , a is IOrderable) with
+  //var toRational : (a -> Rational)
+end
+
+constraint IIntegral for a where (a is IReal) with // TODO: , a is IEnumerable) with
+  func div       : ((a,a) -> a)
+  func mod       : ((a,a) -> a)
+  //func toInteger : (a -> Integer)
+end
+
+constraint IFractional for a where (a is INumeric) with
+  func /- : ((a,a) -> a)
+  //var fromRational : (a -> Rational)
+end
+
+return ()
+|])
+        `shouldBe` Right EUnit
+
+      it "Rational" $                           -- pg 78 (TODO: show)
+        (run True $
+          pre ++ [r|
+data Rational with (Int,Int)
+
+func signum x : (Int -> Int) do
+  if x == 0 then
+    return 0
+  else/if x < 0 then
+    return -1
+  else
+    return 1
+  end
+end
+
+func abs x : (Int -> Int) do
+  if x < 0 then
+    return -x
+  else
+    return x
+  end
+end
+
+func gcd (x,y) : ((Int,Int) -> Int) do
+  func gcd_ (a,b) : ((Int,Int) -> Int) do
+    if b == 0 then
+      return a
+    else
+      return gcd_ (b, a rem b)
+    end
+  end
+  return gcd_ (abs x, abs y)
+end
+
+func mkRat (x,y) : ((Int,Int) -> Rational) do
+  var u : Int <- (signum y) * x
+  var v : Int <- abs y
+  var d : Int <- gcd (u,v)
+  return Rational (u / d, v / d)
+end
+
+return (mkRat (10,2), mkRat (0,1), mkRat (1,-5))
+|])
+        `shouldBe` Right (ETuple [EData ["Rational"] (ETuple [EData ["Int","5"] EUnit,EData ["Int","1"] EUnit]),EData ["Rational"] (ETuple [EData ["Int","0"] EUnit,EData ["Int","1"] EUnit]),EData ["Rational"] (ETuple [EData ["Int","-1"] EUnit,EData ["Int","5"] EUnit])])
+
+      it "Rational / INumeric / IFractional" $                       -- pg 80
+        (run True $
+          pre ++ [r|
+constraint INumeric for a where (a is IEqualable) with
+  func ++  : ((a,a) -> a)
+  func **  : ((a,a) -> a)
+  func neg : (a -> a)
+
+  func -- (x,y) : ((a,a) -> a) do
+    return x + (neg y)
+  end
+end
+
+constraint IFractional for a where (a is INumeric) with
+  func /- : ((a,a) -> a)
+  //var fromRational : (a -> Rational)
+end
+
+data Rational with (Int,Int)
+
+func signum x : (Int -> Int) do
+  if x == 0 then
+    return 0
+  else/if x < 0 then
+    return -1
+  else
+    return 1
+  end
+end
+
+func abs x : (Int -> Int) do
+  if x < 0 then
+    return -x
+  else
+    return x
+  end
+end
+
+func gcd (x,y) : ((Int,Int) -> Int) do
+  func gcd_ (a,b) : ((Int,Int) -> Int) do
+    if b == 0 then
+      return a
+    else
+      return gcd_ (b, a rem b)
+    end
+  end
+  return gcd_ (abs x, abs y)
+end
+
+func mkRat (x,y) : ((Int,Int) -> Rational) do
+  var u : Int <- (signum y) * x
+  var v : Int <- abs y
+  var d : Int <- gcd (u,v)
+  return Rational (u / d, v / d)
+end
+
+instance of IEqualable for Rational with end
+
+instance of INumeric for Rational with
+  func ++ (x,y) : ((Rational,Rational) -> Rational) do
+    var (x1,x2) : (Int,Int)
+    var (y1,y2) : (Int,Int)
+    set Rational (x1,x2) <- x
+    set Rational (y1,y2) <- y
+    return mkRat ((x1*y2) + (y1*x2), x2*y2)
+  end
+  func -- (x,y) : ((Rational,Rational) -> Rational) do
+    var (x1,x2) : (Int,Int)
+    var (y1,y2) : (Int,Int)
+    set Rational (x1,x2) <- x
+    set Rational (y1,y2) <- y
+    return mkRat ((x1*y2) - (y1*x2), x2*y2)
+  end
+  func ** (x,y) : ((Rational,Rational) -> Rational) do
+    var (x1,x2) : (Int,Int)
+    var (y1,y2) : (Int,Int)
+    set Rational (x1,x2) <- x
+    set Rational (y1,y2) <- y
+    return mkRat (x1*y1, x2*y2)
+  end
+  func neg x : (Rational -> Rational) do
+    var (x1,x2) : (Int,Int)
+    set Rational (x1,x2) <- x
+    return mkRat (-x1, x2)
+  end
+end
+
+instance of IFractional for Rational with
+  func /- (x,y) : ((Rational,Rational) -> Rational) do
+    var (x1,x2) : (Int,Int)
+    var (y1,y2) : (Int,Int)
+    set Rational (x1,x2) <- x
+    set Rational (y1,y2) <- y
+    if y1 < 0 then
+      return mkRat ((-x1)*y2, (-x2)*y1)
+    else/if y1 == 0 then
+      error 1
+    else
+      return mkRat (x1*y2, x2*y1)
+    end
+  end
+end
+
+return (neg ((((mkRat (10,2)) -- (mkRat (0,1))) ++ (mkRat (1,-5))) ** (mkRat (-5,-1)))) /- (mkRat (24,1))
+|])
+        `shouldBe` Right (EData ["Rational"] (ETuple [EData ["Int","-1"] EUnit,EData ["Int","1"] EUnit]))
 
 -------------------------------------------------------------------------------
 
