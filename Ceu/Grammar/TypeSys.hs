@@ -400,13 +400,17 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
                             Just (Data _ tp _ _) -> case tp of
                               (TData _ ofs st, ctrs) -> (es,tp') where
                                 tp' = (TData (take 1 h) ofs st, ctrs)
-                                es  = map (toError z) (relatesErrors SUB tp tp')
+                                es  = []-- map (toError z) (relatesErrors SUB tp tp')
   fLoc (ETuple z ls)   = (concat ess, (TTuple (map fst tps),cz), ETuple z ls') where   -- TODO: cz should be union of all snd
                           (ess, tps, ls') = unzip3 $ map fLoc ls
-  fLoc (ECall  z f e)  = (esf++ese, (tp_,ctrs), ECall z f' e') where
-                          (esf,f') = expr z (SUP,(TAny "?",cz)) ids f
-                          (ese,e') = expr z (SUP,(TAny "?",cz)) ids e
-                          (TFunc _ tp_, ctrs) = type_ $ getAnn f'
+  fLoc (ECall  z f e)  = (esf++ese, (tp_',ctrs), ECall z f' e') where
+                          (esf,tpf,f') = fLoc f
+                          --(esf,f')   = expr z (SUP,(TAny "?",cz)) ids f
+                          (ese,e')   = expr z (SUP,(TAny "?",cz)) ids e
+                          (tp_,ctrs) = type_ $ getAnn f'
+                          tp_'       = case tp_ of
+                            TFunc _ tp_ -> tp_
+                            tp_         -> tp_
   fLoc (EExp   z e)    = (ese, type_ $ getAnn e', EExp z e') where
                           (ese,e') = expr z (SUP,(TAny "?",cz)) ids e
 
