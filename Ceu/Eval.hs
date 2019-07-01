@@ -159,7 +159,7 @@ step (Match loc e p q,vars)  = case envEval vars e of
                                 (ret2,vars') = aux vars l e
                                 ret' = case ret2 of
                                   Left  x  -> Left  x
-                                  Right v2 -> Right (v1 || v2)
+                                  Right v2 -> Right (v1 && v2)
     aux vars (ETuple ls)
              (ETuple es)    = foldr
                                 (\(loc,e) (b1,vars1) ->
@@ -197,9 +197,9 @@ steps d             = if (envRead vars "_steps") == (EData ["Int",show 1000] EUn
                         EError error_terminate
                       else
                         steps (step d') where
-                          (s,vars)             = d
-                          d'                   = (s,vars')
-                          vars'                = envWrite vars "_steps" (EData ["Int", show (read v+1)] EUnit)
+                          (s,vars)              = d
+                          d'                    = (s,vars')
+                          vars'                 = envWrite vars "_steps" (EData ["Int", show (read v+1)] EUnit)
                           EData ["Int",v] EUnit = envRead  vars "_steps"
 
 go :: B.Stmt -> Exp
