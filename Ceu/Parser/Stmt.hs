@@ -27,7 +27,7 @@ singleton x = [x]
 
 -------------------------------------------------------------------------------
 
-pSet :: Bool -> Loc -> Parser Stmt
+pSet :: Bool -> Exp -> Parser Stmt
 pSet chk loc = do
   pos  <- pos2src <$> getPosition
   void <- tk_sym "<-"
@@ -35,51 +35,61 @@ pSet chk loc = do
   return $ Set annz{source=pos} chk loc exp
 
 -- (x, (y,_))
-pLoc :: Parser Loc
+pLoc :: Parser Exp
 pLoc = lany  <|> lvar <|> try lunit  <|> lnumber <|>
        lcons <|> lexp <|> try ltuple <|> (tk_sym "(" *> (pLoc <* tk_sym ")"))
        <?> "location"
   where
     lany    = do
+                pos  <- pos2src <$> getPosition
                 void <- tk_key "_"
-                return LAny
+                return $ EAny annz{source=pos}
     lvar    = do
+                pos  <- pos2src <$> getPosition
                 var <- tk_var
-                return $ LVar var
+                return $ EVar annz{source=pos} var
     lunit   = do
+                pos  <- pos2src <$> getPosition
                 void <- tk_sym "("
                 void <- tk_sym ")"
-                return LUnit
+                return $ EUnit annz{source=pos}
     lnumber = do
+                pos  <- pos2src <$> getPosition
                 num <- tk_num
-                return $ LCons ["Int", show num] LUnit
+                return $ ECons annz{source=pos} ["Int", show num]
     lcons   = do
+                pos  <- pos2src <$> getPosition
                 cons <- tk_data_hier
-                loc  <- option LUnit pLoc
-                return $ LCons cons loc
+                loc  <- optionMaybe pLoc
+                return $ case loc of
+                          Nothing -> ECons annz{source=pos} cons
+                          Just l  -> ECall annz{source=pos} (ECons annz{source=pos} cons) l
     ltuple  = do
+                pos  <- pos2src <$> getPosition
                 locs <- list2 pLoc
-                return (LTuple $ locs)
+                return (ETuple annz{source=pos} $ locs)
     lexp    = do
+                pos  <- pos2src <$> getPosition
                 exp <- tk_sym "`" *> expr <* tk_sym "´"
-                return $ LExp exp
+                return $ EExp annz{source=pos} exp
 
-matchLocType :: Source -> Loc -> TypeC -> Maybe Stmt
+matchLocType :: Source -> Exp -> TypeC -> Maybe Stmt
 matchLocType src loc (tp_,ctrs) = case (aux src loc tp_) of
                                     Nothing -> Nothing
                                     Just v  -> Just $ foldr (Seq annz) (Nop annz) v
   where
-    aux :: Source -> Loc -> Type -> Maybe [Stmt]
-    aux pos LAny        _          = Just []
-    aux pos LUnit       TUnit      = Just []
-    aux pos (LVar var)  tp_        = Just [Var annz{source=pos} var (tp_,ctrs)]
-    aux pos (LTuple []) (TTuple []) = Just []
-    aux pos (LTuple []) _          = Nothing
-    aux pos (LTuple _)  (TTuple []) = Nothing
-    aux pos (LTuple (v1:vs1)) (TTuple (v2:vs2)) = (fmap (++) (aux pos v1 v2)) <*>
-                                                 (aux pos (LTuple vs1) (TTuple vs2))
-    aux pos (LTuple _)  _          = Nothing
-    aux pos loc         tp_        = error $ show (pos,loc,tp_)
+    aux :: Source -> Exp -> Type -> Maybe [Stmt]
+    aux pos (EAny   _)     _           = Just []
+    aux pos (EUnit  _)     TUnit       = Just []
+    aux pos (EVar   _ var) tp_         = Just [Var annz{source=pos} var (tp_,ctrs)]
+    aux pos (ETuple _ [])  (TTuple []) = Just []
+    aux pos (ETuple _ [])  _           = Nothing
+    aux pos (ETuple _ _)   (TTuple []) = Nothing
+    aux pos (ETuple _ (v1:vs1))
+            (TTuple (v2:vs2))          = (fmap (++) (aux pos v1 v2)) <*>
+                                          (aux pos (ETuple annz{source=pos} vs1) (TTuple vs2))
+    aux pos (ETuple _ _)  _            = Nothing
+    aux pos loc         tp_            = error $ show (pos,loc,tp_)
 
 -------------------------------------------------------------------------------
 
@@ -100,7 +110,7 @@ stmt_error = do
   pos  <- pos2src <$> getPosition
   void <- try $ tk_key "error"
   e    <- expr_number
-  return $ let (EData z ["Int",n]) = e in
+  return $ let (ECons z ["Int",n]) = e in
             Ret annz{source=pos} (EError z $ read n)
 
 -------------------------------------------------------------------------------
@@ -191,7 +201,7 @@ stmt_do = do
   void <- tk_key "end"
   return $ Scope annz{source=pos} s
 
-pMatch pos = option (LExp $ EVar annz{source=pos} "_true") $ try $ pLoc <* tk_sym "<-"
+pMatch pos = option (EExp annz{source=pos} $ EVar annz{source=pos} "_true") $ try $ pLoc <* tk_sym "<-"
 
 stmt_match :: Parser Stmt
 stmt_match = do
@@ -260,13 +270,13 @@ expr_number :: Parser Exp
 expr_number = do
   pos <- pos2src <$> getPosition
   num <- tk_num
-  return $ EData annz{source=pos} ["Int", show num]
+  return $ ECons annz{source=pos} ["Int", show num]
 
 expr_cons :: Parser Exp
 expr_cons = do
   pos  <- pos2src <$> getPosition
   cons <- tk_data_hier
-  return $ EData annz{source=pos} cons
+  return $ ECons annz{source=pos} cons
 
 expr_read :: Parser Exp
 expr_read = do

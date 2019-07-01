@@ -30,7 +30,7 @@ prelude z p =
     (Seq z (Data z (boolf,cz) False)
     (Seq z (Data z (boolt,cz) False)
     (Seq z (Var  z "_true"  (bool,cz))
-    (Seq z (Set  z False (LVar "_true") (EData z ["Bool","True"]))
+    (Seq z (Set  z False (EVar z "_true") (ECons z ["Bool","True"]))
     (Seq z (Var  z "print"  (TFunc (TAny "?")        (TAny "?"), cz))
     (Seq z (Var  z "negate" (TFunc int                int,         cz))
     (Seq z (Var  z "=="     (TFunc (TTuple [int, int]) bool,        cz))

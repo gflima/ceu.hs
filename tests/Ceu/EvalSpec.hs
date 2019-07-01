@@ -26,41 +26,41 @@ spec = do
   describe "Env/Envs" $ do
 
       it "pass: 1st write" $
-        envWrite [("x",Nothing)] "x" (EData ["Int","0"]) `shouldBe` [("x",Just (EData ["Int","0"]))]
+        envWrite [("x",Nothing)] "x" (ECons ["Int","0"]) `shouldBe` [("x",Just (ECons ["Int","0"]))]
 
       it "pass: 2nd write" $
-        envWrite [("x",Just (EData ["Int","99"]))] "x" (EData ["Int","0"]) `shouldBe` [("x",Just (EData ["Int","0"]))]
+        envWrite [("x",Just (ECons ["Int","99"]))] "x" (ECons ["Int","0"]) `shouldBe` [("x",Just (ECons ["Int","0"]))]
 
       it "pass: write in middle" $
-        envWrite [("a",Nothing),("x",Just (EData ["Int","99"])),("b",Nothing)] "x" (EData ["Int","0"]) `shouldBe` [("a",Nothing),("x",Just (EData ["Int","0"])),("b",Nothing)]
+        envWrite [("a",Nothing),("x",Just (ECons ["Int","99"])),("b",Nothing)] "x" (ECons ["Int","0"]) `shouldBe` [("a",Nothing),("x",Just (ECons ["Int","0"])),("b",Nothing)]
 
       it "pass: write in last" $
-        envWrite [("a",Nothing),("b",Nothing),("x",Just (EData ["Int","99"]))] "x" (EData ["Int","0"]) `shouldBe` [("a",Nothing),("b",Nothing),("x",Just (EData ["Int","0"]))]
+        envWrite [("a",Nothing),("b",Nothing),("x",Just (ECons ["Int","99"]))] "x" (ECons ["Int","0"]) `shouldBe` [("a",Nothing),("b",Nothing),("x",Just (ECons ["Int","0"]))]
 
   describe "envRead vars id" $ do
       it "pass: read in simple env" $
-        envRead [("x",Just (EData ["Int","0"]))] "x" `shouldBe` (EData ["Int","0"])
+        envRead [("x",Just (ECons ["Int","0"]))] "x" `shouldBe` (ECons ["Int","0"])
 
       it "pass: read in complex env" $
-        let vars = [("y",Just (EData ["Int","0"])),("x",Just (EData ["Int","1"])),("z",Just (EData ["Int","0"]))] in
-          envRead vars "x" `shouldBe` (EData ["Int","1"])
+        let vars = [("y",Just (ECons ["Int","0"])),("x",Just (ECons ["Int","1"])),("z",Just (ECons ["Int","0"]))] in
+          envRead vars "x" `shouldBe` (ECons ["Int","1"])
 
   describe "envEval vars exp" $ do
       it "pass: vars == [] && exp == (Number _)" $
-        envEval [] (EData ["Int","0"]) `shouldBe` (EData ["Int","0"])
+        envEval [] (ECons ["Int","0"]) `shouldBe` (ECons ["Int","0"])
 
       it "pass: eval in simple env" $
         let vars = [("negate",Nothing), ("+",Nothing), ("-",Nothing),
-                    ("x",Just (EData' ["Int","1"] EUnit)),("y",Just (EData' ["Int","2"] EUnit))] in
-          envEval vars (ECall (EVar "+") (ETuple [(ECall (EVar "-") (ETuple [(EVar "x"),(EData' ["Int","3"] EUnit)])),(ECall (EVar "negate") (EVar "y"))]))
-          `shouldBe` (EData' ["Int","-4"] EUnit)
+                    ("x",Just (EData ["Int","1"] EUnit)),("y",Just (EData ["Int","2"] EUnit))] in
+          envEval vars (ECall (EVar "+") (ETuple [(ECall (EVar "-") (ETuple [(EVar "x"),(EData ["Int","3"] EUnit)])),(ECall (EVar "negate") (EVar "y"))]))
+          `shouldBe` (EData ["Int","-4"] EUnit)
 
       it "pass: eval in complex env" $
         let vars = [("negate",Nothing), ("+",Nothing), ("-",Nothing),
-                    ("y",Just (EData' ["Int","2"] EUnit)),("x",Just (EData' ["Int","1"] EUnit)),
-                    ("y",Just (EData' ["Int","99"] EUnit)),("x",Just (EData' ["Int","99"] EUnit))] in
-          envEval vars (ECall (EVar "+") (ETuple [(ECall (EVar "-") (ETuple [(EVar "x"),(EData' ["Int","3"] EUnit)])),(ECall (EVar "negate") (EVar "y"))]))
-          `shouldBe` (EData' ["Int","-4"] EUnit)
+                    ("y",Just (EData ["Int","2"] EUnit)),("x",Just (EData ["Int","1"] EUnit)),
+                    ("y",Just (EData ["Int","99"] EUnit)),("x",Just (EData ["Int","99"] EUnit))] in
+          envEval vars (ECall (EVar "+") (ETuple [(ECall (EVar "-") (ETuple [(EVar "x"),(EData ["Int","3"] EUnit)])),(ECall (EVar "negate") (EVar "y"))]))
+          `shouldBe` (EData ["Int","-4"] EUnit)
 
   --------------------------------------------------------------------------
   describe "step" $ do
@@ -68,50 +68,50 @@ spec = do
     -- write --
     describe "write" $ do
       it "[x=?] x=1" $
-        step (Var ("x",Nothing) (Match (LVar "x") (EData ["Int","1"]) Nop Nop), [])
-        `shouldBe` (Var ("x",(Just (EData ["Int","1"]))) Nop, [])
+        step (Var ("x",Nothing) (Match (EVar "x") (ECons ["Int","1"]) Nop Nop), [])
+        `shouldBe` (Var ("x",(Just (ECons ["Int","1"]))) Nop, [])
 
       it "[x=1] x=2" $
-        step (Var ("x",(Just (EData ["Int","1"]))) (Match (LVar "x") (EData ["Int","2"]) Nop Nop), [])
-        `shouldBe` (Var ("x",(Just (EData ["Int","2"]))) Nop, [])
+        step (Var ("x",(Just (EData ["Int","1"] EUnit))) (Match (EVar "x") (EData ["Int","2"] EUnit) Nop Nop), [])
+        `shouldBe` (Var ("x",(Just (EData ["Int","2"] EUnit))) Nop, [])
 
       it "nop; x=1" $
         step
         (Var ("x",Nothing)
-          (Nop `Seq` (Match (LVar "x") (EData ["Int","1"]) Nop Nop)), [])
+          (Nop `Seq` (Match (EVar "x") (ECons ["Int","1"]) Nop Nop)), [])
         `shouldBe`
         (Var ("x",Nothing)
-          (Match (LVar "x") (EData ["Int","1"]) Nop Nop), [])
+          (Match (EVar "x") (ECons ["Int","1"]) Nop Nop), [])
 
       it "[x=1,y=?] y=x+2" $
         step (
           (Var ("+",Nothing)
-          (Var ("x",(Just (EData' ["Int","1"] EUnit)))
+          (Var ("x",(Just (EData ["Int","1"] EUnit)))
           (Var ("y",Nothing)
-          (Match (LVar "y") (ECall (EVar "+") (ETuple [(EVar "x"),(EData' ["Int","2"] EUnit)])) Nop Nop)))), [])
-        `shouldBe` (Var ("+",Nothing) (Var ("x",(Just (EData' ["Int","1"] EUnit))) (Var ("y",(Just (EData' ["Int","3"] EUnit))) Nop)), [])
+          (Match (EVar "y") (ECall (EVar "+") (ETuple [(EVar "x"),(EData ["Int","2"] EUnit)])) Nop Nop)))), [])
+        `shouldBe` (Var ("+",Nothing) (Var ("x",(Just (EData ["Int","1"] EUnit))) (Var ("y",(Just (EData ["Int","3"] EUnit))) Nop)), [])
 
       it "[x=1,y=?] y=x+2" $
         step
           (Var ("+",Nothing)
-        (Var ("x",(Just (EData' ["Int","1"] EUnit)))
+        (Var ("x",(Just (EData ["Int","1"] EUnit)))
         (Var ("y",Nothing)
-          (Match (LVar "y") (ECall (EVar "+") (ETuple [(EVar "x"),(EData' ["Int","2"] EUnit)])) Nop Nop))), [])
+          (Match (EVar "y") (ECall (EVar "+") (ETuple [(EVar "x"),(EData ["Int","2"] EUnit)])) Nop Nop))), [])
         `shouldBe`
         (Var ("+",Nothing)
-        (Var ("x",(Just (EData' ["Int","1"] EUnit)))
-        (Var ("y",(Just (EData' ["Int","3"] EUnit))) Nop)), [])
+        (Var ("x",(Just (EData ["Int","1"] EUnit)))
+        (Var ("y",(Just (EData ["Int","3"] EUnit))) Nop)), [])
 
       it "[x=?] x=-(5+1)" $
         step
         (Var ("negate",Nothing)
         (Var ("+",Nothing)
-        (Var ("x",(Just (EData' ["Int","0"] EUnit)))
-          (Match (LVar "x") (ECall (EVar "negate") (ECall (EVar "+") (ETuple [(EData' ["Int","5"] EUnit),(EData' ["Int","1"] EUnit)]))) Nop Nop))), [])
+        (Var ("x",(Just (EData ["Int","0"] EUnit)))
+          (Match (EVar "x") (ECall (EVar "negate") (ECall (EVar "+") (ETuple [(EData ["Int","5"] EUnit),(EData ["Int","1"] EUnit)]))) Nop Nop))), [])
         `shouldBe`
         (Var ("negate",Nothing)
         (Var ("+",Nothing)
-        (Var ("x",(Just (EData' ["Int","-6"] EUnit))) Nop)), [])
+        (Var ("x",(Just (EData ["Int","-6"] EUnit))) Nop)), [])
 
   describe "seq" $ do
       it "nop" $
@@ -124,11 +124,11 @@ spec = do
 {-
   describe "if" $ do
       it "x == 0" $
-        step (If (EVar "x") Nop Nop, [("x",Just (EData ["Int","0"]))])
-        `shouldBe` (Nop, [("x",Just (EData ["Int","0"]))])
+        step (If (EVar "x") Nop Nop, [("x",Just (ECons ["Int","0"]))])
+        `shouldBe` (Nop, [("x",Just (ECons ["Int","0"]))])
       it "x /= 0" $
-        step (If (EVar "x") Nop Nop, [("x",Just (EData ["Int","1"]))])
-        `shouldBe` (Nop, [("x",Just (EData ["Int","1"]))])
+        step (If (EVar "x") Nop Nop, [("x",Just (ECons ["Int","1"]))])
+        `shouldBe` (Nop, [("x",Just (ECons ["Int","1"]))])
 -}
 
   describe "loop" $ do
@@ -152,26 +152,26 @@ spec = do
   describe "func" $ do
     it "ret f()" $
       steps (
-        (Var ("f", Just $ EFunc (Ret (EData' ["Int","1"] EUnit)))
+        (Var ("f", Just $ EFunc (Ret (EData ["Int","1"] EUnit)))
         (Ret (ECall (EVar "f") EUnit)))
-        , [("_steps",Just $ EData' ["Int","0"] EUnit)])
-      `shouldBe` (EData' ["Int","1"] EUnit)
+        , [("_steps",Just $ EData ["Int","0"] EUnit)])
+      `shouldBe` (EData ["Int","1"] EUnit)
 
     it "ret f(1)" $
       steps (
         (Var ("+", Nothing)
-        (Var ("f", Just $ EFunc (Ret (ECall (EVar "+") (ETuple [EVar "_arg",EData' ["Int","1"] EUnit]))))
-        (Ret (ECall (EVar "f") (EData' ["Int","2"] EUnit)))))
-        , [("_steps",Just $ EData' ["Int","0"] EUnit)])
-      `shouldBe` (EData' ["Int","3"] EUnit)
+        (Var ("f", Just $ EFunc (Ret (ECall (EVar "+") (ETuple [EVar "_arg",EData ["Int","1"] EUnit]))))
+        (Ret (ECall (EVar "f") (EData ["Int","2"] EUnit)))))
+        , [("_steps",Just $ EData ["Int","0"] EUnit)])
+      `shouldBe` (EData ["Int","3"] EUnit)
 
     it "ret f(1,2)" $
       steps (
         (Var ("+", Nothing)
         (Var ("f", Just $ EFunc (Ret (ECall (EVar "+") (EVar "_arg"))))
-        (Ret (ECall (EVar "f") (ETuple [EData' ["Int","1"] EUnit,EData' ["Int","2"] EUnit])))))
-        , [("_steps",Just $ EData' ["Int","0"] EUnit)])
-      `shouldBe` (EData' ["Int","3"] EUnit)
+        (Ret (ECall (EVar "f") (ETuple [EData ["Int","1"] EUnit,EData ["Int","2"] EUnit])))))
+        , [("_steps",Just $ EData ["Int","0"] EUnit)])
+      `shouldBe` (EData ["Int","3"] EUnit)
 
   --------------------------------------------------------------------------
   describe "go" $ do
@@ -183,46 +183,46 @@ spec = do
           (B.Data annz (int,cz) False
           (B.Var annz "a" (TTop,cz)
           (B.Var annz "b" (TTop,cz)
-          (B.Match annz False (B.LTuple [B.LVar "a",B.LVar "b"]) (B.ETuple annz [B.EData annz ["Int","1"],B.EData annz ["Int","2"]])
+          (B.Match annz False (B.ETuple annz [B.EVar annz "a",B.EVar annz "b"]) (B.ETuple annz [B.ECons annz ["Int","1"],B.ECons annz ["Int","2"]])
             (B.Ret annz (B.EVar annz "b"))
             (B.Ret annz (B.EError annz 99))))))
-          `shouldBe` (EData' ["Int","2"] EUnit)
+          `shouldBe` (EData ["Int","2"] EUnit)
 
       it "(_,b) <- (1,2)" $
         go
           (B.Data annz (int,cz) False
           (B.Var annz "a" (TTop,cz)
           (B.Var annz "b" (TTop,cz)
-          (B.Match annz False (B.LTuple [B.LAny,B.LVar "b"]) (B.ETuple annz [B.EData annz ["Int","1"],B.EData annz ["Int","2"]])
+          (B.Match annz False (B.ETuple annz [B.EAny annz,B.EVar annz "b"]) (B.ETuple annz [B.ECons annz ["Int","1"],B.ECons annz ["Int","2"]])
             (B.Ret annz (B.EVar annz "b"))
             (B.Ret annz (B.EError annz 99))))))
-          `shouldBe` (EData' ["Int","2"] EUnit)
+          `shouldBe` (EData ["Int","2"] EUnit)
 
       it "1 <- 1" $
         go
           (B.Data annz (int,cz) False
-          (B.Match annz False (B.LCons ["Int","1"] B.LUnit) (B.EData annz ["Int","1"])
-            (B.Ret annz (B.EData annz ["Int","2"]))
+          (B.Match annz False (B.ECons annz ["Int","1"]) (B.ECons annz ["Int","1"])
+            (B.Ret annz (B.ECons annz ["Int","2"]))
             (B.Ret annz (B.EError annz 99))))
-          `shouldBe` (EData' ["Int","2"] EUnit)
+          `shouldBe` (EData ["Int","2"] EUnit)
 
       it "a <- 1 ; `a` <- 1" $
         go
           (B.Data  annz (int,cz) False
           (B.Var   annz "a" (int,cz)
-          (B.Match annz False (B.LVar "a") (B.EData annz ["Int","1"])
-            (B.Match annz True (B.LExp $ B.EVar annz "a") (B.EData annz ["Int","1"])
+          (B.Match annz False (B.EVar annz "a") (B.ECons annz ["Int","1"])
+            (B.Match annz True (B.EExp annz $ B.EVar annz "a") (B.ECons annz ["Int","1"])
               (B.Ret   annz (B.EVar annz "a"))
               (B.Ret   annz (B.EError annz 99)))
             (B.Ret   annz (B.EError annz 99)))))
-        `shouldBe` (EData' ["Int","1"] EUnit)
+        `shouldBe` (EData ["Int","1"] EUnit)
 
       it "a <- 2 ; 1 <- a" $
         go
           (B.Data  annz (int,cz) False
           (B.Var   annz "a" (int,cz)
-          (B.Match annz False (B.LVar "a") (B.EData annz ["Int","2"])
-            (B.Match annz True (B.LCons ["Int","1"] B.LUnit) (B.EVar annz "a")
+          (B.Match annz False (B.EVar annz "a") (B.ECons annz ["Int","2"])
+            (B.Match annz True (B.ECons annz ["Int","1"]) (B.EVar annz "a")
               (B.Ret   annz (B.EVar annz "a"))
               (B.Ret   annz (B.EError annz 10)))
             (B.Ret   annz (B.EError annz 99)))))
@@ -232,19 +232,19 @@ spec = do
         go
           (B.Data  annz (int,cz) False
           (B.Var   annz "a" (int,cz)
-          (B.Match annz False (B.LVar "a") (B.EData annz ["Int","1"])
-            (B.Match annz True (B.LCons ["Int","1"] B.LUnit) (B.EVar annz "a")
+          (B.Match annz False (B.EVar annz "a") (B.ECons annz ["Int","1"])
+            (B.Match annz True (B.ECons annz ["Int","1"]) (B.EVar annz "a")
               (B.Ret   annz (B.EVar annz "a"))
               (B.Ret   annz (B.EError annz 99)))
             (B.Ret   annz (B.EError annz 99)))))
-        `shouldBe` (EData' ["Int","1"] EUnit)
+        `shouldBe` (EData ["Int","1"] EUnit)
 
       it "a <- 1 ; `a` <- 2" $
         go
           (B.Data  annz (int,cz) False
           (B.Var   annz "a" (int,cz)
-          (B.Match annz False (B.LVar "a") (B.EData annz ["Int","1"])
-            (B.Match annz True (B.LExp $ B.EVar annz "a") (B.EData annz ["Int","2"])
+          (B.Match annz False (B.EVar annz "a") (B.ECons annz ["Int","1"])
+            (B.Match annz True (B.EExp annz $ B.EVar annz "a") (B.ECons annz ["Int","2"])
               (B.Ret   annz (B.EVar annz "a"))
               (B.Ret   annz (B.EError annz 10)))
             (B.Ret   annz (B.EError annz 99)))))
@@ -256,18 +256,18 @@ spec = do
         go
           (B.Data annz (int,cz) False
           (B.Var annz "f1" (TFunc TUnit (int),cz)
-          (B.Match annz False (B.LVar "f1")
+          (B.Match annz False (B.EVar annz "f1")
                         (B.EFunc annz (TFunc TUnit (int),cz)
-                          (B.Ret annz (B.EData annz ["Int","1"])))
+                          (B.Ret annz (B.ECons annz ["Int","1"])))
             (B.Ret annz (B.ECall annz (B.EVar annz "f1") (B.EUnit annz)))
             (B.Ret annz (B.EError annz 99)))))
-        `shouldBe` (EData' ["Int","1"] EUnit)
+        `shouldBe` (EData ["Int","1"] EUnit)
 
       it "Int ; f1 (err!) ; return f1 1" $
         go
           (B.Data annz (int,cz) False
           (B.Var annz "f1" (TFunc TUnit TUnit,cz)
-          (B.Match annz False (B.LVar "f1")
+          (B.Match annz False (B.EVar annz "f1")
                         (B.EFunc annz (TFunc TUnit TUnit,cz)
                           (B.Ret annz (B.EError annz 1)))
             (B.Ret annz (B.ECall annz (B.EVar annz "f1") (B.EUnit annz)))
@@ -278,12 +278,12 @@ spec = do
         go
           (B.Data annz (int,cz) False
           (B.Var annz "f1" (TFunc TUnit TUnit,cz)
-          (B.Match annz False (B.LVar "f1")
+          (B.Match annz False (B.EVar annz "f1")
                         (B.EFunc annz (TFunc TUnit TUnit,cz)
                           (B.Ret annz (B.EError annz 1)))
             (B.Seq annz
               (B.CallS annz (B.ECall annz (B.EVar annz "f1") (B.EUnit annz)))
-              (B.Ret annz (B.EData annz ["Int","99"])))
+              (B.Ret annz (B.ECons annz ["Int","99"])))
             (B.Ret annz (B.EError annz 99)))))
         `shouldBe` (EError 1)
 
@@ -299,44 +299,44 @@ spec = do
           (B.Data annz (int,cz) False
           (B.Var annz "+" (TFunc (TTuple [int, int]) (int),cz)
           (B.Var annz "c" (TFunc (int) (int),cz)
-          (B.Match annz False (B.LVar "c")
+          (B.Match annz False (B.EVar annz "c")
                         (B.EFunc annz (TFunc (int) (int),cz)
                           (B.Ret annz (B.EArg annz)))
             (B.Var annz "f" (TFunc (TTuple [int, int]) (int),cz)
               (B.Var annz "g" (TFunc (int) (int),cz)
-              (B.Match annz False (B.LTuple [B.LVar "f",B.LVar "g"]) (B.ETuple annz [B.EVar annz "+",B.EVar annz "c"])
+              (B.Match annz False (B.ETuple annz [B.EVar annz "f",B.EVar annz "g"]) (B.ETuple annz [B.EVar annz "+",B.EVar annz "c"])
                 (B.Ret annz
                   (B.ECall annz
                     (B.EVar annz "f")
                     (B.ETuple annz [
-                      B.ECall annz (B.EVar annz "c") (B.EData annz ["Int","1"]),
-                      B.ECall annz (B.EVar annz "c") (B.EData annz ["Int","2"])])))
+                      B.ECall annz (B.EVar annz "c") (B.ECons annz ["Int","1"]),
+                      B.ECall annz (B.EVar annz "c") (B.ECons annz ["Int","2"])])))
                 (B.Ret annz (B.EError annz 99)))))
             (B.Ret annz (B.EError annz 99))))))
-          `shouldBe` (EData' ["Int","3"] EUnit)
+          `shouldBe` (EData ["Int","3"] EUnit)
 
       it "glb <- 1 ; f () -> glb ; ret glb" $
         go
           (B.Data  annz (int,cz) False
           (B.Var   annz "glb" (int,cz)
-          (B.Match annz False (B.LVar "glb") (B.EData annz ["Int","1"])
+          (B.Match annz False (B.EVar annz "glb") (B.ECons annz ["Int","1"])
             (B.Var   annz "f" (TFunc TUnit (int),cz)
-              (B.Match annz False (B.LVar "f")
+              (B.Match annz False (B.EVar annz "f")
                             (B.EFunc annz (TFunc TUnit (int),cz)
                               (B.Ret annz (B.EVar annz "glb")))
                 (B.Ret annz
                   (B.ECall annz (B.EVar annz "f") (B.EUnit annz)))
                 (B.Ret annz (B.EError annz 99))))
             (B.Ret annz (B.EError annz 99)))))
-          `shouldBe` (EData' ["Int","1"] EUnit)
+          `shouldBe` (EData ["Int","1"] EUnit)
 
       it "glb <- 1 ; f() -> g() -> glb ; ret f()()" $
         go
           (B.Data  annz (int,cz) False
           (B.Var   annz "glb" (int,cz)
-          (B.Match annz False (B.LVar "glb") (B.EData annz ["Int","1"])
+          (B.Match annz False (B.EVar annz "glb") (B.ECons annz ["Int","1"])
             (B.Var   annz "f" (TFunc TUnit (TFunc TUnit (int)),cz)
-              (B.Match annz False (B.LVar "f")
+              (B.Match annz False (B.EVar annz "f")
                             (B.EFunc annz (TFunc TUnit (TFunc TUnit (int)),cz)
                               (B.Ret annz
                                 (B.EFunc annz (TFunc TUnit (int),cz)
@@ -347,28 +347,28 @@ spec = do
                     (B.EUnit annz)))
                 (B.Ret annz (B.EError annz 99))))
             (B.Ret annz (B.EError annz 99)))))
-          `shouldBe` (EData' ["Int","1"] EUnit)
+          `shouldBe` (EData ["Int","1"] EUnit)
 
       it "(TODO: loc lifetime) g' <- nil ; { loc <- 1 ; f() -> g() -> glb ; g' <- f() } ; ret g'()" $
         go
           (B.Data  annz (int,cz) False
           (B.Var   annz "g'" (TFunc TUnit (int),cz)
           (B.Var   annz "loc" (int,cz)
-          (B.Match annz False (B.LVar "loc") (B.EData annz ["Int","1"])
+          (B.Match annz False (B.EVar annz "loc") (B.ECons annz ["Int","1"])
             (B.Var   annz "f" (TFunc TUnit (TFunc TUnit (int)),cz)
-              (B.Match annz False (B.LVar "f")
+              (B.Match annz False (B.EVar annz "f")
                             (B.EFunc annz (TFunc TUnit (TFunc TUnit (int)),cz)
                               (B.Ret annz
                                 (B.EFunc annz (TFunc TUnit (int),cz)
                                   (B.Ret annz (B.EVar annz "loc")))))
-                (B.Match annz False (B.LVar "g'")
+                (B.Match annz False (B.EVar annz "g'")
                               (B.ECall annz (B.EVar annz "f") (B.EUnit annz))
                   (B.Ret annz
                     (B.ECall annz (B.EVar annz "g'") (B.EUnit annz)))
                   (B.Ret annz (B.EError annz 99)))
                 (B.Ret annz (B.EError annz 99))))
             (B.Ret annz (B.EError annz 99))))))
-          `shouldBe` (EData' ["Int","1"] EUnit)
+          `shouldBe` (EData ["Int","1"] EUnit)
 
     describe "data" $ do
 
@@ -377,10 +377,10 @@ spec = do
           (B.Data annz (int,cz) False
           (B.Data annz (TData ["X"] [] int,cz) False
           (B.Var annz "x" (TData ["X"] [] (int),cz)
-          (B.Match annz False (B.LVar "x") (B.ECall annz (B.EData annz ["X"]) (B.EData annz ["Int","1"]))
+          (B.Match annz False (B.EVar annz "x") (B.ECall annz (B.ECons annz ["X"]) (B.ECons annz ["Int","1"]))
             (B.Ret annz (B.EVar annz "x"))
             (B.Ret annz (B.EError annz 99))))))
-        `shouldBe` (EData' ["X"] (EData' ["Int","1"] EUnit))
+        `shouldBe` (EData ["X"] (EData ["Int","1"] EUnit))
 
       it "data X with (Int,Int) ; x <- X (1,2) ; return +x" $
         go
@@ -388,10 +388,10 @@ spec = do
           (B.Var annz "+" (TFunc (TTuple [int, int]) (int),cz)
           (B.Data annz (TData ["X"] [] (TTuple [int, int]),cz) False
           (B.Var annz "x" (TData ["X"] [] (TTuple [int, int]),cz)
-          (B.Match annz False (B.LVar "x") (B.ECall annz (B.EData annz ["X"]) (B.ETuple annz [B.ECall annz (B.EVar annz "+") (B.ETuple annz [B.EData annz ["Int","1"],B.EData annz ["Int","2"]]), B.EData annz ["Int","3"]]))
+          (B.Match annz False (B.EVar annz "x") (B.ECall annz (B.ECons annz ["X"]) (B.ETuple annz [B.ECall annz (B.EVar annz "+") (B.ETuple annz [B.ECons annz ["Int","1"],B.ECons annz ["Int","2"]]), B.ECons annz ["Int","3"]]))
             (B.Ret annz (B.EVar annz "x"))
             (B.Ret annz (B.EError annz 99)))))))
-        `shouldBe` (EData' ["X"] (ETuple [EData' ["Int","3"] EUnit,EData' ["Int","3"] EUnit]))
+        `shouldBe` (EData ["X"] (ETuple [EData ["Int","3"] EUnit,EData ["Int","3"] EUnit]))
 
       it "TODO (coerse): data X with (Int,Int) ; x <- X (1,2) ; return +x" $
         go
@@ -399,20 +399,20 @@ spec = do
           (B.Var annz "+" (TFunc (TTuple [int, int]) (int),cz)
           (B.Data annz (TData ["X"] [] (TTuple [int, int]),cz) False
           (B.Var annz "x" (TData ["X"] [] TUnit,cz)
-          (B.Match annz False (B.LVar "x") (B.ECall annz (B.EData annz ["X"]) (B.ETuple annz [B.EData annz ["Int","1"],B.EData annz ["Int","2"]]))
+          (B.Match annz False (B.EVar annz "x") (B.ECall annz (B.ECons annz ["X"]) (B.ETuple annz [B.ECons annz ["Int","1"],B.ECons annz ["Int","2"]]))
             (B.Ret annz (B.ECall annz (B.EVar annz "+") (B.EVar annz "x")))
             (B.Ret annz (B.EError annz 99)))))))
-        `shouldBe` (EData' ["X"] (EData' ["Int","1"] EUnit))
+        `shouldBe` (EData ["X"] (EData ["Int","1"] EUnit))
 
       it "data X with Int ; x:Int ; X x <- X 1" $
         go
           (B.Data  annz (int,cz) False
           (B.Data  annz (TData ["X"] [] int,cz) False
           (B.Var   annz "x" (int,cz)
-          (B.Match annz False (B.LCons ["X"] (B.LVar "x")) (B.ECall annz (B.EData annz ["X"]) (B.EData annz ["Int","1"]))
+          (B.Match annz False (B.ECall annz (B.ECons annz ["X"]) (B.EVar annz "x")) (B.ECall annz (B.ECons annz ["X"]) (B.ECons annz ["Int","1"]))
             (B.Ret   annz (B.EVar annz "x"))
             (B.Ret   annz (B.EError annz 99))))))
-        `shouldBe` (EData' ["Int","1"] EUnit)
+        `shouldBe` (EData ["Int","1"] EUnit)
 
     describe "class" $ do
 
@@ -426,14 +426,14 @@ spec = do
             [(annz,"f3",(TFunc (int) (int),cz),True)]
             (B.Var annz "$f3$(Int -> Int)$" (TFunc (int) (int),cz)
             (B.Match annz False
-              (B.LVar "$f3$(Int -> Int)$")
+              (B.EVar annz "$f3$(Int -> Int)$")
               (B.EFunc annz (TFunc (int) (int),cz)
-                (B.Ret annz (B.EData annz ["Int","1"])))
+                (B.Ret annz (B.ECons annz ["Int","1"])))
               (B.Seq annz
                 (B.Nop annz)
-                (B.Ret annz (B.ECall annz (B.EVar annz "f3") (B.EData annz ["Int","1"]))))
+                (B.Ret annz (B.ECall annz (B.EVar annz "f3") (B.ECons annz ["Int","1"]))))
               (B.Nop annz)))))))
-        `shouldBe` (EData' ["Int","1"] EUnit)
+        `shouldBe` (EData ["Int","1"] EUnit)
 
       it "Int ; Bool ; X a ; inst X Bool/Int ; return f2 1" $
         go
@@ -447,33 +447,33 @@ spec = do
             [(annz,"f2",(TFunc (bool) (int),cz),True)]
             (B.Var annz "$f2$(Bool -> Int)$" (TFunc (bool) (int),cz)
             (B.Match annz False
-              (B.LVar "$f2$(Bool -> Int)$")
+              (B.EVar annz "$f2$(Bool -> Int)$")
               (B.EFunc annz (TFunc (bool) (int),cz)
-                (B.Ret annz (B.EData annz ["Int","0"])))
+                (B.Ret annz (B.ECons annz ["Int","0"])))
               (B.Seq annz
                 (B.Nop annz)
                 (B.Inst annz "X" (int,cz)
                   [(annz,"f2",(TFunc (int) (int),cz),True)]
                   (B.Var annz "$f2$(Int -> Int)$" (TFunc (int) (int),cz)
                   (B.Match annz False
-                    (B.LVar "$f2$(Int -> Int)$")
+                    (B.EVar annz "$f2$(Int -> Int)$")
                     (B.EFunc annz (TFunc (int) (int),cz)
                       (B.Ret annz
                         (B.ECall annz
                           (B.EVar annz "+")
-                          (B.ETuple annz [B.EArg annz, B.EData annz ["Int","1"]]))))
+                          (B.ETuple annz [B.EArg annz, B.ECons annz ["Int","1"]]))))
                     (B.Seq annz
                       (B.Nop annz)
                       (B.Var annz "ret" (int,cz)
-                      (B.Match annz False (B.LVar "ret")
-                        (B.ECall annz (B.EVar annz "f2") (B.EData annz ["Int","1"]))
+                      (B.Match annz False (B.EVar annz "ret")
+                        (B.ECall annz (B.EVar annz "f2") (B.ECons annz ["Int","1"]))
                         (B.Ret annz (B.EVar annz "ret"))
                         (B.Ret annz (B.EError annz 99))))
                     )
                     (B.Nop annz))))
                     )
                     (B.Nop annz)))))))))
-        `shouldBe` (EData' ["Int","2"] EUnit)
+        `shouldBe` (EData ["Int","2"] EUnit)
 
       it "Int ; Bool ; X a ; inst X Bool/Int ; return f4 1" $
         go
@@ -487,54 +487,54 @@ spec = do
             [(annz,"f4",(TFunc (int) (int),cz),True)]
             (B.Var annz "$f4$(Int -> Int)$" (TFunc (int) (int),cz)
             (B.Match annz False
-              (B.LVar "$f4$(Int -> Int)$")
+              (B.EVar annz "$f4$(Int -> Int)$")
               (B.EFunc annz (TFunc (int) (int),cz)
                 (B.Ret annz
                   (B.ECall annz
                     (B.EVar annz "+")
-                    (B.ETuple annz [B.EArg annz, B.EData annz ["Int","1"]]))))
+                    (B.ETuple annz [B.EArg annz, B.ECons annz ["Int","1"]]))))
                 (B.Seq annz
                   (B.Nop annz)
                   (B.Inst annz "X" (bool,cz)
                     [(annz,"f4",(TFunc (bool) (int),cz),True)]
                     (B.Var annz "$f4$(Bool -> Int)$" (TFunc (bool) (int),cz)
                     (B.Match annz False
-                      (B.LVar "$f4$(Bool -> Int)$")
+                      (B.EVar annz "$f4$(Bool -> Int)$")
                       (B.EFunc annz (TFunc (bool) (int),cz)
-                        (B.Ret annz (B.EData annz ["Int","0"])))
+                        (B.Ret annz (B.ECons annz ["Int","0"])))
                       (B.Seq annz
                         (B.Nop annz)
-                        (B.Ret annz (B.ECall annz (B.EVar annz "f4") (B.EData annz ["Int","1"])))
+                        (B.Ret annz (B.ECall annz (B.EVar annz "f4") (B.ECons annz ["Int","1"])))
                       )
                       (B.Nop annz))))
                 )
                 (B.Nop annz)))))))))
-        `shouldBe` (EData' ["Int","2"] EUnit)
+        `shouldBe` (EData ["Int","2"] EUnit)
 
     describe "misc" $ do
 
-      evalProgItSuccess (EData' ["Int","11"] EUnit)
+      evalProgItSuccess (EData ["Int","11"] EUnit)
         (B.Var annz "+" (TFunc (TTuple [int, int]) (int),cz)
         (B.Var annz "a" (int,cz)
-        (B.Match annz False (B.LVar "a") (B.EData annz ["Int","1"])
-          (B.Ret annz (B.ECall annz (B.EVar annz "+") (B.ETuple annz [(B.EVar annz "a"),(B.EData annz ["Int","10"])])))
+        (B.Match annz False (B.EVar annz "a") (B.ECons annz ["Int","1"])
+          (B.Ret annz (B.ECall annz (B.EVar annz "+") (B.ETuple annz [(B.EVar annz "a"),(B.ECons annz ["Int","10"])])))
           (B.Ret annz (B.EError annz 99)))))
 
-      evalProgItSuccess (EData' ["Int","11"] EUnit)
+      evalProgItSuccess (EData ["Int","11"] EUnit)
         (B.Var annz "+" (TFunc (TTuple [int, int]) (int),cz)
         (B.Var annz "a" (int,cz)
-        (B.Match annz False (B.LVar "a") (B.EData annz ["Int","1"])
+        (B.Match annz False (B.EVar annz "a") (B.ECons annz ["Int","1"])
           (B.Var annz "b" (int,cz)
-            (B.Match annz False (B.LVar "b") (B.EData annz ["Int","91"])
+            (B.Match annz False (B.EVar annz "b") (B.ECons annz ["Int","91"])
               (B.Ret annz
                 (B.ECall annz (B.EVar annz "+")
-                             (B.ETuple annz [(B.EVar annz "a"),(B.EData annz ["Int","10"])])))
+                             (B.ETuple annz [(B.EVar annz "a"),(B.ECons annz ["Int","10"])])))
               (B.Ret annz (B.EError annz 92))))
           (B.Ret annz (B.EError annz 93)))))
 
-      evalProgItSuccess (EData' ["Int","1"] EUnit)
-        (B.Ret annz (B.EData annz ["Int","1"]) `B.sSeq`
-            B.Var annz "_" (int,cz) (B.Ret annz (B.EData annz ["Int","2"])) `B.sSeq`
+      evalProgItSuccess (EData ["Int","1"] EUnit)
+        (B.Ret annz (B.ECons annz ["Int","1"]) `B.sSeq`
+            B.Var annz "_" (int,cz) (B.Ret annz (B.ECons annz ["Int","2"])) `B.sSeq`
             B.Nop annz)
 
       where

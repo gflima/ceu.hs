@@ -87,9 +87,9 @@ inst2table ids (Inst z cls tp imp _) = Map.union (f2 imp) sups where
   f2 :: [(Ann,ID_Var,TypeC,Bool)] -> Map.Map ID_Var (Ann,ID_Var,TypeC,Bool)
   f2 ifc = Map.fromList $ map (\s@(_,id,_,_) -> (id,s)) ifc
 
-wrap insts (Var z id1 (tp_,_) (Match _ False (LVar id2) body _ _)) acc | id1==id2 =
+wrap insts (Var z id1 (tp_,_) (Match _ False (EVar _ id2) body _ _)) acc | id1==id2 =
   Var z id' (tp_',cz)
-    (Match z False (LVar id')
+    (Match z False (EVar z id')
       body'
       acc
       (err z))
@@ -285,7 +285,7 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
                 -- functions to instantiate
                 fs :: [Stmt]
                 fs  = filter pred ids where
-                        pred (Var _ id1 tp@(_,ctrs) (Match _ False (LVar id2) body _ _)) =
+                        pred (Var _ id1 tp@(_,ctrs) (Match _ False (EVar _ id2) body _ _)) =
                           id1==id2 && (not inInsts) && (Cs.hasClass cls ctrs) where
                             inInsts = not $ null $ Map.filter f hinst where
                                         f (_,id',tp',_) = id1==id' && (isRight $ relates SUP tp' tp)
@@ -336,7 +336,7 @@ stmt ids s@(Var z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
   es_data = getErrsTypesDeclared z ids tp_
   es_id   = errDeclared z (Just chk) "variable" id ids where
               chk :: Stmt -> Bool
-              chk (Var _ id1 tp'@(TFunc _ _,_) (Match _ False (LVar id2) _ _ _)) = (id1 /= id2)
+              chk (Var _ id1 tp'@(TFunc _ _,_) (Match _ False (EVar _ id2) _ _ _)) = (id1 /= id2)
               chk (Var _ id1 tp'@(TFunc _ _,_) _) = (tp == tp') -- function prototype
               chk _ = False
   (es,p'') = stmt (s:ids) p'
@@ -350,7 +350,7 @@ stmt ids s@(Var z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
   --    ...
   (f,p') = if ctrs == cz then (Var z id tp, p) else -- normal concrete declarations
     case p of
-      Match z2 False (LVar id') body t f
+      Match z2 False (EVar _ id') body t f
         | id==id' -> (Prelude.id, funcs t)    -- instantiate for all available implementations
       _   -> (Prelude.id, p)                  -- just ignore parametric declarations
       where
@@ -386,29 +386,29 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
 
   -----------------------------------------------------------------------------
 
-  fLoc :: Loc -> (Errors,TypeC,Loc)
-  fLoc LAny          = ([], (TAny "?",cz), LAny)
-  fLoc LUnit         = ([], (TUnit,    cz), LUnit)
-  fLoc (LVar    id)  = case find (isVar id) ids of
-                        Just (Var _ _ tp _) -> ([], tp, LVar id)
-                        otherwise           -> ([toError z $ "variable '" ++ id ++ "' is not declared"],
-                                                (TAny "?",cz), LVar id)
-  fLoc (LCons   h l) = (esl++esh, tph, LCons h l') where
-                        (esl,(tpl,csl),l') = fLoc l
-                        (esh,tph) = case find (isData $ hier2str h) ids of
-                          Nothing -> ([toError z $ "data '" ++ (hier2str h) ++ "' is not declared"],
-                                      (TData [] [] (TAny "?"),cz))
-                          Just (Data _ tp _ _) -> case tp of
-                            (TData _ ofs _, ctrs) -> (es,tp') where
-                              tp' = (TData (take 1 h) ofs tpl, csl)
-                              es  = map (toError z) (relatesErrors SUB tp tp')
-  fLoc (LTuple  ls)  = (concat ess, (TTuple (map fst tps),cz), LTuple ls') where   -- TODO: cz should be union of all snd
-                        (ess, tps, ls') = unzip3 $ map fLoc ls
-  fLoc (LExp    e)   = (ese, type_ $ getAnn e', LExp e') where
-                        (ese,e') = expr z (SUP,(TAny "?",cz)) ids e
-
-  --tLoc :: Loc -> TypeC
-  --tLoc loc = tp where (_,tp,_) = fLoc loc
+  fLoc :: Exp -> (Errors,TypeC,Exp)
+  fLoc (EAny   z)      = ([], (TAny "?",cz), EAny z)
+  fLoc (EUnit  z)      = ([], (TUnit,   cz), EUnit z)
+  fLoc (EVar   z id)   = case find (isVar id) ids of
+                          Just (Var _ _ tp _) -> ([], tp, EVar z id)
+                          otherwise           -> ([toError z $ "variable '" ++ id ++ "' is not declared"],
+                                                  (TAny "?",cz), EVar z id)
+  fLoc (ECons  z h)    = (es, tp, ECons z{type_=tp} h) where
+                          (es,tp) = case find (isData $ hier2str h) ids of
+                            Nothing -> ([toError z $ "data '" ++ (hier2str h) ++ "' is not declared"],
+                                        (TData [] [] (TAny "?"),cz))
+                            Just (Data _ tp _ _) -> case tp of
+                              (TData _ ofs st, ctrs) -> (es,tp') where
+                                tp' = (TData (take 1 h) ofs st, ctrs)
+                                es  = map (toError z) (relatesErrors SUB tp tp')
+  fLoc (ETuple z ls)   = (concat ess, (TTuple (map fst tps),cz), ETuple z ls') where   -- TODO: cz should be union of all snd
+                          (ess, tps, ls') = unzip3 $ map fLoc ls
+  fLoc (ECall  z f e)  = (esf++ese, (tp_,ctrs), ECall z f' e') where
+                          (esf,f') = expr z (SUP,(TAny "?",cz)) ids f
+                          (ese,e') = expr z (SUP,(TAny "?",cz)) ids e
+                          (TFunc _ tp_, ctrs) = type_ $ getAnn f'
+  fLoc (EExp   z e)    = (ese, type_ $ getAnn e', EExp z e') where
+                          (ese,e') = expr z (SUP,(TAny "?",cz)) ids e
 
   -----------------------------------------------------------------------------
 
@@ -417,76 +417,75 @@ stmt ids (Match z chk loc exp p1 p2) = (es', Match z chk loc' exp' p1' p2') wher
   --  LExp    a     <- x      # match  # a     SUP x
   --  LAny          <- x      # match  # BOT   SUB x
   --  LUnit         <- x      # match  # unit  SUB x
-  --  LCons   a b   <- EData x # match  # a     SUP EData x | b match x
+  --  LCons   a b   <- ECons x # match  # a     SUP ECons x | b match x
   --  LCons   a.* b <- x      # match  # a     SUP x      | b match x
   --  LTuple  (a,b) <- (x,y)  # match  # (B,B) SUB (x,y)  | a match x,  b match y
   --  LTuple  (a,b) <- x      # match  # (B,B) SUB x      | a match x1, b match x2
 
-  match :: Loc -> Exp -> (Bool, Errors)
+  match :: Exp -> Exp -> (Bool, Errors)
 
-  match _               (EArg _)        = (False, [])
+  match _                 (EArg   _)         = (False, [])
 
   -- structural match
-  match LUnit           (EUnit   _)     = (False, [])
-  match (LCons hr1 loc)
-        (ECall _ (EData z hr2) exp)      = (may, es++es') where
-                                          es = if hr1 `isPrefixOf` hr2 then [] else
-                                                [toError z "match never succeeds : data mismatch"]
-                                          (may, es') = match loc exp
-  match (LTuple ls)     (ETuple z exps) = (or mays, concat eses ++ es) where
-                                          es = if lenl == lene then [] else
-                                                [toError z "match never succeeds : arity mismatch"]
-                                          (mays, eses) = unzip $ zipWith match ls' exps' where
-                                            ls'   = ls   ++ replicate (lene - lenl) LAny
-                                            exps' = exps ++ replicate (lenl - lene) (EError z (-2))
-                                          lenl  = length ls
-                                          lene  = length exps
-  match l@(LCons _ _)   e@(EData z _)    = match l (ECall z e (EUnit z))
+  match (EUnit _)         (EUnit  _)         = (False, [])
+  match (ECons _ hr1)     (ECons  _ hr2)     = (False, es) where
+                                                es = if hr1 `isPrefixOf` hr2 then [] else
+                                                      [toError z "match never succeeds : data mismatch"]
+  match (ECall _ el1 er1) (ECall  _ el2 er2) = (may1||may2, es1++es2) where
+                                                (may1, es1) = match el1 el2
+                                                (may2, es2) = match er1 er2
+  match (ETuple z1 els)   (ETuple z2 ers)    = (or mays, concat eses ++ es) where
+                                                es = if lenl == lene then [] else
+                                                  [toError z "match never succeeds : arity mismatch"]
+                                                (mays, eses) = unzip $ zipWith match els' ers' where
+                                                  els' = els ++ replicate (lene - lenl) (EAny z1)
+                                                  ers' = ers ++ replicate (lenl - lene) (EError z2 (-2))
+                                                lenl  = length els
+                                                lene  = length ers
 
   -- structural fail
-  match l e | (isL l && isE e) = (False, ["match never succeeds"]) where
-    isL LUnit       = True
-    isL (LCons _ _) = True
-    isL (LTuple _)  = True
-    isL _           = False
-
-    isE (EUnit   _)   = True
-    isE (ETuple  _ _) = True
-    isE (EData   _ _) = True
-    isE (ECall   _ (EData _ _) _) = True
-    isE _            = False
+  match l e | (isE l && isE e) = (False, ["match never succeeds"]) where
+    isE (EUnit  _)              = True
+    isE (ETuple _ _)            = True
+    isE (ECons  _ _)            = True
+    isE (ECall _ (ECons _ _) _) = True
+    isE _                       = False
 
   -- contravariant on constants (SUB)
-  match LUnit           exp            = (True, es) where
-                                          es = map (toError $ getAnn exp)
+  match (EUnit  z)      exp            = (True, es) where
+                                          es = map (toError z)
                                                    (relatesErrors SUB (TUnit,cz) (type_ $ getAnn exp))
 
   -- non-constants: LAny,LVar (no fail) // LExp (may fail)
-  match (LVar _)        _              = (False, [])
-  match LAny            _              = (False, [])
-  match (LExp _)        _              = (True,  [])
+  match (EVar _ _)      _              = (False, [])
+  match (EAny _)        _              = (False, [])
+  match (EExp _ _)      _              = (True,  [])
 
   -- rec
   match loc             exp            = match' loc (type_ $ getAnn exp) where
 
     z = getAnn exp
 
-    match' :: Loc -> TypeC -> (Bool, Errors)
-    match' LUnit        tp  = (False, es) where
-                                es = [] --map (toError z) (relatesErrors SUB (TUnit,cz) tp)
-    match' (LVar _)      _  = (False, [])
-    match' LAny          _  = (False, [])
-    match' (LExp _)      _  = (True,  [])
-    match' (LCons hr1 l) tp = case tp of
-                              (TData hr2 _ st, ctrs) -> (may' || may, es) where
-                                                          may'     = (hr2 `isPrefixOf` hr1) && (hr1 /= hr2)
-                                                          (may,es) = match' l (st,ctrs)
-                              otherwise            -> (False, [])
-    match' (LTuple ls)  tp = case tp of
-                              (TTuple tps, ctrs)    -> (or mays, concat ess) where
-                                                        (mays, ess) = unzip $ zipWith match' ls (map f tps)
-                                                        f tp = (tp,ctrs)
-                              otherwise            -> (False, [])
+    match' :: Exp -> TypeC -> (Bool, Errors)
+    match' (EUnit _)       tp = (False, es) where
+                                  es = [] --map (toError z) (relatesErrors SUB (TUnit,cz) tp)
+    match' (EVar  _ _)     _  = (False, [])
+    match' (EAny  _)       _  = (False, [])
+    match' (EExp  _ _)     _  = (True,  [])
+    match' (ECons _ hr1)   tp = case tp of
+                                  (TData hr2 _ st, ctrs) -> (may, []) where
+                                                              may = (hr2 `isPrefixOf` hr1) && (hr1 /= hr2)
+                                  otherwise              -> (False, [])
+    match' (ETuple _ ls)   tp = case tp of
+                                  (TTuple tps, ctrs)     -> (or mays, concat ess) where
+                                                              (mays, ess) = unzip $ zipWith match' ls (map f tps)
+                                                              f tp = (tp,ctrs)
+                                  otherwise              -> (False, [])
+    match' (ECall _ el er) tp = case tp of
+                                  (TData h ofs st, ctrs) -> (may1 || may2, es1 ++ es2) where
+                                                              (may1, es1) = match' el tp
+                                                              (may2, es2) = match' er (st,ctrs)
+                                  otherwise              -> (False, [])
 
 -------------------------------------------------------------------------------
 
@@ -542,7 +541,7 @@ expr' _       ids (EFunc   z tp p)  = (es, EFunc   z{type_=tp} tp p')
                                      where
                                       (es,p') = stmt ids p
 
-expr' (rel,txp) ids (EData z hr) = (es1++es2, EData z{type_=tp2} hr)
+expr' (rel,txp) ids (ECons z hr) = (es1++es2, ECons z{type_=tp2} hr)
     where
         hr_str = T.hier2str hr
         (tp1,es1) = case find (isData hr_str) ids of
@@ -606,3 +605,5 @@ expr' (rel,(txp_,cxp)) ids (ECall z f exp) = (bool ese esf (null ese),
     tp_out = case type_ $ getAnn f' of
       (TFunc _ out_,ctrs) -> (out_,ctrs)
       otherwise           -> (txp_,cxp)
+
+expr' (_,txp) ids (EAny z) = ([], EAny z{type_=txp})

@@ -21,7 +21,7 @@ spec = do
     describe "return:" $ do
         it "return 1" $
             run True "return 1"
-            `shouldBe` Right (EData' ["Int","1"] EUnit)
+            `shouldBe` Right (EData ["Int","1"] EUnit)
         it "return a" $
             run True "return a"
             `shouldBe` Left "(line 1, column 8):\nvariable 'a' is not declared\n"
@@ -32,34 +32,34 @@ spec = do
     describe "exps:" $ do
         it "return -1" $
             run True "return -1"
-            `shouldBe` Right (EData' ["Int","-1"] EUnit)
+            `shouldBe` Right (EData ["Int","-1"] EUnit)
         it "return - (-1)" $
             run True "return - (-1)"
-            `shouldBe` Right (EData' ["Int","1"] EUnit)
+            `shouldBe` Right (EData ["Int","1"] EUnit)
         it "return -( - 1)" $
             run True "return -(-  1)"
-            `shouldBe` Right (EData' ["Int","1"] EUnit)
+            `shouldBe` Right (EData ["Int","1"] EUnit)
         it "return ((1))" $
             run True "return ((1))"
-            `shouldBe` Right (EData' ["Int","1"] EUnit)
+            `shouldBe` Right (EData ["Int","1"] EUnit)
         it "return ((-9999))" $
             run True "return ((-9999))"
-            `shouldBe` Right (EData' ["Int","-9999"] EUnit)
+            `shouldBe` Right (EData ["Int","-9999"] EUnit)
         it "(1+2)*3" $
             run True "return (1+2)*3"
-            `shouldBe` Right (EData' ["Int","9"] EUnit)
+            `shouldBe` Right (EData ["Int","9"] EUnit)
         it "(1+2)*3" $
             run True "return (1+2)*3"
-            `shouldBe` Right (EData' ["Int","9"] EUnit)
+            `shouldBe` Right (EData ["Int","9"] EUnit)
         it "(1+2)-3" $
             run True "return (1+2)-3"
-            `shouldBe` Right (EData' ["Int","0"] EUnit)
+            `shouldBe` Right (EData ["Int","0"] EUnit)
         it "((1+2)*3)/4" $
             run True "return ((1+2)*3)/4"
-            `shouldBe` Right (EData' ["Int","2"] EUnit)
+            `shouldBe` Right (EData ["Int","2"] EUnit)
         it "+ (1 2)" $
             run True "return + (1,2)"
-            `shouldBe` Right (EData' ["Int","3"] EUnit)
+            `shouldBe` Right (EData ["Int","3"] EUnit)
 
     describe "vars:" $ do
         it "var Int a,b" $
@@ -67,25 +67,25 @@ spec = do
             `shouldBe` Left "(line 1, column 6):\nunexpected \",\"\nexpecting identifier or \":\""
         it "a <- 1; return a;" $
             run True "set a <- 1; return a"
-            `shouldBe` Left "(line 1, column 7):\nvariable 'a' is not declared\n(line 1, column 20):\nvariable 'a' is not declared\n"
+            `shouldBe` Left "(line 1, column 5):\nvariable 'a' is not declared\n(line 1, column 20):\nvariable 'a' is not declared\n"
         it "var a  : Int <- 1; return a;" $
             run True "var a  : Int <- 1; return a"
-            `shouldBe` Right (EData' ["Int","1"] EUnit)
+            `shouldBe` Right (EData ["Int","1"] EUnit)
         it "var a:Int ; a <- 1" $
             run True "var a :Int ; set a <- 1 ; return a"
-            `shouldBe` Right (EData' ["Int","1"] EUnit)
+            `shouldBe` Right (EData ["Int","1"] EUnit)
         it "var x :Int; x<-1; return x" $
             run True "var x:Int; set x <- 1 ;return x"
-            `shouldBe` Right (EData' ["Int","1"] EUnit)
+            `shouldBe` Right (EData ["Int","1"] EUnit)
         it "hide a" $
             run True "var a :Int ; var a :Int ; return 0"
             `shouldBe` Left "(line 1, column 14):\nvariable 'a' is already declared\n"
         it "TODO-index-tuples" $
             run True "var x:(Int,()) <- (1,()) ; var y:(Int,()) <- x ; return 1"
-            `shouldBe` Right (EData' ["Int","1"] EUnit)
+            `shouldBe` Right (EData ["Int","1"] EUnit)
         it "var x:(Int,Int) <- (1,2) ; return '+ x | (TODO: no RT support for tuples)" $
             run True "var x:(Int,Int) <- (1,2) ; return + x"
-            `shouldBe` Right (EData' ["Int","3"] EUnit)
+            `shouldBe` Right (EData ["Int","3"] EUnit)
 
 -------------------------------------------------------------------------------
 
@@ -93,23 +93,23 @@ spec = do
 
       it "f1 ; return f1 1" $
         run True "func f1 () : (() -> Int) do return 1 end ; return f1()"
-        `shouldBe` Right (EData' ["Int","1"] EUnit)
+        `shouldBe` Right (EData ["Int","1"] EUnit)
 
       it "return 1+2" $
         run True "return 1+2"
-        `shouldBe` Right (EData' ["Int","3"] EUnit)
+        `shouldBe` Right (EData ["Int","3"] EUnit)
 
       it "return +(1,2)" $
         run True "return +(1,2)"
-        `shouldBe` Right (EData' ["Int","3"] EUnit)
+        `shouldBe` Right (EData ["Int","3"] EUnit)
 
       it "Int ; + ; return 1+2" $
         run False "data Int ; func + : ((Int,Int)->Int) ; return 1+2"
-        `shouldBe` Right (EData' ["Int","3"] EUnit)
+        `shouldBe` Right (EData ["Int","3"] EUnit)
 
       it "Int ; + ; return +(1,2)" $
         run False "data Int ; func + : ((Int,Int)->Int) ; return +(1,2)"
-        `shouldBe` Right (EData' ["Int","3"] EUnit)
+        `shouldBe` Right (EData ["Int","3"] EUnit)
 
       it "(f,g) <- (+,c) ; return f(g 1, g 2)" $
         (run True $
@@ -120,7 +120,7 @@ spec = do
             "set (f,g) <- (+,c)",
             "return f (g 1, g 2)"
            ])
-        `shouldBe` Right (EData' ["Int","3"] EUnit)
+        `shouldBe` Right (EData ["Int","3"] EUnit)
 
       it "glb <- 1 ; f () -> glb ; ret glb" $
         (run True $
@@ -132,7 +132,7 @@ spec = do
             "end",
             "return f()"
           ])
-        `shouldBe` Right (EData' ["Int","1"] EUnit)
+        `shouldBe` Right (EData ["Int","1"] EUnit)
 
       it "glb <- 1 ; f() -> g() -> glb ; ret f()()" $
         (run True $
@@ -143,7 +143,7 @@ spec = do
             "end",
             "return (f())()"
           ])
-        `shouldBe` Right (EData' ["Int","1"] EUnit)
+        `shouldBe` Right (EData ["Int","1"] EUnit)
 
       it "call 1" $
         (run True $ "call 1")
@@ -151,7 +151,7 @@ spec = do
 
       it "call print" $
         (run True $ "call print 1 ; return print 2")
-        `shouldBe` Right (EData' ["Int","2"] EUnit)
+        `shouldBe` Right (EData ["Int","2"] EUnit)
 
       it "recursion" $
         (run True $
@@ -165,7 +165,7 @@ spec = do
             "end",
             "return fat 5"
            ])
-        `shouldBe` Right (EData' ["Int","120"] EUnit)
+        `shouldBe` Right (EData ["Int","120"] EUnit)
 
       it "dynamic scope" $
         (run True $
@@ -190,29 +190,29 @@ spec = do
             "end",
             "return fst (Bool.True, Bool.False)"
           ])
-        `shouldBe` Right (EData' ["Bool","True"] EUnit)
+        `shouldBe` Right (EData ["Bool","True"] EUnit)
 
     describe "data:" $ do
 
       it "data Xxx" $
         (run False "data Xxx ; var x:Xxx <- Xxx ; return x")
-        `shouldBe` Right (EData' ["Xxx"] EUnit)
+        `shouldBe` Right (EData ["Xxx"] EUnit)
 
       it "data Xxx.Yyy" $
         (run False "data Xxx ; data Xxx.Yyy ; var x:Xxx.Yyy <- Xxx.Yyy ; return x")
-        `shouldBe` Right (EData' ["Xxx","Yyy"] EUnit)
+        `shouldBe` Right (EData ["Xxx","Yyy"] EUnit)
 
       it "data Xxx.Yyy" $
         (run False "data Xxx ; data Xxx.Yyy ; var x:Xxx <- Xxx.Yyy ; return x")
-        `shouldBe` Right (EData' ["Xxx","Yyy"] EUnit)
+        `shouldBe` Right (EData ["Xxx","Yyy"] EUnit)
 
       it "data Xxx with (Int,Int)" $
         (run True "data Xxx with (Int,Int) ; var x:Xxx <- Xxx (1+1,2+2) ; return x")
-        `shouldBe` Right (EData' ["Xxx"] (ETuple [EData' ["Int","2"] EUnit, EData' ["Int","4"] EUnit]))
+        `shouldBe` Right (EData ["Xxx"] (ETuple [EData ["Int","2"] EUnit, EData ["Int","4"] EUnit]))
 
       it "data Xxx(Int), Xxx.Yyy(Int), y=Yyy(1,2)" $
         (run True "data Xxx with Int ; data Xxx.Yyy with Int ; var y:Xxx.Yyy <- Xxx.Yyy (1,2) ; return y")
-        `shouldBe` Right (EData' ["Xxx","Yyy"] (ETuple [EData' ["Int","1"] EUnit,EData' ["Int","2"] EUnit]))
+        `shouldBe` Right (EData ["Xxx","Yyy"] (ETuple [EData ["Int","1"] EUnit,EData ["Int","2"] EUnit]))
 
       it "Aa <- Aa.Bb" $
         (run True $
@@ -225,7 +225,7 @@ spec = do
             "set (Aa v) <- b",
             "return v"
           ])
-        `shouldBe` Right (EData' ["Int","1"] EUnit)
+        `shouldBe` Right (EData ["Int","1"] EUnit)
 
       it "List" $
         (run True $
@@ -237,7 +237,7 @@ spec = do
             "set l1   <- l2",
             "return 1"
           ])
-        `shouldBe` Right (EData' ["Int","1"] EUnit)
+        `shouldBe` Right (EData ["Int","1"] EUnit)
 
       it "List" $
         (run True $
@@ -253,7 +253,7 @@ spec = do
             "set List.Pair (x,_) <- l2",
             "return x"
           ])
-        `shouldBe` Right (EData' ["Int","1"] EUnit)
+        `shouldBe` Right (EData ["Int","1"] EUnit)
 
       it "List" $
         (run True $
@@ -266,7 +266,7 @@ spec = do
             "set! List.Pair(x1,_) <- l1",
             "return x1"
           ])
-        `shouldBe` Right (EData' ["Int","1"] EUnit)
+        `shouldBe` Right (EData ["Int","1"] EUnit)
 
       it "Pair (a,b) <- (1,2)" $
         (run True $
@@ -275,7 +275,7 @@ spec = do
             "var p1 : Pair of (Int,Int) <- Pair (1,2)",
             "return p1"
            ])
-        `shouldBe` Right (EData' ["Pair"] (ETuple [EData' ["Int","1"] EUnit,EData' ["Int","2"] EUnit]))
+        `shouldBe` Right (EData ["Pair"] (ETuple [EData ["Int","1"] EUnit,EData ["Int","2"] EUnit]))
 
       it "Pair (a,b) <- 1" $
         (run True $
@@ -337,37 +337,37 @@ spec = do
 
       it "1 <- 1" $
         (run True "set 1 <- 1 ; return 1")
-        `shouldBe` Right (EData' ["Int","1"] EUnit)
+        `shouldBe` Right (EData ["Int","1"] EUnit)
       it "1 <- 2" $
         (run True "set 1 <- 2 ; return 2")
-        `shouldBe` Left "(line 1, column 10):\nmatch never succeeds : data mismatch\n"
+        `shouldBe` Left "(line 1, column 7):\nmatch never succeeds : data mismatch\n"
 
       it "x1 <- 1" $
         (run True "var x:Int <- 1 ; set `x´ <- 1 ; return 1")
         `shouldBe` Left "(line 1, column 26):\nmatch might fail\n"
       it "x1 <- 1" $
         (run True "var x:Int <- 1 ; set! `x´ <- 1 ; return 1")
-        `shouldBe` Right (EData' ["Int","1"] EUnit)
+        `shouldBe` Right (EData ["Int","1"] EUnit)
       it "x1 <- 2" $
         (run True "var x:Int <- 1 ; set! `x´ <- 2 ; return 2")
         `shouldBe` Right (EError (-2))
       it "1 <- x" $
         (run True "var x:Int <- 1 ; set! 1 <- x ; return x")
-        `shouldBe` Right (EData' ["Int","1"] EUnit)
+        `shouldBe` Right (EData ["Int","1"] EUnit)
 
       it "data X with Int ; x:Int ; X x <- X 1" $
         (run True "data Xxx with Int ; var x:Int ; set Xxx x <- Xxx 1 ; return x")
-        `shouldBe` Right (EData' ["Int","1"] EUnit)
+        `shouldBe` Right (EData ["Int","1"] EUnit)
       it "data X with Int ; X 1 <- X 1" $
         (run True "data Xxx with Int ; set Xxx 1 <- Xxx 1 ; return 1")
-        `shouldBe` Right (EData' ["Int","1"] EUnit)
+        `shouldBe` Right (EData ["Int","1"] EUnit)
       it "data X with Int ; X 2 <- X 1" $
         (run True "data Xxx with Int ; set Xxx 2 <- Xxx 1 ; return 1")
-        `shouldBe` Left "(line 1, column 38):\nmatch never succeeds : data mismatch\n"
+        `shouldBe` Left "(line 1, column 31):\nmatch never succeeds : data mismatch\n"
 
       it "x <- (10,2) ; (i,2) <- x" $
         (run True "data Xxx with (Int,Int) ; var x : Xxx <- Xxx (10,2) ; var i : int ; set! Xxx (i,2) <- x ; return i")
-        `shouldBe` Right (EData' ["Int","10"] EUnit)
+        `shouldBe` Right (EData ["Int","10"] EUnit)
 
       it "match/if" $
         (run True $
@@ -381,7 +381,7 @@ spec = do
             "   return 0",
             "end"
           ])
-        `shouldBe` Right (EData' ["Int","10"] EUnit)
+        `shouldBe` Right (EData ["Int","10"] EUnit)
 
       it "if" $
         (run True $
@@ -391,7 +391,7 @@ spec = do
             "end",
             "return 10"
           ])
-        `shouldBe` Right (EData' ["Int","10"] EUnit)
+        `shouldBe` Right (EData ["Int","10"] EUnit)
 
       it "if" $
         (run True $
@@ -401,7 +401,7 @@ spec = do
             "end",
             "return 10"
           ])
-        `shouldBe` Right (EData' ["Int","10"] EUnit)
+        `shouldBe` Right (EData ["Int","10"] EUnit)
 
     describe "constraint:" $ do
 
@@ -428,7 +428,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "end"                               ,
             "return f3(10)"
           ])
-        `shouldBe` Right (EData' ["Int","10"] EUnit)
+        `shouldBe` Right (EData ["Int","10"] EUnit)
 
       it "Int ; Bool ; IF2able a ; inst IF2able Bool/Int ; return f2 1" $
         (run True $
@@ -449,7 +449,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "var ret : Int <- f2(1)"            ,
             "return ret"
           ])
-        `shouldBe` Right (EData' ["Int","2"] EUnit)
+        `shouldBe` Right (EData ["Int","2"] EUnit)
 
       it "Int ; Bool ; IF2able a ; inst IF2able Bool/Int ; return f2 1" $
         (run True $
@@ -470,7 +470,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "var ret : Int <- f2(1)"            ,
             "return ret"
           ])
-        `shouldBe` Right (EData' ["Int","2"] EUnit)
+        `shouldBe` Right (EData ["Int","2"] EUnit)
 
       it "IEqualable" $
         (run True $
@@ -490,7 +490,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "end",
             "return ((Bool.True) === (Bool.True)) =/= Bool.False"
            ])
-        `shouldBe` Right (EData' ["Bool","False"] EUnit)
+        `shouldBe` Right (EData ["Bool","False"] EUnit)
 
       it "IOrd extends IEq" $
         (run True $
@@ -542,7 +542,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "",
             "return (Bool.True) =$= (Bool.False)"
           ])
-        `shouldBe` Right (EData' ["Bool","False"] EUnit)
+        `shouldBe` Right (EData ["Bool","False"] EUnit)
 
       it "IOrd extends IEq" $
         (run True $
@@ -565,7 +565,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "",
             "return (Bool.True) =$= (Bool.False)"
           ])
-        `shouldBe` Right (EData' ["Bool","False"] EUnit)
+        `shouldBe` Right (EData ["Bool","False"] EUnit)
 
       it "f1" $
         (run True $
@@ -578,7 +578,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "end",
             "return f1 (Bool.True)"
            ])
-        `shouldBe` Right (EData' ["Bool","True"] EUnit)
+        `shouldBe` Right (EData ["Bool","True"] EUnit)
 
       it "f1.x" $
         (run True $
@@ -591,7 +591,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "end",
             "return f1 (Bool.True)"
            ])
-        `shouldBe` Right (EData' ["Bool","True"] EUnit)
+        `shouldBe` Right (EData ["Bool","True"] EUnit)
 
       it "f1 default" $
         (run True $
@@ -603,7 +603,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "end",
             "return f1 (Bool.True)"
            ])
-        `shouldBe` Right (EData' ["Bool","True"] EUnit)
+        `shouldBe` Right (EData ["Bool","True"] EUnit)
 
       it "f1/f2" $
         (run True $
@@ -620,7 +620,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "end",
             "return f1 (Bool.True)"
            ])
-        `shouldBe` Right (EData' ["Bool","True"] EUnit)
+        `shouldBe` Right (EData ["Bool","True"] EUnit)
 
       it "f1/f2/f3" $
         (run True $
@@ -638,7 +638,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "end",
             "return f1 (Bool.True)"
            ])
-        `shouldBe` Right (EData' ["Bool","True"] EUnit)
+        `shouldBe` Right (EData ["Bool","True"] EUnit)
 
       it "IFable f ; g a is IFable" $
         (run True $
@@ -676,7 +676,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "return (g (Bool.True))"
                     -- g_Bool->Bool
            ])
-        `shouldBe` Right (EData' ["Bool","True"] EUnit)
+        `shouldBe` Right (EData ["Bool","True"] EUnit)
 
       it "IFable f ; g a is IFable" $
         (run True $
@@ -698,7 +698,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "return (g (Bool.True))"
                     -- g_Bool->Bool
            ])
-        `shouldBe` Right (EData' ["Bool","True"] EUnit)
+        `shouldBe` Right (EData ["Bool","True"] EUnit)
 
       it "IFable f1/f2/f3 ; g/h a is IFable" $
         (run True $
@@ -734,7 +734,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "return (g (Bool.True)) or (h (Bool.False))"
                     -- g_Bool->Bool
            ])
-        `shouldBe` Right (EData' ["Bool","True"] EUnit)
+        `shouldBe` Right (EData ["Bool","True"] EUnit)
 
       it "params" $
         (run True $
@@ -777,7 +777,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "",
             "return (1===1) and (1=/=2)"
            ])
-        `shouldBe` Right (EData' ["Bool","True"] EUnit)
+        `shouldBe` Right (EData ["Bool","True"] EUnit)
 
       it "tuples" $
         (run True $
@@ -787,7 +787,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "end",
             "return (1,2) f (1,1)"
            ])
-        `shouldBe` Right (EData' ["Bool","True"] EUnit)
+        `shouldBe` Right (EData ["Bool","True"] EUnit)
 
       it "tuples" $
         (run True $
@@ -799,7 +799,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             --"return (((1,1)===(1,1)) and ((1,2)=/=(1,1))) and ((1,2)@>(1,1))"
             "return (((1,1)===(1,1)) and ((1,2)=/=(1,1)))"
            ])
-        `shouldBe` Right (EData' ["Bool","True"] EUnit)
+        `shouldBe` Right (EData ["Bool","True"] EUnit)
 
     describe "extends" $ do
 
@@ -823,7 +823,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "instance of IFb for (m,n) where (m is IFb, n is IFb) with end",
             "return Bool.True"
            ])
-        `shouldBe` Right (EData' ["Bool","True"] EUnit)
+        `shouldBe` Right (EData ["Bool","True"] EUnit)
 
       it "instance for extends of (a,b)" $
         (run True $
@@ -838,7 +838,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "end",
             "return Bool.True"
            ])
-        `shouldBe` Right (EData' ["Bool","True"] EUnit)
+        `shouldBe` Right (EData ["Bool","True"] EUnit)
 
       it "instance for extends of (a,b)" $
         (run True $
@@ -859,26 +859,26 @@ $f3$(Int -> Int)$ 10                       // EVar
             "end",
             "return Bool.True"
            ])
-        `shouldBe` Right (EData' ["Bool","True"] EUnit)
+        `shouldBe` Right (EData ["Bool","True"] EUnit)
 
 -------------------------------------------------------------------------------
 
     describe "do-end:" $ do
         it "do return 1 end" $
             run True "do return 1; end"
-            `shouldBe` Right (EData' ["Int","1"] EUnit)
+            `shouldBe` Right (EData ["Int","1"] EUnit)
         it "do end return 1" $
             run True "do end return 1;"
-            `shouldBe` Right (EData' ["Int","1"] EUnit)
+            `shouldBe` Right (EData ["Int","1"] EUnit)
         it "do do do do return 1 end end end end" $
             run True "do do do do return 1 end end end end"
-            `shouldBe` Right (EData' ["Int","1"] EUnit)
+            `shouldBe` Right (EData ["Int","1"] EUnit)
         it "do do do do end end end end return 1" $
             run True "do do do; do end ; end end end ;return 1"
-            `shouldBe` Right (EData' ["Int","1"] EUnit)
+            `shouldBe` Right (EData ["Int","1"] EUnit)
         it "do ... end" $ do
             run True "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end return 1"
-            `shouldBe` Right (EData' ["Int","1"] EUnit)
+            `shouldBe` Right (EData ["Int","1"] EUnit)
 
     describe "if-then-else/if-else" $ do
         it "if 0 then return 0 else return 1 end" $
@@ -886,19 +886,19 @@ $f3$(Int -> Int)$ 10                       // EVar
             `shouldBe` Left "(line 1, column 4):\ntypes do not match : expected 'Bool' : found 'Int'\n"
         it "if 0==1 then return 0 else return 1 end" $
             run True "if 0==1 then return 0 else return 1 end"
-            `shouldBe` Right (EData' ["Int","1"] EUnit)
+            `shouldBe` Right (EData ["Int","1"] EUnit)
         it "if then (if then else end) end" $
             run True "if 1==1 then if 0==1 then return 999 else return 1 end ; end ; return 999; "
-            `shouldBe` Right (EData' ["Int","1"] EUnit)
+            `shouldBe` Right (EData ["Int","1"] EUnit)
         it "if then (if then end) else end" $
             run True "if 0==1 then ; if 0==1 then end ; else return 1 end ; return 999"
-            `shouldBe` Right (EData' ["Int","1"] EUnit)
+            `shouldBe` Right (EData ["Int","1"] EUnit)
         it "if 1==1 then a=1; a=2; if 1==1 then return a end end" $
             run True "if 1==1 then var a:Int <-1 ; set a<-2; if 1==1 then return a end end ; return 999"
-            `shouldBe` Right (EData' ["Int","2"] EUnit)
+            `shouldBe` Right (EData ["Int","2"] EUnit)
         it "if 0==1 then . else/if 1==1 then return 1 else ." $
             run True "if 0==1 then return 0 else/if 1==1 then return 1 else return 0 end"
-            `shouldBe` Right (EData' ["Int","1"] EUnit)
+            `shouldBe` Right (EData ["Int","1"] EUnit)
 
 -------------------------------------------------------------------------------
 

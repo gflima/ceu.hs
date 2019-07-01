@@ -12,16 +12,16 @@ compile :: Stmt -> Stmt
 compile p = stmt p
 
 protos :: Stmt -> [(Ann, ID_Var, TypeC, Bool)]
-protos (Seq  _ (Var z id tp) (Set _ False (LVar id') _)) | id==id' = [(z,id,tp,True)]
+protos (Seq  _ (Var z id tp) (Set _ False (EVar _ id') _)) | id==id' = [(z,id,tp,True)]
 protos (Seq  _ p1 p2) = (protos p1) ++ (protos p2)
 protos (Var z id tp)  = [(z,id,tp,False)]
 protos p              = []
 
 rename :: Stmt -> Stmt
 rename (Seq  z (Var z1 id tp)
-               (Set z2 False (LVar id') exp))
+               (Set z2 False (EVar z3 id') exp))
         | id==id'    = Seq  z (Var z1 (idtp id tp) tp)
-                                     (Set  z2 False (LVar $ idtp id' tp) exp)
+                                     (Set  z2 False (EVar z3 $ idtp id' tp) exp)
 rename (Seq z p1 p2) = Seq  z (rename p1) (rename p2)
 rename (Var z id tp) = Var z (idtp id tp) tp
 rename p             = p

@@ -19,27 +19,21 @@ error_terminate = -1
 error_match     = -2
 
 data Exp
-    = EError  Int
-    | EData'  ID_Data_Hier Exp   -- True, X v (constants)
-    | EData   ID_Data_Hier       -- X         (functions)
-    | EVar   ID_Var         -- a ; xs
-    | EUnit                  -- ()
-    | ETuple  [Exp]          -- (1,2) ; ((1),2) ; ((1,2),3) ; ((),()) // (len >= 2)
-    | EFunc   Stmt
-    | ECall   Exp Exp        -- f a ; f(a) ; f(1,2)
+    = EError Int
+    | EVar   ID_Var           -- a ; xs
+    | EUnit                   -- ()
+    | EData  ID_Data_Hier Exp -- True, X v (constants)
+    | ECons  ID_Data_Hier     -- X         (functions)
+    | ETuple [Exp]            -- (1,2) ; ((1),2) ; ((1,2),3) ; ((),()) // (len >= 2)
+    | EFunc  Stmt
+    | ECall  Exp Exp          -- f a ; f(a) ; f(1,2)
+    | EAny
+    | EExp   Exp
     deriving (Eq, Show)
-
-data Loc = LAny
-         | LVar ID_Var
-         | LUnit
-         | LCons ID_Data_Hier Loc
-         | LTuple [Loc]
-         | LExp Exp
-  deriving (Eq, Show)
 
 data Stmt
     = Var    (ID_Var,Maybe Exp) Stmt    -- block with environment store
-    | Match  Loc Exp Stmt Stmt          -- match/assignment/if statement
+    | Match  Exp Exp Stmt Stmt          -- match/assignment/if statement
     | CallS  Exp                        -- procedure call
     | Seq    Stmt Stmt                  -- sequence
     | Nop                               -- dummy statement (internal)
@@ -50,28 +44,18 @@ data Stmt
 infixr 1 `Seq`
 
 fromExp :: B.Exp -> Exp
-fromExp (B.EError  _ v)    = EError  v
-fromExp (B.EData   z id)   = case type_ z of
-                              (TData _ _ TUnit, _) -> EData' id EUnit
-                              otherwise            -> EData id
-fromExp (B.EArg    _)      = EVar "_arg"
-fromExp (B.EUnit   _)      = EUnit
-fromExp (B.ETuple  _ vs)   = ETuple (map fromExp vs)
-fromExp (B.ECall   _ f e)  = ECall (fromExp f) (fromExp e)
-fromExp (B.EFunc   _ z p)  = EFunc (fromStmt p)
-fromExp (B.EVar   z id)   = EVar id --' where
-                              --id' = case type_ z of
-                                --tp@(TypeF _ _) -> id ++ "__" ++ T.show' tp
-                                --otherwise      -> id
-
--------------------------------------------------------------------------------
-
-fromLoc B.LAny             = LAny
-fromLoc (B.LVar   id)      = LVar id
-fromLoc B.LUnit            = LUnit
-fromLoc (B.LCons  tps loc) = LCons tps (fromLoc loc)
-fromLoc (B.LTuple locs)    = LTuple $ map fromLoc locs
-fromLoc (B.LExp   exp)     = LExp (fromExp exp)
+fromExp (B.EError  _ v)   = EError  v
+fromExp (B.EVar    _ id)  = EVar id
+fromExp (B.EUnit   _)     = EUnit
+fromExp (B.ECons   z id)  = case type_ z of
+                              (TData _ _ TUnit, _) -> EData id EUnit
+                              otherwise            -> ECons id
+fromExp (B.ETuple  _ vs)  = ETuple (map fromExp vs)
+fromExp (B.EFunc   _ z p) = EFunc (fromStmt p)
+fromExp (B.ECall   _ f e) = ECall (fromExp f) (fromExp e)
+fromExp (B.EAny    _)     = EAny
+fromExp (B.EArg    _)     = EVar "_arg"
+fromExp (B.EExp    _ e)   = EExp (fromExp e)
 
 -------------------------------------------------------------------------------
 
@@ -83,7 +67,7 @@ fromStmt (B.Seq    _ p1 p2)         = Seq (fromStmt p1) (fromStmt p2)
 fromStmt (B.Loop   _ p)             = Loop' (fromStmt p) (fromStmt p)
 fromStmt (B.Ret    _ e)             = Ret (fromExp e)
 fromStmt (B.Nop    _)               = Nop
-fromStmt (B.Match  _ _ loc e p1 p2) = Match (fromLoc loc) (fromExp e) (fromStmt p1) (fromStmt p2)
+fromStmt (B.Match  _ _ loc e p1 p2) = Match (fromExp loc) (fromExp e) (fromStmt p1) (fromStmt p2)
 
 ----------------------------------------------------------------------------
 
@@ -119,29 +103,29 @@ envEval vars e = case e of
 
     ECall  f e'  ->
       case (envEval vars f, envEval vars e') of
-        (EError x, _)                                  -> EError x
-        (_, EError x)                                  -> EError x
-        (EVar "print",  x)                            -> traceShowId x
-        (EVar "negate", EData' ["Int",x] EUnit)         -> EData' ["Int",show (- (read x))] EUnit
-        (EVar "+",      ETuple [EData' ["Int",x] EUnit,
-                               EData' ["Int",y] EUnit]) -> EData' ["Int",show (read x   +   read y)] EUnit
-        (EVar "-",      ETuple [EData' ["Int",x] EUnit,
-                               EData' ["Int",y] EUnit]) -> EData' ["Int",show (read x   -   read y)] EUnit
-        (EVar "*",      ETuple [EData' ["Int",x] EUnit,
-                               EData' ["Int",y] EUnit]) -> EData' ["Int",show (read x   *   read y)] EUnit
-        (EVar "/",      ETuple [EData' ["Int",x] EUnit,
-                               EData' ["Int",y] EUnit]) -> EData' ["Int",show (read x `div` read y)] EUnit
-        (EVar "rem",    ETuple [EData' ["Int",x] EUnit,
-                               EData' ["Int",y] EUnit]) -> EData' ["Int",show (read x `rem` read y)] EUnit
-        (EVar "==",     ETuple [EData' ["Int",x] EUnit,
-                               EData' ["Int",y] EUnit]) -> EData' (bool ["Bool","False"] ["Bool","True"] (read' x == read' y)) EUnit
-        (EVar "<=",     ETuple [EData' ["Int",x] EUnit,
-                               EData' ["Int",y] EUnit]) -> EData' (bool ["Bool","False"] ["Bool","True"] (read' x <= read' y)) EUnit
-        (EVar "<",      ETuple [EData' ["Int",x] EUnit,
-                               EData' ["Int",y] EUnit]) -> EData' (bool ["Bool","False"] ["Bool","True"] (read' x < read' y))  EUnit
-        (EData id,       e)                            -> EData' id (envEval vars e)
-        (EFunc p,        arg)                          -> steps (p, ("_arg",Just arg):vars)
-        x                                             -> error $ show (x,f,e',vars)
+        (EError x, _)                                   -> EError x
+        (_, EError x)                                   -> EError x
+        (EVar "print",  x)                              -> traceShowId x
+        (EVar "negate", EData ["Int",x] EUnit)          -> EData ["Int",show (- (read x))] EUnit
+        (EVar "+",      ETuple [EData ["Int",x] EUnit,
+                                EData ["Int",y] EUnit]) -> EData ["Int",show (read x   +   read y)] EUnit
+        (EVar "-",      ETuple [EData ["Int",x] EUnit,
+                                EData ["Int",y] EUnit]) -> EData ["Int",show (read x   -   read y)] EUnit
+        (EVar "*",      ETuple [EData ["Int",x] EUnit,
+                                EData ["Int",y] EUnit]) -> EData ["Int",show (read x   *   read y)] EUnit
+        (EVar "/",      ETuple [EData ["Int",x] EUnit,
+                                EData ["Int",y] EUnit]) -> EData ["Int",show (read x `div` read y)] EUnit
+        (EVar "rem",    ETuple [EData ["Int",x] EUnit,
+                                EData ["Int",y] EUnit]) -> EData ["Int",show (read x `rem` read y)] EUnit
+        (EVar "==",     ETuple [EData ["Int",x] EUnit,
+                                EData ["Int",y] EUnit]) -> EData (bool ["Bool","False"] ["Bool","True"] (read' x == read' y)) EUnit
+        (EVar "<=",     ETuple [EData ["Int",x] EUnit,
+                                EData ["Int",y] EUnit]) -> EData (bool ["Bool","False"] ["Bool","True"] (read' x <= read' y)) EUnit
+        (EVar "<",      ETuple [EData ["Int",x] EUnit,
+                                EData ["Int",y] EUnit]) -> EData (bool ["Bool","False"] ["Bool","True"] (read' x < read' y))  EUnit
+        (ECons id,       e)                             -> EData id (envEval vars e)
+        (EFunc p,        arg)                           -> steps (p, ("_arg",Just arg):vars)
+        --x                                               -> error $ show (x,f,e',vars)
 
     e         -> e
 
@@ -161,32 +145,33 @@ step (CallS e,        vars)  = (p,          vars) where
 
 step (Match loc e p q,vars)  = case envEval vars e of
                                 EError x -> (Ret (EError x), vars)
-                                e'      -> f $ aux vars loc e'
+                                e'       -> f $ aux vars loc e'
   where
-    aux vars LAny         _ = (Right True,            vars)
-    aux vars (LVar id)    v = (Right True,            envWrite vars id v)
-    aux vars LUnit        v = (Right True,            vars)
-    aux vars (LCons id l)
-             (EData' id' e)  = if T.isRel_ T.SUP (TData id [] TUnit) (TData id' [] TUnit) then
-                                case envEval vars e of
-                                  EError x -> (Left $ EError x, vars)
-                                  e'      -> aux vars l e'
-                              else
-                                (Right False, vars)
-    aux vars (LTuple ls)
-             (ETuple es)     = foldr (\(loc,e) (b1,vars1) ->
-                                      if b1/=(Right True) then (b1,vars1) else
-                                        case envEval vars1 e of
-                                          EError x -> (Left $ EError x, vars)
-                                          e'      -> aux vars1 loc e')
-                                    (Right True, vars)
-                                    (zip ls es)
-    aux vars (LExp x)     v = case envEval vars x of
+    aux vars EAny         _ = (Right True,            vars)
+    aux vars (EVar id)    v = (Right True,            envWrite vars id v)
+    aux vars EUnit        v = (Right True,            vars)
+    aux vars (EData hr1 _)
+             (EData hr2 _)  = (Right ret, vars) where
+                                ret = T.isRel_ T.SUP (TData hr1 [] TUnit) (TData hr2 [] TUnit)
+    aux vars (ECall (ECons hr1) l)
+             (EData hr2 e)  = (ret', vars')  where
+                                v1 = T.isRel_ T.SUP (TData hr1 [] TUnit) (TData hr2 [] TUnit)
+                                (ret2,vars') = aux vars l e
+                                ret' = case ret2 of
+                                  Left  x  -> Left  x
+                                  Right v2 -> Right (v1 || v2)
+    aux vars (ETuple ls)
+             (ETuple es)    = foldr
+                                (\(loc,e) (b1,vars1) ->
+                                  if b1/=(Right True) then (b1,vars1) else
+                                    aux vars1 loc e)
+                                (Right True, vars)
+                                (zip ls es)
+    aux vars (EExp x)     v = case envEval vars x of
                                 EError x -> (Left  $ EError x, vars)
-                                e'      -> (Right $ e' == v, vars)
+                                e'       -> (Right $ e' == v, vars)
 
     --aux x y z = error $ show (y,z)
-
     --err xp got = error $ "assignment does not match : expected '" ++ show xp ++
                                                  --"' : found '"    ++ show got ++ "'"
 
@@ -208,14 +193,14 @@ step p =  error $ "step: cannot advance : " ++ (show p)
 
 steps :: Desc -> Exp
 steps (Ret e, vars) = envEval vars e
-steps d             = if (envRead vars "_steps") == (EData' ["Int",show 1000] EUnit) then
+steps d             = if (envRead vars "_steps") == (EData ["Int",show 1000] EUnit) then
                         EError error_terminate
                       else
                         steps (step d') where
                           (s,vars)             = d
                           d'                   = (s,vars')
-                          vars'                = envWrite vars "_steps" (EData' ["Int", show (read v+1)] EUnit)
-                          EData' ["Int",v] EUnit = envRead  vars "_steps"
+                          vars'                = envWrite vars "_steps" (EData ["Int", show (read v+1)] EUnit)
+                          EData ["Int",v] EUnit = envRead  vars "_steps"
 
 go :: B.Stmt -> Exp
 go p = case T.go p of
@@ -223,4 +208,4 @@ go p = case T.go p of
     (es, _) -> error $ "compile error : " ++ show es
 
 go' :: B.Stmt -> Exp
-go' p = steps (fromStmt p, [("_steps",Just $ EData' ["Int","0"] EUnit)])
+go' p = steps (fromStmt p, [("_steps",Just $ EData ["Int","0"] EUnit)])

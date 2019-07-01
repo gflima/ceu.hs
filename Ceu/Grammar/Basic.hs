@@ -12,7 +12,7 @@ data Exp
     = EError Ann Int
     | EVar   Ann ID_Var         -- a ; xs
     | EUnit  Ann                -- ()
-    | EData  Ann ID_Data_Hier   -- Bool.True ; Int.1 ; Tree.Node
+    | ECons  Ann ID_Data_Hier   -- Bool.True ; Int.1 ; Tree.Node
     | ETuple Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
     | EFunc  Ann TypeC Stmt     -- function implementation
     | ECall  Ann Exp Exp        -- f a ; f(a) ; f(1,2)
@@ -26,7 +26,7 @@ instance HasAnn Exp where
     getAnn (EError z _)   = z
     getAnn (EVar   z _)   = z
     getAnn (EUnit  z)     = z
-    getAnn (EData  z _)   = z
+    getAnn (ECons  z _)   = z
     getAnn (ETuple z _)   = z
     getAnn (EFunc  z _ _) = z
     getAnn (ECall  z _ _) = z
@@ -36,22 +36,12 @@ instance HasAnn Exp where
 
 -------------------------------------------------------------------------------
 
-data Loc = LAny
-         | LVar ID_Var
-         | LUnit
-         | LCons ID_Data_Hier Loc
-         | LTuple [Loc]
-         | LExp Exp
-  deriving (Eq, Show)
-
--------------------------------------------------------------------------------
-
 data Stmt
     = Class  Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class declaration
     | Inst   Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class instance
     | Data   Ann TypeC Bool Stmt              -- new type declaration
     | Var    Ann ID_Var TypeC Stmt            -- variable declaration
-    | Match  Ann Bool Loc Exp Stmt Stmt       -- match/assignment/if statement
+    | Match  Ann Bool Exp Exp Stmt Stmt       -- match/assignment/if statement
     | CallS  Ann Exp                          -- call function
     | Seq    Ann Stmt Stmt                    -- sequence
     | Loop   Ann Stmt                         -- infinite loop
@@ -70,25 +60,19 @@ show_stmt spc (CallS _ e)             = replicate spc ' ' ++ "call " ++ show_exp
 show_stmt spc (Ret _ e)               = replicate spc ' ' ++ "return " ++ show_exp spc e
 show_stmt spc (Seq _ p1 p2)           = replicate spc ' ' ++ "--\n" ++ show_stmt (spc+4) p1 ++
                                         replicate spc ' ' ++ "--\n" ++ show_stmt (spc+4) p2
-show_stmt spc (Match _ _ loc e p1 p2) = replicate spc ' ' ++ show_loc loc ++ " = " ++ show_exp spc e ++ "\n" ++ show_stmt spc p1
+show_stmt spc (Match _ _ le re p1 p2) = replicate spc ' ' ++ show_exp 0 le ++ " = " ++ show_exp spc re ++ "\n" ++ show_stmt spc p1
 show_stmt spc (Nop _)                 = replicate spc ' ' ++ "nop"
 show_stmt spc p = error $ show p
 
 show_exp :: Int -> Exp -> String
-show_exp spc (EData _ ["Int",n]) = n
-show_exp spc (EData _ id)    = hier2str id
+show_exp spc (ECons _ ["Int",n]) = n
+show_exp spc (ECons _ id)    = hier2str id
 show_exp spc (EVar _ id)    = id
 show_exp spc (EArg _)        = "arg"
 show_exp spc (ETuple _ es)   = "(" ++ intercalate "," (map (show_exp spc) es) ++ ")"
 show_exp spc (EFunc _ _ p)   = "func" ++ "\n" ++ show_stmt (spc+4) p
 show_exp spc (ECall _ e1 e2) = "call" ++ " " ++ show_exp spc e1 ++ " " ++ show_exp spc e2
 show_exp spc e              = show e
-
-show_loc :: Loc -> String
-show_loc (LVar   id)  = id
-show_loc (LTuple ls)  = "(" ++ intercalate "," (map show_loc ls) ++ ")"
-show_loc (LExp   exp) = show_exp 0 exp
-show_loc l = show l
 
 -------------------------------------------------------------------------------
 
@@ -107,7 +91,7 @@ map_stmt f@(fs,_,_)  (Ret   z exp)              = fs (Ret   z (map_exp f exp))
 map_stmt f@(fs,_,_)  (Nop   z)                  = fs (Nop   z)
 
 map_exp :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Exp -> Exp
-map_exp f@(_,fe,_)  (EData  z id)    = fe (EData  z id)
+map_exp f@(_,fe,_)  (ECons  z id)    = fe (ECons  z id)
 map_exp f@(_,fe,_)  (ETuple z es)    = fe (ETuple z (map (map_exp f) es))
 map_exp f@(_,fe,ft) (EFunc  z tp p)  = fe (EFunc  z (ft tp) (map_stmt f p))
 map_exp f@(_,fe,_)  (ECall  z e1 e2) = fe (ECall  z (map_exp f e1) (map_exp f e2))

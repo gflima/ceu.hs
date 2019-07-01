@@ -11,53 +11,40 @@ import qualified Ceu.Grammar.Basic as B
 -------------------------------------------------------------------------------
 
 data Exp
-    = EError  Ann Int            -- 1
-    | EData   Ann ID_Data_Hier   -- True
+    = EError Ann Int            -- 1
     | EVar   Ann ID_Var         -- a ; xs
-    | EArg    Ann
-    | EUnit   Ann                -- ()
-    | ETuple  Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
-    | EFunc   Ann TypeC Stmt      -- function implementation
-    | ECall   Ann Exp Exp        -- f a ; f(a) ; f(1,2)
+    | EUnit  Ann                -- ()
+    | ECons  Ann ID_Data_Hier   -- True
+    | EArg   Ann
+    | ETuple Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
+    | EFunc  Ann TypeC Stmt      -- function implementation
+    | ECall  Ann Exp Exp        -- f a ; f(a) ; f(1,2)
+    | EAny   Ann
+    | EExp   Ann Exp
     deriving (Eq, Show)
 
 toBasicExp :: Exp -> B.Exp
-toBasicExp (EError  z v)     = B.EError  z v
-toBasicExp (EData   z v)     = B.EData   z v
+toBasicExp (EError z v)     = B.EError z v
 toBasicExp (EVar   z v)     = B.EVar   z v
-toBasicExp (EArg    z)       = B.EArg    z
-toBasicExp (EUnit   z)       = B.EUnit   z
-toBasicExp (ETuple  z es)    = B.ETuple  z (map toBasicExp es)
-toBasicExp (EFunc   z tp p)  = B.EFunc   z tp (toBasicStmt p)
-toBasicExp (ECall   z e1 e2) = B.ECall   z (toBasicExp e1) (toBasicExp e2)
+toBasicExp (EUnit  z)       = B.EUnit  z
+toBasicExp (ECons  z v)     = B.ECons  z v
+toBasicExp (EArg   z)       = B.EArg   z
+toBasicExp (ETuple z es)    = B.ETuple z (map toBasicExp es)
+toBasicExp (EFunc  z tp p)  = B.EFunc  z tp (toBasicStmt p)
+toBasicExp (ECall  z e1 e2) = B.ECall  z (toBasicExp e1) (toBasicExp e2)
+toBasicExp (EAny   z)       = B.EAny   z
+toBasicExp (EExp   z e)     = B.EExp   z (toBasicExp e)
 
 instance HasAnn Exp where
     --getAnn :: Exp -> Ann
-    getAnn (EError  z _)   = z
-    getAnn (EData   z _)   = z
+    getAnn (EError z _)   = z
+    getAnn (ECons  z _)   = z
     getAnn (EVar   z _)   = z
-    getAnn (EArg    z)     = z
-    getAnn (EUnit   z)     = z
-    getAnn (ETuple  z _)   = z
-    getAnn (EFunc   z _ _) = z
-    getAnn (ECall   z _ _) = z
-
--------------------------------------------------------------------------------
-
-data Loc = LAny
-         | LVar ID_Var
-         | LUnit
-         | LCons ID_Data_Hier Loc
-         | LTuple [Loc]
-         | LExp Exp
-  deriving (Eq, Show)
-
-toBasicLoc LAny             = B.LAny
-toBasicLoc (LVar   id)      = B.LVar id
-toBasicLoc LUnit            = B.LUnit
-toBasicLoc (LCons  tps loc) = B.LCons tps (toBasicLoc loc)
-toBasicLoc (LTuple locs)    = B.LTuple $ map toBasicLoc locs
-toBasicLoc (LExp   exp)     = B.LExp (toBasicExp exp)
+    getAnn (EArg   z)     = z
+    getAnn (EUnit  z)     = z
+    getAnn (ETuple z _)   = z
+    getAnn (EFunc  z _ _) = z
+    getAnn (ECall  z _ _) = z
 
 -------------------------------------------------------------------------------
 
@@ -69,9 +56,9 @@ data Stmt
   | Data     Ann TypeC Bool                       -- new type declaration
   | Var      Ann ID_Var TypeC                     -- variable declaration
   | FuncS    Ann ID_Var TypeC Stmt                -- function declaration
-  | Match    Ann Loc Exp Stmt Stmt                -- match
-  | Match'   Ann Bool Loc Exp Stmt Stmt           -- match w/ chk
-  | Set      Ann Bool Loc Exp                     -- assignment statement
+  | Match    Ann Exp Exp Stmt Stmt                -- match
+  | Match'   Ann Bool Exp Exp Stmt Stmt           -- match w/ chk
+  | Set      Ann Bool Exp Exp                     -- assignment statement
   | CallS    Ann Exp                              -- call function
   | If       Ann Exp Stmt Stmt                    -- conditional
   | Seq      Ann Stmt Stmt                        -- sequence
@@ -110,7 +97,7 @@ toBasicStmt (Class'' z id  cs ifc p)      = B.Class z id  cs ifc (toBasicStmt p)
 toBasicStmt (Inst''  z cls tp imp p)      = B.Inst  z cls tp imp (toBasicStmt p)
 toBasicStmt (Data''  z tp abs p)          = B.Data  z tp abs (toBasicStmt p)
 toBasicStmt (Var''   z var tp p)          = B.Var   z var tp (toBasicStmt p)
-toBasicStmt (Match'  z chk loc exp p1 p2) = B.Match z chk (toBasicLoc loc) (toBasicExp exp)
+toBasicStmt (Match'  z chk loc exp p1 p2) = B.Match z chk (toBasicExp loc) (toBasicExp exp)
                                                           (toBasicStmt p1) (toBasicStmt p2)
 toBasicStmt (CallS   z e)                 = B.CallS z (toBasicExp e)
 toBasicStmt (Seq     z p1 p2)             = B.Seq   z (toBasicStmt p1) (toBasicStmt p2)
@@ -138,7 +125,7 @@ map_stmt f@(fs,_,_)  (Ret   z exp)            = fs (Ret   z (map_exp f exp))
 map_stmt f@(fs,_,_)  (Nop   z)                = fs (Nop   z)
 
 map_exp :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Exp -> Exp
-map_exp f@(_,fe,_)  (EData  z id)    = fe (EData  z id)
+map_exp f@(_,fe,_)  (ECons  z id)    = fe (ECons  z id)
 map_exp f@(_,fe,_)  (ETuple z es)    = fe (ETuple z (map (map_exp f) es))
 map_exp f@(_,fe,ft) (EFunc  z tp p)  = fe (EFunc  z (ft tp) (map_stmt f p))
 map_exp f@(_,fe,_)  (ECall  z e1 e2) = fe (ECall  z (map_exp f e1) (map_exp f e2))
