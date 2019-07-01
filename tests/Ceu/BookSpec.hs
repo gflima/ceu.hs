@@ -1391,7 +1391,7 @@ return (Nat.Zero) ++ (Nat.Succ (Nat.Zero))
       it "Nat *" $            -- pg 59
         (run True $
           nat ++ [r|
-return ((zr ** um) ++ (um ** um)) ++ ((um++um) ** (um++um))
+return ((zero ** one) ++ (one ** one)) ++ ((one++one) ** (one++one))
 |])
         `shouldBe` Right (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Zero"] EUnit))))))
 
@@ -1408,7 +1408,7 @@ func ^^ (x,y) : ((Nat,Nat) -> Nat) do
   end
 end
 
-return ((um++um) ^^ zr) ++ ((um++um) ^^ ((um++um)++um))
+return ((one++one) ^^ zero) ++ ((one++one) ^^ ((one++one)++one))
 |])
         `shouldBe` Right (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Zero"] EUnit))))))))))
 
@@ -1438,10 +1438,10 @@ instance of IEqualable for Nat with
   end
 end
 
-var zr : Nat <- Nat.Zero
-var um : Nat <- Nat.Succ (Nat.Zero)
+var zero : Nat <- Nat.Zero
+var one : Nat <- Nat.Succ (Nat.Zero)
 
-return (zr === zr, zr =/= um, um =/= zr, um === um, um =/= um)
+return (zero === zero, zero =/= one, one =/= zero, one === one, one =/= one)
 |])
         `shouldBe` Right (ETuple [EData ["Bool","True"] EUnit,EData ["Bool","True"] EUnit,EData ["Bool","True"] EUnit,EData ["Bool","True"] EUnit,EData ["Bool","False"] EUnit])
 
@@ -1490,10 +1490,10 @@ instance of IOrderable for Nat with
   end
 end
 
-var zr : Nat <- Nat.Zero
-var um : Nat <- Nat.Succ (Nat.Zero)
+var zero : Nat <- Nat.Zero
+var one : Nat <- Nat.Succ (Nat.Zero)
 
-return (zr @< zr, zr @<= zr, zr @< um, um @< zr, um @> um, um @>= um)
+return (zero @< zero, zero @<= zero, zero @< one, one @< zero, one @> one, one @>= one)
 |])
         `shouldBe` Right (ETuple [EData ["Bool","False"] EUnit,EData ["Bool","True"] EUnit,EData ["Bool","True"] EUnit,EData ["Bool","False"] EUnit,EData ["Bool","False"] EUnit,EData ["Bool","True"] EUnit])
 
@@ -1515,10 +1515,10 @@ func -- (x,y) : ((Nat,Nat) -> Nat) do
   end
 end
 
-var zr : Nat <- Nat.Zero
-var um : Nat <- Nat.Succ (Nat.Zero)
+var zero : Nat <- Nat.Zero
+var one : Nat <- Nat.Succ (Nat.Zero)
 
-return um--zr
+return one--zero
 |])
         `shouldBe` Right (EData ["Nat","Succ"] (EData ["Nat","Zero"] EUnit))
 
@@ -1540,10 +1540,10 @@ func -- (x,y) : ((Nat,Nat) -> Nat) do
   end
 end
 
-var zr : Nat <- Nat.Zero
-var um : Nat <- Nat.Succ (Nat.Zero)
+var zero : Nat <- Nat.Zero
+var one : Nat <- Nat.Succ (Nat.Zero)
 
-return zr--um
+return zero--one
 |])
         `shouldBe` Right (EError (-2))
 
@@ -1551,8 +1551,8 @@ return zr--um
         (run True $
           nat ++ [r|
 func fact (x) : (Nat -> Nat) do
-  if `zr´ <- x then
-    return um
+  if `zero´ <- x then
+    return one
   else
     var z : Nat
     set! Nat.Succ z <- x
@@ -1560,7 +1560,7 @@ func fact (x) : (Nat -> Nat) do
   end
 end
 
-return fact (um ++ (um ++ um))
+return fact (one ++ (one ++ one))
 |])
         `shouldBe` Right (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Zero"] EUnit)))))))
 
@@ -1568,10 +1568,10 @@ return fact (um ++ (um ++ um))
         (run True $
           nat ++ [r|
 func fib (x) : (Nat -> Nat) do
-  if `zr´ <- x then
-    return zr
-  else/if `um´ <- x then
-    return um
+  if `zero´ <- x then
+    return zero
+  else/if `one´ <- x then
+    return one
   else
     var z : Nat
     set! Nat.Succ (Nat.Succ z) <- x
@@ -1579,7 +1579,7 @@ func fib (x) : (Nat -> Nat) do
   end
 end
 
-return fib (um ++ (um ++ (um ++ (um ++ (um ++ um)))))
+return fib (one ++ (one ++ (one ++ (one ++ (one ++ one)))))
 |])
         `shouldBe` Right (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Zero"] EUnit)))))))))
 
@@ -1596,7 +1596,7 @@ func convert (x) : (Nat -> Int) do
   end
 end
 
-return convert (um ++ (um ++ (um ++ (um ++ (um ++ um)))))
+return convert (one ++ (one ++ (one ++ (one ++ (one ++ one)))))
 |])
         `shouldBe` Right (EData ["Int","6"] EUnit)
 
@@ -1620,10 +1620,10 @@ func -- (x,y) : ((Nat,Nat) -> Nat) do
   end
 end
 
-var zr : Nat <- Nat.Zero
-var um : Nat <- Nat.Succ (Nat.Zero)
+var zero : Nat <- Nat.Zero
+var one : Nat <- Nat.Succ (Nat.Zero)
 
-return zr--um
+return zero--one
 |])
         `shouldBe` Right (EData ["Nat","Zero"] EUnit)
 
@@ -1654,11 +1654,11 @@ func ** (x,y) : ((Nat,Nat) -> Nat) do
   end
 end
 
-var zr : Nat <- Nat.Zero
-var um : Nat <- Nat.Succ (Nat.Zero)
+var zero : Nat <- Nat.Zero
+var one : Nat <- Nat.Succ (Nat.Zero)
 
 return ((Nat.Zero) ++ (Nat.Succ (Nat.Zero)),
-        ((zr ** um) ++ (um ** um)) ++ ((um++um) ** (um++um)))
+        ((zero ** one) ++ (one ** one)) ++ ((one++one) ** (one++one)))
 |])
         `shouldBe` Right (ETuple [EData ["Nat","Succ"] (EData ["Nat","Zero"] EUnit),EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Zero"] EUnit)))))])
 
@@ -1670,7 +1670,7 @@ return ((Nat.Zero) ++ (Nat.Succ (Nat.Zero)),
 
   describe "Chapter 3.3 - The fold Function:" $ do            -- pg 70
 
-      it "foldn" $            -- pg 58
+      it "fold : +" $            -- pg 71
         (run True $
           nat ++ [r|
 func foldn (h,c,n) : (((a -> a), a, Nat) -> a) do
@@ -1687,11 +1687,11 @@ func +++ (x,y) : ((Nat,Nat) -> Nat) do
   return foldn ( (func (n) : (Nat -> Nat) do return Nat.Succ n end), x, y)
 end
 
-return um +++ (um +++ um)
+return one +++ (one +++ one)
 |])
         `shouldBe` Right (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Zero"] EUnit))))
 
-      it "foldn" $            -- pg 58
+      it "foldn : +" $            -- pg 71
         (run True $
           nat ++ [r|
 func foldn (h,c,n) : (((a -> a), a, Nat) -> a) do
@@ -1708,9 +1708,16 @@ func +++ (x,y) : ((Nat,Nat) -> Nat) do
   return foldn (Nat.Succ, x, y)
 end
 
-return um +++ (um +++ um)
+return one +++ (one +++ one)
 |])
         `shouldBe` Right (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Succ"] (EData ["Nat","Zero"] EUnit))))
+
+      it "TODO: closures : fold : +/*/^" $            -- pg 71
+        (run True $
+          nat ++ [r|
+error 1
+|])
+        `shouldBe` Right (EData ["Nat","Zero"] EUnit)
 
 -------------------------------------------------------------------------------
 
@@ -1754,8 +1761,12 @@ func ** (x,y) : ((Nat,Nat) -> Nat) do
   end
 end
 
-var zr : Nat <- Nat.Zero
-var um : Nat <- Nat.Succ (Nat.Zero)
+var zero  : Nat <- Nat.Zero
+var one   : Nat <- Nat.Succ zero
+var two   : Nat <- Nat.Succ one
+var three : Nat <- Nat.Succ two
+var four  : Nat <- Nat.Succ three
+var five  : Nat <- Nat.Succ four
 |]
 
       pre = [r|
