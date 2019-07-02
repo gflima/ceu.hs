@@ -28,6 +28,9 @@ keywords = [
     "is",
     "instance",
     "loop",
+    "match",
+    "match!",
+    "matches",
     "of",
     "set",
     "set!",
@@ -62,7 +65,7 @@ tk_op = do
     --void <- notFollowedBy (tk_sym "<-" <|> tk_sym "->")
     op   <- many1 $ (oneOf "!@#$%&*-+=/?^~\\|<>" <?> "operator")
     --guard $ op /= "<-" && op /= "->"
-    when (op == "<-" || op == "->") $ unexpected "arrow"
+    --when (op == "->" || op == "=") $ unexpected "symbol"
     s
     return $ op
 

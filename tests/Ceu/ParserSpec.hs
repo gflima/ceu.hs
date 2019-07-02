@@ -103,7 +103,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"(\"\nexpecting operator"
             it "->" $
                 parse tk_op "->"
-                `shouldBe` Left "(line 1, column 3):\nunexpected arrow\nexpecting operator"
+                `shouldBe` Right "->" --Left "(line 1, column 3):\nunexpected symbol\nexpecting operator"
 
         describe "tk_num:" $ do
             it "''" $
@@ -413,7 +413,7 @@ spec = do
 
         describe "var-tuples:" $ do
             it "((_,x,),_)" $ do
-                parse pLoc "((_,x,),_)"
+                parse (pLoc True) "((_,x,),_)"
                 `shouldBe` Right (ETuple annz{source = ("",1,1)} [ETuple annz{source = ("",1,2)} [EAny annz{source = ("",1,3)},EVar annz{source = ("",1,5)} "x"],EAny annz{source = ("",1,9)}])
             it "var (x,y) : (Int,Int) =  (1, 2); return x+y" $
                 parse stmt_var "var (x,y) : (Int,Int) =  (1, 2)"
@@ -433,11 +433,11 @@ spec = do
 
         describe "write:" $ do
             it "x =  1" $
-                parse stmt_attr "set x =  1"
-                `shouldBe` Right (Set annz{source=("",1,7)} False (EVar annz{source=("",1,5)} "x") (ECons annz{source=("",1,10)} ["Int","1"]))
+                parse stmt_set "set x = 1"
+                `shouldBe` Right (Set annz{source=("",1,7)} False (EVar annz{source=("",1,5)} "x") (ECons annz{source=("",1,9)} ["Int","1"]))
             it "val =  1" $
-                parse stmt_attr "set val =  1"
-                `shouldBe` Right (Set annz{source=("",1,9)} False (EVar annz{source=("",1,5)} "val") (ECons annz{source=("",1,12)} ["Int","1"]))
+                parse stmt_set "set val = 1"
+                `shouldBe` Right (Set annz{source=("",1,9)} False (EVar annz{source=("",1,5)} "val") (ECons annz{source=("",1,11)} ["Int","1"]))
 
         describe "call:" $ do
           it "call 1" $
@@ -465,34 +465,34 @@ spec = do
 
         describe "if-then-else/if-else" $ do
             it "if 0 then return ()" $
-                parse stmt_match "if 0 then return ()"
+                parse stmt_if "if 0 then return ()"
                 `shouldBe` Left "(line 1, column 20):\nunexpected end of input\nexpecting expression, statement, \"else/if\", \"else\" or \"end\""
 
             it "if 0 then return 0" $
-                parse stmt_match "if 0 then return 0"
+                parse stmt_if "if 0 then return 0"
                 `shouldBe` Left "(line 1, column 19):\nunexpected end of input\nexpecting digit, expression, statement, \"else/if\", \"else\" or \"end\""
 
             it "if 0 return 0 end" $
-                parse stmt_match "if 0 return 0 end"
+                parse stmt_if "if 0 return 0 end"
                 `shouldBe` Left "(line 1, column 12):\nunexpected `return`\nexpecting expression"
 
             it "if 0 then return 0 else return 1 end" $
-                parse stmt_match "if 0 then return 0 else return 1 end"
+                parse stmt_if "if 0 then return 0 else return 1 end"
                 `shouldBe` Right (Match annz{source=("",1,1)} (EExp annz{source=("",1,1)} (EVar annz{source=("",1,1)} "_true")) (ECons annz{source=("",1,4)} ["Int","0"]) (Ret annz{source=("",1,11)} (ECons annz{source=("",1,18)} ["Int","0"])) (Ret annz{source=("",1,25)} (ECons annz{source=("",1,32)} ["Int","1"])))
             it "if 1 then return 1 end" $
-                parse stmt_match "if 1 then return 1 end"
+                parse stmt_if "if 1 then return 1 end"
                 `shouldBe` Right (Match annz{source=("",1,1)} (EExp annz{source=("",1,1)} (EVar annz{source=("",1,1)} "_true")) (ECons annz{source=("",1,4)} ["Int","1"]) (Ret annz{source=("",1,11)} (ECons annz{source=("",1,18)} ["Int","1"])) (Nop annz{source=("",1,20)}))
             it "if then return 1 end" $
-                parse stmt_match "if then return 1 end"
-                `shouldBe` Left "(line 1, column 8):\nunexpected `then`\nexpecting identifier or expression"
+                parse stmt_if "if then return 1 end"
+                `shouldBe` Left "(line 1, column 8):\nunexpected `then`\nexpecting expression"
             it "if then (if then else end) end" $
-                parse stmt_match "if 1 then ; if 0 then else return 1 end ; end"
+                parse stmt_if "if 1 then ; if 0 then else return 1 end ; end"
                 `shouldBe` Right (Match annz{source=("",1,1)} (EExp annz{source=("",1,1)} (EVar annz{source=("",1,1)} "_true")) (ECons annz{source=("",1,4)} ["Int","1"]) (Match annz{source=("",1,13)} (EExp annz{source=("",1,13)} (EVar annz{source=("",1,13)} "_true")) (ECons annz{source=("",1,16)} ["Int","0"]) (Nop annz{source=("",1,23)}) (Ret annz{source=("",1,28)} (ECons annz{source=("",1,35)} ["Int","1"]))) (Nop annz{source=("",1,43)}))
             it "if then (if then end) else end" $
-                parse stmt_match "if 0 then ; if 0 then end ; else return 1 end"
+                parse stmt_if "if 0 then ; if 0 then end ; else return 1 end"
                 `shouldBe` Right (Match annz{source=("",1,1)} (EExp annz{source=("",1,1)} (EVar annz{source=("",1,1)} "_true")) (ECons annz{source=("",1,4)} ["Int","0"]) (Match annz{source=("",1,13)} (EExp annz{source=("",1,13)} (EVar annz{source=("",1,13)} "_true")) (ECons annz{source=("",1,16)} ["Int","0"]) (Nop annz{source=("",1,23)}) (Nop annz{source=("",1,23)})) (Ret annz{source=("",1,34)} (ECons annz{source=("",1,41)} ["Int","1"])))
             it "if 0 then . else/if 1 then return 1 else ." $
-                parse stmt_match "if 0 then return 0 else/if 1 then return 1 else return 0 end"
+                parse stmt_if "if 0 then return 0 else/if 1 then return 1 else return 0 end"
                 `shouldBe` Right (Match annz{source=("",1,1)} (EExp annz{source=("",1,1)} (EVar annz{source=("",1,1)} "_true")) (ECons annz{source=("",1,4)} ["Int","0"]) (Ret annz{source=("",1,11)} (ECons annz{source=("",1,18)} ["Int","0"])) (Match annz{source=("",1,20)} (EExp annz{source=("",1,1)} (EVar annz{source=("",1,1)} "_true")) (ECons annz{source=("",1,28)} ["Int","1"]) (Ret annz{source=("",1,35)} (ECons annz{source=("",1,42)} ["Int","1"])) (Ret annz{source=("",1,49)} (ECons annz{source=("",1,56)} ["Int","0"]))))
 
         describe "loop" $ do
@@ -751,8 +751,8 @@ spec = do
                 `shouldBe` Right (Seq annz{source=("",1,1)} (Scope annz{source=("",1,1)} (Nop annz{source=("",1,4)})) (Seq annz{source=("",1,1)} (Scope annz{source=("",1,10)} (Nop annz{source=("",1,13)})) (Scope annz{source=("",1,19)} (Nop annz{source=("",1,22)}))))
 
             it "var a:Int ; a= 1" $
-                parse (stmt_seq ("",1,1)) "var a:Int ; set a= 1"
-                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "a" (int,cz)) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Set (annz{source = ("",1,18)}) False (EVar annz{source = ("",1,17)} "a") (ECons (annz{source = ("",1,20)}) ["Int","1"])))
+                parse (stmt_seq ("",1,1)) "var a:Int ; set a = 1"
+                `shouldBe` Right (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",1,1)}) (Seq (annz{source = ("",0,0)}) (Var (annz{source = ("",1,1)}) "a" (int,cz)) (Nop (annz{source = ("",0,0)}))) (Nop (annz{source = ("",1,1)}))) (Set (annz{source = ("",1,19)}) False (EVar annz{source = ("",1,17)} "a") (ECons (annz{source = ("",1,21)}) ["Int","1"])))
 
         describe "stmt:" $ do
             it "var x:Int; return 1" $

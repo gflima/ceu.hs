@@ -7,7 +7,7 @@ import Data.Maybe             (isJust, isNothing, fromJust)
 import qualified Data.Set as Set
 import Control.Monad          (guard, when)
 
-import Text.Parsec            (eof)
+import Text.Parsec            (eof, parserZero)
 import Text.Parsec.Prim       ((<|>), (<?>), try, getPosition, many, unexpected)
 import Text.Parsec.Char       (char, anyChar)
 import Text.Parsec.String     (Parser)
@@ -27,26 +27,20 @@ singleton x = [x]
 
 -------------------------------------------------------------------------------
 
-pSet :: Bool -> Exp -> Parser Stmt
-pSet chk loc = do
-  pos  <- pos2src <$> getPosition
-  void <- tk_sym "="
-  exp  <- expr
-  return $ Set annz{source=pos} chk loc exp
-
 -- (x, (y,_))
-pLoc :: Parser Exp
-pLoc = lany  <|> lvar <|> try lunit  <|> lnumber <|>
-       lcons <|> lexp <|> try ltuple <|> (tk_sym "(" *> (pLoc <* tk_sym ")"))
-       <?> "location"
+pLoc :: Bool -> Parser Exp  -- True=only vars (no exps)
+pLoc v = lany  <|> lvar <|> try lunit  <|> lnumber <|>
+         lcons <|> lexp <|> try ltuple <|> (tk_sym "(" *> (pLoc v <* tk_sym ")"))
+          <?> "location"
   where
     lany    = do
                 pos  <- pos2src <$> getPosition
                 void <- tk_key "_"
                 return $ EAny annz{source=pos}
     lvar    = do
+                void <- bool (tk_sym "=") (tk_sym "") v
                 pos  <- pos2src <$> getPosition
-                var <- tk_var
+                var  <- tk_var
                 return $ EVar annz{source=pos} var
     lunit   = do
                 pos  <- pos2src <$> getPosition
@@ -60,17 +54,18 @@ pLoc = lany  <|> lvar <|> try lunit  <|> lnumber <|>
     lcons   = do
                 pos  <- pos2src <$> getPosition
                 cons <- tk_data_hier
-                loc  <- optionMaybe pLoc
+                loc  <- optionMaybe (pLoc v)
                 return $ case loc of
                           Nothing -> ECons annz{source=pos} cons
                           Just l  -> ECall annz{source=pos} (ECons annz{source=pos} cons) l
     ltuple  = do
                 pos  <- pos2src <$> getPosition
-                locs <- list2 pLoc
+                locs <- list2 (pLoc v)
                 return (ETuple annz{source=pos} $ locs)
     lexp    = do
+                void <- bool (tk_sym "~") parserZero v
                 pos  <- pos2src <$> getPosition
-                exp <- tk_sym "`" *> expr <* tk_sym "´"
+                exp  <- expr
                 return $ EExp annz{source=pos} exp
 
 matchLocType :: Source -> Exp -> TypeC -> Maybe Stmt
@@ -160,28 +155,43 @@ stmt_data = do
   (st,cs) <- option (TUnit,cz) $ try $ tk_key "with" *> pTypeContext
   return $ Data annz{source=pos} (TData id ofs st, cs) False
 
+pMatch :: Parser () -> Bool -> Exp -> Parser Stmt
+pMatch tk chk loc = do
+  pos  <- pos2src <$> getPosition
+  void <- tk --tk_sym "="
+  exp  <- expr
+  return $ Set annz{source=pos} chk loc exp
+
 stmt_var :: Parser Stmt
 stmt_var = do
   pos  <- pos2src <$> getPosition
   void <- try $ tk_key "var"
-  loc  <- pLoc
+  loc  <- pLoc True
   void <- tk_sym ":"
   tp   <- pTypeContext
   --guard (isJust $ matchLocType pos loc tp) <?> "arity match"
   when (isNothing $ matchLocType pos loc tp) $ unexpected "arity mismatch"
   s    <- option (Nop $ annz{source=pos}) $
-                 try $ pSet False loc
+                 try $ pMatch (tk_sym "=") False loc
   --s'   <- fromJust $ matchLocType pos loc tp)
             --Nothing -> do { fail "arity mismatch" }
             --Just v  -> return $ Seq annz{source=pos} v s
   return $ Seq annz{source=pos} (fromJust $ matchLocType pos loc tp) s
 
-stmt_attr :: Parser Stmt
-stmt_attr = do
+stmt_set :: Parser Stmt
+stmt_set = do
   --pos  <- pos2src <$> getPosition
   set  <- (try $ tk_key "set!") <|> (try $ tk_key "set") <?> "set"
-  loc  <- pLoc
-  s    <- pSet (set=="set!") loc
+  loc  <- pLoc True
+  s    <- pMatch (tk_sym "=") (set=="set!") loc
+  return s
+
+stmt_match :: Parser Stmt
+stmt_match = do
+  --pos  <- pos2src <$> getPosition
+  set  <- (try $ tk_key "match!") <|> (try $ tk_key "match") <?> "match"
+  loc  <- pLoc False
+  s    <- pMatch (tk_sym "with") (set=="match!") loc
   return s
 
 stmt_call :: Parser Stmt
@@ -201,18 +211,18 @@ stmt_do = do
   void <- tk_key "end"
   return $ Scope annz{source=pos} s
 
-pMatch pos = option (EExp annz{source=pos} $ EVar annz{source=pos} "_true") $ try $ pLoc <* tk_sym "~"
+pIf pos = option (EExp annz{source=pos} $ EVar annz{source=pos} "_true") $ try $ (pLoc False) <* tk_key "matches"
 
-stmt_match :: Parser Stmt
-stmt_match = do
+stmt_if :: Parser Stmt
+stmt_if = do
   pos1 <- pos2src <$> getPosition
   void <- try $ tk_key "if"
-  loc  <- pMatch pos1
+  loc  <- pIf pos1
   exp  <- expr
   void <- tk_key "then"
   s1   <- stmt
   ss   <- many $ ((,,,) <$> pos2src <$> getPosition <*>
-                 (try (tk_key "else/if") *> pMatch pos1) <*> expr <*> (tk_key "then" *> stmt))
+                 (try (tk_key "else/if") *> pIf pos1) <*> expr <*> (tk_key "then" *> stmt))
   pos2 <- pos2src <$> getPosition
   s2   <- option (Nop annz{source=pos2}) $ try $ tk_key "else" *> stmt
   void <- tk_key "end"
@@ -237,10 +247,11 @@ stmt1 = do
        stmt_data    <|>
        stmt_var     <|>
        stmt_funcs   <|>
-       stmt_attr    <|>
+       stmt_set     <|>
+       stmt_match   <|>
        stmt_call    <|>
        stmt_do      <|>
-       stmt_match   <|>
+       stmt_if      <|>
        stmt_loop    <|>
        stmt_ret     <|>
        stmt_error   <?> "statement"
@@ -348,7 +359,7 @@ expr = do
 
 func :: Source -> Parser (TypeC, Stmt)
 func pos = do
-  loc  <- pLoc
+  loc  <- pLoc True
   void <- tk_sym ":"
   tp   <- pTypeContext
 

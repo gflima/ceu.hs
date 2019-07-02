@@ -66,8 +66,8 @@ spec = do
             run True "var a,b :Int;" -- TODO: support a,b,c? (problem w/ assign/finalization)
             `shouldBe` Left "(line 1, column 6):\nunexpected \",\"\nexpecting identifier or \":\""
         it "a =  1; return a;" $
-            run True "set a =  1; return a"
-            `shouldBe` Left "(line 1, column 5):\nvariable 'a' is not declared\n(line 1, column 20):\nvariable 'a' is not declared\n"
+            run True "set a = 1; return a"
+            `shouldBe` Left "(line 1, column 5):\nvariable 'a' is not declared\n(line 1, column 19):\nvariable 'a' is not declared\n"
         it "var a  : Int = 1; return a;" $
             run True "var a  : Int = 1; return a"
             `shouldBe` Right (EData ["Int","1"] EUnit)
@@ -234,7 +234,7 @@ spec = do
             "data List.Pair with (Int,List)",
             "var l1 : List",
             "var l2 : List.Pair",
-            "set l1   = l2",
+            "set l1 = l2",
             "return 1"
           ])
         `shouldBe` Right (EData ["Int","1"] EUnit)
@@ -247,7 +247,7 @@ spec = do
             "data List.Pair with (Int,List)",
             "var l1 : List      = List",
             "var l2 : List.Pair = List.Pair(1, List.Empty)",
-            "set l1   = l2",
+            "set l1  = l2",
             "set List = l2",
             "var x:Int",
             "set List.Pair (x,_) = l2",
@@ -343,13 +343,13 @@ spec = do
         `shouldBe` Left "(line 1, column 7):\nmatch never succeeds : data mismatch\n"
 
       it "x1 = 1" $
-        (run True "var x:Int =  1 ; set `x´ =  1 ; return 1")
-        `shouldBe` Left "(line 1, column 26):\nmatch might fail\n"
+        (run True "var x:Int =  1 ; match ~x with 1 ; return 1")
+        `shouldBe` Left "(line 1, column 27):\nmatch might fail\n"
       it "x1 = 1" $
-        (run True "var x:Int = 1 ; set! `x´ = 1 ; return 1")
+        (run True "var x:Int = 1 ; match! ~x with 1 ; return 1")
         `shouldBe` Right (EData ["Int","1"] EUnit)
       it "x1 = 2" $
-        (run True "var x:Int = 1 ; set! `x´ = 2 ; return 2")
+        (run True "var x:Int = 1 ; match! ~x with 2 ; return 2")
         `shouldBe` Right (EError (-2))
       it "1 = x" $
         (run True "var x:Int = 1 ; set! 1 = x ; return x")
@@ -375,7 +375,7 @@ spec = do
             "var x:Int = 10",
             "if x == 0 then",
             "   return 0",
-            "else/if `x´ ~ 10 then",
+            "else/if ~x matches 10 then",
             "   return x",
             "else",
             "   return 0",
@@ -724,7 +724,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "end",
             "",
             "func or (x,y) : ((Bool,Bool)->Bool) do",
-            "   if Bool.True ~ x then",
+            "   if Bool.True matches x then",
             "     return Bool.True",
             "   else",
             "     return y",
@@ -740,7 +740,7 @@ $f3$(Int -> Int)$ 10                       // EVar
         (run True $
           unlines [
             "func not (x) : (Bool->Bool) do",
-            "   if Bool.True ~ x then",
+            "   if Bool.True matches x then",
             "     return Bool.False",
             "   else",
             "     return Bool.True",
@@ -748,7 +748,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "end",
             "",
             "func and (x,y) : ((Bool,Bool)->Bool) do",
-            "   if Bool.False ~ x then",
+            "   if Bool.False matches x then",
             "     return Bool.False",
             "   else",
             "     return y",
@@ -757,8 +757,8 @@ $f3$(Int -> Int)$ 10                       // EVar
             "",
             "constraint IEqualable for a with",
             "   func === (x,y) : ((a,a) -> Bool) do",
-            "     if `x´ ~ y then",
-            "       if `y´ ~ x then",
+            "     if ~x matches y then",
+            "       if ~y matches x then",
             "         return Bool.True",
             "       else",
             "         return Bool.False",
@@ -915,7 +915,7 @@ $f3$(Int -> Int)$ 10                       // EVar
 
         pre = unlines [
           "func not (x) : (Bool->Bool) do",
-          "   if Bool.True ~ x then",
+          "   if Bool.True matches x then",
           "     return Bool.False",
           "   else",
           "     return Bool.True",
@@ -923,7 +923,7 @@ $f3$(Int -> Int)$ 10                       // EVar
           "end",
           "",
           "func and (x,y) : ((Bool,Bool)->Bool) do",
-          "   if Bool.False ~ x then",
+          "   if Bool.False matches x then",
           "     return Bool.False",
           "   else",
           "     return y",
@@ -932,8 +932,8 @@ $f3$(Int -> Int)$ 10                       // EVar
           "",
           "constraint IEqualable for a with",
           "   func === (x,y) : ((a,a) -> Bool) do",
-          "     if `x´ ~ y then",
-          "       if `y´ ~ x then",
+          "     if ~x matches y then",
+          "       if ~y matches x then",
           "         return Bool.True",
           "       else",
           "         return Bool.False",
