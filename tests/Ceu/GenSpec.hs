@@ -52,7 +52,7 @@ spec = do
             "end"                               ,
             "instance of IEq for Int with" ,
             " func eq (x,y) : ((Int,Int) -> Int) do",
-            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            "   if `x´ ~ y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
             "return neq(10,20)"
@@ -68,7 +68,7 @@ spec = do
             "end"                               ,
             "instance of IEq for Int with" ,
             " func eq (x,y) : ((Int,Int) -> Int) do",
-            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            "   if `x´ ~ y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
             "func f x : (a -> Int) where a is IEq do",
@@ -90,7 +90,7 @@ spec = do
             "end",
             "instance of IEq for Int with" ,
             " func eq (x,y) : ((Int,Int) -> Int) do",
-            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            "   if `x´ ~ y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
             "return f 1"  -- eq_a=eq_Int
@@ -106,7 +106,7 @@ spec = do
             "end"                               ,
             "instance of IEq for Int with" ,
             " func eq (x,y) : ((Int,Int) -> Int) do",
-            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            "   if `x´ ~ y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
             "constraint IXx for a with"          ,
@@ -142,13 +142,13 @@ spec = do
             "end"                               ,
             "instance of IEq for Int with" ,
             " func eq (x,y) : ((Int,Int) -> Int) do",
-            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            "   if `x´ ~ y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
             "instance of IEq for (a,b) where (a is IEq, b is IEq) with" ,
             " func eq ((x,y),(z,w)) : (((a,b),(a,b)) -> Int) do",
-            "   if 1 <- (x eq z) then"                 ,   -- eq_a
-            "     if 1 <- (y eq w) then"               ,   -- eq_b
+            "   if 1 ~ (x eq z) then"                 ,   -- eq_a
+            "     if 1 ~ (y eq w) then"               ,   -- eq_b
             "       return 1"                   ,
             "     end"                          ,
             "   end"                            ,
@@ -168,13 +168,13 @@ spec = do
             "end"                               ,
             "instance of IEq for Int with" ,
             " func eq (x,y) : ((Int,Int) -> Int) do",
-            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            "   if `x´ ~ y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
             "instance of IEq for (a,b) where (a is IEq,b is IEq) with" ,
             " func eq ((x,y),(z,w)) : (((a,b),(a,b)) -> Int) do",
-            "   if 1 <- (x eq z) then"                 ,   -- eq_a
-            "     if 1 <- (y eq w) then"               ,   -- eq_b
+            "   if 1 ~ (x eq z) then"                 ,   -- eq_a
+            "     if 1 ~ (y eq w) then"               ,   -- eq_b
             "       return 1"                   ,
             "     end"                          ,
             "   end"                            ,
@@ -205,7 +205,7 @@ data X for a with a
 instance of IAa for (X of a) where (a is IAa) with
   func f (x) : (X of a -> Int) do
     var v : a
-    set (X v) <- x
+    set (X v) = x
     return f v
   end
 end
@@ -234,7 +234,7 @@ data X for a with (a,a)
 instance of IAa for (X of a) where (a is IAa) with
   func f (x) : (X of a -> Int) do
     var (v1,v2) : (a,a)
-    set X (v1,v2) <- x
+    set X (v1,v2) = x
     return (f v1) + (f v2)
   end
 end
@@ -254,7 +254,7 @@ data X for a with a
 instance of IAa for (X of a) where (a is IAa) with
   func f (x) : (X of a -> Int) do
     var v1 : a
-    set X v1 <- x
+    set X v1 = x
     return (f v1)
   end
 end
@@ -283,7 +283,7 @@ data X for a with (a,a)
 instance of IAa for (X of a) where (a is IAa) with
   func f (x) : (X of a -> Int) do
     var (v1,v2) : (a,a)
-    set X (v1,v2) <- x
+    set X (v1,v2) = x
     return (f v1) + (f v2)
   end
 end
@@ -307,8 +307,8 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "instance of IEq for (a,b) where (a is IEq, b is IEq) with" ,
             " func eq ((x,y),(z,w)) : (((a,b),(a,b)) -> Int) do",
-            "   if 1 <- (x eq z) then"                 ,   -- eq_a
-            "     if 1 <- (y eq w) then"               ,   -- eq_b
+            "   if 1 ~ (x eq z) then"                 ,   -- eq_a
+            "     if 1 ~ (y eq w) then"               ,   -- eq_b
             "       return 1"                   ,
             "     end"                          ,
             "   end"                            ,
@@ -317,7 +317,7 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "instance of IEq for Int with" ,
             " func eq (x,y) : ((Int,Int) -> Int) do",
-            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            "   if `x´ ~ y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
             "return (eq((10,20),(30,40))) + (neq((10,20),(30,40)))"
@@ -333,18 +333,18 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "instance of IEq for Int with" ,
             " func eq (x,y) : ((Int,Int) -> Int) do",
-            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            "   if `x´ ~ y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
             "instance of IEq for Bool with" ,
             " func eq (x,y) : ((Bool,Bool) -> Int) do",
-            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            "   if `x´ ~ y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
             "instance of IEq for (a,b) where (a is IEq, b is IEq) with" ,
             " func eq ((x,y),(z,w)) : (((a,b),(a,b)) -> Int) do",
-            "   if 1 <- x eq z then"                 ,   -- eq_a
-            "     if 1 <- y eq w then"               ,   -- eq_b
+            "   if 1 ~ x eq z then"                 ,   -- eq_a
+            "     if 1 ~ y eq w then"               ,   -- eq_b
             "       return 1"                   ,
             "     end"                          ,
             "   end"                            ,
@@ -364,13 +364,13 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "instance of IEq for Int with" ,
             " func eq (x,y) : ((Int,Int) -> Int) do",
-            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            "   if `x´ ~ y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
             "instance of IEq for (a,b) where (a is IEq, b is IEq) with" ,
             " func eq ((x,y),(z,w)) : (((a,b),(a,b)) -> Int) do",
-            "   if 1 <- x eq z then"                 ,   -- eq_a
-            "     if 1 <- y eq w then"               ,   -- eq_b
+            "   if 1 ~ x eq z then"                 ,   -- eq_a
+            "     if 1 ~ y eq w then"               ,   -- eq_b
             "       return 1"                   ,
             "     end"                          ,
             "   end"                            ,
@@ -379,7 +379,7 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "instance of IEq for Bool with" ,
             " func eq (x,y) : ((Bool,Bool) -> Int) do",
-            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            "   if `x´ ~ y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
             "return eq((10,Bool.True),(20,Bool.False))"
@@ -396,14 +396,14 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "instance of IEq for Int with" ,
             " func eq (x,y) : ((Int,Int) -> Int) do",
-            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            "   if `x´ ~ y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
             "instance of IEq for (a,b,c) where (a is IEq,b is IEq,c is IEq) with" ,
             " func eq ((x,y,z),(i,j,k)) : (((a,b,c),(a,b,c)) -> Int) do",
-            "   if 1 <- x eq i then"            ,
-            "     if 1 <- y eq j then"          ,
-            "       if 1 <- z eq k then"        ,
+            "   if 1 ~ x eq i then"            ,
+            "     if 1 ~ y eq j then"          ,
+            "       if 1 ~ z eq k then"        ,
             "         return 1"                 ,
             "       end"                        ,
             "     end"                          ,
@@ -413,7 +413,7 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "instance of IEq for Bool with" ,
             " func eq (x,y) : ((Bool,Bool) -> Int) do",
-            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            "   if `x´ ~ y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
             "return eq((20,Bool.True,10),(20,Bool.True,10))"
@@ -430,14 +430,14 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "instance of IEq for Int with" ,
             " func eq (x,y) : ((Int,Int) -> Int) do",
-            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            "   if `x´ ~ y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
             "instance of IEq for (a,b,a) where (a is IEq,b is IEq) with" ,
             " func eq ((x,y,z),(i,j,k)) : (((a,b,a),(a,b,a)) -> Int) do",
-            "   if 1 <- x eq i then"            ,
-            "     if 1 <- y eq j then"          ,
-            "       if 1 <- z eq k then"        ,
+            "   if 1 ~ x eq i then"            ,
+            "     if 1 ~ y eq j then"          ,
+            "       if 1 ~ z eq k then"        ,
             "         return 1"                 ,
             "       end"                        ,
             "     end"                          ,
@@ -447,7 +447,7 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "instance of IEq for Bool with" ,
             " func eq (x,y) : ((Bool,Bool) -> Int) do",
-            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            "   if `x´ ~ y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
             "return eq((20,Bool.True,10),(20,Bool.True,10))"
@@ -463,14 +463,14 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "instance of IEq for Int with" ,
             " func eq (x,y) : ((Int,Int) -> Int) do",
-            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            "   if `x´ ~ y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
             "instance of IEq for (a,b,a) where (a is IEq, b is IEq) with" ,
             " func eq ((x,y,z),(i,j,k)) : (((a,b,a),(a,b,a)) -> Int) do",
-            "   if 1 <- x eq i then"            ,
-            "     if 1 <- y eq j then"          ,
-            "       if 1 <- z eq k then"        ,
+            "   if 1 ~ x eq i then"            ,
+            "     if 1 ~ y eq j then"          ,
+            "       if 1 ~ z eq k then"        ,
             "         return 1"                 ,
             "       end"                        ,
             "     end"                          ,
@@ -480,7 +480,7 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "instance of IEq for Bool with" ,
             " func eq (x,y) : ((Bool,Bool) -> Int) do",
-            "   if `x´ <- y then return 1 else return 0 end"                  ,
+            "   if `x´ ~ y then return 1 else return 0 end"                  ,
             " end"                              ,
             "end"                               ,
             "return eq((20,10,Bool.True),(20,10,Bool.True))"
@@ -504,11 +504,11 @@ end
 instance of IGable for (X of a) where (a is IFable) with
   func g (x) : ((X of a) -> Int) do
     var v : a
-    set X v <- x
+    set X v = x
     return f v
   end
 end
-var x1 : X of Int <- X 10
+var x1 : X of Int = X 10
 return (g x1)
 |])
         `shouldBe` Right (EData ["Int","10"] EUnit)
@@ -525,7 +525,7 @@ end
 instance of IGable for (X of a) where (a is IFable) with
   func g (x) : ((X of a) -> Int) do
     var v : a
-    set X v <- x
+    set X v = x
     return f v
   end
 end
@@ -534,7 +534,7 @@ instance of IFable for Int with
     return x
   end
 end
-var x1 : X of Int <- X 10
+var x1 : X of Int = X 10
 return (g x1)
 |])
         `shouldBe` Right (EData ["Int","10"] EUnit)
@@ -557,11 +557,11 @@ end
 instance of IGable for (X of a) where (a is IFable) with
   func g (x) : ((X of a) -> Int) do
     var v : a
-    set X v <- x
+    set X v = x
     return f v
   end
 end
-var x2 : X of Y <- X Y
+var x2 : X of Y = X Y
 return (g x2)
 |])
         `shouldBe` Left "(line 23, column 9):\nvariable 'g' has no associated instance for '((X of Y) -> ?)'\n"
@@ -584,15 +584,15 @@ end
 instance of IGable for (X of a) where (a is IFable) with
   func g (x) : ((X of a) -> Int) do
     var v : a
-    if X.Y v <- x then
+    if X.Y v ~ x then
       return f v
     else
       return 0
     end
   end
 end
-var x1 : X of Int <- X.Y 10
-var x2 : X of Int <- X
+var x1 : X of Int = X.Y 10
+var x2 : X of Int = X
 return (g x1) + (g x2)
 |])
         `shouldBe` Right (EData ["Int","10"] EUnit)
@@ -616,15 +616,15 @@ end
 instance of IGable for (X of a) where (a is IFable) with
   func g (x) : ((X of a) -> Int) do
     var v : a
-    if X.Y v <- x then
+    if X.Y v ~ x then
       return f v
     else
       return 0
     end
   end
 end
-var x1 : X of Z <- X.Y Z
-var x2 : X of Z <- X
+var x1 : X of Z = X.Y Z
+var x2 : X of Z = X
 return (g x1) + (g x2)
 |])
         `shouldBe` Left "(line 28, column 9):\nvariable 'g' has no associated instance for '((X of Z) -> ?)'\n(line 28, column 18):\nvariable 'g' has no associated instance for '((X of Z) -> ?)'\n"
@@ -644,7 +644,7 @@ return (g x1) + (g x2)
 
         pre = unlines [
           "func not (x) : (Bool->Bool) do",
-          "   if Bool.True <- x then",
+          "   if Bool.True ~ x then",
           "     return Bool.False",
           "   else",
           "     return Bool.True",
@@ -652,7 +652,7 @@ return (g x1) + (g x2)
           "end",
           "",
           "func and (x,y) : ((Bool,Bool)->Bool) do",
-          "   if Bool.False <- x then",
+          "   if Bool.False ~ x then",
           "     return Bool.False",
           "   else",
           "     return y",
@@ -661,8 +661,8 @@ return (g x1) + (g x2)
           "",
           "constraint IEqualable for a with",
           "   func === (x,y) : ((a,a) -> Bool) do",
-          "     if `x´ <- y then",
-          "       if `y´ <- x then",
+          "     if `x´ ~ y then",
+          "       if `y´ ~ x then",
           "         return Bool.True",
           "       else",
           "         return Bool.False",

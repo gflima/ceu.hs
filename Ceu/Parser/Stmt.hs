@@ -30,7 +30,7 @@ singleton x = [x]
 pSet :: Bool -> Exp -> Parser Stmt
 pSet chk loc = do
   pos  <- pos2src <$> getPosition
-  void <- tk_sym "<-"
+  void <- tk_sym "="
   exp  <- expr
   return $ Set annz{source=pos} chk loc exp
 
@@ -201,7 +201,7 @@ stmt_do = do
   void <- tk_key "end"
   return $ Scope annz{source=pos} s
 
-pMatch pos = option (EExp annz{source=pos} $ EVar annz{source=pos} "_true") $ try $ pLoc <* tk_sym "<-"
+pMatch pos = option (EExp annz{source=pos} $ EVar annz{source=pos} "_true") $ try $ pLoc <* tk_sym "~"
 
 stmt_match :: Parser Stmt
 stmt_match = do

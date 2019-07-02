@@ -221,7 +221,7 @@ spec = do
         (run True $
           unlines [
             "func f (x,y) : ((Int,Int)->Int) do",
-            "   var a:Int <- x+y",
+            "   var a:Int = x+y",
             "   return (a+1) * (a+2)",
             "end",
             "return f (2,3)"
@@ -232,7 +232,7 @@ spec = do
         (run True $
           unlines [
             "func f (x,y) : ((Int,Int)->Int) do",
-            "   var (a,b):(Int,Int) <- (x+y, x*y)",
+            "   var (a,b):(Int,Int) = (x+y, x*y)",
             "   return (a+1) * (b+2)",
             "end",
             "return f (2,3)"
@@ -271,7 +271,7 @@ spec = do
         (run True $
           unlines [
             "func not (x) : (Bool->Bool) do",
-            "   if Bool.True <- x then",
+            "   if Bool.True ~ x then",
             "     return Bool.False",
             "   else",
             "     return Bool.True",
@@ -285,9 +285,9 @@ spec = do
         (run True $
           unlines [
             "func and (x,y) : ((Bool,Bool)->Bool) do",
-            "   if Bool.False <- x then",
+            "   if Bool.False ~ x then",
             "     return Bool.False",
-            "   else/if Bool.False <- y then",
+            "   else/if Bool.False ~ y then",
             "     return Bool.False",
             "   else",
             "     return Bool.True",
@@ -301,7 +301,7 @@ spec = do
         (run True $
           unlines [
             "func and (x,y) : ((Bool,Bool)->Bool) do",
-            "   if Bool.False <- x then",
+            "   if Bool.False ~ x then",
             "     return Bool.False",
             "   else",
             "     return y",
@@ -315,7 +315,7 @@ spec = do
         (run True $
           unlines [
             "func or (x,y) : ((Bool,Bool)->Bool) do",
-            "   if Bool.True <- x then",
+            "   if Bool.True ~ x then",
             "     return Bool.True",
             "   else",
             "     return y",
@@ -329,21 +329,21 @@ spec = do
         (run True $
           unlines [
             "func not (x) : (Bool->Bool) do",
-            "   if Bool.True <- x then",
+            "   if Bool.True ~ x then",
             "     return Bool.False",
             "   else",
             "     return Bool.True",
             "   end",
             "end",
             "func and (x,y) : ((Bool,Bool)->Bool) do",
-            "   if Bool.False <- x then",
+            "   if Bool.False ~ x then",
             "     return Bool.False",
             "   else",
             "     return y",
             "   end",
             "end",
             "func or (x,y) : ((Bool,Bool)->Bool) do",
-            "   if Bool.True <- x then",
+            "   if Bool.True ~ x then",
             "     return Bool.True",
             "   else",
             "     return y",
@@ -363,21 +363,21 @@ spec = do
         (run True $
           unlines [
             "func not (x) : (Bool->Bool) do",
-            "   if Bool.True <- x then",
+            "   if Bool.True ~ x then",
             "     return Bool.False",
             "   else",
             "     return Bool.True",
             "   end",
             "end",
             "func and (x,y) : ((Bool,Bool)->Bool) do",
-            "   if Bool.False <- x then",
+            "   if Bool.False ~ x then",
             "     return Bool.False",
             "   else",
             "     return y",
             "   end",
             "end",
             "func or (x,y) : ((Bool,Bool)->Bool) do",
-            "   if Bool.True <- x then",
+            "   if Bool.True ~ x then",
             "     return Bool.True",
             "   else",
             "     return y",
@@ -666,7 +666,7 @@ spec = do
             "end",
             "",
             "func capitalize c : (Char -> Char) do",
-            "   var off : Int <- (ord (Char.AA)) - (ord (Char.Aa))",
+            "   var off : Int = (ord (Char.AA)) - (ord (Char.Aa))",
             "   if isLower c then",
             "     return chr (off + (ord c))",
             "   else",
@@ -677,28 +677,28 @@ spec = do
             "func nextlet c : (Char -> Char) do",
             "   var (min,max) : (Int,Int)",
             "   if isLower c then",
-            "     set (min,max) <- (ord Char.Aa, ord Char.Dd)",
+            "     set (min,max) = (ord Char.Aa, ord Char.Dd)",
             "   else",
-            "     set (min,max) <- (ord Char.AA, ord Char.DD)",
+            "     set (min,max) = (ord Char.AA, ord Char.DD)",
             "   end",
             "   return chr (((((ord c) - min) + 1) rem ((max-min)+1)) + min)",
             "end",
             "",
-            "var c1 : Char <- Char.AA",
-            "var c2 : Char <- Char.BB",
+            "var c1 : Char = Char.AA",
+            "var c2 : Char = Char.BB",
             "",
-            "var eq  : Bool <- c1 =/= c2",
-            "var gt  : Bool <- c1 @< c2",
-            "var cs  : Bool <- (Char.AA) @< (Char.Aa)",
-            "var low : Bool <- (not (isLower (Char.AA))) and (isLower (Char.Dd))",
-            "var cp1 : Bool <- (capitalize (Char.BB)) === (Char.BB)",
-            "var cp2 : Bool <- (capitalize (Char.Cc)) === (Char.CC)",
-            "var nx1 : Bool <- (nextlet (Char.Cc)) === (Char.Dd)",
-            "var nx2 : Bool <- (nextlet (Char.AA)) === (Char.BB)",
-            "var nx3 : Bool <- (nextlet (Char.DD)) === (Char.AA)",
-            "var nx4 : Bool <- (nextlet (Char.Dd)) === (Char.Aa)",
-            "var nx  : Bool <- (nx1 and nx2) and (nx3 and nx4)",
-            "var sum : Int  <- (((ord c1) + (ord c2)) + (ord (Char.CC))) + (ord (Char.DD))",
+            "var eq  : Bool = c1 =/= c2",
+            "var gt  : Bool = c1 @< c2",
+            "var cs  : Bool = (Char.AA) @< (Char.Aa)",
+            "var low : Bool = (not (isLower (Char.AA))) and (isLower (Char.Dd))",
+            "var cp1 : Bool = (capitalize (Char.BB)) === (Char.BB)",
+            "var cp2 : Bool = (capitalize (Char.Cc)) === (Char.CC)",
+            "var nx1 : Bool = (nextlet (Char.Cc)) === (Char.Dd)",
+            "var nx2 : Bool = (nextlet (Char.AA)) === (Char.BB)",
+            "var nx3 : Bool = (nextlet (Char.DD)) === (Char.AA)",
+            "var nx4 : Bool = (nextlet (Char.Dd)) === (Char.Aa)",
+            "var nx  : Bool = (nx1 and nx2) and (nx3 and nx4)",
+            "var sum : Int  = (((ord c1) + (ord c2)) + (ord (Char.CC))) + (ord (Char.DD))",
             "return (((((eq and gt) and cs) and low) and (cp1 and cp2)) and nx) and (sum == 10)"
            ])
         `shouldBe` Right (EData ["Bool","True"] EUnit)
@@ -778,15 +778,15 @@ spec = do
             "  return fromEnum (((toEnum day) + 1) rem 7)",
             "end",
             "",
-            "var d1 : Day <- Day.Sun",
-            "var d2 : Day <- Day.Mon",
+            "var d1 : Day = Day.Sun",
+            "var d2 : Day = Day.Mon",
             "",
-            "var eq  : Bool <- d1 =/= d2",
-            "var gt  : Bool <- d1 @< d2",
-            "var wd1 : Bool <- workday (Day.Sun)",
-            "var wd2 : Bool <- workday (Day.Fri)",
-            "var aft : Bool <- ((dayAfter (Day.Sun)) === (Day.Mon)) and ((dayAfter (Day.Sat)) === (Day.Sun))",
-            "var sum : Int  <- (((toEnum d1) + (toEnum d2)) + (toEnum (Day.Sat))) + (toEnum (Day.Wed))",
+            "var eq  : Bool = d1 =/= d2",
+            "var gt  : Bool = d1 @< d2",
+            "var wd1 : Bool = workday (Day.Sun)",
+            "var wd2 : Bool = workday (Day.Fri)",
+            "var aft : Bool = ((dayAfter (Day.Sun)) === (Day.Mon)) and ((dayAfter (Day.Sat)) === (Day.Sun))",
+            "var sum : Int  = (((toEnum d1) + (toEnum d2)) + (toEnum (Day.Sat))) + (toEnum (Day.Wed))",
             "return ((((eq and gt) and (sum == 10)) and ((fromEnum(toEnum(Day.Sat))) === Day.Sat)) and ((not wd1) and wd2)) and aft"
            ])
         `shouldBe` Right (EData ["Bool","True"] EUnit)
@@ -887,7 +887,7 @@ spec = do
         (run True $
           unlines [
             "data Pair for (a,b) with (a,b)",
-            "var p1 : Pair of (Int,Int) <- Pair (1,2)",
+            "var p1 : Pair of (Int,Int) = Pair (1,2)",
             "return p1"
            ])
         `shouldBe` Right (EData ["Pair"] (ETuple [EData ["Int","1"] EUnit,EData ["Int","2"] EUnit]))
@@ -896,8 +896,8 @@ spec = do
         (run True $
           unlines [
             "data Pair for (a,b) with (a,b)",
-            "var mkPair : ((a,b) -> Pair of (a,b)) <- Pair",
-            "var p1 : Pair of (Int,Int) <- mkPair (1,2)",
+            "var mkPair : ((a,b) -> Pair of (a,b)) = Pair",
+            "var p1 : Pair of (Int,Int) = mkPair (1,2)",
             "return p1"
            ])
         `shouldBe` Right (EData ["Pair"] (ETuple [EData ["Int","1"] EUnit,EData ["Int","2"] EUnit]))
@@ -993,26 +993,26 @@ spec = do
             "    return x; ",
             "  end",
             "",
-            "  var i : Int <- 1",
-            "  var r : Int <- 1",
+            "  var i : Int = 1",
+            "  var r : Int = 1",
             "  loop do",
             "    if r @> x then",
             "      return i - 1",
             "    else",
-            "      set i <- i + 1",
-            "      set r <- i * i",
+            "      set i = i + 1",
+            "      set r = i * i",
             "    end",
             "  end",
             "end",
             "func roots (a,b,c) : ((Int,Int,Int) -> (Int,Int)) do",
-            "   var e : Int <- (b*b) - (4 * (a*c))",
+            "   var e : Int = (b*b) - (4 * (a*c))",
             "   if a === 0 then",
             "     return (0,0)",
             "   else/if e @< 0 then",
             "     return (-1,-1)",
             "   else",
-            "     var d : Int <- 2 * a",
-            "     var r : Int <- sqrt e",
+            "     var d : Int = 2 * a",
+            "     var r : Int = sqrt e",
             "     return (((-b)-r)/d, ((-b)+r)/d)",
             "   end",
             "end",
@@ -1048,9 +1048,9 @@ spec = do
           pre ++ unlines [
             "data Triple for (a,b,c) with (a,b,c)",
             "instance of IEqualable for Triple of (a,b,c) with end",
-            "var t0 : Triple of (Int,Int,Int) <- Triple (1,0,3)",
-            "var t1 : Triple of (Int,Int,Int) <- Triple (1,2,3)",
-            "var t2 : Triple of (Int,Int,Int) <- Triple (1,2,3)",
+            "var t0 : Triple of (Int,Int,Int) = Triple (1,0,3)",
+            "var t1 : Triple of (Int,Int,Int) = Triple (1,2,3)",
+            "var t2 : Triple of (Int,Int,Int) = Triple (1,2,3)",
             "return (t1 === t2) and (t0 =/= t1)"
            ])
         `shouldBe` Right (EData ["Bool","True"] EUnit)
@@ -1060,8 +1060,8 @@ spec = do
           pre ++ unlines [
             "data Triple for (a,b,c) with (a,b,c)",
             "instance of IEqualable for Triple with end",
-            "var t1 : Triple of (Int,Int,Int)    <- Triple (1,2,3)",
-            "var t2 : Triple of (Bool,Bool,Bool) <- Triple (Bool.True,Bool.False,Bool.True)",
+            "var t1 : Triple of (Int,Int,Int)    = Triple (1,2,3)",
+            "var t2 : Triple of (Bool,Bool,Bool) = Triple (Bool.True,Bool.False,Bool.True)",
             "return t1 =/= t2"
            ])
         `shouldBe` Left "(line 79, column 11):\ntypes do not match : expected '(((Triple of (Int,Int,Int)),(Triple of (Bool,Bool,Bool))) -> ?)' : found '((a,a) -> Bool)'\n(line 79, column 11):\nambiguous instances for 'a' : '(Triple of (Int,Int,Int))', '(Triple of (Bool,Bool,Bool))'\n"
@@ -1079,8 +1079,8 @@ spec = do
             "func age (now,person) : ((Date,Date) -> Int) do",
             "   var (d1,m1,y1) : (Int,Int,Int)",
             "   var (d2,m2,y2) : (Int,Int,Int)",
-            "   set Date (d2,m2,y2) <- now",
-            "   set Date (d1,m1,y1) <- person",
+            "   set Date (d2,m2,y2) = now",
+            "   set Date (d1,m1,y1) = person",
             "   if (d1,m1) @< (d2,m2) then",
             "     return (y2-y1)-1",
             "   else",
@@ -1103,8 +1103,8 @@ spec = do
 data Either
 data Either.Left  with Bool
 data Either.Right with Int
-var l : Either.Left  <- Either.Left  Bool.True
-var r : Either.Right <- Either.Right 10
+var l : Either.Left  = Either.Left  Bool.True
+var r : Either.Right = Either.Right 10
 return (l,r)
 |])
         `shouldBe` Right (ETuple [EData ["Either","Left"] (EData ["Bool","True"] EUnit),EData ["Either","Right"] (EData ["Int","10"] EUnit)])
@@ -1115,8 +1115,8 @@ return (l,r)
 data Either for (a,b)
 data Either.Left  with a
 data Either.Right with b
-var l : Either.Left  of (Bool,Int) <- Either.Left  Bool.True
-var r : Either.Right of (Bool,Int) <- Either.Right 10
+var l : Either.Left  of (Bool,Int) = Either.Left  Bool.True
+var r : Either.Right of (Bool,Int) = Either.Right 10
 return (l,r)
 |])
         `shouldBe` Right (ETuple [EData ["Either","Left"] (EData ["Bool","True"] EUnit),EData ["Either","Right"] (EData ["Int","10"] EUnit)])
@@ -1131,9 +1131,9 @@ data Either.Right with b
 func case ((f,g),v) : ((((a->r),(b->r)), Either of (a,b)) -> r) do
   var x : a
   var y : b
-  if (Either.Left x) <- v then
+  if (Either.Left x) ~ v then
     return f x
-  else/if (Either.Right x) <- v then
+  else/if (Either.Right x) ~ v then
     return g y
   end
 end
@@ -1146,8 +1146,8 @@ func g (v) : (Int -> Int) do
   return 10
 end
 
-var l : Either.Left  of (Bool,Int) <- Either.Left  Bool.True
-var r : Either.Right of (Bool,Int) <- Either.Right 10
+var l : Either.Left  of (Bool,Int) = Either.Left  Bool.True
+var r : Either.Right of (Bool,Int) = Either.Right 10
 
 return (case ((f,g),l)) + (case ((f,g),r))
 |])
@@ -1162,10 +1162,10 @@ data Either.Right with b
 
 instance of IEqualable for Either of (a,b) with end
 
-var l : Either.Left  of (Bool,Int) <- Either.Left  Bool.True
-var r : Either.Right of (Bool,Int) <- Either.Right 10
+var l : Either.Left  of (Bool,Int) = Either.Left  Bool.True
+var r : Either.Right of (Bool,Int) = Either.Right 10
 
-var l_ : Either of (Bool,Int) <- l
+var l_ : Either of (Bool,Int) = l
 
 return (l_ === l) and (l_ =/= r)
 |])
@@ -1183,14 +1183,14 @@ instance of IOrderable for Either of (a,b) where (a is IOrderable, b is IOrderab
   func @< (x,y) : ((Either of (a,b), Either of (a,b)) -> Bool) do
     var (xl,yl) : (a,a)
     var (xr,yr) : (b,b)
-    if Either.Left xl <- x then
-      if Either.Left yl <- y then
+    if Either.Left xl ~ x then
+      if Either.Left yl ~ y then
         return xl @< yl
       else
         return Bool.True
       end
-    else/if Either.Right xr <- x then
-      if Either.Right yr <- y then
+    else/if Either.Right xr ~ x then
+      if Either.Right yr ~ y then
         return xr @< yr
       else
         return Bool.False
@@ -1199,13 +1199,13 @@ instance of IOrderable for Either of (a,b) where (a is IOrderable, b is IOrderab
   end
 end
 
-var f : Either.Left  of (Bool,Int) <- Either.Left  Bool.False
-var l : Either.Left  of (Bool,Int) <- Either.Left  Bool.True
-var r : Either.Right of (Bool,Int) <- Either.Right 10
+var f : Either.Left  of (Bool,Int) = Either.Left  Bool.False
+var l : Either.Left  of (Bool,Int) = Either.Left  Bool.True
+var r : Either.Right of (Bool,Int) = Either.Right 10
 
-var f_ : Either of (Bool,Int) <- f
-var l_ : Either of (Bool,Int) <- l
-var r_ : Either of (Bool,Int) <- r
+var f_ : Either of (Bool,Int) = f
+var l_ : Either of (Bool,Int) = l
+var r_ : Either of (Bool,Int) = r
 
 return (f_ @<= f) and (((f @< l_) and (l @< r_)) and (r_ @>= r))
 |])
@@ -1228,29 +1228,29 @@ func sqrt x : (Int -> Int) do
     return x;
   end
 
-  var i : Int <- 1
-  var r : Int <- 1
+  var i : Int = 1
+  var r : Int = 1
   loop do
     if r @> x then
       return i - 1
     else
-      set i <- i + 1
-      set r <- i * i
+      set i = i + 1
+      set r = i * i
     end
   end
 end
 
 func roots (cs) : (Coefs -> Roots) do
   var (a,b,c) : (Int,Int,Int)
-  set Coefs (a,b,c) <- cs
-  var e : Int <- (b*b) - (4 * (a*c))
+  set Coefs (a,b,c) = cs
+  var e : Int = (b*b) - (4 * (a*c))
   if a === 0 then
     return Roots (0,0)
   else/if e @< 0 then
     return Roots (-1,-1)
   else
-    var d : Int <- 2 * a
-    var r : Int <- sqrt e
+    var d : Int = 2 * a
+    var r : Int = sqrt e
     return Roots (((-b)-r)/d, ((-b)+r)/d)
   end
 end
@@ -1268,9 +1268,9 @@ data Distance with Int
 
 func move (d_,a_,p_) : ((Distance,Angle,Position) -> Position) do
   var (d,a,x,y) : (Int,Int,Int,Int)
-  set Distance d     <- d_
-  set Angle a        <- a_
-  set Position (x,y) <- p_
+  set Distance d     = d_
+  set Angle a        = a_
+  set Position (x,y) = p_
   return Position (x+(d*a), y+(d*(-a)))  // TODO: sin/cos
 end
 
@@ -1308,13 +1308,13 @@ data Angle with Int
 instance of IEqualable for Angle with
   func === (a1,a2) : ((Angle,Angle) -> Bool) do
     var (a1_,a2_) : (Int,Int)
-    set (Angle a1_, Angle a2_) <- (a1,a2)
+    set (Angle a1_, Angle a2_) = (a1,a2)
     return (a1_ rem 360) == (a2_ rem 360)
   end
 end
 
-var a1 : Angle <- Angle 370
-var a2 : Angle <- Angle  10
+var a1 : Angle = Angle 370
+var a2 : Angle = Angle  10
 //return a1 === a2
 return ((Angle 370) === (Angle 10)) and (a1 === a2)
 |])
@@ -1328,7 +1328,7 @@ data Distance with Int
 instance of IEqualable for Distance with
   func === (d1,d2) : ((Distance,Distance) -> Bool) do
     var (d1_,d2_) : (Int,Int)
-    set (Distance d1_, Distance d2_) <- (d1,d2)
+    set (Distance d1_, Distance d2_) = (d1,d2)
     if d2_ < d1_ then
       return (d1_-d2_) < 10
     else
@@ -1375,11 +1375,11 @@ data Nat.Zero
 data Nat.Succ with Nat
 
 func ++ (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero <- y then
+  if Nat.Zero ~ y then
     return x
   else
     var z : Nat
-    set! Nat.Succ z <- y
+    set! Nat.Succ z = y
     return Nat.Succ (x ++ z)
   end
 end
@@ -1399,11 +1399,11 @@ return ((zero ** one) ++ (one ** one)) ++ ((one++one) ** (one++one))
         (run True $
           nat ++ [r|
 func ^^ (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero <- y then
+  if Nat.Zero ~ y then
     return Nat.Succ (Nat.Zero)
   else
     var z : Nat
-    set! Nat.Succ z <- y
+    set! Nat.Succ z = y
     return (x ^^ z) ** x
   end
 end
@@ -1421,25 +1421,25 @@ data Nat.Succ with Nat
 
 instance of IEqualable for Nat with
   func === (x,y) : ((Nat,Nat) -> Bool) do
-    if Nat.Zero <- x then
-      if Nat.Zero <- y then
+    if Nat.Zero ~ x then
+      if Nat.Zero ~ y then
         return Bool.True
       else
         return Bool.False
       end
-    else/if Nat.Zero <- y then
+    else/if Nat.Zero ~ y then
         return Bool.False
     else
       var (x_,y_) : (Nat,Nat)
-      set! Nat.Succ x_ <- x
-      set! Nat.Succ y_ <- y
+      set! Nat.Succ x_ = x
+      set! Nat.Succ y_ = y
       return x_ === y_
     end
   end
 end
 
-var zero : Nat <- Nat.Zero
-var one : Nat <- Nat.Succ (Nat.Zero)
+var zero : Nat = Nat.Zero
+var one : Nat = Nat.Succ (Nat.Zero)
 
 return (zero === zero, zero =/= one, one =/= zero, one === one, one =/= one)
 |])
@@ -1454,18 +1454,18 @@ data Nat.Succ with Nat
 
 instance of IEqualable for Nat with
   func === (x,y) : ((Nat,Nat) -> Bool) do
-    if Nat.Zero <- x then
-      if Nat.Zero <- y then
+    if Nat.Zero ~ x then
+      if Nat.Zero ~ y then
         return Bool.True
       else
         return Bool.False
       end
-    else/if Nat.Zero <- y then
+    else/if Nat.Zero ~ y then
         return Bool.False
     else
       var (x_,y_) : (Nat,Nat)
-      set! Nat.Succ x_ <- x
-      set! Nat.Succ y_ <- y
+      set! Nat.Succ x_ = x
+      set! Nat.Succ y_ = y
       return x_ === y_
     end
   end
@@ -1473,25 +1473,25 @@ end
 
 instance of IOrderable for Nat with
   func @< (x,y) : ((Nat,Nat) -> Bool) do
-    if Nat.Zero <- x then
-      if Nat.Zero <- y then
+    if Nat.Zero ~ x then
+      if Nat.Zero ~ y then
         return Bool.False
       else
         return Bool.True
       end
-    else/if Nat.Zero <- y then
+    else/if Nat.Zero ~ y then
         return Bool.False
     else
       var (x_,y_) : (Nat,Nat)
-      set! Nat.Succ x_ <- x
-      set! Nat.Succ y_ <- y
+      set! Nat.Succ x_ = x
+      set! Nat.Succ y_ = y
       return x_ @< y_
     end
   end
 end
 
-var zero : Nat <- Nat.Zero
-var one : Nat <- Nat.Succ (Nat.Zero)
+var zero : Nat = Nat.Zero
+var one : Nat = Nat.Succ (Nat.Zero)
 
 return (zero @< zero, zero @<= zero, zero @< one, one @< zero, one @> one, one @>= one)
 |])
@@ -1505,18 +1505,18 @@ data Nat.Zero
 data Nat.Succ with Nat
 
 func -- (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero <- y then
+  if Nat.Zero ~ y then
     return x
   else
     var (x_,y_) : (Nat,Nat)
-    set! Nat.Succ x_ <- x
-    set! Nat.Succ y_ <- y
+    set! Nat.Succ x_ = x
+    set! Nat.Succ y_ = y
     return Nat.Succ (x_ -- y_)
   end
 end
 
-var zero : Nat <- Nat.Zero
-var one : Nat <- Nat.Succ (Nat.Zero)
+var zero : Nat = Nat.Zero
+var one  : Nat = Nat.Succ (Nat.Zero)
 
 return one--zero
 |])
@@ -1530,18 +1530,18 @@ data Nat.Zero
 data Nat.Succ with Nat
 
 func -- (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero <- y then
+  if Nat.Zero ~ y then
     return x
   else
     var (x_,y_) : (Nat,Nat)
-    set! Nat.Succ x_ <- x
-    set! Nat.Succ y_ <- y
+    set! Nat.Succ x_ = x
+    set! Nat.Succ y_ = y
     return Nat.Succ (x_ -- y_)
   end
 end
 
-var zero : Nat <- Nat.Zero
-var one : Nat <- Nat.Succ (Nat.Zero)
+var zero : Nat = Nat.Zero
+var one : Nat = Nat.Succ (Nat.Zero)
 
 return zero--one
 |])
@@ -1551,11 +1551,11 @@ return zero--one
         (run True $
           nat ++ [r|
 func fact (x) : (Nat -> Nat) do
-  if `zero´ <- x then
+  if `zero´ ~ x then
     return one
   else
     var z : Nat
-    set! Nat.Succ z <- x
+    set! Nat.Succ z = x
     return x ** (fact z)
   end
 end
@@ -1568,13 +1568,13 @@ return fact (one ++ (one ++ one))
         (run True $
           nat ++ [r|
 func fib (x) : (Nat -> Nat) do
-  if `zero´ <- x then
+  if `zero´ ~ x then
     return zero
-  else/if `one´ <- x then
+  else/if `one´ ~ x then
     return one
   else
     var z : Nat
-    set! Nat.Succ (Nat.Succ z) <- x
+    set! Nat.Succ (Nat.Succ z) = x
     return (fib (Nat.Succ z)) ++ (fib z)
   end
 end
@@ -1587,11 +1587,11 @@ return fib (one ++ (one ++ (one ++ (one ++ (one ++ one)))))
         (run True $
           nat ++ [r|
 func convert (x) : (Nat -> Int) do
-  if Nat.Zero <- x then
+  if Nat.Zero ~ x then
     return 0
   else
     var z : Nat
-    set! Nat.Succ z <- x
+    set! Nat.Succ z = x
     return 1 + (convert z)
   end
 end
@@ -1608,20 +1608,20 @@ data Nat.Zero
 data Nat.Succ with Nat
 
 func -- (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero <- y then
+  if Nat.Zero ~ y then
     return x
-  else/if Nat.Zero <- x then
+  else/if Nat.Zero ~ x then
     return x
   else
     var (x_,y_) : (Nat,Nat)
-    set! Nat.Succ x_ <- x
-    set! Nat.Succ y_ <- y
+    set! Nat.Succ x_ = x
+    set! Nat.Succ y_ = y
     return Nat.Succ (x_ -- y_)
   end
 end
 
-var zero : Nat <- Nat.Zero
-var one : Nat <- Nat.Succ (Nat.Zero)
+var zero : Nat = Nat.Zero
+var one : Nat = Nat.Succ (Nat.Zero)
 
 return zero--one
 |])
@@ -1635,27 +1635,27 @@ data Nat.Zero
 data Nat.Succ with Nat
 
 func ++ (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero <- x then
+  if Nat.Zero ~ x then
     return y
   else
     var z : Nat
-    set! Nat.Succ z <- x
+    set! Nat.Succ z = x
     return Nat.Succ (y ++ z)
   end
 end
 
 func ** (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero <- x then
+  if Nat.Zero ~ x then
     return Nat.Zero
   else
     var z : Nat
-    set! Nat.Succ z <- x
+    set! Nat.Succ z = x
     return (y ** z) ++ y
   end
 end
 
-var zero : Nat <- Nat.Zero
-var one : Nat <- Nat.Succ (Nat.Zero)
+var zero : Nat = Nat.Zero
+var one : Nat = Nat.Succ (Nat.Zero)
 
 return ((Nat.Zero) ++ (Nat.Succ (Nat.Zero)),
         ((zero ** one) ++ (one ** one)) ++ ((one++one) ** (one++one)))
@@ -1674,11 +1674,11 @@ return ((Nat.Zero) ++ (Nat.Succ (Nat.Zero)),
         (run True $
           nat ++ [r|
 func foldn (h,c,n) : (((a -> a), a, Nat) -> a) do
-  if Nat.Zero <- n then
+  if Nat.Zero ~ n then
     return c
   else
     var n_ : Nat
-    set! Nat.Succ n_ <- n
+    set! Nat.Succ n_ = n
     return h (foldn (h,c,n_))
   end
 end
@@ -1695,11 +1695,11 @@ return one +++ (one +++ one)
         (run True $
           nat ++ [r|
 func foldn (h,c,n) : (((a -> a), a, Nat) -> a) do
-  if Nat.Zero <- n then
+  if Nat.Zero ~ n then
     return c
   else
     var n_ : Nat
-    set! Nat.Succ n_ <- n
+    set! Nat.Succ n_ = n
     return h (foldn (h,c,n_))
   end
 end
@@ -1808,9 +1808,9 @@ func gcd (x,y) : ((Int,Int) -> Int) do
 end
 
 func mkRat (x,y) : ((Int,Int) -> Rational) do
-  var u : Int <- (signum y) * x
-  var v : Int <- abs y
-  var d : Int <- gcd (u,v)
+  var u : Int = (signum y) * x
+  var v : Int = abs y
+  var d : Int = gcd (u,v)
   return Rational (u / d, v / d)
 end
 
@@ -1868,9 +1868,9 @@ func gcd (x,y) : ((Int,Int) -> Int) do
 end
 
 func mkRat (x,y) : ((Int,Int) -> Rational) do
-  var u : Int <- (signum y) * x
-  var v : Int <- abs y
-  var d : Int <- gcd (u,v)
+  var u : Int = (signum y) * x
+  var v : Int = abs y
+  var d : Int = gcd (u,v)
   return Rational (u / d, v / d)
 end
 
@@ -1880,27 +1880,27 @@ instance of INumeric for Rational with
   func ++ (x,y) : ((Rational,Rational) -> Rational) do
     var (x1,x2) : (Int,Int)
     var (y1,y2) : (Int,Int)
-    set Rational (x1,x2) <- x
-    set Rational (y1,y2) <- y
+    set Rational (x1,x2) = x
+    set Rational (y1,y2) = y
     return mkRat ((x1*y2) + (y1*x2), x2*y2)
   end
   func -- (x,y) : ((Rational,Rational) -> Rational) do
     var (x1,x2) : (Int,Int)
     var (y1,y2) : (Int,Int)
-    set Rational (x1,x2) <- x
-    set Rational (y1,y2) <- y
+    set Rational (x1,x2) = x
+    set Rational (y1,y2) = y
     return mkRat ((x1*y2) - (y1*x2), x2*y2)
   end
   func ** (x,y) : ((Rational,Rational) -> Rational) do
     var (x1,x2) : (Int,Int)
     var (y1,y2) : (Int,Int)
-    set Rational (x1,x2) <- x
-    set Rational (y1,y2) <- y
+    set Rational (x1,x2) = x
+    set Rational (y1,y2) = y
     return mkRat (x1*y1, x2*y2)
   end
   func neg x : (Rational -> Rational) do
     var (x1,x2) : (Int,Int)
-    set Rational (x1,x2) <- x
+    set Rational (x1,x2) = x
     return mkRat (-x1, x2)
   end
 end
@@ -1909,8 +1909,8 @@ instance of IFractional for Rational with
   func /- (x,y) : ((Rational,Rational) -> Rational) do
     var (x1,x2) : (Int,Int)
     var (y1,y2) : (Int,Int)
-    set Rational (x1,x2) <- x
-    set Rational (y1,y2) <- y
+    set Rational (x1,x2) = x
+    set Rational (y1,y2) = y
     if y1 < 0 then
       return mkRat ((-x1)*y2, (-x2)*y1)
     else/if y1 == 0 then
@@ -1965,7 +1965,7 @@ data List for a
 data List.Nil
 data List.Cons with (a, List of a)
 func :: : (a -> List of a)
-set :: <- List.Cons
+set :: = List.Cons
 return 10 :: (List.Nil)
 |])
         `shouldBe` Right (EData ["List","Cons"] (ETuple [EData ["Int","10"] EUnit,EData ["List","Nil"] EUnit]))
@@ -1980,19 +1980,19 @@ data List.Cons with (a, List of a)
 instance of IEqualable for List of a where (a is IEqualable) with end
 
 func eq (l1,l2) : ((List of a, List of a) -> Bool) do
-  if List.Nil <- l1 then
-    if List.Nil <- l2 then
+  if List.Nil ~ l1 then
+    if List.Nil ~ l2 then
       return Bool.True
     else
       return Bool.False
     end
-  else/if List.Nil <- l2 then
+  else/if List.Nil ~ l2 then
       return Bool.False
   else
       var (v1 ,v2 ) : (a,         a)
       var (l1_,l2_) : (List of a, List of a)
-      set! List.Cons (v1,l1_) <- l1
-      set! List.Cons (v2,l2_) <- l2
+      set! List.Cons (v1,l1_) = l1
+      set! List.Cons (v2,l2_) = l2
       return (v1 === v2) and (l1_ === l2_)
   end
 end
@@ -2011,7 +2011,7 @@ data List.Nil
 data List.Cons with (a, List of a)
 
 func null l : (List of a -> Bool) do
-  if List.Nil <- l then
+  if List.Nil ~ l then
     return Bool.True
   else
     return Bool.False
@@ -2033,22 +2033,22 @@ instance of IEqualable for List of a where (a is IEqualable) with end
 
 instance of IOrderable for (List of a) with
   func @< (xs, ys) : ((List of a, List of a) -> Bool) do
-    if List.Nil <- xs then
+    if List.Nil ~ xs then
       return Bool.False
-    else/if List.Nil <- ys then
+    else/if List.Nil ~ ys then
       return Bool.True
     else
       var (x,  y )  : (a,         a)
       var (xs_,ys_) : (List of a, List of a)
-      set! List.Cons (x,xs_) <- xs
-      set! List.Cons (y,ys_) <- ys
+      set! List.Cons (x,xs_) = xs
+      set! List.Cons (y,ys_) = ys
       return (x @< y) or ((x === y) and (xs_ @< ys_))
     end
   end
 end
 
 func null l : (List of a -> Bool) do
-  if List.Nil <- l then
+  if List.Nil ~ l then
     return Bool.True
   else
     return Bool.False
@@ -2069,7 +2069,7 @@ data List.Cons with (a, List of a)
 instance of IEqualable for List of a where (a is IEqualable) with end
 
 func null l : (List of a -> Bool) do
-  if List.Nil <- l then
+  if List.Nil ~ l then
     return Bool.True
   else
     return Bool.False
@@ -2079,8 +2079,8 @@ end
 func last1 (xs) : (List of a -> a) do
   var x   : a
   var xs_ : List of a
-  set! List.Cons (x,xs_) <- xs
-  if List.Nil <- xs_ then
+  set! List.Cons (x,xs_) = xs
+  if List.Nil ~ xs_ then
     return x
   else
     return last1 xs_
@@ -2090,7 +2090,7 @@ end
 func last2 (xs) : (List of a -> a) do
   var x   : a
   var xs_ : List of a
-  set! List.Cons (x,xs_) <- xs
+  set! List.Cons (x,xs_) = xs
   if List.Nil === xs_ then
     return x
   else
@@ -2114,7 +2114,7 @@ data List.Cons with (a, List of a)
 func last2 (xs) : (List of a -> a) do
   var x   : a
   var xs_ : List of a
-  set! List.Cons (x,xs_) <- xs
+  set! List.Cons (x,xs_) = xs
   if List.Nil === xs_ then
     return x
   else
@@ -2137,7 +2137,7 @@ instance of IEqualable for List of a where (a is IEqualable) with end
 
 func head xs : (List of a -> a) do
   var x : a
-  set! List.Cons (x,_) <- xs
+  set! List.Cons (x,_) = xs
   return x
 end
 
@@ -2148,8 +2148,8 @@ data Liste.Snoc with (Liste of a, a)
 func heade xs : (Liste of a -> a) do
   var xs_ : Liste of a
   var x   : a
-  set! Liste.Snoc (xs_,x) <- xs
-  if Liste.Nil <- xs_ then
+  set! Liste.Snoc (xs_,x) = xs
+  if Liste.Nil ~ xs_ then
     return x
   else
     return heade xs_
@@ -2157,18 +2157,18 @@ func heade xs : (Liste of a -> a) do
 end
 
 func convert (xs,acc) : ((Liste of a, List of a) -> List of a) do
-  if Liste.Nil <- xs then
+  if Liste.Nil ~ xs then
     return acc
   else
     var xs_ : Liste of a
     var x   : a
-    set! Liste.Snoc (xs_,x) <- xs
+    set! Liste.Snoc (xs_,x) = xs
     return convert (xs_, List.Cons (x, acc))
   end
 end
 
-var l  : List  of Int <- List.Cons  (10, List.Cons  (20, List.Nil ))
-var le : Liste of Int <- Liste.Snoc (Liste.Snoc (Liste.Nil, 10), 20)
+var l  : List  of Int = List.Cons  (10, List.Cons  (20, List.Nil ))
+var le : Liste of Int = Liste.Snoc (Liste.Snoc (Liste.Nil, 10), 20)
 
 return (head l, heade le, (convert (le, List.Nil)) === l)
 |])
@@ -2186,12 +2186,12 @@ data List.Nil
 data List.Cons with (a, List of a)
 
 func cat (xs,ys) : ((List of a, List of a) -> List of a) do
-  if List.Nil <- xs then
+  if List.Nil ~ xs then
     return ys
   else
     var x   : a
     var xs_ : List of a
-    set! List.Cons (x,xs_) <- xs
+    set! List.Cons (x,xs_) = xs
     return List.Cons (x, cat (xs_,ys))
   end
 end
@@ -2208,23 +2208,23 @@ data List.Nil
 data List.Cons with (a, List of a)
 
 func cat (xs,ys) : ((List of a, List of a) -> List of a) do
-  if List.Nil <- xs then
+  if List.Nil ~ xs then
     return ys
   else
     var x   : a
     var xs_ : List of a
-    set! List.Cons (x,xs_) <- xs
+    set! List.Cons (x,xs_) = xs
     return List.Cons (x, cat (xs_,ys))
   end
 end
 
 func concat (xss) : (List of (List of a) -> List of a) do
-  if List.Nil <- xss then
+  if List.Nil ~ xss then
     return xss
   else
     var xs   : List of a
     var xss_ : List of (List of a)
-    set! List.Cons (xs,xss_) <- xss
+    set! List.Cons (xs,xss_) = xss
     return cat (xs, concat (xss_))
   end
 end
@@ -2241,17 +2241,17 @@ data List.Nil
 data List.Cons with (a, List of a)
 
 func reverse (xs,acc) : ((List of a, List of a) -> List of a) do
-  if List.Nil <- xs then
+  if List.Nil ~ xs then
     return acc
   else
     var xs_ : List of a
     var x   : a
-    set! List.Cons (x,xs_) <- xs
+    set! List.Cons (x,xs_) = xs
     return reverse (xs_, List.Cons (x, acc))
   end
 end
 
-var l : List of Int <- List.Cons (10, List.Cons (20, List.Nil))
+var l : List of Int = List.Cons (10, List.Cons (20, List.Nil))
 
 return (reverse (l, List.Nil))
 |])
@@ -2265,17 +2265,17 @@ data List.Nil
 data List.Cons with (a, List of a)
 
 func length (xs) : (List of a -> Int) do
-  if List.Nil <- xs then
+  if List.Nil ~ xs then
     return 0
   else
     var xs_ : List of a
     var x   : a
-    set! List.Cons (x,xs_) <- xs
+    set! List.Cons (x,xs_) = xs
     return 1 + (length xs_)
   end
 end
 
-var l : List of Int <- List.Cons (10, List.Cons (20, List.Nil))
+var l : List of Int = List.Cons (10, List.Cons (20, List.Nil))
 
 return length l
 |])
@@ -2290,17 +2290,17 @@ data List.Cons with (a, List of a)
 
 func head (xs) : (List of a -> a) do
   var x : a
-  set! List.Cons (x,_) <- xs
+  set! List.Cons (x,_) = xs
   return x
 end
 
 func tail (xs) : (List of a -> List of a) do
   var xs_ : List of a
-  set! List.Cons (_,xs_) <- xs
+  set! List.Cons (_,xs_) = xs
   return xs_
 end
 
-var l : List of Int <- List.Cons (10, List.Cons (20, List.Nil))
+var l : List of Int = List.Cons (10, List.Cons (20, List.Nil))
 
 return (head l, tail l)
 |])
@@ -2325,50 +2325,50 @@ data Nat.Zero
 data Nat.Succ with Nat
 
 func ++ (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero <- y then
+  if Nat.Zero ~ y then
     return x
   else
     var z : Nat
-    set! Nat.Succ z <- y
+    set! Nat.Succ z = y
     return Nat.Succ (x ++ z)
   end
 end
 
 func ** (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero <- y then
+  if Nat.Zero ~ y then
     return Nat.Zero
   else
     var z : Nat
-    set! Nat.Succ z <- y
+    set! Nat.Succ z = y
     return (x ** z) ++ x
   end
 end
 
-var zero  : Nat <- Nat.Zero
-var one   : Nat <- Nat.Succ zero
-var two   : Nat <- Nat.Succ one
-var three : Nat <- Nat.Succ two
-var four  : Nat <- Nat.Succ three
-var five  : Nat <- Nat.Succ four
+var zero  : Nat = Nat.Zero
+var one   : Nat = Nat.Succ zero
+var two   : Nat = Nat.Succ one
+var three : Nat = Nat.Succ two
+var four  : Nat = Nat.Succ three
+var five  : Nat = Nat.Succ four
 |]
 
       pre = [r|
 func not (x) : (Bool->Bool) do
-  if Bool.True <- x then
+  if Bool.True ~ x then
     return Bool.False
   else
     return Bool.True
   end
 end
 func and (x,y) : ((Bool,Bool)->Bool) do
-  if Bool.False <- x then
+  if Bool.False ~ x then
     return Bool.False
   else
     return y
   end
 end
 func or (x,y) : ((Bool,Bool)->Bool) do
-  if Bool.True <- x then
+  if Bool.True ~ x then
     return Bool.True
   else
     return y
@@ -2377,8 +2377,8 @@ end
 
 constraint IEqualable for a with
   func === (x,y) : ((a,a) -> Bool) do
-    if `x´ <- y then
-      if `y´ <- x then
+    if `x´ ~ y then
+      if `y´ ~ x then
         return Bool.True
       else
         return Bool.False
@@ -2419,10 +2419,10 @@ end
 
 instance of IOrderable for Bool with
   func @< (x,y) : ((Bool,Bool) -> Bool) do
-    if      (Bool.False, Bool.False) <- (x, y) then return Bool.False
-    else/if (Bool.False, Bool.True)  <- (x, y) then return Bool.True
-    else/if (Bool.True,  Bool.False) <- (x, y) then return Bool.False
-    else/if (Bool.True,  Bool.True)  <- (x, y) then return Bool.False
+    if      (Bool.False, Bool.False) ~ (x, y) then return Bool.False
+    else/if (Bool.False, Bool.True)  ~ (x, y) then return Bool.True
+    else/if (Bool.True,  Bool.False) ~ (x, y) then return Bool.False
+    else/if (Bool.True,  Bool.True)  ~ (x, y) then return Bool.False
     end
   end
 end
