@@ -1907,10 +1907,8 @@ end
 
 instance of IFractional for Rational with
   func /- (x,y) : ((Rational,Rational) -> Rational) do
-    var (x1,x2) : (Int,Int)
-    var (y1,y2) : (Int,Int)
-    set Rational (x1,x2) = x
-    set Rational (y1,y2) = y
+    var Rational (x1,x2) : (Int,Int) = x
+    var Rational (y1,y2) : (Int,Int) = y
     if y1 < 0 then
       return mkRat ((-x1)*y2, (-x2)*y1)
     else/if y1 == 0 then
@@ -2038,10 +2036,8 @@ instance of IOrderable for (List of a) with
     else/if List.Nil matches ys then
       return Bool.True
     else
-      var (x,  y )  : (a,         a)
-      var (xs_,ys_) : (List of a, List of a)
-      set! List.Cons (x,xs_) = xs
-      set! List.Cons (y,ys_) = ys
+      var! List.Cons (x,xs_) : (a, List of a) = xs
+      var! List.Cons (y,ys_) : (a, List of a) = ys
       return (x @< y) or ((x === y) and (xs_ @< ys_))
     end
   end
@@ -2088,9 +2084,7 @@ func last1 (xs) : (List of a -> a) do
 end
 
 func last2 (xs) : (List of a -> a) do
-  var x   : a
-  var xs_ : List of a
-  set! List.Cons (x,xs_) = xs
+  var! List.Cons (x,xs_) : (a, List of a) = xs
   if List.Nil === xs_ then
     return x
   else
@@ -2136,8 +2130,7 @@ data List.Cons with (a, List of a)
 instance of IEqualable for List of a where (a is IEqualable) with end
 
 func head xs : (List of a -> a) do
-  var x : a
-  set! List.Cons (x,_) = xs
+  var! List.Cons (x,_) : a = xs
   return x
 end
 
@@ -2160,9 +2153,7 @@ func convert (xs,acc) : ((Liste of a, List of a) -> List of a) do
   if Liste.Nil matches xs then
     return acc
   else
-    var xs_ : Liste of a
-    var x   : a
-    set! Liste.Snoc (xs_,x) = xs
+    var! Liste.Snoc (xs_,x) : (Liste of a, a) = xs
     return convert (xs_, List.Cons (x, acc))
   end
 end
@@ -2189,9 +2180,7 @@ func cat (xs,ys) : ((List of a, List of a) -> List of a) do
   if List.Nil matches xs then
     return ys
   else
-    var x   : a
-    var xs_ : List of a
-    set! List.Cons (x,xs_) = xs
+    var! List.Cons (x,xs_) : (a,List of a) = xs
     return List.Cons (x, cat (xs_,ys))
   end
 end
@@ -2222,9 +2211,7 @@ func concat (xss) : (List of (List of a) -> List of a) do
   if List.Nil matches xss then
     return xss
   else
-    var xs   : List of a
-    var xss_ : List of (List of a)
-    set! List.Cons (xs,xss_) = xss
+    var! List.Cons (xs,xss_) : (List of a, List of (List of a)) = xss
     return cat (xs, concat (xss_))
   end
 end
@@ -2268,9 +2255,7 @@ func length (xs) : (List of a -> Int) do
   if List.Nil matches xs then
     return 0
   else
-    var xs_ : List of a
-    var x   : a
-    set! List.Cons (x,xs_) = xs
+    var! List.Cons (x,xs_) : (a,List of a) = xs
     return 1 + (length xs_)
   end
 end
@@ -2289,14 +2274,12 @@ data List.Nil
 data List.Cons with (a, List of a)
 
 func head (xs) : (List of a -> a) do
-  var x : a
-  set! List.Cons (x,_) = xs
+  var! List.Cons (x,_) : a = xs
   return x
 end
 
 func tail (xs) : (List of a -> List of a) do
-  var xs_ : List of a
-  set! List.Cons (_,xs_) = xs
+  var! List.Cons (_,xs_) : a = xs
   return xs_
 end
 

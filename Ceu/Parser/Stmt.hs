@@ -68,8 +68,8 @@ pLoc v = lany  <|> lvar <|> try lunit  <|> lnumber <|>
                 exp  <- expr
                 return $ EExp annz{source=pos} exp
 
-matchLocType :: Source -> Exp -> TypeC -> Maybe Stmt
-matchLocType src loc (tp_,ctrs) = case (aux src loc tp_) of
+matchLocType1 :: Source -> Exp -> TypeC -> Maybe Stmt
+matchLocType1 src loc (tp_,ctrs) = case (aux src loc tp_) of
                                     Nothing -> Nothing
                                     Just v  -> Just $ foldr (Seq annz) (Nop annz) v
   where
@@ -85,6 +85,29 @@ matchLocType src loc (tp_,ctrs) = case (aux src loc tp_) of
                                           (aux pos (ETuple annz{source=pos} vs1) (TTuple vs2))
     aux pos (ETuple _ _)  _            = Nothing
     aux pos loc         tp_            = error $ show (pos,loc,tp_)
+
+matchLocType2 :: Source -> Exp -> TypeC -> Maybe Stmt
+matchLocType2 src loc (tp_,ctrs) = if length vars /= length tps_ then Nothing else
+                                    Just $ foldr (Seq annz) (Nop annz) dcls
+  where
+    tps_ = tp2list (length vars) tp_
+    vars = getVars loc
+
+    dcls = map f $ map (\(Just v,t) -> (v,t)) $ filter (\(v,_) -> isJust v) $ zip vars tps_ where
+            f (var,tp_) = Var annz{source=src} var (tp_,ctrs)
+
+    getVars :: Exp -> [Maybe ID_Var]
+    getVars (EAny   _)               = []
+    getVars (EUnit  _)               = []
+    getVars (EVar   _ var)           = [Just var]
+    getVars (ETuple _ es)            = concatMap getVars es
+    getVars (ECons  _ _)             = []
+    getVars (ECall  _ (ECons _ _) e) = getVars e
+
+    tp2list :: Int -> Type -> [Type]
+    tp2list 1 tp_@(TTuple tps_) = [tp_]
+    tp2list _     (TTuple tps_) = tps_
+    tp2list _     tp_           = [tp_]
 
 -------------------------------------------------------------------------------
 
@@ -165,18 +188,18 @@ pMatch tk chk loc = do
 stmt_var :: Parser Stmt
 stmt_var = do
   pos  <- pos2src <$> getPosition
-  void <- try $ tk_key "var"
+  var  <- (try $ tk_key "var!") <|> (try $ tk_key "var") <?> "var"
   loc  <- pLoc True
   void <- tk_sym ":"
   tp   <- pTypeContext
   --guard (isJust $ matchLocType pos loc tp) <?> "arity match"
-  when (isNothing $ matchLocType pos loc tp) $ unexpected "arity mismatch"
+  when (isNothing $ matchLocType2 pos loc tp) $ unexpected "arity mismatch"
   s    <- option (Nop $ annz{source=pos}) $
-                 try $ pMatch (tk_sym "=") False loc
-  --s'   <- fromJust $ matchLocType pos loc tp)
+                 try $ pMatch (tk_sym "=") (var=="var!") loc
+  --s'   <- fromJust $ matchLocType2 pos loc tp)
             --Nothing -> do { fail "arity mismatch" }
             --Just v  -> return $ Seq annz{source=pos} v s
-  return $ Seq annz{source=pos} (fromJust $ matchLocType pos loc tp) s
+  return $ Seq annz{source=pos} (fromJust $ matchLocType2 pos loc tp) s
 
 stmt_set :: Parser Stmt
 stmt_set = do
@@ -364,7 +387,7 @@ func pos = do
   tp   <- pTypeContext
 
   dcls <- let (TFunc tp' _,ctrs) = tp
-              dcls = (matchLocType pos loc (tp',ctrs))
+              dcls = (matchLocType1 pos loc (tp',ctrs))
           in
             case dcls of
               Nothing    -> do { fail "arity mismatch" }

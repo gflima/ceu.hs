@@ -36,6 +36,7 @@ keywords = [
     "set!",
     "then",
     "var",
+    "var!",
     "return",
     "where",
     "with"
