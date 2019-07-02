@@ -1936,9 +1936,9 @@ return (neg ((((mkRat (10,2)) -- (mkRat (0,1))) ++ (mkRat (1,-5))) ** (mkRat (-5
 
     describe "Chapter 4.1 - List notation:" $ do       -- pg 91
 
-    describe "XXX: Chapter 4.1.1 - List as a datatype:" $ do       -- pg 92
+    describe "Chapter 4.1.1 - List as a datatype:" $ do       -- pg 92
 
-      it "List" $                   -- pg 2
+      it "List" $                   -- pg 92
         (run True $
           [r|
 data List for a
@@ -1948,7 +1948,7 @@ return 10 (List.Cons) List.Nil
 |])
         `shouldBe` Right (EData ["List","Cons"] (ETuple [EData ["Int","10"] EUnit,EData ["List","Nil"] EUnit]))
 
-      it "List" $                   -- pg 2
+      it "List" $                   -- pg 92
         (run True $
           [r|
 data List for a
@@ -1958,7 +1958,7 @@ return List.Cons (10, List.Nil)
 |])
         `shouldBe` Right (EData ["List","Cons"] (ETuple [EData ["Int","10"] EUnit,EData ["List","Nil"] EUnit]))
 
-      it "TODO: List `:´" $                   -- pg 2
+      it "TODO: List `:´" $                   -- pg 92
         (run True $
           [r|
 data List for a
@@ -1970,7 +1970,7 @@ return 10 :: (List.Nil)
 |])
         `shouldBe` Right (EData ["List","Cons"] (ETuple [EData ["Int","10"] EUnit,EData ["List","Nil"] EUnit]))
 
-      it "List: ==" $                   -- pg 2
+      it "List: ==" $                   -- pg 93
         (run True $
           pre ++ [r|
 data List for a
@@ -2002,6 +2002,309 @@ return ((10 (List.Cons) List.Nil) =/= (List.Cons (10, List.Nil)),
         (10 (List.Cons) List.Nil) eq  (List.Cons (11, List.Nil)))
 |])
         `shouldBe` Right (ETuple [EData ["Bool","False"] EUnit,EData ["Bool","True"] EUnit,EData ["Bool","False"] EUnit])
+
+      it "List: null" $                   -- pg 93
+        (run True $
+          [r|
+data List for a
+data List.Nil
+data List.Cons with (a, List of a)
+
+func null l : (List of a -> Bool) do
+  if List.Nil <- l then
+    return Bool.True
+  else
+    return Bool.False
+  end
+end
+
+return (null (List.Cons (10, List.Nil)), null (List.Nil))
+|])
+        `shouldBe` Right (ETuple [EData ["Bool","False"] EUnit,EData ["Bool","True"] EUnit])
+
+      it "List: IOrderable" $                   -- pg 94
+        (run True $
+          pre ++ [r|
+data List for a
+data List.Nil
+data List.Cons with (a, List of a)
+
+instance of IEqualable for List of a where (a is IEqualable) with end
+
+instance of IOrderable for (List of a) with
+  func @< (xs, ys) : ((List of a, List of a) -> Bool) do
+    if List.Nil <- xs then
+      return Bool.False
+    else/if List.Nil <- ys then
+      return Bool.True
+    else
+      var (x,  y )  : (a,         a)
+      var (xs_,ys_) : (List of a, List of a)
+      set! List.Cons (x,xs_) <- xs
+      set! List.Cons (y,ys_) <- ys
+      return (x @< y) or ((x === y) and (xs_ @< ys_))
+    end
+  end
+end
+
+func null l : (List of a -> Bool) do
+  if List.Nil <- l then
+    return Bool.True
+  else
+    return Bool.False
+  end
+end
+
+return (null (List.Cons (10, List.Nil)), null (List.Nil))
+|])
+        `shouldBe` Right (ETuple [EData ["Bool","False"] EUnit,EData ["Bool","True"] EUnit])
+
+      it "List: last1/last2" $                   -- pg 94
+        (run True $
+          pre ++ [r|
+data List for a
+data List.Nil
+data List.Cons with (a, List of a)
+
+instance of IEqualable for List of a where (a is IEqualable) with end
+
+func null l : (List of a -> Bool) do
+  if List.Nil <- l then
+    return Bool.True
+  else
+    return Bool.False
+  end
+end
+
+func last1 (xs) : (List of a -> a) do
+  var x   : a
+  var xs_ : List of a
+  set! List.Cons (x,xs_) <- xs
+  if List.Nil <- xs_ then
+    return x
+  else
+    return last1 xs_
+  end
+end
+
+func last2 (xs) : (List of a -> a) do
+  var x   : a
+  var xs_ : List of a
+  set! List.Cons (x,xs_) <- xs
+  if List.Nil === xs_ then
+    return x
+  else
+    return last2 xs_
+  end
+end
+
+data X
+
+return (last2 (List.Cons (X, List.Nil)), last1 (List.Cons (10, List.Nil)))
+|])
+        `shouldBe` Right (ETuple [EData ["X"] EUnit,EData ["Int","10"] EUnit])
+
+      it "List: last2" $                   -- pg 94
+        (run True $
+          pre ++ [r|
+data List for a
+data List.Nil
+data List.Cons with (a, List of a)
+
+func last2 (xs) : (List of a -> a) do
+  var x   : a
+  var xs_ : List of a
+  set! List.Cons (x,xs_) <- xs
+  if List.Nil === xs_ then
+    return x
+  else
+    return last2 xs_
+  end
+end
+
+return 1
+|])
+        `shouldBe` Left "(line 84, column 15):\nvariable '===' has no associated instance for '(((List.Nil of a),(List of a)) -> Bool)'\n"
+
+      it "List: Snoc" $                   -- pg 94
+        (run True $
+          pre ++ [r|
+data List for a
+data List.Nil
+data List.Cons with (a, List of a)
+
+instance of IEqualable for List of a where (a is IEqualable) with end
+
+func head xs : (List of a -> a) do
+  var x : a
+  set! List.Cons (x,_) <- xs
+  return x
+end
+
+data Liste for a
+data Liste.Nil
+data Liste.Snoc with (Liste of a, a)
+
+func heade xs : (Liste of a -> a) do
+  var xs_ : Liste of a
+  var x   : a
+  set! Liste.Snoc (xs_,x) <- xs
+  if Liste.Nil <- xs_ then
+    return x
+  else
+    return heade xs_
+  end
+end
+
+func convert (xs,acc) : ((Liste of a, List of a) -> List of a) do
+  if Liste.Nil <- xs then
+    return acc
+  else
+    var xs_ : Liste of a
+    var x   : a
+    set! Liste.Snoc (xs_,x) <- xs
+    return convert (xs_, List.Cons (x, acc))
+  end
+end
+
+var l  : List  of Int <- List.Cons  (10, List.Cons  (20, List.Nil ))
+var le : Liste of Int <- Liste.Snoc (Liste.Snoc (Liste.Nil, 10), 20)
+
+return (head l, heade le, (convert (le, List.Nil)) === l)
+|])
+        `shouldBe` Right (ETuple [EData ["Int","10"] EUnit,EData ["Int","10"] EUnit,EData ["Bool","True"] EUnit])
+
+-------------------------------------------------------------------------------
+
+    describe "Chapter 4.2 - List operations:" $ do       -- pg 95
+
+      it "List: ++" $                   -- pg 95
+        (run True $
+          [r|
+data List for a
+data List.Nil
+data List.Cons with (a, List of a)
+
+func cat (xs,ys) : ((List of a, List of a) -> List of a) do
+  if List.Nil <- xs then
+    return ys
+  else
+    var x   : a
+    var xs_ : List of a
+    set! List.Cons (x,xs_) <- xs
+    return List.Cons (x, cat (xs_,ys))
+  end
+end
+
+return cat (List.Cons (10, List.Cons (20, List.Nil)), List.Nil)
+|])
+        `shouldBe` Right (EData ["List","Cons"] (ETuple [EData ["Int","10"] EUnit,EData ["List","Cons"] (ETuple [EData ["Int","20"] EUnit,EData ["List","Nil"] EUnit])]))
+
+      it "List: concat" $                   -- pg 98
+        (run True $
+          [r|
+data List for a
+data List.Nil
+data List.Cons with (a, List of a)
+
+func cat (xs,ys) : ((List of a, List of a) -> List of a) do
+  if List.Nil <- xs then
+    return ys
+  else
+    var x   : a
+    var xs_ : List of a
+    set! List.Cons (x,xs_) <- xs
+    return List.Cons (x, cat (xs_,ys))
+  end
+end
+
+func concat (xss) : (List of (List of a) -> List of a) do
+  if List.Nil <- xss then
+    return xss
+  else
+    var xs   : List of a
+    var xss_ : List of (List of a)
+    set! List.Cons (xs,xss_) <- xss
+    return cat (xs, concat (xss_))
+  end
+end
+
+return concat (List.Cons (List.Cons(10,List.Nil), List.Cons (List.Cons(20,List.Nil), List.Nil)))
+|])
+        `shouldBe` Right (EData ["List","Cons"] (ETuple [EData ["Int","10"] EUnit,EData ["List","Cons"] (ETuple [EData ["Int","20"] EUnit,EData ["List","Nil"] EUnit])]))
+
+      it "List: reverse" $                   -- pg 99
+        (run True $
+          [r|
+data List for a
+data List.Nil
+data List.Cons with (a, List of a)
+
+func reverse (xs,acc) : ((List of a, List of a) -> List of a) do
+  if List.Nil <- xs then
+    return acc
+  else
+    var xs_ : List of a
+    var x   : a
+    set! List.Cons (x,xs_) <- xs
+    return reverse (xs_, List.Cons (x, acc))
+  end
+end
+
+var l : List of Int <- List.Cons (10, List.Cons (20, List.Nil))
+
+return (reverse (l, List.Nil))
+|])
+        `shouldBe` Right (EData ["List","Cons"] (ETuple [EData ["Int","20"] EUnit,EData ["List","Cons"] (ETuple [EData ["Int","10"] EUnit,EData ["List","Nil"] EUnit])]))
+
+      it "List: length" $                   -- pg 102
+        (run True $
+          [r|
+data List for a
+data List.Nil
+data List.Cons with (a, List of a)
+
+func length (xs) : (List of a -> Int) do
+  if List.Nil <- xs then
+    return 0
+  else
+    var xs_ : List of a
+    var x   : a
+    set! List.Cons (x,xs_) <- xs
+    return 1 + (length xs_)
+  end
+end
+
+var l : List of Int <- List.Cons (10, List.Cons (20, List.Nil))
+
+return length l
+|])
+        `shouldBe` Right (EData ["Int","2"] EUnit)
+
+      it "List: head/tail" $                   -- pg 102
+        (run True $
+          [r|
+data List for a
+data List.Nil
+data List.Cons with (a, List of a)
+
+func head (xs) : (List of a -> a) do
+  var x : a
+  set! List.Cons (x,_) <- xs
+  return x
+end
+
+func tail (xs) : (List of a -> List of a) do
+  var xs_ : List of a
+  set! List.Cons (_,xs_) <- xs
+  return xs_
+end
+
+var l : List of Int <- List.Cons (10, List.Cons (20, List.Nil))
+
+return (head l, tail l)
+|])
+        `shouldBe` Right (ETuple [EData ["Int","10"] EUnit,EData ["List","Cons"] (ETuple [EData ["Int","20"] EUnit,EData ["List","Nil"] EUnit])])
 
 -------------------------------------------------------------------------------
 
