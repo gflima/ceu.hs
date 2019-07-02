@@ -271,7 +271,7 @@ spec = do
         (run True $
           unlines [
             "func not (x) : (Bool->Bool) do",
-            "   if Bool.True matches x then",
+            "   if x matches Bool.True then",
             "     return Bool.False",
             "   else",
             "     return Bool.True",
@@ -285,9 +285,9 @@ spec = do
         (run True $
           unlines [
             "func and (x,y) : ((Bool,Bool)->Bool) do",
-            "   if Bool.False matches x then",
+            "   if x matches Bool.False then",
             "     return Bool.False",
-            "   else/if Bool.False matches y then",
+            "   else/if y matches Bool.False then",
             "     return Bool.False",
             "   else",
             "     return Bool.True",
@@ -301,7 +301,7 @@ spec = do
         (run True $
           unlines [
             "func and (x,y) : ((Bool,Bool)->Bool) do",
-            "   if Bool.False matches x then",
+            "   if x matches Bool.False then",
             "     return Bool.False",
             "   else",
             "     return y",
@@ -315,7 +315,7 @@ spec = do
         (run True $
           unlines [
             "func or (x,y) : ((Bool,Bool)->Bool) do",
-            "   if Bool.True matches x then",
+            "   if x matches Bool.True then",
             "     return Bool.True",
             "   else",
             "     return y",
@@ -329,21 +329,21 @@ spec = do
         (run True $
           unlines [
             "func not (x) : (Bool->Bool) do",
-            "   if Bool.True matches x then",
+            "   if x matches Bool.True then",
             "     return Bool.False",
             "   else",
             "     return Bool.True",
             "   end",
             "end",
             "func and (x,y) : ((Bool,Bool)->Bool) do",
-            "   if Bool.False matches x then",
+            "   if x matches Bool.False then",
             "     return Bool.False",
             "   else",
             "     return y",
             "   end",
             "end",
             "func or (x,y) : ((Bool,Bool)->Bool) do",
-            "   if Bool.True matches x then",
+            "   if x matches Bool.True then",
             "     return Bool.True",
             "   else",
             "     return y",
@@ -363,21 +363,21 @@ spec = do
         (run True $
           unlines [
             "func not (x) : (Bool->Bool) do",
-            "   if Bool.True matches x then",
+            "   if x matches Bool.True then",
             "     return Bool.False",
             "   else",
             "     return Bool.True",
             "   end",
             "end",
             "func and (x,y) : ((Bool,Bool)->Bool) do",
-            "   if Bool.False matches x then",
+            "   if x matches Bool.False then",
             "     return Bool.False",
             "   else",
             "     return y",
             "   end",
             "end",
             "func or (x,y) : ((Bool,Bool)->Bool) do",
-            "   if Bool.True matches x then",
+            "   if x matches Bool.True then",
             "     return Bool.True",
             "   else",
             "     return y",
@@ -1131,9 +1131,9 @@ data Either.Right with b
 func case ((f,g),v) : ((((a->r),(b->r)), Either of (a,b)) -> r) do
   var x : a
   var y : b
-  if (Either.Left =x) matches v then
+  if v matches (Either.Left =x) then
     return f x
-  else/if (Either.Right =x) matches v then
+  else/if v matches (Either.Right =x) then
     return g y
   end
 end
@@ -1183,14 +1183,14 @@ instance of IOrderable for Either of (a,b) where (a is IOrderable, b is IOrderab
   func @< (x,y) : ((Either of (a,b), Either of (a,b)) -> Bool) do
     var (xl,yl) : (a,a)
     var (xr,yr) : (b,b)
-    if Either.Left =xl matches x then
-      if Either.Left =yl matches y then
+    if x matches Either.Left =xl then
+      if y matches Either.Left =yl then
         return xl @< yl
       else
         return Bool.True
       end
-    else/if Either.Right =xr matches x then
-      if Either.Right =yr matches y then
+    else/if x matches Either.Right =xr then
+      if y matches Either.Right =yr then
         return xr @< yr
       else
         return Bool.False
@@ -1375,7 +1375,7 @@ data Nat.Zero
 data Nat.Succ with Nat
 
 func ++ (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero matches y then
+  if y matches Nat.Zero then
     return x
   else
     var z : Nat
@@ -1399,7 +1399,7 @@ return ((zero ** one) ++ (one ** one)) ++ ((one++one) ** (one++one))
         (run True $
           nat ++ [r|
 func ^^ (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero matches y then
+  if y matches Nat.Zero then
     return Nat.Succ (Nat.Zero)
   else
     var z : Nat
@@ -1421,13 +1421,13 @@ data Nat.Succ with Nat
 
 instance of IEqualable for Nat with
   func === (x,y) : ((Nat,Nat) -> Bool) do
-    if Nat.Zero matches x then
-      if Nat.Zero matches y then
+    if x matches Nat.Zero then
+      if y matches Nat.Zero then
         return Bool.True
       else
         return Bool.False
       end
-    else/if Nat.Zero matches y then
+    else/if y matches Nat.Zero then
         return Bool.False
     else
       var (x_,y_) : (Nat,Nat)
@@ -1454,13 +1454,13 @@ data Nat.Succ with Nat
 
 instance of IEqualable for Nat with
   func === (x,y) : ((Nat,Nat) -> Bool) do
-    if Nat.Zero matches x then
-      if Nat.Zero matches y then
+    if x matches Nat.Zero then
+      if y matches Nat.Zero then
         return Bool.True
       else
         return Bool.False
       end
-    else/if Nat.Zero matches y then
+    else/if y matches Nat.Zero then
         return Bool.False
     else
       var (x_,y_) : (Nat,Nat)
@@ -1473,13 +1473,13 @@ end
 
 instance of IOrderable for Nat with
   func @< (x,y) : ((Nat,Nat) -> Bool) do
-    if Nat.Zero matches x then
-      if Nat.Zero matches y then
+    if x matches Nat.Zero then
+      if y matches Nat.Zero then
         return Bool.False
       else
         return Bool.True
       end
-    else/if Nat.Zero matches y then
+    else/if y matches Nat.Zero then
         return Bool.False
     else
       var (x_,y_) : (Nat,Nat)
@@ -1505,7 +1505,7 @@ data Nat.Zero
 data Nat.Succ with Nat
 
 func -- (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero matches y then
+  if y matches Nat.Zero then
     return x
   else
     var (x_,y_) : (Nat,Nat)
@@ -1530,7 +1530,7 @@ data Nat.Zero
 data Nat.Succ with Nat
 
 func -- (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero matches y then
+  if y matches Nat.Zero then
     return x
   else
     var (x_,y_) : (Nat,Nat)
@@ -1551,7 +1551,7 @@ return zero--one
         (run True $
           nat ++ [r|
 func fact (x) : (Nat -> Nat) do
-  if ~zero matches x then
+  if x matches ~zero then
     return one
   else
     var z : Nat
@@ -1568,9 +1568,9 @@ return fact (one ++ (one ++ one))
         (run True $
           nat ++ [r|
 func fib (x) : (Nat -> Nat) do
-  if ~zero matches x then
+  if x matches ~zero then
     return zero
-  else/if ~one matches x then
+  else/if x matches ~one then
     return one
   else
     var z : Nat
@@ -1587,7 +1587,7 @@ return fib (one ++ (one ++ (one ++ (one ++ (one ++ one)))))
         (run True $
           nat ++ [r|
 func convert (x) : (Nat -> Int) do
-  if Nat.Zero matches x then
+  if x matches Nat.Zero then
     return 0
   else
     var z : Nat
@@ -1608,9 +1608,9 @@ data Nat.Zero
 data Nat.Succ with Nat
 
 func -- (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero matches y then
+  if y matches Nat.Zero then
     return x
-  else/if Nat.Zero matches x then
+  else/if x matches Nat.Zero then
     return x
   else
     var (x_,y_) : (Nat,Nat)
@@ -1635,7 +1635,7 @@ data Nat.Zero
 data Nat.Succ with Nat
 
 func ++ (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero matches x then
+  if x matches Nat.Zero then
     return y
   else
     var z : Nat
@@ -1645,7 +1645,7 @@ func ++ (x,y) : ((Nat,Nat) -> Nat) do
 end
 
 func ** (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero matches x then
+  if x matches Nat.Zero then
     return Nat.Zero
   else
     var z : Nat
@@ -1674,7 +1674,7 @@ return ((Nat.Zero) ++ (Nat.Succ (Nat.Zero)),
         (run True $
           nat ++ [r|
 func foldn (h,c,n) : (((a -> a), a, Nat) -> a) do
-  if Nat.Zero matches n then
+  if n matches Nat.Zero then
     return c
   else
     var n_ : Nat
@@ -1695,7 +1695,7 @@ return one +++ (one +++ one)
         (run True $
           nat ++ [r|
 func foldn (h,c,n) : (((a -> a), a, Nat) -> a) do
-  if Nat.Zero matches n then
+  if n matches Nat.Zero then
     return c
   else
     var n_ : Nat
@@ -1978,13 +1978,13 @@ data List.Cons with (a, List of a)
 instance of IEqualable for List of a where (a is IEqualable) with end
 
 func eq (l1,l2) : ((List of a, List of a) -> Bool) do
-  if List.Nil matches l1 then
-    if List.Nil matches l2 then
+  if l1 matches List.Nil then
+    if l2 matches List.Nil then
       return Bool.True
     else
       return Bool.False
     end
-  else/if List.Nil matches l2 then
+  else/if l2 matches List.Nil then
       return Bool.False
   else
       var (v1 ,v2 ) : (a,         a)
@@ -2009,7 +2009,7 @@ data List.Nil
 data List.Cons with (a, List of a)
 
 func null l : (List of a -> Bool) do
-  if List.Nil matches l then
+  if l matches List.Nil then
     return Bool.True
   else
     return Bool.False
@@ -2031,9 +2031,9 @@ instance of IEqualable for List of a where (a is IEqualable) with end
 
 instance of IOrderable for (List of a) with
   func @< (xs, ys) : ((List of a, List of a) -> Bool) do
-    if List.Nil matches xs then
+    if xs matches List.Nil then
       return Bool.False
-    else/if List.Nil matches ys then
+    else/if ys matches List.Nil then
       return Bool.True
     else
       var! List.Cons (x,xs_) : (a, List of a) = xs
@@ -2044,7 +2044,7 @@ instance of IOrderable for (List of a) with
 end
 
 func null l : (List of a -> Bool) do
-  if List.Nil matches l then
+  if l matches List.Nil then
     return Bool.True
   else
     return Bool.False
@@ -2065,7 +2065,7 @@ data List.Cons with (a, List of a)
 instance of IEqualable for List of a where (a is IEqualable) with end
 
 func null l : (List of a -> Bool) do
-  if List.Nil matches l then
+  if l matches List.Nil then
     return Bool.True
   else
     return Bool.False
@@ -2076,7 +2076,7 @@ func last1 (xs) : (List of a -> a) do
   var x   : a
   var xs_ : List of a
   set! List.Cons (x,xs_) = xs
-  if List.Nil matches xs_ then
+  if xs_ matches List.Nil then
     return x
   else
     return last1 xs_
@@ -2142,7 +2142,7 @@ func heade xs : (Liste of a -> a) do
   var xs_ : Liste of a
   var x   : a
   set! Liste.Snoc (xs_,x) = xs
-  if Liste.Nil matches xs_ then
+  if xs_ matches Liste.Nil then
     return x
   else
     return heade xs_
@@ -2150,7 +2150,7 @@ func heade xs : (Liste of a -> a) do
 end
 
 func convert (xs,acc) : ((Liste of a, List of a) -> List of a) do
-  if Liste.Nil matches xs then
+  if xs matches Liste.Nil then
     return acc
   else
     var! Liste.Snoc (xs_,x) : (Liste of a, a) = xs
@@ -2177,7 +2177,7 @@ data List.Nil
 data List.Cons with (a, List of a)
 
 func cat (xs,ys) : ((List of a, List of a) -> List of a) do
-  if List.Nil matches xs then
+  if xs matches List.Nil then
     return ys
   else
     var! List.Cons (x,xs_) : (a,List of a) = xs
@@ -2197,7 +2197,7 @@ data List.Nil
 data List.Cons with (a, List of a)
 
 func cat (xs,ys) : ((List of a, List of a) -> List of a) do
-  if List.Nil matches xs then
+  if xs matches List.Nil then
     return ys
   else
     var x   : a
@@ -2208,7 +2208,7 @@ func cat (xs,ys) : ((List of a, List of a) -> List of a) do
 end
 
 func concat (xss) : (List of (List of a) -> List of a) do
-  if List.Nil matches xss then
+  if xss matches List.Nil then
     return xss
   else
     var! List.Cons (xs,xss_) : (List of a, List of (List of a)) = xss
@@ -2228,7 +2228,7 @@ data List.Nil
 data List.Cons with (a, List of a)
 
 func reverse (xs,acc) : ((List of a, List of a) -> List of a) do
-  if List.Nil matches xs then
+  if xs matches List.Nil then
     return acc
   else
     var xs_ : List of a
@@ -2252,7 +2252,7 @@ data List.Nil
 data List.Cons with (a, List of a)
 
 func length (xs) : (List of a -> Int) do
-  if List.Nil matches xs then
+  if xs matches List.Nil then
     return 0
   else
     var! List.Cons (x,xs_) : (a,List of a) = xs
@@ -2308,7 +2308,7 @@ data Nat.Zero
 data Nat.Succ with Nat
 
 func ++ (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero matches y then
+  if y matches Nat.Zero then
     return x
   else
     var z : Nat
@@ -2318,7 +2318,7 @@ func ++ (x,y) : ((Nat,Nat) -> Nat) do
 end
 
 func ** (x,y) : ((Nat,Nat) -> Nat) do
-  if Nat.Zero matches y then
+  if y matches Nat.Zero then
     return Nat.Zero
   else
     var z : Nat
@@ -2337,21 +2337,21 @@ var five  : Nat = Nat.Succ four
 
       pre = [r|
 func not (x) : (Bool->Bool) do
-  if Bool.True matches x then
+  if x matches Bool.True then
     return Bool.False
   else
     return Bool.True
   end
 end
 func and (x,y) : ((Bool,Bool)->Bool) do
-  if Bool.False matches x then
+  if x matches Bool.False then
     return Bool.False
   else
     return y
   end
 end
 func or (x,y) : ((Bool,Bool)->Bool) do
-  if Bool.True matches x then
+  if x matches Bool.True then
     return Bool.True
   else
     return y
@@ -2360,8 +2360,8 @@ end
 
 constraint IEqualable for a with
   func === (x,y) : ((a,a) -> Bool) do
-    if ~x matches y then
-      if ~y matches x then
+    if y matches ~x then
+      if x matches ~y then
         return Bool.True
       else
         return Bool.False
@@ -2402,10 +2402,10 @@ end
 
 instance of IOrderable for Bool with
   func @< (x,y) : ((Bool,Bool) -> Bool) do
-    if      (Bool.False, Bool.False) matches (x, y) then return Bool.False
-    else/if (Bool.False, Bool.True)  matches (x, y) then return Bool.True
-    else/if (Bool.True,  Bool.False) matches (x, y) then return Bool.False
-    else/if (Bool.True,  Bool.True)  matches (x, y) then return Bool.False
+    if      (x, y) matches (Bool.False, Bool.False) then return Bool.False
+    else/if (x, y) matches (Bool.False, Bool.True)  then return Bool.True
+    else/if (x, y) matches (Bool.True,  Bool.False) then return Bool.False
+    else/if (x, y) matches (Bool.True,  Bool.True)  then return Bool.False
     end
   end
 end
