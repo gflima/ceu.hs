@@ -178,10 +178,10 @@ stmt_data = do
   (st,cs) <- option (TUnit,cz) $ try $ tk_key "with" *> pTypeContext
   return $ Data annz{source=pos} (TData id ofs st, cs) False
 
-pMatch :: Parser () -> Bool -> Exp -> Parser Stmt
-pMatch tk chk loc = do
-  pos  <- pos2src <$> getPosition
-  void <- tk --tk_sym "="
+pMatch :: Source -> Bool -> Exp -> Parser Stmt
+pMatch pos chk loc = do
+  --pos  <- pos2src <$> getPosition
+  void <- tk_sym "="
   exp  <- expr
   return $ Set annz{source=pos} chk loc exp
 
@@ -195,7 +195,7 @@ stmt_var = do
   --guard (isJust $ matchLocType pos loc tp) <?> "arity match"
   when (isNothing $ matchLocType2 pos loc tp) $ unexpected "arity mismatch"
   s    <- option (Nop $ annz{source=pos}) $
-                 try $ pMatch (tk_sym "=") (var=="var!") loc
+                 try $ pMatch pos (var=="var!") loc
   --s'   <- fromJust $ matchLocType2 pos loc tp)
             --Nothing -> do { fail "arity mismatch" }
             --Just v  -> return $ Seq annz{source=pos} v s
@@ -203,19 +203,21 @@ stmt_var = do
 
 stmt_set :: Parser Stmt
 stmt_set = do
-  --pos  <- pos2src <$> getPosition
+  pos  <- pos2src <$> getPosition
   set  <- (try $ tk_key "set!") <|> (try $ tk_key "set") <?> "set"
   loc  <- pLoc True
-  s    <- pMatch (tk_sym "=") (set=="set!") loc
-  return s
+  void <- tk_sym "="
+  exp  <- expr
+  return $ Set annz{source=pos} (set=="set!") loc exp
 
 stmt_match :: Parser Stmt
 stmt_match = do
-  --pos  <- pos2src <$> getPosition
+  pos  <- pos2src <$> getPosition
   set  <- (try $ tk_key "match!") <|> (try $ tk_key "match") <?> "match"
+  exp  <- expr
+  void <- tk_sym "with"
   loc  <- pLoc False
-  s    <- pMatch (tk_sym "with") (set=="match!") loc
-  return s
+  return $ Set annz{source=pos} (set=="match!") loc exp
 
 stmt_call :: Parser Stmt
 stmt_call = do
