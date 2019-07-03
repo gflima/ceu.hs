@@ -219,10 +219,31 @@ stmt_match = do
   loc  <- pLoc False
   return $ Set annz{source=pos} (set=="match!") loc exp
 
+pCase :: Parser (Source, Exp, Stmt)
+pCase = do
+  pos  <- pos2src <$> getPosition
+  void <- try $ tk_sym "case"
+  patt <- pLoc False
+  void <- tk_sym "then"
+  s    <- stmt
+  return $ (pos, patt, s)
+
+stmt_cases :: Parser Stmt
+stmt_cases = do
+  set   <- (try $ tk_key "match!") <|> (try $ tk_key "match") <?> "match"
+  exp   <- expr
+  void  <- tk_sym "with"
+  cases <- many1 pCase
+  pos   <- pos2src <$> getPosition
+  celse <- option (Nop annz{source=pos}) $ try $ tk_key "else" *> stmt
+  void  <- tk_key "end"
+  return $ foldr (\(p,l,s) acc -> Match annz{source=p} l exp s acc) celse cases
+    -- TODO: create local for `exp`
+
 stmt_call :: Parser Stmt
 stmt_call = do
   pos  <- pos2src <$> getPosition
-  set  <- tk_key "call"
+  set  <- try $ tk_key "call"
   e    <- expr
   return $ CallS annz{source=pos} e
 
@@ -273,6 +294,7 @@ stmt1 = do
        stmt_var     <|>
        stmt_funcs   <|>
        stmt_set     <|>
+       stmt_cases   <|>
        stmt_match   <|>
        stmt_call    <|>
        stmt_do      <|>

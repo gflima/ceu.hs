@@ -30,7 +30,7 @@ clearStmt (Inst  _ cls tp imp)  = Inst  annz cls tp (clearStmt imp)
 clearStmt (Data  _ tp abs)      = Data  annz tp abs
 clearStmt (Var   _ var tp)      = Var   annz var tp
 clearStmt (FuncS _ var tp p)    = FuncS annz var tp (clearStmt p)
---clearStmt (Match _ l r t f)   = Match annz (clearExp l) (clearExp r) (clearStmt t) (clearStmt f)
+clearStmt (Match _ l r t f)     = Match annz (clearExp l) (clearExp r) (clearStmt t) (clearStmt f)
 clearStmt (Set   _ chk loc exp) = Set   annz chk (clearExp loc) (clearExp exp)
 clearStmt (If    _ exp p1 p2)   = If    annz (clearExp exp) (clearStmt p1) (clearStmt p2)
 clearStmt (Seq   _ p1 p2)       = Seq   annz (clearStmt p1) (clearStmt p2)
@@ -494,6 +494,18 @@ spec = do
             it "if 0 then . else/if 1 then return 1 else ." $
                 parse stmt_if "if 0 then return 0 else/if 1 then return 1 else return 0 end"
                 `shouldBe` Right (Match annz{source=("",1,1)} (EExp annz{source=("",1,1)} (EVar annz{source=("",1,1)} "_true")) (ECons annz{source=("",1,4)} ["Int","0"]) (Ret annz{source=("",1,11)} (ECons annz{source=("",1,18)} ["Int","0"])) (Match annz{source=("",1,20)} (EExp annz{source=("",1,1)} (EVar annz{source=("",1,1)} "_true")) (ECons annz{source=("",1,28)} ["Int","1"]) (Ret annz{source=("",1,35)} (ECons annz{source=("",1,42)} ["Int","1"])) (Ret annz{source=("",1,49)} (ECons annz{source=("",1,56)} ["Int","0"]))))
+
+        describe "XXX: match" $ do
+          it "match-case" $
+            parse' (s *> stmt_cases) [r|
+match xs with
+  case List.Nil then
+    return 0
+  case List.Cons (=x,=xs_) then
+    return 1 + (length xs_)
+end
+|]
+            `shouldBe` Right (Match annz (ECons annz ["List","Nil"]) (EVar annz "xs") (Ret annz (ECons annz ["Int","0"])) (Match annz (ECall annz (ECons annz ["List","Cons"]) (ETuple annz [EVar annz "x",EVar annz "xs_"])) (EVar annz "xs") (Ret annz (ECall annz (EVar annz "+") (ETuple annz [ECons annz ["Int","1"],ECall annz (EVar annz "length") (EVar annz "xs_")]))) (Nop annz)))
 
         describe "loop" $ do
             it "loop do end" $

@@ -14,6 +14,7 @@ import Text.Parsec.Combinator (many1, notFollowedBy, manyTill, eof)
 keywords = [
     "_",
     "call",
+    "case",
     "constraint",
     "data",
     "do",

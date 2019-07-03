@@ -2244,7 +2244,7 @@ return (reverse (l, List.Nil))
 |])
         `shouldBe` Right (EData ["List","Cons"] (ETuple [EData ["Int","20"] EUnit,EData ["List","Cons"] (ETuple [EData ["Int","10"] EUnit,EData ["List","Nil"] EUnit])]))
 
-      it "List: length" $                   -- pg 102
+      it "XXX: List: length" $                   -- pg 102
         (run True $
           [r|
 data List for a
@@ -2252,11 +2252,11 @@ data List.Nil
 data List.Cons with (a, List of a)
 
 func length (xs) : (List of a -> Int) do
-  if xs matches List.Nil then
-    return 0
-  else
-    var! List.Cons (x,xs_) : (a,List of a) = xs
-    return 1 + (length xs_)
+  match xs with
+    case List.Nil then
+      return 0
+    case List.Cons (=x,=xs_) : (a,List of a) then
+      return 1 + (length xs_)
   end
 end
 
