@@ -58,7 +58,7 @@ data Stmt
   | Data     Ann TypeC Bool                       -- new type declaration
   | Var      Ann ID_Var TypeC                     -- variable declaration
   | FuncS    Ann ID_Var TypeC Stmt                -- function declaration
-  | Match    Ann Exp [(Exp,Stmt)]                 -- match
+  | Match    Ann Bool Exp [(Exp,Stmt)]            -- match
   | Match'   Ann Bool Exp [(Exp,Stmt)]            -- match w/ chk
   | Set      Ann Bool Exp Exp                     -- assignment statement
   | CallS    Ann Exp                              -- call function
@@ -116,8 +116,8 @@ map_stmt f@(fs,_,ft) (Inst  z cls tp p)  = fs (Inst  z cls (ft tp) (map_stmt f p
 map_stmt f@(fs,_,ft) (Data  z tp abs)    = fs (Data  z (ft tp) abs)
 map_stmt f@(fs,_,ft) (Var   z id tp)     = fs (Var   z id (ft tp))
 map_stmt f@(fs,_,ft) (FuncS z id tp p)   = fs (FuncS z id (ft tp) (map_stmt f p))
-map_stmt f@(fs,_,_)  (Match z exp cses)  = fs (Match z (map_exp f exp)
-                                             (map (\(pt,st) -> (map_exp f pt, map_stmt f st)) cses))
+map_stmt f@(fs,_,_)  (Match z chk exp cses) = fs (Match z chk (map_exp f exp)
+                                                (map (\(pt,st) -> (map_exp f pt, map_stmt f st)) cses))
 map_stmt f@(fs,_,_)  (Set   z b loc exp) = fs (Set   z b loc (map_exp f exp))
 map_stmt f@(fs,_,_)  (CallS z exp)       = fs (CallS z (map_exp f exp))
 map_stmt f@(fs,_,_)  (If    z exp p1 p2) = fs (If    z (map_exp f exp) (map_stmt f p1) (map_stmt f p2))

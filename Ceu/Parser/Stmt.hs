@@ -3,7 +3,7 @@ module Ceu.Parser.Stmt where
 import Debug.Trace
 import Data.Bool              (bool)
 import Data.Char              (isLower)
-import Data.Maybe             (isJust, isNothing, fromJust)
+import Data.Maybe             (maybe, isJust, isNothing, fromJust)
 import qualified Data.Set as Set
 import Control.Monad          (guard, when)
 
@@ -195,19 +195,16 @@ pMatch pos chk loc = do
 
 stmt_var :: Parser Stmt
 stmt_var = do
-  pos  <- pos2src <$> getPosition
+  pos1 <- pos2src <$> getPosition
   var  <- (try $ tk_key "var!") <|> (try $ tk_key "var") <?> "var"
-  loc  <- pPat SET
+  pat  <- pPat SET
+  pos2 <- pos2src <$> getPosition
   void <- tk_sym ":"
   tp   <- pTypeContext
-  --guard (isJust $ matchLocType pos loc tp) <?> "arity match"
-  when (isNothing $ matchLocType2 pos loc tp) $ unexpected "arity mismatch"
-  s    <- option (Nop $ annz{source=pos}) $
-                 try $ pMatch pos (var=="var!") loc
-  --s'   <- fromJust $ matchLocType2 pos loc tp)
-            --Nothing -> do { fail "arity mismatch" }
-            --Just v  -> return $ Seq annz{source=pos} v s
-  return $ Seq annz{source=pos} (fromJust $ matchLocType2 pos loc tp) s
+  when (isNothing $ matchLocType2 pos2 pat tp) $ unexpected "arity mismatch"
+  s    <- option (Nop $ annz{source=pos1}) $
+                 try $ pMatch pos1 (var=="var!") pat
+  return $ Seq annz{source=pos1} (fromJust $ matchLocType2 pos2 pat tp) s
 
 stmt_set :: Parser Stmt
 stmt_set = do
@@ -227,13 +224,21 @@ stmt_match = do
   loc  <- pPat BOTH
   return $ Set annz{source=pos} (set=="match!") loc exp
 
-pCase :: Parser (Exp, Stmt)
+pCase :: Parser (Stmt, (Exp,Stmt))
 pCase = do
   void <- try $ tk_sym "case"
-  patt <- pPat BOTH
+  pat  <- pPat BOTH
+  pos  <- pos2src <$> getPosition
+  col  <- optionMaybe $ tk_sym ":"
+  dcls <- case col of
+            Nothing -> do { return $ Nop annz{source=pos} }
+            Just _  -> do
+              tp   <- pTypeContext
+              when (isNothing $ matchLocType2 pos pat tp) $ unexpected "arity mismatch"
+              return $ fromJust $ matchLocType2 pos pat tp
   void <- tk_sym "then"
   s    <- stmt
-  return $ (patt, s)
+  return $ (dcls, (pat,s))
 
 stmt_cases :: Parser Stmt
 stmt_cases = do
@@ -243,9 +248,10 @@ stmt_cases = do
   void  <- tk_sym "with"
   cases <- many1 pCase
   pos2  <- pos2src <$> getPosition
-  celse <- option (Nop annz{source=pos2}) $ try $ tk_key "else" *> stmt
+  celse <- optionMaybe $ try $ tk_key "else" *> stmt
   void  <- tk_key "end"
-  return $ Match annz{source=pos1} exp (cases ++ [(EAny annz{source=pos2}, celse)])
+  return $ Match annz{source=pos1} (set=="match!") exp (map snd cases ++
+            maybe [] (\v -> [(EAny annz{source=pos2}, v)]) celse)
 
 stmt_call :: Parser Stmt
 stmt_call = do

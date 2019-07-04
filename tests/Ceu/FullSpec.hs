@@ -21,9 +21,9 @@ import qualified Ceu.Grammar.Full.Compile.FuncS as FuncS
 main :: IO ()
 main = hspec spec
 
-setb z chk loc exp p1 p2 = B.Match  z chk exp [(loc,p1)]
-set  z     loc exp p1 p2 =   Match  z     exp [(loc,p1)]
-set' z chk loc exp p1 p2 =   Match' z chk exp [(loc,p1)]
+setb z chk loc exp p1 p2 = B.Match  z chk   exp [(loc,p1)]
+set  z     loc exp p1 p2 =   Match  z False exp [(loc,p1)]
+set' z chk loc exp p1 p2 =   Match' z chk   exp [(loc,p1)]
 
 spec :: Spec
 spec = do

@@ -369,7 +369,7 @@ spec = do
         (run True "data Xxx with (Int,Int) ; var x : Xxx = Xxx (10,2) ; var i : int ; set! Xxx (i,2) = x ; return i")
         `shouldBe` Right (EData ["Int","10"] EUnit)
 
-      it "match/if" $
+      it "XXX: match/if" $
         (run True $
           unlines [
             "var x:Int = 10",
