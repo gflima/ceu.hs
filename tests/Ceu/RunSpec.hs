@@ -383,6 +383,15 @@ spec = do
           ])
         `shouldBe` Right (EData ["Int","10"] EUnit)
 
+      it "match/if" $
+        (run True $
+          unlines [
+            "var (x,y) : (Bool,Bool)",
+            "set (x,y) = (Bool.True, Bool.False)",
+            "return (x,y) matches (Bool.True,Bool.False)"
+          ])
+        `shouldBe` Right (EData ["Bool","True"] EUnit)
+
       it "if" $
         (run True $
           unlines [

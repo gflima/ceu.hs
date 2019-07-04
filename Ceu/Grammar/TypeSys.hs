@@ -166,8 +166,8 @@ fPat ids (ECall  z f e)  = (esf++ese, (tp_',ctrs), ECall z f' e') where
                             tp_'       = case tp_ of
                               TFunc _ tp_ -> tp_
                               tp_         -> tp_
-fPat ids (EExp   z e)    = (ese, type_ $ getAnn e', EExp z e') where
-                            (ese,e') = expr z (SUP,(TAny "?",cz)) ids e
+fPat ids (EExp   z e)    = (es, tp, EExp z e') where
+                            (es,tp,e') = fPat ids e
 
 -------------------------------------------------------------------------------
 
