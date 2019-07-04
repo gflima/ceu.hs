@@ -21,9 +21,9 @@ import qualified Ceu.Grammar.Full.Compile.FuncS as FuncS
 main :: IO ()
 main = hspec spec
 
-mmmb z chk loc exp p1 p2 = B.Match  z chk exp [(loc,p1),(B.EAny z,p2)]
-mmm  z     loc exp p1 p2 =   Match  z     exp [(loc,p1),(  EAny z,p2)]
-mmm' z chk loc exp p1 p2 =   Match' z chk exp [(loc,p1),(  EAny z,p2)]
+setb z chk loc exp p1 p2 = B.Match  z chk exp [(loc,p1)]
+set  z     loc exp p1 p2 =   Match  z     exp [(loc,p1)]
+set' z chk loc exp p1 p2 =   Match' z chk exp [(loc,p1)]
 
 spec :: Spec
 spec = do
@@ -68,7 +68,7 @@ spec = do
 
       it "scope var x end ; x=1" $ do
         compile' (Seq annz (Scope annz (Var annz "x" (int,cz))) (Set annz False (EVar annz "x") (ECons annz ["Int","1"])))
-        `shouldBe` (["data 'Int' is not declared","variable 'x' is not declared","data 'Int.1' is not declared"], B.Seq annz (B.Var annz "x" (int,cz) (B.Nop annz)) (mmmb annz False (B.EVar annz "x") (B.ECons (annz{type_=(TAny "?",cz)}) ["Int","1"]) (B.Nop annz) (B.Ret annz (B.EError annz (-2)))))
+        `shouldBe` (["data 'Int' is not declared","variable 'x' is not declared","data 'Int.1' is not declared"], B.Seq annz (B.Var annz "x" (int,cz) (B.Nop annz)) (setb annz False (B.EVar annz "x") (B.ECons (annz{type_=(TAny "?",cz)}) ["Int","1"]) (B.Nop annz) (B.Ret annz (B.EError annz (-2)))))
 
   --------------------------------------------------------------------------
 
@@ -79,23 +79,23 @@ spec = do
       `shouldBe` ([], (B.Var annz "x" (TUnit,cz) (B.Nop annz)))
 
     it "do var x; x = 1 end" $ do
-      compile' (Var'' annz "x" (int,cz) (mmm' annz False (EVar annz "x") (ECons annz ["Int","1"]) (Nop annz) (Nop annz)))
-      `shouldBe` (["data 'Int' is not declared","data 'Int.1' is not declared"], (B.Var annz "x" (int,cz) (mmmb annz False (B.EVar annz "x") (B.ECons annz{type_=(TData ["Int"] [] TUnit,cz)} ["Int","1"]) (B.Nop annz) (B.Nop annz))))
+      compile' (Var'' annz "x" (int,cz) (set' annz False (EVar annz "x") (ECons annz ["Int","1"]) (Nop annz) (Nop annz)))
+      `shouldBe` (["data 'Int' is not declared","data 'Int.1' is not declared"], (B.Var annz "x" (int,cz) (setb annz False (B.EVar annz "x") (B.ECons annz{type_=(TData ["Int"] [] TUnit,cz)} ["Int","1"]) (B.Nop annz) (B.Nop annz))))
 
     it "do var x; x = 1 end" $ do
-      compile' (Var'' annz "x" (int,cz) (mmm' annz False (EVar annz "x") (ECons annz ["Int","1"]) (Nop annz) (Nop annz)))
-      `shouldBe` (["data 'Int' is not declared","data 'Int.1' is not declared"], (B.Var annz "x" (int,cz) (mmmb annz False (B.EVar annz "x") (B.ECons annz{type_=(TData ["Int"] [] TUnit,cz)} ["Int","1"]) (B.Nop annz) (B.Nop annz))))
+      compile' (Var'' annz "x" (int,cz) (set' annz False (EVar annz "x") (ECons annz ["Int","1"]) (Nop annz) (Nop annz)))
+      `shouldBe` (["data 'Int' is not declared","data 'Int.1' is not declared"], (B.Var annz "x" (int,cz) (setb annz False (B.EVar annz "x") (B.ECons annz{type_=(TData ["Int"] [] TUnit,cz)} ["Int","1"]) (B.Nop annz) (B.Nop annz))))
 
     it "if" $
       compile
         (Seq annz
-            (mmm annz
+            (set annz
                 (EExp annz (EVar annz "_true"))
                 (ECall annz (ECons annz ["Bool","False"]) (EUnit annz))
                 (Nop annz)
                 (Nop annz))
             (Ret annz (ECons annz ["Int","10"])))
-      `shouldBe` Seq annz (mmm' annz True (EExp annz (EVar annz "_true")) (ECall annz (ECons annz ["Bool","False"]) (EUnit annz)) (Nop annz) (Nop annz)) (Ret annz (ECons annz ["Int","10"]))
+      `shouldBe` Seq annz (set' annz True (EExp annz (EVar annz "_true")) (ECall annz (ECons annz ["Bool","False"]) (EUnit annz)) (Nop annz) (Nop annz)) (Ret annz (ECons annz ["Int","10"]))
 
     it "class/inst/0" $ do
       compile (Inst annz "F3able" (int,cz)
@@ -105,7 +105,7 @@ spec = do
         (Inst'' annz "F3able" (int,cz)
           [(annz,"f3",(TFunc (TAny "Int") (int),cz),True)]
         (Var'' annz "$f3$(Int -> Int)$" (TFunc (TAny "Int") (int),cz)
-          (mmm' annz False (EVar annz "$f3$(Int -> Int)$") (EFunc annz (TFunc (TAny "Int") (int),cz) (Ret annz (ECons annz ["Int","10"]))) (Nop annz) (Ret annz (EError annz (-2))))))
+          (set' annz False (EVar annz "$f3$(Int -> Int)$") (EFunc annz (TFunc (TAny "Int") (int),cz) (Ret annz (ECons annz ["Int","10"]))) (Nop annz) (Ret annz (EError annz (-2))))))
 
     it "class/inst/1" $ do
       compile (Seq annz
@@ -121,7 +121,7 @@ spec = do
         (Inst'' annz "F3able" (int,cz)
           [(annz,"f3",(TFunc (TAny "Int") (int),cz),True)]
         (Var'' annz "$f3$(Int -> Int)$" (TFunc (TAny "Int") (int),cz)
-            (mmm' annz False (EVar annz "$f3$(Int -> Int)$") (EFunc annz (TFunc (TAny "Int") (int),cz) (Ret annz (ECons annz ["Int","10"]))) (Nop annz) (Ret annz (EError annz (-2))))))))
+            (set' annz False (EVar annz "$f3$(Int -> Int)$") (EFunc annz (TFunc (TAny "Int") (int),cz) (Ret annz (ECons annz ["Int","10"]))) (Nop annz) (Ret annz (EError annz (-2))))))))
 
     it "class/inst/2" $ do
       compile (Seq annz
@@ -139,11 +139,11 @@ spec = do
         (Inst'' annz "F3able" (int,cz)
           [(annz,"f3",(TFunc (TAny "Int") (int),cz),True)]
         (Var'' annz "$f3$(Int -> Int)$" (TFunc (TAny "Int") (int),cz)
-            (mmm' annz False (EVar annz "$f3$(Int -> Int)$") (EFunc annz (TFunc (TAny "Int") (int),cz) (Ret annz (ECons annz ["Int","10"])))
-              (Seq annz
-                (Nop annz)
-                (Ret annz (ECall annz (EVar annz "f3") (ECons annz ["Int","10"]))))
-              (Ret annz (EError annz (-2))))))))
+          (Seq annz
+            (set' annz False (EVar annz "$f3$(Int -> Int)$") (EFunc annz (TFunc (TAny "Int") (int),cz) (Ret annz (ECons annz ["Int","10"])))
+              (Nop annz)
+              (Ret annz (EError annz (-2))))
+            (Ret annz (ECall annz (EVar annz "f3") (ECons annz ["Int","10"]))))))))
     it "class/inst/3" $ do
       compile (Seq annz
                 (Class annz "F3able" (cv "a")
@@ -174,17 +174,20 @@ spec = do
         (Inst'' annz "F3able" (int,cz)
           [(annz,"f3",(TFunc (TAny "Int") (int),cz),True)]
           (Var'' annz "$f3$(Int -> Int)$" (TFunc (TAny "Int") (int),cz)
-          (mmm' annz False
-            (EVar annz "$f3$(Int -> Int)$")
-            (EFunc annz (TFunc (TAny "Int") (int),cz)
-              (Var'' annz "v" (TAny "Int",cz)
-              (Seq annz
+          (Seq annz
+            (set' annz False (EVar annz "$f3$(Int -> Int)$")
+              (EFunc annz (TFunc (TAny "Int") (int),cz)
+                (Var'' annz "v" (TAny "Int",cz)
+                (Seq annz
+                (Nop annz)
+                (Seq annz
+                  (set' annz False (EVar annz "v") (EArg annz)
+                    (Nop annz)
+                    (Ret annz (EError annz (-2))))
+                  (Ret annz (EVar annz "v"))))))
               (Nop annz)
-              (mmm' annz False (EVar annz "v") (EArg annz) (Seq annz (Nop annz) (Ret annz (EVar annz "v"))) (Ret annz (EError annz (-2)))))))
-            (Seq annz
-              (Nop annz)
-              (Ret annz (ECall annz (EVar annz "f3") (ECons annz ["Int","10"]))))
-            (Ret annz (EError annz (-2))))))))))
+              (Ret annz (EError annz (-2))))
+            (Ret annz (ECall annz (EVar annz "f3") (ECons annz ["Int","10"]))))))))))
 
     it "Xxx.Yyy" $
       compile (Seq annz (Data annz (int,                            M.fromList []) False)
@@ -195,7 +198,7 @@ spec = do
                         (Nop annz))
                         (Set annz False (EVar annz "y") (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]])))))))
       `shouldBe`
-        (Data'' annz (TData ["Int"] [] TUnit,fromList []) False (Data'' annz (TData ["Xxx"] [] int,fromList []) False (Data'' annz (TData ["Xxx","Yyy"] [] (TTuple [int,int]),fromList []) False (Var'' annz "y" (TData ["Xxx","Yyy"] [] (TTuple [int,int]),fromList []) (Seq annz (Nop annz) (mmm' annz False (EVar annz "y") (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]])) (Nop annz) (Ret annz (EError annz (-2)))))))))
+        (Data'' annz (TData ["Int"] [] TUnit,fromList []) False (Data'' annz (TData ["Xxx"] [] int,fromList []) False (Data'' annz (TData ["Xxx","Yyy"] [] (TTuple [int,int]),fromList []) False (Var'' annz "y" (TData ["Xxx","Yyy"] [] (TTuple [int,int]),fromList []) (Seq annz (Nop annz) (set' annz False (EVar annz "y") (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]])) (Nop annz) (Ret annz (EError annz (-2)))))))))
 
   --------------------------------------------------------------------------
 

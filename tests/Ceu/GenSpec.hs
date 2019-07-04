@@ -343,8 +343,8 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "instance of IEq for (a,b) where (a is IEq, b is IEq) with" ,
             " func eq ((x,y),(z,w)) : (((a,b),(a,b)) -> Int) do",
-            "   if x eq z matches 1 then"                 ,   -- eq_a
-            "     if y eq w matches 1 then"               ,   -- eq_b
+            "   if (x eq z) matches 1 then"                 ,   -- eq_a
+            "     if (y eq w) matches 1 then"               ,   -- eq_b
             "       return 1"                   ,
             "     end"                          ,
             "   end"                            ,
@@ -369,8 +369,8 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "instance of IEq for (a,b) where (a is IEq, b is IEq) with" ,
             " func eq ((x,y),(z,w)) : (((a,b),(a,b)) -> Int) do",
-            "   if x eq z matches 1 then"                 ,   -- eq_a
-            "     if y eq w matches 1 then"               ,   -- eq_b
+            "   if (x eq z) matches 1 then"                 ,   -- eq_a
+            "     if (y eq w) matches 1 then"               ,   -- eq_b
             "       return 1"                   ,
             "     end"                          ,
             "   end"                            ,
@@ -435,9 +435,9 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "instance of IEq for (a,b,a) where (a is IEq,b is IEq) with" ,
             " func eq ((x,y,z),(i,j,k)) : (((a,b,a),(a,b,a)) -> Int) do",
-            "   if x eq i matches 1 then"            ,
-            "     if y eq j matches 1 then"          ,
-            "       if z eq k matches 1 then"        ,
+            "   if (x eq i) matches 1 then"            ,
+            "     if (y eq j) matches 1 then"          ,
+            "       if (z eq k) matches 1 then"        ,
             "         return 1"                 ,
             "       end"                        ,
             "     end"                          ,
@@ -468,9 +468,9 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
             "end"                               ,
             "instance of IEq for (a,b,a) where (a is IEq, b is IEq) with" ,
             " func eq ((x,y,z),(i,j,k)) : (((a,b,a),(a,b,a)) -> Int) do",
-            "   if x eq i matches 1 then"            ,
-            "     if y eq j matches 1 then"          ,
-            "       if z eq k matches 1 then"        ,
+            "   if (x eq i) matches 1 then"            ,
+            "     if (y eq j) matches 1 then"          ,
+            "       if (z eq k) matches 1 then"        ,
             "         return 1"                 ,
             "       end"                        ,
             "     end"                          ,
@@ -583,11 +583,11 @@ instance of IFable for Int with
 end
 instance of IGable for (X of a) where (a is IFable) with
   func g (x) : ((X of a) -> Int) do
-    var v : a
-    if x matches X.Y =v then
-      return f v
-    else
-      return 0
+    match x with
+      case matches X.Y =v : Int then
+        return f v
+      else
+        return 0
     end
   end
 end
@@ -615,11 +615,11 @@ instance of IFable for Int with
 end
 instance of IGable for (X of a) where (a is IFable) with
   func g (x) : ((X of a) -> Int) do
-    var v : a
-    if x matches X.Y =v then
-      return f v
-    else
-      return 0
+    match x with
+      case x X.Y =v : Int then
+        return f v
+      else
+        return 0
     end
   end
 end

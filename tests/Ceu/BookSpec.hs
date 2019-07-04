@@ -1128,13 +1128,12 @@ data Either for (a,b)
 data Either.Left  with a
 data Either.Right with b
 
-func case ((f,g),v) : ((((a->r),(b->r)), Either of (a,b)) -> r) do
-  var x : a
-  var y : b
-  if v matches (Either.Left =x) then
-    return f x
-  else/if v matches (Either.Right =x) then
-    return g y
+func case_ ((f,g),v) : ((((a->r),(b->r)), Either of (a,b)) -> r) do
+  match v with
+    case (Either.Left  =x) : Int then
+      return f x
+    case (Either.Right =x) : Int then
+      return g x
   end
 end
 
@@ -1149,7 +1148,7 @@ end
 var l : Either.Left  of (Bool,Int) = Either.Left  Bool.True
 var r : Either.Right of (Bool,Int) = Either.Right 10
 
-return (case ((f,g),l)) + (case ((f,g),r))
+return (case_ ((f,g),l)) + (case_ ((f,g),r))
 |])
         `shouldBe` Right (EData ["Int","11"] EUnit)
 
