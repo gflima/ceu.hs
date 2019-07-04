@@ -33,19 +33,19 @@ stmt (FuncS z k tp@(tp_,ctrs) imp) = Seq z (Var z k tp) (Set z False (EVar z k) 
   imp' = if ctrs == Cs.cz then imp else
           map_stmt (id,id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) imp
 
-stmt (Var   z id tp)         = Var   z id tp
-stmt (Set   z chk loc exp)   = Set   z chk loc (expr exp)
-stmt (Match z loc exp p1 p2) = Match z loc (expr exp) (stmt p1) (stmt p2)
-stmt (CallS z exp)           = CallS z (expr exp)
-stmt (If    z exp p1 p2)     = If    z (expr exp) (stmt p1) (stmt p2)
-stmt (Seq   z p1 p2)         = Seq   z (stmt p1) (stmt p2)
-stmt (Loop  z p)             = Loop  z (stmt p)
-stmt (Scope z p)             = Scope z (stmt p)
-stmt (Ret   z exp)           = Ret   z (expr exp)
-stmt p                       = p
+stmt (Var   z id tp)       = Var   z id tp
+stmt (Set   z chk loc exp) = Set   z chk loc (expr exp)
+stmt (Match z exp cses)    = Match z (expr exp) (map (\(pt,st) -> (expr pt, stmt st)) cses)
+stmt (CallS z exp)         = CallS z (expr exp)
+stmt (If    z exp p1 p2)   = If    z (expr exp) (stmt p1) (stmt p2)
+stmt (Seq   z p1 p2)       = Seq   z (stmt p1) (stmt p2)
+stmt (Loop  z p)           = Loop  z (stmt p)
+stmt (Scope z p)           = Scope z (stmt p)
+stmt (Ret   z exp)         = Ret   z (expr exp)
+stmt p                     = p
 
 expr :: Exp -> Exp
-expr (ETuple z es)           = ETuple z (map expr es)
-expr (ECall  z e1 e2)        = ECall  z (expr e1) (expr e2)
-expr (EFunc  z tp p)         = EFunc  z tp (stmt p)
-expr e                       = e
+expr (ETuple z es)         = ETuple z (map expr es)
+expr (ECall  z e1 e2)      = ECall  z (expr e1) (expr e2)
+expr (EFunc  z tp p)       = EFunc  z tp (stmt p)
+expr e                     = e

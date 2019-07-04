@@ -8,11 +8,14 @@ compile :: Stmt -> Stmt
 compile p = stmt p
 stmt :: Stmt -> Stmt
 stmt (Inst   z cls tp imp)    = Inst   z cls tp (stmt imp)
-stmt (Set    z chk loc exp)   = Match' z chk  loc (expr exp) (Nop z) (Ret z (EError z error_match))
-stmt (Match  z loc exp p1 p2) = Match' z True loc (expr exp) (stmt p1) (stmt p2)
+stmt (Set    z chk pat exp)   = Match' z chk  (expr exp) [(pat,Nop z),(EAny z,Ret z (EError z error_match))]
+stmt (Match  z exp cses)      = Match' z True (expr exp)
+                                  (map (\(pt,st) -> (expr pt, stmt st)) cses)
 stmt (CallS  z exp)           = CallS  z (expr exp)
-stmt (If     z exp p1 p2)     = Match' z True (EExp z (EVar z "_true")) (expr exp)
-                                              (stmt p1) (stmt p2)
+stmt (If     z exp p1 p2)     = Match' z True (expr exp) [
+                                  (EExp z (EVar z "_true"), stmt p1),
+                                  (EAny z,                  stmt p2)
+                                ]
 stmt (Seq    z p1 p2)         = Seq    z (stmt p1) (stmt p2)
 stmt (Loop   z p)             = Loop   z (stmt p)
 stmt (Scope  z p)             = Scope  z (stmt p)

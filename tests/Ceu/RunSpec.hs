@@ -593,7 +593,7 @@ $f3$(Int -> Int)$ 10                       // EVar
            ])
         `shouldBe` Right (EData ["Bool","True"] EUnit)
 
-      it "f1 default" $
+      it "XXX: f1 default" $
         (run True $
           unlines [
             "constraint IFable for a with",

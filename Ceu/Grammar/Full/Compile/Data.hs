@@ -26,27 +26,28 @@ compile p = stmt [] p
 -------------------------------------------------------------------------------
 
 stmt :: [Stmt] -> Stmt -> Stmt
-stmt ds (Class'' z id  cs ifc p)      = Class'' z id  cs ifc (stmt ds p)
-stmt ds (Inst''  z cls tp imp p)      = Inst''  z cls tp imp (stmt ds p)
-stmt ds (Data''  z tp abs p)          = Data''  z tp' abs (stmt (d':ds) p)
-                                        where
-                                          tp' = fdata ds tp
-                                          d'  = Data'' z tp' abs p
-stmt ds (Var''   z var tp p)          = Var''   z var (fvar ds tp) (stmt ds p)
-stmt ds (Match'  z chk loc exp p1 p2) = Match'  z chk loc (expr ds exp) (stmt ds p1) (stmt ds p2)
-stmt ds (CallS   z exp)               = CallS   z (expr ds exp)
-stmt ds (Seq     z p1 p2)             = Seq     z (stmt ds p1) (stmt ds p2)
-stmt ds (Loop    z p)                 = Loop    z (stmt ds p)
-stmt ds (Ret     z exp)               = Ret     z (expr ds exp)
-stmt _  p                             = p
+stmt ds (Class'' z id  cs ifc p) = Class'' z id  cs ifc (stmt ds p)
+stmt ds (Inst''  z cls tp imp p) = Inst''  z cls tp imp (stmt ds p)
+stmt ds (Data''  z tp abs p)     = Data''  z tp' abs (stmt (d':ds) p)
+                                   where
+                                     tp' = fdata ds tp
+                                     d'  = Data'' z tp' abs p
+stmt ds (Var''   z var tp p)     = Var''   z var (fvar ds tp) (stmt ds p)
+stmt ds (Match'  z chk exp cses) = Match'  z chk (expr ds exp)
+                                     (map (\(pt,st) -> (expr ds pt, stmt ds st)) cses)
+stmt ds (CallS   z exp)          = CallS   z (expr ds exp)
+stmt ds (Seq     z p1 p2)        = Seq     z (stmt ds p1) (stmt ds p2)
+stmt ds (Loop    z p)            = Loop    z (stmt ds p)
+stmt ds (Ret     z exp)          = Ret     z (expr ds exp)
+stmt _  p                        = p
 
 -------------------------------------------------------------------------------
 
 expr :: [Stmt] -> Exp -> Exp
-expr ds (ETuple z es)                 = ETuple z (map (expr ds) es)
-expr ds (ECall  z e1 e2)              = ECall  z (expr ds e1) (expr ds e2)
-expr ds (EFunc  z tp p)               = EFunc  z tp (stmt ds p)
-expr _  e                             = e
+expr ds (ETuple z es)            = ETuple z (map (expr ds) es)
+expr ds (ECall  z e1 e2)         = ECall  z (expr ds e1) (expr ds e2)
+expr ds (EFunc  z tp p)          = EFunc  z tp (stmt ds p)
+expr _  e                        = e
 
 -------------------------------------------------------------------------------
 
@@ -61,12 +62,12 @@ fdata ds tp@(TData id ofs st, ctrs) = case getSuper id of
                     False -> (TData id (ofs ++ ofs') (cat st st'), Cs.union ctrs ctrs')
   where
     cat :: Type -> Type -> Type
-    cat TUnit      tp              = tp
-    cat tp         TUnit           = tp
-    cat (TTuple l1) (TTuple l2)    = TTuple $ l1 ++ l2
-    cat (TTuple l1) tp             = TTuple $ l1 ++ [tp]
-    cat tp         (TTuple l2)     = TTuple $ tp :  l2
-    cat tp1        tp2             = TTuple $ [tp1,tp2]
+    cat TUnit      tp            = tp
+    cat tp         TUnit         = tp
+    cat (TTuple l1) (TTuple l2)  = TTuple $ l1 ++ l2
+    cat (TTuple l1) tp           = TTuple $ l1 ++ [tp]
+    cat tp         (TTuple l2)   = TTuple $ tp :  l2
+    cat tp1        tp2           = TTuple $ [tp1,tp2]
 
 -------------------------------------------------------------------------------
 
@@ -80,5 +81,5 @@ fvar ds (tp_,ctrs) = (fvar' ds tp_, ctrs)
         Just (Data'' _ (TData _ ofs' st',_) _ _)
                 -> instantiate (zip (map (\(TAny v)->v) ofs') ofs) st'
     fvar' ds (TFunc inp out)  = TFunc (fvar' ds inp) (fvar' ds out)
-    fvar' ds (TTuple tps)      = TTuple $ map (fvar' ds) tps
+    fvar' ds (TTuple tps)     = TTuple $ map (fvar' ds) tps
     fvar' _  tp               = tp

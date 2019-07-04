@@ -60,7 +60,11 @@ show_stmt spc (CallS _ e)             = replicate spc ' ' ++ "call " ++ show_exp
 show_stmt spc (Ret _ e)               = replicate spc ' ' ++ "return " ++ show_exp spc e
 show_stmt spc (Seq _ p1 p2)           = replicate spc ' ' ++ "--\n" ++ show_stmt (spc+4) p1 ++
                                         replicate spc ' ' ++ "--\n" ++ show_stmt (spc+4) p2
-show_stmt spc (Match _ _ exp cses)    = replicate spc ' ' ++ "case " ++ show_exp 0 exp ++ " = ..." -- ++ show_exp spc re ++ "\n" ++ show_stmt spc p1
+show_stmt spc (Match _ False exp [(pt,st)])
+                                      = replicate spc ' ' ++ "set " ++ show_exp 0 pt ++ " = " ++
+                                                  show_exp spc exp ++ "\n" ++ show_stmt spc st
+show_stmt spc (Match _ chk exp cses)  = replicate spc ' ' ++ "match " ++ show_exp 0 exp ++ " with\n" ++
+                                          (concatMap (\(pt,st) -> show_exp (spc+4) pt ++ " -> " ++ show_stmt 0 st ++ "\n") cses)
 show_stmt spc (Nop _)                 = replicate spc ' ' ++ "nop"
 show_stmt spc p = error $ show p
 
