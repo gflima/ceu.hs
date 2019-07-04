@@ -27,8 +27,10 @@ singleton x = [x]
 
 -------------------------------------------------------------------------------
 
+data PLoc = BOTH | SET | CHK
+
 -- (x, (y,_))
-pLoc :: Bool -> Parser Exp  -- True=only vars (no exps)
+pLoc :: PLoc -> Parser Exp  -- True=only vars (no exps)
 pLoc v = lany  <|> lvar <|> try lunit  <|> lnumber <|>
          lcons <|> lexp <|> try ltuple <|> (tk_sym "(" *> (pLoc v <* tk_sym ")"))
           <?> "location"
@@ -38,7 +40,10 @@ pLoc v = lany  <|> lvar <|> try lunit  <|> lnumber <|>
                 void <- tk_key "_"
                 return $ EAny annz{source=pos}
     lvar    = do
-                void <- bool (tk_sym "=") (tk_sym "") v
+                void <- case v of
+                          BOTH -> tk_sym "="
+                          SET  -> tk_sym ""
+                          CHK  -> parserZero
                 pos  <- pos2src <$> getPosition
                 var  <- tk_var
                 return $ EVar annz{source=pos} var
@@ -63,7 +68,10 @@ pLoc v = lany  <|> lvar <|> try lunit  <|> lnumber <|>
                 locs <- list2 (pLoc v)
                 return (ETuple annz{source=pos} $ locs)
     lexp    = do
-                void <- bool (tk_sym "~") parserZero v
+                void <- case v of
+                          BOTH -> tk_sym "~"
+                          SET  -> parserZero
+                          CHK  -> tk_sym ""
                 pos  <- pos2src <$> getPosition
                 exp  <- expr
                 return $ EExp annz{source=pos} exp
@@ -189,7 +197,7 @@ stmt_var :: Parser Stmt
 stmt_var = do
   pos  <- pos2src <$> getPosition
   var  <- (try $ tk_key "var!") <|> (try $ tk_key "var") <?> "var"
-  loc  <- pLoc True
+  loc  <- pLoc SET
   void <- tk_sym ":"
   tp   <- pTypeContext
   --guard (isJust $ matchLocType pos loc tp) <?> "arity match"
@@ -205,7 +213,7 @@ stmt_set :: Parser Stmt
 stmt_set = do
   pos  <- pos2src <$> getPosition
   set  <- (try $ tk_key "set!") <|> (try $ tk_key "set") <?> "set"
-  loc  <- pLoc True
+  loc  <- pLoc SET
   void <- tk_sym "="
   exp  <- expr
   return $ Set annz{source=pos} (set=="set!") loc exp
@@ -216,29 +224,28 @@ stmt_match = do
   set  <- (try $ tk_key "match!") <|> (try $ tk_key "match") <?> "match"
   exp  <- expr
   void <- tk_sym "with"
-  loc  <- pLoc False
+  loc  <- pLoc BOTH
   return $ Set annz{source=pos} (set=="match!") loc exp
 
-pCase :: Parser (Source, Exp, Stmt)
+pCase :: Parser (Exp, Stmt)
 pCase = do
-  pos  <- pos2src <$> getPosition
   void <- try $ tk_sym "case"
-  patt <- pLoc False
+  patt <- pLoc BOTH
   void <- tk_sym "then"
   s    <- stmt
-  return $ (pos, patt, s)
+  return $ (patt, s)
 
 stmt_cases :: Parser Stmt
 stmt_cases = do
+  pos1  <- pos2src <$> getPosition
   set   <- (try $ tk_key "match!") <|> (try $ tk_key "match") <?> "match"
   exp   <- expr
   void  <- tk_sym "with"
   cases <- many1 pCase
-  pos   <- pos2src <$> getPosition
-  celse <- option (Nop annz{source=pos}) $ try $ tk_key "else" *> stmt
+  pos2  <- pos2src <$> getPosition
+  celse <- option (Nop annz{source=pos2}) $ try $ tk_key "else" *> stmt
   void  <- tk_key "end"
-  return $ foldr (\(p,l,s) acc -> Match annz{source=p} l exp s acc) celse cases
-    -- TODO: create local for `exp`
+  return $ Match annz{source=pos1} exp (cases ++ [(EAny annz{source=pos2}, celse)])
 
 stmt_call :: Parser Stmt
 stmt_call = do
@@ -257,22 +264,19 @@ stmt_do = do
   void <- tk_key "end"
   return $ Scope annz{source=pos} s
 
-pIf pos = option (EExp annz{source=pos} $ EVar annz{source=pos} "_true") $ try $ tk_key "matches" *> (pLoc False)
-
 stmt_if :: Parser Stmt
 stmt_if = do
   pos1 <- pos2src <$> getPosition
   void <- try $ tk_key "if"
   exp  <- expr
-  loc  <- pIf pos1
   void <- tk_key "then"
   s1   <- stmt
-  ss   <- many $ ((,,,) <$> pos2src <$> getPosition <*>
-                 (try (tk_key "else/if") *> expr) <*> pIf pos1 <*> (tk_key "then" *> stmt))
+  ss   <- many $ ((,,) <$> pos2src <$> getPosition <*>
+                 (try (tk_key "else/if") *> expr) <*> (tk_key "then" *> stmt))
   pos2 <- pos2src <$> getPosition
   s2   <- option (Nop annz{source=pos2}) $ try $ tk_key "else" *> stmt
   void <- tk_key "end"
-  return $ foldr (\(p,e,l,s) acc -> Match annz{source=p} l e s acc) s2 ([(pos1,exp,loc,s1)] ++ ss)
+  return $ foldr (\(p,e,s) acc -> If annz{source=p} e s acc) s2 ([(pos1,exp,s1)] ++ ss)
 
 stmt_loop :: Parser Stmt
 stmt_loop = do
@@ -294,7 +298,7 @@ stmt1 = do
        stmt_var     <|>
        stmt_funcs   <|>
        stmt_set     <|>
-       stmt_cases   <|>
+       try stmt_cases   <|>
        stmt_match   <|>
        stmt_call    <|>
        stmt_do      <|>
@@ -379,34 +383,41 @@ expr' =
   expr_tuple      <|>
   expr_func       <?> "expression"
 
+-- 0:   e1            matches           e2
 -- 1:   e             e                 1
--- 2:   e1  op        ECall op e1        a?  5!
--- 3:   e1  e2        ECall e1 e2        -1  +(2,3)  add(2,3)
--- 4:   e1  e2  e3    ECall e2 (e1,e3)   1+1  t1 isSupOf t2
+-- 2:   e1  op        ECall op e1       a?  5!
+-- 3:   e1  e2        ECall e1 e2       -1  +(2,3)  add(2,3)
+-- 4:   e1  e2  e3    ECall e2 (e1,e3)  1+1  t1 isSupOf t2
 expr :: Parser Exp
 expr = do
   e1  <- expr'
-  e2' <- optionMaybe $ try expr'
-  case e2' of
-    Nothing -> do { return e1 }               -- case 1
-    Just e2 -> do                             -- case 2-4
-      e3' <- optionMaybe $ try expr'
-      return $
-        case e3' of                           -- case 4
-          Just e3 -> ECall (getAnn e2) e2 (ETuple (getAnn e1) [e1,e3])
-          Nothing -> ECall (getAnn f)  f  e    -- case 2-3
-                      where
-                        (f,e) = bool (neg e1,e2) (e2,e1) (isOp e2)
-                        isOp (EVar _ (c:op)) = not $ isLower c
-                        isOp _               = False
-                        neg  (EVar z "-")    = EVar z "negate"
-                        neg  e               = e
+  m   <- optionMaybe $ try (tk_sym "matches") *> (pos2src <$> getPosition)
+  case m of
+    Just pos -> do
+      e2 <- pLoc CHK
+      return $ EMatch annz{source=pos} e1 e2
+    Nothing  -> do
+      e2' <- optionMaybe $ try expr'
+      case e2' of
+        Nothing -> do { return e1 }               -- case 1
+        Just e2 -> do                             -- case 2-4
+          e3' <- optionMaybe $ try expr'
+          return $
+            case e3' of                           -- case 4
+              Just e3 -> ECall (getAnn e2) e2 (ETuple (getAnn e1) [e1,e3])
+              Nothing -> ECall (getAnn f)  f  e    -- case 2-3
+                          where
+                            (f,e) = bool (neg e1,e2) (e2,e1) (isOp e2)
+                            isOp (EVar _ (c:op)) = not $ isLower c
+                            isOp _               = False
+                            neg  (EVar z "-")    = EVar z "negate"
+                            neg  e               = e
 
 -------------------------------------------------------------------------------
 
 func :: Source -> Parser (TypeC, Stmt)
 func pos = do
-  loc  <- pLoc True
+  loc  <- pLoc SET
   void <- tk_sym ":"
   tp   <- pTypeContext
 

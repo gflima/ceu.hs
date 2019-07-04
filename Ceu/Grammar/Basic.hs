@@ -19,6 +19,7 @@ data Exp
     | EAny   Ann
     | EArg   Ann
     | EExp   Ann Exp
+    | EMatch Ann Exp Exp
     deriving (Eq, Show)
 
 instance HasAnn Exp where
@@ -33,6 +34,7 @@ instance HasAnn Exp where
     getAnn (EAny   z)     = z
     getAnn (EArg   z)     = z
     getAnn (EExp   z _)   = z
+    getAnn (EMatch z _ _) = z
 
 -------------------------------------------------------------------------------
 

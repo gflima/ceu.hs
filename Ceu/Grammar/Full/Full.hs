@@ -21,6 +21,7 @@ data Exp
     | ECall  Ann Exp Exp        -- f a ; f(a) ; f(1,2)
     | EAny   Ann
     | EExp   Ann Exp
+    | EMatch Ann Exp Exp
     deriving (Eq, Show)
 
 toBasicExp :: Exp -> B.Exp
@@ -34,6 +35,7 @@ toBasicExp (EFunc  z tp p)  = B.EFunc  z tp (toBasicStmt p)
 toBasicExp (ECall  z e1 e2) = B.ECall  z (toBasicExp e1) (toBasicExp e2)
 toBasicExp (EAny   z)       = B.EAny   z
 toBasicExp (EExp   z e)     = B.EExp   z (toBasicExp e)
+toBasicExp (EMatch z e p)   = B.EMatch z (toBasicExp e) (toBasicExp p)
 
 instance HasAnn Exp where
     --getAnn :: Exp -> Ann

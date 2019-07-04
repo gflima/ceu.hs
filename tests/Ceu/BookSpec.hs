@@ -1551,7 +1551,7 @@ return zero--one
         (run True $
           nat ++ [r|
 func fact (x) : (Nat -> Nat) do
-  if x matches ~zero then
+  if x matches zero then
     return one
   else
     var z : Nat
@@ -1568,9 +1568,9 @@ return fact (one ++ (one ++ one))
         (run True $
           nat ++ [r|
 func fib (x) : (Nat -> Nat) do
-  if x matches ~zero then
+  if x matches zero then
     return zero
-  else/if x matches ~one then
+  else/if x matches one then
     return one
   else
     var z : Nat
@@ -2360,8 +2360,8 @@ end
 
 constraint IEqualable for a with
   func === (x,y) : ((a,a) -> Bool) do
-    if y matches ~x then
-      if x matches ~y then
+    if y matches x then
+      if x matches y then
         return Bool.True
       else
         return Bool.False
