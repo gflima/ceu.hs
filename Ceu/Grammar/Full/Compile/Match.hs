@@ -8,7 +8,8 @@ compile :: Stmt -> Stmt
 compile p = stmt p
 stmt :: Stmt -> Stmt
 stmt (Inst   z cls tp imp)    = Inst   z cls tp (stmt imp)
-stmt (Set    z chk pat exp)   = Match' z chk  (expr exp) [(pat,Nop z),(EAny z,Ret z (EError z error_match))]
+stmt (Set    z False pat exp) = Match' z False (expr exp) [(pat,Nop z)]
+stmt (Set    z True  pat exp) = Match' z True  (expr exp) [(pat,Nop z),(EAny z,Ret z (EError z error_match))]
 stmt (Match  z exp cses)      = Match' z True (expr exp)
                                   (map (\(pt,st) -> (expr pt, stmt st)) cses)
 stmt (CallS  z exp)           = CallS  z (expr exp)
