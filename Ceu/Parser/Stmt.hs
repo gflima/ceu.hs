@@ -27,13 +27,13 @@ singleton x = [x]
 
 -------------------------------------------------------------------------------
 
-data PLoc = BOTH | SET | CHK
+data PPat = BOTH | SET | CHK
 
 -- (x, (y,_))
-pLoc :: PLoc -> Parser Exp  -- True=only vars (no exps)
-pLoc v = lany  <|> lvar <|> try lunit  <|> lnumber <|>
-         lcons <|> lexp <|> try ltuple <|> (tk_sym "(" *> (pLoc v <* tk_sym ")"))
-          <?> "location"
+pPat :: PPat -> Parser Exp  -- True=only vars (no exps)
+pPat v = lany  <|> lvar <|> try lunit  <|> lnumber <|>
+         lcons <|> lexp <|> try ltuple <|> (tk_sym "(" *> (pPat v <* tk_sym ")"))
+          <?> "pattern"
   where
     lany    = do
                 pos  <- pos2src <$> getPosition
@@ -59,13 +59,13 @@ pLoc v = lany  <|> lvar <|> try lunit  <|> lnumber <|>
     lcons   = do
                 pos  <- pos2src <$> getPosition
                 cons <- tk_data_hier
-                loc  <- optionMaybe (pLoc v)
+                loc  <- optionMaybe (pPat v)
                 return $ case loc of
                           Nothing -> ECons annz{source=pos} cons
                           Just l  -> ECall annz{source=pos} (ECons annz{source=pos} cons) l
     ltuple  = do
                 pos  <- pos2src <$> getPosition
-                locs <- list2 (pLoc v)
+                locs <- list2 (pPat v)
                 return (ETuple annz{source=pos} $ locs)
     lexp    = do
                 void <- case v of
@@ -197,7 +197,7 @@ stmt_var :: Parser Stmt
 stmt_var = do
   pos  <- pos2src <$> getPosition
   var  <- (try $ tk_key "var!") <|> (try $ tk_key "var") <?> "var"
-  loc  <- pLoc SET
+  loc  <- pPat SET
   void <- tk_sym ":"
   tp   <- pTypeContext
   --guard (isJust $ matchLocType pos loc tp) <?> "arity match"
@@ -213,7 +213,7 @@ stmt_set :: Parser Stmt
 stmt_set = do
   pos  <- pos2src <$> getPosition
   set  <- (try $ tk_key "set!") <|> (try $ tk_key "set") <?> "set"
-  loc  <- pLoc SET
+  loc  <- pPat SET
   void <- tk_sym "="
   exp  <- expr
   return $ Set annz{source=pos} (set=="set!") loc exp
@@ -224,13 +224,13 @@ stmt_match = do
   set  <- (try $ tk_key "match!") <|> (try $ tk_key "match") <?> "match"
   exp  <- expr
   void <- tk_sym "with"
-  loc  <- pLoc BOTH
+  loc  <- pPat BOTH
   return $ Set annz{source=pos} (set=="match!") loc exp
 
 pCase :: Parser (Exp, Stmt)
 pCase = do
   void <- try $ tk_sym "case"
-  patt <- pLoc BOTH
+  patt <- pPat BOTH
   void <- tk_sym "then"
   s    <- stmt
   return $ (patt, s)
@@ -298,8 +298,8 @@ stmt1 = do
        stmt_var     <|>
        stmt_funcs   <|>
        stmt_set     <|>
-       try stmt_cases   <|>
-       stmt_match   <|>
+       try stmt_match   <|>
+       stmt_cases   <|>
        stmt_call    <|>
        stmt_do      <|>
        stmt_if      <|>
@@ -394,7 +394,7 @@ expr = do
   m   <- optionMaybe $ try (tk_sym "matches") *> (pos2src <$> getPosition)
   case m of
     Just pos -> do
-      e2 <- pLoc CHK
+      e2 <- pPat CHK
       return $ EMatch annz{source=pos} e1 e2
     Nothing  -> do
       e2' <- optionMaybe $ try expr'
@@ -417,7 +417,7 @@ expr = do
 
 func :: Source -> Parser (TypeC, Stmt)
 func pos = do
-  loc  <- pLoc SET
+  loc  <- pPat SET
   void <- tk_sym ":"
   tp   <- pTypeContext
 

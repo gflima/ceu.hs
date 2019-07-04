@@ -417,7 +417,7 @@ spec = do
 
         describe "var-tuples:" $ do
             it "((_,x,),_)" $ do
-                parse (pLoc SET) "((_,x,),_)"
+                parse (pPat SET) "((_,x,),_)"
                 `shouldBe` Right (ETuple annz{source = ("",1,1)} [ETuple annz{source = ("",1,2)} [EAny annz{source = ("",1,3)},EVar annz{source = ("",1,5)} "x"],EAny annz{source = ("",1,9)}])
             it "var (x,y) : (Int,Int) =  (1, 2); return x+y" $
                 parse stmt_var "var (x,y) : (Int,Int) =  (1, 2)"
