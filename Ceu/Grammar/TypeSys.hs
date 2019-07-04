@@ -87,9 +87,9 @@ inst2table ids (Inst z cls tp imp _) = Map.union (f2 imp) sups where
   f2 :: [(Ann,ID_Var,TypeC,Bool)] -> Map.Map ID_Var (Ann,ID_Var,TypeC,Bool)
   f2 ifc = Map.fromList $ map (\s@(_,id,_,_) -> (id,s)) ifc
 
-wrap insts (Var z id1 (tp_,_) (Match _ False (EVar _ id2) [(body,_)])) acc | id1==id2 =
+wrap insts (Var z id1 (tp_,_) (Match _ False body [((EVar _ id2),_)])) acc | id1==id2 =
   Var z id' (tp_',cz)
-    (Match z False (EVar z id') [(body',acc)])
+    (Match z False body' [((EVar z id'),acc)])
   where
     id'   = idtp id1 tp_'
     tp_'  = T.instantiate insts tp_
@@ -282,7 +282,7 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
                 -- functions to instantiate
                 fs :: [Stmt]
                 fs  = filter pred ids where
-                        pred (Var _ id1 tp@(_,ctrs) (Match _ False (EVar _ id2) [(body,_)])) =
+                        pred (Var _ id1 tp@(_,ctrs) (Match _ False body [((EVar _ id2),_)])) =
                           id1==id2 && (not inInsts) && (Cs.hasClass cls ctrs) where
                             inInsts = not $ null $ Map.filter f hinst where
                                         f (_,id',tp',_) = id1==id' && (isRight $ relates SUP tp' tp)
@@ -333,7 +333,7 @@ stmt ids s@(Var z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
   es_data = getErrsTypesDeclared z ids tp_
   es_id   = errDeclared z (Just chk) "variable" id ids where
               chk :: Stmt -> Bool
-              chk (Var _ id1 tp'@(TFunc _ _,_) (Match _ False (EVar _ id2) _)) = (id1 /= id2)
+              chk (Var _ id1 tp'@(TFunc _ _,_) (Match _ False _ [(EVar _ id2,_)])) = (id1 /= id2)
               chk (Var _ id1 tp'@(TFunc _ _,_) _) = (tp == tp') -- function prototype
               chk _ = False
   (es,p'') = stmt (s:ids) p'
@@ -347,7 +347,7 @@ stmt ids s@(Var z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
   --    ...
   (f,p') = if ctrs == cz then (Var z id tp, p) else -- normal concrete declarations
     case p of
-      Match z2 False (EVar _ id') [(body,s)]
+      Match z2 False body [((EVar _ id'),s)]
         | id==id' -> (Prelude.id, funcs s)    -- instantiate for all available implementations
       _   -> (Prelude.id, p)                  -- just ignore parametric declarations
       where
