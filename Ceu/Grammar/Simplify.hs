@@ -34,8 +34,8 @@ stmt (Var z id tp p) =
     _ -> Var z id tp p'
   where p' = stmt p
 
--- TODO: loc may contain exp which may contain stmt
-stmt (Match z b loc exp p q) = Match z b loc (expr exp) (stmt p) (stmt q)
+stmt (Match z b exp cses) = Match z b (expr exp)
+                                (map (\(pt,st)->(expr pt, stmt st)) cses)
 
 -- normal form: (Seq x (Seq y (Seq z ...)))
 stmt (Seq z1 (Seq z2 p1 p2) p3) = stmt $ Seq z1 p1 (Seq z2 p2 p3)

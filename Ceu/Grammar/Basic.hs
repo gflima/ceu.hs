@@ -41,7 +41,7 @@ data Stmt
     | Inst   Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class instance
     | Data   Ann TypeC Bool Stmt              -- new type declaration
     | Var    Ann ID_Var TypeC Stmt            -- variable declaration
-    | Match  Ann Bool Exp Exp Stmt Stmt       -- match/assignment/if statement
+    | Match  Ann Bool Exp [(Exp,Stmt)]        -- match/assignment/if statement
     | CallS  Ann Exp                          -- call function
     | Seq    Ann Stmt Stmt                    -- sequence
     | Loop   Ann Stmt                         -- infinite loop
@@ -60,7 +60,7 @@ show_stmt spc (CallS _ e)             = replicate spc ' ' ++ "call " ++ show_exp
 show_stmt spc (Ret _ e)               = replicate spc ' ' ++ "return " ++ show_exp spc e
 show_stmt spc (Seq _ p1 p2)           = replicate spc ' ' ++ "--\n" ++ show_stmt (spc+4) p1 ++
                                         replicate spc ' ' ++ "--\n" ++ show_stmt (spc+4) p2
-show_stmt spc (Match _ _ le re p1 p2) = replicate spc ' ' ++ show_exp 0 le ++ " = " ++ show_exp spc re ++ "\n" ++ show_stmt spc p1
+show_stmt spc (Match _ _ exp cses)    = replicate spc ' ' ++ "case " ++ show_exp 0 exp ++ " = ..." -- ++ show_exp spc re ++ "\n" ++ show_stmt spc p1
 show_stmt spc (Nop _)                 = replicate spc ' ' ++ "nop"
 show_stmt spc p = error $ show p
 
@@ -83,7 +83,7 @@ map_stmt f@(fs,_,ft) (Inst  z cls tp imp p)     = fs (Inst  z cls tp imp' (map_s
                                                     where imp' = map (\(x,y,tp,z)->(x,y,ft tp,z)) imp
 map_stmt f@(fs,_,ft) (Data  z tp abs p)         = fs (Data  z (ft tp) abs (map_stmt f p))
 map_stmt f@(fs,_,ft) (Var   z id tp p)          = fs (Var   z id (ft tp) (map_stmt f p))
-map_stmt f@(fs,_,_)  (Match z b loc exp p1 p2)  = fs (Match z b loc (map_exp f exp) (map_stmt f p1) (map_stmt f p2))
+map_stmt f@(fs,_,_)  (Match z b exp cses)       = fs (Match z b (map_exp f exp) (map (\(pt,st) -> (map_exp f pt, map_stmt f st)) cses))
 map_stmt f@(fs,_,_)  (CallS z exp)              = fs (CallS z (map_exp f exp))
 map_stmt f@(fs,_,_)  (Seq   z p1 p2)            = fs (Seq   z (map_stmt f p1) (map_stmt f p2))
 map_stmt f@(fs,_,_)  (Loop  z p)                = fs (Loop  z (map_stmt f p))
@@ -136,7 +136,7 @@ instance HasAnn Stmt where
     getAnn (Inst  z _ _ _ _)   = z
     getAnn (Data  z _ _ _)     = z
     getAnn (Var   z _ _ _)     = z
-    getAnn (Match z _ _ _ _ _) = z
+    getAnn (Match z _ _ _)     = z
     getAnn (CallS z _)         = z
     getAnn (Seq   z _ _)       = z
     getAnn (Loop  z _)         = z
