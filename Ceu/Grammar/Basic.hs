@@ -51,32 +51,41 @@ data Stmt
 
 -------------------------------------------------------------------------------
 
+rep spc = replicate spc ' '
+
 show_stmt :: Int -> Stmt -> String
---show_stmt spc (Class _ (id,_) _ _ p) = replicate spc ' ' ++ "class "  ++ id ++ "\n" ++ show_stmt spc p
---show_stmt spc (Inst  _ (id,_) _ p)   = replicate spc ' ' ++ "inst "   ++ id ++ "\n" ++ show_stmt spc p
-show_stmt spc (Data _ (TData id _ _,_) _ p) = replicate spc ' ' ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
-show_stmt spc (Var _ id (tp,_) p)     = replicate spc ' ' ++ "var "    ++ id ++ ": " ++ T.show' tp ++ "\n" ++ show_stmt spc p
-show_stmt spc (CallS _ e)             = replicate spc ' ' ++ "call " ++ show_exp spc e
-show_stmt spc (Ret _ e)               = replicate spc ' ' ++ "return " ++ show_exp spc e
-show_stmt spc (Seq _ p1 p2)           = replicate spc ' ' ++ "--\n" ++ show_stmt (spc+4) p1 ++
-                                        replicate spc ' ' ++ "--\n" ++ show_stmt (spc+4) p2
+--show_stmt spc (Class _ (id,_) _ _ p) = rep spc ++ "class "  ++ id ++ "\n" ++ show_stmt spc p
+--show_stmt spc (Inst  _ (id,_) _ p)   = rep spc ++ "inst "   ++ id ++ "\n" ++ show_stmt spc p
+show_stmt spc (Data _ (TData id _ _,_) _ p) = rep spc ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
+show_stmt spc (Var _ id (tp,_) p)     = rep spc ++ "var "    ++ id ++ ": " ++ T.show' tp ++ "\n" ++ show_stmt spc p
+show_stmt spc (CallS _ e)             = rep spc ++ "call " ++ show_exp spc e
+show_stmt spc (Ret _ e)               = rep spc ++ "return " ++ show_exp spc e
+show_stmt spc (Seq _ p1 p2)           = show_stmt spc p1 ++ "\n" ++ show_stmt spc p2
+  --rep spc ++ "--\n" ++ show_stmt (spc+4) p1 ++ rep spc ++ "--\n" ++ show_stmt (spc+4) p2
 show_stmt spc (Match _ False exp [(pt,st)])
-                                      = replicate spc ' ' ++ "set " ++ show_exp 0 pt ++ " = " ++
-                                                  show_exp spc exp ++ "\n" ++ show_stmt spc st
-show_stmt spc (Match _ chk exp cses)  = replicate spc ' ' ++ "match " ++ show_exp 0 exp ++ " with\n" ++
-                                          (concatMap (\(pt,st) -> show_exp (spc+4) pt ++ " -> " ++ show_stmt 0 st ++ "\n") cses)
-show_stmt spc (Nop _)                 = replicate spc ' ' ++ "nop"
+                                      = rep spc ++ "set " ++ show_exp spc pt ++ " = " ++
+                                          show_exp spc exp ++ "\n" ++ show_stmt spc st
+show_stmt spc (Match _ True  exp ((pt,st):_))
+                                      = rep spc ++ "set! " ++ show_exp spc pt ++ " = " ++
+                                          show_exp spc exp ++ "\n" ++ show_stmt spc st
+show_stmt spc (Match _ chk exp cses)  = rep spc ++ "match " ++ show_exp spc exp ++ " with\n" ++ (concatMap f cses)
+                                        where
+                                          f (pt,st) = rep (spc+4) ++ show_exp (spc+4) pt ++ " then\n" ++
+                                                        show_stmt (spc+8) st ++ "\n"
+show_stmt spc (Nop _)                 = rep spc ++ "nop"
 show_stmt spc p = error $ show p
 
 show_exp :: Int -> Exp -> String
-show_exp spc (ECons _ ["Int",n]) = n
-show_exp spc (ECons _ id)    = hier2str id
-show_exp spc (EVar _ id)    = id
-show_exp spc (EArg _)        = "arg"
-show_exp spc (ETuple _ es)   = "(" ++ intercalate "," (map (show_exp spc) es) ++ ")"
-show_exp spc (EFunc _ _ p)   = "func" ++ "\n" ++ show_stmt (spc+4) p
-show_exp spc (ECall _ e1 e2) = "call" ++ " " ++ show_exp spc e1 ++ " " ++ show_exp spc e2
-show_exp spc e              = show e
+show_exp spc (EAny   _)           = "_"
+show_exp spc (EError _ n)         = "error " ++ show n
+show_exp spc (ECons  _ ["Int",n]) = n
+show_exp spc (ECons  _ id)        = hier2str id
+show_exp spc (EVar   _ id)        = id
+show_exp spc (EArg   _)           = "arg"
+show_exp spc (ETuple _ es)        = "(" ++ intercalate "," (map (show_exp spc) es) ++ ")"
+show_exp spc (EFunc  _ _ p)       = "func" ++ "\n" ++ show_stmt (spc+4) p
+show_exp spc (ECall  _ e1 e2)     = "call" ++ " " ++ show_exp spc e1 ++ " " ++ show_exp spc e2
+show_exp spc e                    = error $ show e
 
 -------------------------------------------------------------------------------
 
