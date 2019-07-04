@@ -20,7 +20,7 @@ main :: IO ()
 main = hspec spec
 
 mmm :: Ann -> Bool -> Exp -> Exp -> Stmt -> Stmt -> Stmt
-mmm z b loc exp p1 p2 = Match z b exp [(loc,p1),(EAny z,p2)]
+mmm z b loc exp p1 p2 = Match z b exp [(loc,p1)]
 
 func id tp p = Var annz id tp
                 (mmm annz False (EVar annz id)

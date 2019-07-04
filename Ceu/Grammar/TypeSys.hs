@@ -482,7 +482,7 @@ stmt ids (Match z chk exp cses) = (es', Match z chk exp' cses') where
                       fst3 (x,_,_) = x
                       snd3 (_,x,_) = x
                       trd3 (_,_,x) = x
-  (may, esm)     = (or l1, map (toError z) $ concat l2) where
+  (may, esm)     = (and l1, map (toError z) $ concat l2) where
                     (l1,l2) = unzip $ map (flip match exp') $ map fst cses'
   esem           = bool esm ese (null esm)    -- hide ese if esm
 

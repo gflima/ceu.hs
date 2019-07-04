@@ -15,7 +15,7 @@ import Debug.Trace
 int  = TData ["Int"]  [] TUnit
 bool = TData ["Bool"] [] TUnit
 
-mmm        loc exp p1 p2 =   Match       exp [(loc,p1),(  EAny,  p2)]
+mmm        loc exp p1 p2 =   Match       exp [(loc,p1)]
 mmm' z chk loc exp p1 p2 = B.Match z chk exp [(loc,p1),(B.EAny z,p2)]
 
 main :: IO ()
@@ -214,7 +214,7 @@ spec = do
           (B.Data  annz (int,cz) False
           (B.Var   annz "a" (int,cz)
           (mmm' annz False (B.EVar annz "a") (B.ECons annz ["Int","1"])
-            (mmm' annz True (B.EExp annz $ B.EVar annz "a") (B.ECons annz ["Int","1"])
+            (mmm' annz False (B.EExp annz $ B.EVar annz "a") (B.ECons annz ["Int","1"])
               (B.Ret   annz (B.EVar annz "a"))
               (B.Ret   annz (B.EError annz 99)))
             (B.Ret   annz (B.EError annz 99)))))
@@ -225,7 +225,7 @@ spec = do
           (B.Data  annz (int,cz) False
           (B.Var   annz "a" (int,cz)
           (mmm' annz False (B.EVar annz "a") (B.ECons annz ["Int","2"])
-            (mmm' annz True (B.ECons annz ["Int","1"]) (B.EVar annz "a")
+            (mmm' annz False (B.ECons annz ["Int","1"]) (B.EVar annz "a")
               (B.Ret   annz (B.EVar annz "a"))
               (B.Ret   annz (B.EError annz 10)))
             (B.Ret   annz (B.EError annz 99)))))
@@ -236,7 +236,7 @@ spec = do
           (B.Data  annz (int,cz) False
           (B.Var   annz "a" (int,cz)
           (mmm' annz False (B.EVar annz "a") (B.ECons annz ["Int","1"])
-            (mmm' annz True (B.ECons annz ["Int","1"]) (B.EVar annz "a")
+            (mmm' annz False (B.ECons annz ["Int","1"]) (B.EVar annz "a")
               (B.Ret   annz (B.EVar annz "a"))
               (B.Ret   annz (B.EError annz 99)))
             (B.Ret   annz (B.EError annz 99)))))
@@ -247,7 +247,7 @@ spec = do
           (B.Data  annz (int,cz) False
           (B.Var   annz "a" (int,cz)
           (mmm' annz False (B.EVar annz "a") (B.ECons annz ["Int","1"])
-            (mmm' annz True (B.EExp annz $ B.EVar annz "a") (B.ECons annz ["Int","2"])
+            (mmm' annz False (B.EExp annz $ B.EVar annz "a") (B.ECons annz ["Int","2"])
               (B.Ret   annz (B.EVar annz "a"))
               (B.Ret   annz (B.EError annz 10)))
             (B.Ret   annz (B.EError annz 99)))))
