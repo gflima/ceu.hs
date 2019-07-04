@@ -146,45 +146,48 @@ step (CallS e,        vars)  = (p,          vars) where
 
 step (Match e cses,   vars)  = case envEval vars e of
                                 EError x -> (Ret (EError x), vars)
-                                e'       -> foldl f (map (aux vars e') cses) (Right Left, vars, Nop)
+                                e'       -> toDesc $ foldl (aux e') (Right False, vars, Nop) cses
   where
-    type T = (Either EExp Bool, Vars, Stmt)
-    f :: T -> T -> T
-    f ret@(Right True,  vars, stmt) _ = ret
-    f     (Right False, vars, stmt) = (q,       vars)
-    f (Left  err,   vars, _) = (Ret err, vars)
+    toDesc :: (Either Exp Bool, Vars, Stmt) -> Desc
+    toDesc (_, vars, stmt) = (stmt,vars)
 
-    aux :: Vars -> Exp -> (Exp,Stmt) -> (Maybe Bool, Vars, Stmt)
-    aux vars exp (pat,stmt) = (ret,vars',stmt) where
-      (ret,vars') = aux' vars exp pat
+    aux :: Exp -> (Either Exp Bool, Vars, Stmt) -> (Exp,Stmt) -> (Either Exp Bool, Vars, Stmt)
+    aux exp all@(ret,vars,stmt) (pat,stmt') =
+      case (ret,ret') of
+        (Left  err,  _)            -> all
+        (Right True, _)            -> all
+        (Right False, Left  err)   -> (ret', vars', Ret err)
+        (Right False, Right _)     -> (ret', vars', stmt')
+      where
+        (ret', vars') = aux' vars pat exp
 
-      aux' :: Vars -> Exp -> Exp -> (Maybe Bool, Vars)
-      aux' vars _ EAny        = (Right True, vars)
-      aux' vars v (EVar id)   = (Right True, envWrite vars id v)
-      aux' vars v EUnit       = (Right True, vars)
-      aux' vars (EData hre _)
-                (EData hrp _) = (Right ret, vars) where
-                                  ret = T.isRel_ T.SUP (TData hrp [] TUnit) (TData hre [] TUnit)
-      aux' vars (EData hre e)
-                (ECall (ECons hrp) l)
-                              = (ret', vars')  where
-                                  v1 = T.isRel_ T.SUP (TData hrp [] TUnit) (TData hre [] TUnit)
-                                  (ret2,vars') = aux' vars l e
-                                  ret' = case ret2 of
-                                    Left  x  -> Left  x
-                                    Right v2 -> Right (v1 && v2)
-      aux' vars (ETuple es)
-                (ETuple ps)   = foldr
-                                  (\(loc,e) (b1,vars1) ->
-                                    if b1/=(Right True) then (b1,vars1) else
-                                      aux' vars1 loc e)
-                                  (Right True, vars)
-                                  (zip ps es)
-      aux' vars v (EExp x)    = case envEval vars x of
-                                  EError x -> (Left  $ EError x, vars)
-                                  e'       -> (Right $ e' == v, vars)
+    aux' :: Vars -> Exp -> Exp -> (Either Exp Bool, Vars)
+    aux' vars EAny        _ = (Right True, vars)
+    aux' vars (EVar id)   v = (Right True, envWrite vars id v)
+    aux' vars EUnit       v = (Right True, vars)
+    aux' vars (EData hrp _)
+              (EData hre _) = (Right ret, vars) where
+                                ret = T.isRel_ T.SUP (TData hrp [] TUnit) (TData hre [] TUnit)
+    aux' vars (ECall (ECons hrp) l)
+              (EData hre e)
+                            = (ret', vars')  where
+                                v1 = T.isRel_ T.SUP (TData hrp [] TUnit) (TData hre [] TUnit)
+                                (ret2,vars') = aux' vars l e
+                                ret' = case ret2 of
+                                  Left  x  -> Left  x
+                                  Right v2 -> Right (v1 && v2)
+    aux' vars (ETuple ps)
+              (ETuple es)   = foldr
+                                (\(loc,e) (b1,vars1) ->
+                                  if b1/=(Right True) then (b1,vars1) else
+                                    aux' vars1 loc e)
+                                (Right True, vars)
+                                (zip ps es)
+    aux' vars (EExp x)    v = case envEval vars x of
+                                EError x -> (Left  $ EError x, vars)
+                                e'       -> (Right $ e' == v, vars)
 
-    --aux' x y z = error $ show (y,z)
+    aux' x y z = error $ show (y,z)
     --err xp got = error $ "assignment does not match : expected '" ++ show xp ++
                                                  --"' : found '"    ++ show got ++ "'"
 
