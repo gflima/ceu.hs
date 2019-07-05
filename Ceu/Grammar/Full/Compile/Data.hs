@@ -34,7 +34,7 @@ stmt ds (Data''  z tp abs p)     = Data''  z tp' abs (stmt (d':ds) p)
                                      d'  = Data'' z tp' abs p
 stmt ds (Var''   z var tp p)     = Var''   z var (fvar ds tp) (stmt ds p)
 stmt ds (Match'  z chk exp cses) = Match'  z chk (expr ds exp)
-                                     (map (\(pt,st) -> (expr ds pt, stmt ds st)) cses)
+                                     (map (\(xs,pt,st) -> (stmt ds xs, expr ds pt, stmt ds st)) cses)
 stmt ds (CallS   z exp)          = CallS   z (expr ds exp)
 stmt ds (Seq     z p1 p2)        = Seq     z (stmt ds p1) (stmt ds p2)
 stmt ds (Loop    z p)            = Loop    z (stmt ds p)

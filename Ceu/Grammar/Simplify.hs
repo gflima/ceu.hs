@@ -35,10 +35,10 @@ stmt (Var z id tp p) =
   where p' = stmt p
 
 stmt (Match z b exp cses) = Match z b (expr exp)
-                                (map (\(pt,st)->(expr pt, stmt st)) cses)
+                                (map (\(ds,pt,st)->(stmt ds, expr pt, stmt st)) cses)
 
 -- normal form: (Seq x (Seq y (Seq z ...)))
-stmt (Seq z1 (Match z2 False exp [(pt,st)]) p) = stmt $ Match z2 False exp [(pt,Seq z1 st p)]
+stmt (Seq z1 (Match z2 False exp [(ds,pt,st)]) p) = stmt $ Match z2 False exp [(ds,pt,Seq z1 st p)]
 stmt (Seq z1 (Seq z2 p1 p2) p3) = stmt $ Seq z1 p1 (Seq z2 p2 p3)
 stmt (Seq z p q) =
   case (p',q') of

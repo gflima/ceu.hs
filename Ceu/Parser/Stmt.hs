@@ -223,7 +223,7 @@ stmt_match = do
   loc  <- pPat BOTH
   return $ Set annz{source=pos} (set=="match!") loc exp
 
-pCase :: Parser (Stmt, (Exp,Stmt))
+pCase :: Parser (Stmt,Exp,Stmt)
 pCase = do
   void <- try $ tk_sym "case"
   pat  <- pPat BOTH
@@ -237,7 +237,7 @@ pCase = do
               return $ fromJust $ matchLocType2 pos pat tp
   void <- tk_sym "then"
   s    <- stmt
-  return $ (dcls, (pat,s))
+  return $ (dcls,pat,s)
 
 stmt_cases :: Parser Stmt
 stmt_cases = do
@@ -249,8 +249,8 @@ stmt_cases = do
   pos2  <- pos2src <$> getPosition
   celse <- optionMaybe $ try $ tk_key "else" *> stmt
   void  <- tk_key "end"
-  return $ Match annz{source=pos1} (set=="match!") exp (map snd cases ++
-            maybe [] (\v -> [(EAny annz{source=pos2}, v)]) celse)
+  return $ Match annz{source=pos1} (set=="match!") exp (cases ++
+            maybe [] (\v -> [(Nop annz{source=pos2}, EAny annz{source=pos2}, v)]) celse)
 
 stmt_call :: Parser Stmt
 stmt_call = do

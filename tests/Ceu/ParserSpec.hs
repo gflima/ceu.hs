@@ -31,7 +31,7 @@ clearStmt (Data  _ tp abs)      = Data  annz tp abs
 clearStmt (Var   _ var tp)      = Var   annz var tp
 clearStmt (FuncS _ var tp p)    = FuncS annz var tp (clearStmt p)
 clearStmt (Match _ chk exp cses)= Match annz chk (clearExp exp)
-                                    (map (\(pt,st) -> (clearExp pt, clearStmt st)) cses)
+                                    (map (\(ds,pt,st) -> (clearStmt ds,clearExp pt,clearStmt st)) cses)
 clearStmt (Set   _ chk loc exp) = Set   annz chk (clearExp loc) (clearExp exp)
 clearStmt (If    _ exp p1 p2)   = If    annz (clearExp exp) (clearStmt p1) (clearStmt p2)
 clearStmt (Seq   _ p1 p2)       = Seq   annz (clearStmt p1) (clearStmt p2)
@@ -57,7 +57,7 @@ fromRight' (Right x) = x
 int  = TData ["Int"]  [] TUnit
 bool = TData ["Bool"] [] TUnit
 
-mmm z loc exp p1 p2 = Match z False exp [(loc,p1),(EAny z,p2)]
+mmm z loc exp p1 p2 = Match z False exp [(Nop z,loc,p1),(Nop z,EAny z,p2)]
 
 main :: IO ()
 main = hspec spec
@@ -509,7 +509,7 @@ match xs with
     return 1 + (length xs_)
 end
 |]
-            `shouldBe` Right (Match annz False (EVar annz "xs") [(ECons annz ["List","Nil"],Ret annz (ECons annz ["Int","0"])),(ECall annz (ECons annz ["List","Cons"]) (ETuple annz [EVar annz "x",EVar annz "xs_"]),Ret annz (ECall annz (EVar annz "+") (ETuple annz [ECons annz ["Int","1"],ECall annz (EVar annz "length") (EVar annz "xs_")]))),(EAny annz,Nop annz)])
+            `shouldBe` Right (Match annz False (EVar annz "xs") [(Nop annz,ECons annz ["List","Nil"],Ret annz (ECons annz ["Int","0"])),(Nop annz,ECall annz (ECons annz ["List","Cons"]) (ETuple annz [EVar annz "x",EVar annz "xs_"]),Ret annz (ECall annz (EVar annz "+") (ETuple annz [ECons annz ["Int","1"],ECall annz (EVar annz "length") (EVar annz "xs_")]))),(Nop annz,EAny annz,Nop annz)])
 
         describe "loop" $ do
             it "loop do end" $

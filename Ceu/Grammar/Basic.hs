@@ -43,7 +43,7 @@ data Stmt
     | Inst   Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class instance
     | Data   Ann TypeC Bool Stmt              -- new type declaration
     | Var    Ann ID_Var TypeC Stmt            -- variable declaration
-    | Match  Ann Bool Exp [(Exp,Stmt)]        -- match/assignment/if statement
+    | Match  Ann Bool Exp [(Stmt,Exp,Stmt)]   -- match/assignment/if statement
     | CallS  Ann Exp                          -- call function
     | Seq    Ann Stmt Stmt                    -- sequence
     | Loop   Ann Stmt                         -- infinite loop
@@ -64,16 +64,17 @@ show_stmt spc (CallS _ e)             = rep spc ++ "call " ++ show_exp spc e
 show_stmt spc (Ret _ e)               = rep spc ++ "return " ++ show_exp spc e
 show_stmt spc (Seq _ p1 p2)           = show_stmt spc p1 ++ "\n" ++ show_stmt spc p2
   --rep spc ++ "--\n" ++ show_stmt (spc+4) p1 ++ rep spc ++ "--\n" ++ show_stmt (spc+4) p2
-show_stmt spc (Match _ False exp [(pt,st)])
+show_stmt spc (Match _ False exp [(_,pt,st)])
                                       = rep spc ++ "set " ++ show_exp spc pt ++ " = " ++
                                           show_exp spc exp ++ "\n" ++ show_stmt spc st
-show_stmt spc (Match _ True  exp ((pt,st):_))
+show_stmt spc (Match _ True  exp ((ds,pt,st):_))
                                       = rep spc ++ "set! " ++ show_exp spc pt ++ " = " ++
                                           show_exp spc exp ++ "\n" ++ show_stmt spc st
 show_stmt spc (Match _ chk exp cses)  = rep spc ++ "match " ++ show_exp spc exp ++ " with\n" ++ (concatMap f cses)
                                         where
-                                          f (pt,st) = rep (spc+4) ++ show_exp (spc+4) pt ++ " then\n" ++
-                                                        show_stmt (spc+8) st ++ "\n"
+                                          f (ds,pt,st) = rep (spc+4) ++ show_exp (spc+4) pt ++
+                                                          " { " ++ show_stmt 0 ds ++ " } then\n" ++
+                                                          show_stmt (spc+8) st ++ "\n"
 show_stmt spc (Nop _)                 = rep spc ++ "nop"
 show_stmt spc p = error $ show p
 
@@ -98,7 +99,7 @@ map_stmt f@(fs,_,ft) (Inst  z cls tp imp p)     = fs (Inst  z cls tp imp' (map_s
                                                     where imp' = map (\(x,y,tp,z)->(x,y,ft tp,z)) imp
 map_stmt f@(fs,_,ft) (Data  z tp abs p)         = fs (Data  z (ft tp) abs (map_stmt f p))
 map_stmt f@(fs,_,ft) (Var   z id tp p)          = fs (Var   z id (ft tp) (map_stmt f p))
-map_stmt f@(fs,_,_)  (Match z b exp cses)       = fs (Match z b (map_exp f exp) (map (\(pt,st) -> (map_exp f pt, map_stmt f st)) cses))
+map_stmt f@(fs,_,_)  (Match z b exp cses)       = fs (Match z b (map_exp f exp) (map (\(ds,pt,st) -> (map_stmt f st, map_exp f pt, map_stmt f st)) cses))
 map_stmt f@(fs,_,_)  (CallS z exp)              = fs (CallS z (map_exp f exp))
 map_stmt f@(fs,_,_)  (Seq   z p1 p2)            = fs (Seq   z (map_stmt f p1) (map_stmt f p2))
 map_stmt f@(fs,_,_)  (Loop  z p)                = fs (Loop  z (map_stmt f p))

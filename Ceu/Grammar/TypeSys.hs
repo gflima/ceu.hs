@@ -91,9 +91,9 @@ inst2table ids (Inst z cls tp imp _) = Map.union (f2 imp) sups where
 
 -------------------------------------------------------------------------------
 
-wrap insts (Var z id1 (tp_,_) (Match _ False body [((EVar _ id2),_)])) acc | id1==id2 =
+wrap insts (Var z id1 (tp_,_) (Match _ False body [(ds,EVar _ id2,_)])) acc | id1==id2 =
   Var z id' (tp_',cz)
-    (Match z False body' [((EVar z id'),acc)])
+    (Match z False body' [(ds,EVar z id',acc)])
   where
     id'   = idtp id1 tp_'
     tp_'  = T.instantiate insts tp_
@@ -394,7 +394,7 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
                 -- functions to instantiate
                 fs :: [Stmt]
                 fs  = filter pred ids where
-                        pred (Var _ id1 tp@(_,ctrs) (Match _ False body [((EVar _ id2),_)])) =
+                        pred (Var _ id1 tp@(_,ctrs) (Match _ False body [(_,EVar _ id2,_)])) =
                           id1==id2 && (not inInsts) && (Cs.hasClass cls ctrs) where
                             inInsts = not $ null $ Map.filter f hinst where
                                         f (_,id',tp',_) = id1==id' && (isRight $ relates SUP tp' tp)
@@ -445,7 +445,7 @@ stmt ids s@(Var z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
   es_data = getErrsTypesDeclared z ids tp_
   es_id   = errDeclared z (Just chk) "variable" id ids where
               chk :: Stmt -> Bool
-              chk (Var _ id1 tp'@(TFunc _ _,_) (Match _ False _ [(EVar _ id2,_)])) = (id1 /= id2)
+              chk (Var _ id1 tp'@(TFunc _ _,_) (Match _ False _ [(_,EVar _ id2,_)])) = (id1 /= id2)
               chk (Var _ id1 tp'@(TFunc _ _,_) _) = (tp == tp') -- function prototype
               chk _ = False
   (es,p'') = stmt (s:ids) p'
@@ -459,7 +459,7 @@ stmt ids s@(Var z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
   --    ...
   (f,p') = if ctrs == cz then (Var z id tp, p) else -- normal concrete declarations
     case p of
-      Match z2 False body [((EVar _ id'),s)]
+      Match z2 False body [(_,EVar _ id',s)]
         | id==id' -> (Prelude.id, funcs s)    -- instantiate for all available implementations
       _   -> (Prelude.id, p)                  -- just ignore parametric declarations
       where
@@ -475,15 +475,12 @@ stmt ids (Match z chk exp cses) = (es', Match z chk exp' cses'') where
   (ese, exp')    = expr z (SUP,tpl) ids exp
   (escs,tpl,cses') = (es, tpl, cses') where
                       --(l1,l2) :: ( [(Errors,TypeC,Exp)] , [(Errors,Stmt)] )
-                      (l1,l2) = unzip $ map (\(pt,st)->(fPat ids pt, stmt ids st)) cses
-                      es      = concat $ (map fst3 l1) ++ (map fst l2)
+                      (l0,l1,l2) = unzip3 $ map (\(ds,pt,st)->(stmt ids ds, fPat ids pt, stmt ids st)) cses
+                      es      = concat $ (map fst l0) ++ (map fst3 l1) ++ (map fst l2)
                       tpl     = snd3 $ l1 !! 0
-                      cses'   = zip (map trd3 l1) (map snd l2)
-                      fst3 (x,_,_) = x
-                      snd3 (_,x,_) = x
-                      trd3 (_,_,x) = x
+                      cses'   = zip3 (map snd l0) (map trd3 l1) (map snd l2)
   (may, esm)     = (and l1, map (toError z) $ concat l2) where
-                    (l1,l2) = unzip $ map (flip match exp') $ map fst cses'
+                    (l1,l2) = unzip $ map (flip match exp') $ map snd3 cses'
   esem           = bool esm ese (null esm)    -- hide ese if esm
 
   -- set  x <- 1    // chk=false
@@ -498,7 +495,11 @@ stmt ids (Match z chk exp cses) = (es', Match z chk exp' cses'') where
           []
 
   cses'' = if not chk then cses' else
-            cses' ++ [(EAny z, Ret z $ EError z (-2))]
+            cses' ++ [(Nop z, EAny z, Ret z $ EError z (-2))]
+
+  fst3 (x,_,_) = x
+  snd3 (_,x,_) = x
+  trd3 (_,_,x) = x
 
 -------------------------------------------------------------------------------
 

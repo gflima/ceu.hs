@@ -34,7 +34,7 @@ data Exp
 
 data Stmt
     = Var    (ID_Var,Maybe Exp) Stmt    -- block with environment store
-    | Match  Exp [(Exp,Stmt)]           -- match/assignment/if statement
+    | Match  Exp [(Stmt,Exp,Stmt)]      -- match/assignment/if statement
     | CallS  Exp                        -- procedure call
     | Seq    Stmt Stmt                  -- sequence
     | Nop                               -- dummy statement (internal)
@@ -70,7 +70,7 @@ fromStmt (B.Loop   _ p)             = Loop' (fromStmt p) (fromStmt p)
 fromStmt (B.Ret    _ e)             = Ret (fromExp e)
 fromStmt (B.Nop    _)               = Nop
 fromStmt (B.Match  _ _ exp cses)    = Match (fromExp exp) $
-                                        map (\(pt,st)->(fromExp pt,fromStmt st)) cses
+                                        map (\(ds,pt,st)->(fromStmt ds,fromExp pt,fromStmt st)) cses
 
 ----------------------------------------------------------------------------
 
@@ -189,8 +189,8 @@ step (Match e cses,   vars)  = case envEval vars e of
     toDesc :: (Either Exp Bool, Vars, Stmt) -> Desc
     toDesc (_, vars, stmt) = (stmt,vars)
 
-    aux :: Exp -> (Either Exp Bool, Vars, Stmt) -> (Exp,Stmt) -> (Either Exp Bool, Vars, Stmt)
-    aux exp all@(ret,vars,stmt) (pat,stmt') =
+    aux :: Exp -> (Either Exp Bool, Vars, Stmt) -> (Stmt,Exp,Stmt) -> (Either Exp Bool, Vars, Stmt)
+    aux exp all@(ret,vars,stmt) (_,pat,stmt') =
       case (ret,ret') of
         (Left  err,  _)            -> all
         (Right True, _)            -> all

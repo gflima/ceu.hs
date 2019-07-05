@@ -15,8 +15,8 @@ import Debug.Trace
 int  = TData ["Int"]  [] TUnit
 bool = TData ["Bool"] [] TUnit
 
-mmm        loc exp p1 p2 =   Match       exp [(loc,p1)]
-mmm' z chk loc exp p1 p2 = B.Match z chk exp [(loc,p1),(B.EAny z,p2)]
+mmm        loc exp p1 p2 =   Match       exp [(  Nop,  loc,p1)]
+mmm' z chk loc exp p1 p2 = B.Match z chk exp [(B.Nop z,loc,p1),(B.Nop z,B.EAny z,p2)]
 
 main :: IO ()
 main = hspec spec

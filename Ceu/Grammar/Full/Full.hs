@@ -58,8 +58,8 @@ data Stmt
   | Data     Ann TypeC Bool                       -- new type declaration
   | Var      Ann ID_Var TypeC                     -- variable declaration
   | FuncS    Ann ID_Var TypeC Stmt                -- function declaration
-  | Match    Ann Bool Exp [(Exp,Stmt)]            -- match
-  | Match'   Ann Bool Exp [(Exp,Stmt)]            -- match w/ chk
+  | Match    Ann Bool Exp [(Stmt,Exp,Stmt)]       -- match
+  | Match'   Ann Bool Exp [(Stmt,Exp,Stmt)]       -- match w/ chk
   | Set      Ann Bool Exp Exp                     -- assignment statement
   | CallS    Ann Exp                              -- call function
   | If       Ann Exp Stmt Stmt                    -- conditional
@@ -100,7 +100,7 @@ toBasicStmt (Inst''  z cls tp imp p) = B.Inst  z cls tp imp (toBasicStmt p)
 toBasicStmt (Data''  z tp abs p)     = B.Data  z tp abs (toBasicStmt p)
 toBasicStmt (Var''   z var tp p)     = B.Var   z var tp (toBasicStmt p)
 toBasicStmt (Match'  z chk exp cses) = B.Match z chk (toBasicExp exp)
-                                         (map (\(pt,st) -> (toBasicExp pt, toBasicStmt st)) cses)
+                                         (map (\(ds,pt,st) -> (toBasicStmt ds, toBasicExp pt, toBasicStmt st)) cses)
 toBasicStmt (CallS   z e)            = B.CallS z (toBasicExp e)
 toBasicStmt (Seq     z p1 p2)        = B.Seq   z (toBasicStmt p1) (toBasicStmt p2)
 toBasicStmt (Loop    z p)            = B.Loop  z (toBasicStmt p)
@@ -117,7 +117,7 @@ map_stmt f@(fs,_,ft) (Data  z tp abs)    = fs (Data  z (ft tp) abs)
 map_stmt f@(fs,_,ft) (Var   z id tp)     = fs (Var   z id (ft tp))
 map_stmt f@(fs,_,ft) (FuncS z id tp p)   = fs (FuncS z id (ft tp) (map_stmt f p))
 map_stmt f@(fs,_,_)  (Match z chk exp cses) = fs (Match z chk (map_exp f exp)
-                                                (map (\(pt,st) -> (map_exp f pt, map_stmt f st)) cses))
+                                                (map (\(ds,pt,st) -> (map_stmt f st, map_exp f pt, map_stmt f st)) cses))
 map_stmt f@(fs,_,_)  (Set   z b loc exp) = fs (Set   z b loc (map_exp f exp))
 map_stmt f@(fs,_,_)  (CallS z exp)       = fs (CallS z (map_exp f exp))
 map_stmt f@(fs,_,_)  (If    z exp p1 p2) = fs (If    z (map_exp f exp) (map_stmt f p1) (map_stmt f p2))
