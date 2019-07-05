@@ -1121,7 +1121,7 @@ return (l,r)
 |])
         `shouldBe` Right (ETuple [EData ["Either","Left"] (EData ["Bool","True"] EUnit),EData ["Either","Right"] (EData ["Int","10"] EUnit)])
 
-      it "case" $         -- pg 46
+      it "XXX: case" $         -- pg 46
         (run True $
           pre ++ [r|
 data Either for (a,b)
@@ -1134,6 +1134,8 @@ func case_ ((f,g),v) : ((((a->r),(b->r)), Either of (a,b)) -> r) do
       return f x
     case (Either.Right =x) : Int then
       return g x
+    else
+      // TODO: remove
   end
 end
 
@@ -1170,7 +1172,7 @@ return (l_ === l) and (l_ =/= r)
 |])
         `shouldBe` Right (EData ["Bool","True"] EUnit)
 
-      it "Either / IOrd" $         -- pg 47
+      it "XXX: Either / IOrd" $         -- pg 47
         (run True $
           pre ++ [r|
 data Either for (a,b)
@@ -1180,20 +1182,17 @@ data Either.Right with b
 instance of IEqualable for Either of (a,b) with end
 instance of IOrderable for Either of (a,b) where (a is IOrderable, b is IOrderable) with
   func @< (x,y) : ((Either of (a,b), Either of (a,b)) -> Bool) do
-    var (xl,yl) : (a,a)
-    var (xr,yr) : (b,b)
-    if x matches Either.Left =xl then
-      if y matches Either.Left =yl then
+    match (x,y) with
+      case (Either.Left =xl,  Either.Left =yl)  : (a,a) then
         return xl @< yl
-      else
+      case (Either.Left _,    Either.Right _)           then
         return Bool.True
-      end
-    else/if x matches Either.Right =xr then
-      if y matches Either.Right =yr then
+      case (Either.Right =xr, Either.Right =yr) : (a,a) then
         return xr @< yr
-      else
+      case (Either.Right _,   Either.Left  _)           then
         return Bool.False
-      end
+      else
+        // TODO: remove
     end
   end
 end
@@ -2256,6 +2255,8 @@ func length (xs) : (List of a -> Int) do
       return 0
     case List.Cons (=x,=xs_) : (a,List of a) then
       return 1 + (length xs_)
+    else
+      // TODO: remove
   end
 end
 

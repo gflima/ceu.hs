@@ -584,7 +584,7 @@ end
 instance of IGable for (X of a) where (a is IFable) with
   func g (x) : ((X of a) -> Int) do
     match x with
-      case matches X.Y =v : Int then
+      case X.Y =v : Int then
         return f v
       else
         return 0
@@ -616,7 +616,7 @@ end
 instance of IGable for (X of a) where (a is IFable) with
   func g (x) : ((X of a) -> Int) do
     match x with
-      case x X.Y =v : Int then
+      case X.Y =v : Int then
         return f v
       else
         return 0

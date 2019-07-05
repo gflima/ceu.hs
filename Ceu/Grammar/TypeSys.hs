@@ -470,12 +470,17 @@ stmt ids s@(Var z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
 
 -------------------------------------------------------------------------------
 
-stmt ids (Match z chk exp cses) = (es', Match z chk exp' cses'') where
+stmt ids xxx@(Match z chk exp cses) = (es', Match z chk exp' cses'') where
   es'            = esc ++ escs ++ esem
   (ese, exp')    = expr z (SUP,tpl) ids exp
   (escs,tpl,cses') = (es, tpl, cses') where
                       --(l1,l2) :: ( [(Errors,TypeC,Exp)] , [(Errors,Stmt)] )
-                      (l0,l1,l2) = unzip3 $ map (\(ds,pt,st)->(stmt ids ds, fPat ids pt, stmt ids st)) cses
+                      (l0,l1,l2) = unzip3 $ map f cses where
+                                    f (ds,pt,st) = ((es,ds'), fPat ids' pt, stmt ids' st) where
+                                      (es,ds') = stmt ids ds
+                                      ids'     = g ds' ids
+                                      g   (Nop _)       ids = ids
+                                      g s@(Var _ _ _ p) ids = s : (g p ids)
                       es      = concat $ (map fst l0) ++ (map fst3 l1) ++ (map fst l2)
                       tpl     = snd3 $ l1 !! 0
                       cses'   = zip3 (map snd l0) (map trd3 l1) (map snd l2)

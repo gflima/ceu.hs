@@ -509,7 +509,7 @@ match xs with
     return 1 + (length xs_)
 end
 |]
-            `shouldBe` Right (Match annz False (EVar annz "xs") [(Nop annz,ECons annz ["List","Nil"],Ret annz (ECons annz ["Int","0"])),(Nop annz,ECall annz (ECons annz ["List","Cons"]) (ETuple annz [EVar annz "x",EVar annz "xs_"]),Ret annz (ECall annz (EVar annz "+") (ETuple annz [ECons annz ["Int","1"],ECall annz (EVar annz "length") (EVar annz "xs_")]))),(Nop annz,EAny annz,Nop annz)])
+            `shouldBe` Right (Match annz False (EVar annz "xs") [(Nop annz,ECons annz ["List","Nil"],Ret annz (ECons annz ["Int","0"])),(Nop annz,ECall annz (ECons annz ["List","Cons"]) (ETuple annz [EVar annz "x",EVar annz "xs_"]),Ret annz (ECall annz (EVar annz "+") (ETuple annz [ECons annz ["Int","1"],ECall annz (EVar annz "length") (EVar annz "xs_")])))])
 
         describe "loop" $ do
             it "loop do end" $

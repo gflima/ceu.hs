@@ -181,7 +181,7 @@ spec = do
 
     describe "write" $ do
 
-      it "XXX: (a,b) <- (1,2)" $
+      it "(a,b) <- (1,2)" $
         go
           (B.Data annz (int,cz) False
           (B.Var annz "a" (TTop,cz)

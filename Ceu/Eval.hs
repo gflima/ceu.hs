@@ -190,14 +190,17 @@ step (Match e cses,   vars)  = case envEval vars e of
     toDesc (_, vars, stmt) = (stmt,vars)
 
     aux :: Exp -> (Either Exp Bool, Vars, Stmt) -> (Stmt,Exp,Stmt) -> (Either Exp Bool, Vars, Stmt)
-    aux exp all@(ret,vars,stmt) (_,pat,stmt') =
+    aux exp all@(ret,vars0,stmt) (ds,pat,stmt') =
       case (ret,ret') of
         (Left  err,  _)            -> all
         (Right True, _)            -> all
-        (Right False, Left  err)   -> (ret', vars', Ret err)
-        (Right False, Right _)     -> (ret', vars', stmt')
+        (Right False, Left  err)   -> (ret', vars2, Ret err)
+        (Right False, Right _)     -> (ret', vars2, stmt')
       where
-        (ret', vars') = match vars pat exp
+        (ret', vars2) = match vars1 pat exp
+        vars1 = f ds vars0 where
+          f Nop        vars = vars
+          f (Var id p) vars = id : (f p vars)
 
 step (Seq Nop     q,  vars)  = (q,          vars)
 step (Seq (Ret e) q,  vars)  = (Ret e,      vars)

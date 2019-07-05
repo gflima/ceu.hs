@@ -88,6 +88,8 @@ show_exp spc (EArg   _)           = "arg"
 show_exp spc (ETuple _ es)        = "(" ++ intercalate "," (map (show_exp spc) es) ++ ")"
 show_exp spc (EFunc  _ _ p)       = "func" ++ "\n" ++ show_stmt (spc+4) p
 show_exp spc (ECall  _ e1 e2)     = "call" ++ " " ++ show_exp spc e1 ++ " " ++ show_exp spc e2
+show_exp spc (EMatch _ exp pat)   = "match" ++ " " ++ show_exp spc exp ++ " with " ++ show_exp spc pat
+show_exp spc (EExp   _ exp)       = show_exp spc exp
 show_exp spc e                    = error $ show e
 
 -------------------------------------------------------------------------------
@@ -99,7 +101,7 @@ map_stmt f@(fs,_,ft) (Inst  z cls tp imp p)     = fs (Inst  z cls tp imp' (map_s
                                                     where imp' = map (\(x,y,tp,z)->(x,y,ft tp,z)) imp
 map_stmt f@(fs,_,ft) (Data  z tp abs p)         = fs (Data  z (ft tp) abs (map_stmt f p))
 map_stmt f@(fs,_,ft) (Var   z id tp p)          = fs (Var   z id (ft tp) (map_stmt f p))
-map_stmt f@(fs,_,_)  (Match z b exp cses)       = fs (Match z b (map_exp f exp) (map (\(ds,pt,st) -> (map_stmt f st, map_exp f pt, map_stmt f st)) cses))
+map_stmt f@(fs,_,_)  (Match z b exp cses)       = fs (Match z b (map_exp f exp) (map (\(ds,pt,st) -> (map_stmt f ds, map_exp f pt, map_stmt f st)) cses))
 map_stmt f@(fs,_,_)  (CallS z exp)              = fs (CallS z (map_exp f exp))
 map_stmt f@(fs,_,_)  (Seq   z p1 p2)            = fs (Seq   z (map_stmt f p1) (map_stmt f p2))
 map_stmt f@(fs,_,_)  (Loop  z p)                = fs (Loop  z (map_stmt f p))
