@@ -1187,7 +1187,7 @@ instance of IOrderable for Either of (a,b) where (a is IOrderable, b is IOrderab
         return xl @< yl
       case (Either.Left _,    Either.Right _)           then
         return Bool.True
-      case (Either.Right =xr, Either.Right =yr) : (a,a) then
+      case (Either.Right =xr, Either.Right =yr) : (b,b) then
         return xr @< yr
       case (Either.Right _,   Either.Left  _)           then
         return Bool.False
