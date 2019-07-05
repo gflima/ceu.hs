@@ -470,7 +470,7 @@ stmt ids s@(Var z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
 
 -------------------------------------------------------------------------------
 
-stmt ids (Match z chk exp cses) = (es', Match z chk exp' cses') where
+stmt ids (Match z chk exp cses) = (es', Match z chk exp' cses'') where
   es'            = esc ++ escs ++ esem
   (ese, exp')    = expr z (SUP,tpl) ids exp
   (escs,tpl,cses') = (es, tpl, cses') where
@@ -496,6 +496,9 @@ stmt ids (Match z chk exp cses) = (es', Match z chk exp' cses') where
             bool [toError z "match might fail"]  [] (not may)
         else
           []
+
+  cses'' = if not chk then cses' else
+            cses' ++ [(EAny z, Ret z $ EError z (-2))]
 
 -------------------------------------------------------------------------------
 

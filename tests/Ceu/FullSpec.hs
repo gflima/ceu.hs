@@ -95,7 +95,7 @@ spec = do
                 (Nop annz)
                 (Nop annz))
             (Ret annz (ECons annz ["Int","10"])))
-      `shouldBe` Seq annz (set' annz True (EExp annz (EVar annz "_true")) (ECall annz (ECons annz ["Bool","False"]) (EUnit annz)) (Nop annz) (Nop annz)) (Ret annz (ECons annz ["Int","10"]))
+      `shouldBe` Seq annz (set' annz False (EExp annz (EVar annz "_true")) (ECall annz (ECons annz ["Bool","False"]) (EUnit annz)) (Nop annz) (Nop annz)) (Ret annz (ECons annz ["Int","10"]))
 
     it "class/inst/0" $ do
       compile (Inst annz "F3able" (int,cz)

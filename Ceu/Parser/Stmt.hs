@@ -195,16 +195,15 @@ pMatch pos chk loc = do
 
 stmt_var :: Parser Stmt
 stmt_var = do
-  pos1 <- pos2src <$> getPosition
+  pos  <- pos2src <$> getPosition
   var  <- (try $ tk_key "var!") <|> (try $ tk_key "var") <?> "var"
   pat  <- pPat SET
-  pos2 <- pos2src <$> getPosition
   void <- tk_sym ":"
   tp   <- pTypeContext
-  when (isNothing $ matchLocType2 pos2 pat tp) $ unexpected "arity mismatch"
-  s    <- option (Nop $ annz{source=pos1}) $
-                 try $ pMatch pos1 (var=="var!") pat
-  return $ Seq annz{source=pos1} (fromJust $ matchLocType2 pos2 pat tp) s
+  when (isNothing $ matchLocType2 pos pat tp) $ unexpected "arity mismatch"
+  s    <- option (Nop $ annz{source=pos}) $
+                 try $ pMatch pos (var=="var!") pat
+  return $ Seq annz{source=pos} (fromJust $ matchLocType2 pos pat tp) s
 
 stmt_set :: Parser Stmt
 stmt_set = do
