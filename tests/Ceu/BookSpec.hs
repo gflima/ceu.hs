@@ -1121,7 +1121,7 @@ return (l,r)
 |])
         `shouldBe` Right (ETuple [EData ["Either","Left"] (EData ["Bool","True"] EUnit),EData ["Either","Right"] (EData ["Int","10"] EUnit)])
 
-      it "case" $         -- pg 46
+      it "YYY: case" $         -- pg 46
         (run True $
           pre ++ [r|
 data Either for (a,b)
