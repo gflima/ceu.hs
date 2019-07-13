@@ -342,7 +342,7 @@ spec = do
         (run True "set 1 =  2 ; return 2")
         `shouldBe` Left "(line 1, column 1):\nmatch never succeeds : data mismatch\n"
 
-      it "x1 = 1" $
+      it "match 1 with ~x" $
         (run True "var x:Int =  1 ; match 1 with ~x ; return 1")
         `shouldBe` Left "(line 1, column 18):\nmatch might fail\n"
       it "x1 = 1" $

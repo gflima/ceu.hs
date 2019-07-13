@@ -1121,7 +1121,7 @@ return (l,r)
 |])
         `shouldBe` Right (ETuple [EData ["Either","Left"] (EData ["Bool","True"] EUnit),EData ["Either","Right"] (EData ["Int","10"] EUnit)])
 
-      it "XXX: case" $         -- pg 46
+      it "case" $         -- pg 46
         (run True $
           pre ++ [r|
 data Either for (a,b)
@@ -1134,8 +1134,6 @@ func case_ ((f,g),v) : ((((a->r),(b->r)), Either of (a,b)) -> r) do
       return f x
     case (Either.Right =x) : Int then
       return g x
-    else
-      // TODO: remove
   end
 end
 
@@ -1191,8 +1189,6 @@ instance of IOrderable for Either of (a,b) where (a is IOrderable, b is IOrderab
         return xr @< yr
       case (Either.Right _,   Either.Left  _)           then
         return Bool.False
-      else
-        // TODO: remove
     end
   end
 end
@@ -2255,8 +2251,6 @@ func length (xs) : (List of a -> Int) do
       return 0
     case List.Cons (=x,=xs_) : (a,List of a) then
       return 1 + (length xs_)
-    else
-      // TODO: remove
   end
 end
 
