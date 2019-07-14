@@ -93,19 +93,20 @@ matchT _   (EExp  _ _)     tp = ([Right tp], [])
 matchT ids (ECons z hrP)   tp = case tp of
                                   (TData hrE ofs st, ctrs) -> if hrP `isPrefixOf` hrE then ([],[]) else
                                                                 if hrE `isPrefixOf` hrP then
-                                                                  (ret, [])
+                                                                  traceShowId (ret, [])
                                                                 else
                                                                   ([Right tp], [toError z $ "match never succeeds : data mismatch"])
                                     where
-                                      ret = map (\hr -> Right $ (TData hr ofs st,ctrs)) (rem subs)
+                                      ret = map (\hr -> Right $ (TData hr ofs st,ctrs)) (traceShowId $ rem subs)
                                       rem l = [ v | v <- l, v /= hrP ]
                                       subs = ints ++ (map f $ filter pred ids) where
                                               ints = bool [] [["Int","?"]] (hrE == ["Int"])
                                                       -- Int that will never match any numeric pattern
-                                              pred (Data  _ (TData hrD _ _,_) _ _) = gt hrE hrD
+                                              pred (Data  _ (TData hrD _ _,_) False _) = gt hrE hrD
+                                                      -- ignore abstract data
                                               pred _ = False
                                               f (Data  _ (TData hrD _ _,_) _ _) = hrD
-                                      gt sup sub = (sup `isPrefixOf` sub) && (length sup < length sub)
+                                      gt sup sub = (sup `isPrefixOf` sub) -- && (length sup < length sub)
                                   otherwise              -> ([], [])
 matchT ids (ETuple _ ls)   tp = case tp of
                                   (TTuple tps, ctrs)     -> (bool [Right tp] [] (all null tps'), concat ess) where

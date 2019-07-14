@@ -79,6 +79,30 @@ spec = do
             (Nop annz)))))))
       `shouldBe` ["match is non exhaustive"]
 
+    it "Bool ; True <- x" $
+      (fst $ TypeSys.go
+        (Data annz (bool,cz) False
+        (Data annz (boolt,cz) False
+        (Var annz "x" (bool,cz)
+          (mmm annz False
+            (ECons annz ["Bool","True"])
+            (EVar  annz "x")
+            (Nop annz)
+            (Nop annz))))))
+      `shouldBe` ["match is non exhaustive"]
+
+    it "Bool ; True <- x" $
+      (fst $ TypeSys.go
+        (Data annz (bool,cz)  True
+        (Data annz (boolt,cz) False
+        (Var annz "x" (bool,cz)
+          (mmm annz False
+            (ECons annz ["Bool","True"])
+            (EVar  annz "x")
+            (Nop annz)
+            (Nop annz))))))
+      `shouldBe` []
+
     it "x <- 0" $
       (fst $ TypeSys.go (mmm annz False (EVar annz "x") (ECons annz ["Int","0"]) (Nop annz) (Nop annz)))
         `shouldBe` ["variable 'x' is not declared","data 'Int.0' is not declared"]
