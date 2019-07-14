@@ -20,10 +20,10 @@ main :: IO ()
 main = hspec spec
 
 mmm :: Ann -> Bool -> Exp -> Exp -> Stmt -> Stmt -> Stmt
-mmm z b loc exp p1 p2 = Match z b exp [(Nop z,loc,p1)]
+mmm z b pat exp p1 p2 = Match z b exp [(Nop z,pat,p1)]
 
 mmm' :: Ann -> Bool -> Exp -> Exp -> Stmt -> Stmt -> Stmt
-mmm' z b loc exp p1 p2 = Match z b exp [(Nop z,loc,p1),(Nop z,EAny z, Ret z $ EError z (-2))]
+mmm' z b pat exp p1 p2 = Match z b exp [(Nop z,pat,p1),(Nop z,EAny z, Ret z $ EError z (-2))]
 
 func id tp p = Var annz id tp
                 (mmm annz False (EVar annz id)
@@ -66,6 +66,19 @@ spec = do
             (Nop annz)))))))
       `shouldBe` []
 
+    it "Bool ; True <- x" $
+      (fst $ TypeSys.go
+        (Data annz (bool,cz) False
+        (Data annz (boolt,cz) False
+        (Data annz (boolf,cz) False
+        (Var annz "x" (bool,cz)
+          (mmm annz False
+            (ECons annz ["Bool","True"])
+            (EVar  annz "x")
+            (Nop annz)
+            (Nop annz)))))))
+      `shouldBe` ["match is non exhaustive"]
+
     it "x <- 0" $
       (fst $ TypeSys.go (mmm annz False (EVar annz "x") (ECons annz ["Int","0"]) (Nop annz) (Nop annz)))
         `shouldBe` ["variable 'x' is not declared","data 'Int.0' is not declared"]
@@ -95,7 +108,7 @@ spec = do
         `shouldBe` []
     it "a:Bool ; True <- a" $
       (fst $ TypeSys.go (prelude annz (Var annz "a" (bool,cz) (mmm annz False (ECons annz ["Bool","True"]) (EVar annz "a") (Nop annz) (Nop annz)))))
-        `shouldBe` ["match might fail"]
+        `shouldBe` ["match is non exhaustive"]
 
     checkCheckIt (Var annz "a" (TUnit,cz) (Var annz "a" (TUnit,cz) (Nop annz)))  ["variable 'a' is already declared"]
     checkCheckIt (prelude annz $ mmm annz False (EVar annz "a") (ECons annz ["Int","1"]) (Nop annz) (Nop annz))        ["variable 'a' is not declared"]
@@ -138,7 +151,7 @@ spec = do
         (Data annz (int,cz) False
         (Var annz "ret" (TTop,cz)
         (mmm annz True (EVar annz "ret") (ECons annz ["Int","1"]) (Nop annz) (Nop annz)))))
-        `shouldBe` ["match never fails"]
+        `shouldBe` ["match is exhaustive"]
     it "(a,b) = (1,2)" $
       (fst $ TypeSys.go
         (Data annz (int,cz) False
@@ -152,7 +165,7 @@ spec = do
         (Var annz "a" (TTop,cz)
         (Var annz "b" (TTop,cz)
         (mmm annz True (ETuple annz [EVar annz "a",EVar annz "b"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]]) (Nop annz) (Nop annz))))))
-        `shouldBe` ["match never fails"]
+        `shouldBe` ["match is exhaustive"]
     it "(a,b) = (1,2,3)" $
       (fst $ TypeSys.go
         (Data annz (int,cz) False
@@ -179,7 +192,7 @@ spec = do
         `shouldBe` []
 
   describe "write!" $ do
-    it "XXX: 1 <- ret" $
+    it "1 <- ret" $
       (fst $ TypeSys.go
         (Data annz (int,cz) False
         (Var annz "ret" (int,cz)
@@ -190,7 +203,7 @@ spec = do
         (Data annz (int,cz) False
         (Var annz "ret" (int,cz)
         (mmm annz False (ECons annz ["Int","1"]) (EVar annz "ret") (Nop annz) (Nop annz)))))
-        `shouldBe` ["match might fail"]
+        `shouldBe` ["match is non exhaustive"]
 
   describe "functions" $ do
     it "func ~Int" $

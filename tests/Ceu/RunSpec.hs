@@ -344,7 +344,7 @@ spec = do
 
       it "match 1 with ~x" $
         (run True "var x:Int =  1 ; match 1 with ~x ; return 1")
-        `shouldBe` Left "(line 1, column 18):\nmatch might fail\n"
+        `shouldBe` Left "(line 1, column 18):\nmatch is non exhaustive\n"
       it "match reduntant" $
         (run True "match 1 with case _ then case _ then end ; return 1")
         `shouldBe` Left "(line 1, column 31):\npattern is redundant\n"

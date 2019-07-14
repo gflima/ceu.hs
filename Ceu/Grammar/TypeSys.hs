@@ -412,9 +412,9 @@ stmt ids (Match z fce exp cses) = (es', Match z fce exp' cses'') where
   -- if   1 <- x    // fce=true
   esc = if null esem then
           if fce then
-            bool [toError z "match never fails"] [] may
+            bool [toError z "match is exhaustive"] [] may
           else
-            bool [toError z "match might fail"]  [] (not may)
+            bool [toError z "match is non exhaustive"]  [] (not may)
         else
           []
 
@@ -482,7 +482,7 @@ expr' _ ids (EMatch z exp pat) = (esp++esem++esc, EMatch z{type_=(TData ["Bool"]
     (may, esm)     = (may, map (toError z) esm) where (may,esm) = matchX ids [pat'] exp'
     esem           = bool esm ese (null esm)    -- hide ese if esm
     esc = if null esem then
-            bool [toError z "match never fails"] [] may
+            bool [toError z "match is exhaustive"] [] may
           else
             []
 
