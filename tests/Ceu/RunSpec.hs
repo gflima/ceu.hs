@@ -345,15 +345,15 @@ spec = do
       it "match 1 with ~x" $
         (run True "var x:Int =  1 ; match 1 with ~x ; return 1")
         `shouldBe` Left "(line 1, column 18):\nmatch might fail\n"
-      it "RRR: match reduntant" $
+      it "match reduntant" $
         (run True "match 1 with case _ then case _ then end ; return 1")
-        `shouldBe` Left "TODO: reduntant\n"
-      it "RRR: match reduntant" $
+        `shouldBe` Left "(line 1, column 31):\npattern is redundant\n"
+      it "match reduntant" $
         (run True "match 1 with case 1 then case _ then end ; return 1")
-        `shouldBe` Left "TODO: reduntant\n"
-      it "RRR: match reduntant" $
+        `shouldBe` Left "(line 1, column 31):\npattern is redundant\n"
+      it "match reduntant" $
         (run True "match () with case () then case () then case _ then end ; return 1")
-        `shouldBe` Left "TODO: reduntant\n"
+        `shouldBe` Left "(line 1, column 33):\npattern is redundant\n(line 1, column 46):\npattern is redundant\n"
       it "x1 = 1" $
         (run True "var x:Int = 1 ; match! 1 with ~x ; return 1")
         `shouldBe` Right (EData ["Int","1"] EUnit)

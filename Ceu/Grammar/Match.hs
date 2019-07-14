@@ -26,7 +26,7 @@ matchX :: [Exp] -> Exp -> (Bool, Errors)
 matchX pats exp = matchX' pats [Left exp] where
   matchX' :: [Exp] -> [Either Exp TypeC] -> (Bool, Errors)
   matchX' [] [] = (False, [])   -- OK
-  matchX' _  [] = (False, [])   -- reduntant
+  matchX' l  [] = (False, map (\pat -> toError (getAnn pat) "pattern is redundant") l)
   matchX' [] _  = (True,  [])   -- non-exhaustive
   matchX' (pat:pats) (exp:exps) = (ret, es'++es) where
     (exps',es') = case exp of
