@@ -1,10 +1,12 @@
 module Ceu.Grammar.Basic where
 
+import Data.Bool                      (bool)
+import Data.List                      (intercalate)
+
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann                (Ann, HasAnn(..), annz)
 import Ceu.Grammar.Constraints as Cs  (Map, cz)
 import Ceu.Grammar.Type        as T   (TypeC, Type(..), show', hier2str)
-import Data.List                      (intercalate)
 
 -------------------------------------------------------------------------------
 
@@ -50,6 +52,18 @@ data Stmt
     | Ret    Ann Exp                          -- terminate program with Ret
     | Nop    Ann                              -- dummy statement (internal)
     deriving (Eq, Show)
+
+-------------------------------------------------------------------------------
+
+isClass id1 (Class _ id2 _ _ _) = (id1 == id2)
+isClass _   _                   = False
+
+isData  hr1 (Data  _ (TData hr2 _ _,_) _ _) = (hr1' == hier2str hr2) where
+                                                hr1' = bool hr1 "Int" (take 4 hr1 == "Int.")
+isData  _   _                               = False
+
+isVar   id1 (Var   _ id2 _ _)   = (id1 == id2)
+isVar   _   _                   = False
 
 -------------------------------------------------------------------------------
 
