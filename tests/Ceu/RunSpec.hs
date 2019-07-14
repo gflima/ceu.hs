@@ -340,7 +340,7 @@ spec = do
         `shouldBe` Right (EData ["Int","1"] EUnit)
       it "1 = 2" $
         (run True "set 1 =  2 ; return 2")
-        `shouldBe` Left "(line 1, column 1):\nmatch never succeeds : data mismatch\n"
+        `shouldBe` Left "(line 1, column 5):\nmatch never succeeds : data mismatch\n"
 
       it "match 1 with ~x" $
         (run True "var x:Int =  1 ; match 1 with ~x ; return 1")
@@ -372,7 +372,7 @@ spec = do
         `shouldBe` Right (EData ["Int","1"] EUnit)
       it "data X with Int ; X 2 = X 1" $
         (run True "data Xxx with Int ; set Xxx 2 =  Xxx 1 ; return 1")
-        `shouldBe` Left "(line 1, column 21):\nmatch never succeeds : data mismatch\n"
+        `shouldBe` Left "(line 1, column 29):\nmatch never succeeds : data mismatch\n"
 
       it "x = (10,2) ; (i,2) = x" $
         (run True "data Xxx with (Int,Int) ; var x : Xxx = Xxx (10,2) ; var i : int ; set! Xxx (i,2) = x ; return i")

@@ -3,8 +3,8 @@ module Ceu.Grammar.Match where
 import Data.Bool (bool)
 import Data.List (find, unzip, unzip3, isPrefixOf)
 
+import Ceu.Grammar.Ann                (getAnn, type_, toError)
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
 import Ceu.Grammar.Constraints as Cs  (Pair, cz, toList, hasClass)
 import Ceu.Grammar.Type        as T   (Type(..), TypeC, hier2str,
@@ -22,17 +22,17 @@ import Ceu.Grammar.Type        as T   (Type(..), TypeC, hier2str,
 --  LTuple  (a,b) <- (x,y)  # match  # (B,B) SUB (x,y)  | a match x,  b match y
 --  LTuple  (a,b) <- x      # match  # (B,B) SUB x      | a match x1, b match x2
 
-matchX :: Ann -> Bool -> [Exp] -> Exp -> (Bool, Errors)
-matchX z fce pats exp = matchX' z fce pats [Left exp] where
-  matchX' :: Ann -> Bool -> [Exp] -> [Either Exp TypeC] -> (Bool, Errors)
-  matchX' _ _   [] [] = (False, [])   -- OK
-  matchX' _ _   _  [] = (False, [])   -- reduntant
-  matchX' _ _   [] _  = (True,  [])   -- non-exhaustive
-  matchX' z fce (pat:pats) (exp:exps) = (ret, es'++es) where
+matchX :: [Exp] -> Exp -> (Bool, Errors)
+matchX pats exp = matchX' pats [Left exp] where
+  matchX' :: [Exp] -> [Either Exp TypeC] -> (Bool, Errors)
+  matchX' [] [] = (False, [])   -- OK
+  matchX' _  [] = (False, [])   -- reduntant
+  matchX' [] _  = (True,  [])   -- non-exhaustive
+  matchX' (pat:pats) (exp:exps) = (ret, es'++es) where
     (exps',es') = case exp of
-                    Left  x -> matchE z pat x
+                    Left  x -> matchE pat x
                     Right x -> matchT pat x
-    (ret,es) = matchX' z fce pats (exps'++exps)
+    (ret,es) = matchX' pats (exps'++exps)
 
 {-
   matchX' _ _ es pats (exp:exps) = (and l1, concat l2) where
@@ -41,29 +41,29 @@ matchX z fce pats exp = matchX' z fce pats [Left exp] where
 
 -------------------------------------------------------------------------------
 
-matchE :: Ann -> Exp -> Exp -> ([Either Exp TypeC], Errors)
+matchE :: Exp -> Exp -> ([Either Exp TypeC], Errors)
 
-matchE _ _                 (EArg   _)         = ([], [])
+matchE _                 (EArg   _)         = ([], [])
 
 -- structural match
-matchE _ (EUnit _)         (EUnit  _)         = ([], [])
-matchE z (ECons _ hr1)     (ECons  _ hr2)     = ([], es) where
-                                                es = if hr1 `isPrefixOf` hr2 then [] else
-                                                      [toError z $ "match never succeeds : data mismatch"]
-matchE z (ECall _ el1 er1) exp@(ECall  _ el2 er2) = ([] {-may1||may2-}, es1++es2) where
-                                                      (exps1, es1) = matchE z el1 el2
-                                                      (exps2, es2) = matchE z er1 er2
-matchE z (ETuple z1 els)   exp@(ETuple z2 ers)    = ([] {-or mays-}, concat eses ++ es) where
-                                                      es = if lenl == lene then [] else
-                                                        [toError z $ "match never succeeds : arity mismatch"]
-                                                      (exps, eses) = unzip $ zipWith (matchE z) els' ers' where
-                                                        els' = els ++ replicate (lene - lenl) (EAny z1)
-                                                        ers' = ers ++ replicate (lenl - lene) (EError z2 (-2))
-                                                      lenl  = length els
-                                                      lene  = length ers
+matchE (EUnit _)         (EUnit  _)         = ([], [])
+matchE (ECons z hr1)     (ECons  _ hr2)     = ([], es) where
+                                              es = if hr1 `isPrefixOf` hr2 then [] else
+                                                    [toError z $ "match never succeeds : data mismatch"]
+matchE (ECall _ el1 er1) exp@(ECall  _ el2 er2) = ([] {-may1||may2-}, es1++es2) where
+                                                    (exps1, es1) = matchE el1 el2
+                                                    (exps2, es2) = matchE er1 er2
+matchE (ETuple z1 els)   exp@(ETuple z2 ers)    = ([] {-or mays-}, concat eses ++ es) where
+                                                    es = if lenl == lene then [] else
+                                                      [toError z1 $ "match never succeeds : arity mismatch"]
+                                                    (exps, eses) = unzip $ zipWith matchE els' ers' where
+                                                      els' = els ++ replicate (lene - lenl) (EAny z1)
+                                                      ers' = ers ++ replicate (lenl - lene) (EError z2 (-2))
+                                                    lenl  = length els
+                                                    lene  = length ers
 
 -- structural fail
-matchE z l e | (isE l && isE e) = ([], [toError z $ "match never succeeds"]) where
+matchE l e | (isE l && isE e) = ([], [toError (getAnn l) $ "match never succeeds"]) where
   isE (EUnit  _)              = True
   isE (ETuple _ _)            = True
   isE (ECons  _ _)            = True
@@ -71,16 +71,16 @@ matchE z l e | (isE l && isE e) = ([], [toError z $ "match never succeeds"]) whe
   isE _                       = False
 
 -- contravariant on constants (SUB)
-matchE _ (EUnit  z)      exp            = ([Left exp], es) where
-                                          es = (relatesErrors SUB (TUnit,cz) (type_ $ getAnn exp))
+matchE (EUnit  z)      exp            = ([Left exp], es) where
+                                        es = (relatesErrors SUB (TUnit,cz) (type_ $ getAnn exp))
 
 -- non-constants: LAny,LVar (no fail) // LExp (may fail)
-matchE _ (EVar _ _)      _              = ([],    [])
-matchE _ (EAny _)        _              = ([],    [])
-matchE _ (EExp _ _)      exp            = ([Left exp], [])
+matchE (EVar _ _)      _              = ([],    [])
+matchE (EAny _)        _              = ([],    [])
+matchE (EExp _ _)      exp            = ([Left exp], [])
 
 -- rec
-matchE _ loc             exp            = matchT loc (type_ $ getAnn exp) where
+matchE loc             exp            = matchT loc (type_ $ getAnn exp) where
 
 -------------------------------------------------------------------------------
 
