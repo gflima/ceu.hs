@@ -91,16 +91,18 @@ matchT _   (EVar  _ _)     _  = ([], [])
 matchT _   (EAny  _)       _  = ([], [])
 matchT _   (EExp  _ _)     tp = ([Right tp], [])
 matchT ids (ECons z hr1)   tp = case tp of
-                                  (TData hr2 _ st, ctrs) -> if hr1 `isPrefixOf` hr2 then ([],[]) else
-                                                              if hr2 `isPrefixOf` hr1 then
-                                                                traceShow subs([Right tp],[])
-                                                              else
-                                                                ([Right tp], [toError z $ "match never succeeds : data mismatch"])
+                                  (TData hr2 ofs st, ctrs) -> if hr1 `isPrefixOf` hr2 then ([],[]) else
+                                                                if hr2 `isPrefixOf` hr1 then
+                                                                  (ret, [])
+                                                                else
+                                                                  ([Right tp], [toError z $ "match never succeeds : data mismatch"])
                                     where
+                                      ret = map (\hr -> Right $ (TData hr ofs st,ctrs)) (rem subs)
+                                      rem l = [ v | v <- l, v /= hr1 ]
                                       subs = map f $ filter pred ids where
-                                              pred (Data  _ (TData hr2 _ _,_) _ _) = gt hr1 hr2
+                                              pred (Data  _ (TData hr3 _ _,_) _ _) = gt hr2 hr3
                                               pred _ = False
-                                              f (Data  _ (TData hr2 _ _,_) _ _) = hr2
+                                              f (Data  _ (TData hr3 _ _,_) _ _) = hr3
                                       gt sup sub = (sup `isPrefixOf` sub) && (length sup < length sub)
                                   otherwise              -> ([], [])
 matchT ids (ETuple _ ls)   tp = case tp of
