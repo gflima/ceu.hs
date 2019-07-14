@@ -190,15 +190,15 @@ spec = do
             (Ret annz (ECall annz (EVar annz "f3") (ECons annz ["Int","10"]))))))))))
 
     it "Xxx.Yyy" $
-      compile (Seq annz (Data annz (int,                            M.fromList []) False)
-              (Seq annz (Data annz (TData ["Xxx"]       [] int,  M.fromList []) False)
+      compile (Seq annz (Data annz (int,                         M.fromList []) False)
+              (Seq annz (Data annz (TData ["Xxx"]       [] int,  M.fromList []) True)
               (Seq annz (Data annz (TData ["Xxx","Yyy"] [] int,  M.fromList []) False)
               (Seq annz
               (Seq annz (Var annz "y" (TData ["Xxx","Yyy"] [] TUnit,M.fromList []))
                         (Nop annz))
                         (Set annz False (EVar annz "y") (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]])))))))
       `shouldBe`
-        (Data'' annz (TData ["Int"] [] TUnit,fromList []) False (Data'' annz (TData ["Xxx"] [] int,fromList []) False (Data'' annz (TData ["Xxx","Yyy"] [] (TTuple [int,int]),fromList []) False (Var'' annz "y" (TData ["Xxx","Yyy"] [] (TTuple [int,int]),fromList []) (Seq annz (Nop annz) (set' annz False (EVar annz "y") (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]])) (Nop annz) (Ret annz (EError annz (-2)))))))))
+        (Data'' annz (TData ["Int"] [] TUnit,fromList []) False (Data'' annz (TData ["Xxx"] [] int,fromList []) True (Data'' annz (TData ["Xxx","Yyy"] [] (TTuple [int,int]),fromList []) False (Var'' annz "y" (TData ["Xxx","Yyy"] [] (TTuple [int,int]),fromList []) (Seq annz (Nop annz) (set' annz False (EVar annz "y") (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]])) (Nop annz) (Ret annz (EError annz (-2)))))))))
 
   --------------------------------------------------------------------------
 

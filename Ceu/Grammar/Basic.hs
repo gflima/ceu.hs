@@ -176,6 +176,6 @@ instance HasAnn Stmt where
     getAnn (Nop   z)           = z
 
 prelude z p = (Data z (TData ["Int"]          [] TUnit,cz) False
-              (Data z (TData ["Bool"]         [] TUnit,cz) False
+              (Data z (TData ["Bool"]         [] TUnit,cz) True
               (Data z (TData ["Bool","True"]  [] TUnit,cz) False
               (Data z (TData ["Bool","False"] [] TUnit,cz) False p))))
