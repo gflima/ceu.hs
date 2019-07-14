@@ -23,17 +23,17 @@ import Ceu.Grammar.Type        as T   (Type(..), TypeC, hier2str,
 --  LTuple  (a,b) <- (x,y)  # match  # (B,B) SUB (x,y)  | a match x,  b match y
 --  LTuple  (a,b) <- x      # match  # (B,B) SUB x      | a match x1, b match x2
 
-matchX :: [Exp] -> Exp -> (Bool, Errors)
-matchX pats exp = matchX' pats [Left exp] where
-  matchX' :: [Exp] -> [Either Exp TypeC] -> (Bool, Errors)
-  matchX' [] [] = (False, [])   -- OK
-  matchX' l  [] = (False, map (\pat -> toError (getAnn pat) "pattern is redundant") l)
-  matchX' [] _  = (True,  [])   -- non-exhaustive
-  matchX' (pat:pats) (exp:exps) = (ret, es'++es) where
+matchX :: [Stmt] -> [Exp] -> Exp -> (Bool, Errors)
+matchX ids pats exp = matchX' ids pats [Left exp] where
+  matchX' :: [Stmt] -> [Exp] -> [Either Exp TypeC] -> (Bool, Errors)
+  matchX' _ [] [] = (False, [])   -- OK
+  matchX' _ l  [] = (False, map (\pat -> toError (getAnn pat) "pattern is redundant") l)
+  matchX' _ [] _  = (True,  [])   -- non-exhaustive
+  matchX' ids (pat:pats) (exp:exps) = (ret, es'++es) where
     (exps',es') = case exp of
-                    Left  x -> matchE pat x
-                    Right x -> matchT pat x
-    (ret,es) = matchX' pats (exps'++exps)
+                    Left  x -> matchE ids pat x
+                    Right x -> matchT ids pat x
+    (ret,es) = matchX' ids pats (exps'++exps)
 
 {-
   matchX' _ _ es pats (exp:exps) = (and l1, concat l2) where
@@ -42,29 +42,28 @@ matchX pats exp = matchX' pats [Left exp] where
 
 -------------------------------------------------------------------------------
 
-matchE :: Exp -> Exp -> ([Either Exp TypeC], Errors)
+matchE :: [Stmt] -> Exp -> Exp -> ([Either Exp TypeC], Errors)
 
-matchE _                 (EArg   _)         = ([], [])
+matchE _ _                 (EArg   _)         = ([], [])
 
 -- structural match
-matchE (EUnit _)         (EUnit  _)         = ([], [])
-matchE (ECons z hr1)     (ECons  _ hr2)     = ([], es) where
-                                              es = if hr1 `isPrefixOf` hr2 then [] else
-                                                    [toError z $ "match never succeeds : data mismatch"]
-matchE (ECall _ el1 er1) exp@(ECall  _ el2 er2) = ([] {-may1||may2-}, es1++es2) where
-                                                    (exps1, es1) = matchE el1 el2
-                                                    (exps2, es2) = matchE er1 er2
-matchE (ETuple z1 els)   exp@(ETuple z2 ers)    = ([] {-or mays-}, concat eses ++ es) where
-                                                    es = if lenl == lene then [] else
-                                                      [toError z1 $ "match never succeeds : arity mismatch"]
-                                                    (exps, eses) = unzip $ zipWith matchE els' ers' where
-                                                      els' = els ++ replicate (lene - lenl) (EAny z1)
-                                                      ers' = ers ++ replicate (lenl - lene) (EError z2 (-2))
-                                                    lenl  = length els
-                                                    lene  = length ers
+matchE _ (EUnit _)         (EUnit  _)         = ([], [])
+matchE _ (ECons z hr1)     exp@(ECons  _ hr2) = if hr1 `isPrefixOf` hr2 then ([],[]) else
+                                                  ([Left exp], [toError z $ "match never succeeds : data mismatch"])
+matchE ids (ECall _ el1 er1) exp@(ECall  _ el2 er2) = ([] {-may1||may2-}, es1++es2) where
+                                                        (exps1, es1) = matchE ids el1 el2
+                                                        (exps2, es2) = matchE ids er1 er2
+matchE ids (ETuple z1 els)   exp@(ETuple z2 ers)    = (ret {-or mays-}, concat eses ++ es) where
+                                                        (ret,es) = if lenl == lene then ([],[]) else
+                                                                    ([Left exp], [toError z1 $ "match never succeeds : arity mismatch"])
+                                                        (exps, eses) = unzip $ zipWith (matchE ids) els' ers' where
+                                                          els' = els ++ replicate (lene - lenl) (EAny z1)
+                                                          ers' = ers ++ replicate (lenl - lene) (EError z2 (-2))
+                                                        lenl  = length els
+                                                        lene  = length ers
 
 -- structural fail
-matchE l e | (isE l && isE e) = ([], [toError (getAnn l) $ "match never succeeds"]) where
+matchE _ l e | (isE l && isE e) = ([Left e], [toError (getAnn l) $ "match never succeeds"]) where
   isE (EUnit  _)              = True
   isE (ETuple _ _)            = True
   isE (ECons  _ _)            = True
@@ -72,36 +71,45 @@ matchE l e | (isE l && isE e) = ([], [toError (getAnn l) $ "match never succeeds
   isE _                       = False
 
 -- contravariant on constants (SUB)
-matchE (EUnit  z)      exp            = ([Left exp], es) where
-                                        es = (relatesErrors SUB (TUnit,cz) (type_ $ getAnn exp))
+matchE _ (EUnit  z)      exp    = ([Left exp], es) where
+                                    es = (relatesErrors SUB (TUnit,cz) (type_ $ getAnn exp))
 
 -- non-constants: LAny,LVar (no fail) // LExp (may fail)
-matchE (EVar _ _)      _              = ([],    [])
-matchE (EAny _)        _              = ([],    [])
-matchE (EExp _ _)      exp            = ([Left exp], [])
+matchE _ (EVar _ _)      _      = ([],    [])
+matchE _ (EAny _)        _      = ([],    [])
+matchE _ (EExp _ _)      exp    = ([Left exp], [])
 
 -- rec
-matchE loc             exp            = matchT loc (type_ $ getAnn exp) where
+matchE ids loc           exp    = matchT ids loc (type_ $ getAnn exp) where
 
 -------------------------------------------------------------------------------
 
-matchT :: Exp -> TypeC -> ([Either Exp TypeC], Errors)
+matchT :: [Stmt] -> Exp -> TypeC -> ([Either Exp TypeC], Errors)
 
-matchT (EUnit _)       tp = ([], [])
-matchT (EVar  _ _)     _  = ([], [])
-matchT (EAny  _)       _  = ([], [])
-matchT (EExp  _ _)     tp = ([Right tp], [])
-matchT (ECons _ hr1)   tp = case tp of
-                              (TData hr2 _ st, ctrs) -> (bool [] [Right tp] may, []) where
-                                                          may = (hr2 `isPrefixOf` hr1) && (hr1 /= hr2)
-                              otherwise              -> ([], [])
-matchT (ETuple _ ls)   tp = case tp of
-                              (TTuple tps, ctrs)     -> (bool [Right tp] [] (all null tps'), concat ess) where
-                                                          (tps', ess) = unzip $ zipWith matchT ls (map f tps)
-                                                          f tp = (tp,ctrs)
-                              otherwise              -> ([], [])
-matchT (ECall _ el er) tp = case tp of
-                              (TData h ofs st, ctrs) -> (bool [Right tp] [] (null may1 && null may2), es1 ++ es2) where
-                                                          (may1, es1) = matchT el tp
-                                                          (may2, es2) = matchT er (st,ctrs)
-                              otherwise              -> ([], [])
+matchT _   (EUnit _)       tp = ([], [])
+matchT _   (EVar  _ _)     _  = ([], [])
+matchT _   (EAny  _)       _  = ([], [])
+matchT _   (EExp  _ _)     tp = ([Right tp], [])
+matchT ids (ECons z hr1)   tp = case tp of
+                                  (TData hr2 _ st, ctrs) -> if hr1 `isPrefixOf` hr2 then ([],[]) else
+                                                              if hr2 `isPrefixOf` hr1 then
+                                                                traceShow subs([Right tp],[])
+                                                              else
+                                                                ([Right tp], [toError z $ "match never succeeds : data mismatch"])
+                                    where
+                                      subs = map f $ filter pred ids where
+                                              pred (Data  _ (TData hr2 _ _,_) _ _) = gt hr1 hr2
+                                              pred _ = False
+                                              f (Data  _ (TData hr2 _ _,_) _ _) = hr2
+                                      gt sup sub = (sup `isPrefixOf` sub) && (length sup < length sub)
+                                  otherwise              -> ([], [])
+matchT ids (ETuple _ ls)   tp = case tp of
+                                  (TTuple tps, ctrs)     -> (bool [Right tp] [] (all null tps'), concat ess) where
+                                                              (tps', ess) = unzip $ zipWith (matchT ids) ls (map f tps)
+                                                              f tp = (tp,ctrs)
+                                  otherwise              -> ([], [])
+matchT ids (ECall _ el er) tp = case tp of
+                                  (TData h ofs st, ctrs) -> (bool [Right tp] [] (null may1 && null may2), es1 ++ es2) where
+                                                              (may1, es1) = matchT ids el tp
+                                                              (may2, es2) = matchT ids er (st,ctrs)
+                                  otherwise              -> ([], [])

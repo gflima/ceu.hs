@@ -404,7 +404,7 @@ stmt ids (Match z fce exp cses) = (es', Match z fce exp' cses'') where
                       es      = concat $ (map fst l0) ++ (map fst3 l1) ++ (map fst l2)
                       tpl     = snd3 $ l1 !! 0
                       cses'   = zip3 (map snd l0) (map trd3 l1) (map snd l2)
-  (may, esm)     = matchX (map snd3 cses') exp'
+  (may, esm)     = matchX ids (map snd3 cses') exp'
   esem           = bool esm ese (null esm)    -- hide ese if esm
 
   -- set  x <- 1    // fce=false
@@ -479,7 +479,7 @@ expr' _ ids (EMatch z exp pat) = (esp++esem++esc, EMatch z{type_=(TData ["Bool"]
   where
     (esp,tpp,pat') = fPat ids pat
     (ese, exp')    = expr z (SUP,tpp) ids exp
-    (may, esm)     = (may, map (toError z) esm) where (may,esm) = matchX [pat'] exp'
+    (may, esm)     = (may, map (toError z) esm) where (may,esm) = matchX ids [pat'] exp'
     esem           = bool esm ese (null esm)    -- hide ese if esm
     esc = if null esem then
             bool [toError z "match never fails"] [] may
