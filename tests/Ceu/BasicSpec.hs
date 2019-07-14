@@ -94,7 +94,7 @@ spec = do
       (fst $ TypeSys.go (prelude annz (Var annz "a" (bool,cz) (mmm annz True (ECons annz ["Bool","True"]) (EVar annz "a") (Nop annz) (Nop annz)))))
         `shouldBe` []
     it "a:Bool ; True <- a" $
-      (fst $ TypeSys.go (prelude annz (Var annz "a" (bool,cz) (mmm annz True (ECons annz ["Bool","True"]) (EVar annz "a") (Nop annz) (Nop annz)))))
+      (fst $ TypeSys.go (prelude annz (Var annz "a" (bool,cz) (mmm annz False (ECons annz ["Bool","True"]) (EVar annz "a") (Nop annz) (Nop annz)))))
         `shouldBe` ["match might fail"]
 
     checkCheckIt (Var annz "a" (TUnit,cz) (Var annz "a" (TUnit,cz) (Nop annz)))  ["variable 'a' is already declared"]
@@ -179,7 +179,7 @@ spec = do
         `shouldBe` []
 
   describe "write!" $ do
-    it "1 <- ret" $
+    it "XXX: 1 <- ret" $
       (fst $ TypeSys.go
         (Data annz (int,cz) False
         (Var annz "ret" (int,cz)

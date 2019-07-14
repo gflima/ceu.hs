@@ -90,19 +90,21 @@ matchT _   (EUnit _)       tp = ([], [])
 matchT _   (EVar  _ _)     _  = ([], [])
 matchT _   (EAny  _)       _  = ([], [])
 matchT _   (EExp  _ _)     tp = ([Right tp], [])
-matchT ids (ECons z hr1)   tp = case tp of
-                                  (TData hr2 ofs st, ctrs) -> if hr1 `isPrefixOf` hr2 then ([],[]) else
-                                                                if hr2 `isPrefixOf` hr1 then
+matchT ids (ECons z hrP)   tp = case tp of
+                                  (TData hrE ofs st, ctrs) -> if hrP `isPrefixOf` hrE then ([],[]) else
+                                                                if hrE `isPrefixOf` hrP then
                                                                   (ret, [])
                                                                 else
                                                                   ([Right tp], [toError z $ "match never succeeds : data mismatch"])
                                     where
                                       ret = map (\hr -> Right $ (TData hr ofs st,ctrs)) (rem subs)
-                                      rem l = [ v | v <- l, v /= hr1 ]
-                                      subs = map f $ filter pred ids where
-                                              pred (Data  _ (TData hr3 _ _,_) _ _) = gt hr2 hr3
+                                      rem l = [ v | v <- l, v /= hrP ]
+                                      subs = ints ++ (map f $ filter pred ids) where
+                                              ints = bool [] [["Int","?"]] (hrE == ["Int"])
+                                                      -- Int that will never match any numeric pattern
+                                              pred (Data  _ (TData hrD _ _,_) _ _) = gt hrE hrD
                                               pred _ = False
-                                              f (Data  _ (TData hr3 _ _,_) _ _) = hr3
+                                              f (Data  _ (TData hrD _ _,_) _ _) = hrD
                                       gt sup sub = (sup `isPrefixOf` sub) && (length sup < length sub)
                                   otherwise              -> ([], [])
 matchT ids (ETuple _ ls)   tp = case tp of
