@@ -3,6 +3,7 @@ module Ceu.Grammar.Match where
 import Data.Bool (bool)
 import Data.List (find, unzip, unzip3, isPrefixOf)
 
+import Ceu.Trace
 import Ceu.Grammar.Ann                (getAnn, type_, toError)
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Basic
@@ -86,11 +87,10 @@ matchE loc             exp            = matchT loc (type_ $ getAnn exp) where
 
 matchT :: Exp -> TypeC -> ([Either Exp TypeC], Errors)
 
-matchT (EUnit _)       tp = ([], es) where
-                              es = [] --map (toError z) (relatesErrors SUB (TUnit,cz) tp)
+matchT (EUnit _)       tp = ([], [])
 matchT (EVar  _ _)     _  = ([], [])
 matchT (EAny  _)       _  = ([], [])
-matchT (EExp  _ _)     _  = ([] {-True-},  [])
+matchT (EExp  _ _)     tp = ([Right tp], [])
 matchT (ECons _ hr1)   tp = case tp of
                               (TData hr2 _ st, ctrs) -> (bool [] [Right tp] may, []) where
                                                           may = (hr2 `isPrefixOf` hr1) && (hr1 /= hr2)
