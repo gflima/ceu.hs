@@ -11,7 +11,7 @@ import Text.Parsec            (eof, parserZero)
 import Text.Parsec.Prim       ((<|>), (<?>), try, getPosition, many, unexpected)
 import Text.Parsec.Char       (char, anyChar)
 import Text.Parsec.String     (Parser)
-import Text.Parsec.Combinator (notFollowedBy, many1, chainl, chainl1, chainr1, option, optionMaybe, optional)
+import Text.Parsec.Combinator (notFollowedBy, many1, chainl, chainl1, chainr1, option, optionMaybe)
 
 import Ceu.Parser.Common
 import Ceu.Parser.Token
@@ -184,7 +184,11 @@ stmt_data = do
   id      <- tk_data_hier
   ofs     <- option [] $ try $ tk_key "for" *> (map TAny <$> (try (list1 tk_var) <|> (singleton <$> tk_var)))
   (st,cs) <- option (TUnit,cz) $ try $ tk_key "with" *> pTypeContext
-  return $ Data annz{source=pos} (TData id ofs st, cs) False
+  isAbs   <- option False $ do
+                              void <- try $ tk_key "is"
+                              void <- tk_key "abstract"
+                              return True
+  return $ Data annz{source=pos} (TData id ofs st, cs) isAbs
 
 pMatch :: Source -> Bool -> Exp -> Parser Stmt
 pMatch pos chk loc = do

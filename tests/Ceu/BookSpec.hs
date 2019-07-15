@@ -1124,7 +1124,7 @@ return (l,r)
       it "YYY: case" $         -- pg 46
         (run True $
           pre ++ [r|
-data Either for (a,b)
+data Either for (a,b) is abstract
 data Either.Left  with a
 data Either.Right with b
 
@@ -2238,7 +2238,7 @@ return (reverse (l, List.Nil))
 |])
         `shouldBe` Right (EData ["List","Cons"] (ETuple [EData ["Int","20"] EUnit,EData ["List","Cons"] (ETuple [EData ["Int","10"] EUnit,EData ["List","Nil"] EUnit])]))
 
-      it "XXX: List: length" $                   -- pg 102
+      it "XXX1: List: length" $                   -- pg 102
         (run True $
           [r|
 data List for a
