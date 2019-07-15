@@ -29,16 +29,14 @@ matchX ids pats exp = matchX' ids pats [Left exp] where
   matchX' _ [] [] = (False, [])   -- OK
   matchX' _ l  [] = (False, map (\pat -> toError (getAnn pat) "pattern is redundant") l)
   matchX' _ [] _  = (True,  [])   -- non-exhaustive
-  matchX' ids (pat:pats) (exp:exps) = (ret, es'++es) where
-    (exps',es') = case exp of
-                    Left  x -> matchE ids pat x
-                    Right x -> matchT ids pat x
-    (ret,es) = matchX' ids pats (exps'++exps)
 
-{-
-  matchX' _ _ es pats (exp:exps) = (and l1, concat l2) where
-                                  (l1,l2) = unzip $ map (flip (match z) exp) pats
--}
+  matchX' ids (pat:pats) exps = (ret, es'++es) where
+    (exps',es') = foldr f ([],[]) exps where
+                    f exp (acc1,acc2) = (ret1++acc1,ret2++acc2) where
+                                          (ret1,ret2) = case exp of
+                                                          Left  x -> matchE ids pat x
+                                                          Right x -> matchT ids pat x
+    (ret,es) = matchX' ids pats exps'
 
 -------------------------------------------------------------------------------
 

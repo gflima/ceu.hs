@@ -15,9 +15,9 @@ import Debug.Trace
 int  = TData ["Int"]  [] TUnit
 bool = TData ["Bool"] [] TUnit
 
-mmm          loc exp p1 p2 =   Match       exp [(  Nop,  loc,p1)]
-mmmAny z chk loc exp p1 p2 = B.Match z chk exp [(B.Nop z,loc,p1),(B.Nop z,B.EAny z,p2)]
-mmmOne z chk loc exp p1 p2 = B.Match z chk exp [(B.Nop z,loc,p1)]
+mmm          loc exp p1 p2 =   Match         exp [(  Nop,  loc,p1)]
+mmmAny z     loc exp p1 p2 = B.Match z False exp [(B.Nop z,loc,p1),(B.Nop z,B.EAny z,p2)]
+mmmOne z chk loc exp p1 p2 = B.Match z chk   exp [(B.Nop z,loc,p1)]
 
 main :: IO ()
 main = hspec spec
@@ -215,7 +215,7 @@ spec = do
           (B.Data  annz (int,cz) False
           (B.Var   annz "a" (int,cz)
           (mmmOne annz False (B.EVar annz "a") (B.ECons annz ["Int","1"])
-            (mmmAny annz False (B.EExp annz $ B.EVar annz "a") (B.ECons annz ["Int","1"])
+            (mmmAny annz (B.EExp annz $ B.EVar annz "a") (B.ECons annz ["Int","1"])
               (B.Ret   annz (B.EVar annz "a"))
               (B.Ret   annz (B.EError annz 99)))
             (B.Ret   annz (B.EError annz 99)))))
@@ -226,7 +226,7 @@ spec = do
           (B.Data  annz (int,cz) False
           (B.Var   annz "a" (int,cz)
           (mmmOne annz False (B.EVar annz "a") (B.ECons annz ["Int","2"])
-            (mmmAny annz False (B.ECons annz ["Int","1"]) (B.EVar annz "a")
+            (mmmAny annz (B.ECons annz ["Int","1"]) (B.EVar annz "a")
               (B.Ret   annz (B.EVar annz "a"))
               (B.Ret   annz (B.EError annz 10)))
             (B.Ret   annz (B.EError annz 99)))))
@@ -237,7 +237,7 @@ spec = do
           (B.Data  annz (int,cz) False
           (B.Var   annz "a" (int,cz)
           (mmmOne annz False (B.EVar annz "a") (B.ECons annz ["Int","1"])
-            (mmmAny annz False (B.ECons annz ["Int","1"]) (B.EVar annz "a")
+            (mmmAny annz (B.ECons annz ["Int","1"]) (B.EVar annz "a")
               (B.Ret   annz (B.EVar annz "a"))
               (B.Ret   annz (B.EError annz 99)))
             (B.Ret   annz (B.EError annz 99)))))
@@ -248,7 +248,7 @@ spec = do
           (B.Data  annz (int,cz) False
           (B.Var   annz "a" (int,cz)
           (mmmOne annz False (B.EVar annz "a") (B.ECons annz ["Int","1"])
-            (mmmAny annz False (B.EExp annz $ B.EVar annz "a") (B.ECons annz ["Int","2"])
+            (mmmAny annz (B.EExp annz $ B.EVar annz "a") (B.ECons annz ["Int","2"])
               (B.Ret   annz (B.EVar annz "a"))
               (B.Ret   annz (B.EError annz 10)))
             (B.Ret   annz (B.EError annz 99)))))
