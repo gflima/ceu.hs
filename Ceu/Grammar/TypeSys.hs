@@ -97,18 +97,6 @@ wrap insts (Var z id1 (tp_,_) (Match _ False body [(ds,EVar _ id2,_)])) acc | id
       where
         ftp (tp_,_) = (T.instantiate insts tp_,cz)
 
--- All possible combinations between members of each group:
---    G1        G2        G3
--- [ [1,10], [2,20,200], [3], ... ]
--- [ [1,2,3,...], [1,20,3,...], [1,200,3,...], ... ]
-combos :: [[a]] -> [[a]]
-combos l = foldr g [[]] l where
-    g :: [a] -> [[a]] -> [[a]]
-    g l combos = foldr (\v acc -> (h v combos) ++ acc) [] l
-
-    h :: a -> [[a]] -> [[a]]
-    h v combos = map (\combo -> v:combo) combos
-
 -- [ [Ia], [Ib], ... ]
 -- [ [A1,A2,...], [B1,B2,...], ... ]
 -- [ [A1,B1,...], [A1,B2,...], ... ]
@@ -404,7 +392,7 @@ stmt ids (Match z fce exp cses) = (es', Match z fce exp' cses'') where
                       es      = concat $ (map fst l0) ++ (map fst3 l1) ++ (map fst l2)
                       tpl     = snd3 $ l1 !! 0
                       cses'   = zip3 (map snd l0) (map trd3 l1) (map snd l2)
-  (may, esm)     = matchX ids (map snd3 cses') exp'
+  (ok, esm)      = matchX ids (map snd3 cses') exp'
   esem           = bool esm ese (null esm)    -- hide ese if esm
 
   -- set  x <- 1    // fce=false
@@ -412,9 +400,9 @@ stmt ids (Match z fce exp cses) = (es', Match z fce exp' cses'') where
   -- if   1 <- x    // fce=true
   esc = if null esem then
           if fce then
-            bool [toError z "match is exhaustive"] [] may
+            bool [] [toError z "match is exhaustive"] ok
           else
-            bool [toError z "match is non exhaustive"]  [] (not may)
+            bool [toError z "match is non exhaustive"]  [] ok
         else
           []
 
@@ -479,10 +467,10 @@ expr' _ ids (EMatch z exp pat) = (esp++esem++esc, EMatch z{type_=(TData ["Bool"]
   where
     (esp,tpp,pat') = fPat ids pat
     (ese, exp')    = expr z (SUP,tpp) ids exp
-    (may, esm)     = (may, map (toError z) esm) where (may,esm) = matchX ids [pat'] exp'
+    (ok, esm)      = (ok, map (toError z) esm) where (ok,esm) = matchX ids [pat'] exp'
     esem           = bool esm ese (null esm)    -- hide ese if esm
     esc = if null esem then
-            bool [toError z "match is exhaustive"] [] may
+            bool [] [toError z "match is exhaustive"] ok
           else
             []
 
