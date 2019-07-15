@@ -1121,7 +1121,7 @@ return (l,r)
 |])
         `shouldBe` Right (ETuple [EData ["Either","Left"] (EData ["Bool","True"] EUnit),EData ["Either","Right"] (EData ["Int","10"] EUnit)])
 
-      it "YYY: case" $         -- pg 46
+      it "case" $         -- pg 46
         (run True $
           pre ++ [r|
 data Either for (a,b) is abstract
@@ -1170,10 +1170,10 @@ return (l_ === l) and (l_ =/= r)
 |])
         `shouldBe` Right (EData ["Bool","True"] EUnit)
 
-      it "XXX: Either / IOrd" $         -- pg 47
+      it "Either / IOrd" $         -- pg 47
         (run True $
           pre ++ [r|
-data Either for (a,b)
+data Either for (a,b) is abstract
 data Either.Left  with a
 data Either.Right with b
 
@@ -2238,10 +2238,10 @@ return (reverse (l, List.Nil))
 |])
         `shouldBe` Right (EData ["List","Cons"] (ETuple [EData ["Int","20"] EUnit,EData ["List","Cons"] (ETuple [EData ["Int","10"] EUnit,EData ["List","Nil"] EUnit])]))
 
-      it "XXX1: List: length" $                   -- pg 102
+      it "List: length" $                   -- pg 102
         (run True $
           [r|
-data List for a
+data List for a is abstract
 data List.Nil
 data List.Cons with (a, List of a)
 
