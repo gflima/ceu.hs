@@ -10,52 +10,52 @@ go p = stmt p
 
 stmt :: Stmt -> Stmt
 
-stmt (Class z id tp ifc p) =
+stmt (SClass z id tp ifc p) =
   case p' of
-    Nop z'    -> Nop z'
-    otherwise -> Class z id tp ifc p'
+    SNop z'   -> SNop z'
+    otherwise -> SClass z id tp ifc p'
   where p' = stmt p
 
-stmt (Inst z cls tp imp p) =
+stmt (SInst z cls tp imp p) =
   case p' of
-    Nop z'    -> Nop z'
-    otherwise -> Inst z cls tp imp p'
+    SNop z'   -> SNop z'
+    otherwise -> SInst z cls tp imp p'
   where p' = stmt p
 
-stmt (Data z nms tp abs p) =
+stmt (SData z nms tp abs p) =
   case p' of
-    Nop z'    -> Nop z'
-    otherwise -> Data z nms tp abs p'
+    SNop z'   -> SNop z'
+    otherwise -> SData z nms tp abs p'
   where p' = stmt p
 
-stmt (Var z id tp p) =
+stmt (SVar z id tp p) =
   case p' of
-    --Nop z'    -> Nop z'
-    _ -> Var z id tp p'
+    --SNop z'    -> SNop z'
+    _ -> SVar z id tp p'
   where p' = stmt p
 
-stmt (Match z b exp cses) = Match z b (expr exp)
+stmt (SMatch z b exp cses) = SMatch z b (expr exp)
                                 (map (\(ds,pt,st)->(stmt ds, expr pt, stmt st)) cses)
 
--- normal form: (Seq x (Seq y (Seq z ...)))
-stmt (Seq z1 (Match z2 False exp [(ds,pt,st)]) p) = stmt $ Match z2 False exp [(ds,pt,Seq z1 st p)]
-stmt (Seq z1 (Seq z2 p1 p2) p3) = stmt $ Seq z1 p1 (Seq z2 p2 p3)
-stmt (Seq z p q) =
+-- normal form: (SSeq x (SSeq y (SSeq z ...)))
+stmt (SSeq z1 (SMatch z2 False exp [(ds,pt,st)]) p) = stmt $ SMatch z2 False exp [(ds,pt,SSeq z1 st p)]
+stmt (SSeq z1 (SSeq z2 p1 p2) p3) = stmt $ SSeq z1 p1 (SSeq z2 p2 p3)
+stmt (SSeq z p q) =
   case (p',q') of
-    (Nop _,    q')    -> q'
-    (p',       Nop _) -> p'
-    (Ret z' n, q')    -> Ret z' n
-    otherwise         -> Seq z p' q'
+    (SNop _,    q')    -> q'
+    (p',       SNop _) -> p'
+    (SRet z' n, q')    -> SRet z' n
+    otherwise          -> SSeq z p' q'
   where p' = stmt p
         q' = stmt q
 
-stmt (Loop z p) =
+stmt (SLoop z p) =
   case p' of
-    Ret z' n  -> Ret z' n
-    otherwise -> Loop z p'
+    SRet z' n -> SRet z' n
+    otherwise -> SLoop z p'
   where p' = stmt p
 
-stmt (Ret z e) = Ret z (expr e)
+stmt (SRet z e) = SRet z (expr e)
 
 stmt p = p
 
@@ -65,4 +65,4 @@ expr :: Exp -> Exp
 
 expr (ECall z e1 e2) = ECall z (expr e1) (expr e2)
 expr (EFunc z tp p)  = EFunc z tp (stmt p)
-expr e              = e
+expr e               = e

@@ -79,12 +79,12 @@ pPat v = lany  <|> lvar <|> try lunit  <|> lnumber <|>
 matchLocType1 :: Source -> Exp -> TypeC -> Maybe Stmt
 matchLocType1 src loc (tp_,ctrs) = case (aux src loc tp_) of
                                     Nothing -> Nothing
-                                    Just v  -> Just $ foldr (Seq annz) (Nop annz) v
+                                    Just v  -> Just $ foldr (SSeq annz) (SNop annz) v
   where
     aux :: Source -> Exp -> Type -> Maybe [Stmt]
     aux pos (EAny   _)     _           = Just []
     aux pos (EUnit  _)     TUnit       = Just []
-    aux pos (EVar   _ var) tp_         = Just [Var annz{source=pos} var (tp_,ctrs)]
+    aux pos (EVar   _ var) tp_         = Just [SVar annz{source=pos} var (tp_,ctrs)]
     aux pos (ETuple _ [])  (TTuple []) = Just []
     aux pos (ETuple _ [])  _           = Nothing
     aux pos (ETuple _ _)   (TTuple []) = Nothing
@@ -96,13 +96,13 @@ matchLocType1 src loc (tp_,ctrs) = case (aux src loc tp_) of
 
 matchLocType2 :: Source -> Exp -> TypeC -> Maybe Stmt
 matchLocType2 src loc (tp_,ctrs) = if length vars /= length tps_ then Nothing else
-                                    Just $ foldr (Seq annz) (Nop annz) dcls
+                                    Just $ foldr (SSeq annz) (SNop annz) dcls
   where
     tps_ = tp2list (length vars) tp_
     vars = getVars loc
 
     dcls = map f $ map (\(Just v,t) -> (v,t)) $ filter (\(v,_) -> isJust v) $ zip vars tps_ where
-            f (var,tp_) = Var annz{source=src} var (tp_,ctrs)
+            f (var,tp_) = SVar annz{source=src} var (tp_,ctrs)
 
     getVars :: Exp -> [Maybe ID_Var]
     getVars (EAny   _)               = []
@@ -122,14 +122,14 @@ matchLocType2 src loc (tp_,ctrs) = if length vars /= length tps_ then Nothing el
 stmt_nop :: Parser Stmt
 stmt_nop = do
   pos  <- pos2src <$> getPosition
-  return $ Nop annz{source=pos}
+  return $ SNop annz{source=pos}
 
 stmt_ret :: Parser Stmt
 stmt_ret = do
   pos  <- pos2src <$> getPosition
   void <- try $ tk_key "return"
   e  <- expr
-  return $ Ret annz{source=pos} e
+  return $ SRet annz{source=pos} e
 
 stmt_error :: Parser Stmt
 stmt_error = do
@@ -137,7 +137,7 @@ stmt_error = do
   void <- try $ tk_key "error"
   e    <- expr_number
   return $ let (ECons z ["Int",n]) = e in
-            Ret annz{source=pos} (EError z $ read n)
+            SRet annz{source=pos} (EError z $ read n)
 
 -------------------------------------------------------------------------------
 
@@ -160,7 +160,7 @@ stmt_class = do
                                      | otherwise -> error "TODO: multiple variables"
                         otherwise                -> error "TODO: multiple constraints"
             in
-              Class annz{source=pos} cls ctrs ifc where
+              SClass annz{source=pos} cls ctrs ifc where
 
 stmt_inst :: Parser Stmt
 stmt_inst = do
@@ -175,7 +175,7 @@ stmt_inst = do
   void <- tk_key "with"
   imp  <- stmt
   void <- tk_key "end"
-  return $ Inst annz{source=pos} cls tp imp
+  return $ SInst annz{source=pos} cls tp imp
 
 stmt_data :: Parser Stmt
 stmt_data = do
@@ -189,14 +189,14 @@ stmt_data = do
                               void <- try $ tk_key "is"
                               void <- tk_key "abstract"
                               return True
-  return $ Data annz{source=pos} nms (TData id ofs st, cs) isAbs
+  return $ SData annz{source=pos} nms (TData id ofs st, cs) isAbs
 
 pMatch :: Source -> Bool -> Exp -> Parser Stmt
 pMatch pos chk loc = do
   --pos  <- pos2src <$> getPosition
   void <- tk_sym "="
   exp  <- expr
-  return $ Set annz{source=pos} chk loc exp
+  return $ SSet annz{source=pos} chk loc exp
 
 stmt_var :: Parser Stmt
 stmt_var = do
@@ -206,9 +206,9 @@ stmt_var = do
   void <- tk_sym ":"
   tp   <- pTypeContext
   when (isNothing $ matchLocType2 pos pat tp) $ unexpected "arity mismatch"
-  s    <- option (Nop $ annz{source=pos}) $
+  s    <- option (SNop $ annz{source=pos}) $
                  try $ pMatch pos (var=="var!") pat
-  return $ Seq annz{source=pos} (fromJust $ matchLocType2 pos pat tp) s
+  return $ SSeq annz{source=pos} (fromJust $ matchLocType2 pos pat tp) s
 
 stmt_set :: Parser Stmt
 stmt_set = do
@@ -217,7 +217,7 @@ stmt_set = do
   loc  <- pPat SET
   void <- tk_sym "="
   exp  <- expr
-  return $ Set annz{source=pos} (set=="set!") loc exp
+  return $ SSet annz{source=pos} (set=="set!") loc exp
 
 stmt_match :: Parser Stmt
 stmt_match = do
@@ -226,7 +226,7 @@ stmt_match = do
   exp  <- expr
   void <- tk_sym "with"
   loc  <- pPat BOTH
-  return $ Set annz{source=pos} (set=="match!") loc exp
+  return $ SSet annz{source=pos} (set=="match!") loc exp
 
 pCase :: Parser (Stmt,Exp,Stmt)
 pCase = do
@@ -235,7 +235,7 @@ pCase = do
   pos  <- pos2src <$> getPosition
   col  <- optionMaybe $ tk_sym ":"
   dcls <- case col of
-            Nothing -> do { return $ Nop annz{source=pos} }
+            Nothing -> do { return $ SNop annz{source=pos} }
             Just _  -> do
               tp   <- pTypeContext
               when (isNothing $ matchLocType2 pos pat tp) $ unexpected "arity mismatch"
@@ -254,15 +254,15 @@ stmt_cases = do
   pos2  <- pos2src <$> getPosition
   celse <- optionMaybe $ try $ tk_key "else" *> stmt
   void  <- tk_key "end"
-  return $ Match annz{source=pos1} (set=="match!") exp (cases ++
-            maybe [] (\v -> [(Nop annz{source=pos2}, EAny annz{source=pos2}, v)]) celse)
+  return $ SMatch annz{source=pos1} (set=="match!") exp (cases ++
+            maybe [] (\v -> [(SNop annz{source=pos2}, EAny annz{source=pos2}, v)]) celse)
 
 stmt_call :: Parser Stmt
 stmt_call = do
   pos  <- pos2src <$> getPosition
   set  <- try $ tk_key "call"
   e    <- expr
-  return $ CallS annz{source=pos} e
+  return $ SCall annz{source=pos} e
 
 -------------------------------------------------------------------------------
 
@@ -272,7 +272,7 @@ stmt_do = do
   void <- try $ tk_key "do"
   s    <- stmt
   void <- tk_key "end"
-  return $ Scope annz{source=pos} s
+  return $ SScope annz{source=pos} s
 
 stmt_if :: Parser Stmt
 stmt_if = do
@@ -284,9 +284,9 @@ stmt_if = do
   ss   <- many $ ((,,) <$> pos2src <$> getPosition <*>
                  (try (tk_key "else/if") *> expr) <*> (tk_key "then" *> stmt))
   pos2 <- pos2src <$> getPosition
-  s2   <- option (Nop annz{source=pos2}) $ try $ tk_key "else" *> stmt
+  s2   <- option (SNop annz{source=pos2}) $ try $ tk_key "else" *> stmt
   void <- tk_key "end"
-  return $ foldr (\(p,e,s) acc -> If annz{source=p} e s acc) s2 ([(pos1,exp,s1)] ++ ss)
+  return $ foldr (\(p,e,s) acc -> SIf annz{source=p} e s acc) s2 ([(pos1,exp,s1)] ++ ss)
 
 stmt_loop :: Parser Stmt
 stmt_loop = do
@@ -296,31 +296,31 @@ stmt_loop = do
   s    <- stmt
   --pos2 <- pos2src <$> getPosition
   void <- tk_key "end"
-  return $ Loop annz{source=pos1} s
+  return $ SLoop annz{source=pos1} s
 
 -------------------------------------------------------------------------------
 
 stmt1 :: Parser Stmt
 stmt1 = do
-  s <- stmt_class   <|>
-       stmt_inst    <|>
-       stmt_data    <|>
-       stmt_var     <|>
-       stmt_funcs   <|>
-       stmt_set     <|>
-       try stmt_match   <|>
-       stmt_cases   <|>
-       stmt_call    <|>
-       stmt_do      <|>
-       stmt_if      <|>
-       stmt_loop    <|>
-       stmt_ret     <|>
-       stmt_error   <?> "statement"
+  s <- stmt_class     <|>
+       stmt_inst      <|>
+       stmt_data      <|>
+       stmt_var       <|>
+       stmt_funcs     <|>
+       stmt_set       <|>
+       try stmt_match <|>
+       stmt_cases     <|>
+       stmt_call      <|>
+       stmt_do        <|>
+       stmt_if        <|>
+       stmt_loop      <|>
+       stmt_ret       <|>
+       stmt_error     <?> "statement"
   return s
 
 stmt_seq :: Source -> Parser Stmt
-stmt_seq src = option (Nop annz{source=src}) $
-                      try $ chainr1 stmt1 (do return (\a b->Seq annz{source=src} a b))
+stmt_seq src = option (SNop annz{source=src}) $
+                      try $ chainr1 stmt1 (do return (\a b->SSeq annz{source=src} a b))
 
 stmt :: Parser Stmt
 stmt = do
@@ -454,10 +454,10 @@ func pos = do
   ann  <- do { return annz{source=pos} }
 
   return $ (tp,
-            Seq ann
+            SSeq ann
                 dcls
-                (Seq ann
-                  (Set ann False loc (EArg ann))
+                (SSeq ann
+                  (SSet ann False loc (EArg ann))
                   imp))
 
 stmt_funcs :: Parser Stmt
@@ -471,7 +471,7 @@ stmt_funcs = do
             Nothing -> do
               void <- tk_sym ":"
               tp   <- pTypeContext
-              return $ Var ann f tp
+              return $ SVar ann f tp
             Just (tp,imp) -> do
-              return $ FuncS ann f tp imp
+              return $ SFunc ann f tp imp
   return ret

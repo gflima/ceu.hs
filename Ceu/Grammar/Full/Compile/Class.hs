@@ -12,39 +12,39 @@ compile :: Stmt -> Stmt
 compile p = stmt p
 
 protos :: Stmt -> [(Ann, ID_Var, TypeC, Bool)]
-protos (Seq  _ (Var z id tp) (Set _ False (EVar _ id') _)) | id==id' = [(z,id,tp,True)]
-protos (Seq  _ p1 p2) = (protos p1) ++ (protos p2)
-protos (Var z id tp)  = [(z,id,tp,False)]
+protos (SSeq  _ (SVar z id tp) (SSet _ False (EVar _ id') _)) | id==id' = [(z,id,tp,True)]
+protos (SSeq  _ p1 p2) = (protos p1) ++ (protos p2)
+protos (SVar z id tp)  = [(z,id,tp,False)]
 protos p              = []
 
 rename :: Stmt -> Stmt
-rename (Seq  z (Var z1 id tp)
-               (Set z2 False (EVar z3 id') exp))
-        | id==id'    = Seq  z (Var z1 (idtp id tp) tp)
-                                     (Set  z2 False (EVar z3 $ idtp id' tp) exp)
-rename (Seq z p1 p2) = Seq  z (rename p1) (rename p2)
-rename (Var z id tp) = Var z (idtp id tp) tp
+rename (SSeq  z (SVar z1 id tp)
+               (SSet z2 False (EVar z3 id') exp))
+        | id==id'    = SSeq  z (SVar z1 (idtp id tp) tp)
+                                     (SSet  z2 False (EVar z3 $ idtp id' tp) exp)
+rename (SSeq z p1 p2) = SSeq  z (rename p1) (rename p2)
+rename (SVar z id tp) = SVar z (idtp id tp) tp
 rename p             = p
 
 idtp id (tp_,ctrs) = if null ctrs then "$" ++ id ++ "$" ++ show' tp_ ++ "$" else id
 
 stmt :: Stmt -> Stmt
 
-stmt (Class z id  ctrs ifc) = Seq z (Class' z id  ctrs (protos ifc)) ifc
-stmt (Inst  z cls tp   imp) = Seq z (Inst'  z cls tp   (protos imp)) (rename imp)
-stmt (Set   z chk loc exp)  = Set   z chk loc (expr exp)
-stmt (Match z chk exp cses) = Match z chk (expr exp)
+stmt (SClass z id  ctrs ifc) = SSeq z (SClass' z id  ctrs (protos ifc)) ifc
+stmt (SInst  z cls tp   imp) = SSeq z (SInst'  z cls tp   (protos imp)) (rename imp)
+stmt (SSet   z chk loc exp)  = SSet   z chk loc (expr exp)
+stmt (SMatch z chk exp cses) = SMatch z chk (expr exp)
                                (map (\(ds,pt,st) -> (stmt ds, expr pt, stmt st)) cses)
-stmt (CallS z exp)          = CallS z (expr exp)
-stmt (If    z exp p1 p2)    = If    z (expr exp) (stmt p1) (stmt p2)
-stmt (Seq   z p1 p2)        = Seq   z (stmt p1) (stmt p2)
-stmt (Loop  z p)            = Loop  z (stmt p)
-stmt (Scope z p)            = Scope z (stmt p)
-stmt (Ret   z exp)          = Ret   z (expr exp)
-stmt p                      = p
+stmt (SCall z exp)           = SCall z (expr exp)
+stmt (SIf    z exp p1 p2)    = SIf    z (expr exp) (stmt p1) (stmt p2)
+stmt (SSeq   z p1 p2)        = SSeq   z (stmt p1) (stmt p2)
+stmt (SLoop  z p)            = SLoop  z (stmt p)
+stmt (SScope z p)            = SScope z (stmt p)
+stmt (SRet   z exp)          = SRet   z (expr exp)
+stmt p                       = p
 
 expr :: Exp -> Exp
-expr (ETuple z es)          = ETuple z (map expr es)
-expr (ECall  z e1 e2)       = ECall  z (expr e1) (expr e2)
-expr (EFunc  z tp p)        = EFunc  z tp (stmt p)
-expr e                      = e
+expr (ETuple z es)           = ETuple z (map expr es)
+expr (ECall  z e1 e2)        = ECall  z (expr e1) (expr e2)
+expr (EFunc  z tp p)         = EFunc  z tp (stmt p)
+expr e                       = e

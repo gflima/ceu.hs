@@ -8,17 +8,17 @@ import Ceu.Grammar.Full.Full
 compile :: Stmt -> Stmt
 compile p = stmt p
 stmt :: Stmt -> Stmt
-stmt (Inst   z cls tp imp)        = Inst   z cls tp (stmt imp)
-stmt (Match' z chk exp cses)      = Match' z chk (expr exp)
+stmt (SInst   z cls tp imp)        = SInst   z cls tp (stmt imp)
+stmt (SMatch' z chk exp cses)      = SMatch' z chk (expr exp)
                                       (map (\(ds,pt,st) -> (stmt ds, expr pt, stmt st)) cses)
-stmt (CallS  z exp)               = CallS  z (expr exp)
---stmt (Seq    z (Match' z' False exp ((pat1,st1):l)) p) = stmt $ Match' z' False exp ((pat1,(Seq z st1 p)):l)
-stmt (Seq    z (Seq z' p1 p2) p3) = stmt $ Seq z p1 (Seq z' p2 p3)
-stmt (Seq    z p1 p2)             = Seq    z (stmt p1) (stmt p2)
-stmt (Loop   z p)                 = Loop   z (stmt p)
-stmt (Scope  z p)                 = Scope  z (stmt p)
-stmt (Ret    z exp)               = Ret  z (expr exp)
-stmt p                            = p
+stmt (SCall  z exp)                = SCall  z (expr exp)
+--stmt (SSeq    z (SMatch' z' False exp ((pat1,st1):l)) p) = stmt $ SMatch' z' False exp ((pat1,(SSeq z st1 p)):l)
+stmt (SSeq    z (SSeq z' p1 p2) p3) = stmt $ SSeq z p1 (SSeq z' p2 p3)
+stmt (SSeq    z p1 p2)             = SSeq    z (stmt p1) (stmt p2)
+stmt (SLoop   z p)                 = SLoop   z (stmt p)
+stmt (SScope  z p)                 = SScope  z (stmt p)
+stmt (SRet    z exp)               = SRet  z (expr exp)
+stmt p                             = p
 
 expr :: Exp -> Exp
 expr (ETuple z es)              = ETuple z (map expr es)

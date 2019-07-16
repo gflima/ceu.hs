@@ -33,16 +33,16 @@ data Exp
     deriving (Eq, Show)
 
 data Stmt
-    = Var    (ID_Var,Maybe Exp) Stmt    -- block with environment store
-    | Match  Exp [(Stmt,Exp,Stmt)]      -- match/assignment/if statement
-    | CallS  Exp                        -- procedure call
-    | Seq    Stmt Stmt                  -- sequence
-    | Nop                               -- dummy statement (internal)
-    | Ret    Exp                        -- terminate program with exp
-    | Loop'  Stmt Stmt                  -- unrolled Loop (internal)
+    = SVar    (ID_Var,Maybe Exp) Stmt    -- block with environment store
+    | SMatch  Exp [(Stmt,Exp,Stmt)]      -- match/assignment/if statement
+    | SCall   Exp                        -- procedure call
+    | SSeq    Stmt Stmt                  -- sequence
+    | SNop                               -- dummy statement (internal)
+    | SRet    Exp                        -- terminate program with exp
+    | SLoop'  Stmt Stmt                  -- unrolled SLoop (internal)
     deriving (Eq, Show)
 
-infixr 1 `Seq`
+infixr 1 `SSeq`
 
 fromExp :: B.Exp -> Exp
 fromExp (B.EError _ v)   = EError  v
@@ -62,14 +62,14 @@ fromExp (B.EMatch _ e p) = EMatch (fromExp e) (fromExp p)
 -------------------------------------------------------------------------------
 
 fromStmt :: B.Stmt -> Stmt
-fromStmt (B.Data   _ _ _ _ p)       = fromStmt p
-fromStmt (B.Var    _ id _ p)        = Var (id,Nothing) (fromStmt p)
-fromStmt (B.CallS  _ e)             = CallS (fromExp e)
-fromStmt (B.Seq    _ p1 p2)         = Seq (fromStmt p1) (fromStmt p2)
-fromStmt (B.Loop   _ p)             = Loop' (fromStmt p) (fromStmt p)
-fromStmt (B.Ret    _ e)             = Ret (fromExp e)
-fromStmt (B.Nop    _)               = Nop
-fromStmt (B.Match  _ _ exp cses)    = Match (fromExp exp) $
+fromStmt (B.SData   _ _ _ _ p)       = fromStmt p
+fromStmt (B.SVar    _ id _ p)        = SVar (id,Nothing) (fromStmt p)
+fromStmt (B.SCall   _ e)             = SCall (fromExp e)
+fromStmt (B.SSeq    _ p1 p2)         = SSeq (fromStmt p1) (fromStmt p2)
+fromStmt (B.SLoop   _ p)             = SLoop' (fromStmt p) (fromStmt p)
+fromStmt (B.SRet    _ e)             = SRet (fromExp e)
+fromStmt (B.SNop    _)               = SNop
+fromStmt (B.SMatch  _ _ exp cses)    = SMatch (fromExp exp) $
                                         map (\(ds,pt,st)->(fromStmt ds,fromExp pt,fromStmt st)) cses
 
 ----------------------------------------------------------------------------
@@ -172,19 +172,19 @@ match x y z = error $ show (y,z)
 
 step :: Desc -> Desc
 
-step (Var _  Nop,     vars)  = (Nop,        vars)
-step (Var vv (Ret e), vars)  = (Ret e,      vv:vars)
-step (Var vv p,       vars)  = (Var vv' p', vars') where (p',vv':vars') = step (p,vv:vars)
+step (SVar _  SNop,     vars)  = (SNop,        vars)
+step (SVar vv (SRet e), vars)  = (SRet e,      vv:vars)
+step (SVar vv p,        vars)  = (SVar vv' p', vars') where (p',vv':vars') = step (p,vv:vars)
 
-step (CallS e,        vars)  = (p,          vars) where
-                                ret = envEval vars e
-                                p   = case ret of
-                                        EError v   -> Ret ret
-                                        otherwise -> Nop
+step (SCall e,          vars)  = (p,          vars) where
+                                  ret = envEval vars e
+                                  p   = case ret of
+                                          EError v   -> SRet ret
+                                          otherwise -> SNop
 
-step (Match e cses,   vars)  = case envEval vars e of
-                                EError x -> (Ret (EError x), vars)
-                                e'       -> toDesc $ foldl (aux e') (Right False, vars, Nop) cses
+step (SMatch e cses,    vars)  = case envEval vars e of
+                                  EError x -> (SRet (EError x), vars)
+                                  e'       -> toDesc $ foldl (aux e') (Right False, vars, SNop) cses
   where
     toDesc :: (Either Exp Bool, Vars, Stmt) -> Desc
     toDesc (_, vars, stmt) = (stmt,vars)
@@ -194,28 +194,28 @@ step (Match e cses,   vars)  = case envEval vars e of
       case (ret,ret') of
         (Left  err,  _)            -> all
         (Right True, _)            -> all
-        (Right False, Left  err)   -> (ret', vars2, Ret err)
+        (Right False, Left  err)   -> (ret', vars2, SRet err)
         (Right False, Right _)     -> (ret', vars2, stmt')
       where
         (ret', vars2) = match vars1 pat exp
         vars1 = f ds vars0 where
-          f Nop        vars = vars
-          f (Var id p) vars = id : (f p vars)
+          f SNop        vars = vars
+          f (SVar id p) vars = id : (f p vars)
 
-step (Seq Nop     q,  vars)  = (q,          vars)
-step (Seq (Ret e) q,  vars)  = (Ret e,      vars)
-step (Seq p       q,  vars)  = (Seq p' q,   vars') where (p',vars') = step (p,vars)
+step (SSeq SNop     q,  vars)  = (q,          vars)
+step (SSeq (SRet e) q,  vars)  = (SRet e,      vars)
+step (SSeq p        q,  vars)  = (SSeq p' q,   vars') where (p',vars') = step (p,vars)
 
-step (Loop' Nop     q, vars) = (Loop' q q,  vars)
-step (Loop' (Ret e) q, vars) = (Ret e,      vars)
-step (Loop' p q, vars)       = (Loop' p' q, vars') where (p',vars') = step (p,vars)
+step (SLoop' SNop     q, vars) = (SLoop' q q,  vars)
+step (SLoop' (SRet e) q, vars) = (SRet e,      vars)
+step (SLoop' p q, vars)        = (SLoop' p' q, vars') where (p',vars') = step (p,vars)
 
 step p =  error $ "step: cannot advance : " ++ (show p)
 
 ----------------------------------------------------------------------------
 
 steps :: Desc -> Exp
-steps (Ret e, vars) = envEval vars e
+steps (SRet e, vars) = envEval vars e
 steps d             = if (envRead vars "_steps") == (EData ["Int",show 1000] EUnit) then
                         EError error_terminate
                       else

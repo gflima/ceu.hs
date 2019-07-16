@@ -54,81 +54,81 @@ instance HasAnn Exp where
 -------------------------------------------------------------------------------
 
 data Stmt
-  = Class    Ann ID_Class Cs.Map Stmt             -- new class declaration
-  | Class'   Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] -- interface w/ body
-  | Inst     Ann ID_Class TypeC Stmt              -- new class instance
-  | Inst'    Ann ID_Class TypeC [(Ann,ID_Var,TypeC,Bool)] -- new class instance
-  | Data     Ann (Maybe [ID_Var]) TypeC Bool      -- new type declaration
-  | Var      Ann ID_Var TypeC                     -- variable declaration
-  | FuncS    Ann ID_Var TypeC Stmt                -- function declaration
-  | Match    Ann Bool Exp [(Stmt,Exp,Stmt)]       -- match
-  | Match'   Ann Bool Exp [(Stmt,Exp,Stmt)]       -- match w/ chk
-  | Set      Ann Bool Exp Exp                     -- assignment statement
-  | CallS    Ann Exp                              -- call function
-  | If       Ann Exp Stmt Stmt                    -- conditional
-  | Seq      Ann Stmt Stmt                        -- sequence
-  | Loop     Ann Stmt                             -- infinite loop
-  | Scope    Ann Stmt                             -- scope for local variables
-  | Nop      Ann                                  -- nop as in basic Grammar
-  | Ret      Ann Exp
+  = SClass    Ann ID_Class Cs.Map Stmt             -- new class declaration
+  | SClass'   Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] -- interface w/ body
+  | SInst     Ann ID_Class TypeC Stmt              -- new class instance
+  | SInst'    Ann ID_Class TypeC [(Ann,ID_Var,TypeC,Bool)] -- new class instance
+  | SData     Ann (Maybe [ID_Var]) TypeC Bool      -- new type declaration
+  | SVar      Ann ID_Var TypeC                     -- variable declaration
+  | SFunc     Ann ID_Var TypeC Stmt                -- function declaration
+  | SMatch    Ann Bool Exp [(Stmt,Exp,Stmt)]       -- match
+  | SMatch'   Ann Bool Exp [(Stmt,Exp,Stmt)]       -- match w/ chk
+  | SSet      Ann Bool Exp Exp                     -- assignment statement
+  | SCall     Ann Exp                              -- call function
+  | SIf       Ann Exp Stmt Stmt                    -- conditional
+  | SSeq      Ann Stmt Stmt                        -- sequence
+  | SLoop     Ann Stmt                             -- infinite loop
+  | SScope    Ann Stmt                             -- scope for local variables
+  | SNop      Ann                                  -- nop as in basic Grammar
+  | SRet      Ann Exp
   -- declarations w/ scope
-  | Class''  Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt
-  | Inst''   Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt
-  | Data''   Ann (Maybe [ID_Var]) TypeC Bool Stmt
-  | Var''    Ann ID_Var TypeC Stmt
+  | SClass''  Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt
+  | SInst''   Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt
+  | SData''   Ann (Maybe [ID_Var]) TypeC Bool Stmt
+  | SVar''    Ann ID_Var TypeC Stmt
   deriving (Eq, Show)
 
-sSeq a b = Seq annz a b
+sSeq a b = SSeq annz a b
 infixr 1 `sSeq`
 
 instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
-    getAnn (Class    z _ _ _)     = z
-    getAnn (Inst     z _ _ _)     = z
-    getAnn (Data     z _ _ _)     = z
-    getAnn (Var      z _ _)       = z
-    getAnn (FuncS    z _ _ _)     = z
-    getAnn (Match'   z _ _ _)     = z
-    getAnn (Seq      z _ _  )     = z
-    getAnn (Loop     z _)         = z
-    getAnn (Scope    z _)         = z
-    getAnn (Nop      z)           = z
-    getAnn (Ret      z _)         = z
-    getAnn (Data''   z _ _ _ _)   = z
-    getAnn (Var''    z _ _ _)     = z
+    getAnn (SClass    z _ _ _)     = z
+    getAnn (SInst     z _ _ _)     = z
+    getAnn (SData     z _ _ _)     = z
+    getAnn (SVar      z _ _)       = z
+    getAnn (SFunc     z _ _ _)     = z
+    getAnn (SMatch'   z _ _ _)     = z
+    getAnn (SSeq      z _ _  )     = z
+    getAnn (SLoop     z _)         = z
+    getAnn (SScope    z _)         = z
+    getAnn (SNop      z)           = z
+    getAnn (SRet      z _)         = z
+    getAnn (SData''   z _ _ _ _)   = z
+    getAnn (SVar''    z _ _ _)     = z
 
 toBasicStmt :: Stmt -> B.Stmt
-toBasicStmt (Class'' z id  cs ifc p) = B.Class z id  cs ifc (toBasicStmt p)
-toBasicStmt (Inst''  z cls tp imp p) = B.Inst  z cls tp imp (toBasicStmt p)
-toBasicStmt (Data''  z nms tp abs p) = B.Data  z nms tp abs (toBasicStmt p)
-toBasicStmt (Var''   z var tp p)     = B.Var   z var tp (toBasicStmt p)
-toBasicStmt (Match'  z chk exp cses) = B.Match z chk (toBasicExp exp)
+toBasicStmt (SClass'' z id  cs ifc p) = B.SClass z id  cs ifc (toBasicStmt p)
+toBasicStmt (SInst''  z cls tp imp p) = B.SInst  z cls tp imp (toBasicStmt p)
+toBasicStmt (SData''  z nms tp abs p) = B.SData  z nms tp abs (toBasicStmt p)
+toBasicStmt (SVar''   z var tp p)     = B.SVar   z var tp (toBasicStmt p)
+toBasicStmt (SMatch'  z chk exp cses) = B.SMatch z chk (toBasicExp exp)
                                          (map (\(ds,pt,st) -> (toBasicStmt ds, toBasicExp pt, toBasicStmt st)) cses)
-toBasicStmt (CallS   z e)            = B.CallS z (toBasicExp e)
-toBasicStmt (Seq     z p1 p2)        = B.Seq   z (toBasicStmt p1) (toBasicStmt p2)
-toBasicStmt (Loop    z p)            = B.Loop  z (toBasicStmt p)
-toBasicStmt (Nop     z)              = B.Nop   z
-toBasicStmt (Ret     z exp)          = B.Ret   z (toBasicExp exp)
-toBasicStmt p                        = error $ "toBasicStmt: unexpected statement: " ++ (show p)
+toBasicStmt (SCall   z e)             = B.SCall z (toBasicExp e)
+toBasicStmt (SSeq     z p1 p2)        = B.SSeq   z (toBasicStmt p1) (toBasicStmt p2)
+toBasicStmt (SLoop    z p)            = B.SLoop  z (toBasicStmt p)
+toBasicStmt (SNop     z)              = B.SNop   z
+toBasicStmt (SRet     z exp)          = B.SRet   z (toBasicExp exp)
+toBasicStmt p                         = error $ "toBasicStmt: unexpected statement: " ++ (show p)
 
 -------------------------------------------------------------------------------
 
 map_stmt :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Stmt -> Stmt
-map_stmt f@(fs,_,_)  (Class z id  cs p)  = fs (Class z id  cs (map_stmt f p))
-map_stmt f@(fs,_,ft) (Inst  z cls tp p)  = fs (Inst  z cls (ft tp) (map_stmt f p))
-map_stmt f@(fs,_,ft) (Data  z nms tp abs)= fs (Data  z nms (ft tp) abs)
-map_stmt f@(fs,_,ft) (Var   z id tp)     = fs (Var   z id (ft tp))
-map_stmt f@(fs,_,ft) (FuncS z id tp p)   = fs (FuncS z id (ft tp) (map_stmt f p))
-map_stmt f@(fs,_,_)  (Match z chk exp cses) = fs (Match z chk (map_exp f exp)
+map_stmt f@(fs,_,_)  (SClass z id  cs p)  = fs (SClass z id  cs (map_stmt f p))
+map_stmt f@(fs,_,ft) (SInst  z cls tp p)  = fs (SInst  z cls (ft tp) (map_stmt f p))
+map_stmt f@(fs,_,ft) (SData  z nms tp abs)= fs (SData  z nms (ft tp) abs)
+map_stmt f@(fs,_,ft) (SVar   z id tp)     = fs (SVar   z id (ft tp))
+map_stmt f@(fs,_,ft) (SFunc z id tp p)    = fs (SFunc z id (ft tp) (map_stmt f p))
+map_stmt f@(fs,_,_)  (SMatch z chk exp cses) = fs (SMatch z chk (map_exp f exp)
                                                 (map (\(ds,pt,st) -> (map_stmt f ds, map_exp f pt, map_stmt f st)) cses))
-map_stmt f@(fs,_,_)  (Set   z b loc exp) = fs (Set   z b loc (map_exp f exp))
-map_stmt f@(fs,_,_)  (CallS z exp)       = fs (CallS z (map_exp f exp))
-map_stmt f@(fs,_,_)  (If    z exp p1 p2) = fs (If    z (map_exp f exp) (map_stmt f p1) (map_stmt f p2))
-map_stmt f@(fs,_,_)  (Seq   z p1 p2)     = fs (Seq   z (map_stmt f p1) (map_stmt f p2))
-map_stmt f@(fs,_,_)  (Loop  z p)         = fs (Loop  z (map_stmt f p))
-map_stmt f@(fs,_,_)  (Scope z p)         = fs (Scope z (map_stmt f p))
-map_stmt f@(fs,_,_)  (Ret   z exp)       = fs (Ret   z (map_exp f exp))
-map_stmt f@(fs,_,_)  (Nop   z)           = fs (Nop   z)
+map_stmt f@(fs,_,_)  (SSet   z b loc exp) = fs (SSet   z b loc (map_exp f exp))
+map_stmt f@(fs,_,_)  (SCall z exp)        = fs (SCall z (map_exp f exp))
+map_stmt f@(fs,_,_)  (SIf    z exp p1 p2) = fs (SIf    z (map_exp f exp) (map_stmt f p1) (map_stmt f p2))
+map_stmt f@(fs,_,_)  (SSeq   z p1 p2)     = fs (SSeq   z (map_stmt f p1) (map_stmt f p2))
+map_stmt f@(fs,_,_)  (SLoop  z p)         = fs (SLoop  z (map_stmt f p))
+map_stmt f@(fs,_,_)  (SScope z p)         = fs (SScope z (map_stmt f p))
+map_stmt f@(fs,_,_)  (SRet   z exp)       = fs (SRet   z (map_exp f exp))
+map_stmt f@(fs,_,_)  (SNop   z)           = fs (SNop   z)
 
 map_exp :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Exp -> Exp
 map_exp f@(_,fe,_)  (ECons  z id)    = fe (ECons  z id)

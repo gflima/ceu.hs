@@ -23,11 +23,11 @@ subs ids hr = g $ ints ++ (map f $ filter pred ids) where
           []
           -- Int that will never match any numeric pattern
 
-  pred (Data  _ _ (TData hrD _ _,_) False _) = gt hr hrD
+  pred (SData  _ _ (TData hrD _ _,_) False _) = gt hr hrD
           -- ignore abstract data
   pred _ = False
 
-  f (Data  _ _ (TData hrD _ _,_) _ _) = hrD
+  f (SData  _ _ (TData hrD _ _,_) _ _) = hrD
 
   gt sup sub = (sup `isPrefixOf` sub) -- && (length sup < length sub)
 
@@ -35,7 +35,7 @@ subs ids hr = g $ ints ++ (map f $ filter pred ids) where
 
 -------------------------------------------------------------------------------
 
--- Match must be covariant on variables and contravariant on constants:
+-- SMatch must be covariant on variables and contravariant on constants:
 --  LVar    a     <- x      # assign # a     SUP x
 --  LExp    a     <- x      # match  # a     SUP x
 --  LAny          <- x      # match  # BOT   SUB x

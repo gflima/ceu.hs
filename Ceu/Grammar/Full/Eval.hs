@@ -16,7 +16,7 @@ import qualified Ceu.Grammar.Full.Compile.Scope as Scope
 import qualified Ceu.Grammar.Full.Compile.Seq   as Seq
 import qualified Ceu.Grammar.Full.Compile.Match as Match
 import qualified Ceu.Grammar.Full.Compile.Class as Class
-import qualified Ceu.Grammar.Full.Compile.FuncS as FuncS
+import qualified Ceu.Grammar.Full.Compile.Func  as Func
 
 int   = TData ["Int"]          [] TUnit
 bool  = TData ["Bool"]         [] TUnit
@@ -25,26 +25,26 @@ boolt = TData ["Bool","True"]  [] TUnit
 
 prelude :: Ann -> Stmt -> Stmt
 prelude z p =
-    (Seq z (Data z Nothing (int,  cz) False)  -- TODO: should be abstract
-    (Seq z (Data z Nothing (bool, cz) True)
-    (Seq z (Data z Nothing (boolf,cz) False)
-    (Seq z (Data z Nothing (boolt,cz) False)
-    (Seq z (Var  z "_true"  (bool,cz))
-    (Seq z (Set  z False (EVar z "_true") (ECons z ["Bool","True"]))
-    (Seq z (Var  z "print"  (TFunc (TAny "?")        (TAny "?"), cz))
-    (Seq z (Var  z "negate" (TFunc int                int,         cz))
-    (Seq z (Var  z "=="     (TFunc (TTuple [int, int]) bool,        cz))
-    (Seq z (Var  z "<="     (TFunc (TTuple [int, int]) bool,        cz))
-    (Seq z (Var  z "<"      (TFunc (TTuple [int, int]) bool,        cz))
-    (Seq z (Var  z "+"      (TFunc (TTuple [int, int]) int,         cz))
-    (Seq z (Var  z "-"      (TFunc (TTuple [int, int]) int,         cz))
-    (Seq z (Var  z "/"      (TFunc (TTuple [int, int]) int,         cz))
-    (Seq z (Var  z "*"      (TFunc (TTuple [int, int]) int,         cz))
-    (Seq z (Var  z "rem"    (TFunc (TTuple [int, int]) int,         cz))
+    (SSeq z (SData z Nothing (int,  cz) False)  -- TODO: should be abstract
+    (SSeq z (SData z Nothing (bool, cz) True)
+    (SSeq z (SData z Nothing (boolf,cz) False)
+    (SSeq z (SData z Nothing (boolt,cz) False)
+    (SSeq z (SVar  z "_true"  (bool,cz))
+    (SSeq z (SSet  z False (EVar z "_true") (ECons z ["Bool","True"]))
+    (SSeq z (SVar  z "print"  (TFunc (TAny "?")        (TAny "?"), cz))
+    (SSeq z (SVar  z "negate" (TFunc int                int,         cz))
+    (SSeq z (SVar  z "=="     (TFunc (TTuple [int, int]) bool,        cz))
+    (SSeq z (SVar  z "<="     (TFunc (TTuple [int, int]) bool,        cz))
+    (SSeq z (SVar  z "<"      (TFunc (TTuple [int, int]) bool,        cz))
+    (SSeq z (SVar  z "+"      (TFunc (TTuple [int, int]) int,         cz))
+    (SSeq z (SVar  z "-"      (TFunc (TTuple [int, int]) int,         cz))
+    (SSeq z (SVar  z "/"      (TFunc (TTuple [int, int]) int,         cz))
+    (SSeq z (SVar  z "*"      (TFunc (TTuple [int, int]) int,         cz))
+    (SSeq z (SVar  z "rem"    (TFunc (TTuple [int, int]) int,         cz))
            p))))))))))))))))
 
 compile :: Stmt -> Stmt
-compile p = Data.compile $ Scope.compile $ Seq.compile $ Match.compile $ Class.compile $ FuncS.compile p
+compile p = Data.compile $ Scope.compile $ Seq.compile $ Match.compile $ Class.compile $ Func.compile p
 
 compile' :: Stmt -> (Errors, B.Stmt)
 compile' p = (es4, p4)

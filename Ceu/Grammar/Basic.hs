@@ -43,55 +43,55 @@ instance HasAnn Exp where
 -------------------------------------------------------------------------------
 
 data Stmt
-    = Class  Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class declaration
-    | Inst   Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class instance
-    | Data   Ann (Maybe [String]) TypeC Bool Stmt               -- new type declaration
-    | Var    Ann ID_Var TypeC Stmt            -- variable declaration
-    | Match  Ann Bool Exp [(Stmt,Exp,Stmt)]   -- match/assignment/if statement
-    | CallS  Ann Exp                          -- call function
-    | Seq    Ann Stmt Stmt                    -- sequence
-    | Loop   Ann Stmt                         -- infinite loop
-    | Ret    Ann Exp                          -- terminate program with Ret
-    | Nop    Ann                              -- dummy statement (internal)
+    = SClass  Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class declaration
+    | SInst   Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class instance
+    | SData   Ann (Maybe [String]) TypeC Bool Stmt               -- new type declaration
+    | SVar    Ann ID_Var TypeC Stmt            -- variable declaration
+    | SMatch  Ann Bool Exp [(Stmt,Exp,Stmt)]   -- match/assignment/if statement
+    | SCall   Ann Exp                          -- call function
+    | SSeq    Ann Stmt Stmt                    -- sequence
+    | SLoop   Ann Stmt                         -- infinite loop
+    | SRet    Ann Exp                          -- terminate program with SRet
+    | SNop    Ann                              -- dummy statement (internal)
     deriving (Eq, Show)
 
 -------------------------------------------------------------------------------
 
-isClass id1 (Class _ id2 _ _ _) = (id1 == id2)
-isClass _   _                   = False
+isClass id1 (SClass _ id2 _ _ _) = (id1 == id2)
+isClass _   _                    = False
 
-isData  hr1 (Data  _ _ (TData hr2 _ _,_) _ _) = (hr1' == hier2str hr2) where
+isData  hr1 (SData  _ _ (TData hr2 _ _,_) _ _) = (hr1' == hier2str hr2) where
                                                   hr1' = bool hr1 "Int" (take 4 hr1 == "Int.")
-isData  _   _                                 = False
+isData  _   _                                  = False
 
-isVar   id1 (Var   _ id2 _ _)   = (id1 == id2)
-isVar   _   _                   = False
+isVar   id1 (SVar   _ id2 _ _)   = (id1 == id2)
+isVar   _   _                    = False
 
 -------------------------------------------------------------------------------
 
 rep spc = replicate spc ' '
 
 show_stmt :: Int -> Stmt -> String
---show_stmt spc (Class _ (id,_) _ _ p) = rep spc ++ "class "  ++ id ++ "\n" ++ show_stmt spc p
---show_stmt spc (Inst  _ (id,_) _ p)   = rep spc ++ "inst "   ++ id ++ "\n" ++ show_stmt spc p
-show_stmt spc (Data _ _ (TData id _ _,_) _ p) = rep spc ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
-show_stmt spc (Var _ id (tp,_) p)     = rep spc ++ "var "    ++ id ++ ": " ++ T.show' tp ++ "\n" ++ show_stmt spc p
-show_stmt spc (CallS _ e)             = rep spc ++ "call " ++ show_exp spc e
-show_stmt spc (Ret _ e)               = rep spc ++ "return " ++ show_exp spc e
-show_stmt spc (Seq _ p1 p2)           = show_stmt spc p1 ++ "\n" ++ show_stmt spc p2
+--show_stmt spc (SClass _ (id,_) _ _ p) = rep spc ++ "class "  ++ id ++ "\n" ++ show_stmt spc p
+--show_stmt spc (SInst  _ (id,_) _ p)   = rep spc ++ "inst "   ++ id ++ "\n" ++ show_stmt spc p
+show_stmt spc (SData _ _ (TData id _ _,_) _ p) = rep spc ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
+show_stmt spc (SVar _ id (tp,_) p)     = rep spc ++ "var "    ++ id ++ ": " ++ T.show' tp ++ "\n" ++ show_stmt spc p
+show_stmt spc (SCall _ e)              = rep spc ++ "call " ++ show_exp spc e
+show_stmt spc (SRet _ e)               = rep spc ++ "return " ++ show_exp spc e
+show_stmt spc (SSeq _ p1 p2)           = show_stmt spc p1 ++ "\n" ++ show_stmt spc p2
   --rep spc ++ "--\n" ++ show_stmt (spc+4) p1 ++ rep spc ++ "--\n" ++ show_stmt (spc+4) p2
-show_stmt spc (Match _ False exp [(_,pt,st)])
-                                      = rep spc ++ "set " ++ show_exp spc pt ++ " = " ++
+show_stmt spc (SMatch _ False exp [(_,pt,st)])
+                                       = rep spc ++ "set " ++ show_exp spc pt ++ " = " ++
                                           show_exp spc exp ++ "\n" ++ show_stmt spc st
-show_stmt spc (Match _ True  exp ((ds,pt,st):_))
-                                      = rep spc ++ "set! " ++ show_exp spc pt ++ " = " ++
+show_stmt spc (SMatch _ True  exp ((ds,pt,st):_))
+                                       = rep spc ++ "set! " ++ show_exp spc pt ++ " = " ++
                                           show_exp spc exp ++ "\n" ++ show_stmt spc st
-show_stmt spc (Match _ chk exp cses)  = rep spc ++ "match " ++ show_exp spc exp ++ " with\n" ++ (concatMap f cses)
-                                        where
+show_stmt spc (SMatch _ chk exp cses)  = rep spc ++ "match " ++ show_exp spc exp ++ " with\n" ++ (concatMap f cses)
+                                         where
                                           f (ds,pt,st) = rep (spc+4) ++ show_exp (spc+4) pt ++
                                                           " { " ++ show_stmt 0 ds ++ " } then\n" ++
                                                           show_stmt (spc+8) st ++ "\n"
-show_stmt spc (Nop _)                 = rep spc ++ "nop"
+show_stmt spc (SNop _)                 = rep spc ++ "nop"
 show_stmt spc p = error $ show p
 
 show_exp :: Int -> Exp -> String
@@ -111,25 +111,25 @@ show_exp spc e                    = error $ show e
 -------------------------------------------------------------------------------
 
 map_stmt :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Stmt -> Stmt
-map_stmt f@(fs,_,ft) (Class z id ctr ifc p)     = fs (Class z id ctr ifc' (map_stmt f p))
+map_stmt f@(fs,_,ft) (SClass z id ctr ifc p)     = fs (SClass z id ctr ifc' (map_stmt f p))
                                                     where ifc' = map (\(x,y,tp,z)->(x,y,ft tp,z)) ifc
-map_stmt f@(fs,_,ft) (Inst  z cls tp imp p)     = fs (Inst  z cls tp imp' (map_stmt f p))
+map_stmt f@(fs,_,ft) (SInst  z cls tp imp p)     = fs (SInst  z cls tp imp' (map_stmt f p))
                                                     where imp' = map (\(x,y,tp,z)->(x,y,ft tp,z)) imp
-map_stmt f@(fs,_,ft) (Data  z nms tp abs p)     = fs (Data  z nms (ft tp) abs (map_stmt f p))
-map_stmt f@(fs,_,ft) (Var   z id tp p)          = fs (Var   z id (ft tp) (map_stmt f p))
-map_stmt f@(fs,_,_)  (Match z b exp cses)       = fs (Match z b (map_exp f exp) (map (\(ds,pt,st) -> (map_stmt f ds, map_exp f pt, map_stmt f st)) cses))
-map_stmt f@(fs,_,_)  (CallS z exp)              = fs (CallS z (map_exp f exp))
-map_stmt f@(fs,_,_)  (Seq   z p1 p2)            = fs (Seq   z (map_stmt f p1) (map_stmt f p2))
-map_stmt f@(fs,_,_)  (Loop  z p)                = fs (Loop  z (map_stmt f p))
-map_stmt f@(fs,_,_)  (Ret   z exp)              = fs (Ret   z (map_exp f exp))
-map_stmt f@(fs,_,_)  (Nop   z)                  = fs (Nop   z)
+map_stmt f@(fs,_,ft) (SData  z nms tp abs p)     = fs (SData  z nms (ft tp) abs (map_stmt f p))
+map_stmt f@(fs,_,ft) (SVar   z id tp p)          = fs (SVar   z id (ft tp) (map_stmt f p))
+map_stmt f@(fs,_,_)  (SMatch z b exp cses)       = fs (SMatch z b (map_exp f exp) (map (\(ds,pt,st) -> (map_stmt f ds, map_exp f pt, map_stmt f st)) cses))
+map_stmt f@(fs,_,_)  (SCall z exp)               = fs (SCall z (map_exp f exp))
+map_stmt f@(fs,_,_)  (SSeq   z p1 p2)            = fs (SSeq   z (map_stmt f p1) (map_stmt f p2))
+map_stmt f@(fs,_,_)  (SLoop  z p)                = fs (SLoop  z (map_stmt f p))
+map_stmt f@(fs,_,_)  (SRet   z exp)              = fs (SRet   z (map_exp f exp))
+map_stmt f@(fs,_,_)  (SNop   z)                  = fs (SNop   z)
 
 map_exp :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Exp -> Exp
 map_exp f@(_,fe,_)  (ECons  z id)    = fe (ECons  z id)
 map_exp f@(_,fe,_)  (ETuple z es)    = fe (ETuple z (map (map_exp f) es))
 map_exp f@(_,fe,ft) (EFunc  z tp p)  = fe (EFunc  z (ft tp) (map_stmt f p))
 map_exp f@(_,fe,_)  (ECall  z e1 e2) = fe (ECall  z (map_exp f e1) (map_exp f e2))
-map_exp f@(_,fe,_)  exp             = fe exp
+map_exp f@(_,fe,_)  exp              = fe exp
 
 --  class Equalable a where
 --      eq :: a -> a -> Bool
@@ -154,30 +154,30 @@ map_exp f@(_,fe,_)  exp             = fe exp
 --      * instantiate class variable `a` against call `eq 10 20`, resolving to `Int`
 --          ! must find `instance Equable Int`
 --
--- Expected layout of Inst.imp:
---  (Var _ "f" tp
---    (Seq _
---      (Write _ (LVar "f") (EFunc ...))   -- or (Nop _) // no implementation
---      (Var _ "g" tp                     -- or (Nop _) // eof
+-- Expected layout of SInst.imp:
+--  (SVar _ "f" tp
+--    (SSeq _
+--      (Write _ (LVar "f") (EFunc ...))   -- or (SNop _) // no implementation
+--      (SVar _ "g" tp                     -- or (SNop _) // eof
 --        ...
 
-sSeq a b = Seq annz a b
+sSeq a b = SSeq annz a b
 infixr 1 `sSeq`
 
 instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
-    getAnn (Class z _ _ _ _)   = z
-    getAnn (Inst  z _ _ _ _)   = z
-    getAnn (Data  z _ _ _ _)   = z
-    getAnn (Var   z _ _ _)     = z
-    getAnn (Match z _ _ _)     = z
-    getAnn (CallS z _)         = z
-    getAnn (Seq   z _ _)       = z
-    getAnn (Loop  z _)         = z
-    getAnn (Ret   z _)         = z
-    getAnn (Nop   z)           = z
+    getAnn (SClass z _ _ _ _)   = z
+    getAnn (SInst  z _ _ _ _)   = z
+    getAnn (SData  z _ _ _ _)   = z
+    getAnn (SVar   z _ _ _)     = z
+    getAnn (SMatch z _ _ _)     = z
+    getAnn (SCall z _)          = z
+    getAnn (SSeq   z _ _)       = z
+    getAnn (SLoop  z _)         = z
+    getAnn (SRet   z _)         = z
+    getAnn (SNop   z)           = z
 
-prelude z p = (Data z Nothing (TData ["Int"]          [] TUnit,cz) False
-              (Data z Nothing (TData ["Bool"]         [] TUnit,cz) True
-              (Data z Nothing (TData ["Bool","True"]  [] TUnit,cz) False
-              (Data z Nothing (TData ["Bool","False"] [] TUnit,cz) False p))))
+prelude z p = (SData z Nothing (TData ["Int"]          [] TUnit,cz) False
+              (SData z Nothing (TData ["Bool"]         [] TUnit,cz) True
+              (SData z Nothing (TData ["Bool","True"]  [] TUnit,cz) False
+              (SData z Nothing (TData ["Bool","False"] [] TUnit,cz) False p))))
