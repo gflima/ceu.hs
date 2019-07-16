@@ -931,7 +931,7 @@ spec = do
            ])
         `shouldBe` Right (ETuple [EData ["Bool","True"] EUnit,EData ["Int","6"] EUnit])
 
-      it "CLOSURE: compose" $         -- pg 42
+      it "TODO-CLOSURE: compose" $         -- pg 42
         (run True $
           pre ++ unlines [
             "func compose (f,g) : (((a->b),(b->c)) -> (a -> c)) do",

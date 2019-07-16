@@ -363,6 +363,14 @@ spec = do
                 parse expr_tuple "(3,55,)"
                 `shouldBe` Right (ETuple annz{source=("",1,1)} [ECons annz{source=("",1,2)} ["Int","3"], ECons annz{source=("",1,4)} ["Int","55"]])
 
+        describe "field:" $ do
+            it "X._1" $ do
+                parse expr_field "X._1"
+                `shouldBe` Right (EField annz{source = ("",1,1)} ["X"] 1)
+            it "X._1._2" $ do
+                parse expr_field "X._1._2"
+                `shouldBe` Left "(line 1, column 5):\nunexpected '.'\nexpecting digit or end of input"
+
         describe "expr:" $ do
             it "0" $
                 parse expr "0"
@@ -391,6 +399,9 @@ spec = do
             it "(1+2)*3" $
                 parse expr "(1+2)*3"
                 `shouldBe` Right (ECall annz{source=("",1,6)} (EVar annz{source=("",1,6)} "*") (ETuple annz{source=("",1,3)} [(ECall annz{source=("",1,3)} (EVar annz{source=("",1,3)} "+") (ETuple annz{source=("",1,2)} [(ECons annz{source=("",1,2)} ["Int","1"]), (ECons annz{source=("",1,4)} ["Int","2"])])), (ECons annz{source=("",1,7)} ["Int","3"])]))
+            it "1 + X._1 x" $
+                parse expr "1 + (X._1 x)"
+                `shouldBe` Right (ECall (annz{source = ("",1,3)}) (EVar (annz{source = ("",1,3)}) "+") (ETuple (annz{source = ("",1,1)}) [ECons (annz{source = ("",1,1)}) ["Int","1"],ECall (annz{source = ("",1,6)}) (EField (annz{source = ("",1,6)}) ["X"] 1) (EVar (annz{source = ("",1,11)}) "x")]))
 
     describe "stmt:" $ do
         describe "nop:" $ do

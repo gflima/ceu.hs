@@ -510,7 +510,7 @@ spec = do
         (Data annz (TData ["X"] [] int,cz) False
         (Var annz "x" (TData ["X"] [] TUnit,cz)
           (mmm annz False (EVar annz "x") (ECons annz ["X"]) (Nop annz) (Nop annz)))))
-      `shouldBe` ["types do not match : expected 'X' : found '(Int -> X)'"]
+      `shouldBe` ["data 'Int' is not declared","types do not match : expected 'X' : found '(Int -> X)'"]
       --["types do not match : expected 'Int' : found '()'"]
       -- ["types do not match : 'Int' is not supertype of '()'"]
 
@@ -519,7 +519,7 @@ spec = do
         (Data annz (TData ["X"] [] int,cz) False
         (Var annz "x" (TData ["X"] [] (int),cz)
           (mmm annz False (EVar annz "x") (ECall annz (ECons annz ["X"]) (ECons annz ["Int","1"])) (Nop annz) (Nop annz)))))
-      `shouldBe` ["data 'Int' is not declared","data 'Int.1' is not declared"]
+      `shouldBe` ["data 'Int' is not declared","data 'Int' is not declared","data 'Int.1' is not declared"]
 
     it "data X with Int ; data X.Y with Int" $
       (TypeSys.go
@@ -527,7 +527,7 @@ spec = do
         (Data annz (TData ["X"]     [] int,cz) True
         (Data annz (TData ["X","Y"] [] int,cz) False
         (Nop annz)))))
-      `shouldBe` ([],Data annz (int,cz) False (Data annz (TData ["X"] [] int,cz) True (Data annz (TData ["X","Y"] [] int,cz) False (Nop annz))))
+      `shouldBe` ([],Data annz (TData ["Int"] [] TUnit,cz) False (Data annz (TData ["X"] [] (TData ["Int"] [] TUnit),cz) True (Var annz "X._1" (TFunc (TData ["X"] [] (TData ["Int"] [] TUnit)) (TData ["Int"] [] TUnit),cz) (Match annz False (EFunc (annz {type_ = (TFunc (TData ["X"] [] (TData ["Int"] [] TUnit)) (TData ["Int"] [] TUnit),cz)}) (TFunc (TData ["X"] [] (TData ["Int"] [] TUnit)) (TData ["Int"] [] TUnit),cz) (Var annz "ret" (TData ["Int"] [] TUnit,cz) (Match annz False (EArg (annz {type_ = (TData ["X"] [] (TData ["Int"] [] TUnit),cz)})) [(Nop annz,ECall annz (ECons (annz {type_ = (TData ["X"] [] (TData ["Int"] [] TUnit),cz)}) ["X"]) (EVar (annz {type_ = (TData ["Int"] [] TUnit,cz)}) "ret"),Ret annz (EVar (annz {type_ = (TData ["Int"] [] TUnit,cz)}) "ret"))]))) [(Nop annz,EVar annz "X._1",Data annz (TData ["X","Y"] [] (TData ["Int"] [] TUnit),cz) False (Var annz "X.Y._1" (TFunc (TData ["X","Y"] [] (TData ["Int"] [] TUnit)) (TData ["Int"] [] TUnit),cz) (Match annz False (EFunc (annz {type_ = (TFunc (TData ["X","Y"] [] (TData ["Int"] [] TUnit)) (TData ["Int"] [] TUnit),cz)}) (TFunc (TData ["X","Y"] [] (TData ["Int"] [] TUnit)) (TData ["Int"] [] TUnit),cz) (Var annz "ret" (TData ["Int"] [] TUnit,cz) (Match annz False (EArg (annz {type_ = (TData ["X"] [] (TData ["Int"] [] TUnit),cz)})) [(Nop annz,ECall annz (ECons (annz {type_ = (TData ["X"] [] (TData ["Int"] [] TUnit),cz)}) ["X","Y"]) (EVar (annz {type_ = (TData ["Int"] [] TUnit,cz)}) "ret"),Ret annz (EVar (annz {type_ = (TData ["Int"] [] TUnit,cz)}) "ret"))]))) [(Nop annz,EVar annz "X.Y._1",Nop annz)])))]))))
 
     it "data X with (Int,Int)" $
       (fst $ TypeSys.go

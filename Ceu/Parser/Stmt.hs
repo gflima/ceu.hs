@@ -349,6 +349,14 @@ expr_cons = do
   cons <- tk_data_hier
   return $ ECons annz{source=pos} cons
 
+expr_field :: Parser Exp
+expr_field = do
+  pos  <- pos2src <$> getPosition
+  cons <- tk_data_hier
+  void <- tk_sym "._"
+  idx  <- tk_num
+  return $ EField annz{source=pos} cons idx
+
 expr_read :: Parser Exp
 expr_read = do
   pos <- pos2src <$> getPosition
@@ -385,6 +393,7 @@ expr_tuple = do
 expr' :: Parser Exp
 expr' =
   expr_number     <|>
+  try expr_field  <|>   -- before cons
   expr_cons       <|>
   expr_read       <|>
   try expr_unit   <|>

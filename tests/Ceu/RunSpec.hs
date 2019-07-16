@@ -345,6 +345,62 @@ spec = do
            ])
         `shouldBe` Left "(line 2, column 31):\ntypes do not match : expected '((Int,()) -> (Pair of (Int,Int)))' : found '((a,b) -> (Pair of (a,b)))'\n(line 2, column 31):\nambiguous instances for 'b' : '()', 'Int'\n"
 
+    describe "field:" $ do
+
+      it "One._1" $
+        (run True $
+          unlines [
+            "return One._1 1"
+           ])
+        `shouldBe` Left "(line 1, column 8):\ndata 'One' is not declared\n"
+
+      it "One._1" $
+        (run True $
+          unlines [
+            "data One with (Int)",
+            "var p1 : One = One 1",
+            "return One._1 p1"
+           ])
+        `shouldBe` Right (EData ["Int","1"] EUnit)
+
+      it "One._2" $
+        (run True $
+          unlines [
+            "data One with (Int)",
+            "var p1 : One = One 1",
+            "return One._2 p1"
+           ])
+        `shouldBe` Left "(line 3, column 8):\nfield '_2' is not declared\n"
+
+      it "One.Two._1" $
+        (run True $
+          unlines [
+            "data Two with (Int,Int)",
+            "data One with (Two)",
+            "var p1 : One = One (Two (0,2))",
+            "return Two._2 (One._1 p1)"
+           ])
+        `shouldBe` Right (EData ["Int","2"] EUnit)
+
+      it "One.Two._2" $
+        (run True $
+          unlines [
+            "data One     with (Int)",
+            "data One.Two with (Int)",
+            "var p1 : One.Two = One.Two (0,2)",
+            "return One.Two._2 p1"
+           ])
+        `shouldBe` Right (EData ["Int","2"] EUnit)
+
+      it "Pair (a,b) =  Pair (1,())" $
+        (run True $
+          unlines [
+            "data Pair for (a,b) with (a,b)",
+            "var p1 : Pair of (Int,()) =  Pair (1,())",
+            "return Pair._2 p1"
+           ])
+        `shouldBe` Right EUnit
+
     describe "match:" $ do
 
       it "1 = 1" $

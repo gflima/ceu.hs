@@ -15,6 +15,7 @@ data Exp
     | EVar   Ann ID_Var         -- a ; xs
     | EUnit  Ann                -- ()
     | ECons  Ann ID_Data_Hier   -- Bool.True ; Int.1 ; Tree.Node
+    | EField Ann ID_Data_Hier Int -- List.Cons._1
     | ETuple Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
     | EFunc  Ann TypeC Stmt     -- function implementation
     | ECall  Ann Exp Exp        -- f a ; f(a) ; f(1,2)
@@ -30,6 +31,7 @@ instance HasAnn Exp where
     getAnn (EVar   z _)   = z
     getAnn (EUnit  z)     = z
     getAnn (ECons  z _)   = z
+    getAnn (EField z _ _) = z
     getAnn (ETuple z _)   = z
     getAnn (EFunc  z _ _) = z
     getAnn (ECall  z _ _) = z

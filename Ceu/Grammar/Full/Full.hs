@@ -15,6 +15,7 @@ data Exp
     | EVar   Ann ID_Var         -- a ; xs
     | EUnit  Ann                -- ()
     | ECons  Ann ID_Data_Hier   -- True
+    | EField Ann ID_Data_Hier Int  -- List.Cons._1
     | EArg   Ann
     | ETuple Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
     | EFunc  Ann TypeC Stmt      -- function implementation
@@ -29,6 +30,7 @@ toBasicExp (EError z v)     = B.EError z v
 toBasicExp (EVar   z v)     = B.EVar   z v
 toBasicExp (EUnit  z)       = B.EUnit  z
 toBasicExp (ECons  z v)     = B.ECons  z v
+toBasicExp (EField z f e)   = B.EField z f e
 toBasicExp (EArg   z)       = B.EArg   z
 toBasicExp (ETuple z es)    = B.ETuple z (map toBasicExp es)
 toBasicExp (EFunc  z tp p)  = B.EFunc  z tp (toBasicStmt p)
@@ -41,6 +43,7 @@ instance HasAnn Exp where
     --getAnn :: Exp -> Ann
     getAnn (EError z _)   = z
     getAnn (ECons  z _)   = z
+    getAnn (EField z _ _) = z
     getAnn (EVar   z _)   = z
     getAnn (EArg   z)     = z
     getAnn (EUnit  z)     = z

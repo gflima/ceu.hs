@@ -340,14 +340,42 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
 
         otherwise  -> error "TODO: multiple vars"
 
-stmt ids s@(Data z tp@(TData hr _ st,_) abs p) = (es_dcl ++ (errDeclared z Nothing "data" (T.hier2str hr) ids) ++ es,
-                                                     Data z tp abs p')
+stmt ids s@(Data z (tpD@(TData hr _ st),cz) abs p) = (es_dcl ++ (errDeclared z Nothing "data" (T.hier2str hr) ids) ++ es,
+                                                      Data z (tpD,cz) abs p')
   where
-    (es,p') = stmt (s:ids) p
-    es_dcl  = case T.getSuper hr of
+    (es,p') = stmt (s:ids) (bool p accs (null es_dcl))
+    es_dcl  = (getErrsTypesDeclared z ids st) ++ case T.getSuper hr of
                 Nothing  -> []
-                Just sup -> (getErrsTypesDeclared z ids (TData sup [] TUnit)) ++
-                            (getErrsTypesDeclared z ids st)
+                Just sup -> (getErrsTypesDeclared z ids (TData sup [] TUnit))
+
+    -- accessors
+    -- data X with (...,Int,...)
+    -- X_2 : (X -> Int)
+    accs :: Stmt
+    (accs,_) = foldr f (p, 1) (g st) where
+                hr_str = T.hier2str hr
+
+                g :: Type -> [Type]
+                g (TTuple l) = l
+                g TUnit      = []
+                g tp         = [tp]
+
+                f :: Type -> (Stmt,Int) -> (Stmt,Int)
+                f tp (p,idx) = (Var z id (TFunc tpD tp,cz)
+                                  (Match z False body [(Nop z, EVar z id, p)])
+                               ,idx+1)
+                               where
+                                id = hr_str ++ "._" ++ show idx
+
+                                body = EFunc z (TFunc tpD tp,cz)
+                                        (Var z "ret" (tp,cz)
+                                          (Match z False (EArg z) [(Nop z, ret, Ret z (EVar z "ret"))]))
+                                ret  = ECall z (ECons z hr) (bool (ETuple z repl) (repl!!0) (len st == 1))
+                                repl = take (idx-1) anys ++ [EVar z "ret"] ++ drop idx anys
+                                anys = replicate (len st) (EAny z)
+
+                                len (TTuple l) = length l
+                                len _          = 1
 
 stmt ids s@(Var z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
   es_data = getErrsTypesDeclared z ids tp_
@@ -473,6 +501,20 @@ expr' _ ids (EMatch z exp pat) = (esp++esem++esc, EMatch z{type_=(TData ["Bool"]
             bool [] [toError z "match is exhaustive"] ok
           else
             []
+
+expr' _ ids (EField z hr idx) = (es, EVar z{type_=(TFunc inp out,cz)} (hr_str ++ "._" ++ show idx))
+  where
+    hr_str = T.hier2str hr
+
+    (inp,out,cz,es) = case find (isData hr_str) ids of
+      Nothing -> (TAny "?",TAny "?",cz, [toError z $ "data '" ++ hr_str ++ "' is not declared"])
+      Just (Data _ (tp@(TData _ _ (TTuple sts)),cz) _ _) -> (tp,out,cz,es) where (out,es) = f sts
+      Just (Data _ (tp@(TData _ _ st),cz) _ _)           -> (tp,out,cz,es) where (out,es) = f [st]
+
+    f sts = if length sts >= idx then
+              (sts!!(idx-1), [])
+            else
+              (TAny "?",     [toError z $ "field '_" ++ show idx ++ "' is not declared"])
 
 expr' (rel,txp) ids (ECons z hr) = (es1++es2, ECons z{type_=tp2} hr)
   where
