@@ -343,39 +343,10 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
 stmt ids s@(Data z (tpD@(TData hr _ st),cz) abs p) = (es_dcl ++ (errDeclared z Nothing "data" (T.hier2str hr) ids) ++ es,
                                                       Data z (tpD,cz) abs p')
   where
-    (es,p') = stmt (s:ids) (bool p accs (null es_dcl))
+    (es,p') = stmt (s:ids) p
     es_dcl  = (getErrsTypesDeclared z ids st) ++ case T.getSuper hr of
                 Nothing  -> []
                 Just sup -> (getErrsTypesDeclared z ids (TData sup [] TUnit))
-
-    -- accessors
-    -- data X with (...,Int,...)
-    -- X_2 : (X -> Int)
-    accs :: Stmt
-    (accs,_) = foldr f (p, 1) (g st) where
-                hr_str = T.hier2str hr
-
-                g :: Type -> [Type]
-                g (TTuple l) = l
-                g TUnit      = []
-                g tp         = [tp]
-
-                f :: Type -> (Stmt,Int) -> (Stmt,Int)
-                f tp (p,idx) = (Var z id (TFunc tpD tp,cz)
-                                  (Match z False body [(Nop z, EVar z id, p)])
-                               ,idx+1)
-                               where
-                                id = hr_str ++ "._" ++ show idx
-
-                                body = EFunc z (TFunc tpD tp,cz)
-                                        (Var z "ret" (tp,cz)
-                                          (Match z False (EArg z) [(Nop z, ret, Ret z (EVar z "ret"))]))
-                                ret  = ECall z (ECons z hr) (bool (ETuple z repl) (repl!!0) (len st == 1))
-                                repl = take (idx-1) anys ++ [EVar z "ret"] ++ drop idx anys
-                                anys = replicate (len st) (EAny z)
-
-                                len (TTuple l) = length l
-                                len _          = 1
 
 stmt ids s@(Var z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
   es_data = getErrsTypesDeclared z ids tp_

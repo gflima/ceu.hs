@@ -2,9 +2,11 @@ module Ceu.Grammar.Full.Compile.Data where
 
 import Debug.Trace
 import Data.List (find)
+import Data.Bool (bool)
 
+import Ceu.Grammar.Ann
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Type               (Type(..),TypeC,instantiate,getSuper)
+import Ceu.Grammar.Type               (Type(..),TypeC,instantiate,getSuper,hier2str)
 import Ceu.Grammar.Constraints as Cs
 import Ceu.Grammar.Full.Full
 
@@ -28,7 +30,7 @@ compile p = stmt [] p
 stmt :: [Stmt] -> Stmt -> Stmt
 stmt ds (Class'' z id  cs ifc p) = Class'' z id  cs ifc (stmt ds p)
 stmt ds (Inst''  z cls tp imp p) = Inst''  z cls tp imp (stmt ds p)
-stmt ds (Data''  z tp abs p)     = Data''  z tp' abs (stmt (d':ds) p)
+stmt ds (Data''  z tp abs p)     = Data''  z tp' abs (stmt (d':ds) (faccs z tp' p))
                                    where
                                      tp' = fdata ds tp
                                      d'  = Data'' z tp' abs p
@@ -83,3 +85,37 @@ fvar ds (tp_,ctrs) = (fvar' ds tp_, ctrs)
     fvar' ds (TFunc inp out)  = TFunc (fvar' ds inp) (fvar' ds out)
     fvar' ds (TTuple tps)     = TTuple $ map (fvar' ds) tps
     fvar' _  tp               = tp
+
+-------------------------------------------------------------------------------
+
+-- accessors
+-- data X with (...,Int,...)
+-- X_2 : (X -> Int)
+
+faccs :: Ann -> TypeC -> Stmt -> Stmt
+faccs z (tpD@(TData hr _ st),cz) p = accs where
+  (accs,_) = foldr f (p, 1) (g st)
+
+  hr_str = hier2str hr
+
+  g :: Type -> [Type]
+  g (TTuple l) = l
+  g TUnit      = []
+  g tp         = [tp]
+
+  f :: Type -> (Stmt,Int) -> (Stmt,Int)
+  f tp (p,idx) = (Var'' z id (TFunc tpD tp,cz)
+                    (Match' z False body [(Nop z, EVar z id, p)])
+                 ,idx+1)
+                 where
+                  id = hr_str ++ "._" ++ show idx
+
+                  body = EFunc z (TFunc tpD tp,cz)
+                          (Var'' z "ret" (tp,cz)
+                            (Match' z False (EArg z) [(Nop z, ret, Ret z (EVar z "ret"))]))
+                  ret  = ECall z (ECons z hr) (bool (ETuple z repl) (repl!!0) (len st == 1))
+                  repl = take (idx-1) anys ++ [EVar z "ret"] ++ drop idx anys
+                  anys = replicate (len st) (EAny z)
+
+                  len (TTuple l) = length l
+                  len _          = 1

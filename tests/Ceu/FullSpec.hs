@@ -8,7 +8,7 @@ import Data.Map as M (fromList)
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Constraints  (cz,cv,cvc)
 import Ceu.Grammar.Type         (Type(..))
-import Ceu.Grammar.Ann      (Ann(type_),annz)
+import Ceu.Grammar.Ann          (Ann(type_),annz)
 
 import qualified Ceu.Grammar.Basic as B
 import qualified Ceu.Eval as E
@@ -198,7 +198,8 @@ spec = do
                         (Nop annz))
                         (Set annz False (EVar annz "y") (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]])))))))
       `shouldBe`
-        (Data'' annz (TData ["Int"] [] TUnit,fromList []) False (Data'' annz (TData ["Xxx"] [] int,fromList []) True (Data'' annz (TData ["Xxx","Yyy"] [] (TTuple [int,int]),fromList []) False (Var'' annz "y" (TData ["Xxx","Yyy"] [] (TTuple [int,int]),fromList []) (Seq annz (Nop annz) (set' annz False (EVar annz "y") (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]])) (Nop annz) (Ret annz (EError annz (-2)))))))))
+        --(Data'' annz (TData ["Int"] [] TUnit,fromList []) False (Data'' annz (TData ["Xxx"] [] int,fromList []) True (Data'' annz (TData ["Xxx","Yyy"] [] (TTuple [int,int]),fromList []) False (Var'' annz "y" (TData ["Xxx","Yyy"] [] (TTuple [int,int]),fromList []) (Seq annz (Nop annz) (set' annz False (EVar annz "y") (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]])) (Nop annz) (Ret annz (EError annz (-2)))))))))
+        Data'' annz (TData ["Int"] [] TUnit,fromList []) False (Data'' annz (TData ["Xxx"] [] (TData ["Int"] [] TUnit),fromList []) True (Var'' annz "Xxx._1" (TFunc (TData ["Xxx"] [] (TData ["Int"] [] TUnit)) (TData ["Int"] [] TUnit),fromList []) (Match' annz False (EFunc annz (TFunc (TData ["Xxx"] [] (TData ["Int"] [] TUnit)) (TData ["Int"] [] TUnit),fromList []) (Var'' annz "ret" (TData ["Int"] [] TUnit,fromList []) (Match' annz False (EArg annz) [(Nop annz,ECall annz (ECons annz ["Xxx"]) (EVar annz "ret"),Ret annz (EVar annz "ret"))]))) [(Nop annz,EVar annz "Xxx._1",Data'' annz (TData ["Xxx","Yyy"] [] (TTuple [TData ["Int"] [] TUnit,TData ["Int"] [] TUnit]),fromList []) False (Var'' annz "Xxx.Yyy._2" (TFunc (TData ["Xxx","Yyy"] [] (TTuple [TData ["Int"] [] TUnit,TData ["Int"] [] TUnit])) (TData ["Int"] [] TUnit),fromList []) (Match' annz False (EFunc annz (TFunc (TData ["Xxx","Yyy"] [] (TTuple [TData ["Int"] [] TUnit,TData ["Int"] [] TUnit])) (TData ["Int"] [] TUnit),fromList []) (Var'' annz "ret" (TData ["Int"] [] TUnit,fromList []) (Match' annz False (EArg annz) [(Nop annz,ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [EAny annz,EVar annz "ret"]),Ret annz (EVar annz "ret"))]))) [(Nop annz,EVar annz "Xxx.Yyy._2",Var'' annz "Xxx.Yyy._1" (TFunc (TData ["Xxx","Yyy"] [] (TTuple [TData ["Int"] [] TUnit,TData ["Int"] [] TUnit])) (TData ["Int"] [] TUnit),fromList []) (Match' annz False (EFunc annz (TFunc (TData ["Xxx","Yyy"] [] (TTuple [TData ["Int"] [] TUnit,TData ["Int"] [] TUnit])) (TData ["Int"] [] TUnit),fromList []) (Var'' annz "ret" (TData ["Int"] [] TUnit,fromList []) (Match' annz False (EArg annz) [(Nop annz,ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [EVar annz "ret",EAny annz]),Ret annz (EVar annz "ret"))]))) [(Nop annz,EVar annz "Xxx.Yyy._1",Var'' annz "y" (TData ["Xxx","Yyy"] [] (TTuple [TData ["Int"] [] TUnit,TData ["Int"] [] TUnit]),fromList []) (Seq annz (Nop annz) (Match' annz False (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]])) [(Nop annz,EVar annz "y",Nop annz)])))]))])))])))
 
   --------------------------------------------------------------------------
 
