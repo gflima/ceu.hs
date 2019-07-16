@@ -345,7 +345,7 @@ spec = do
            ])
         `shouldBe` Left "(line 2, column 31):\ntypes do not match : expected '((Int,()) -> (Pair of (Int,Int)))' : found '((a,b) -> (Pair of (a,b)))'\n(line 2, column 31):\nambiguous instances for 'b' : '()', 'Int'\n"
 
-    describe "field:" $ do
+    describe "fields: index:" $ do
 
       it "One._1" $
         (run True $
@@ -398,6 +398,80 @@ spec = do
             "data Pair for (a,b) with (a,b)",
             "var p1 : Pair of (Int,()) =  Pair (1,())",
             "return Pair._2 p1"
+           ])
+        `shouldBe` Right EUnit
+
+    describe "fields: names:" $ do
+
+      it "One._1" $
+        (run True $
+          unlines [
+            "return One.f 1"
+           ])
+        `shouldBe` Left "(line 1, column 8):\ndata 'One' is not declared\n"
+
+      it "One._1" $
+        (run True $
+          unlines [
+            "data One with (Int)",
+            "var p1 : One = One 1",
+            "return One.f p1"
+           ])
+        `shouldBe` Left "(line 3, column 8):\nfield 'f' is not declared\n"
+
+      it "One._1" $
+        (run True $
+          unlines [
+            "data One (f,g) with (Int)",
+            "var p1 : One = One 1",
+            "return One.f p1"
+           ])
+        `shouldBe` Right (EData ["Int","1"] EUnit)
+
+      it "One._1" $
+        (run True $
+          unlines [
+            "data One f with (Int)",
+            "var p1 : One = One 1",
+            "return One.f p1"
+           ])
+        `shouldBe` Right (EData ["Int","1"] EUnit)
+
+      it "One._2" $
+        (run True $
+          unlines [
+            "data One f with (Int)",
+            "var p1 : One = One 1",
+            "return One.g p1"
+           ])
+        `shouldBe` Left "(line 3, column 8):\nfield 'g' is not declared\n"
+
+      it "One.Two._1" $
+        (run True $
+          unlines [
+            "data Two (f,g) with (Int,Int)",
+            "data One (t) with Two",
+            "var p1 : One = One (Two (0,2))",
+            "return Two.g (One.t p1)"
+           ])
+        `shouldBe` Right (EData ["Int","2"] EUnit)
+
+      it "One.Two._2" $
+        (run True $
+          unlines [
+            "data One     o with (Int)",
+            "data One.Two t with (Int)",
+            "var p1 : One.Two = One.Two (0,2)",
+            "return One.Two.t p1"
+           ])
+        `shouldBe` Right (EData ["Int","2"] EUnit)
+
+      it "Pair (a,b) =  Pair (1,())" $
+        (run True $
+          unlines [
+            "data Pair (x,y) for (a,b) with (a,b)",
+            "var p1 : Pair of (Int,()) =  Pair (1,())",
+            "return Pair.y p1"
            ])
         `shouldBe` Right EUnit
 

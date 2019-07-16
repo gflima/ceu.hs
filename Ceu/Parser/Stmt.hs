@@ -182,13 +182,14 @@ stmt_data = do
   pos     <- pos2src <$> getPosition
   void    <- try $ tk_key "data"
   id      <- tk_data_hier
+  nms     <- optionMaybe $ try ((list1 tk_var) <|> (singleton <$> tk_var))
   ofs     <- option [] $ try $ tk_key "for" *> (map TAny <$> (try (list1 tk_var) <|> (singleton <$> tk_var)))
   (st,cs) <- option (TUnit,cz) $ try $ tk_key "with" *> pTypeContext
   isAbs   <- option False $ do
                               void <- try $ tk_key "is"
                               void <- tk_key "abstract"
                               return True
-  return $ Data annz{source=pos} (TData id ofs st, cs) isAbs
+  return $ Data annz{source=pos} nms (TData id ofs st, cs) isAbs
 
 pMatch :: Source -> Bool -> Exp -> Parser Stmt
 pMatch pos chk loc = do
@@ -353,9 +354,9 @@ expr_field :: Parser Exp
 expr_field = do
   pos  <- pos2src <$> getPosition
   cons <- tk_data_hier
-  void <- tk_sym "._"
-  idx  <- tk_num
-  return $ EField annz{source=pos} cons idx
+  void <- tk_sym "."
+  fld  <- ((\x->"_"++show x) <$> (tk_sym "_" *> tk_num)) <|> tk_var
+  return $ EField annz{source=pos} cons fld
 
 expr_read :: Parser Exp
 expr_read = do

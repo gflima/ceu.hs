@@ -62,7 +62,7 @@ fromExp (B.EMatch _ e p) = EMatch (fromExp e) (fromExp p)
 -------------------------------------------------------------------------------
 
 fromStmt :: B.Stmt -> Stmt
-fromStmt (B.Data   _ _ _ p)         = fromStmt p
+fromStmt (B.Data   _ _ _ _ p)       = fromStmt p
 fromStmt (B.Var    _ id _ p)        = Var (id,Nothing) (fromStmt p)
 fromStmt (B.CallS  _ e)             = CallS (fromExp e)
 fromStmt (B.Seq    _ p1 p2)         = Seq (fromStmt p1) (fromStmt p2)

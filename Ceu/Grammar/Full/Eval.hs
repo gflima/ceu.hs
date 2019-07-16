@@ -25,10 +25,10 @@ boolt = TData ["Bool","True"]  [] TUnit
 
 prelude :: Ann -> Stmt -> Stmt
 prelude z p =
-    (Seq z (Data z (int,  cz) False)  -- TODO: should be abstract
-    (Seq z (Data z (bool, cz) True)
-    (Seq z (Data z (boolf,cz) False)
-    (Seq z (Data z (boolt,cz) False)
+    (Seq z (Data z Nothing (int,  cz) False)  -- TODO: should be abstract
+    (Seq z (Data z Nothing (bool, cz) True)
+    (Seq z (Data z Nothing (boolf,cz) False)
+    (Seq z (Data z Nothing (boolt,cz) False)
     (Seq z (Var  z "_true"  (bool,cz))
     (Seq z (Set  z False (EVar z "_true") (ECons z ["Bool","True"]))
     (Seq z (Var  z "print"  (TFunc (TAny "?")        (TAny "?"), cz))

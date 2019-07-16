@@ -31,7 +31,7 @@ spec = do
 {-
   describe "TODO" $ do
     it "TODO" $
-      compile' (Seq annz (Data annz ["Int"] [] TUnit False) (Seq annz (Seq annz (Var annz "x" (TData ["Int"])) (Nop annz)) (Seq annz (Set annz False (EVar annz "x") (ECons annz ["Int","1"])) (Ret annz (ECons annz ["Int","1"])))))
+      compile' (Seq annz (Data annz Nothing ["Int"] [] TUnit False) (Seq annz (Seq annz (Var annz "x" (TData ["Int"])) (Nop annz)) (Seq annz (Set annz False (EVar annz "x") (ECons annz ["Int","1"])) (Ret annz (ECons annz ["Int","1"])))))
       `shouldBe` ([], (B.Var annz "x" TUnit (B.Nop annz)))
 -}
 
@@ -190,16 +190,16 @@ spec = do
             (Ret annz (ECall annz (EVar annz "f3") (ECons annz ["Int","10"]))))))))))
 
     it "Xxx.Yyy" $
-      compile (Seq annz (Data annz (int,                         M.fromList []) False)
-              (Seq annz (Data annz (TData ["Xxx"]       [] int,  M.fromList []) True)
-              (Seq annz (Data annz (TData ["Xxx","Yyy"] [] int,  M.fromList []) False)
+      compile (Seq annz (Data annz Nothing (int,                         M.fromList []) False)
+              (Seq annz (Data annz Nothing (TData ["Xxx"]       [] int,  M.fromList []) True)
+              (Seq annz (Data annz Nothing (TData ["Xxx","Yyy"] [] int,  M.fromList []) False)
               (Seq annz
               (Seq annz (Var annz "y" (TData ["Xxx","Yyy"] [] TUnit,M.fromList []))
                         (Nop annz))
                         (Set annz False (EVar annz "y") (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]])))))))
       `shouldBe`
-        --(Data'' annz (TData ["Int"] [] TUnit,fromList []) False (Data'' annz (TData ["Xxx"] [] int,fromList []) True (Data'' annz (TData ["Xxx","Yyy"] [] (TTuple [int,int]),fromList []) False (Var'' annz "y" (TData ["Xxx","Yyy"] [] (TTuple [int,int]),fromList []) (Seq annz (Nop annz) (set' annz False (EVar annz "y") (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]])) (Nop annz) (Ret annz (EError annz (-2)))))))))
-        Data'' annz (TData ["Int"] [] TUnit,fromList []) False (Data'' annz (TData ["Xxx"] [] (TData ["Int"] [] TUnit),fromList []) True (Var'' annz "Xxx._1" (TFunc (TData ["Xxx"] [] (TData ["Int"] [] TUnit)) (TData ["Int"] [] TUnit),fromList []) (Match' annz False (EFunc annz (TFunc (TData ["Xxx"] [] (TData ["Int"] [] TUnit)) (TData ["Int"] [] TUnit),fromList []) (Var'' annz "ret" (TData ["Int"] [] TUnit,fromList []) (Match' annz False (EArg annz) [(Nop annz,ECall annz (ECons annz ["Xxx"]) (EVar annz "ret"),Ret annz (EVar annz "ret"))]))) [(Nop annz,EVar annz "Xxx._1",Data'' annz (TData ["Xxx","Yyy"] [] (TTuple [TData ["Int"] [] TUnit,TData ["Int"] [] TUnit]),fromList []) False (Var'' annz "Xxx.Yyy._2" (TFunc (TData ["Xxx","Yyy"] [] (TTuple [TData ["Int"] [] TUnit,TData ["Int"] [] TUnit])) (TData ["Int"] [] TUnit),fromList []) (Match' annz False (EFunc annz (TFunc (TData ["Xxx","Yyy"] [] (TTuple [TData ["Int"] [] TUnit,TData ["Int"] [] TUnit])) (TData ["Int"] [] TUnit),fromList []) (Var'' annz "ret" (TData ["Int"] [] TUnit,fromList []) (Match' annz False (EArg annz) [(Nop annz,ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [EAny annz,EVar annz "ret"]),Ret annz (EVar annz "ret"))]))) [(Nop annz,EVar annz "Xxx.Yyy._2",Var'' annz "Xxx.Yyy._1" (TFunc (TData ["Xxx","Yyy"] [] (TTuple [TData ["Int"] [] TUnit,TData ["Int"] [] TUnit])) (TData ["Int"] [] TUnit),fromList []) (Match' annz False (EFunc annz (TFunc (TData ["Xxx","Yyy"] [] (TTuple [TData ["Int"] [] TUnit,TData ["Int"] [] TUnit])) (TData ["Int"] [] TUnit),fromList []) (Var'' annz "ret" (TData ["Int"] [] TUnit,fromList []) (Match' annz False (EArg annz) [(Nop annz,ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [EVar annz "ret",EAny annz]),Ret annz (EVar annz "ret"))]))) [(Nop annz,EVar annz "Xxx.Yyy._1",Var'' annz "y" (TData ["Xxx","Yyy"] [] (TTuple [TData ["Int"] [] TUnit,TData ["Int"] [] TUnit]),fromList []) (Seq annz (Nop annz) (Match' annz False (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]])) [(Nop annz,EVar annz "y",Nop annz)])))]))])))])))
+        --(Data'' annz Nothing (TData ["Int"] [] TUnit,fromList []) False (Data'' annz Nothing (TData ["Xxx"] [] int,fromList []) True (Data'' annz Nothing (TData ["Xxx","Yyy"] [] (TTuple [int,int]),fromList []) False (Var'' annz "y" (TData ["Xxx","Yyy"] [] (TTuple [int,int]),fromList []) (Seq annz (Nop annz) (set' annz False (EVar annz "y") (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]])) (Nop annz) (Ret annz (EError annz (-2)))))))))
+        Data'' annz Nothing (TData ["Int"] [] TUnit,fromList []) False (Data'' annz Nothing (TData ["Xxx"] [] (TData ["Int"] [] TUnit),fromList []) True (Var'' annz "Xxx._1" (TFunc (TData ["Xxx"] [] (TData ["Int"] [] TUnit)) (TData ["Int"] [] TUnit),fromList []) (Match' annz False (EFunc annz (TFunc (TData ["Xxx"] [] (TData ["Int"] [] TUnit)) (TData ["Int"] [] TUnit),fromList []) (Var'' annz "ret" (TData ["Int"] [] TUnit,fromList []) (Match' annz False (EArg annz) [(Nop annz,ECall annz (ECons annz ["Xxx"]) (EVar annz "ret"),Ret annz (EVar annz "ret"))]))) [(Nop annz,EVar annz "Xxx._1",Data'' annz Nothing (TData ["Xxx","Yyy"] [] (TTuple [TData ["Int"] [] TUnit,TData ["Int"] [] TUnit]),fromList []) False (Var'' annz "Xxx.Yyy._2" (TFunc (TData ["Xxx","Yyy"] [] (TTuple [TData ["Int"] [] TUnit,TData ["Int"] [] TUnit])) (TData ["Int"] [] TUnit),fromList []) (Match' annz False (EFunc annz (TFunc (TData ["Xxx","Yyy"] [] (TTuple [TData ["Int"] [] TUnit,TData ["Int"] [] TUnit])) (TData ["Int"] [] TUnit),fromList []) (Var'' annz "ret" (TData ["Int"] [] TUnit,fromList []) (Match' annz False (EArg annz) [(Nop annz,ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [EAny annz,EVar annz "ret"]),Ret annz (EVar annz "ret"))]))) [(Nop annz,EVar annz "Xxx.Yyy._2",Var'' annz "Xxx.Yyy._1" (TFunc (TData ["Xxx","Yyy"] [] (TTuple [TData ["Int"] [] TUnit,TData ["Int"] [] TUnit])) (TData ["Int"] [] TUnit),fromList []) (Match' annz False (EFunc annz (TFunc (TData ["Xxx","Yyy"] [] (TTuple [TData ["Int"] [] TUnit,TData ["Int"] [] TUnit])) (TData ["Int"] [] TUnit),fromList []) (Var'' annz "ret" (TData ["Int"] [] TUnit,fromList []) (Match' annz False (EArg annz) [(Nop annz,ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [EVar annz "ret",EAny annz]),Ret annz (EVar annz "ret"))]))) [(Nop annz,EVar annz "Xxx.Yyy._1",Var'' annz "y" (TData ["Xxx","Yyy"] [] (TTuple [TData ["Int"] [] TUnit,TData ["Int"] [] TUnit]),fromList []) (Seq annz (Nop annz) (Match' annz False (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]])) [(Nop annz,EVar annz "y",Nop annz)])))]))])))])))
 
   --------------------------------------------------------------------------
 
@@ -209,7 +209,7 @@ spec = do
       `shouldBe` Right (E.EData ["Int","1"] E.EUnit)
 
     it "data X with Int ; x:Int ; X 1 <- X 2" $ do
-      go (prelude annz $ Seq annz (Data annz (TData ["Xxx"] [] int,cz) False) (Seq annz (Set annz False (ECall annz (ECons annz ["Xxx"]) (ECons annz ["Int","1"])) (ECall annz (ECons annz ["Xxx"]) (ECons annz ["Int","2"]))) (Ret annz (ECons annz ["Int","2"]))))
+      go (prelude annz $ Seq annz (Data annz Nothing (TData ["Xxx"] [] int,cz) False) (Seq annz (Set annz False (ECall annz (ECons annz ["Xxx"]) (ECons annz ["Int","1"])) (ECall annz (ECons annz ["Xxx"]) (ECons annz ["Int","2"]))) (Ret annz (ECons annz ["Int","2"]))))
       `shouldBe`
         Left ["match never succeeds : data mismatch"] --["types do not match : expected 'Int.1' : found 'Int.2'"]
 

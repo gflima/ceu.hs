@@ -15,7 +15,7 @@ data Exp
     | EVar   Ann ID_Var         -- a ; xs
     | EUnit  Ann                -- ()
     | ECons  Ann ID_Data_Hier   -- True
-    | EField Ann ID_Data_Hier Int  -- List.Cons._1
+    | EField Ann ID_Data_Hier String -- List.Cons._1 / Student.age
     | EArg   Ann
     | ETuple Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
     | EFunc  Ann TypeC Stmt      -- function implementation
@@ -58,7 +58,7 @@ data Stmt
   | Class'   Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] -- interface w/ body
   | Inst     Ann ID_Class TypeC Stmt              -- new class instance
   | Inst'    Ann ID_Class TypeC [(Ann,ID_Var,TypeC,Bool)] -- new class instance
-  | Data     Ann TypeC Bool                       -- new type declaration
+  | Data     Ann (Maybe [ID_Var]) TypeC Bool      -- new type declaration
   | Var      Ann ID_Var TypeC                     -- variable declaration
   | FuncS    Ann ID_Var TypeC Stmt                -- function declaration
   | Match    Ann Bool Exp [(Stmt,Exp,Stmt)]       -- match
@@ -74,7 +74,7 @@ data Stmt
   -- declarations w/ scope
   | Class''  Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt
   | Inst''   Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt
-  | Data''   Ann TypeC Bool Stmt
+  | Data''   Ann (Maybe [ID_Var]) TypeC Bool Stmt
   | Var''    Ann ID_Var TypeC Stmt
   deriving (Eq, Show)
 
@@ -85,7 +85,7 @@ instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
     getAnn (Class    z _ _ _)     = z
     getAnn (Inst     z _ _ _)     = z
-    getAnn (Data     z _ _)       = z
+    getAnn (Data     z _ _ _)     = z
     getAnn (Var      z _ _)       = z
     getAnn (FuncS    z _ _ _)     = z
     getAnn (Match'   z _ _ _)     = z
@@ -94,13 +94,13 @@ instance HasAnn Stmt where
     getAnn (Scope    z _)         = z
     getAnn (Nop      z)           = z
     getAnn (Ret      z _)         = z
-    getAnn (Data''   z _ _ _)     = z
+    getAnn (Data''   z _ _ _ _)   = z
     getAnn (Var''    z _ _ _)     = z
 
 toBasicStmt :: Stmt -> B.Stmt
 toBasicStmt (Class'' z id  cs ifc p) = B.Class z id  cs ifc (toBasicStmt p)
 toBasicStmt (Inst''  z cls tp imp p) = B.Inst  z cls tp imp (toBasicStmt p)
-toBasicStmt (Data''  z tp abs p)     = B.Data  z tp abs (toBasicStmt p)
+toBasicStmt (Data''  z nms tp abs p) = B.Data  z nms tp abs (toBasicStmt p)
 toBasicStmt (Var''   z var tp p)     = B.Var   z var tp (toBasicStmt p)
 toBasicStmt (Match'  z chk exp cses) = B.Match z chk (toBasicExp exp)
                                          (map (\(ds,pt,st) -> (toBasicStmt ds, toBasicExp pt, toBasicStmt st)) cses)
@@ -116,7 +116,7 @@ toBasicStmt p                        = error $ "toBasicStmt: unexpected statemen
 map_stmt :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Stmt -> Stmt
 map_stmt f@(fs,_,_)  (Class z id  cs p)  = fs (Class z id  cs (map_stmt f p))
 map_stmt f@(fs,_,ft) (Inst  z cls tp p)  = fs (Inst  z cls (ft tp) (map_stmt f p))
-map_stmt f@(fs,_,ft) (Data  z tp abs)    = fs (Data  z (ft tp) abs)
+map_stmt f@(fs,_,ft) (Data  z nms tp abs)= fs (Data  z nms (ft tp) abs)
 map_stmt f@(fs,_,ft) (Var   z id tp)     = fs (Var   z id (ft tp))
 map_stmt f@(fs,_,ft) (FuncS z id tp p)   = fs (FuncS z id (ft tp) (map_stmt f p))
 map_stmt f@(fs,_,_)  (Match z chk exp cses) = fs (Match z chk (map_exp f exp)

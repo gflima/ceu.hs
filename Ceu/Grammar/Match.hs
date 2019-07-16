@@ -23,11 +23,11 @@ subs ids hr = g $ ints ++ (map f $ filter pred ids) where
           []
           -- Int that will never match any numeric pattern
 
-  pred (Data  _ (TData hrD _ _,_) False _) = gt hr hrD
+  pred (Data  _ _ (TData hrD _ _,_) False _) = gt hr hrD
           -- ignore abstract data
   pred _ = False
 
-  f (Data  _ (TData hrD _ _,_) _ _) = hrD
+  f (Data  _ _ (TData hrD _ _,_) _ _) = hrD
 
   gt sup sub = (sup `isPrefixOf` sub) -- && (length sup < length sub)
 

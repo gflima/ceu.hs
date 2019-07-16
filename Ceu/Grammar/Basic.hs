@@ -15,7 +15,7 @@ data Exp
     | EVar   Ann ID_Var         -- a ; xs
     | EUnit  Ann                -- ()
     | ECons  Ann ID_Data_Hier   -- Bool.True ; Int.1 ; Tree.Node
-    | EField Ann ID_Data_Hier Int -- List.Cons._1
+    | EField Ann ID_Data_Hier String -- List.Cons._1 // Student.age
     | ETuple Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
     | EFunc  Ann TypeC Stmt     -- function implementation
     | ECall  Ann Exp Exp        -- f a ; f(a) ; f(1,2)
@@ -45,7 +45,7 @@ instance HasAnn Exp where
 data Stmt
     = Class  Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class declaration
     | Inst   Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class instance
-    | Data   Ann TypeC Bool Stmt              -- new type declaration
+    | Data   Ann (Maybe [String]) TypeC Bool Stmt               -- new type declaration
     | Var    Ann ID_Var TypeC Stmt            -- variable declaration
     | Match  Ann Bool Exp [(Stmt,Exp,Stmt)]   -- match/assignment/if statement
     | CallS  Ann Exp                          -- call function
@@ -60,9 +60,9 @@ data Stmt
 isClass id1 (Class _ id2 _ _ _) = (id1 == id2)
 isClass _   _                   = False
 
-isData  hr1 (Data  _ (TData hr2 _ _,_) _ _) = (hr1' == hier2str hr2) where
-                                                hr1' = bool hr1 "Int" (take 4 hr1 == "Int.")
-isData  _   _                               = False
+isData  hr1 (Data  _ _ (TData hr2 _ _,_) _ _) = (hr1' == hier2str hr2) where
+                                                  hr1' = bool hr1 "Int" (take 4 hr1 == "Int.")
+isData  _   _                                 = False
 
 isVar   id1 (Var   _ id2 _ _)   = (id1 == id2)
 isVar   _   _                   = False
@@ -74,7 +74,7 @@ rep spc = replicate spc ' '
 show_stmt :: Int -> Stmt -> String
 --show_stmt spc (Class _ (id,_) _ _ p) = rep spc ++ "class "  ++ id ++ "\n" ++ show_stmt spc p
 --show_stmt spc (Inst  _ (id,_) _ p)   = rep spc ++ "inst "   ++ id ++ "\n" ++ show_stmt spc p
-show_stmt spc (Data _ (TData id _ _,_) _ p) = rep spc ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
+show_stmt spc (Data _ _ (TData id _ _,_) _ p) = rep spc ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
 show_stmt spc (Var _ id (tp,_) p)     = rep spc ++ "var "    ++ id ++ ": " ++ T.show' tp ++ "\n" ++ show_stmt spc p
 show_stmt spc (CallS _ e)             = rep spc ++ "call " ++ show_exp spc e
 show_stmt spc (Ret _ e)               = rep spc ++ "return " ++ show_exp spc e
@@ -115,7 +115,7 @@ map_stmt f@(fs,_,ft) (Class z id ctr ifc p)     = fs (Class z id ctr ifc' (map_s
                                                     where ifc' = map (\(x,y,tp,z)->(x,y,ft tp,z)) ifc
 map_stmt f@(fs,_,ft) (Inst  z cls tp imp p)     = fs (Inst  z cls tp imp' (map_stmt f p))
                                                     where imp' = map (\(x,y,tp,z)->(x,y,ft tp,z)) imp
-map_stmt f@(fs,_,ft) (Data  z tp abs p)         = fs (Data  z (ft tp) abs (map_stmt f p))
+map_stmt f@(fs,_,ft) (Data  z nms tp abs p)     = fs (Data  z nms (ft tp) abs (map_stmt f p))
 map_stmt f@(fs,_,ft) (Var   z id tp p)          = fs (Var   z id (ft tp) (map_stmt f p))
 map_stmt f@(fs,_,_)  (Match z b exp cses)       = fs (Match z b (map_exp f exp) (map (\(ds,pt,st) -> (map_stmt f ds, map_exp f pt, map_stmt f st)) cses))
 map_stmt f@(fs,_,_)  (CallS z exp)              = fs (CallS z (map_exp f exp))
@@ -168,7 +168,7 @@ instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
     getAnn (Class z _ _ _ _)   = z
     getAnn (Inst  z _ _ _ _)   = z
-    getAnn (Data  z _ _ _)     = z
+    getAnn (Data  z _ _ _ _)   = z
     getAnn (Var   z _ _ _)     = z
     getAnn (Match z _ _ _)     = z
     getAnn (CallS z _)         = z
@@ -177,7 +177,7 @@ instance HasAnn Stmt where
     getAnn (Ret   z _)         = z
     getAnn (Nop   z)           = z
 
-prelude z p = (Data z (TData ["Int"]          [] TUnit,cz) False
-              (Data z (TData ["Bool"]         [] TUnit,cz) True
-              (Data z (TData ["Bool","True"]  [] TUnit,cz) False
-              (Data z (TData ["Bool","False"] [] TUnit,cz) False p))))
+prelude z p = (Data z Nothing (TData ["Int"]          [] TUnit,cz) False
+              (Data z Nothing (TData ["Bool"]         [] TUnit,cz) True
+              (Data z Nothing (TData ["Bool","True"]  [] TUnit,cz) False
+              (Data z Nothing (TData ["Bool","False"] [] TUnit,cz) False p))))

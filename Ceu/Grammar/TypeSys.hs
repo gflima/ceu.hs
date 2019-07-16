@@ -1,6 +1,6 @@
 module Ceu.Grammar.TypeSys where
 
-import Data.List (find, intercalate, unzip, unzip3, isPrefixOf)
+import Data.List (find, intercalate, unzip, unzip3, isPrefixOf, elemIndex)
 import Data.Maybe (isNothing, isJust, fromJust)
 import Data.Bool (bool)
 import Data.Either (isRight)
@@ -136,7 +136,7 @@ fPat ids (ECons  z h)    = (es, tp, ECons z{type_=tp} h) where
                             (es,tp) = case find (isData $ hier2str h) ids of
                               Nothing -> ([toError z $ "data '" ++ (hier2str h) ++ "' is not declared"],
                                           (TData [] [] (TAny "?"),cz))
-                              Just (Data _ tp _ _) -> case tp of
+                              Just (Data _ _ tp _ _) -> case tp of
                                 (TData _ ofs st, ctrs) -> (es,tp') where
                                   tp' = (TData (take 1 h) ofs st, ctrs)
                                   es  = []-- map (toError z) (relatesErrors SUB tp tp')
@@ -187,8 +187,8 @@ getErrsTypesDeclared :: Ann -> [Stmt] -> Type -> Errors
 getErrsTypesDeclared z ids tp = concatMap f (T.getDs tp) where
   f :: Type -> Errors
   f (TData hier _ tp_) = case find (isData id) ids of
-    Nothing               -> [toError z $ "data '" ++ id ++ "' is not declared"]
-    Just (Data _ tp' _ _) -> [] --relatesErrors SUP tp' (tp_,cz)
+    Nothing                 -> [toError z $ "data '" ++ id ++ "' is not declared"]
+    Just (Data _ _ tp' _ _) -> [] --relatesErrors SUP tp' (tp_,cz)
 -- TODO
     where
       id = hier2str hier
@@ -340,8 +340,9 @@ stmt ids s@(Inst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
 
         otherwise  -> error "TODO: multiple vars"
 
-stmt ids s@(Data z (tpD@(TData hr _ st),cz) abs p) = (es_dcl ++ (errDeclared z Nothing "data" (T.hier2str hr) ids) ++ es,
-                                                      Data z (tpD,cz) abs p')
+stmt ids s@(Data z nms (tpD@(TData hr _ st),cz) abs p) =
+  (es_dcl ++ (errDeclared z Nothing "data" (T.hier2str hr) ids) ++ es,
+   Data z nms (tpD,cz) abs p')
   where
     (es,p') = stmt (s:ids) p
     es_dcl  = (getErrsTypesDeclared z ids st) ++ case T.getSuper hr of
@@ -473,28 +474,35 @@ expr' _ ids (EMatch z exp pat) = (esp++esem++esc, EMatch z{type_=(TData ["Bool"]
           else
             []
 
-expr' _ ids (EField z hr idx) = (es, EVar z{type_=(TFunc inp out,cz)} (hr_str ++ "._" ++ show idx))
+expr' _ ids (EField z hr fld) = (es, EVar z{type_=(TFunc inp out,cz)} (hr_str ++ "." ++ fld))
   where
     hr_str = T.hier2str hr
 
     (inp,out,cz,es) = case find (isData hr_str) ids of
       Nothing -> (TAny "?",TAny "?",cz, [toError z $ "data '" ++ hr_str ++ "' is not declared"])
-      Just (Data _ (tp@(TData _ _ (TTuple sts)),cz) _ _) -> (tp,out,cz,es) where (out,es) = f sts
-      Just (Data _ (tp@(TData _ _ st),cz) _ _)           -> (tp,out,cz,es) where (out,es) = f [st]
+      Just (Data _ nms (tp@(TData _ _ (TTuple sts)),cz) _ _) -> (tp,out,cz,es) where (out,es) = f nms sts
+      Just (Data _ nms (tp@(TData _ _ st),cz) _ _)           -> (tp,out,cz,es) where (out,es) = f nms [st]
 
-    f sts = if length sts >= idx then
-              (sts!!(idx-1), [])
-            else
-              (TAny "?",     [toError z $ "field '_" ++ show idx ++ "' is not declared"])
+    f nms sts = case fld of
+      ('_':idx) -> if length sts >= idx' then
+                    (sts!!(idx'-1), [])
+                   else
+                    (TAny "?",      [toError z $ "field '" ++ fld ++ "' is not declared"])
+                   where
+                    idx' = read idx
+      otherwise -> case (nms, elemIndex fld (fromJust nms)) of
+                    (Nothing, _)  -> (TAny "?", [toError z $ "field '" ++ fld ++ "' is not declared"])
+                    (_, Nothing)  -> (TAny "?", [toError z $ "field '" ++ fld ++ "' is not declared"])
+                    (_, Just idx) -> (sts!!idx, [])
 
 expr' (rel,txp) ids (ECons z hr) = (es1++es2, ECons z{type_=tp2} hr)
   where
     hr_str = T.hier2str hr
     (tp1,es1) = case find (isData hr_str) ids of
-      Nothing                  -> ((TAny "?",cz),
-                                   [toError z $ "data '" ++ hr_str ++ "' is not declared"])
-      Just (Data _ tp True  _) -> (f tp, [toError z $ "data '" ++ hr_str ++ "' is abstract"])
-      Just (Data _ tp False _) -> (f tp, [])
+      Nothing                    -> ((TAny "?",cz),
+                                     [toError z $ "data '" ++ hr_str ++ "' is not declared"])
+      Just (Data _ _ tp True  _) -> (f tp, [toError z $ "data '" ++ hr_str ++ "' is abstract"])
+      Just (Data _ _ tp False _) -> (f tp, [])
 
     f (tp_@(TData _ ofs TUnit), ctrs) = (tp_,            ctrs)
     f (tp_@(TData _ ofs tpst),  ctrs) = (TFunc tpst tp_, ctrs)
