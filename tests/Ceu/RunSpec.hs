@@ -182,18 +182,6 @@ spec = do
            ])
         `shouldBe` Left "(line 6, column 4):\nvariable 'a' is already declared\n"
 
-      it "CLOSURE: escape scope" $
-        (run True $
-          unlines [
-            "func g () : (() -> (() -> Int)) do",
-            "   var a : Int =10",
-            "   return func () : (()->Int) do return a end",
-            "end",
-            "var a : Int = 99",
-            "return (g ()) ()"
-           ])
-        `shouldBe` Right (EData ["Int","99"] EUnit)
-
       it "fst : (a,a) -> a" $
         (run True $
           unlines [
@@ -203,6 +191,52 @@ spec = do
             "return fst (Bool.True, Bool.False)"
           ])
         `shouldBe` Right (EData ["Bool","True"] EUnit)
+
+    describe "closure:" $ do
+
+      it "escape scope - none - func" $
+        (run True $
+          unlines [
+            "func g () : (() -> (() -> Int)) do",
+            "   return func () : (()->Int) do return 10 end",
+            "end",
+            "return (g ()) ()"
+           ])
+        `shouldBe` Right (EData ["Int","10"] EUnit)
+
+      it "escape scope - none - new func" $
+        (run True $
+          unlines [
+            "func g () : (() -> (() -> Int)) do",
+            "   return new func () : (()->Int) do return 10 end",
+            "end",
+            "return (g ()) ()"
+           ])
+        `shouldBe` Left "new not required"
+
+      it "escape scope - var a - func " $
+        (run True $
+          unlines [
+            "func g () : (() -> (() -> Int)) do",
+            "   var a : Int =10",
+            "   return func () : (()->Int) do return a end",
+            "end",
+            "var a : Int = 99",
+            "return (g ()) ()"
+           ])
+        `shouldBe` Left "new required"
+
+      it "escape scope - var a - new func " $
+        (run True $
+          unlines [
+            "func g () : (() -> (() -> Int)) do",
+            "   var a : Int =10",
+            "   return new func () : (()->Int) do return a end",
+            "end",
+            "var a : Int = 99",
+            "return (g ()) ()"
+           ])
+        `shouldBe` Right (EData ["Int","10"] EUnit)
 
     describe "data:" $ do
 

@@ -456,9 +456,9 @@ expr' :: (Relation,TypeC) -> [Stmt] -> Exp -> (Errors, Exp)
 expr' _       _   (EError  z v)     = ([], EError  z{type_=(TBot,cz)} v)
 expr' _       _   (EUnit   z)       = ([], EUnit   z{type_=(TUnit,cz)})
 expr' (_,txp) _   (EArg    z)       = ([], EArg    z{type_=txp})
-expr' _       ids (EFunc   z tp p)  = (es, EFunc   z{type_=tp} tp p')
-                                     where
-                                      (es,p') = stmt ids p
+expr' _       ids (EFunc   z e tp p) = (es, EFunc   z{type_=tp} e tp p')
+                                       where
+                                        (es,p') = stmt ids p
 
 expr' _ ids (EMatch z exp pat) = (esp++esem++esc, EMatch z{type_=(TData ["Bool"] [] TUnit,cz)} exp' pat')
   where

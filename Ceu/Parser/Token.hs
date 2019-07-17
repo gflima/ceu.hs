@@ -33,6 +33,7 @@ keywords = [
     "match",
     "match!",
     "matches",
+    "new",
     "of",
     "set",
     "set!",

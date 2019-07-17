@@ -14,7 +14,7 @@ stmt (SMatch  z chk exp cses)  = SMatch' z chk  (expr exp) (map (\(ds,pt,st) -> 
                                   cses' = cses
                                   --cses' = if not chk then cses else
                                             --cses ++ [(EAny z, SRet z $ EError z (-2))]
-stmt (SCall  z exp)            = SCall  z (expr exp)
+stmt (SCall   z exp)           = SCall  z (expr exp)
 stmt (SIf     z exp p1 p2)     = stmt $ SMatch z False exp [
                                   (SNop z, EExp z (EVar z "_true"), stmt p1),
                                   (SNop z, EAny z,                  stmt p2)
@@ -28,5 +28,5 @@ stmt p                         = p
 expr :: Exp -> Exp
 expr (ETuple z es)            = ETuple z (map expr es)
 expr (ECall  z e1 e2)         = ECall  z (expr e1) (expr e2)
-expr (EFunc  z tp p)          = EFunc  z tp (stmt p)
+expr (EFunc  z env tp p)      = EFunc  z env tp (stmt p)
 expr e                        = e

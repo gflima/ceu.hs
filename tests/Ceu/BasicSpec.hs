@@ -27,7 +27,7 @@ mmm' z b pat exp p1 p2 = SMatch z b exp [(SNop z,pat,p1),(SNop z,EAny z, SRet z 
 
 func id tp p = SVar annz id tp
                 (mmm annz False (EVar annz id)
-                  (EFunc annz tp (SRet annz (EError annz 99)))
+                  (EFunc annz Nothing tp (SRet annz (EError annz 99)))
                   p
                   (SRet annz (EError annz 99)))
 
@@ -265,7 +265,7 @@ spec = do
       (fst $ TypeSys.go
         (SVar annz "f" (TFunc TUnit TUnit,cz)
         (mmm annz False (EVar annz "f")
-          (EFunc annz (TFunc TUnit TUnit,cz)
+          (EFunc annz Nothing (TFunc TUnit TUnit,cz)
             (SRet annz (EArg annz)))
           (SNop annz)
           (SNop annz))))
@@ -294,7 +294,7 @@ spec = do
             (SVar annz "fff" (TFunc (int) (int),cz)
             (mmm annz False
               (EVar annz "fff")
-              (EFunc annz (TFunc (int) (int),cz)
+              (EFunc annz Nothing (TFunc (int) (int),cz)
                 (SRet annz (ECons annz ["Int","1"])))
               (SSeq annz
                 (SNop annz)
@@ -730,7 +730,7 @@ spec = do
         (SVar annz "$fff$((A,A) -> ())$" (TFunc (TTuple [TData ["A"] [] TUnit,TData ["A"] [] TUnit]) TUnit,cz)
         (SVar annz "$fff$((A,A) -> ())$" (TFunc (TTuple [TData ["A"] [] TUnit,TData ["A"] [] TUnit]) TUnit,cz)
         (mmm annz False (EVar annz "$fff$((A,A) -> ())$")
-          (EFunc (annz {type_ = (TFunc (TTuple [TData ["A"] [] TUnit,TData ["A"] [] TUnit]) TUnit,cz)}) (TFunc (TTuple [TData ["A"] [] TUnit,TData ["A"] [] TUnit]) TUnit,cz) (SRet annz (EError annz 99)))
+          (EFunc (annz {type_ = (TFunc (TTuple [TData ["A"] [] TUnit,TData ["A"] [] TUnit]) TUnit,cz)}) Nothing (TFunc (TTuple [TData ["A"] [] TUnit,TData ["A"] [] TUnit]) TUnit,cz) (SRet annz (EError annz 99)))
           (SCall annz
             (ECall (annz {type_ = (TUnit,cz)})
               (EVar (annz {type_ = (TFunc (TTuple [TData ["A"] [] TUnit,TData ["A"] [] TUnit]) TUnit,cz)}) "$fff$((A,A) -> ())$")

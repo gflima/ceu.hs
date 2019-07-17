@@ -367,9 +367,10 @@ expr_read = do
 expr_func :: Parser Exp
 expr_func = do
   pos      <- pos2src <$> getPosition
+  new      <- optionMaybe $ try $ tk_key "new"
   void     <- try $ tk_key "func"
   (tp,imp) <- func pos
-  return $ EFunc annz{source=pos} tp imp
+  return $ EFunc annz{source=pos} (bool Nothing (Just "?") (isJust new)) tp imp
 
 expr_unit :: Parser Exp
 expr_unit = do
@@ -463,15 +464,16 @@ func pos = do
 stmt_funcs :: Parser Stmt
 stmt_funcs = do
   pos    <- pos2src <$> getPosition
+  new    <- optionMaybe $ try $ tk_key "new"
   void   <- tk_key "func"
   f      <- tk_op <|> tk_var
   tp_imp <- optionMaybe $ try $ func pos
-  ann  <- do { return annz{source=pos} }
-  ret  <- case tp_imp of
-            Nothing -> do
-              void <- tk_sym ":"
-              tp   <- pTypeContext
-              return $ SVar ann f tp
-            Just (tp,imp) -> do
-              return $ SFunc ann f tp imp
+  ann    <- do { return annz{source=pos} }
+  ret    <- case tp_imp of
+              Nothing -> do
+                void <- tk_sym ":"
+                tp   <- pTypeContext
+                return $ SVar ann f tp
+              Just (tp,imp) -> do
+                return $ SFunc ann f (bool Nothing (Just "?") (isJust new)) tp imp
   return ret
