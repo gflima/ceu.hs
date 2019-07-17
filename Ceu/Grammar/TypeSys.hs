@@ -27,7 +27,7 @@ trd3 (_,_,x) = x
 idtp id tp = "$" ++ id ++ "$" ++ T.show' tp ++ "$"
 
 go :: Stmt -> (Errors, Stmt)
-go p = stmt [] p
+go p = stmt [] (TAny "?",cz) p
 --go p = f $ stmt [] p where f (e,s) = traceShow s (e,s)
 --go p = f $ stmt [] p where f (e,s) = traceShow (show_stmt 0 s) (e,s)
 
@@ -195,9 +195,9 @@ getErrsTypesDeclared z ids tp = concatMap f (T.getDs tp) where
 
 -------------------------------------------------------------------------------
 
-stmt :: [Stmt] -> Stmt -> (Errors, Stmt)
+stmt :: [Stmt] -> TypeC -> Stmt -> (Errors, Stmt)
 
-stmt ids s@(SClass z id ctrs ifc p) = (esMe ++ esExts ++ es, p') where
+stmt ids tpr s@(SClass z id ctrs ifc p) = (esMe ++ esExts ++ es, p') where
   esMe    = errDeclared z Nothing "constraint" id ids
   esExts  = case Cs.toList ctrs of
               [(_,sups)] -> concatMap f sups where
@@ -205,10 +205,10 @@ stmt ids s@(SClass z id ctrs ifc p) = (esMe ++ esExts ++ es, p') where
                   Nothing -> [toError z $ "constraint '" ++ sup ++ "' is not declared"]
                   Just _  -> []
               otherwise  -> error "TODO: multiple vars"
-  (es,p') = stmt (s:ids) p
+  (es,p') = stmt (s:ids) tpr p
 
-stmt ids s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
-  (esP, p'') = stmt (s:ids) p'
+stmt ids tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
+  (esP, p'') = stmt (s:ids) tpr p'
   (p',  es)  =
     case find (isClass cls) ids of
       -- class is not declared
@@ -340,23 +340,23 @@ stmt ids s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, p'') where
 
         otherwise  -> error "TODO: multiple vars"
 
-stmt ids s@(SData z nms (tpD@(TData hr _ st),cz) abs p) =
+stmt ids tpr s@(SData z nms (tpD@(TData hr _ st),cz) abs p) =
   (es_dcl ++ (errDeclared z Nothing "data" (T.hier2str hr) ids) ++ es,
    SData z nms (tpD,cz) abs p')
   where
-    (es,p') = stmt (s:ids) p
+    (es,p') = stmt (s:ids) tpr p
     es_dcl  = (getErrsTypesDeclared z ids st) ++ case T.getSuper hr of
                 Nothing  -> []
                 Just sup -> (getErrsTypesDeclared z ids (TData sup [] TUnit))
 
-stmt ids s@(SVar z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
+stmt ids tpr s@(SVar z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
   es_data = getErrsTypesDeclared z ids tp_
   es_id   = errDeclared z (Just chk) "variable" id ids where
               chk :: Stmt -> Bool
               chk (SVar _ id1 tp'@(TFunc _ _,_) (SMatch _ False _ [(_,EVar _ id2,_)])) = (id1 /= id2)
               chk (SVar _ id1 tp'@(TFunc _ _,_) _) = (tp == tp') -- function prototype
               chk _ = False
-  (es,p'') = stmt (s:ids) p'
+  (es,p'') = stmt (s:ids) tpr p'
 
   -- In case of a parametric/generic var with a constraint, instantiate it for
   -- each instance of the constraint:
@@ -378,14 +378,14 @@ stmt ids s@(SVar z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, f p'') where
 
 -------------------------------------------------------------------------------
 
-stmt ids (SMatch z fce exp cses) = (es', SMatch z fce exp' cses'') where
+stmt ids tpr (SMatch z fce exp cses) = (es', SMatch z fce exp' cses'') where
   es'            = esc ++ escs ++ esem
   (ese, exp')    = expr z (SUP,tpl) ids exp
   (escs,tpl,cses') = (es, tpl, cses') where
                       --(l1,l2) :: ( [(Errors,TypeC,Exp)] , [(Errors,Stmt)] )
                       (l0,l1,l2) = unzip3 $ map f cses where
-                                    f (ds,pt,st) = ((es,ds'), fPat ids' pt, stmt ids' st) where
-                                      (es,ds') = stmt ids ds
+                                    f (ds,pt,st) = ((es,ds'), fPat ids' pt, stmt ids' tpr st) where
+                                      (es,ds') = stmt ids tpr ds
                                       ids'     = g ds' ids
                                       g   (SNop _)       ids = ids
                                       g s@(SVar _ _ _ p) ids = s : (g p ids)
@@ -411,23 +411,22 @@ stmt ids (SMatch z fce exp cses) = (es', SMatch z fce exp' cses'') where
 
 -------------------------------------------------------------------------------
 
-stmt ids (SCall z exp)  = (ese++esf, SCall z exp') where
-                            (ese, exp') = expr z (SUP, (TAny "?",cz)) ids exp
-                            esf = case exp' of
-                              ECall _ _ _ -> []
-                              otherwise  -> [toError z "expected call"]
+stmt ids _   (SCall z exp)  = (ese++esf, SCall z exp') where
+                                (ese, exp') = expr z (SUP, (TAny "?",cz)) ids exp
+                                esf = case exp' of
+                                  ECall _ _ _ -> []
+                                  otherwise  -> [toError z "expected call"]
 
-stmt ids (SSeq z p1 p2) = (es1++es2, SSeq z p1' p2') where
-                            (es1,p1') = stmt ids p1
-                            (es2,p2') = stmt ids p2
-stmt ids (SLoop z p)    = (es, SLoop z p') where
-                            (es,p') = stmt ids p
+stmt ids tpr (SSeq z p1 p2) = (es1++es2, SSeq z p1' p2') where
+                                (es1,p1') = stmt ids tpr p1
+                                (es2,p2') = stmt ids tpr p2
+stmt ids tpr (SLoop z p)    = (es, SLoop z p') where
+                                (es,p') = stmt ids tpr p
 
-stmt ids (SRet z exp)   = (es, SRet z exp') where
-                            (es,exp') = expr z (SUP,(TAny "?",cz)) ids exp
-                              -- VAR: I expect exp.type to be a subtype of Top (any type)
+stmt ids tpr (SRet z exp)   = (es, SRet z exp') where
+                                (es,exp') = expr z (SUP,tpr) ids exp
 
-stmt _   (SNop z)       = ([], SNop z)
+stmt _   _   (SNop z)       = ([], SNop z)
 
 -------------------------------------------------------------------------------
 
@@ -456,9 +455,10 @@ expr' :: (Relation,TypeC) -> [Stmt] -> Exp -> (Errors, Exp)
 expr' _       _   (EError  z v)     = ([], EError  z{type_=(TBot,cz)} v)
 expr' _       _   (EUnit   z)       = ([], EUnit   z{type_=(TUnit,cz)})
 expr' (_,txp) _   (EArg    z)       = ([], EArg    z{type_=txp})
-expr' _       ids (EFunc   z e tp p) = (es, EFunc   z{type_=tp} e tp p')
+expr' _       ids (EFunc   z e tp p) = (es, EFunc  z{type_=tp} e tp p')
                                        where
-                                        (es,p') = stmt ids p
+                                        (es,p') = stmt ids (out,cs) p
+                                        (TFunc _ out,cs) = tp
 
 expr' _ ids (EMatch z exp pat) = (esp++esem++esc, EMatch z{type_=(TData ["Bool"] [] TUnit,cz)} exp' pat')
   where

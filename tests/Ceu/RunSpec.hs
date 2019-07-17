@@ -192,6 +192,17 @@ spec = do
           ])
         `shouldBe` Right (EData ["Bool","True"] EUnit)
 
+      it "ret type" $
+        (run True $
+          unlines [
+            "func f () : (() -> Int) do",
+            "   return Bool.True",
+            "end",
+            "var v : Int = f()",
+            "return v"
+          ])
+        `shouldBe` Left "(line 2, column 11):\ntypes do not match : expected 'Int' : found 'Bool.True'\n"
+
     describe "closure:" $ do
 
       it "escape scope - none - func" $

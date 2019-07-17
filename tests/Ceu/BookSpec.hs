@@ -651,7 +651,7 @@ spec = do
             " else/if c === 14 then",
             "   return Char.Dd",
             " else",
-            "   return 0",
+            "   error 0",
             " end",
             "end",
             "",
