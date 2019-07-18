@@ -1,0 +1,378 @@
+- runhaskell -itests/ tests/Spec.hs
+- 7 -- Basic=1, Type=0, Eval=1, Full=0, Parser=1, Run=0, Book=4, Gen=0
+
+- set! List.Cons (xs_,x) <- xs
+    - x/xs_ invertido nao ta dando erro
+    - case (Either.Right =xr, Either.Right =yr) : (a,a) then
+        - should be (b,b)
+        -- Book: it "XXX: Either / IOrd" $         -- pg 47
+
+- `:´ -> `::´
+
+- var (x,y) : (Int,Int) <- unpack d     (d:Distance)
+
+X._1 x = 10
+x._1   = 10
+
+match 10 with =X._1 x
+    - questoes de refs (tipos recursivos)
+
+- closures
+    - (f,data)
+    - todos os ponteiros para funcoes na verdade sao closures
+        - os que forem fc vao ficar com data=null
+            - se a funcao for estatica/constante:
+                - func f ...
+    - double escape
+    - recursive
+    - compositions
+    - partial evaluation
+    - refactor generics
+    - new/ref syntax?
+    - raciocino de escape de funcao vale p/ qq referencia, ex:
+        - return &x
+- strings e show?
+    - acho que nao
+- pool
+- C runtime
+
+- list,vector,hash
+    - [Int]
+    - {String->Int}
+    - <Int>
+
+- set x = 1
+    = &x 1
+
+- mut vs val
+    - val can never be used in `=` context
+    - :: initialization (primitive)
+        val x:Int :: 1  -- immutable
+        mut x:Int :: 1  -- mutable
+    - mut can never be assigned a recursive val (a reference)
+
+- simbolos
+    - nada mais sao do que identificadores com ` de escape
+        - `+SOMA
+
+- combos recursivos
+
+- remover idtp de Full/Class.hs
+
+- <- // =
+- data -> type
+- check type of return expressions
+- ord ser primitivo e funcionar p/ qq data
+    - mas poder ser extendido
+    - ord v : (a -> Int)
+    - chr ser primitivo se nao houver fields (for um enum)
+    - Ord e Enum de Haskell serem automaticos
+- sintaxa p using
+    - using Bool do return True end
+- tentar remover if take 2 id "__"
+- tipo p/ (Ann,ID_Var,Type,Bool)
+- tentar remover class/inst de Full->Basic
+- usar mais o map_stmt
+- print -> show
+- usar SSet na parte de type
+
+- Typeclass implementation:
+    - https://www.schoolofhaskell.com/user/jfischoff/instances-and-dictionaries
+    - http://okmij.org/ftp/Computation/typeclass.html
+- http://www.cs.cornell.edu/projects/genus/
+- http://stefanwehr.de/javagi/
+
+- https://stackoverflow.com/questions/43320556/gvim-regexp-for-nested-parentheses
+    - %di(v0p
+
+- hier to typeclas
+        - Eq.Ord
+
+- NEXT
+    - implementacao default
+    - livro
+    - inferencia
+
+- acucar
+    do return x end
+    -> x
+
+func mult (x,y) : (Num, Num)
+func mult (x,y) : (a,   a)   where (a is (Num,Show))
+
+- o extends é necessário quando o subtipo tem implementacoes default que
+  usam o que o supertipo tem
+
+- f() . + 1
+    - . ~~ $
+
+- funcoes anonimas
+    - BOOK: currying,operators,sections,compositions 11-16
+
+- constantes
+    - BOOK: 17
+
+
+- simplificar set (error nunca executa)
+
+- Problemas com efeitos colaterais
+    - (x,1,z) <- (1,9,2)        (quais os valores de x/z? ja que 1<-9 falhou?)
+    - error
+
+-- TODO: loc may contain exp which may contain stmt
+
+- return (Bool.True) and (Bool.True)
+- tipos parametricos
+- tipos recursivos
+
+- type family
+- type family instance
+
+- fields o.x (from Ooo with x : Int)
+
+- Type1 "X" [vars]
+    - payload
+    - parametros
+
+- unwrap / coerse
+
+- SLoop condition
+
+=== TYPECLASS
+
+- typeclasses
+    - Eq
+    - Num
+        - Number ser do tipo "Num of a"
+    - multimethods
+
+- tirar type/inst em favor de subtyping
+    - precisa ainda:
+        - map :: (a->b, List a) -> List b
+
+typeclass (Comparable of a) extends (Equable of a) with
+    x  :: Int
+    gt :: ((a,a)->Bool),
+    ...
+) ::> Equable
+
+instance Comparable Bool (
+    gt :: ((x::Bool,y::Bool) -> Bool) do
+        case (x,y) of
+            (Bool.False,Bool.True) do
+                escape Bool.False
+    gt (True,
+    ...
+)
+
+val x :: List ([static]/dynamic Comparable)
+
+dynamic length x
+static f()
+
+type Bool   :: False | True
+type List a :: Nil   | Cons a
+
+type Node :: X (name::String, n::Int, typ::Type) | Y
+
+type Stmt :: (Ann, Stmt.SNop | Stmt.Write ID Int)
+
+class HasAnn a :: (getAnn :: (a->Ann))
+instance HasAnn Stmt :: (getAnn :: (ann,_)::Stmt->Ann do escape ann end)
+
+func f :: static  a ::> X => (a -> a -> a)
+func f :: dynamic a ::> X => (a -> a -> a)
+
+val a::Node.Stmt
+
+===
+
+- obrigar um "try" antes de coisas que possam voar
+    - mesmo sem o catch
+    - alternativa ao set!
+
+- Exp.Func nao deveria especificar seu proprio tipo
+    - assim como (Number 1) nao o faz
+    - Verify args and ret inside Func?
+        - args nao precisa pois so pode ser passado certo
+        - ret???
+
+- other types of vars in classes
+    - minBound : Int    -> xxx
+- x:Int
+  call x
+
+- type ID_Var = String
+- type String.ID_Var        -- tudo de string vai funcionar para ID_Var
+
+- nominal subtyping
+    - aproveita campos
+        Node (id:String)
+        Node.Stmt (...)
+        getId node = node.id    -- para qq node (vs getAnn)
+    - restringe construtores
+        Class id [Func]         -- vs [Stmt]
+    - dispacho dinâmico
+
+- ID_Type recursivo como expressoes
+- typeclass Equalable
+- destructor
+
+- check types
+    - Bool(if,relat)
+    - implement function
+        - Gen.hs / Fun / dcl
+        - unit ret
+    - tuples index
+        - tup@i, tup/1, tup[1], tup._1
+    - type/new?
+    - named tuples/fields/record
+    - first-class functions
+        - poly
+        - 1 |> f  ==  (|>) v f = f v
+
+- rename parsing functions: stmt -> pStmt
+
+- separar Gen.hs -> Exp.hs+Stmt.hs
+
+- TODO_02: func primitive names
+
+- SSeq normal form in Simplify and Full/SSeq
+
+- f como statement
+
+x :: (Int,Int)
+x <: (1,_)       -- nao muda x_2
+
+- mudar tst.checkTypeSys para *também* verificar arvore de tipos
+
+- operators
+    - reserved ::, :
+    - <:> byref
+        - ?:?   both byref
+        - <:?   left byref
+        - ?:>   right byref
+        x <: 1
+        1 :> x
+        x <:> y
+        x <+: 1
+        x :++
+    - | & : short circuit
+        - a ?|? b, se a==1, b nao avalia
+        - a ?&? b, se a==0, b nao avalia
+    - pipe |>
+        - $$ in hack
+
+- parser error messages
+
+- if s :: f x then
+
+- if then else end if
+
+- timer
+- finalize
+- pause
+
+- usar Set.
+
+- ADTS
+    data Node:          v:Int
+    data Node.Branch:   (l:Node,r:Node)
+    data Node.Leaf:     ()
+
+    a : Node <- ...
+    case a of
+        Branch (v,l,r) do ... end
+        Branch b       do b.v, b.l, b.r end
+
+    code/inst f : (Node.Branch)
+
+- remover sSeq, sPar
+
+- tmp/unused vars
+
+- tceu_nevt/ntrl
+
+- trap/clear
+    - com trail>1 precisa do clear
+        - par/or
+    - com trail=1 nao precisa
+        - loop
+    - traps aninhados
+        - talvez do o mais de fora precise do clear
+            - caso o caminho seja instant. s/ emits
+    - clear precisa do stack so se tiver fin
+        - e so se o fin tiver emit
+        - pode ser memset na verdade
+
+- qq code/inst pode ser executado como uma call, sem necessidade de STACK
+
+-rwxr-xr-x 1 chico chico  8624 dez 20 06:59 a.out
+
+- BUT-LED: 1112/20 (Ceu)
+            920/11 (Arduino)
+
+- GADTs, Existencial, "Eq ann"
+
+- Corrigir erros em Run
+    - Também inverter por ordem de linha
+
+- Mudar  boundedLoop para usar alwaysInst
+    - Ficou mais facil, na verdade, basta verificar qq Escape para fora
+        - mas tem que ser reachable
+            - acho que alwaysInst vai funcionar melhor
+                - nao, o "SSeq (Escape _) q" testa reachability
+
+- checar se um lado do Or é "tight" e nem deixa o outro lado executar
+
+- checar declarations
+    - unsused vars
+        - warning
+        - simplify
+
+- otimizar lado direito do (And x SNop), one SNop é qq coisa `alwaysInstantaneous`
+
+- checkIt vs checkIt'
+
+- simplify
+    - traps sem escapes
+
+- async é tight e s/ emit
+    - async nao pode ter async
+
+- timer
+    - precisa corrigir o artigo pois o "delta" nao funciona para paralelos
+        - a solucao foi emitir de 1 em 1 us
+
+- erros a remover:
+    - ultimo awaitFor não alcancavel
+        - ja vai dar o erro de "terminating trap"
+
+- POLY READS
+
+
+
+===============================================================================
+
+interface IFable for a with
+   func f : (a -> Bool)
+end
+
+func g x : (a -> Bool) where a implements IFable do
+   return f x
+end
+
+return (g (Bool.True))
+
+===============================================================================
+
+func f : (a -> Bool)
+
+
+return __g__(a -> Bool) Bool.True
+
+===============================================================================
+
+
+
+
