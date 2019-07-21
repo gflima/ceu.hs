@@ -57,6 +57,16 @@ data Stmt
 
 -------------------------------------------------------------------------------
 
+data EnvType = EnvGlobal | EnvNonLocal | EnvLocal
+  deriving Show
+
+type Envs = [[Stmt]]  -- [ [globals], [non-locals], [locals] ]
+
+envsAdd :: Envs -> Stmt -> Envs
+envsAdd [glbs,nons,locs] s = [glbs,nons,s:locs]
+
+-------------------------------------------------------------------------------
+
 isClass id1 (SClass _ id2 _ _ _) = (id1 == id2)
 isClass _   _                    = False
 
