@@ -474,17 +474,15 @@ expr' :: (Relation,TypeC) -> Envs -> Exp -> (Errors, Exp)
 expr' _       _   (EError  z v)     = ([], EError  z{type_=(TBot,cz)} v)
 expr' _       _   (EUnit   z)       = ([], EUnit   z{type_=(TUnit,cz)})
 expr' (_,txp) _   (EArg    z)       = ([], EArg    z{type_=txp})
-expr' _       ids (EFunc   z e tp p) = (es, EFunc  z{type_=tp} e tp p')
-                                       where
-                                        (es,p') = stmt ids (out,cs) p
-                                        (TFunc _ out,cs) = tp
 
-{-
-                                        -- TODO: closures
-                                        ids' = filter f ids
-                                        f (SVar _ _ (tp_,cs) _) = False
-                                        f _                     = True
--}
+expr' _ ids@[glbs,nons,locs] (EFunc z e tp p) = (es, EFunc z{type_=tp} e tp p')
+ where
+  (es,p') = stmt [glbs',nons',[]] (out,cs) p
+  (TFunc _ out,cs) = tp
+  (glbs',nons') = if null glbs then
+                    (locs,nons)
+                  else
+                    (glbs,nons++locs)
 
 expr' _ ids (EMatch z exp pat) = (esp++esem++esc, EMatch z{type_=(TData ["Bool"] [] TUnit,cz)} exp' pat')
   where
