@@ -277,7 +277,7 @@ spec = do
            ])
         `shouldBe` Left "(line 3, column 9):\ncannot return nested function\n"
 
-      it "escape scope - none - func" $
+      it "FuncGlobal return" $
         (run True $
           unlines [
             "func g () : (() -> (() -> Int)) do",

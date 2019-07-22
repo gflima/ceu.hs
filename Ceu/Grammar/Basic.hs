@@ -72,13 +72,13 @@ data FuncType = FuncUnknown
   deriving (Eq, Show)
 
 funcType :: FuncType -> FuncType -> FuncType
-funcType FuncNested  _                   = FuncNested
-funcType _           FuncNested          = FuncNested
-funcType FuncClosure _                   = FuncClosure
-funcType _           FuncClosure         = FuncClosure
-funcType FuncGlobal  _                   = FuncGlobal
-funcType _           FuncGlobal          = FuncGlobal
-funcType _           _                   = FuncUnknown
+funcType FuncNested  _           = FuncNested
+funcType _           FuncNested  = FuncNested
+funcType FuncClosure _           = FuncClosure
+funcType _           FuncClosure = FuncClosure
+funcType FuncGlobal  _           = FuncGlobal
+funcType _           FuncGlobal  = FuncGlobal
+funcType _           _           = FuncUnknown
 
 funcType' :: EnvType -> Bool -> FuncType  -- Bool = is reference
 funcType' EnvNonLocal False = FuncNested
