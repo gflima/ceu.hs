@@ -1,6 +1,15 @@
 - runhaskell -itests/ tests/Spec.hs
 - 7 -- Basic=1, Type=0, Eval=1, Full=0, Parser=1, Run=0, Book=4, Gen=0
 
+- if / case as expressions
+- where ... end
+
+- modificador de referencia
+- escopos: fora, imediato, local
+- 3 tipos de funcao
+    - verificar retorno
+- implementar closure
+
 - set! List.Cons (xs_,x) <- xs
     - x/xs_ invertido nao ta dando erro
     - case (Either.Right =xr, Either.Right =yr) : (a,a) then
@@ -13,6 +22,13 @@
 
 X._1 x = 10
 x._1   = 10
+
+var x : int
+var x : &int
+
+var y : int
+ref x : int
+x = alias y
 
 match 10 with =X._1 x
     - questoes de refs (tipos recursivos)
@@ -31,10 +47,96 @@ match 10 with =X._1 x
     - new/ref syntax?
     - raciocino de escape de funcao vale p/ qq referencia, ex:
         - return &x
+    - why?
+        - function factories
+            - compose
+            - partial application, currying
+        - encapsulation
+            - private fields, methods
+
 - strings e show?
     - acho que nao
 - pool
 - C runtime
+
+- referencias
+    - tipos recursivos  - ponteiro para filho
+    - ref               - é um ponteiro
+    - closures          - ponteiro para ambiente
+    --
+    - posso retornar uma referencia desde que seja de um pleno
+        - nesse caso o pleno tera a memoria fora da funcao
+            - isso so é possivel em um nivel
+    - uma new closure pode acessar somente argumentos --que sejam referencias-- da fc por fora
+        - isso garante que se ela for retornada, nao havera risco de acessar dados inexistentes
+        - c1 = counter(&1)
+        - 
+    - uma nao new closure nao pode ser retornada
+    - so retornar funcao se for um valor ali criado
+        - recebe sempre os mesmos parametros inicialmente passados para a factory
+            - precisam ser somente referencias pra poder alterá-los
+    - tipo new func
+        - new (Int -> Int)
+        - new func (x) : new (Int->Int) do
+
+    - 3 tipos de funcoes aninhadas:
+        - save f type in fat pointer
+        - globais
+            - podem ser retornadas e passadas
+            - no maximo podem acessar globais
+        - nested
+            - nao podem ser retornadas ou passadas
+            - podem acessar qualquer escopo
+                - como ela nao escapa, é garantido que as variáveis sempre vão existir
+        - closures
+            - podem ser retornadas e passadas
+            - podem acessar globais e nao-locais nao imediatas
+            - nao podem acessar escopo imediato
+                - a nao ser parametros passados por referencia
+                    - que nada mais sao que variaveis do escopo acima
+            - precisa de trabalho no momento da sua criacao
+                - ou melhor, logo ao retornar para quem a criou
+                    - ARGS os argumentos ficam guardados em uma struct
+                    - a closure fica (FPTR,APTR)
+                        - quando retorna outro nivel, os ARGS sao copiados e APTR modificado
+        - referencia
+            - assumir que pode guardar os tres tipos
+            - nao necessita de modificador
+            - nao pode ser retornada (pois pode ser uma nested)
+
+        - modificador
+            - apenas para closures através do "new"
+                - explicita o custo
+                - diferencia de globais
+                    - as duas podem ser retornadas
+                        - assim, o chamador precisa saber para criar ou nao a closure
+            - consigo identificar os tres tipos
+                - global
+                    - nao acessa nada de fora (nao locais), apenas globais e locais
+                - closure
+                    - acessa nao locais somente por referencia
+                - nested
+                    - acessa alguma nao local sem ser por referencia
+
+F = factory(x,y,z)
+F ~ (f, (x,y,z))
+F(i,j,k) ~ f(x,y,z,i,j,k)
+
+func compose (f,g) : (((a->b),(b->c)) -> new (a -> c)) do
+   return new func x : new (a -> c) do
+           return f (g x)
+          end
+end
+func inc x : (Int -> Int) do
+   return x+1
+end
+func dec x : (Int -> Int) do
+   return x-1
+end
+func dup x : (Int -> Int) do
+   return x*2
+end
+return (compose (dec, compose(dup,inc))) 10
 
 - list,vector,hash
     - [Int]
@@ -374,5 +476,35 @@ return __g__(a -> Bool) Bool.True
 ===============================================================================
 
 
+
+func g () : (() -> (() -> Int)) do
+    var a : Int = 10
+    var f : ? = func () : (()->Int) do a=a+1 ; return a end
+    print f()   -- 11
+    a = 1
+    return f
+end
+var a : Int = 99
+
+f = g()
+
+print f()   -- 2
+
+return (g ()) ()
+
+
+{-
+filterEnvs :: (Stmt -> Bool) -> Envs -> Envs
+filterEnvs f envs = map (filter f) envs
+
+mapEnvs :: (Stmt -> a) -> Envs -> [[a]]
+mapEnvs f envs = map (map f) envs
+
+find' :: (a -> Bool) -> [[a]] -> Maybe a
+find' f ls = foldr g Nothing ls where
+              g l acc = case find f l of
+                          Just x    -> Just x
+                          otherwise -> acc
+-}
 
 

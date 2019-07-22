@@ -25,7 +25,7 @@ data Exp
     | EData  ID_Data_Hier Exp -- True, X v (constants)
     | ECons  ID_Data_Hier     -- X         (functions)
     | ETuple [Exp]            -- (1,2) ; ((1),2) ; ((1,2),3) ; ((),()) // (len >= 2)
-    | EFunc  (Maybe ID_Var) Stmt
+    | EFunc  Stmt
     | ECall  Exp Exp          -- f a ; f(a) ; f(1,2)
     | EAny
     | EExp   Exp
@@ -52,7 +52,7 @@ fromExp (B.ECons  z id)  = case type_ z of
                             (TData _ _ TUnit, _) -> EData id EUnit
                             otherwise            -> ECons id
 fromExp (B.ETuple _ vs)  = ETuple (map fromExp vs)
-fromExp (B.EFunc  _ e _ p) = EFunc e (fromStmt p)
+fromExp (B.EFunc  _ _ _ p) = EFunc (fromStmt p)
 fromExp (B.ECall  _ f e) = ECall (fromExp f) (fromExp e)
 fromExp (B.EAny   _)     = EAny
 fromExp (B.EArg   _)     = EVar "_arg"
@@ -132,7 +132,7 @@ envEval vars e = case e of
         (EVar "<",      ETuple [EData ["Int",x] EUnit,
                                 EData ["Int",y] EUnit]) -> EData (bool ["Bool","False"] ["Bool","True"] (read' x < read' y))  EUnit
         (ECons id,       e)                             -> EData id (envEval vars e)
-        (EFunc _ p,      arg)                           -> steps (p, ("_arg",Just arg):vars)
+        (EFunc p,      arg)                             -> steps (p, ("_arg",Just arg):vars)
         --x                                               -> error $ show (x,f,e',vars)
 
     e         -> e

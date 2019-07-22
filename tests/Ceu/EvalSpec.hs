@@ -156,7 +156,7 @@ spec = do
   describe "func" $ do
     it "ret f()" $
       steps (
-        (SVar ("f", Just $ EFunc Nothing (SRet (EData ["Int","1"] EUnit)))
+        (SVar ("f", Just $ EFunc (SRet (EData ["Int","1"] EUnit)))
         (SRet (ECall (EVar "f") EUnit)))
         , [("_steps",Just $ EData ["Int","0"] EUnit)])
       `shouldBe` (EData ["Int","1"] EUnit)
@@ -164,7 +164,7 @@ spec = do
     it "ret f(1)" $
       steps (
         (SVar ("+", Nothing)
-        (SVar ("f", Just $ EFunc Nothing (SRet (ECall (EVar "+") (ETuple [EVar "_arg",EData ["Int","1"] EUnit]))))
+        (SVar ("f", Just $ EFunc (SRet (ECall (EVar "+") (ETuple [EVar "_arg",EData ["Int","1"] EUnit]))))
         (SRet (ECall (EVar "f") (EData ["Int","2"] EUnit)))))
         , [("_steps",Just $ EData ["Int","0"] EUnit)])
       `shouldBe` (EData ["Int","3"] EUnit)
@@ -172,7 +172,7 @@ spec = do
     it "ret f(1,2)" $
       steps (
         (SVar ("+", Nothing)
-        (SVar ("f", Just $ EFunc Nothing (SRet (ECall (EVar "+") (EVar "_arg"))))
+        (SVar ("f", Just $ EFunc (SRet (ECall (EVar "+") (EVar "_arg"))))
         (SRet (ECall (EVar "f") (ETuple [EData ["Int","1"] EUnit,EData ["Int","2"] EUnit])))))
         , [("_steps",Just $ EData ["Int","0"] EUnit)])
       `shouldBe` (EData ["Int","3"] EUnit)
@@ -261,7 +261,7 @@ spec = do
           (B.SData annz Nothing (int,cz) False
           (B.SVar annz "f1" (TFunc TUnit (int),cz)
           (mmmOne annz False (B.EVar annz "f1")
-                        (B.EFunc annz Nothing (TFunc TUnit (int),cz)
+                        (B.EFunc annz B.FuncGlobal (TFunc TUnit (int),cz)
                           (B.SRet annz (B.ECons annz ["Int","1"])))
             (B.SRet annz (B.ECall annz (B.EVar annz "f1") (B.EUnit annz)))
             (B.SRet annz (B.EError annz 99)))))
@@ -272,7 +272,7 @@ spec = do
           (B.SData annz Nothing (int,cz) False
           (B.SVar annz "f1" (TFunc TUnit TUnit,cz)
           (mmmOne annz False (B.EVar annz "f1")
-                        (B.EFunc annz Nothing (TFunc TUnit TUnit,cz)
+                        (B.EFunc annz B.FuncGlobal (TFunc TUnit TUnit,cz)
                           (B.SRet annz (B.EError annz 1)))
             (B.SRet annz (B.ECall annz (B.EVar annz "f1") (B.EUnit annz)))
             (B.SRet annz (B.EError annz 99)))))
@@ -283,7 +283,7 @@ spec = do
           (B.SData annz Nothing (int,cz) False
           (B.SVar annz "f1" (TFunc TUnit TUnit,cz)
           (mmmOne annz False (B.EVar annz "f1")
-                        (B.EFunc annz Nothing (TFunc TUnit TUnit,cz)
+                        (B.EFunc annz B.FuncGlobal (TFunc TUnit TUnit,cz)
                           (B.SRet annz (B.EError annz 1)))
             (B.SSeq annz
               (B.SCall annz (B.ECall annz (B.EVar annz "f1") (B.EUnit annz)))
@@ -304,7 +304,7 @@ spec = do
           (B.SVar annz "+" (TFunc (TTuple [int, int]) (int),cz)
           (B.SVar annz "c" (TFunc (int) (int),cz)
           (mmmOne annz False (B.EVar annz "c")
-                        (B.EFunc annz Nothing (TFunc (int) (int),cz)
+                        (B.EFunc annz B.FuncGlobal (TFunc (int) (int),cz)
                           (B.SRet annz (B.EArg annz)))
             (B.SVar annz "f" (TFunc (TTuple [int, int]) (int),cz)
               (B.SVar annz "g" (TFunc (int) (int),cz)
@@ -326,7 +326,7 @@ spec = do
           (mmmOne annz False (B.EVar annz "glb") (B.ECons annz ["Int","1"])
             (B.SVar   annz "f" (TFunc TUnit (int),cz)
               (mmmOne annz False (B.EVar annz "f")
-                            (B.EFunc annz Nothing (TFunc TUnit (int),cz)
+                            (B.EFunc annz B.FuncGlobal (TFunc TUnit (int),cz)
                               (B.SRet annz (B.EVar annz "glb")))
                 (B.SRet annz
                   (B.ECall annz (B.EVar annz "f") (B.EUnit annz)))
@@ -341,9 +341,9 @@ spec = do
           (mmmOne annz False (B.EVar annz "glb") (B.ECons annz ["Int","1"])
             (B.SVar   annz "f" (TFunc TUnit (TFunc TUnit (int)),cz)
               (mmmOne annz False (B.EVar annz "f")
-                            (B.EFunc annz Nothing (TFunc TUnit (TFunc TUnit (int)),cz)
+                            (B.EFunc annz B.FuncGlobal (TFunc TUnit (TFunc TUnit (int)),cz)
                               (B.SRet annz
-                                (B.EFunc annz Nothing (TFunc TUnit (int),cz)
+                                (B.EFunc annz B.FuncGlobal (TFunc TUnit (int),cz)
                                   (B.SRet annz (B.EVar annz "glb")))))
                 (B.SRet annz
                   (B.ECall annz
@@ -361,9 +361,9 @@ spec = do
           (mmmOne annz False (B.EVar annz "loc") (B.ECons annz ["Int","1"])
             (B.SVar   annz "f" (TFunc TUnit (TFunc TUnit (int)),cz)
               (mmmOne annz False (B.EVar annz "f")
-                            (B.EFunc annz Nothing (TFunc TUnit (TFunc TUnit (int)),cz)
+                            (B.EFunc annz B.FuncGlobal (TFunc TUnit (TFunc TUnit (int)),cz)
                               (B.SRet annz
-                                (B.EFunc annz Nothing (TFunc TUnit (int),cz)
+                                (B.EFunc annz B.FuncGlobal (TFunc TUnit (int),cz)
                                   (B.SRet annz (B.EVar annz "loc")))))
                 (mmmOne annz False (B.EVar annz "g'")
                               (B.ECall annz (B.EVar annz "f") (B.EUnit annz))
@@ -431,7 +431,7 @@ spec = do
             (B.SVar annz "$f3$(Int -> Int)$" (TFunc (int) (int),cz)
             (mmmOne annz False
               (B.EVar annz "$f3$(Int -> Int)$")
-              (B.EFunc annz Nothing (TFunc (int) (int),cz)
+              (B.EFunc annz B.FuncGlobal (TFunc (int) (int),cz)
                 (B.SRet annz (B.ECons annz ["Int","1"])))
               (B.SSeq annz
                 (B.SNop annz)
@@ -452,7 +452,7 @@ spec = do
             (B.SVar annz "$f2$(Bool -> Int)$" (TFunc (bool) (int),cz)
             (mmmOne annz False
               (B.EVar annz "$f2$(Bool -> Int)$")
-              (B.EFunc annz Nothing (TFunc (bool) (int),cz)
+              (B.EFunc annz B.FuncGlobal (TFunc (bool) (int),cz)
                 (B.SRet annz (B.ECons annz ["Int","0"])))
               (B.SSeq annz
                 (B.SNop annz)
@@ -461,7 +461,7 @@ spec = do
                   (B.SVar annz "$f2$(Int -> Int)$" (TFunc (int) (int),cz)
                   (mmmOne annz False
                     (B.EVar annz "$f2$(Int -> Int)$")
-                    (B.EFunc annz Nothing (TFunc (int) (int),cz)
+                    (B.EFunc annz B.FuncGlobal (TFunc (int) (int),cz)
                       (B.SRet annz
                         (B.ECall annz
                           (B.EVar annz "+")
@@ -492,7 +492,7 @@ spec = do
             (B.SVar annz "$f4$(Int -> Int)$" (TFunc (int) (int),cz)
             (mmmOne annz False
               (B.EVar annz "$f4$(Int -> Int)$")
-              (B.EFunc annz Nothing (TFunc (int) (int),cz)
+              (B.EFunc annz B.FuncGlobal (TFunc (int) (int),cz)
                 (B.SRet annz
                   (B.ECall annz
                     (B.EVar annz "+")
@@ -504,7 +504,7 @@ spec = do
                     (B.SVar annz "$f4$(Bool -> Int)$" (TFunc (bool) (int),cz)
                     (mmmOne annz False
                       (B.EVar annz "$f4$(Bool -> Int)$")
-                      (B.EFunc annz Nothing (TFunc (bool) (int),cz)
+                      (B.EFunc annz B.FuncGlobal (TFunc (bool) (int),cz)
                         (B.SRet annz (B.ECons annz ["Int","0"])))
                       (B.SSeq annz
                         (B.SNop annz)

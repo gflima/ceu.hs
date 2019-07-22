@@ -10,3 +10,6 @@ traceShowId = T.traceShowId
 
 traceShowX :: (Show a,Show b) => a -> b -> b
 traceShowX v id = traceShow (v, "==>", id) id
+
+assertEq :: Eq b => a -> b -> b -> a
+assertEq ret v1 v2 = if v1 == v2 then ret else error "assertion error"

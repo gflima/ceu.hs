@@ -17,7 +17,7 @@ data Exp
     | ECons  Ann ID_Data_Hier   -- Bool.True ; Int.1 ; Tree.Node
     | EField Ann ID_Data_Hier String -- List.Cons._1 // Student.age
     | ETuple Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
-    | EFunc  Ann (Maybe ID_Var) TypeC Stmt -- function implementation
+    | EFunc  Ann FuncType TypeC Stmt -- function implementation
     | ECall  Ann Exp Exp        -- f a ; f(a) ; f(1,2)
     | EAny   Ann
     | EArg   Ann
@@ -64,6 +64,23 @@ type Envs = [[Stmt]]  -- [ [globals], [non-locals], [locals] ]
 
 envsAdd :: Envs -> Stmt -> Envs
 envsAdd [glbs,nons,locs] s = [glbs,nons,s:locs]
+
+data FuncType = FuncUnknown | FuncGlobal | FuncNested | FuncClosure
+  deriving (Eq, Show)
+
+funcType :: FuncType -> FuncType -> FuncType
+funcType FuncNested  _                   = FuncNested
+funcType _           FuncNested          = FuncNested
+funcType FuncClosure _                   = FuncClosure
+funcType _           FuncClosure         = FuncClosure
+funcType FuncGlobal  _                   = FuncGlobal
+funcType _           FuncGlobal          = FuncGlobal
+funcType _           _                   = FuncUnknown
+
+funcType' :: EnvType -> Bool -> FuncType  -- Bool = is reference
+funcType' EnvNonLocal False = FuncNested
+funcType' EnvNonLocal True  = FuncClosure
+funcType' _           _     = FuncGlobal
 
 -------------------------------------------------------------------------------
 
@@ -137,7 +154,7 @@ map_stmt f@(fs,_,_)  (SNop   z)                  = fs (SNop   z)
 map_exp :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Exp -> Exp
 map_exp f@(_,fe,_)  (ECons  z id)    = fe (ECons  z id)
 map_exp f@(_,fe,_)  (ETuple z es)    = fe (ETuple z (map (map_exp f) es))
-map_exp f@(_,fe,ft) (EFunc  z e tp p) = fe (EFunc  z e (ft tp) (map_stmt f p))
+map_exp f@(_,fe,ft) (EFunc  z ftp tp p) = fe (EFunc  z ftp (ft tp) (map_stmt f p))
 map_exp f@(_,fe,_)  (ECall  z e1 e2) = fe (ECall  z (map_exp f e1) (map_exp f e2))
 map_exp f@(_,fe,_)  exp              = fe exp
 

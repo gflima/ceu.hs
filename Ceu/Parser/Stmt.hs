@@ -370,7 +370,7 @@ expr_func = do
   new      <- optionMaybe $ try $ tk_key "new"
   void     <- try $ tk_key "func"
   (tp,imp) <- func pos
-  return $ EFunc annz{source=pos} (bool Nothing (Just "?") (isJust new)) tp imp
+  return $ EFunc annz{source=pos} {-(bool FuncUnknown FuncClosure (isJust new))-} tp imp
 
 expr_unit :: Parser Exp
 expr_unit = do
@@ -475,5 +475,5 @@ stmt_funcs = do
                 tp   <- pTypeContext
                 return $ SVar ann f tp
               Just (tp,imp) -> do
-                return $ SFunc ann f (bool Nothing (Just "?") (isJust new)) tp imp
+                return $ SFunc ann f {-(bool Nothing (Just "?") (isJust new))-} tp imp
   return ret

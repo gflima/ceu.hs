@@ -48,7 +48,7 @@ stmt _  p                         = p
 expr :: [Stmt] -> Exp -> Exp
 expr ds (ETuple z es)            = ETuple z (map (expr ds) es)
 expr ds (ECall  z e1 e2)         = ECall  z (expr ds e1) (expr ds e2)
-expr ds (EFunc  z env tp p)      = EFunc  z env tp (stmt ds p)
+expr ds (EFunc  z tp p)          = EFunc  z tp (stmt ds p)
 expr _  e                        = e
 
 -------------------------------------------------------------------------------
@@ -116,7 +116,7 @@ faccs z nms (tpD@(TData hr _ st),cz) p = accs where
                  where
                   id = hr_str ++ "._" ++ show idx
 
-                  body = EFunc z Nothing (TFunc tpD tp,cz)
+                  body = EFunc z (TFunc tpD tp,cz)
                           (SVar'' z "ret" (tp,cz)
                             (SMatch' z False (EArg z) [(SNop z, ret, SRet z (EVar z "ret"))]))
                   ret  = ECall z (ECons z hr) (bool (ETuple z repl) (repl!!0) (len st == 1))
@@ -132,5 +132,5 @@ faccs z nms (tpD@(TData hr _ st),cz) p = accs where
                                       (SMatch' z False body [(SNop z, EVar z idm, p)])
                                      where
                                       idm = hr_str ++ "." ++ (l!!(idx-1))
-                                      body = EFunc z Nothing (TFunc tpD tp,cz)
+                                      body = EFunc z (TFunc tpD tp,cz)
                                               (SRet z (ECall z (EVar z id) (EArg z)))
