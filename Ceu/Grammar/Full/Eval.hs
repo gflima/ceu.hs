@@ -18,10 +18,10 @@ import qualified Ceu.Grammar.Full.Compile.Match as Match
 import qualified Ceu.Grammar.Full.Compile.Class as Class
 import qualified Ceu.Grammar.Full.Compile.Func  as Func
 
-int   = TData ["Int"]          [] TUnit
-bool  = TData ["Bool"]         [] TUnit
-boolf = TData ["Bool","False"] [] TUnit
-boolt = TData ["Bool","True"]  [] TUnit
+int   = TData False ["Int"]          [] (TUnit False)
+bool  = TData False ["Bool"]         [] (TUnit False)
+boolf = TData False ["Bool","False"] [] (TUnit False)
+boolt = TData False ["Bool","True"]  [] (TUnit False)
 
 prelude :: Ann -> Stmt -> Stmt
 prelude z p =
@@ -31,16 +31,16 @@ prelude z p =
     (SSeq z (SData z Nothing (boolt,cz) False)
     (SSeq z (SVar  z "_true"  (bool,cz))
     (SSeq z (SSet  z False (EVar z "_true") (ECons z ["Bool","True"]))
-    (SSeq z (SVar  z "print"  (TFunc (TAny "?")        (TAny "?"), cz))
-    (SSeq z (SVar  z "negate" (TFunc int                int,         cz))
-    (SSeq z (SVar  z "=="     (TFunc (TTuple [int, int]) bool,        cz))
-    (SSeq z (SVar  z "<="     (TFunc (TTuple [int, int]) bool,        cz))
-    (SSeq z (SVar  z "<"      (TFunc (TTuple [int, int]) bool,        cz))
-    (SSeq z (SVar  z "+"      (TFunc (TTuple [int, int]) int,         cz))
-    (SSeq z (SVar  z "-"      (TFunc (TTuple [int, int]) int,         cz))
-    (SSeq z (SVar  z "/"      (TFunc (TTuple [int, int]) int,         cz))
-    (SSeq z (SVar  z "*"      (TFunc (TTuple [int, int]) int,         cz))
-    (SSeq z (SVar  z "rem"    (TFunc (TTuple [int, int]) int,         cz))
+    (SSeq z (SVar  z "print"  (TFunc False (TAny False "?")          (TAny False "?"), cz))
+    (SSeq z (SVar  z "negate" (TFunc False int                       int,              cz))
+    (SSeq z (SVar  z "=="     (TFunc False (TTuple False [int, int]) bool,             cz))
+    (SSeq z (SVar  z "<="     (TFunc False (TTuple False [int, int]) bool,             cz))
+    (SSeq z (SVar  z "<"      (TFunc False (TTuple False [int, int]) bool,             cz))
+    (SSeq z (SVar  z "+"      (TFunc False (TTuple False [int, int]) int,              cz))
+    (SSeq z (SVar  z "-"      (TFunc False (TTuple False [int, int]) int,              cz))
+    (SSeq z (SVar  z "/"      (TFunc False (TTuple False [int, int]) int,              cz))
+    (SSeq z (SVar  z "*"      (TFunc False (TTuple False [int, int]) int,              cz))
+    (SSeq z (SVar  z "rem"    (TFunc False (TTuple False [int, int]) int,              cz))
            p))))))))))))))))
 
 compile :: Stmt -> Stmt

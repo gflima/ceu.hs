@@ -11,13 +11,13 @@ import Ceu.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Constraints as Cs
 
-data Type = TBot
-          | TTop
-          | TUnit
-          | TData ID_Data_Hier [Type] Type    -- X of [Y] with (Y,Int)
-          | TTuple [Type]    -- (len >= 2)
-          | TFunc Type Type
-          | TAny ID_Var
+data Type = TBot   Bool
+          | TTop   Bool
+          | TUnit  Bool
+          | TData  Bool ID_Data_Hier [Type] Type    -- X of [Y] with (Y,Int)
+          | TTuple Bool [Type]    -- (len >= 2)
+          | TFunc  Bool Type Type
+          | TAny   Bool ID_Var
     deriving (Eq,Show)
 
 data Relation = SUP | SUB | ANY | NONE deriving (Eq, Show)
@@ -29,53 +29,53 @@ type TypeC = (Type, Cs.Map)
 hier2str = intercalate "."
 
 show' :: Type -> String
-show' (TAny id)         = id
-show' TTop              = "top"
-show' TBot              = "bot"
-show' TUnit              = "()"
-show' (TData hier []  _) = hier2str hier
-show' (TData hier [x] _) = "(" ++ hier2str hier ++ " of " ++ show' x ++ ")"
-show' (TData hier ofs _) = "(" ++ hier2str hier ++ " of " ++ "(" ++ intercalate "," (map show' ofs) ++ ")" ++ ")"
-show' (TFunc inp out)    = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
-show' (TTuple tps)        = "(" ++ intercalate "," (map show' tps) ++ ")"
+show' (TAny   False id)         = id
+show' (TTop   False)            = "top"
+show' (TBot   False)            = "bot"
+show' (TUnit  False)            = "()"
+show' (TData  False hier []  _) = hier2str hier
+show' (TData  False hier [x] _) = "(" ++ hier2str hier ++ " of " ++ show' x ++ ")"
+show' (TData  False hier ofs _) = "(" ++ hier2str hier ++ " of " ++ "(" ++ intercalate "," (map show' ofs) ++ ")" ++ ")"
+show' (TFunc  False inp out)    = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
+show' (TTuple False tps)        = "(" ++ intercalate "," (map show' tps) ++ ")"
 
 -------------------------------------------------------------------------------
 
 instance Ord Type where
-  (<=) TTop               _                   = True
-  (<=) _                   TTop               = False
-  (<=) TBot               _                   = True
-  (<=) _                   TBot               = False
-  (<=) TUnit               _                   = True
-  (<=) _                   TUnit               = False
-  (<=) (TData h1 ofs1 st1) (TData h2 ofs2 st2) = h1 `isPrefixOf` h2 -- || ofs1>ofs2 || st1>st2
-  (<=) (TData _  _    _)   _                   = True
-  (<=) _                   (TData _  _    _)   = False
-  (<=) (TFunc inp1 out1)   (TFunc inp2 out2)   = inp1<=inp2 && out1<=out2
-  (<=) (TFunc _    _)      _                   = True
-  (<=) _                   (TFunc _    _)      = False
-  (<=) (TTuple [])          (TTuple l2)          = True
-  (<=) (TTuple l1)          (TTuple [])          = False
-  (<=) (TTuple (v1:l1))     (TTuple (v2:l2))     | v2<v1     = False
+  (<=) (TTop False)              _                         = True
+  (<=) _                         (TTop False)              = False
+  (<=) (TBot False)              _                         = True
+  (<=) _                         (TBot _)                  = False
+  (<=) (TUnit False)             _                         = True
+  (<=) _                         (TUnit False)             = False
+  (<=) (TData False h1 ofs1 st1) (TData False h2 ofs2 st2) = h1 `isPrefixOf` h2 -- || ofs1>ofs2 || st1>st2
+  (<=) (TData False _  _    _)   _                         = True
+  (<=) _                         (TData False _  _    _)   = False
+  (<=) (TFunc False inp1 out1)   (TFunc False inp2 out2)   = inp1<=inp2 && out1<=out2
+  (<=) (TFunc False _    _)      _                         = True
+  (<=) _                         (TFunc _ _    _)          = False
+  (<=) (TTuple False [])         (TTuple False l2)         = True
+  (<=) (TTuple False l1)         (TTuple False [])         = False
+  (<=) (TTuple False (v1:l1))    (TTuple False (v2:l2))| v2<v1 = False
                                                | v1<v2     = True
-                                               | otherwise = (TTuple l1 <= TTuple l2)
-  (<=) (TTuple _)           _                   = True
-  (<=) _                   (TTuple _)           = False
-  (<=) (TAny v1)          (TAny v2)          = v1<=v2
+                                               | otherwise = (TTuple False l1 <= TTuple False l2)
+  (<=) (TTuple False _)          _                         = True
+  (<=) _                         (TTuple False _)          = False
+  (<=) (TAny False v1)           (TAny False v2)           = v1<=v2
 
 sort' :: [[Type]] -> [[Type]]
-sort' ts = map (\(TTuple l)->l) $ sort $ map TTuple ts
+sort' ts = map (\(TTuple False l)->l) $ sort $ map (TTuple False) ts
 
 -------------------------------------------------------------------------------
 
 getDs :: Type -> [Type]
-getDs (TAny _)           = []
-getDs TTop               = []
-getDs TBot               = []
-getDs TUnit               = []
-getDs tp@(TData _ ofs st) = [tp] ++ concatMap getDs ofs ++ getDs st
-getDs (TFunc inp out)     = getDs inp ++ getDs out
-getDs (TTuple ts)          = concatMap getDs ts
+getDs (TAny False _)            = []
+getDs (TTop False)              = []
+getDs (TBot False)              = []
+getDs (TUnit False)             = []
+getDs tp@(TData False _ ofs st) = [tp] ++ concatMap getDs ofs ++ getDs st
+getDs (TFunc False inp out)     = getDs inp ++ getDs out
+getDs (TTuple False ts)         = concatMap getDs ts
 
 -------------------------------------------------------------------------------
 
@@ -94,13 +94,13 @@ splitOn d s = x : splitOn d (drop 1 y) where (x,y) = span (/= d) s
 -- Type: type of the instantiated variable
 -- [(a,TData "Bool"),...] -> TAny "a" -> TData "Bool"
 instantiate :: [(ID_Var,Type)] -> Type -> Type
-instantiate vars (TAny var)    = case find (\(var',_) -> var==var') vars of
-                                    Nothing    -> TAny var
-                                    Just (_,v) -> v
-instantiate vars (TData hier ofs st) = TData hier (map (instantiate vars) ofs) (instantiate vars st)
-instantiate vars (TFunc inp out) = TFunc (instantiate vars inp) (instantiate vars out)
-instantiate vars (TTuple tps)     = TTuple $ map (instantiate vars) tps
-instantiate _    tp              = tp
+instantiate vars (TAny   False var)         = case find (\(var',_) -> var==var') vars of
+                                                Nothing    -> TAny False var
+                                                Just (_,v) -> v
+instantiate vars (TData  False hier ofs st) = TData  False hier (map (instantiate vars) ofs) (instantiate vars st)
+instantiate vars (TFunc  False inp out)     = TFunc  False (instantiate vars inp) (instantiate vars out)
+instantiate vars (TTuple False tps)         = TTuple False $ map (instantiate vars) tps
+instantiate _    tp                         = tp
 
 -------------------------------------------------------------------------------
 
@@ -163,7 +163,7 @@ relates_ rel tp1 tp2 =
         else
           --traceShow (rel, tp1, tp2, sups_ok, ret,tp,insts) $
           --traceShow (sups_ok,grouped) $
-          ((var,TBot),
+          ((var,TBot False),
             if sups_ok && subs_ok && sups/=[] && subs/=[] && (subest `isSubOf_` supest) then
               ["type variance does not match : '" ++ show' subest ++
                "' should be supertype of '" ++ show' supest ++ "'"]
@@ -189,59 +189,59 @@ relates_ rel tp1 tp2 =
 
 comPre :: [Type] -> Maybe Type
 comPre tps = yyy where
-  l = bool [TData pre [] TUnit] [] (null tp1s || null pre)
+  l = bool [TData False pre [] (TUnit False)] [] (null tp1s || null pre)
 
   xxx = find isNotV tps
         where
-          isNotV (TAny _) = False
-          isNotV _         = True
+          isNotV (TAny False _) = False
+          isNotV _              = True
 
   yyy = case xxx of
           Nothing -> bool (Just (head tps)) Nothing (null tps)
           Just tp -> case tp of
-            TData _ x y   -> case commonPrefixAll $ map (\(TData hr _ _)->hr) $ filter isTData tps of
-                              [] -> Nothing
+            TData False _ x y   -> case commonPrefixAll $ map (\(TData False hr _ _)->hr) $ filter isTData tps of
+                                    [] -> Nothing
 {-
-                              tp -> Just $ TData tp x y
+                                    tp -> Just $ TData tp x y
 -}
-                              tp -> case comPre $ map (\(TData _ _ st)->st) $ filter isTData tps of
-                                Nothing  -> Just $ TData tp x y
-                                Just tp' -> Just $ TData tp x tp'
-            TFunc inp out -> f $ unzip $ map (\(TFunc inp out)->(inp,out)) $ filter isTFunc tps
-                             where
-                              f (inps,outs) =
-                                case (comPre inps, comPre outs) of
-                                  (Just inp, Just out) -> Just $ TFunc inp out
-                                  otherwise            -> Nothing
+                                    tp -> case comPre $ map (\(TData False _ _ st)->st) $ filter isTData tps of
+                                      Nothing  -> Just $ TData False tp x y
+                                      Just tp' -> Just $ TData False tp x tp'
+            TFunc False inp out -> f $ unzip $ map (\(TFunc False inp out)->(inp,out)) $ filter isTFunc tps
+                                    where
+                                      f (inps,outs) =
+                                        case (comPre inps, comPre outs) of
+                                          (Just inp, Just out) -> Just $ TFunc False inp out
+                                          otherwise            -> Nothing
 
-            TTuple ts      -> if all isJust yyy then
-                              Just $ TTuple (map fromJust yyy)
-                             else
-                              Nothing
-                             where
-                              yyy = map comPre xxx                   -- [ com1,      com2 ]
-                              xxx = foldr (zipWith (:)) (rep l) l    -- [ [a,c,...], [b,d,...] ]
-                              rep l = assert (ass l) $ replicate (length (head l)) [] -- [ [], [] ]
-                              l = map (\(TTuple tps)->tps)            -- [ [a,b], [c,d], ... ]
-                                    $ filter isTTuple tps             -- [ tn1,   tn2,   ... ]
-                              ass l = and $ map (== head l') (tail l')  -- all lists have same length
-                                      where
-                                        l' = map length l
+            TTuple False ts      -> if all isJust yyy then
+                                      Just $ TTuple False (map fromJust yyy)
+                                    else
+                                      Nothing
+                                    where
+                                      yyy = map comPre xxx                   -- [ com1,      com2 ]
+                                      xxx = foldr (zipWith (:)) (rep l) l    -- [ [a,c,...], [b,d,...] ]
+                                      rep l = assert (ass l) $ replicate (length (head l)) [] -- [ [], [] ]
+                                      l = map (\(TTuple False tps)->tps)          -- [ [a,b], [c,d], ... ]
+                                            $ filter isTTuple tps             -- [ tn1,   tn2,   ... ]
+                                      ass l = and $ map (== head l') (tail l')  -- all lists have same length
+                                              where
+                                                l' = map length l
 
 
             otherwise     -> Nothing
 
   tp1s = filter isTData tps
-  pre  = commonPrefixAll $ map (\(TData hr _ _)->hr) tp1s
+  pre  = commonPrefixAll $ map (\(TData False hr _ _)->hr) tp1s
 
-  isTData (TData _ _ _) = True
-  isTData _             = False
+  isTData (TData False _ _ _) = True
+  isTData _                   = False
 
-  isTFunc (TFunc _ _)   = True
-  isTFunc _             = False
+  isTFunc (TFunc False _ _)   = True
+  isTFunc _                   = False
 
-  isTTuple (TTuple _)     = True
-  isTTuple _             = False
+  isTTuple (TTuple False _)   = True
+  isTTuple _                  = False
 
   -- https://stackoverflow.com/questions/21717646/longest-common-prefix-in-haskell
   commonPrefixAll :: (Eq a) => [[a]] -> [a]
@@ -274,25 +274,25 @@ supOf :: Type -> Type -> (Bool, Type, [(ID_Var,Type,Relation)])
                                         -- "a" >= tp (True)
                                         -- "a" <= tp (False)
 
-supOf TTop             sub               = (True,  sub,   [])
+supOf (TTop False)        sub                 = (True,  sub,         [])
 
-supOf _                 TBot             = (True,  TBot, [])
-supOf TBot             _                 = (False, TBot, [])
+supOf _                   (TBot False)        = (True,  TBot False,  [])
+supOf (TBot False)        _                   = (False, TBot False,  [])
 
-supOf sup@(TAny a1)    sub@(TAny a2)    = (True,  sub,   [(a1,sub,SUP),(a2,sup,SUB)])
-supOf (TAny a1)        sub               = (True,  sub,   [(a1,sub,SUP)])
-supOf sup               sub@(TAny a2)    = (True,  sup,   [(a2,sup,SUB)])
+supOf sup@(TAny False a1) sub@(TAny False a2) = (True,  sub,         [(a1,sub,SUP),(a2,sup,SUB)])
+supOf (TAny False a1)     sub                 = (True,  sub,         [(a1,sub,SUP)])
+supOf sup                 sub@(TAny False a2) = (True,  sup,         [(a2,sup,SUB)])
 
-supOf TUnit             TUnit             = (True,  TUnit, [])
-supOf TUnit             _                 = (False, TUnit, [])
-supOf sup               TUnit             = (False, sup,   [])
+supOf (TUnit False)       (TUnit False)       = (True,  TUnit False, [])
+supOf (TUnit False)       _                   = (False, TUnit False, [])
+supOf sup                 (TUnit False)       = (False, sup,         [])
 
-supOf sup               TTop             = (False, sup,   [])
+supOf sup                 (TTop False)        = (False, sup,         [])
 
-supOf sup@(TData x ofs1 st1) sub@(TData y ofs2 st2)
-  | not $ x `isPrefixOf` y                     = (False, sup,   [])
-  | not $ (TTuple ofs1) `isSupOf_` (TTuple ofs2) = (False, sup,   [])
-  | otherwise                                  = (ret, TData x ofs1 sup, es)
+supOf sup@(TData False x ofs1 st1) sub@(TData False y ofs2 st2)
+  | not $ x `isPrefixOf` y = (False, sup,   [])
+  | not $ (TTuple False ofs1) `isSupOf_` (TTuple False ofs2) = (False, sup,   [])
+  | otherwise              = (ret, TData False x ofs1 sup, es)
   where
     (ret,sup,es) = f st1 st2
 
@@ -302,36 +302,36 @@ supOf sup@(TData x ofs1 st1) sub@(TData y ofs2 st2)
     -- x(_) <- y(_,_)
     f :: Type -> Type -> (Bool, Type, [(ID_Var,Type,Relation)])
     f tp1 tp2 = case tp1 of
-      TTuple l1   -> case tp2 of
-        TTuple l2 -> (TTuple l1') `supOf` (TTuple l2') where
-                      m   = min (length l1) (length l2)
-                      l1' = take m l1
-                      l2' = take m l2
-        TUnit    -> g $ f tp1           (TTuple [])
-        _        -> g $ f tp1           (TTuple [tp2])
-      TUnit      -> g $ f (TTuple [])    tp2
-      _          -> g $ f (TTuple [tp1]) tp2
+      TTuple False l1   -> case tp2 of
+        TTuple False l2 -> (TTuple False l1') `supOf` (TTuple False l2') where
+                            m   = min (length l1) (length l2)
+                            l1' = take m l1
+                            l2' = take m l2
+        TUnit False     -> g $ f tp1                  (TTuple False [])
+        _               -> g $ f tp1                  (TTuple False [tp2])
+      TUnit False       -> g $ f (TTuple False [])    tp2
+      _                 -> g $ f (TTuple False [tp1]) tp2
 
     g :: (Bool, Type, [(ID_Var,Type,Relation)]) -> (Bool, Type, [(ID_Var,Type,Relation)])
-    g (b, TTuple [],   l) = (b, TUnit, l)
-    g (b, TTuple [tp], l) = (b, tp,    l)
-    g x                  = x
+    g (b, TTuple False [],   l) = (b, TUnit False, l)
+    g (b, TTuple False [tp], l) = (b, tp,          l)
+    g x                     = x
 
-supOf sup@(TData _ _ _) _                 = (False, sup,   [])
-supOf sup               (TData _ _ _)     = (False, sup,   [])
+supOf sup@(TData False _ _ _) _                   = (False, sup,   [])
+supOf sup                     (TData False _ _ _) = (False, sup,   [])
 
-supOf (TFunc inp1 out1) (TFunc inp2 out2) = (ret, TFunc inp out, k++z) where
+supOf (TFunc False inp1 out1) (TFunc False inp2 out2) = (ret, TFunc False inp out, k++z) where
   (i,inp,k) = inp2 `supOf` inp1      -- contravariance on inputs
   (x,out,z) = out1 `supOf` out2
   ret = i && x
 
-supOf sup@(TFunc _ _)   _                 = (False, sup,   [])
-supOf sup               (TFunc _ _)       = (False, sup,   [])
+supOf sup@(TFunc False _ _)   _                   = (False, sup,   [])
+supOf sup                     (TFunc False _ _)   = (False, sup,   [])
 
-supOf sup@(TTuple sups)  (TTuple subs)      = if (length subs) /= (length sups) then
-                                              (False, sup, [])
-                                            else
-                                              foldr f (True, TTuple [], []) $ zipWith supOf sups subs
+supOf sup@(TTuple False sups) (TTuple False subs) = if (length subs) /= (length sups) then
+                                                      (False, sup, [])
+                                                    else
+                                                      foldr f (True, TTuple False [], []) $ zipWith supOf sups subs
   where
-    f (ret, tp, insts) (ret', TTuple tps', insts') =
-      (ret&&ret', TTuple (tp:tps'), insts++insts')
+    f (ret, tp, insts) (ret', TTuple False tps', insts') =
+      (ret&&ret', TTuple False (tp:tps'), insts++insts')

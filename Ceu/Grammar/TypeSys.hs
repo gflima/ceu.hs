@@ -38,7 +38,7 @@ idtp id tp = "$" ++ id ++ "$" ++ T.show' tp ++ "$"
 
 go :: Stmt -> (Errors, Stmt)
 go p = (es,p') where
-        (es,_,p') = stmt [[],[],[]] (TAny "?",cz) p
+        (es,_,p') = stmt [[],[],[]] (TAny False "?",cz) p
 --go p = f $ stmt [] p where f (e,s) = traceShow s (e,s)
 --go p = f $ stmt [] p where f (e,s) = traceShow (show_stmt 0 s) (e,s)
 
@@ -149,29 +149,29 @@ combos' lvl ids clss = combos insts where
 -------------------------------------------------------------------------------
 
 fPat :: Envs -> Exp -> (Errors,FuncType,TypeC,Exp)
-fPat ids (EAny   z)      = ([], FuncGlobal, (TAny "?",cz), EAny z)
-fPat ids (EUnit  z)      = ([], FuncGlobal, (TUnit,   cz), EUnit z)
-fPat ids (EVar   z id)   = case findVar z (id,SUP,(TAny "?",cz)) ids of
+fPat ids (EAny   z)      = ([], FuncGlobal, (TAny False "?",cz), EAny z)
+fPat ids (EUnit  z)      = ([], FuncGlobal, (TUnit False,   cz), EUnit z)
+fPat ids (EVar   z id)   = case findVar z (id,SUP,(TAny False "?",cz)) ids of
                             Right (etp, SVar _ _ tp _, _) -> ([], funcType' etp False, tp, EVar z id)
-                            Left  es                      -> (es, FuncGlobal, (TAny "?",cz), EVar z id)
+                            Left  es                      -> (es, FuncGlobal, (TAny False "?",cz), EVar z id)
 fPat ids (ECons  z h)    = (es, FuncGlobal, tp, ECons z{type_=tp} h) where
                             (es,tp) = case find (isData $ hier2str h) (concat ids) of
                               Nothing -> ([toError z $ "data '" ++ (hier2str h) ++ "' is not declared"],
-                                          (TData [] [] (TAny "?"),cz))
+                                          (TData False [] [] (TAny False "?"),cz))
                               Just (SData _ _ tp _ _) -> case tp of
-                                (TData _ ofs st, ctrs) -> (es,tp') where
-                                  tp' = (TData (take 1 h) ofs st, ctrs)
+                                (TData False _ ofs st, ctrs) -> (es,tp') where
+                                  tp' = (TData False (take 1 h) ofs st, ctrs)
                                   es  = []-- map (toError z) (relatesErrors SUB tp tp')
-fPat ids (ETuple z ls)   = (concat ess, ftp, (TTuple (map fst tps),cz), ETuple z ls') where   -- TODO: cz should be union of all snd
+fPat ids (ETuple z ls)   = (concat ess, ftp, (TTuple False (map fst tps),cz), ETuple z ls') where   -- TODO: cz should be union of all snd
                             (ess, ftps, tps, ls') = unzip4 $ map (fPat ids) ls
                             ftp = foldr funcType FuncUnknown ftps
 fPat ids (ECall  z f e)  = (esf++ese, funcType ftp1 ftp2, (tp_',ctrs), ECall z f' e') where
                             (esf,ftp1,tpf,f') = fPat ids f
-                            --(esf,f')   = expr z (SUP,(TAny "?",cz)) ids f
-                            (ese,ftp2,e') = expr z (SUP,(TAny "?",cz)) ids e
+                            --(esf,f')   = expr z (SUP,(TAny False "?",cz)) ids f
+                            (ese,ftp2,e') = expr z (SUP,(TAny False "?",cz)) ids e
                             (tp_,ctrs) = type_ $ getAnn f'
                             tp_'       = case tp_ of
-                              TFunc _ tp_ -> tp_
+                              TFunc False _ tp_ -> tp_
                               tp_         -> tp_
 fPat ids (EExp   z e)    = (es, ftp, tp, EExp z e') where
                             (es,ftp,tp,e') = fPat ids e
@@ -209,7 +209,7 @@ errDeclared z chk str id ids =
 getErrsTypesDeclared :: Ann -> [Stmt] -> Type -> Errors
 getErrsTypesDeclared z ids tp = concatMap f (T.getDs tp) where
   f :: Type -> Errors
-  f (TData hier _ tp_) = case find (isData id) ids of
+  f (TData False hier _ tp_) = case find (isData id) ids of
     Nothing                  -> [toError z $ "data '" ++ id ++ "' is not declared"]
     Just (SData _ _ tp' _ _) -> [] --relatesErrors SUP tp' (tp_,cz)
 -- TODO
@@ -282,7 +282,7 @@ stmt ids tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ftp, p'') where
                         case relates SUP tp1 tp2 of
                           Left es -> map (toError z2) es
                           Right (_,insts) ->
-                            let tp' = T.instantiate insts (TAny clss_var) in
+                            let tp' = T.instantiate insts (TAny False clss_var) in
                               if tp' == itp then
                                 []
                               else
@@ -363,7 +363,7 @@ stmt ids tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ftp, p'') where
 
         otherwise  -> error "TODO: multiple vars"
 
-stmt ids tpr s@(SData z nms (tpD@(TData hr _ st),cz) abs p) =
+stmt ids tpr s@(SData z nms (tpD@(TData False hr _ st),cz) abs p) =
   (es_dcl ++ (errDeclared z Nothing "data" (T.hier2str hr) (concat ids)) ++ es,
   ftp,
   SData z nms (tpD,cz) abs p')
@@ -371,14 +371,14 @@ stmt ids tpr s@(SData z nms (tpD@(TData hr _ st),cz) abs p) =
     (es,ftp,p') = stmt (envsAdd ids s) tpr p
     es_dcl = (getErrsTypesDeclared z (concat ids) st) ++ case T.getSuper hr of
                 Nothing  -> []
-                Just sup -> (getErrsTypesDeclared z (concat ids) (TData sup [] TUnit))
+                Just sup -> (getErrsTypesDeclared z (concat ids) (TData False sup [] (TUnit False)))
 
 stmt ids tpr s@(SVar z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, ftp, f p'') where
   es_data = getErrsTypesDeclared z (concat ids) tp_
   es_id   = errDeclared z (Just chk) "variable" id (concat ids) where
               chk :: Stmt -> Bool
-              chk (SVar _ id1 tp'@(TFunc _ _,_) (SMatch _ False _ [(_,EVar _ id2,_)])) = (id1 /= id2)
-              chk (SVar _ id1 tp'@(TFunc _ _,_) _) = (tp == tp') -- function prototype
+              chk (SVar _ id1 tp'@(TFunc False _ _,_) (SMatch _ False _ [(_,EVar _ id2,_)])) = (id1 /= id2)
+              chk (SVar _ id1 tp'@(TFunc False _ _,_) _) = (tp == tp') -- function prototype
               chk _ = False
   (es,ftp,p'') = stmt (envsAdd ids s) tpr p'
 
@@ -447,7 +447,7 @@ stmt ids tpr (SMatch z fce exp cses) = (es', funcType ftp1 ftp2, SMatch z fce ex
 -------------------------------------------------------------------------------
 
 stmt ids _   (SCall z exp)  = (ese++esf, ftp, SCall z exp') where
-                                (ese,ftp,exp') = expr z (SUP, (TAny "?",cz)) ids exp
+                                (ese,ftp,exp') = expr z (SUP, (TAny False "?",cz)) ids exp
                                 esf = case exp' of
                                   ECall _ _ _ -> []
                                   otherwise  -> [toError z "expected call"]
@@ -464,8 +464,8 @@ stmt ids tpr (SRet z exp)   = (es ++ ese, ftp, SRet z exp') where
 {-
                                 -- TODO: closures
                                 xxx = f $ fst $ type_ $ getAnn exp' where
-                                  f (TFunc _ _) = True
-                                  f (TTuple l)  = or $ map f l
+                                  f (TFunc False _ _) = True
+                                  f (TTuple False l)  = or $ map f l
                                   f _           = False
 -}
 
@@ -475,8 +475,8 @@ stmt _   _   (SNop z)       = ([], FuncGlobal, SNop z)
 
 expr :: Ann -> (Relation,TypeC) -> Envs -> Exp -> (Errors, FuncType, Exp)
 expr z (rel,txp) ids exp = (es1++es2, ftp, exp') where
-  --(es1, exp') = expr' (rel,bool (TAny "?" []) txp (rel/=ANY)) ids exp
-  --(es1, exp') = expr' (rel,bool (TAny "?" []) txp (rel==SUP)) ids exp
+  --(es1, exp') = expr' (rel,bool (TAny False "?" []) txp (rel/=ANY)) ids exp
+  --(es1, exp') = expr' (rel,bool (TAny False "?" []) txp (rel==SUP)) ids exp
                            -- only force expected type on SUP
   (es1, ftp, exp') = expr' (rel,txp) ids exp
   es2 = if not.null $ es1 then [] else
@@ -495,14 +495,14 @@ expr z (rel,txp) ids exp = (es1++es2, ftp, exp') where
 
 expr' :: (Relation,TypeC) -> Envs -> Exp -> (Errors, FuncType, Exp)
 
-expr' _       _   (EError  z v)     = ([], FuncGlobal, EError  z{type_=(TBot,cz)} v)
-expr' _       _   (EUnit   z)       = ([], FuncGlobal, EUnit   z{type_=(TUnit,cz)})
+expr' _       _   (EError  z v)     = ([], FuncGlobal, EError  z{type_=(TBot False,cz)} v)
+expr' _       _   (EUnit   z)       = ([], FuncGlobal, EUnit   z{type_=(TUnit False,cz)})
 expr' (_,txp) _   (EArg    z)       = ([], FuncGlobal, EArg    z{type_=txp})
 
 expr' _ ids@[glbs,nons,locs] (EFunc z ftp1 tp p) = (es, ftp, EFunc z{type_=tp} ftp tp p')
  where
   (es,ftp2,p') = stmt [glbs',nons',[]] (out,cs) p
-  (TFunc _ out,cs) = tp
+  (TFunc False _ out,cs) = tp
   (glbs',nons') = if null glbs then
                     (locs,nons)
                   else
@@ -511,7 +511,7 @@ expr' _ ids@[glbs,nons,locs] (EFunc z ftp1 tp p) = (es, ftp, EFunc z{type_=tp} f
           assertEq ftp1 ftp1 ftp2
 
 expr' _ ids (EMatch z exp pat) = (esp++esem++esc, funcType ftp1 ftp2,
-                                  EMatch z{type_=(TData ["Bool"] [] TUnit,cz)} exp' pat')
+                                  EMatch z{type_=(TData False ["Bool"] [] (TUnit False),cz)} exp' pat')
   where
     (esp,ftp1,tpp,pat') = fPat ids pat
     (ese,ftp2,exp')     = expr z (SUP,tpp) ids exp
@@ -522,38 +522,38 @@ expr' _ ids (EMatch z exp pat) = (esp++esem++esc, funcType ftp1 ftp2,
           else
             []
 
-expr' _ ids (EField z hr fld) = (es, FuncGlobal, EVar z{type_=(TFunc inp out,cz)} (hr_str ++ "." ++ fld))
+expr' _ ids (EField z hr fld) = (es, FuncGlobal, EVar z{type_=(TFunc False inp out,cz)} (hr_str ++ "." ++ fld))
   where
     hr_str = T.hier2str hr
 
     (inp,out,cz,es) = case find (isData hr_str) (concat ids) of
-      Nothing -> (TAny "?",TAny "?",cz, [toError z $ "data '" ++ hr_str ++ "' is not declared"])
-      Just (SData _ nms (tp@(TData _ _ (TTuple sts)),cz) _ _) -> (tp,out,cz,es) where (out,es) = f nms sts
-      Just (SData _ nms (tp@(TData _ _ st),cz) _ _)           -> (tp,out,cz,es) where (out,es) = f nms [st]
+      Nothing -> (TAny False "?",TAny False "?",cz, [toError z $ "data '" ++ hr_str ++ "' is not declared"])
+      Just (SData _ nms (tp@(TData False _ _ (TTuple False sts)),cz) _ _) -> (tp,out,cz,es) where (out,es) = f nms sts
+      Just (SData _ nms (tp@(TData False _ _ st),cz) _ _)           -> (tp,out,cz,es) where (out,es) = f nms [st]
 
     f nms sts = case fld of
       ('_':idx) -> if length sts >= idx' then
                     (sts!!(idx'-1), [])
                    else
-                    (TAny "?",      [toError z $ "field '" ++ fld ++ "' is not declared"])
+                    (TAny False "?",      [toError z $ "field '" ++ fld ++ "' is not declared"])
                    where
                     idx' = read idx
       otherwise -> case (nms, elemIndex fld (fromJust nms)) of
-                    (Nothing, _)  -> (TAny "?", [toError z $ "field '" ++ fld ++ "' is not declared"])
-                    (_, Nothing)  -> (TAny "?", [toError z $ "field '" ++ fld ++ "' is not declared"])
+                    (Nothing, _)  -> (TAny False "?", [toError z $ "field '" ++ fld ++ "' is not declared"])
+                    (_, Nothing)  -> (TAny False "?", [toError z $ "field '" ++ fld ++ "' is not declared"])
                     (_, Just idx) -> (sts!!idx, [])
 
 expr' (rel,txp) ids (ECons z hr) = (es1++es2, FuncGlobal, ECons z{type_=tp2} hr)
   where
     hr_str = T.hier2str hr
     (tp1,es1) = case find (isData hr_str) (concat ids) of
-      Nothing                     -> ((TAny "?",cz),
+      Nothing                     -> ((TAny False "?",cz),
                                       [toError z $ "data '" ++ hr_str ++ "' is not declared"])
       Just (SData _ _ tp True  _) -> (f tp, [toError z $ "data '" ++ hr_str ++ "' is abstract"])
       Just (SData _ _ tp False _) -> (f tp, [])
 
-    f (tp_@(TData _ ofs TUnit), ctrs) = (tp_,            ctrs)
-    f (tp_@(TData _ ofs tpst),  ctrs) = (TFunc tpst tp_, ctrs)
+    f (tp_@(TData False _ ofs (TUnit False)), ctrs) = (tp_,            ctrs)
+    f (tp_@(TData False _ ofs tpst),  ctrs) = (TFunc False tpst tp_, ctrs)
 
     (es2,tp2) = case relates SUP txp tp1 of
       Left es       -> (map (toError z) es,tp1)
@@ -561,19 +561,19 @@ expr' (rel,txp) ids (ECons z hr) = (es1++es2, FuncGlobal, ECons z{type_=tp2} hr)
 
 expr' _ ids (ETuple z exps) = (es, ftp, ETuple z{type_=(tps',cz)} exps') where
                               rets :: [(Errors,FuncType,Exp)]
-                              rets  = map (\e -> expr z (SUP,(TAny "?",cz)) ids e) exps
+                              rets  = map (\e -> expr z (SUP,(TAny False "?",cz)) ids e) exps
                               es    = concat $ map fst3 rets
                               exps' = map trd3 rets
-                              tps'  = TTuple (map (fst.type_.getAnn) exps')
+                              tps'  = TTuple False (map (fst.type_.getAnn) exps')
                               ftp   = foldr funcType FuncUnknown $ map snd3 rets
 
 expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, funcType' etp False, EVar z{type_=tp} id') where    -- EVar x
   (id', tp, etp, es)
-    | (id == "_INPUT") = (id, (TData ["Int"] [] TUnit,cz), EnvLocal, [])
+    | (id == "_INPUT") = (id, (TData False ["Int"] [] (TUnit False),cz), EnvLocal, [])
     | otherwise        =
       -- find in top-level ids | id : a
       case findVar z (id,rel,txp) ids of
-        Left  es -> (id, (TAny "?",cz), EnvLocal, es)
+        Left  es -> (id, (TAny False "?",cz), EnvLocal, es)
         Right (etp, SVar _ id' tp@(_,ctrs) _,_) ->
           if ctrs == cz then (id, tp, etp, []) else
             --[] | tp==tp' -> (id, tp, [])
@@ -585,10 +585,10 @@ expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, funcType' etp False, EVar z{ty
                   (idtp id tp_'', tp'', etp, [])
                 else
                   if null cxp then
-                    (id, (TAny "?",cz), etp, err)
+                    (id, (TAny False "?",cz), etp, err)
                   else
                     (id, tp'', etp, [])
-              Nothing -> (id, (TAny "?",cz), etp, err)
+              Nothing -> (id, (TAny False "?",cz), etp, err)
             where
               pred :: Stmt -> Bool
               pred (SVar _ k tp@(tp_,_) _) = (idtp id tp_ == k) && (isRight $ relates SUP txp tp)
@@ -602,12 +602,12 @@ expr' (rel,(txp_,cxp)) ids (ECall z f exp) = (bool ese esf (null ese) ++ esa,
                                               funcType ftp1 ftp2,
                                               ECall z{type_=tp_out} f' exp')
   where
-    (ese, ftp1, exp') = expr z (rel, (TAny "?",cz)) ids exp
-    (esf, ftp2, f')   = expr z (rel, (TFunc (fst$type_$getAnn$exp') txp_, cxp)) ids f
+    (ese, ftp1, exp') = expr z (rel, (TAny False "?",cz)) ids exp
+    (esf, ftp2, f')   = expr z (rel, (TFunc False (fst$type_$getAnn$exp') txp_, cxp)) ids f
                                       -- TODO: ctrs of exp'
 
     tp_out = case type_ $ getAnn f' of
-      (TFunc _ out_,ctrs) -> (out_,ctrs)
+      (TFunc False _ out_,ctrs) -> (out_,ctrs)
       otherwise           -> (txp_,cxp)
 
     esa = checkFunc "cannot pass nested function" exp'

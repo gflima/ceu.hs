@@ -23,11 +23,11 @@ subs ids hr = g $ ints ++ (map f $ filter pred ids) where
           []
           -- Int that will never match any numeric pattern
 
-  pred (SData  _ _ (TData hrD _ _,_) False _) = gt hr hrD
+  pred (SData  _ _ (TData False hrD _ _,_) False _) = gt hr hrD
           -- ignore abstract data
   pred _ = False
 
-  f (SData  _ _ (TData hrD _ _,_) _ _) = hrD
+  f (SData  _ _ (TData False hrD _ _,_) _ _) = hrD
 
   gt sup sub = (sup `isPrefixOf` sub) -- && (length sup < length sub)
 
@@ -86,13 +86,13 @@ expandE _ e = [e]
 
 expandT :: [Stmt] -> Type -> [Type]
 
-expandT ids (TData hrT ofs st) = foldr f [] (subs ids hrT) where
-                                  f hr tps = (TData hr ofs st) : tps
+expandT ids (TData False hrT ofs st) = foldr f [] (subs ids hrT) where
+                                        f hr tps = (TData False hr ofs st) : tps
 
-expandT ids (TTuple l)         = foldr f [] (combos $ map (expandT ids) l) where
-                                  f l' tps = (TTuple l') : tps
+expandT ids (TTuple False l)         = foldr f [] (combos $ map (expandT ids) l) where
+                                        f l' tps = (TTuple False l') : tps
 
-expandT _   tp                 = [tp]
+expandT _   tp                       = [tp]
 
 -------------------------------------------------------------------------------
 
@@ -126,7 +126,7 @@ matchE l e | (isE l && isE e) = (False, [toError (getAnn l) $ "match never succe
 
 -- contravariant on constants (SUB)
 matchE (EUnit  z)      exp    = (False, es) where
-                                  es = (relatesErrors SUB (TUnit,cz) (type_ $ getAnn exp))
+                                  es = (relatesErrors SUB (TUnit False,cz) (type_ $ getAnn exp))
 
 -- non-constants: LAny,LVar (no fail) // LExp (may fail)
 matchE (EVar _ _)      _      = (True,  [])
@@ -147,23 +147,23 @@ matchT (EExp  _ _)     tp = (False, [])
 
 matchT (ECons z hrP)   tp =
   case tp of
-    (TData hrE ofs st, ctrs) -> if hrP `isPrefixOf` hrE then (True,[]) else
-                                  if take 1 hrE `isPrefixOf` take 1 hrP then
-                                    (False, [])
-                                  else
-                                    (False, [toError z $ "match never succeeds : data mismatch"])
-    otherwise                -> (True, [])
+    (TData False hrE ofs st, ctrs) -> if hrP `isPrefixOf` hrE then (True,[]) else
+                                        if take 1 hrE `isPrefixOf` take 1 hrP then
+                                          (False, [])
+                                        else
+                                          (False, [toError z $ "match never succeeds : data mismatch"])
+    otherwise                      -> (True, [])
 
 matchT (ETuple _ ls)   tp =
   case tp of
-    (TTuple tps, ctrs)     -> (and oks, concat ess) where
-                                (oks, ess) = unzip $ zipWith matchT ls (map f tps)
-                                f tp = (tp,ctrs)
-    otherwise              -> (True, [])
+    (TTuple False tps, ctrs)       -> (and oks, concat ess) where
+                                        (oks, ess) = unzip $ zipWith matchT ls (map f tps)
+                                        f tp = (tp,ctrs)
+    otherwise                      -> (True, [])
 
 matchT (ECall _ el er) tp =
   case tp of
-    (TData h ofs st, ctrs) -> (ok1 && ok2, es1 ++ es2) where
-                                (ok1, es1) = matchT el tp
-                                (ok2, es2) = matchT er (st,ctrs)
-    otherwise              -> (True, [])
+    (TData False h ofs st, ctrs)   -> (ok1 && ok2, es1 ++ es2) where
+                                        (ok1, es1) = matchT el tp
+                                        (ok2, es2) = matchT er (st,ctrs)
+    otherwise                      -> (True, [])

@@ -90,9 +90,9 @@ funcType' _           _     = FuncGlobal
 isClass id1 (SClass _ id2 _ _ _) = (id1 == id2)
 isClass _   _                    = False
 
-isData  hr1 (SData  _ _ (TData hr2 _ _,_) _ _) = (hr1' == hier2str hr2) where
-                                                  hr1' = bool hr1 "Int" (take 4 hr1 == "Int.")
-isData  _   _                                  = False
+isData  hr1 (SData  _ _ (TData False hr2 _ _,_) _ _) = (hr1' == hier2str hr2) where
+                                                        hr1' = bool hr1 "Int" (take 4 hr1 == "Int.")
+isData  _   _                                        = False
 
 isVar   id1 (SVar   _ id2 _ _)   = (id1 == id2)
 isVar   _   _                    = False
@@ -104,7 +104,7 @@ rep spc = replicate spc ' '
 show_stmt :: Int -> Stmt -> String
 --show_stmt spc (SClass _ (id,_) _ _ p) = rep spc ++ "class "  ++ id ++ "\n" ++ show_stmt spc p
 --show_stmt spc (SInst  _ (id,_) _ p)   = rep spc ++ "inst "   ++ id ++ "\n" ++ show_stmt spc p
-show_stmt spc (SData _ _ (TData id _ _,_) _ p) = rep spc ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
+show_stmt spc (SData _ _ (TData False id _ _,_) _ p) = rep spc ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
 show_stmt spc (SVar _ id (tp,_) p)     = rep spc ++ "var "    ++ id ++ ": " ++ T.show' tp ++ "\n" ++ show_stmt spc p
 show_stmt spc (SCall _ e)              = rep spc ++ "call " ++ show_exp spc e
 show_stmt spc (SRet _ e)               = rep spc ++ "return " ++ show_exp spc e
@@ -207,7 +207,7 @@ instance HasAnn Stmt where
     getAnn (SRet   z _)         = z
     getAnn (SNop   z)           = z
 
-prelude z p = (SData z Nothing (TData ["Int"]          [] TUnit,cz) False
-              (SData z Nothing (TData ["Bool"]         [] TUnit,cz) True
-              (SData z Nothing (TData ["Bool","True"]  [] TUnit,cz) False
-              (SData z Nothing (TData ["Bool","False"] [] TUnit,cz) False p))))
+prelude z p = (SData z Nothing (TData False ["Int"]          [] (TUnit False),cz) False
+              (SData z Nothing (TData False ["Bool"]         [] (TUnit False),cz) True
+              (SData z Nothing (TData False ["Bool","True"]  [] (TUnit False),cz) False
+              (SData z Nothing (TData False ["Bool","False"] [] (TUnit False),cz) False p))))

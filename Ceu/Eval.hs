@@ -49,7 +49,7 @@ fromExp (B.EError _ v)   = EError  v
 fromExp (B.EVar   _ id)  = EVar id
 fromExp (B.EUnit  _)     = EUnit
 fromExp (B.ECons  z id)  = case type_ z of
-                            (TData _ _ TUnit, _) -> EData id EUnit
+                            (TData False _ _ (TUnit False), _) -> EData id EUnit
                             otherwise            -> ECons id
 fromExp (B.ETuple _ vs)  = ETuple (map fromExp vs)
 fromExp (B.EFunc  _ _ _ p) = EFunc (fromStmt p)
@@ -145,10 +145,10 @@ match vars (EVar id)   v = (Right True, envWrite vars id v)
 match vars EUnit       v = (Right True, vars)
 match vars (EData hrp _)
            (EData hre _) = (Right ret, vars) where
-                            ret = T.isRel_ T.SUP (TData hrp [] TUnit) (TData hre [] TUnit)
+                            ret = T.isRel_ T.SUP (TData False hrp [] (TUnit False)) (TData False hre [] (TUnit False))
 match vars (ECall (ECons hrp) l)
            (EData hre e) = (ret', vars')  where
-                            v1 = T.isRel_ T.SUP (TData hrp [] TUnit) (TData hre [] TUnit)
+                            v1 = T.isRel_ T.SUP (TData False hrp [] (TUnit False)) (TData False hre [] (TUnit False))
                             (ret2,vars') = match vars l e
                             ret' = case ret2 of
                               Left  x  -> Left  x

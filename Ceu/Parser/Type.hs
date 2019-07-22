@@ -17,41 +17,41 @@ import Ceu.Grammar.Type               (Type(..), TypeC)
 
 singleton x = [x]
 
-type_0 :: Parser Type
-type_0 = do
+type_0 :: Bool -> Parser Type
+type_0 ref = do
     void <- tk_sym "("
     void <- tk_sym ")"
-    return TUnit
+    return $ TUnit ref
 
 f tp = case tp of
-  TUnit   -> []
-  TTuple l -> l
-  _       -> [tp]
+  TUnit _    -> []
+  TTuple _ l -> l
+  _          -> [tp]
 
-type_D :: Parser Type
-type_D = do
+type_D :: Bool -> Parser Type
+type_D ref = do
     hier <- tk_data_hier
-    ofs  <- option TUnit $ try (tk_key "of" *> pType)
-    return $ TData hier (f ofs) TUnit
+    ofs  <- option (TUnit False) $ try (tk_key "of" *> pType)
+    return $ TData ref hier (f ofs) (TUnit False)
 
-type_N :: Parser Type
-type_N = do
+type_N :: Bool -> Parser Type
+type_N ref = do
     tps <- list2 pType
-    return $ TTuple tps
+    return $ TTuple ref tps
 
-type_F :: Parser Type
-type_F = do
+type_F :: Bool -> Parser Type
+type_F ref = do
     void <- tk_sym "("
     inp  <- pType
     void <- tk_sym "->"
     out  <- pType
     void <- tk_sym ")"
-    return $ TFunc inp out
+    return $ TFunc ref inp out
 
-type_V :: Parser Type
-type_V = do
+type_V :: Bool -> Parser Type
+type_V ref = do
     var <- tk_var
-    return $ TAny var
+    return $ TAny ref var
 
 type_parens :: Parser Type
 type_parens = do
@@ -60,9 +60,19 @@ type_parens = do
   void <- tk_sym ")"
   return tp
 
+pType' :: Parser Type
+pType' = do
+  ref <- option False $ do
+                          void <- try $ tk_key "ref"
+                          return True
+  tp  <- type_D ref <|> try (type_V ref) <|> try (type_0 ref) <|>
+          try (type_N ref) <|> try (type_F ref) <|> type_parens
+  return tp
+
 pType :: Parser Type
-pType = type_D <|> try type_V <|> try type_0 <|> try type_N <|> try type_F
-        <|> type_parens <?> "type"
+pType = do
+  tp <- pType' <?> "type"
+  return tp
 
 pTypeContext :: Parser TypeC
 pTypeContext = do

@@ -82,17 +82,17 @@ matchLocType1 src loc (tp_,ctrs) = case (aux src loc tp_) of
                                     Just v  -> Just $ foldr (SSeq annz) (SNop annz) v
   where
     aux :: Source -> Exp -> Type -> Maybe [Stmt]
-    aux pos (EAny   _)     _           = Just []
-    aux pos (EUnit  _)     TUnit       = Just []
-    aux pos (EVar   _ var) tp_         = Just [SVar annz{source=pos} var (tp_,ctrs)]
-    aux pos (ETuple _ [])  (TTuple []) = Just []
-    aux pos (ETuple _ [])  _           = Nothing
-    aux pos (ETuple _ _)   (TTuple []) = Nothing
+    aux pos (EAny   _)     _                 = Just []
+    aux pos (EUnit  _)     (TUnit False)     = Just []
+    aux pos (EVar   _ var) tp_               = Just [SVar annz{source=pos} var (tp_,ctrs)]
+    aux pos (ETuple _ [])  (TTuple False []) = Just []
+    aux pos (ETuple _ [])  _                 = Nothing
+    aux pos (ETuple _ _)   (TTuple False []) = Nothing
     aux pos (ETuple _ (v1:vs1))
-            (TTuple (v2:vs2))          = (fmap (++) (aux pos v1 v2)) <*>
-                                          (aux pos (ETuple annz{source=pos} vs1) (TTuple vs2))
-    aux pos (ETuple _ _)  _            = Nothing
-    aux pos loc         tp_            = error $ show (pos,loc,tp_)
+            (TTuple False (v2:vs2))          = (fmap (++) (aux pos v1 v2)) <*>
+                                                (aux pos (ETuple annz{source=pos} vs1) (TTuple False vs2))
+    aux pos (ETuple _ _)  _                  = Nothing
+    aux pos loc         tp_                  = error $ show (pos,loc,tp_)
 
 matchLocType2 :: Source -> Exp -> TypeC -> Maybe Stmt
 matchLocType2 src loc (tp_,ctrs) = if length vars /= length tps_ then Nothing else
@@ -113,9 +113,9 @@ matchLocType2 src loc (tp_,ctrs) = if length vars /= length tps_ then Nothing el
     getVars (ECall  _ (ECons _ _) e) = getVars e
 
     tp2list :: Int -> Type -> [Type]
-    tp2list 1 tp_@(TTuple tps_) = [tp_]
-    tp2list _     (TTuple tps_) = tps_
-    tp2list _     tp_           = [tp_]
+    tp2list 1 tp_@(TTuple False tps_) = [tp_]
+    tp2list _     (TTuple False tps_) = tps_
+    tp2list _     tp_                 = [tp_]
 
 -------------------------------------------------------------------------------
 
@@ -183,13 +183,13 @@ stmt_data = do
   void    <- try $ tk_key "data"
   id      <- tk_data_hier
   nms     <- optionMaybe $ try ((list1 tk_var) <|> (singleton <$> tk_var))
-  ofs     <- option [] $ try $ tk_key "for" *> (map TAny <$> (try (list1 tk_var) <|> (singleton <$> tk_var)))
-  (st,cs) <- option (TUnit,cz) $ try $ tk_key "with" *> pTypeContext
+  ofs     <- option [] $ try $ tk_key "for" *> (map (TAny False) <$> (try (list1 tk_var) <|> (singleton <$> tk_var)))
+  (st,cs) <- option (TUnit False,cz) $ try $ tk_key "with" *> pTypeContext
   isAbs   <- option False $ do
                               void <- try $ tk_key "is"
                               void <- tk_key "abstract"
                               return True
-  return $ SData annz{source=pos} nms (TData id ofs st, cs) isAbs
+  return $ SData annz{source=pos} nms (TData False id ofs st, cs) isAbs
 
 pMatch :: Source -> Bool -> Exp -> Parser Stmt
 pMatch pos chk loc = do
@@ -441,7 +441,7 @@ func pos = do
   void <- tk_sym ":"
   tp   <- pTypeContext
 
-  dcls <- let (TFunc tp' _,ctrs) = tp
+  dcls <- let (TFunc False tp' _,ctrs) = tp
               dcls = (matchLocType1 pos loc (tp',ctrs))
           in
             case dcls of
