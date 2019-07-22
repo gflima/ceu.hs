@@ -64,36 +64,19 @@ match 10 with =X._1 x
     - ref               - é um ponteiro
     - closures          - ponteiro para ambiente
     --
-    - posso retornar uma referencia desde que seja de um pleno
-        - nesse caso o pleno tera a memoria fora da funcao
-            - isso so é possivel em um nivel
-    - uma new closure pode acessar somente argumentos --que sejam referencias-- da fc por fora
-        - isso garante que se ela for retornada, nao havera risco de acessar dados inexistentes
-        - c1 = counter(&1)
-        - 
-    - uma nao new closure nao pode ser retornada
-    - so retornar funcao se for um valor ali criado
-        - recebe sempre os mesmos parametros inicialmente passados para a factory
-            - precisam ser somente referencias pra poder alterá-los
     - tipo new func
         - new (Int -> Int)
         - new func (x) : new (Int->Int) do
 
     - 3 tipos de funcoes aninhadas:
         - save f type in fat pointer
-        - globais
-            - podem ser retornadas e passadas
-            - no maximo podem acessar globais
-        - nested
-            - nao podem ser retornadas ou passadas
-            - podem acessar qualquer escopo
-                - como ela nao escapa, é garantido que as variáveis sempre vão existir
         - closures
-            - podem ser retornadas e passadas
-            - podem acessar globais e nao-locais nao imediatas
-            - nao podem acessar escopo imediato
-                - a nao ser parametros passados por referencia
-                    - que nada mais sao que variaveis do escopo acima
+            - modificador
+                - explicita o custo
+                - diferencia de globais
+                    - as duas podem ser retornadas
+                        - assim, o chamador precisa saber para criar ou nao a closure
+            - acessa nao locais somente por referencia
             - precisa de trabalho no momento da sua criacao
                 - ou melhor, logo ao retornar para quem a criou
                     - ARGS os argumentos ficam guardados em uma struct
@@ -103,20 +86,6 @@ match 10 with =X._1 x
             - assumir que pode guardar os tres tipos
             - nao necessita de modificador
             - nao pode ser retornada (pois pode ser uma nested)
-
-        - modificador
-            - apenas para closures através do "new"
-                - explicita o custo
-                - diferencia de globais
-                    - as duas podem ser retornadas
-                        - assim, o chamador precisa saber para criar ou nao a closure
-            - consigo identificar os tres tipos
-                - global
-                    - nao acessa nada de fora (nao locais), apenas globais e locais
-                - closure
-                    - acessa nao locais somente por referencia
-                - nested
-                    - acessa alguma nao local sem ser por referencia
 
 F = factory(x,y,z)
 F ~ (f, (x,y,z))

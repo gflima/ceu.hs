@@ -65,7 +65,10 @@ type Envs = [[Stmt]]  -- [ [globals], [non-locals], [locals] ]
 envsAdd :: Envs -> Stmt -> Envs
 envsAdd [glbs,nons,locs] s = [glbs,nons,s:locs]
 
-data FuncType = FuncUnknown | FuncGlobal | FuncNested | FuncClosure
+data FuncType = FuncUnknown
+              | FuncGlobal    -- cannot access non-locals         // can    be passed and returned
+              | FuncNested    -- can    access non-locals         // cannot be passed or  returned
+              | FuncClosure   -- can    access non-locals by ref  // can    be passed and returned   // requires "new"
   deriving (Eq, Show)
 
 funcType :: FuncType -> FuncType -> FuncType

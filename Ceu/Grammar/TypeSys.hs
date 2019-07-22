@@ -29,6 +29,11 @@ snd4 (_,x,_,_) = x
 trd4 (_,_,x,_) = x
 fou4 (_,_,_,x) = x
 
+checkFunc :: String -> Exp -> Errors
+checkFunc str (EFunc  z FuncNested _ _) = [toError z str]
+checkFunc str (ETuple _ l)              = concatMap (checkFunc str) l
+checkFunc _   _                         = []
+
 idtp id tp = "$" ++ id ++ "$" ++ T.show' tp ++ "$"
 
 go :: Stmt -> (Errors, Stmt)
@@ -453,8 +458,9 @@ stmt ids tpr (SSeq z p1 p2) = (es1++es2, funcType ftp1 ftp2, SSeq z p1' p2') whe
 stmt ids tpr (SLoop z p)    = (es, ftp, SLoop z p') where
                                 (es,ftp,p') = stmt ids tpr p
 
-stmt ids tpr (SRet z exp)   = (es, ftp, SRet z exp') where
+stmt ids tpr (SRet z exp)   = (es ++ ese, ftp, SRet z exp') where
                                 (es,ftp,exp') = expr z (SUP,tpr) ids exp
+                                ese = checkFunc "cannot return nested function" exp'
 {-
                                 -- TODO: closures
                                 xxx = f $ fst $ type_ $ getAnn exp' where
@@ -501,7 +507,8 @@ expr' _ ids@[glbs,nons,locs] (EFunc z ftp1 tp p) = (es, ftp, EFunc z{type_=tp} f
                     (locs,nons)
                   else
                     (glbs,nons++locs)
-  ftp = assertEq ftp1 ftp1 ftp2
+  ftp = if ftp1 == FuncUnknown then ftp2 else
+          assertEq ftp1 ftp1 ftp2
 
 expr' _ ids (EMatch z exp pat) = (esp++esem++esc, funcType ftp1 ftp2,
                                   EMatch z{type_=(TData ["Bool"] [] TUnit,cz)} exp' pat')
@@ -591,8 +598,9 @@ expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, funcType' etp False, EVar z{ty
                      "' has no associated instance for '" ++
                      T.show' txp_ ++ "'"]
 
-expr' (rel,(txp_,cxp)) ids (ECall z f exp) = (bool ese esf (null ese), funcType ftp1 ftp2,
-                                             ECall z{type_=tp_out} f' exp')
+expr' (rel,(txp_,cxp)) ids (ECall z f exp) = (bool ese esf (null ese) ++ esa,
+                                              funcType ftp1 ftp2,
+                                              ECall z{type_=tp_out} f' exp')
   where
     (ese, ftp1, exp') = expr z (rel, (TAny "?",cz)) ids exp
     (esf, ftp2, f')   = expr z (rel, (TFunc (fst$type_$getAnn$exp') txp_, cxp)) ids f
@@ -601,5 +609,7 @@ expr' (rel,(txp_,cxp)) ids (ECall z f exp) = (bool ese esf (null ese), funcType 
     tp_out = case type_ $ getAnn f' of
       (TFunc _ out_,ctrs) -> (out_,ctrs)
       otherwise           -> (txp_,cxp)
+
+    esa = checkFunc "cannot pass nested function" exp'
 
 expr' (_,txp) ids (EAny z) = ([], FuncGlobal, EAny z{type_=txp})

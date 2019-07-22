@@ -205,6 +205,78 @@ spec = do
 
     describe "closure:" $ do
 
+      it "FuncGlobal pass" $
+        (run True $
+          unlines [
+            "func g f : ((() -> Int) -> Int) do",
+            "   return f()",
+            "end",
+            "var v : Int = 10",
+            "return g (func () : (() -> Int) do return v end)"
+           ])
+        `shouldBe` Right (EData ["Int","10"] EUnit)
+
+      it "FuncNested pass" $
+        (run True $
+          unlines [
+            "func g ((),f) : (((),(() -> Int)) -> Int) do",
+            "   return f()",
+            "end",
+            "func h () : (() -> Int) do",
+            " var v : Int = 10",
+            " return g ((), func () : (() -> Int) do return v end)",
+            "end",
+            "return h()"
+           ])
+        `shouldBe` Left "(line 6, column 16):\ncannot pass nested function\n"
+
+      it "FuncNested pass" $
+        (run True $
+          unlines [
+            "func h () : (() -> Int) do",
+            " func g ((),f) : (((),(() -> Int)) -> Int) do",
+            "   return f()",
+            " end",
+            " var v : Int = 10",
+            " return g ((), func () : (() -> Int) do return v end)",
+            "end",
+            "return h()"
+           ])
+        `shouldBe` Left "(line 6, column 16):\ncannot pass nested function\n"
+
+      it "FuncNested pass" $
+        (run True $
+          unlines [
+            "func h () : (() -> Int) do",
+            " var v : Int = 10",
+            " var g : (()->Int) = func () : (() -> Int) do return v end",
+            " return g()",
+            "end",
+            "return h()"
+           ])
+        `shouldBe` Right (EData ["Int","10"] EUnit)
+
+      it "FuncGlobal return" $
+        (run True $
+          unlines [
+            "var v : Int = 10",
+            "func h () : (() -> (() -> Int)) do",
+            " return func () : (() -> Int) do return v end",
+            "end",
+            "return (h())()"
+           ])
+        `shouldBe` Right (EData ["Int","10"] EUnit)
+
+      it "FuncNested return" $
+        (run True $
+          unlines [
+            "func h () : (() -> (() -> Int)) do",
+            " var v : Int = 10",
+            " return func () : (() -> Int) do return v end",
+            "end"
+           ])
+        `shouldBe` Left "(line 3, column 9):\ncannot return nested function\n"
+
       it "escape scope - none - func" $
         (run True $
           unlines [
