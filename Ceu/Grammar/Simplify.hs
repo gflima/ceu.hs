@@ -38,7 +38,6 @@ stmt (SMatch z b exp cses) = SMatch z b (expr exp)
                                 (map (\(ds,pt,st)->(stmt ds, expr pt, stmt st)) cses)
 
 -- normal form: (SSeq x (SSeq y (SSeq z ...)))
-stmt (SSeq z1 (SMatch z2 False exp [(ds,pt,st)]) p) = stmt $ SMatch z2 False exp [(ds,pt,SSeq z1 st p)]
 stmt (SSeq z1 (SSeq z2 p1 p2) p3) = stmt $ SSeq z1 p1 (SSeq z2 p2 p3)
 stmt (SSeq z p q) =
   case (p',q') of

@@ -112,9 +112,11 @@ inst2table ids (SInst z cls tp imp _) = Map.union (f2 imp) sups where
 
 -------------------------------------------------------------------------------
 
-wrap insts (SVar z id1 (tp_,_) (SMatch _ False body [(ds,EVar _ id2,_)])) acc | id1==id2 =
-  SVar z id' (tp_',cz)
-    (SMatch z False body' [(ds,EVar z id',acc)])
+wrap insts (SVar z1 id1 (tp_,_) (SSeq z2 (SMatch z3 False body [(ds,EVar z4 id2,p)]) _)) acc | id1==id2 =
+  SVar z1 id' (tp_',cz)
+    (SSeq z2
+      (SMatch z3 False body' [(ds,EVar z4 id',p)])
+      acc)
   where
     id'   = idtp id1 tp_'
     tp_'  = T.instantiate insts tp_
@@ -154,7 +156,7 @@ fPat :: Envs -> Exp -> (Errors,FuncType,TypeC,Exp)
 fPat ids (EAny   z)      = ([], FuncGlobal, (TAny False "?",cz), EAny z)
 fPat ids (EUnit  z)      = ([], FuncGlobal, (TUnit False,   cz), EUnit z)
 fPat ids (EVar   z id)   = case findVar z (id,SUP,(TAny False "?",cz)) ids of
-                            Right (lnr, SVar _ _ tp _, _) -> ([], traceShow (id,source z) $ funcType' lnr, tp, EVar z id)
+                            Right (lnr, SVar _ _ tp _, _) -> ([], funcType' lnr, tp, EVar z id)
                             Left  es                      -> (es, FuncGlobal, (TAny False "?",cz), EVar z id)
 fPat ids (ECons  z h)    = (es, FuncGlobal, tp, ECons z{type_=tp} h) where
                             (es,tp) = case find (isData $ hier2str h) (concat ids) of
@@ -327,7 +329,7 @@ stmt ids tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ftp, p'') where
                 -- functions to instantiate
                 fs :: [Stmt]
                 fs  = filter pred (concat ids) where
-                        pred (SVar _ id1 tp@(_,ctrs) (SMatch _ False body [(_,EVar _ id2,_)])) =
+                        pred (SVar _ id1 tp@(_,ctrs) (SSeq _ (SMatch _ False body [(_,EVar _ id2,_)]) _)) =
                           id1==id2 && (not inInsts) && (Cs.hasClass cls ctrs) where
                             inInsts = not $ null $ Map.filter f hinst where
                                         f (_,id',tp',_) = id1==id' && (isRight $ relates SUP tp' tp)
@@ -393,7 +395,7 @@ stmt ids tpr s@(SVar z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, ftp, f p''
   --    ...
   (f,p') = if ctrs == cz then (SVar z id tp, p) else -- normal concrete declarations
     case p of
-      SMatch z2 False body [(_,EVar _ id',s)]
+      SSeq _ (SMatch z2 False body [(_,EVar _ id',_)]) s
         | id==id' -> (Prelude.id, funcs s)    -- instantiate for all available implementations
       _   -> (Prelude.id, p)                  -- just ignore parametric declarations
       where
