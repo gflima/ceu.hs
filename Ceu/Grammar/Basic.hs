@@ -60,15 +60,16 @@ data Stmt
 data EnvType = EnvGlobal | EnvNonLocal | EnvLocal
   deriving Show
 
-type Envs = [[Stmt]]  -- [ [globals], [non-locals], [locals] ]
+type Envs = [[Stmt]]  -- [ [bodyZ],[argsZ], ..., [bodyA],[argsA] ]
 
 envsAdd :: Envs -> Stmt -> Envs
-envsAdd [glbs,nons,locs] s = [glbs,nons,s:locs]
+envsAdd (x:xs) s = (s:x) : xs
 
 data FuncType = FuncUnknown
               | FuncGlobal    -- cannot access non-locals         // can    be passed and returned
               | FuncNested    -- can    access non-locals         // cannot be passed or  returned
-              | FuncClosure   -- can    access non-locals by ref  // can    be passed and returned   // requires "new"
+              | FuncClosure   -- can    access non-locals by ref  // can    be passed and returned
+                              --        starting from args        // requires "new"
   deriving (Eq, Show)
 
 funcType :: FuncType -> FuncType -> FuncType
@@ -80,10 +81,12 @@ funcType FuncGlobal  _           = FuncGlobal
 funcType _           FuncGlobal  = FuncGlobal
 funcType _           _           = FuncUnknown
 
-funcType' :: (EnvType,Bool) -> FuncType  -- Bool = is reference
-funcType' (EnvNonLocal, False) = FuncNested
-funcType' (EnvNonLocal, True)  = FuncClosure
-funcType' _                    = FuncGlobal
+--     0    1     2    3         l-2  l-1  len
+-- [ locs,args, lvl1,args, ..., glbs,args ]
+funcType' :: (Int,Int,Bool) -> FuncType  -- (length,n,ref)
+funcType' (len,n,_)   | n<2 || n>=len-2 = FuncGlobal
+funcType' (len,n,ref) | ref && n/=20    = FuncClosure   -- exclude 1st non-local body
+funcType' _                             = FuncNested
 
 -------------------------------------------------------------------------------
 

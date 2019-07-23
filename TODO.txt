@@ -33,6 +33,10 @@ x = alias y
 match 10 with =X._1 x
     - questoes de refs (tipos recursivos)
 
+- mudar para lista completa com todos os niveis e nao so glb,non,lcl
+- detectar refs somente em args ou outro escopo
+- usar ref em expressao e fazer funcionar
+
 - closures
     - (f,data)
         - so posso sair N niveis onde N é a distancia para o escopo da referencia mais proxima/aninhada

@@ -38,26 +38,26 @@ idtp id tp = "$" ++ id ++ "$" ++ T.show' tp ++ "$"
 
 go :: Stmt -> (Errors, Stmt)
 go p = (es,p') where
-        (es,_,p') = stmt [[],[],[]] (TAny False "?",cz) p
+        (es,_,p') = stmt [[],[]] (TAny False "?",cz) p
 --go p = f $ stmt [] p where f (e,s) = traceShow s (e,s)
 --go p = f $ stmt [] p where f (e,s) = traceShow (show_stmt 0 s) (e,s)
 
 -------------------------------------------------------------------------------
 
-findVar :: Ann -> (ID_Var,Relation,TypeC) -> Envs -> Either Errors ((EnvType,Bool), Stmt, (Type, [(ID_Var,Type)]))
-findVar z x [glb,non,lcl] =
-  case findVar' z x lcl of
-    Right (i,j)    -> Right ((EnvLocal,getRef i), i, j)
-    Left (True,es) -> Left es                     -- True = stop here with error
-    otherwise      -> case findVar' z x non of
-      Right (i,j)    -> Right ((EnvNonLocal,getRef i), i, j)
-      Left (True,es) -> Left es
-      otherwise      -> case findVar' z x glb of
-        Right (i,j) -> Right ((EnvGlobal,getRef i), i, j)
-        Left (_,es) -> Left es
-  where
-    getRef :: Stmt -> Bool
-    getRef (SVar _ _ (tp_,_) _) = T.isRef tp_
+findVar :: Ann -> (ID_Var,Relation,TypeC) -> Envs -> Either Errors ((Int,Int,Bool), Stmt, (Type, [(ID_Var,Type)]))
+findVar z x envs = g $ foldr f (0, Left (False,[])) envs where
+  g (_, Left  (_,ret))   = Left  ret
+  g (n, Right (ref,i,j)) = Right ((length envs, n, ref), i, j)
+
+  f _   l@(_, Left  (True,es)) = l
+  f _   r@(_, Right _)         = r
+  f env (n,_) = case findVar' z x env of
+    Right (i,j)      -> (n,   Right (getRef i, i, j))
+    Left  (True, es) -> (n,   Left (True, es)) -- True = stop here with error
+    Left  (False,es) -> (n+1, Left (False,es))
+
+  getRef :: Stmt -> Bool
+  getRef (SVar _ _ (tp_,_) _) = T.isRef tp_
 
 findVar' :: Ann -> (ID_Var,Relation,TypeC) -> [Stmt] -> Either (Bool,Errors) (Stmt, (Type, [(ID_Var,Type)]))
 findVar' z (id,rel,txp) ids =   -- TODO: not currently using second return value
@@ -155,7 +155,7 @@ fPat :: Envs -> Exp -> (Errors,FuncType,TypeC,Exp)
 fPat ids (EAny   z)      = ([], FuncGlobal, (TAny False "?",cz), EAny z)
 fPat ids (EUnit  z)      = ([], FuncGlobal, (TUnit False,   cz), EUnit z)
 fPat ids (EVar   z id)   = case findVar z (id,SUP,(TAny False "?",cz)) ids of
-                            Right (etr, SVar _ _ tp _, _) -> ([], funcType' etr, tp, EVar z id)
+                            Right (lnr, SVar _ _ tp _, _) -> ([], funcType' lnr, tp, EVar z id)
                             Left  es                      -> (es, FuncGlobal, (TAny False "?",cz), EVar z id)
 fPat ids (ECons  z h)    = (es, FuncGlobal, tp, ECons z{type_=tp} h) where
                             (es,tp) = case find (isData $ hier2str h) (concat ids) of
@@ -405,18 +405,19 @@ stmt ids tpr s@(SVar z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, ftp, f p''
 
 -------------------------------------------------------------------------------
 
-stmt ids tpr (SMatch z fce exp cses) = (es', funcType ftp1 ftp2, SMatch z fce exp' cses'') where
+stmt envs tpr (SMatch z fce exp cses) = (es', funcType ftp1 ftp2, SMatch z fce exp' cses'') where
   es'                   = esc ++ escs ++ esem
-  (ese, ftp1,exp')      = expr z (SUP,tpl) ids exp
+  (ese, ftp1,exp')      = expr z (SUP,tpl) envs exp
   (escs,ftp2,tpl,cses') = (es, ftp, tpl, cses')
     where
       --(l1,l2) :: ( [(Errors,TypeC,Exp)] , [(Errors,Stmt)] )
       (l0,l1,l2) = unzip3 $ map f cses where
-                    f (ds,pt,st) = ((es,ftp,ds'), fPat ids' pt, stmt ids' tpr st) where
-                      (es,ftp,ds') = stmt ids tpr ds
-                      ids' = [ids!!0, ids!!1, g ds' (ids!!2)]
-                      g   (SNop _)       ids = ids
-                      g s@(SVar _ _ _ p) ids = s : (g p ids)
+                    f (ds,pt,st) = ((es,ftp,ds'), fPat envs' pt, stmt envs' tpr st) where
+                      (es,ftp,ds') = stmt envs tpr ds
+                      envs' = (g ds' x):xs where
+                                (x:xs) = envs
+                                g   (SNop _)       env = env
+                                g s@(SVar _ _ _ p) env = s : (g p env)
 
       es :: Errors
       es = concat $ (map fst3 l0) ++ (map fst4 l1) ++ (map fst3 l2)
@@ -430,7 +431,7 @@ stmt ids tpr (SMatch z fce exp cses) = (es', funcType ftp1 ftp2, SMatch z fce ex
       ftp :: FuncType
       ftp = foldr funcType FuncUnknown $ (map snd3 l0) ++ (map snd4 l1) ++ (map snd3 l2)
 
-  (ok, esm)      = matchX (concat ids) (map snd3 cses') exp'
+  (ok, esm)      = matchX (concat envs) (map snd3 cses') exp'
   esem           = bool esm ese (null esm)    -- hide ese if esm
 
   -- set  x <- 1    // fce=false
@@ -502,14 +503,10 @@ expr' _       _   (EError  z v)     = ([], FuncGlobal, EError  z{type_=(TBot Fal
 expr' _       _   (EUnit   z)       = ([], FuncGlobal, EUnit   z{type_=(TUnit False,cz)})
 expr' (_,txp) _   (EArg    z)       = ([], FuncGlobal, EArg    z{type_=txp})
 
-expr' _ ids@[glbs,nons,locs] (EFunc z ftp1 tp p) = (es, ftp, EFunc z{type_=tp} ftp tp p')
+expr' _ envs (EFunc z ftp1 tp p) = (es, ftp, EFunc z{type_=tp} ftp tp p')
  where
-  (es,ftp2,p') = stmt [glbs',nons',[]] (out,cs) p
+  (es,ftp2,p') = stmt ([]:[]:envs) (out,cs) p
   (TFunc False _ out,cs) = tp
-  (glbs',nons') = if null glbs then
-                    (locs,nons)
-                  else
-                    (glbs,nons++locs)
   ftp = if ftp1 == FuncUnknown then ftp2 else
           assertEq ftp1 ftp1 ftp2
 
@@ -570,28 +567,28 @@ expr' _ ids (ETuple z exps) = (es, ftp, ETuple z{type_=(tps',cz)} exps') where
                               tps'  = TTuple False (map (fst.type_.getAnn) exps')
                               ftp   = foldr funcType FuncUnknown $ map snd3 rets
 
-expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, funcType' etr, EVar z{type_=tp} id') where    -- EVar x
-  (id', tp, etr, es)
-    | (id == "_INPUT") = (id, (TData False ["Int"] [] (TUnit False),cz), (EnvLocal,False), [])
+expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, funcType' lnr, EVar z{type_=tp} id') where    -- EVar x
+  (id', tp, lnr, es)
+    | (id == "_INPUT") = (id, (TData False ["Int"] [] (TUnit False),cz), (0,0,False), [])
     | otherwise        =
       -- find in top-level ids | id : a
       case findVar z (id,rel,txp) ids of
-        Left  es -> (id, (TAny False "?",cz), (EnvLocal,False), es)
-        Right (etr, SVar _ id' tp@(_,ctrs) _,_) ->
-          if ctrs == cz then (id, tp, etr, []) else
+        Left  es -> (id, (TAny False "?",cz), (0,0,False), es)
+        Right (lnr, SVar _ id' tp@(_,ctrs) _,_) ->
+          if ctrs == cz then (id, tp, lnr, []) else
             --[] | tp==tp' -> (id, tp, [])
                -- | otherwise -> error $ show (id, tp, tp')
                -- | otherwise -> (id, tp, [])
             case find pred (concat ids) of            -- find instance
               Just (SVar _ _ tp''@(tp_'',ctrs) _) ->
                 if null ctrs then
-                  (idtp id tp_'', tp'', etr, [])
+                  (idtp id tp_'', tp'', lnr, [])
                 else
                   if null cxp then
-                    (id, (TAny False "?",cz), etr, err)
+                    (id, (TAny False "?",cz), lnr, err)
                   else
-                    (id, tp'', etr, [])
-              Nothing -> (id, (TAny False "?",cz), etr, err)
+                    (id, tp'', lnr, [])
+              Nothing -> (id, (TAny False "?",cz), lnr, err)
             where
               pred :: Stmt -> Bool
               pred (SVar _ k tp@(tp_,_) _) = (idtp id tp_ == k) && (isRight $ relates SUP txp tp)
