@@ -287,7 +287,7 @@ spec = do
            ])
         `shouldBe` Right (EData ["Int","10"] EUnit)
 
-      it "escape scope - none - new func" $
+      it "FuncClosure return - not required" $
         (run True $
           unlines [
             "func g () : (() -> (() -> Int)) do",

@@ -41,6 +41,17 @@ show' (TTuple False tps)        = "(" ++ intercalate "," (map show' tps) ++ ")"
 
 -------------------------------------------------------------------------------
 
+isRef :: Type -> Bool
+isRef (TBot   ref      )  = ref
+isRef (TTop   ref      )  = ref
+isRef (TUnit  ref      )  = ref
+isRef (TData  ref _ _ _)  = ref
+isRef (TTuple ref _    )  = ref
+isRef (TFunc  ref _ _  )  = ref
+isRef (TAny   ref _    )  = ref
+
+-------------------------------------------------------------------------------
+
 instance Ord Type where
   (<=) (TTop False)              _                         = True
   (<=) _                         (TTop False)              = False

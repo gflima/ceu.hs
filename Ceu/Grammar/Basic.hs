@@ -80,10 +80,10 @@ funcType FuncGlobal  _           = FuncGlobal
 funcType _           FuncGlobal  = FuncGlobal
 funcType _           _           = FuncUnknown
 
-funcType' :: EnvType -> Bool -> FuncType  -- Bool = is reference
-funcType' EnvNonLocal False = FuncNested
-funcType' EnvNonLocal True  = FuncClosure
-funcType' _           _     = FuncGlobal
+funcType' :: (EnvType,Bool) -> FuncType  -- Bool = is reference
+funcType' (EnvNonLocal, False) = FuncNested
+funcType' (EnvNonLocal, True)  = FuncClosure
+funcType' _                    = FuncGlobal
 
 -------------------------------------------------------------------------------
 

@@ -35,6 +35,8 @@ match 10 with =X._1 x
 
 - closures
     - (f,data)
+        - so posso sair N niveis onde N é a distancia para o escopo da referencia mais proxima/aninhada
+            - da pra verificar isso estaticamente?
     - todos os ponteiros para funcoes na verdade sao closures
         - os que forem fc vao ficar com data=null
             - se a funcao for estatica/constante:

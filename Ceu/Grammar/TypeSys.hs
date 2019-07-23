@@ -11,7 +11,7 @@ import Ceu.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Constraints as Cs  (Pair, cz, toList, hasClass)
 import Ceu.Grammar.Type        as T   (Type(..), TypeC, show', sort', instantiate, getDs,
-                                       getSuper, hier2str, isSupOf,
+                                       getSuper, hier2str, isSupOf, isRef,
                                        Relation(..), relates, isRel, relatesErrors)
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
@@ -44,17 +44,20 @@ go p = (es,p') where
 
 -------------------------------------------------------------------------------
 
-findVar :: Ann -> (ID_Var,Relation,TypeC) -> Envs -> Either Errors (EnvType, Stmt, (Type, [(ID_Var,Type)]))
+findVar :: Ann -> (ID_Var,Relation,TypeC) -> Envs -> Either Errors ((EnvType,Bool), Stmt, (Type, [(ID_Var,Type)]))
 findVar z x [glb,non,lcl] =
   case findVar' z x lcl of
-    Right (i,j)    -> Right (EnvLocal,i,j)
+    Right (i,j)    -> Right ((EnvLocal,getRef i), i, j)
     Left (True,es) -> Left es                     -- True = stop here with error
     otherwise      -> case findVar' z x non of
-      Right (i,j)    -> Right (EnvNonLocal,i,j)
+      Right (i,j)    -> Right ((EnvNonLocal,getRef i), i, j)
       Left (True,es) -> Left es
       otherwise      -> case findVar' z x glb of
-        Right (i,j) -> Right (EnvGlobal,i,j)
+        Right (i,j) -> Right ((EnvGlobal,getRef i), i, j)
         Left (_,es) -> Left es
+  where
+    getRef :: Stmt -> Bool
+    getRef (SVar _ _ (tp_,_) _) = T.isRef tp_
 
 findVar' :: Ann -> (ID_Var,Relation,TypeC) -> [Stmt] -> Either (Bool,Errors) (Stmt, (Type, [(ID_Var,Type)]))
 findVar' z (id,rel,txp) ids =   -- TODO: not currently using second return value
@@ -152,7 +155,7 @@ fPat :: Envs -> Exp -> (Errors,FuncType,TypeC,Exp)
 fPat ids (EAny   z)      = ([], FuncGlobal, (TAny False "?",cz), EAny z)
 fPat ids (EUnit  z)      = ([], FuncGlobal, (TUnit False,   cz), EUnit z)
 fPat ids (EVar   z id)   = case findVar z (id,SUP,(TAny False "?",cz)) ids of
-                            Right (etp, SVar _ _ tp _, _) -> ([], funcType' etp False, tp, EVar z id)
+                            Right (etr, SVar _ _ tp _, _) -> ([], funcType' etr, tp, EVar z id)
                             Left  es                      -> (es, FuncGlobal, (TAny False "?",cz), EVar z id)
 fPat ids (ECons  z h)    = (es, FuncGlobal, tp, ECons z{type_=tp} h) where
                             (es,tp) = case find (isData $ hier2str h) (concat ids) of
@@ -567,28 +570,28 @@ expr' _ ids (ETuple z exps) = (es, ftp, ETuple z{type_=(tps',cz)} exps') where
                               tps'  = TTuple False (map (fst.type_.getAnn) exps')
                               ftp   = foldr funcType FuncUnknown $ map snd3 rets
 
-expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, funcType' etp False, EVar z{type_=tp} id') where    -- EVar x
-  (id', tp, etp, es)
-    | (id == "_INPUT") = (id, (TData False ["Int"] [] (TUnit False),cz), EnvLocal, [])
+expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, funcType' etr, EVar z{type_=tp} id') where    -- EVar x
+  (id', tp, etr, es)
+    | (id == "_INPUT") = (id, (TData False ["Int"] [] (TUnit False),cz), (EnvLocal,False), [])
     | otherwise        =
       -- find in top-level ids | id : a
       case findVar z (id,rel,txp) ids of
-        Left  es -> (id, (TAny False "?",cz), EnvLocal, es)
-        Right (etp, SVar _ id' tp@(_,ctrs) _,_) ->
-          if ctrs == cz then (id, tp, etp, []) else
+        Left  es -> (id, (TAny False "?",cz), (EnvLocal,False), es)
+        Right (etr, SVar _ id' tp@(_,ctrs) _,_) ->
+          if ctrs == cz then (id, tp, etr, []) else
             --[] | tp==tp' -> (id, tp, [])
                -- | otherwise -> error $ show (id, tp, tp')
                -- | otherwise -> (id, tp, [])
             case find pred (concat ids) of            -- find instance
               Just (SVar _ _ tp''@(tp_'',ctrs) _) ->
                 if null ctrs then
-                  (idtp id tp_'', tp'', etp, [])
+                  (idtp id tp_'', tp'', etr, [])
                 else
                   if null cxp then
-                    (id, (TAny False "?",cz), etp, err)
+                    (id, (TAny False "?",cz), etr, err)
                   else
-                    (id, tp'', etp, [])
-              Nothing -> (id, (TAny False "?",cz), etp, err)
+                    (id, tp'', etr, [])
+              Nothing -> (id, (TAny False "?",cz), etr, err)
             where
               pred :: Stmt -> Bool
               pred (SVar _ k tp@(tp_,_) _) = (idtp id tp_ == k) && (isRight $ relates SUP txp tp)
