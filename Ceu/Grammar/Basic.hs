@@ -3,6 +3,7 @@ module Ceu.Grammar.Basic where
 import Data.Bool                      (bool)
 import Data.List                      (intercalate)
 
+import Ceu.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann                (Ann, HasAnn(..), annz)
 import Ceu.Grammar.Constraints as Cs  (Map, cz)
@@ -129,6 +130,7 @@ show_stmt spc p = error $ show p
 
 show_exp :: Int -> Exp -> String
 show_exp spc (EAny   _)           = "_"
+show_exp spc (EUnit  _)           = "()"
 show_exp spc (EError _ n)         = "error " ++ show n
 show_exp spc (ECons  _ ["Int",n]) = n
 show_exp spc (ECons  _ id)        = hier2str id

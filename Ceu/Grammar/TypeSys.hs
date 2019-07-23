@@ -39,22 +39,21 @@ idtp id tp = "$" ++ id ++ "$" ++ T.show' tp ++ "$"
 go :: Stmt -> (Errors, Stmt)
 go p = (es,p') where
         (es,_,p') = stmt [[],[]] (TAny False "?",cz) p
---go p = f $ stmt [] p where f (e,s) = traceShow s (e,s)
---go p = f $ stmt [] p where f (e,s) = traceShow (show_stmt 0 s) (e,s)
+        --(es,_,p') = f $ stmt [[],[]] (TAny False "?",cz) p where f (e,x,s) = traceShow s (e,x,s)
+        --(es,_,p') = f $ stmt [[],[]] (TAny False "?",cz) p where f (e,x,s) = traceShow (show_stmt 0 s) (e,x,s)
 
 -------------------------------------------------------------------------------
 
 findVar :: Ann -> (ID_Var,Relation,TypeC) -> Envs -> Either Errors ((Int,Int,Bool), Stmt, (Type, [(ID_Var,Type)]))
-findVar z x envs = g $ foldr f (0, Left (False,[])) envs where
+findVar z x envs = g $ aux envs (0,undefined) where
+  aux []         ret   = ret
+  aux (env:envs) (n,_) = case findVar' z x env of
+    Right (i,j)      -> (n, Right (getRef i, i, j))
+    Left  (True, es) -> (n, Left  (True, es))          -- True = stop here with error
+    Left  (False,es) -> aux envs (n+1, Left (False,es))
+
   g (_, Left  (_,ret))   = Left  ret
   g (n, Right (ref,i,j)) = Right ((length envs, n, ref), i, j)
-
-  f _   l@(_, Left  (True,es)) = l
-  f _   r@(_, Right _)         = r
-  f env (n,_) = case findVar' z x env of
-    Right (i,j)      -> (n,   Right (getRef i, i, j))
-    Left  (True, es) -> (n,   Left (True, es)) -- True = stop here with error
-    Left  (False,es) -> (n+1, Left (False,es))
 
   getRef :: Stmt -> Bool
   getRef (SVar _ _ (tp_,_) _) = T.isRef tp_
@@ -155,7 +154,7 @@ fPat :: Envs -> Exp -> (Errors,FuncType,TypeC,Exp)
 fPat ids (EAny   z)      = ([], FuncGlobal, (TAny False "?",cz), EAny z)
 fPat ids (EUnit  z)      = ([], FuncGlobal, (TUnit False,   cz), EUnit z)
 fPat ids (EVar   z id)   = case findVar z (id,SUP,(TAny False "?",cz)) ids of
-                            Right (lnr, SVar _ _ tp _, _) -> ([], funcType' lnr, tp, EVar z id)
+                            Right (lnr, SVar _ _ tp _, _) -> ([], traceShow (id,source z) $ funcType' lnr, tp, EVar z id)
                             Left  es                      -> (es, FuncGlobal, (TAny False "?",cz), EVar z id)
 fPat ids (ECons  z h)    = (es, FuncGlobal, tp, ECons z{type_=tp} h) where
                             (es,tp) = case find (isData $ hier2str h) (concat ids) of
@@ -212,7 +211,7 @@ errDeclared z chk str id ids =
 getErrsTypesDeclared :: Ann -> [Stmt] -> Type -> Errors
 getErrsTypesDeclared z ids tp = concatMap f (T.getDs tp) where
   f :: Type -> Errors
-  f (TData False hier _ tp_) = case find (isData id) ids of
+  f (TData _ hier _ tp_) = case find (isData id) ids of
     Nothing                  -> [toError z $ "data '" ++ id ++ "' is not declared"]
     Just (SData _ _ tp' _ _) -> [] --relatesErrors SUP tp' (tp_,cz)
 -- TODO
@@ -431,8 +430,8 @@ stmt envs tpr (SMatch z fce exp cses) = (es', funcType ftp1 ftp2, SMatch z fce e
       ftp :: FuncType
       ftp = foldr funcType FuncUnknown $ (map snd3 l0) ++ (map snd4 l1) ++ (map snd3 l2)
 
-  (ok, esm)      = matchX (concat envs) (map snd3 cses') exp'
-  esem           = bool esm ese (null esm)    -- hide ese if esm
+  (ok, esm) = matchX (concat envs) (map snd3 cses') exp'
+  esem      = bool esm ese (null esm)    -- hide ese if esm
 
   -- set  x <- 1    // fce=false
   -- set! 1 <- x    // fce=true
@@ -456,9 +455,14 @@ stmt ids _   (SCall z exp)  = (ese++esf, ftp, SCall z exp') where
                                   ECall _ _ _ -> []
                                   otherwise  -> [toError z "expected call"]
 
-stmt ids tpr (SSeq z p1 p2) = (es1++es2, funcType ftp1 ftp2, SSeq z p1' p2') where
-                                (es1,ftp1,p1') = stmt ids tpr p1
-                                (es2,ftp2,p2') = stmt ids tpr p2
+stmt envs tpr (SSeq z p1 p2) = (es1++es2, funcType ftp1 ftp2, SSeq z p1' p2')
+  where
+    (es1,ftp1,p1') = stmt envs  tpr p1
+    (es2,ftp2,p2') = stmt envs' tpr p2
+    envs' = case p1' of
+              (SMatch _ False (EArg _) [_]) -> []:envs  -- add body environment after args assignment
+              _ -> envs
+
 stmt ids tpr (SLoop z p)    = (es, ftp, SLoop z p') where
                                 (es,ftp,p') = stmt ids tpr p
 
@@ -505,7 +509,7 @@ expr' (_,txp) _   (EArg    z)       = ([], FuncGlobal, EArg    z{type_=txp})
 
 expr' _ envs (EFunc z ftp1 tp p) = (es, ftp, EFunc z{type_=tp} ftp tp p')
  where
-  (es,ftp2,p') = stmt ([]:[]:envs) (out,cs) p
+  (es,ftp2,p') = stmt ([]:envs) (out,cs) p      -- add args environment, locals to be added on Match...EArg
   (TFunc False _ out,cs) = tp
   ftp = if ftp1 == FuncUnknown then ftp2 else
           assertEq ftp1 ftp1 ftp2
