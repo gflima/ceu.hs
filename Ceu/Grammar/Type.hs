@@ -80,13 +80,13 @@ sort' ts = map (\(TTuple False l)->l) $ sort $ map (TTuple False) ts
 -------------------------------------------------------------------------------
 
 getDs :: Type -> [Type]
-getDs (TAny False _)            = []
-getDs (TTop False)              = []
-getDs (TBot False)              = []
-getDs (TUnit False)             = []
-getDs tp@(TData False _ ofs st) = [tp] ++ concatMap getDs ofs ++ getDs st
-getDs (TFunc False inp out)     = getDs inp ++ getDs out
-getDs (TTuple False ts)         = concatMap getDs ts
+getDs    (TAny   _ _)        = []
+getDs    (TTop   _)          = []
+getDs    (TBot   _)          = []
+getDs    (TUnit  _)          = []
+getDs tp@(TData  _ _ ofs st) = [tp] ++ concatMap getDs ofs ++ getDs st
+getDs    (TFunc  _ inp out)  = getDs inp ++ getDs out
+getDs    (TTuple _ ts)       = concatMap getDs ts
 
 -------------------------------------------------------------------------------
 
