@@ -33,11 +33,14 @@ show' (TAny   False id)         = id
 show' (TTop   False)            = "top"
 show' (TBot   False)            = "bot"
 show' (TUnit  False)            = "()"
-show' (TData  False hier []  _) = hier2str hier
-show' (TData  False hier [x] _) = "(" ++ hier2str hier ++ " of " ++ show' x ++ ")"
-show' (TData  False hier ofs _) = "(" ++ hier2str hier ++ " of " ++ "(" ++ intercalate "," (map show' ofs) ++ ")" ++ ")"
+show' (TData  ref hier []  _)   = ref2str ref ++ hier2str hier
+show' (TData  ref hier [x] _)   = "(" ++ ref2str ref ++ hier2str hier ++ " of " ++ show' x ++ ")"
+show' (TData  ref hier ofs _)   = "(" ++ ref2str ref ++ hier2str hier ++ " of " ++ "(" ++ intercalate "," (map show' ofs) ++ ")" ++ ")"
 show' (TFunc  False inp out)    = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
 show' (TTuple False tps)        = "(" ++ intercalate "," (map show' tps) ++ ")"
+
+ref2str True  = "ref "
+ref2str False = ""
 
 -------------------------------------------------------------------------------
 
@@ -300,7 +303,8 @@ supOf sup                 (TUnit False)       = (False, sup,         [])
 
 supOf sup                 (TTop False)        = (False, sup,         [])
 
-supOf sup@(TData False x ofs1 st1) sub@(TData False y ofs2 st2)
+supOf sup@(TData ref1 x ofs1 st1) sub@(TData ref2 y ofs2 st2)
+  -- | ref1 /= ref2 = (False, sup,   [])
   | not $ x `isPrefixOf` y = (False, sup,   [])
   | not $ (TTuple False ofs1) `isSupOf_` (TTuple False ofs2) = (False, sup,   [])
   | otherwise              = (ret, TData False x ofs1 sup, es)
@@ -346,3 +350,5 @@ supOf sup@(TTuple False sups) (TTuple False subs) = if (length subs) /= (length 
   where
     f (ret, tp, insts) (ret', TTuple False tps', insts') =
       (ret&&ret', TTuple False (tp:tps'), insts++insts')
+
+--supOf x y = error $ show (x,y)

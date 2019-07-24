@@ -203,6 +203,18 @@ spec = do
           ])
         `shouldBe` Left "(line 2, column 11):\ntypes do not match : expected 'Int' : found 'Bool.True'\n"
 
+    describe "refs:" $ do
+
+      it "ref - bad receive" $
+        (run True $
+          unlines [
+            "func g x : (ref Int -> ()) do",
+            "   return ()",
+            "end",
+            "return g (10)"
+           ])
+        `shouldBe` Left "(line 4, column 8):\ntypes do not match : expected '(Int -> ?)' : found '(ref Int -> ())'\n"
+
     describe "closure:" $ do
 
       it "FuncGlobal pass" $
@@ -296,6 +308,29 @@ spec = do
             "return (g ()) ()"
            ])
         `shouldBe` Left "new not required"
+
+      it "FuncNested return - reference in body (not args)" $
+        (run True $
+          unlines [
+            "func g x : (Int -> (() -> Int)) do",
+            "   var ref a = x",
+            "   return func () : (()->Int) do return a end",
+            "end",
+            "var a : Int = 99",
+            "return (g ()) ()"
+           ])
+        `shouldBe` Left "TODO: cannot return"
+
+      it "FuncClosure return - reference in args" $
+        (run True $
+          unlines [
+            "func g x : (ref Int -> (() -> Int)) do",
+            "   return func () : (()->Int) do return x end",
+            "end",
+            "var a : ref Int",
+            "return (g (a)) ()"
+           ])
+        `shouldBe` Left "TODO: 99"
 
       it "escape scope - var a - func " $
         (run True $
