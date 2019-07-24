@@ -15,9 +15,9 @@ import Debug.Trace
 int  = TData False ["Int"]  [] (TUnit False)
 bool = TData False ["Bool"] [] (TUnit False)
 
-mmm          loc exp p1 p2 =   SMatch         exp [(  SNop,  loc,p1)]
-mmmAny z     loc exp p1 p2 = B.SMatch z False exp [(B.SNop z,loc,p1),(B.SNop z,B.EAny z,p2)]
-mmmOne z chk loc exp p1 p2 = B.SMatch z chk   exp [(B.SNop z,loc,p1)]
+mmm          loc exp p1 p2 =   SMatch              exp [(  SNop,  loc,p1)]
+mmmAny z     loc exp p1 p2 = B.SMatch z True False exp [(B.SNop z,loc,p1),(B.SNop z,B.EAny z,p2)]
+mmmOne z chk loc exp p1 p2 = B.SMatch z True chk   exp [(B.SNop z,loc,p1)]
 
 main :: IO ()
 main = hspec spec

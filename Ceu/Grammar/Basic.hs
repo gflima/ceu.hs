@@ -50,7 +50,7 @@ data Stmt
     | SInst   Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class instance
     | SData   Ann (Maybe [String]) TypeC Bool Stmt               -- new type declaration
     | SVar    Ann ID_Var TypeC Stmt            -- variable declaration
-    | SMatch  Ann Bool Exp [(Stmt,Exp,Stmt)]   -- match/assignment/if statement
+    | SMatch  Ann Bool Bool Exp [(Stmt,Exp,Stmt)]   -- match/assignment/if statement
     | SCall   Ann Exp                          -- call function
     | SSeq    Ann Stmt Stmt                    -- sequence
     | SLoop   Ann Stmt                         -- infinite loop
@@ -116,13 +116,13 @@ show_stmt spc (SCall _ e)              = rep spc ++ "call " ++ show_exp spc e
 show_stmt spc (SRet _ e)               = rep spc ++ "return " ++ show_exp spc e
 show_stmt spc (SSeq _ p1 p2)           = show_stmt spc p1 ++ "\n" ++ show_stmt spc p2
   --rep spc ++ "--\n" ++ show_stmt (spc+4) p1 ++ rep spc ++ "--\n" ++ show_stmt (spc+4) p2
-show_stmt spc (SMatch _ False exp [(_,pt,st)])
+show_stmt spc (SMatch _ _ False exp [(_,pt,st)])
                                        = rep spc ++ "set " ++ show_exp spc pt ++ " = " ++
                                           show_exp spc exp ++ "\n" ++ show_stmt spc st
-show_stmt spc (SMatch _ True  exp ((ds,pt,st):_))
+show_stmt spc (SMatch _ _ True  exp ((ds,pt,st):_))
                                        = rep spc ++ "set! " ++ show_exp spc pt ++ " = " ++
                                           show_exp spc exp ++ "\n" ++ show_stmt spc st
-show_stmt spc (SMatch _ chk exp cses)  = rep spc ++ "match " ++ show_exp spc exp ++ " with\n" ++ (concatMap f cses)
+show_stmt spc (SMatch _ _ chk exp cses)  = rep spc ++ "match " ++ show_exp spc exp ++ " with\n" ++ (concatMap f cses)
                                          where
                                           f (ds,pt,st) = rep (spc+4) ++ show_exp (spc+4) pt ++
                                                           " { " ++ show_stmt 0 ds ++ " } then\n" ++
@@ -154,7 +154,7 @@ map_stmt f@(fs,_,ft) (SInst  z cls tp imp p)     = fs (SInst  z cls tp imp' (map
                                                     where imp' = map (\(x,y,tp,z)->(x,y,ft tp,z)) imp
 map_stmt f@(fs,_,ft) (SData  z nms tp abs p)     = fs (SData  z nms (ft tp) abs (map_stmt f p))
 map_stmt f@(fs,_,ft) (SVar   z id tp p)          = fs (SVar   z id (ft tp) (map_stmt f p))
-map_stmt f@(fs,_,_)  (SMatch z b exp cses)       = fs (SMatch z b (map_exp f exp) (map (\(ds,pt,st) -> (map_stmt f ds, map_exp f pt, map_stmt f st)) cses))
+map_stmt f@(fs,_,_)  (SMatch z ini b exp cses)   = fs (SMatch z ini b (map_exp f exp) (map (\(ds,pt,st) -> (map_stmt f ds, map_exp f pt, map_stmt f st)) cses))
 map_stmt f@(fs,_,_)  (SCall z exp)               = fs (SCall z (map_exp f exp))
 map_stmt f@(fs,_,_)  (SSeq   z p1 p2)            = fs (SSeq   z (map_stmt f p1) (map_stmt f p2))
 map_stmt f@(fs,_,_)  (SLoop  z p)                = fs (SLoop  z (map_stmt f p))
@@ -207,7 +207,7 @@ instance HasAnn Stmt where
     getAnn (SInst  z _ _ _ _)   = z
     getAnn (SData  z _ _ _ _)   = z
     getAnn (SVar   z _ _ _)     = z
-    getAnn (SMatch z _ _ _)     = z
+    getAnn (SMatch z _ _ _ _)   = z
     getAnn (SCall z _)          = z
     getAnn (SSeq   z _ _)       = z
     getAnn (SLoop  z _)         = z

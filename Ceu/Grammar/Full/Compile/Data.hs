@@ -35,9 +35,9 @@ stmt ds (SData''  z nms tp abs p) = SData''  z nms' tp' abs (stmt (d':ds) (faccs
                                       (nms',tp') = fdata ds nms tp
                                       d'         = SData'' z nms' tp' abs p
 stmt ds (SVar''   z var tp p)     = SVar''   z var (fvar ds tp) (stmt ds p)
-stmt ds (SMatch'  z chk exp cses) = SMatch'  z chk (expr ds exp)
-                                      (map (\(xs,pt,st) -> (stmt ds xs, expr ds pt, stmt ds st)) cses)
-stmt ds (SCall   z exp)           = SCall   z (expr ds exp)
+stmt ds (SMatch'  z ini chk exp cses) = SMatch' z ini chk (expr ds exp)
+                                          (map (\(xs,pt,st) -> (stmt ds xs, expr ds pt, stmt ds st)) cses)
+stmt ds (SCall    z exp)          = SCall    z (expr ds exp)
 stmt ds (SSeq     z p1 p2)        = SSeq     z (stmt ds p1) (stmt ds p2)
 stmt ds (SLoop    z p)            = SLoop    z (stmt ds p)
 stmt ds (SRet     z exp)          = SRet     z (expr ds exp)
@@ -111,14 +111,14 @@ faccs z nms (tpD@(TData False hr _ st),cz) p = accs where
 
   f :: Type -> (Stmt,Int) -> (Stmt,Int)
   f tp (p,idx) = (SVar'' z id (TFunc False tpD tp,cz)
-                    (SMatch' z False body [(SNop z, EVar z id, nm p)])
+                    (SMatch' z True False body [(SNop z, EVar z id, nm p)])
                  ,idx+1)
                  where
                   id = hr_str ++ "._" ++ show idx
 
                   body = EFunc z (TFunc False tpD tp,cz)
                           (SVar'' z "ret" (tp,cz)
-                            (SMatch' z False (EArg z) [(SNop z, ret, SRet z (EVar z "ret"))]))
+                            (SMatch' z True False (EArg z) [(SNop z, ret, SRet z (EVar z "ret"))]))
                   ret  = ECall z (ECons z hr) (bool (ETuple z repl) (repl!!0) (len st == 1))
                   repl = take (idx-1) anys ++ [EVar z "ret"] ++ drop idx anys
                   anys = replicate (len st) (EAny z)
@@ -129,7 +129,7 @@ faccs z nms (tpD@(TData False hr _ st),cz) p = accs where
                   nm p = case nms of
                           Nothing -> p
                           Just l  -> SVar'' z idm (TFunc False tpD tp,cz)
-                                      (SMatch' z False body [(SNop z, EVar z idm, p)])
+                                      (SMatch' z True False body [(SNop z, EVar z idm, p)])
                                      where
                                       idm = hr_str ++ "." ++ (l!!(idx-1))
                                       body = EFunc z (TFunc False tpD tp,cz)

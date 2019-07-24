@@ -28,14 +28,14 @@ stmt (SInst  z cls tp@(_,ctrs) imp)    = SInst  z cls tp (stmt $ aux imp)
     aux (SFunc z id (tp_',ctrs') imp) = SFunc z id (tp_',Cs.union ctrs ctrs') imp
     aux p                             = p
 
-stmt (SFunc z k tp@(tp_,ctrs) imp)    = SSeq z (SVar z k tp) (SSet z False (EVar z k) (EFunc z tp (stmt imp')))
+stmt (SFunc z k tp@(tp_,ctrs) imp)    = SSeq z (SVar z k tp) (SSet z True False (EVar z k) (EFunc z tp (stmt imp')))
  where
   imp' = if ctrs == Cs.cz then imp else
           map_stmt (id,id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) imp
 
 stmt (SVar   z id tp)       = SVar   z id tp
-stmt (SSet   z chk loc exp) = SSet   z chk loc (expr exp)
-stmt (SMatch z chk exp cses)= SMatch z chk (expr exp) (map (\(ds,pt,st) -> (stmt ds, expr pt, stmt st)) cses)
+stmt (SSet   z ini chk loc exp) = SSet   z ini chk loc (expr exp)
+stmt (SMatch z ini chk exp cses)= SMatch z ini chk (expr exp) (map (\(ds,pt,st) -> (stmt ds, expr pt, stmt st)) cses)
 stmt (SCall z exp)          = SCall z (expr exp)
 stmt (SIf    z exp p1 p2)   = SIf    z (expr exp) (stmt p1) (stmt p2)
 stmt (SSeq   z p1 p2)       = SSeq   z (stmt p1) (stmt p2)

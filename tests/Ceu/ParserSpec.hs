@@ -30,9 +30,9 @@ clearStmt (SInst  _ cls tp imp)  = SInst  annz cls tp (clearStmt imp)
 clearStmt (SData  _ nms tp abs)  = SData  annz nms tp abs
 clearStmt (SVar   _ var tp)      = SVar   annz var tp
 clearStmt (SFunc  _ var tp p)    = SFunc  annz var tp (clearStmt p)
-clearStmt (SMatch _ chk exp cses)= SMatch annz chk (clearExp exp)
-                                    (map (\(ds,pt,st) -> (clearStmt ds,clearExp pt,clearStmt st)) cses)
-clearStmt (SSet   _ chk loc exp) = SSet   annz chk (clearExp loc) (clearExp exp)
+clearStmt (SMatch _ ini chk exp cses) = SMatch annz ini chk (clearExp exp)
+                                          (map (\(ds,pt,st) -> (clearStmt ds,clearExp pt,clearStmt st)) cses)
+clearStmt (SSet   _ ini chk loc exp) = SSet annz ini chk (clearExp loc) (clearExp exp)
 clearStmt (SIf    _ exp p1 p2)   = SIf    annz (clearExp exp) (clearStmt p1) (clearStmt p2)
 clearStmt (SSeq   _ p1 p2)       = SSeq   annz (clearStmt p1) (clearStmt p2)
 clearStmt (SLoop  _ p)           = SLoop  annz (clearStmt p)
@@ -58,7 +58,7 @@ int  = TData False ["Int"]  [] (TUnit False)
 int' = TData True  ["Int"]  [] (TUnit False)
 bool = TData False ["Bool"] [] (TUnit False)
 
-mmm z loc exp p1 p2 = SMatch z False exp [(SNop z,loc,p1),(SNop z,EAny z,p2)]
+mmm z loc exp p1 p2 = SMatch z True False exp [(SNop z,loc,p1),(SNop z,EAny z,p2)]
 
 main :: IO ()
 main = hspec spec
@@ -419,13 +419,13 @@ spec = do
                 `shouldBe` Left "(line 1, column 9):\nunexpected \"x\"\nexpecting \":\""
             it "var a: Int =  1" $
                 parse stmt_var "var a : Int =  1"
-                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "a" (int,cz)) (SNop (annz{source = ("",0,0)}))) (SSet (annz{source = ("",1,1)}) False (EVar annz{source = ("",1,5)} "a") (ECons (annz{source = ("",1,16)}) ["Int","1"])))
+                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "a" (int,cz)) (SNop (annz{source = ("",0,0)}))) (SSet (annz{source = ("",1,1)}) True False (EVar annz{source = ("",1,5)} "a") (ECons (annz{source = ("",1,16)}) ["Int","1"])))
             it "var x:() =  ()" $
                 parse stmt_var "var x:() =  ()"
-                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "x" ((TUnit False),cz)) (SNop (annz{source = ("",0,0)}))) (SSet (annz{source = ("",1,1)}) False (EVar annz{source = ("",1,5)} "x") (EUnit (annz{source = ("",1,13)}))))
+                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "x" ((TUnit False),cz)) (SNop (annz{source = ("",0,0)}))) (SSet (annz{source = ("",1,1)}) True False (EVar annz{source = ("",1,5)} "x") (EUnit (annz{source = ("",1,13)}))))
             it "var x:(Int,()) =  (1 ())" $
                 parse stmt_var "var x:(Int,()) =  (1,())"
-                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "x" (TTuple False [int,(TUnit False)],cz)) (SNop (annz{source = ("",0,0)}))) (SSet (annz{source = ("",1,1)}) False (EVar annz{source = ("",1,5)} "x") (ETuple (annz{source = ("",1,19)}) [ECons (annz{source = ("",1,20)}) ["Int","1"],EUnit (annz{source = ("",1,22)})])))
+                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "x" (TTuple False [int,(TUnit False)],cz)) (SNop (annz{source = ("",0,0)}))) (SSet (annz{source = ("",1,1)}) True False (EVar annz{source = ("",1,5)} "x") (ETuple (annz{source = ("",1,19)}) [ECons (annz{source = ("",1,20)}) ["Int","1"],EUnit (annz{source = ("",1,22)})])))
 
         describe "ref:" $ do
             it "var x: ref Int" $
@@ -433,13 +433,13 @@ spec = do
                 `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "x" (int',cz)) (SNop (annz{source = ("",0,0)}))) (SNop (annz{source = ("",1,1)})))
             it "var a: ref Int =  1" $
                 parse stmt_var "var a : ref Int =  1"
-                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "a" (int',cz)) (SNop (annz{source = ("",0,0)}))) (SSet (annz{source = ("",1,1)}) False (EVar annz{source = ("",1,5)} "a") (ECons (annz{source = ("",1,20)}) ["Int","1"])))
+                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "a" (int',cz)) (SNop (annz{source = ("",0,0)}))) (SSet (annz{source = ("",1,1)}) True False (EVar annz{source = ("",1,5)} "a") (ECons (annz{source = ("",1,20)}) ["Int","1"])))
             it "var x: ref () =  ()" $
                 parse stmt_var "var x: ref () =  ()"
-                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "x" ((TUnit True),cz)) (SNop (annz{source = ("",0,0)}))) (SSet (annz{source = ("",1,1)}) False (EVar annz{source = ("",1,5)} "x") (EUnit (annz{source = ("",1,18)}))))
+                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "x" ((TUnit True),cz)) (SNop (annz{source = ("",0,0)}))) (SSet (annz{source = ("",1,1)}) True False (EVar annz{source = ("",1,5)} "x") (EUnit (annz{source = ("",1,18)}))))
             it "var x:(ref Int,()) =  (1 ())" $
                 parse stmt_var "var x:(ref Int,()) =  (1,())"
-                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "x" (TTuple False [int',(TUnit False)],cz)) (SNop (annz{source = ("",0,0)}))) (SSet (annz{source = ("",1,1)}) False (EVar annz{source = ("",1,5)} "x") (ETuple (annz{source = ("",1,23)}) [ECons (annz{source = ("",1,24)}) ["Int","1"],EUnit (annz{source = ("",1,26)})])))
+                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "x" (TTuple False [int',(TUnit False)],cz)) (SNop (annz{source = ("",0,0)}))) (SSet (annz{source = ("",1,1)}) True False (EVar annz{source = ("",1,5)} "x") (ETuple (annz{source = ("",1,23)}) [ECons (annz{source = ("",1,24)}) ["Int","1"],EUnit (annz{source = ("",1,26)})])))
 
         describe "var-tuples:" $ do
             it "((_,x,),_)" $ do
@@ -447,10 +447,10 @@ spec = do
                 `shouldBe` Right (ETuple annz{source = ("",1,1)} [ETuple annz{source = ("",1,2)} [EAny annz{source = ("",1,3)},EVar annz{source = ("",1,5)} "x"],EAny annz{source = ("",1,9)}])
             it "var (x,y) : (Int,Int) =  (1, 2); return x+y" $
                 parse stmt_var "var (x,y) : (Int,Int) =  (1, 2)"
-                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "x" (int,cz)) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "y" (int,cz)) (SNop (annz{source = ("",0,0)})))) (SSet (annz{source = ("",1,1)}) False (ETuple annz{source = ("",1,5)} [EVar annz{source = ("",1,6)} "x",EVar annz{source = ("",1,8)} "y"]) (ETuple (annz{source = ("",1,26)}) [ECons (annz{source = ("",1,27)}) ["Int","1"], ECons (annz{source = ("",1,30)}) ["Int","2"]])))
+                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "x" (int,cz)) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "y" (int,cz)) (SNop (annz{source = ("",0,0)})))) (SSet (annz{source = ("",1,1)}) True False (ETuple annz{source = ("",1,5)} [EVar annz{source = ("",1,6)} "x",EVar annz{source = ("",1,8)} "y"]) (ETuple (annz{source = ("",1,26)}) [ECons (annz{source = ("",1,27)}) ["Int","1"], ECons (annz{source = ("",1,30)}) ["Int","2"]])))
             it "var (x,(y,_)):(Int,(Int,Int)) =  (1, (2,3)); return x+y" $
                 parse stmt "var (x,(y,_)):(Int,  Int     ) =  (1, (2,3)); return x+y"
-                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "x" (int,cz)) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "y" (int,cz)) (SNop (annz{source = ("",0,0)})))) (SSet (annz{source = ("",1,1)}) False (ETuple annz{source = ("",1,5)} [EVar annz{source = ("",1,6)} "x",ETuple annz{source = ("",1,8)} [EVar annz{source = ("",1,9)} "y",EAny annz{source = ("",1,11)}]]) (ETuple (annz{source = ("",1,35)}) [ECons (annz{source = ("",1,36)}) ["Int","1"],ETuple (annz{source = ("",1,39)}) [ ECons (annz{source = ("",1,40)}) ["Int","2"], ECons (annz{source = ("",1,42)}) ["Int","3"]]]))) (SRet (annz{source = ("",1,47)}) (ECall (annz{source = ("",1,55)}) (EVar annz{source=("",1,55)} "+") (ETuple (annz{source = ("",1,54)}) [EVar (annz{source = ("",1,54)}) "x",EVar (annz{source = ("",1,56)}) "y"]))))
+                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "x" (int,cz)) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "y" (int,cz)) (SNop (annz{source = ("",0,0)})))) (SSet (annz{source = ("",1,1)}) True False (ETuple annz{source = ("",1,5)} [EVar annz{source = ("",1,6)} "x",ETuple annz{source = ("",1,8)} [EVar annz{source = ("",1,9)} "y",EAny annz{source = ("",1,11)}]]) (ETuple (annz{source = ("",1,35)}) [ECons (annz{source = ("",1,36)}) ["Int","1"],ETuple (annz{source = ("",1,39)}) [ ECons (annz{source = ("",1,40)}) ["Int","2"], ECons (annz{source = ("",1,42)}) ["Int","3"]]]))) (SRet (annz{source = ("",1,47)}) (ECall (annz{source = ("",1,55)}) (EVar annz{source=("",1,55)} "+") (ETuple (annz{source = ("",1,54)}) [EVar (annz{source = ("",1,54)}) "x",EVar (annz{source = ("",1,56)}) "y"]))))
             it "var (_,_):(Int,Int,Int)" $
                 parse stmt "var (_,_):(Int,Int,Int)"
                 `shouldBe` Left "(line 1, column 24):\nunexpected arity mismatch\nexpecting \"where\""
@@ -464,10 +464,10 @@ spec = do
         describe "write:" $ do
             it "x =  1" $
                 parse stmt_set "set x = 1"
-                `shouldBe` Right (SSet annz{source=("",1,1)} False (EVar annz{source=("",1,5)} "x") (ECons annz{source=("",1,9)} ["Int","1"]))
+                `shouldBe` Right (SSet annz{source=("",1,1)} False False (EVar annz{source=("",1,5)} "x") (ECons annz{source=("",1,9)} ["Int","1"]))
             it "val =  1" $
                 parse stmt_set "set val = 1"
-                `shouldBe` Right (SSet annz{source=("",1,1)} False (EVar annz{source=("",1,5)} "val") (ECons annz{source=("",1,11)} ["Int","1"]))
+                `shouldBe` Right (SSet annz{source=("",1,1)} False False (EVar annz{source=("",1,5)} "val") (ECons annz{source=("",1,11)} ["Int","1"]))
 
         describe "call:" $ do
           it "call 1" $
@@ -504,7 +504,8 @@ spec = do
 
             it "if 0 return 0 end" $
                 parse stmt_if "if 0 return 0 end"
-                `shouldBe` Left "(line 1, column 12):\nunexpected `return`\nexpecting expression"
+                --`shouldBe` Left "(line 1, column 12):\nunexpected `return`\nexpecting expression"
+                `shouldBe` Left "(line 1, column 6):\nunexpected \"r\"\nexpecting \"matches\", \"ref\" or \"then\""
 
             it "if 0 then return 0 else return 1 end" $
                 parse stmt_if "if 0 then return 0 else return 1 end"
@@ -535,7 +536,7 @@ match xs with
     return 1 + (length xs_)
 end
 |]
-            `shouldBe` Right (SMatch annz False (EVar annz "xs") [(SNop annz,ECons annz ["List","Nil"],SRet annz (ECons annz ["Int","0"])),(SNop annz,ECall annz (ECons annz ["List","Cons"]) (ETuple annz [EVar annz "x",EVar annz "xs_"]),SRet annz (ECall annz (EVar annz "+") (ETuple annz [ECons annz ["Int","1"],ECall annz (EVar annz "length") (EVar annz "xs_")])))])
+            `shouldBe` Right (SMatch annz False False (EVar annz "xs") [(SNop annz,ECons annz ["List","Nil"],SRet annz (ECons annz ["Int","0"])),(SNop annz,ECall annz (ECons annz ["List","Cons"]) (ETuple annz [EVar annz "x",EVar annz "xs_"]),SRet annz (ECall annz (EVar annz "+") (ETuple annz [ECons annz ["Int","1"],ECall annz (EVar annz "length") (EVar annz "xs_")])))])
 
         describe "loop" $ do
             it "loop do end" $
@@ -543,7 +544,7 @@ end
                 `shouldBe` Right (SLoop annz{source=("",1,1)} (SNop annz{source=("",1,9)}))
             it "loop do v= 1 end" $
                 parse stmt_loop "loop do set v= 1 end"
-                `shouldBe` Right (SLoop annz{source=("",1,1)} (SSet annz{source=("",1,9)} False (EVar annz{source=("",1,13)} "v") (ECons annz{source=("",1,16)} ["Int","1"])))
+                `shouldBe` Right (SLoop annz{source=("",1,1)} (SSet annz{source=("",1,9)} False False (EVar annz{source=("",1,13)} "v") (ECons annz{source=("",1,16)} ["Int","1"])))
 
 -------------------------------------------------------------------------------
 
@@ -553,10 +554,10 @@ end
                 `shouldBe` Right (SSeq annz{source = ("",1,1)} (SSeq annz (SVar annz{source = ("",1,1)} "add" (TFunc False (TTuple False [int,int]) (int),cz)) (SNop annz)) (SNop annz{source = ("",1,1)}))
             it "var add : ... =  func ..." $
                 parse stmt "var add : ((Int, Int) -> Int) =  func (a,_) : ((Int, Int) -> Int) do end"
-                `shouldBe` Right (SSeq annz{source=("",1,1)} (SSeq annz (SVar annz{source=("",1,1)} "add" (TFunc False (TTuple False [int,int]) (int),cz)) (SNop annz)) (SSet annz{source=("",1,1)} False (EVar annz{source=("",1,5)} "add") (EFunc annz{source=("",1,34)} (TFunc False (TTuple False [int,int]) (int),cz) (SSeq annz{source=("",1,34)} (SSeq annz (SVar annz{source=("",1,34)} "a" (int,cz)) (SNop annz)) (SSeq annz{source=("",1,34)} (SSet annz{source=("",1,34)} False (ETuple annz{source=("",1,39)} [EVar annz{source=("",1,40)} "a",EAny annz{source=("",1,42)}]) (EArg annz{source=("",1,34)})) (SNop annz{source=("",1,70)}))))))
+                `shouldBe` Right (SSeq annz{source=("",1,1)} (SSeq annz (SVar annz{source=("",1,1)} "add" (TFunc False (TTuple False [int,int]) (int),cz)) (SNop annz)) (SSet annz{source=("",1,1)} True False (EVar annz{source=("",1,5)} "add") (EFunc annz{source=("",1,34)} (TFunc False (TTuple False [int,int]) (int),cz) (SSeq annz{source=("",1,34)} (SSeq annz (SVar annz{source=("",1,34)} "a" (int,cz)) (SNop annz)) (SSeq annz{source=("",1,34)} (SSet annz{source=("",1,34)} True False (ETuple annz{source=("",1,39)} [EVar annz{source=("",1,40)} "a",EAny annz{source=("",1,42)}]) (EArg annz{source=("",1,34)})) (SNop annz{source=("",1,70)}))))))
             it "func add : (...) do end" $
                 parse stmt_funcs "func add (a,_) : ((Int, Int) -> Int) do end"
-                `shouldBe` Right (SFunc annz{source=("",1,1)} "add" (TFunc False (TTuple False [int,int]) (int),cz) (SSeq annz{source=("",1,1)} (SSeq annz{source=("",0,0)} (SVar annz{source=("",1,1)} "a" (int,cz)) (SNop annz{source=("",0,0)})) (SSeq annz{source=("",1,1)} (SSet annz{source=("",1,1)} False (ETuple annz{source=("",1,10)} [EVar annz{source=("",1,11)} "a",EAny annz{source=("",1,13)}]) (EArg annz{source=("",1,1)})) (SNop annz{source=("",1,41)}))))
+                `shouldBe` Right (SFunc annz{source=("",1,1)} "add" (TFunc False (TTuple False [int,int]) (int),cz) (SSeq annz{source=("",1,1)} (SSeq annz{source=("",0,0)} (SVar annz{source=("",1,1)} "a" (int,cz)) (SNop annz{source=("",0,0)})) (SSeq annz{source=("",1,1)} (SSet annz{source=("",1,1)} True False (ETuple annz{source=("",1,10)} [EVar annz{source=("",1,11)} "a",EAny annz{source=("",1,13)}]) (EArg annz{source=("",1,1)})) (SNop annz{source=("",1,41)}))))
             it "func add (...) : (...)" $
                 parse stmt_funcs "func add (a,_) : ((Int, Int) -> Int)"
                 `shouldBe` Left "(line 1, column 37):\nunexpected end of input\nexpecting \"where\" or \"do\""
@@ -584,7 +585,7 @@ end
                   "end",
                   "return (Bool.True) and (Bool.True)"
                  ])
-              `shouldBe` Right (SSeq annz (SFunc annz "and" (TFunc False (TTuple False [bool,bool]) (bool),cz) (SSeq annz (SSeq annz (SVar annz "x" (bool,cz)) (SSeq annz (SVar annz "y" (bool,cz)) (SNop annz))) (SSeq annz (SSet annz False (ETuple annz [EVar annz "x",EVar annz "y"]) (EArg annz)) (SRet annz (ECons annz ["Bool","False"]))))) (SRet annz (ECall annz (EVar annz "and") (ETuple annz [ECons annz ["Bool","True"],ECons annz ["Bool","True"]]))))
+              `shouldBe` Right (SSeq annz (SFunc annz "and" (TFunc False (TTuple False [bool,bool]) (bool),cz) (SSeq annz (SSeq annz (SVar annz "x" (bool,cz)) (SSeq annz (SVar annz "y" (bool,cz)) (SNop annz))) (SSeq annz (SSet annz True False (ETuple annz [EVar annz "x",EVar annz "y"]) (EArg annz)) (SRet annz (ECons annz ["Bool","False"]))))) (SRet annz (ECall annz (EVar annz "and") (ETuple annz [ECons annz ["Bool","True"],ECons annz ["Bool","True"]]))))
 
         describe "data" $ do
 
@@ -593,7 +594,7 @@ end
               `shouldBe` Right (SData annz{source=("",1,1)} Nothing (TData False ["Xxx"] [] (TUnit False),cz) False)
             it "data Xxx ; var x = Xxx" $
               (parse' stmt "data Xxx ; var x:Xxx =  Xxx")
-              `shouldBe` Right (SSeq annz (SData annz Nothing (TData False ["Xxx"] [] (TUnit False),cz) False) (SSeq annz (SSeq annz (SVar annz "x" (TData False ["Xxx"] [] (TUnit False),cz)) (SNop annz)) (SSet annz False (EVar annz "x") (ECons annz ["Xxx"]))))
+              `shouldBe` Right (SSeq annz (SData annz Nothing (TData False ["Xxx"] [] (TUnit False),cz) False) (SSeq annz (SSeq annz (SVar annz "x" (TData False ["Xxx"] [] (TUnit False),cz)) (SNop annz)) (SSet annz True False (EVar annz "x") (ECons annz ["Xxx"]))))
             it "data Xxx.Yyy" $
               (parse stmt "data Xxx.Yyy")
               `shouldBe` Right (SData annz{source=("",1,1)} Nothing (TData False ["Xxx","Yyy"] [] (TUnit False),cz) False)
@@ -615,7 +616,7 @@ end
 
             it "data Xxx with Int ; x= Xxx(1,1)" $
               (parse' stmt "data Xxx with Int ; var x:Xxx =  Xxx 1")
-              `shouldBe` Right (SSeq annz (SData annz Nothing (TData False ["Xxx"] [] int,cz) False) (SSeq annz (SSeq annz (SVar annz "x" (TData False ["Xxx"] [] (TUnit False),cz)) (SNop annz)) (SSet annz False (EVar annz "x") (ECall annz (ECons annz ["Xxx"]) (ECons annz ["Int","1"])))))
+              `shouldBe` Right (SSeq annz (SData annz Nothing (TData False ["Xxx"] [] int,cz) False) (SSeq annz (SSeq annz (SVar annz "x" (TData False ["Xxx"] [] (TUnit False),cz)) (SNop annz)) (SSet annz True False (EVar annz "x") (ECall annz (ECons annz ["Xxx"]) (ECons annz ["Int","1"])))))
 
             it "fields: data Xxx (x,y) with (Int,Int)" $
               (parse' stmt "data Xxx (x,y) with (Int,Int)")
@@ -623,17 +624,17 @@ end
 
             it "Xxx.Yyy" $
               (parse' stmt "data Int ; data Xxx with Int ; data Xxx.Yyy with Int ; var y:Xxx.Yyy =  Xxx.Yyy (1,2)")
-              `shouldBe` Right (SSeq annz (SData annz Nothing (TData False ["Int"] [] (TUnit False),M.fromList []) False) (SSeq annz (SData annz Nothing (TData False ["Xxx"] [] int,M.fromList []) False) (SSeq annz (SData annz Nothing (TData False ["Xxx","Yyy"] [] int,M.fromList []) False) (SSeq annz (SSeq annz (SVar annz "y" (TData False ["Xxx","Yyy"] [] (TUnit False),M.fromList [])) (SNop annz)) (SSet annz False (EVar annz "y") (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"], ECons annz ["Int","2"]])))))))
+              `shouldBe` Right (SSeq annz (SData annz Nothing (TData False ["Int"] [] (TUnit False),M.fromList []) False) (SSeq annz (SData annz Nothing (TData False ["Xxx"] [] int,M.fromList []) False) (SSeq annz (SData annz Nothing (TData False ["Xxx","Yyy"] [] int,M.fromList []) False) (SSeq annz (SSeq annz (SVar annz "y" (TData False ["Xxx","Yyy"] [] (TUnit False),M.fromList [])) (SNop annz)) (SSet annz True False (EVar annz "y") (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"], ECons annz ["Int","2"]])))))))
 
             it "data X with Int ; x:Int ; X x =  X 1 ; ret x" $
               (parse' stmt "data Xxx with Int ; var x:Int ; set Xxx x =  Xxx 1 ; return x")
-              `shouldBe` Right (SSeq annz (SData annz Nothing (TData False ["Xxx"] [] int,cz) False) (SSeq annz (SSeq annz (SSeq annz (SVar annz "x" (int,cz)) (SNop annz)) (SNop annz)) (SSeq annz (SSet annz False (ECall annz (ECons annz ["Xxx"]) (EVar annz "x")) (ECall annz (ECons annz ["Xxx"]) (ECons annz ["Int","1"]))) (SRet annz (EVar annz "x")))))
+              `shouldBe` Right (SSeq annz (SData annz Nothing (TData False ["Xxx"] [] int,cz) False) (SSeq annz (SSeq annz (SSeq annz (SVar annz "x" (int,cz)) (SNop annz)) (SNop annz)) (SSeq annz (SSet annz False False (ECall annz (ECons annz ["Xxx"]) (EVar annz "x")) (ECall annz (ECons annz ["Xxx"]) (ECons annz ["Int","1"]))) (SRet annz (EVar annz "x")))))
             it "data X with Int ; X 1 =  X 1 ; return 1" $
               (parse' stmt "data Xxx with Int ; set Xxx 1 =  Xxx 1 ; return 1")
-              `shouldBe` Right (SSeq annz (SData annz Nothing (TData False ["Xxx"] [] int,cz) False) (SSeq annz (SSet annz False (ECall annz (ECons annz ["Xxx"]) (ECons annz ["Int","1"])) (ECall annz (ECons annz ["Xxx"]) (ECons annz ["Int","1"]))) (SRet annz (ECons annz ["Int","1"]))))
+              `shouldBe` Right (SSeq annz (SData annz Nothing (TData False ["Xxx"] [] int,cz) False) (SSeq annz (SSet annz False False (ECall annz (ECons annz ["Xxx"]) (ECons annz ["Int","1"])) (ECall annz (ECons annz ["Xxx"]) (ECons annz ["Int","1"]))) (SRet annz (ECons annz ["Int","1"]))))
             it "data X with Int ; x:Int ; X 1 =  X 2" $
               (parse' stmt "data Xxx with Int ; set Xxx 1 =  Xxx 2 ; return 2")
-              `shouldBe` Right (SSeq annz (SData annz Nothing (TData False ["Xxx"] [] int,cz) False) (SSeq annz (SSet annz False (ECall annz (ECons annz ["Xxx"]) (ECons annz ["Int","1"])) (ECall annz (ECons annz ["Xxx"]) (ECons annz ["Int","2"]))) (SRet annz (ECons annz ["Int","2"]))))
+              `shouldBe` Right (SSeq annz (SData annz Nothing (TData False ["Xxx"] [] int,cz) False) (SSeq annz (SSet annz False False (ECall annz (ECons annz ["Xxx"]) (ECons annz ["Int","1"])) (ECall annz (ECons annz ["Xxx"]) (ECons annz ["Int","2"]))) (SRet annz (ECons annz ["Int","2"]))))
 
             it "Aa =  Aa.Bb" $
               (parse' stmt $
@@ -646,7 +647,7 @@ end
                   "set (Aa v) =  b",
                   "return v"
                 ])
-              `shouldBe` Right (SSeq annz (SData annz Nothing (TData False ["Aa"] [] int,cz) False) (SSeq annz (SData annz Nothing (TData False ["Aa","Bb"] [] (TUnit False),cz) False) (SSeq annz (SSeq annz (SSeq annz (SVar annz "b" (TData False ["Aa","Bb"] [] (TUnit False),cz)) (SNop annz)) (SSet annz False (EVar annz "b") (ECall annz (ECons annz ["Aa","Bb"]) (ECons annz ["Int","1"])))) (SSeq annz (SSeq annz (SSeq annz (SVar annz "a" (TData False ["Aa"] [] (TUnit False),cz)) (SNop annz)) (SSet annz False (EVar annz "a") (EVar annz "b"))) (SSeq annz (SSeq annz (SSeq annz (SVar annz "v" (int,cz)) (SNop annz)) (SNop annz)) (SSeq annz (SSet annz False (ECall annz (ECons annz ["Aa"]) (EVar annz "v")) (EVar annz "b")) (SRet annz (EVar annz "v"))))))))
+              `shouldBe` Right (SSeq annz (SData annz Nothing (TData False ["Aa"] [] int,cz) False) (SSeq annz (SData annz Nothing (TData False ["Aa","Bb"] [] (TUnit False),cz) False) (SSeq annz (SSeq annz (SSeq annz (SVar annz "b" (TData False ["Aa","Bb"] [] (TUnit False),cz)) (SNop annz)) (SSet annz True False (EVar annz "b") (ECall annz (ECons annz ["Aa","Bb"]) (ECons annz ["Int","1"])))) (SSeq annz (SSeq annz (SSeq annz (SVar annz "a" (TData False ["Aa"] [] (TUnit False),cz)) (SNop annz)) (SSet annz True False (EVar annz "a") (EVar annz "b"))) (SSeq annz (SSeq annz (SSeq annz (SVar annz "v" (int,cz)) (SNop annz)) (SNop annz)) (SSeq annz (SSet annz False False (ECall annz (ECons annz ["Aa"]) (EVar annz "v")) (EVar annz "b")) (SRet annz (EVar annz "v"))))))))
 
         describe "data - constraint:" $ do
 
@@ -705,7 +706,7 @@ end
                   (SVar annz{source=("",5,2)} "v" (TAny False "a",cz))
                   (SNop annz{source=("",0,0)}))
                   (SSeq annz{source=("",5,2)}
-                  (SSet annz{source=("",5,2)} False (EVar annz{source=("",5,11)} "v") (EArg annz{source=("",5,2)})) (SRet annz{source=("",6,4)} (EVar annz{source=("",6,11)} "v"))))))
+                  (SSet annz{source=("",5,2)} True False (EVar annz{source=("",5,11)} "v") (EArg annz{source=("",5,2)})) (SRet annz{source=("",6,4)} (EVar annz{source=("",6,11)} "v"))))))
               (SRet annz{source=("",9,1)} (ECall annz{source=("",9,8)} (EVar annz{source=("",9,8)} "f3") (ECons annz{source=("",9,11)} ["Int","10"])))))
 
           it "IOrd extends IEq" $
@@ -739,11 +740,11 @@ end
               (SSeq annz
               (SInst annz "IEq" (bool,cz)
                 (SFunc annz "==" (TFunc False (TTuple False [TAny False "a",TAny False "a"]) (bool),cz)
-                  (SSeq annz (SSeq annz (SVar annz "x" (TAny False "a",cz)) (SSeq annz (SVar annz "y" (TAny False "a",cz)) (SNop annz))) (SSeq annz (SSet annz False (ETuple annz [EVar annz "x",EVar annz "y"]) (EArg annz)) (SRet annz (ECons annz ["Bool","True"]))))))
+                  (SSeq annz (SSeq annz (SVar annz "x" (TAny False "a",cz)) (SSeq annz (SVar annz "y" (TAny False "a",cz)) (SNop annz))) (SSeq annz (SSet annz True False (ETuple annz [EVar annz "x",EVar annz "y"]) (EArg annz)) (SRet annz (ECons annz ["Bool","True"]))))))
               (SSeq annz
               (SInst annz "IOrd" (bool,cz)
                 (SFunc annz ">=" (TFunc False (TTuple False [TAny False "a",TAny False "a"]) (bool),cz)
-                  (SSeq annz (SSeq annz (SVar annz "x" (TAny False "a",cz)) (SSeq annz (SVar annz "y" (TAny False "a",cz)) (SNop annz))) (SSeq annz (SSet annz False (ETuple annz [EVar annz "x",EVar annz "y"]) (EArg annz)) (SRet annz (ECons annz ["Bool","True"]))))))
+                  (SSeq annz (SSeq annz (SVar annz "x" (TAny False "a",cz)) (SSeq annz (SVar annz "y" (TAny False "a",cz)) (SNop annz))) (SSeq annz (SSet annz True False (ETuple annz [EVar annz "x",EVar annz "y"]) (EArg annz)) (SRet annz (ECons annz ["Bool","True"]))))))
               (SRet annz (ECall annz (EVar annz ">=") (ETuple annz [ECons annz ["Bool","True"],ECons annz ["Bool","False"]])))))))
 
           it "IFable f ; g a is IFable" $
@@ -777,12 +778,12 @@ end
                   (SSeq annz
                   (SSeq annz
                     (SVar annz "x" (TAny False "a",cvc("a","IFable"))) (SNop annz))
-                  (SSeq annz (SSet annz False (EVar annz "x") (EArg annz)) (SRet annz (ECall annz (EVar annz "f") (EVar annz "x")))))) (SRet annz (ECall annz (EVar annz "g") (ECons annz ["Bool","True"])))))
+                  (SSeq annz (SSet annz True False (EVar annz "x") (EArg annz)) (SRet annz (ECall annz (EVar annz "f") (EVar annz "x")))))) (SRet annz (ECall annz (EVar annz "g") (ECons annz ["Bool","True"])))))
 
         describe "seq:" $ do
             it "x =  k k =  1" $
                 parse (stmt_seq ("",1,1)) "set x =  k set k =  1"
-                `shouldBe` Right (SSeq annz{source=("",1,1)} (SSet annz{source=("",1,1)} False (EVar annz{source = ("",1,5)} "x") (EVar annz{source=("",1,10)} "k")) (SSet annz{source=("",1,12)} False (EVar annz{source = ("",1,16)} "k") (ECons annz{source=("",1,21)} ["Int","1"])))
+                `shouldBe` Right (SSeq annz{source=("",1,1)} (SSet annz{source=("",1,1)} False False (EVar annz{source = ("",1,5)} "x") (EVar annz{source=("",1,10)} "k")) (SSet annz{source=("",1,12)} False False (EVar annz{source = ("",1,16)} "k") (ECons annz{source=("",1,21)} ["Int","1"])))
 
             it "do end; return 1" $
                 parse (stmt_seq ("",1,1)) "do end return 1"
@@ -794,7 +795,7 @@ end
 
             it "var a:Int ; a= 1" $
                 parse (stmt_seq ("",1,1)) "var a:Int ; set a = 1"
-                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "a" (int,cz)) (SNop (annz{source = ("",0,0)}))) (SNop (annz{source = ("",1,1)}))) (SSet (annz{source = ("",1,13)}) False (EVar annz{source = ("",1,17)} "a") (ECons (annz{source = ("",1,21)}) ["Int","1"])))
+                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "a" (int,cz)) (SNop (annz{source = ("",0,0)}))) (SNop (annz{source = ("",1,1)}))) (SSet (annz{source = ("",1,13)}) False False (EVar annz{source = ("",1,17)} "a") (ECons (annz{source = ("",1,21)}) ["Int","1"])))
 
         describe "stmt:" $ do
             it "var x:Int; return 1" $
@@ -803,11 +804,11 @@ end
 
             it "var x:Int; x= 1; return x" $
                 parse stmt "var x:Int ; set x =  1 ; return x"
-                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "x" (int,cz)) (SNop (annz{source = ("",0,0)}))) (SNop (annz{source = ("",1,1)}))) (SSeq (annz{source = ("",1,1)}) (SSet (annz{source = ("",1,13)}) False (EVar annz{source = ("",1,17)} "x") (ECons (annz{source = ("",1,22)}) ["Int","1"])) (SRet (annz{source = ("",1,26)}) (EVar (annz{source = ("",1,33)}) "x"))))
+                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "x" (int,cz)) (SNop (annz{source = ("",0,0)}))) (SNop (annz{source = ("",1,1)}))) (SSeq (annz{source = ("",1,1)}) (SSet (annz{source = ("",1,13)}) False False (EVar annz{source = ("",1,17)} "x") (ECons (annz{source = ("",1,22)}) ["Int","1"])) (SRet (annz{source = ("",1,26)}) (EVar (annz{source = ("",1,33)}) "x"))))
 
             it "var x:(Int,Int,)= (1,2) ; return +x" $
                 parse stmt "var x:(Int,Int)= (1,2) ; return +x"
-                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "x" (TTuple False [int,int],cz)) (SNop (annz{source = ("",0,0)}))) (SSet (annz{source = ("",1,1)}) False (EVar annz{source = ("",1,5)} "x") (ETuple (annz{source = ("",1,18)}) [ECons (annz{source = ("",1,19)}) ["Int","1"], ECons (annz{source = ("",1,21)}) ["Int","2"]]))) (SRet (annz{source = ("",1,26)}) (ECall (annz{source = ("",1,33)}) (EVar annz{source=("",1,33)} "+") (EVar (annz{source = ("",1,34)}) "x"))))
+                `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "x" (TTuple False [int,int],cz)) (SNop (annz{source = ("",0,0)}))) (SSet (annz{source = ("",1,1)}) True False (EVar annz{source = ("",1,5)} "x") (ETuple (annz{source = ("",1,18)}) [ECons (annz{source = ("",1,19)}) ["Int","1"], ECons (annz{source = ("",1,21)}) ["Int","2"]]))) (SRet (annz{source = ("",1,26)}) (ECall (annz{source = ("",1,33)}) (EVar annz{source=("",1,33)} "+") (EVar (annz{source = ("",1,34)}) "x"))))
 
             it "do ... end" $
                 parse stmt "do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do do end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end end"

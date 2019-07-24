@@ -34,8 +34,8 @@ stmt (SVar z id tp p) =
     _ -> SVar z id tp p'
   where p' = stmt p
 
-stmt (SMatch z b exp cses) = SMatch z b (expr exp)
-                                (map (\(ds,pt,st)->(stmt ds, expr pt, stmt st)) cses)
+stmt (SMatch z ini b exp cses) = SMatch z ini b (expr exp)
+                                  (map (\(ds,pt,st)->(stmt ds, expr pt, stmt st)) cses)
 
 -- normal form: (SSeq x (SSeq y (SSeq z ...)))
 stmt (SSeq z1 (SSeq z2 p1 p2) p3) = stmt $ SSeq z1 p1 (SSeq z2 p2 p3)

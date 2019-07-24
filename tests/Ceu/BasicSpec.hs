@@ -20,10 +20,10 @@ main :: IO ()
 main = hspec spec
 
 mmm :: Ann -> Bool -> Exp -> Exp -> Stmt -> Stmt -> Stmt
-mmm z b pat exp p1 p2 = SMatch z b exp [(SNop z,pat,p1)]
+mmm z b pat exp p1 p2 = SMatch z True b exp [(SNop z,pat,p1)]
 
 mmm' :: Ann -> Bool -> Exp -> Exp -> Stmt -> Stmt -> Stmt
-mmm' z b pat exp p1 p2 = SMatch z b exp [(SNop z,pat,p1),(SNop z,EAny z, SRet z $ EError z (-2))]
+mmm' z b pat exp p1 p2 = SMatch z True b exp [(SNop z,pat,p1),(SNop z,EAny z, SRet z $ EError z (-2))]
 
 func id tp p = SVar annz id tp
                 (mmm annz False (EVar annz id)

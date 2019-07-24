@@ -112,10 +112,10 @@ inst2table ids (SInst z cls tp imp _) = Map.union (f2 imp) sups where
 
 -------------------------------------------------------------------------------
 
-wrap insts (SVar z1 id1 (tp_,_) (SSeq z2 (SMatch z3 False body [(ds,EVar z4 id2,p)]) _)) acc | id1==id2 =
+wrap insts (SVar z1 id1 (tp_,_) (SSeq z2 (SMatch z3 True False body [(ds,EVar z4 id2,p)]) _)) acc | id1==id2 =
   SVar z1 id' (tp_',cz)
     (SSeq z2
-      (SMatch z3 False body' [(ds,EVar z4 id',p)])
+      (SMatch z3 True False body' [(ds,EVar z4 id',p)])
       acc)
   where
     id'   = idtp id1 tp_'
@@ -329,7 +329,7 @@ stmt ids tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ftp, p'') where
                 -- functions to instantiate
                 fs :: [Stmt]
                 fs  = filter pred (concat ids) where
-                        pred (SVar _ id1 tp@(_,ctrs) (SSeq _ (SMatch _ False body [(_,EVar _ id2,_)]) _)) =
+                        pred (SVar _ id1 tp@(_,ctrs) (SSeq _ (SMatch _ True False body [(_,EVar _ id2,_)]) _)) =
                           id1==id2 && (not inInsts) && (Cs.hasClass cls ctrs) where
                             inInsts = not $ null $ Map.filter f hinst where
                                         f (_,id',tp',_) = id1==id' && (isRight $ relates SUP tp' tp)
@@ -381,7 +381,7 @@ stmt ids tpr s@(SVar z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, ftp, f p''
   es_data = getErrsTypesDeclared z (concat ids) tp_
   es_id   = errDeclared z (Just chk) "variable" id (concat ids) where
               chk :: Stmt -> Bool
-              chk (SVar _ id1 tp'@(TFunc False _ _,_) (SMatch _ False _ [(_,EVar _ id2,_)])) = (id1 /= id2)
+              chk (SVar _ id1 tp'@(TFunc False _ _,_) (SMatch _ True False _ [(_,EVar _ id2,_)])) = (id1 /= id2)
               chk (SVar _ id1 tp'@(TFunc False _ _,_) _) = (tp == tp') -- function prototype
               chk _ = False
   (es,ftp,p'') = stmt (envsAdd ids s) tpr p'
@@ -395,7 +395,7 @@ stmt ids tpr s@(SVar z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, ftp, f p''
   --    ...
   (f,p') = if ctrs == cz then (SVar z id tp, p) else -- normal concrete declarations
     case p of
-      SSeq _ (SMatch z2 False body [(_,EVar _ id',_)]) s
+      SSeq _ (SMatch z2 True False body [(_,EVar _ id',_)]) s
         | id==id' -> (Prelude.id, funcs s)    -- instantiate for all available implementations
       _   -> (Prelude.id, p)                  -- just ignore parametric declarations
       where
@@ -406,7 +406,7 @@ stmt ids tpr s@(SVar z id tp@(tp_,ctrs) p) = (es_data ++ es_id ++ es, ftp, f p''
 
 -------------------------------------------------------------------------------
 
-stmt envs tpr (SMatch z fce exp cses) = (es', funcType ftp1 ftp2, SMatch z fce exp' cses'') where
+stmt envs tpr (SMatch z ini fce exp cses) = (es', funcType ftp1 ftp2, SMatch z ini fce exp' cses'') where
   es'                   = esc ++ escs ++ esem
   (ese, ftp1,exp')      = expr z (SUP,tpl) envs exp
   (escs,ftp2,tpl,cses') = (es, ftp, tpl, cses')
@@ -462,7 +462,7 @@ stmt envs tpr (SSeq z p1 p2) = (es1++es2, funcType ftp1 ftp2, SSeq z p1' p2')
     (es1,ftp1,p1') = stmt envs  tpr p1
     (es2,ftp2,p2') = stmt envs' tpr p2
     envs' = case p1' of
-              (SMatch _ False (EArg _) [_]) -> []:envs  -- add body environment after args assignment
+              (SMatch _ True False (EArg _) [_]) -> []:envs  -- add body environment after args assignment
               _ -> envs
 
 stmt ids tpr (SLoop z p)    = (es, ftp, SLoop z p') where

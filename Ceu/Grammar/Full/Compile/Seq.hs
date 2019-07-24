@@ -9,7 +9,7 @@ compile :: Stmt -> Stmt
 compile p = stmt p
 stmt :: Stmt -> Stmt
 stmt (SInst   z cls tp imp)        = SInst   z cls tp (stmt imp)
-stmt (SMatch' z chk exp cses)      = SMatch' z chk (expr exp)
+stmt (SMatch' z ini chk exp cses)  = SMatch' z ini chk (expr exp)
                                       (map (\(ds,pt,st) -> (stmt ds, expr pt, stmt st)) cses)
 stmt (SCall  z exp)                = SCall  z (expr exp)
 --stmt (SSeq    z (SMatch' z' False exp ((pat1,st1):l)) p) = stmt $ SMatch' z' False exp ((pat1,(SSeq z st1 p)):l)

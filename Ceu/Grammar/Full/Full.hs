@@ -63,9 +63,9 @@ data Stmt
   | SData     Ann (Maybe [ID_Var]) TypeC Bool      -- new type declaration
   | SVar      Ann ID_Var TypeC                     -- variable declaration
   | SFunc     Ann ID_Var TypeC Stmt                -- function declaration
-  | SMatch    Ann Bool Exp [(Stmt,Exp,Stmt)]       -- match
-  | SMatch'   Ann Bool Exp [(Stmt,Exp,Stmt)]       -- match w/ chk
-  | SSet      Ann Bool Exp Exp                     -- assignment statement
+  | SMatch    Ann Bool Bool Exp [(Stmt,Exp,Stmt)]  -- match
+  | SMatch'   Ann Bool Bool Exp [(Stmt,Exp,Stmt)]  -- match w/ chk
+  | SSet      Ann Bool Bool Exp Exp                -- assignment statement
   | SCall     Ann Exp                              -- call function
   | SIf       Ann Exp Stmt Stmt                    -- conditional
   | SSeq      Ann Stmt Stmt                        -- sequence
@@ -90,7 +90,7 @@ instance HasAnn Stmt where
     getAnn (SData     z _ _ _)     = z
     getAnn (SVar      z _ _)       = z
     getAnn (SFunc     z _ _ _)     = z
-    getAnn (SMatch'   z _ _ _)     = z
+    getAnn (SMatch'   z _ _ _ _)   = z
     getAnn (SSeq      z _ _  )     = z
     getAnn (SLoop     z _)         = z
     getAnn (SScope    z _)         = z
@@ -104,8 +104,8 @@ toBasicStmt (SClass'' z id  cs ifc p) = B.SClass z id  cs ifc (toBasicStmt p)
 toBasicStmt (SInst''  z cls tp imp p) = B.SInst  z cls tp imp (toBasicStmt p)
 toBasicStmt (SData''  z nms tp abs p) = B.SData  z nms tp abs (toBasicStmt p)
 toBasicStmt (SVar''   z var tp p)     = B.SVar   z var tp (toBasicStmt p)
-toBasicStmt (SMatch'  z chk exp cses) = B.SMatch z chk (toBasicExp exp)
-                                         (map (\(ds,pt,st) -> (toBasicStmt ds, toBasicExp pt, toBasicStmt st)) cses)
+toBasicStmt (SMatch'  z ini chk exp cses) = B.SMatch z ini chk (toBasicExp exp)
+                                              (map (\(ds,pt,st) -> (toBasicStmt ds, toBasicExp pt, toBasicStmt st)) cses)
 toBasicStmt (SCall   z e)             = B.SCall z (toBasicExp e)
 toBasicStmt (SSeq     z p1 p2)        = B.SSeq   z (toBasicStmt p1) (toBasicStmt p2)
 toBasicStmt (SLoop    z p)            = B.SLoop  z (toBasicStmt p)
@@ -121,10 +121,10 @@ map_stmt f@(fs,_,ft) (SInst  z cls tp p)  = fs (SInst  z cls (ft tp) (map_stmt f
 map_stmt f@(fs,_,ft) (SData  z nms tp abs)= fs (SData  z nms (ft tp) abs)
 map_stmt f@(fs,_,ft) (SVar   z id tp)     = fs (SVar   z id (ft tp))
 map_stmt f@(fs,_,ft) (SFunc  z id tp p)   = fs (SFunc  z id (ft tp) (map_stmt f p))
-map_stmt f@(fs,_,_)  (SMatch z chk exp cses) = fs (SMatch z chk (map_exp f exp)
-                                                (map (\(ds,pt,st) -> (map_stmt f ds, map_exp f pt, map_stmt f st)) cses))
-map_stmt f@(fs,_,_)  (SSet   z b loc exp) = fs (SSet   z b loc (map_exp f exp))
-map_stmt f@(fs,_,_)  (SCall z exp)        = fs (SCall z (map_exp f exp))
+map_stmt f@(fs,_,_)  (SMatch z ini chk exp cses) = fs (SMatch z ini chk (map_exp f exp)
+                                                    (map (\(ds,pt,st) -> (map_stmt f ds, map_exp f pt, map_stmt f st)) cses))
+map_stmt f@(fs,_,_)  (SSet   z ini b loc exp) = fs (SSet   z ini b loc (map_exp f exp))
+map_stmt f@(fs,_,_)  (SCall  z exp)       = fs (SCall z (map_exp f exp))
 map_stmt f@(fs,_,_)  (SIf    z exp p1 p2) = fs (SIf    z (map_exp f exp) (map_stmt f p1) (map_stmt f p2))
 map_stmt f@(fs,_,_)  (SSeq   z p1 p2)     = fs (SSeq   z (map_stmt f p1) (map_stmt f p2))
 map_stmt f@(fs,_,_)  (SLoop  z p)         = fs (SLoop  z (map_stmt f p))

@@ -30,7 +30,7 @@ prelude z p =
     (SSeq z (SData z Nothing (boolf,cz) False)
     (SSeq z (SData z Nothing (boolt,cz) False)
     (SSeq z (SVar  z "_true"  (bool,cz))
-    (SSeq z (SSet  z False (EVar z "_true") (ECons z ["Bool","True"]))
+    (SSeq z (SSet  z True False (EVar z "_true") (ECons z ["Bool","True"]))
     (SSeq z (SVar  z "print"  (TFunc False (TAny False "?")          (TAny False "?"), cz))
     (SSeq z (SVar  z "negate" (TFunc False int                       int,              cz))
     (SSeq z (SVar  z "=="     (TFunc False (TTuple False [int, int]) bool,             cz))

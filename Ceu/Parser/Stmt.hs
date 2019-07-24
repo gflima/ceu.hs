@@ -196,7 +196,7 @@ pMatch pos chk loc = do
   --pos  <- pos2src <$> getPosition
   void <- tk_sym "="
   exp  <- expr
-  return $ SSet annz{source=pos} chk loc exp
+  return $ SSet annz{source=pos} True chk loc exp
 
 stmt_var :: Parser Stmt
 stmt_var = do
@@ -217,7 +217,7 @@ stmt_set = do
   loc  <- pPat SET
   void <- tk_sym "="
   exp  <- expr
-  return $ SSet annz{source=pos} (set=="set!") loc exp
+  return $ SSet annz{source=pos} False (set=="set!") loc exp
 
 stmt_match :: Parser Stmt
 stmt_match = do
@@ -226,7 +226,7 @@ stmt_match = do
   exp  <- expr
   void <- tk_sym "with"
   loc  <- pPat BOTH
-  return $ SSet annz{source=pos} (set=="match!") loc exp
+  return $ SSet annz{source=pos} False (set=="match!") loc exp
 
 pCase :: Parser (Stmt,Exp,Stmt)
 pCase = do
@@ -254,7 +254,7 @@ stmt_cases = do
   pos2  <- pos2src <$> getPosition
   celse <- optionMaybe $ try $ tk_key "else" *> stmt
   void  <- tk_key "end"
-  return $ SMatch annz{source=pos1} (set=="match!") exp (cases ++
+  return $ SMatch annz{source=pos1} False (set=="match!") exp (cases ++
             maybe [] (\v -> [(SNop annz{source=pos2}, EAny annz{source=pos2}, v)]) celse)
 
 stmt_call :: Parser Stmt
@@ -466,7 +466,7 @@ func pos = do
             SSeq ann
                 dcls
                 (SSeq ann
-                  (SSet ann False loc (EArg ann))
+                  (SSet ann True False loc (EArg ann))
                   imp))
 
 stmt_funcs :: Parser Stmt

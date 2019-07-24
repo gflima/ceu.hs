@@ -71,7 +71,7 @@ fromStmt (B.SSeq    _ p1 p2)         = SSeq (fromStmt p1) (fromStmt p2)
 fromStmt (B.SLoop   _ p)             = SLoop' (fromStmt p) (fromStmt p)
 fromStmt (B.SRet    _ e)             = SRet (fromExp e)
 fromStmt (B.SNop    _)               = SNop
-fromStmt (B.SMatch  _ _ exp cses)    = SMatch (fromExp exp) $
+fromStmt (B.SMatch  _ _ _ exp cses)  = SMatch (fromExp exp) $
                                         map (\(ds,pt,st)->(fromStmt ds,fromExp pt,fromStmt st)) cses
 
 ----------------------------------------------------------------------------
