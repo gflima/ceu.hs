@@ -1,6 +1,13 @@
 - runhaskell -itests/ tests/Spec.hs
 - 7 -- Basic=1, Type=0, Eval=1, Full=0, Parser=1, Run=0, Book=4, Gen=0
 
+- match ser obrigatorio com dcls de vars?
+- match ter um campo de INIT/Bool
+    - em typesys, transformar accessos a tipos ref como
+        - wref se estiver dentro de MatchInit
+        - rref caso contrario
+        - ERefWr, ERefRd, ERefAq
+
 - if / case as expressions
 - where ... end
 

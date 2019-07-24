@@ -364,6 +364,13 @@ expr_read = do
   str <- try tk_var <|> tk_op
   return $ EVar annz{source=pos} str
 
+expr_ref :: Parser Exp
+expr_ref = do
+  pos  <- pos2src <$> getPosition
+  void <- tk_key "ref"
+  exp  <- expr
+  return $ ERef annz{source=pos} exp
+
 expr_func :: Parser Exp
 expr_func = do
   pos      <- pos2src <$> getPosition
@@ -398,6 +405,7 @@ expr' =
   try expr_field  <|>   -- before cons
   expr_cons       <|>
   expr_read       <|>
+  expr_ref        <|>
   try expr_unit   <|>
   try expr_parens <|>
   expr_tuple      <|>

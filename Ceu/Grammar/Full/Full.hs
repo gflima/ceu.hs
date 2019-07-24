@@ -13,6 +13,7 @@ import qualified Ceu.Grammar.Basic as B
 data Exp
     = EError Ann Int            -- 1
     | EVar   Ann ID_Var         -- a ; xs
+    | ERef   Ann Exp            -- ref a
     | EUnit  Ann                -- ()
     | ECons  Ann ID_Data_Hier   -- True
     | EField Ann ID_Data_Hier String -- List.Cons._1 / Student.age
@@ -28,6 +29,7 @@ data Exp
 toBasicExp :: Exp -> B.Exp
 toBasicExp (EError z v)     = B.EError z v
 toBasicExp (EVar   z v)     = B.EVar   z v
+toBasicExp (ERef   z e)     = B.ERef   z (toBasicExp e)
 toBasicExp (EUnit  z)       = B.EUnit  z
 toBasicExp (ECons  z v)     = B.ECons  z v
 toBasicExp (EField z f e)   = B.EField z f e

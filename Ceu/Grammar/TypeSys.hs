@@ -11,7 +11,7 @@ import Ceu.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Constraints as Cs  (Pair, cz, toList, hasClass)
 import Ceu.Grammar.Type        as T   (Type(..), TypeC, show', sort', instantiate, getDs,
-                                       getSuper, hier2str, isSupOf, isRef,
+                                       getSuper, hier2str, isSupOf, isRef, toRef,
                                        Relation(..), relates, isRel, relatesErrors)
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
@@ -603,6 +603,10 @@ expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, funcType' lnr, EVar z{type_=tp
               err = [toError z $ "variable '" ++ id ++
                      "' has no associated instance for '" ++
                      T.show' txp_ ++ "'"]
+
+expr' txp ids (ERef z exp) = (es, ftp, ERef z{type_=(T.toRef tp,cz)} exp') where
+                              (es, ftp, exp') = expr' txp ids exp
+                              (tp,cz) = type_ $ getAnn exp'
 
 expr' (rel,(txp_,cxp)) ids (ECall z f exp) = (bool ese esf (null ese) ++ esa,
                                               funcType ftp1 ftp2,

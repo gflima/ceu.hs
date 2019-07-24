@@ -205,6 +205,25 @@ spec = do
 
     describe "refs:" $ do
 
+      it "y = &x" $
+        (run True $
+          unlines [
+            "var x : Int     = 10",
+            "var y : ref Int = ref x",
+            "return y"
+           ])
+        `shouldBe` Right (EData ["Int","10"] EUnit)
+
+      it "y = &x ; x=10 ; ret y" $
+        (run True $
+          unlines [
+            "var x : Int     = 0",
+            "var y : ref Int = ref x",
+            "set y = 10",
+            "return x"
+           ])
+        `shouldBe` Left "10"
+
       it "ref - bad receive" $
         (run True $
           unlines [
@@ -214,6 +233,23 @@ spec = do
             "return g (10)"
            ])
         `shouldBe` Left "(line 4, column 8):\ntypes do not match : expected '(Int -> ?)' : found '(ref Int -> ())'\n"
+
+      it "y = &10" $
+        (run True $
+          unlines [
+            "var y : ref Int = ref (10+10)",
+            "return y"
+           ])
+        `shouldBe` Left "10"
+
+      it "y = &10 ; y=5 ; ret y" $
+        (run True $
+          unlines [
+            "var y : ref Int = ref 10",
+            "set y = 5",
+            "return y"
+           ])
+        `shouldBe` Left "TODO: ref should be constant"
 
     describe "closure:" $ do
 

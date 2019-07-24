@@ -21,6 +21,7 @@ error_match     = -2
 data Exp
     = EError Int
     | EVar   ID_Var           -- a ; xs
+    | ERef   Exp              -- ref a
     | EUnit                   -- ()
     | EData  ID_Data_Hier Exp -- True, X v (constants)
     | ECons  ID_Data_Hier     -- X         (functions)
@@ -47,6 +48,7 @@ infixr 1 `SSeq`
 fromExp :: B.Exp -> Exp
 fromExp (B.EError _ v)   = EError  v
 fromExp (B.EVar   _ id)  = EVar id
+fromExp (B.ERef   _ e)   = ERef (fromExp e)
 fromExp (B.EUnit  _)     = EUnit
 fromExp (B.ECons  z id)  = case type_ z of
                             (TData False _ _ (TUnit False), _) -> EData id EUnit
@@ -96,6 +98,7 @@ read' x = read x
 envEval :: Vars -> Exp -> Exp
 envEval vars e = case e of
     EVar  var -> envRead vars var
+    --ERef  exp -> envEval vars exp
     ETuple es -> let exps = map (envEval vars) es in
                   case find isError exps of
                     Nothing  -> ETuple exps

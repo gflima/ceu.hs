@@ -14,6 +14,7 @@ import Ceu.Grammar.Type        as T   (TypeC, Type(..), show', hier2str)
 data Exp
     = EError Ann Int
     | EVar   Ann ID_Var         -- a ; xs
+    | ERef   Ann Exp            -- &a
     | EUnit  Ann                -- ()
     | ECons  Ann ID_Data_Hier   -- Bool.True ; Int.1 ; Tree.Node
     | EField Ann ID_Data_Hier String -- List.Cons._1 // Student.age
@@ -30,6 +31,7 @@ instance HasAnn Exp where
     --getAnn :: Exp -> Ann
     getAnn (EError z _)   = z
     getAnn (EVar   z _)   = z
+    getAnn (ERef   z _)   = z
     getAnn (EUnit  z)     = z
     getAnn (ECons  z _)   = z
     getAnn (EField z _ _) = z
