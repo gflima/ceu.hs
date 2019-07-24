@@ -29,7 +29,7 @@ data Exp
 toBasicExp :: Exp -> B.Exp
 toBasicExp (EError z v)     = B.EError z v
 toBasicExp (EVar   z v)     = B.EVar   z v
-toBasicExp (ERef   z e)     = B.ERef   z (toBasicExp e)
+toBasicExp (ERef   z e)     = B.ERefRef z (toBasicExp e)
 toBasicExp (EUnit  z)       = B.EUnit  z
 toBasicExp (ECons  z v)     = B.ECons  z v
 toBasicExp (EField z f e)   = B.EField z f e

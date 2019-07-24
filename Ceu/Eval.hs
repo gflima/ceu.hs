@@ -21,7 +21,6 @@ error_match     = -2
 data Exp
     = EError Int
     | EVar   ID_Var           -- a ; xs
-    | ERef   Exp              -- ref a
     | EUnit                   -- ()
     | EData  ID_Data_Hier Exp -- True, X v (constants)
     | ECons  ID_Data_Hier     -- X         (functions)
@@ -31,6 +30,9 @@ data Exp
     | EAny
     | EExp   Exp
     | EMatch Exp Exp
+    | ERefRef Exp            -- &a
+    | ERefAcc Exp            -- *&a
+    | ERefIni Exp            -- a =
     deriving (Eq, Show)
 
 data Stmt
@@ -46,20 +48,22 @@ data Stmt
 infixr 1 `SSeq`
 
 fromExp :: B.Exp -> Exp
-fromExp (B.EError _ v)   = EError  v
-fromExp (B.EVar   _ id)  = EVar id
-fromExp (B.ERef   _ e)   = ERef (fromExp e)
-fromExp (B.EUnit  _)     = EUnit
-fromExp (B.ECons  z id)  = case type_ z of
-                            (TData False _ _ (TUnit False), _) -> EData id EUnit
-                            otherwise            -> ECons id
-fromExp (B.ETuple _ vs)  = ETuple (map fromExp vs)
-fromExp (B.EFunc  _ _ _ p) = EFunc (fromStmt p)
-fromExp (B.ECall  _ f e) = ECall (fromExp f) (fromExp e)
-fromExp (B.EAny   _)     = EAny
-fromExp (B.EArg   _)     = EVar "_arg"
-fromExp (B.EExp   _ e)   = EExp (fromExp e)
-fromExp (B.EMatch _ e p) = EMatch (fromExp e) (fromExp p)
+fromExp (B.EError  _ v)   = EError  v
+fromExp (B.EVar    _ id)  = EVar id
+fromExp (B.EUnit   _)     = EUnit
+fromExp (B.ECons   z id)  = case type_ z of
+                             (TData False _ _ (TUnit False), _) -> EData id EUnit
+                             otherwise            -> ECons id
+fromExp (B.ETuple  _ vs)  = ETuple (map fromExp vs)
+fromExp (B.EFunc   _ _ _ p) = EFunc (fromStmt p)
+fromExp (B.ECall   _ f e) = ECall (fromExp f) (fromExp e)
+fromExp (B.EAny    _)     = EAny
+fromExp (B.EArg    _)     = EVar "_arg"
+fromExp (B.EExp    _ e)   = EExp (fromExp e)
+fromExp (B.EMatch  _ e p) = EMatch (fromExp e) (fromExp p)
+fromExp (B.ERefRef _ e)   = ERefRef (fromExp e)
+fromExp (B.ERefAcc _ e)   = ERefAcc (fromExp e)
+fromExp (B.ERefIni _ e)   = ERefIni (fromExp e)
 
 -------------------------------------------------------------------------------
 
@@ -98,7 +102,6 @@ read' x = read x
 envEval :: Vars -> Exp -> Exp
 envEval vars e = case e of
     EVar  var -> envRead vars var
-    --ERef  exp -> envEval vars exp
     ETuple es -> let exps = map (envEval vars) es in
                   case find isError exps of
                     Nothing  -> ETuple exps
@@ -111,6 +114,9 @@ envEval vars e = case e of
                         (Left  err,   _) -> err
                         (Right False, _) -> EData ["Bool","False"] EUnit
                         (Right True,  _) -> EData ["Bool","True"]  EUnit
+
+    ERefRef exp -> exp
+    ERefAcc exp -> envEval vars $ envEval vars exp
 
     ECall  f e' ->
       case (envEval vars f, envEval vars e') of
@@ -166,6 +172,9 @@ match vars (ETuple ps)
 match vars (EExp x)    v = case envEval vars x of
                             EError x -> (Left  $ EError x, vars)
                             e'       -> (Right $ e' == v, vars)
+
+match vars (ERefIni x) v = match vars x v
+match vars (ERefAcc x) v = match vars (envEval vars x) v
 
 match x y z = error $ show (y,z)
 --err xp got = error $ "assignment does not match : expected '" ++ show xp ++

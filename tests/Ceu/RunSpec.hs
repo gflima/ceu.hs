@@ -222,7 +222,7 @@ spec = do
             "set y = 10",
             "return x"
            ])
-        `shouldBe` Left "10"
+        `shouldBe` Right (EData ["Int","10"] EUnit)
 
       it "ref - bad receive" $
         (run True $
@@ -234,13 +234,13 @@ spec = do
            ])
         `shouldBe` Left "(line 4, column 8):\ntypes do not match : expected '(Int -> ?)' : found '(ref Int -> ())'\n"
 
-      it "y = &10" $
+      it "y = &(10+10)" $
         (run True $
           unlines [
             "var y : ref Int = ref (10+10)",
             "return y"
            ])
-        `shouldBe` Left "10"
+        `shouldBe` Right (EData ["Int","20"] EUnit)
 
       it "y = &10 ; y=5 ; ret y" $
         (run True $

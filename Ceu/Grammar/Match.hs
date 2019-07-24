@@ -145,6 +145,9 @@ matchT (EVar  _ _)     _  = (True,  [])
 matchT (EAny  _)       _  = (True,  [])
 matchT (EExp  _ _)     tp = (False, [])
 
+matchT (ERefAcc _ e)   tp = matchT e tp
+matchT (ERefIni _ e)   tp = matchT e tp
+
 matchT (ECons z hrP)   tp =
   case tp of
     (TData False hrE ofs st, ctrs) -> if hrP `isPrefixOf` hrE then (True,[]) else

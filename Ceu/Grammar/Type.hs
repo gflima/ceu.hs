@@ -62,6 +62,15 @@ toRef (TTuple False x    )  = TTuple True x
 toRef (TFunc  False x y  )  = TFunc  True x y
 toRef (TAny   False x    )  = TAny   True x
 
+toDeref :: Type -> Type
+toDeref (TBot   True      )  = TBot   False
+toDeref (TTop   True      )  = TTop   False
+toDeref (TUnit  True      )  = TUnit  False
+toDeref (TData  True x y z)  = TData  False x y z
+toDeref (TTuple True x    )  = TTuple False x
+toDeref (TFunc  True x y  )  = TFunc  False x y
+toDeref (TAny   True x    )  = TAny   False x
+
 -------------------------------------------------------------------------------
 
 instance Ord Type where

@@ -11,7 +11,7 @@ import Ceu.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Constraints as Cs  (Pair, cz, toList, hasClass)
 import Ceu.Grammar.Type        as T   (Type(..), TypeC, show', sort', instantiate, getDs,
-                                       getSuper, hier2str, isSupOf, isRef, toRef,
+                                       getSuper, hier2str, isSupOf, isRef, toRef, toDeref,
                                        Relation(..), relates, isRel, relatesErrors)
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
@@ -152,33 +152,43 @@ combos' lvl ids clss = combos insts where
 
 -------------------------------------------------------------------------------
 
-fPat :: Envs -> Exp -> (Errors,FuncType,TypeC,Exp)
-fPat ids (EAny   z)      = ([], FuncGlobal, (TAny False "?",cz), EAny z)
-fPat ids (EUnit  z)      = ([], FuncGlobal, (TUnit False,   cz), EUnit z)
-fPat ids (EVar   z id)   = case findVar z (id,SUP,(TAny False "?",cz)) ids of
-                            Right (lnr, SVar _ _ tp _, _) -> ([], funcType' lnr, tp, EVar z id)
-                            Left  es                      -> (es, FuncGlobal, (TAny False "?",cz), EVar z id)
-fPat ids (ECons  z h)    = (es, FuncGlobal, tp, ECons z{type_=tp} h) where
-                            (es,tp) = case find (isData $ hier2str h) (concat ids) of
-                              Nothing -> ([toError z $ "data '" ++ (hier2str h) ++ "' is not declared"],
-                                          (TData False [] [] (TAny False "?"),cz))
-                              Just (SData _ _ tp _ _) -> case tp of
-                                (TData False _ ofs st, ctrs) -> (es,tp') where
-                                  tp' = (TData False (take 1 h) ofs st, ctrs)
-                                  es  = []-- map (toError z) (relatesErrors SUB tp tp')
-fPat ids (ETuple z ls)   = (concat ess, ftp, (TTuple False (map fst tps),cz), ETuple z ls') where   -- TODO: cz should be union of all snd
-                            (ess, ftps, tps, ls') = unzip4 $ map (fPat ids) ls
-                            ftp = foldr funcType FuncUnknown ftps
-fPat ids (ECall  z f e)  = (esf++ese, funcType ftp1 ftp2, (tp_',ctrs), ECall z f' e') where
-                            (esf,ftp1,tpf,f') = fPat ids f
-                            --(esf,f')   = expr z (SUP,(TAny False "?",cz)) ids f
-                            (ese,ftp2,e') = expr z (SUP,(TAny False "?",cz)) ids e
-                            (tp_,ctrs) = type_ $ getAnn f'
-                            tp_'       = case tp_ of
-                              TFunc False _ tp_ -> tp_
-                              tp_         -> tp_
-fPat ids (EExp   z e)    = (es, ftp, tp, EExp z e') where
-                            (es,ftp,tp,e') = fPat ids e
+fPat :: Envs -> Bool -> Exp -> (Errors,FuncType,TypeC,Exp)
+fPat ids ini (EAny   z)     = ([], FuncGlobal, (TAny False "?",cz), EAny z)
+fPat ids ini (EUnit  z)     = ([], FuncGlobal, (TUnit False,   cz), EUnit z)
+fPat ids ini (EVar   z id)  = case findVar z (id,SUP,(TAny False "?",cz)) ids of
+                                Right (lnr, SVar _ _ tp _, _) -> ([], funcType' lnr, tp, toRef tp $ EVar z id)
+                                Left  es                      -> (es, FuncGlobal, (TAny False "?",cz), EVar z id)
+                              where
+                                toRef tp exp = if not $ isRef tp_ then
+                                                 exp
+                                               else if ini then
+                                                 ERefIni z exp
+                                               else
+                                                 ERefAcc z exp
+                                               where
+                                                 (tp_,cz) = tp
+
+fPat ids ini (ECons  z h)   = (es, FuncGlobal, tp, ECons z{type_=tp} h) where
+                                (es,tp) = case find (isData $ hier2str h) (concat ids) of
+                                  Nothing -> ([toError z $ "data '" ++ (hier2str h) ++ "' is not declared"],
+                                              (TData False [] [] (TAny False "?"),cz))
+                                  Just (SData _ _ tp _ _) -> case tp of
+                                    (TData False _ ofs st, ctrs) -> (es,tp') where
+                                      tp' = (TData False (take 1 h) ofs st, ctrs)
+                                      es  = []-- map (toError z) (relatesErrors SUB tp tp')
+fPat ids ini (ETuple z ls)  = (concat ess, ftp, (TTuple False (map fst tps),cz), ETuple z ls') where   -- TODO: cz should be union of all snd
+                                (ess, ftps, tps, ls') = unzip4 $ map (fPat ids ini) ls
+                                ftp = foldr funcType FuncUnknown ftps
+fPat ids ini (ECall  z f e) = (esf++ese, funcType ftp1 ftp2, (tp_',ctrs), ECall z f' e') where
+                                (esf,ftp1,tpf,f') = fPat ids ini f
+                                --(esf,f')   = expr z (SUP,(TAny False "?",cz)) ids f
+                                (ese,ftp2,e') = expr z (SUP,(TAny False "?",cz)) ids e
+                                (tp_,ctrs) = type_ $ getAnn f'
+                                tp_'       = case tp_ of
+                                  TFunc False _ tp_ -> tp_
+                                  tp_         -> tp_
+fPat ids ini (EExp   z e)   = (es, ftp, tp, EExp z e') where
+                                (es,ftp,tp,e') = fPat ids ini e
 
 -------------------------------------------------------------------------------
 
@@ -413,7 +423,7 @@ stmt envs tpr (SMatch z ini fce exp cses) = (es', funcType ftp1 ftp2, SMatch z i
     where
       --(l1,l2) :: ( [(Errors,TypeC,Exp)] , [(Errors,Stmt)] )
       (l0,l1,l2) = unzip3 $ map f cses where
-                    f (ds,pt,st) = ((es,ftp,ds'), fPat envs' pt, stmt envs' tpr st) where
+                    f (ds,pt,st) = ((es,ftp,ds'), fPat envs' ini pt, stmt envs' tpr st) where
                       (es,ftp,ds') = stmt envs tpr ds
                       envs' = (g ds' x):xs where
                                 (x:xs) = envs
@@ -519,7 +529,7 @@ expr' _ envs (EFunc z ftp1 tp p) = (es, ftp, EFunc z{type_=tp} ftp tp p')
 expr' _ ids (EMatch z exp pat) = (esp++esem++esc, funcType ftp1 ftp2,
                                   EMatch z{type_=(TData False ["Bool"] [] (TUnit False),cz)} exp' pat')
   where
-    (esp,ftp1,tpp,pat') = fPat ids pat
+    (esp,ftp1,tpp,pat') = fPat ids False pat
     (ese,ftp2,exp')     = expr z (SUP,tpp) ids exp
     (ok, esm)           = (ok, map (toError z) esm) where (ok,esm) = matchX (concat ids) [pat'] exp'
     esem                = bool esm ese (null esm)    -- hide ese if esm
@@ -573,7 +583,7 @@ expr' _ ids (ETuple z exps) = (es, ftp, ETuple z{type_=(tps',cz)} exps') where
                               tps'  = TTuple False (map (fst.type_.getAnn) exps')
                               ftp   = foldr funcType FuncUnknown $ map snd3 rets
 
-expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, funcType' lnr, EVar z{type_=tp} id') where    -- EVar x
+expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, funcType' lnr, toRefAcc $ EVar z{type_=tp} id') where    -- EVar x
   (id', tp, lnr, es)
     | (id == "_INPUT") = (id, (TData False ["Int"] [] (TUnit False),cz), (0,0,False), [])
     | otherwise        =
@@ -604,9 +614,15 @@ expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, funcType' lnr, EVar z{type_=tp
                      "' has no associated instance for '" ++
                      T.show' txp_ ++ "'"]
 
-expr' txp ids (ERef z exp) = (es, ftp, ERef z{type_=(T.toRef tp,cz)} exp') where
-                              (es, ftp, exp') = expr' txp ids exp
-                              (tp,cz) = type_ $ getAnn exp'
+  toRefAcc exp = if not $ isRef tp_ then exp else
+                  ERefAcc z{type_=(T.toDeref tp_,cz)} exp
+                 where
+                  (tp_,cz) = type_ $ getAnn exp
+
+expr' txp ids (ERefRef z exp) = (es, ftp, ERefRef z{type_=(T.toRef tp,cz)} exp')
+  where
+    (es, ftp, exp') = expr z txp ids exp
+    (tp,cz) = type_ $ getAnn exp'
 
 expr' (rel,(txp_,cxp)) ids (ECall z f exp) = (bool ese esf (null ese) ++ esa,
                                               funcType ftp1 ftp2,
@@ -623,3 +639,5 @@ expr' (rel,(txp_,cxp)) ids (ECall z f exp) = (bool ese esf (null ese) ++ esa,
     esa = checkFunc "cannot pass nested function" exp'
 
 expr' (_,txp) ids (EAny z) = ([], FuncGlobal, EAny z{type_=txp})
+
+--expr' _ _ e = error $ show e

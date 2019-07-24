@@ -12,36 +12,40 @@ import Ceu.Grammar.Type        as T   (TypeC, Type(..), show', hier2str)
 -------------------------------------------------------------------------------
 
 data Exp
-    = EError Ann Int
-    | EVar   Ann ID_Var         -- a ; xs
-    | ERef   Ann Exp            -- &a
-    | EUnit  Ann                -- ()
-    | ECons  Ann ID_Data_Hier   -- Bool.True ; Int.1 ; Tree.Node
-    | EField Ann ID_Data_Hier String -- List.Cons._1 // Student.age
-    | ETuple Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
-    | EFunc  Ann FuncType TypeC Stmt -- function implementation
-    | ECall  Ann Exp Exp        -- f a ; f(a) ; f(1,2)
-    | EAny   Ann
-    | EArg   Ann
-    | EExp   Ann Exp
-    | EMatch Ann Exp Exp
+    = EError  Ann Int
+    | EVar    Ann ID_Var         -- a ; xs
+    | EUnit   Ann                -- ()
+    | ECons   Ann ID_Data_Hier   -- Bool.True ; Int.1 ; Tree.Node
+    | EField  Ann ID_Data_Hier String -- List.Cons._1 // Student.age
+    | ETuple  Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
+    | EFunc   Ann FuncType TypeC Stmt -- function implementation
+    | ECall   Ann Exp Exp        -- f a ; f(a) ; f(1,2)
+    | EAny    Ann
+    | EArg    Ann
+    | EExp    Ann Exp
+    | EMatch  Ann Exp Exp
+    | ERefRef Ann Exp            -- &a    // get reference of expression
+    | ERefAcc Ann Exp            -- *&a   // dereference expression
+    | ERefIni Ann Exp            -- a =   // bind reference
     deriving (Eq, Show)
 
 instance HasAnn Exp where
     --getAnn :: Exp -> Ann
-    getAnn (EError z _)   = z
-    getAnn (EVar   z _)   = z
-    getAnn (ERef   z _)   = z
-    getAnn (EUnit  z)     = z
-    getAnn (ECons  z _)   = z
-    getAnn (EField z _ _) = z
-    getAnn (ETuple z _)   = z
-    getAnn (EFunc  z _ _ _) = z
-    getAnn (ECall  z _ _) = z
-    getAnn (EAny   z)     = z
-    getAnn (EArg   z)     = z
-    getAnn (EExp   z _)   = z
-    getAnn (EMatch z _ _) = z
+    getAnn (EError  z _)   = z
+    getAnn (EVar    z _)   = z
+    getAnn (EUnit   z)     = z
+    getAnn (ECons   z _)   = z
+    getAnn (EField  z _ _) = z
+    getAnn (ETuple  z _)   = z
+    getAnn (EFunc   z _ _ _) = z
+    getAnn (ECall   z _ _) = z
+    getAnn (EAny    z)     = z
+    getAnn (EArg    z)     = z
+    getAnn (EExp    z _)   = z
+    getAnn (EMatch  z _ _) = z
+    getAnn (ERefRef z _)   = z
+    getAnn (ERefAcc z _)   = z
+    getAnn (ERefIni z _)   = z
 
 -------------------------------------------------------------------------------
 
@@ -143,6 +147,9 @@ show_exp spc (EFunc  _ _ _ p)     = "func" ++ "\n" ++ show_stmt (spc+4) p
 show_exp spc (ECall  _ e1 e2)     = "call" ++ " " ++ show_exp spc e1 ++ " " ++ show_exp spc e2
 show_exp spc (EMatch _ exp pat)   = "match" ++ " " ++ show_exp spc exp ++ " with " ++ show_exp spc pat
 show_exp spc (EExp   _ exp)       = show_exp spc exp
+show_exp spc (ERefRef _ exp)      = "ref " ++ show_exp spc exp
+show_exp spc (ERefIni _ exp)      = show_exp spc exp
+show_exp spc (ERefAcc _ exp)      = "acc " ++ show_exp spc exp
 show_exp spc e                    = error $ show e
 
 -------------------------------------------------------------------------------
