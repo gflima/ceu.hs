@@ -80,10 +80,10 @@ spec = do
         it "hide a" $
             run True "var a :Int ; var a :Int ; return 0"
             `shouldBe` Left "(line 1, column 14):\nvariable 'a' is already declared\n"
-        it "TODO-index-tuples" $
-            run True "var x:(Int,()) = (1,()) ; var y:(Int,()) = x ; return 1"
+        it "TODO: index-tuples" $
+            run True "var x:(Int,()) = (1,()) ; var y:(Int,()) = x ; return y!!0"
             `shouldBe` Right (EData ["Int","1"] EUnit)
-        it "var x:(Int,Int) = (1,2) ; return '+ x | (TODO: no RT support for tuples)" $
+        it "var x:(Int,Int) = (1,2) ; return '+ x" $
             run True "var x:(Int,Int) = (1,2) ; return + x"
             `shouldBe` Right (EData ["Int","3"] EUnit)
 
@@ -232,7 +232,7 @@ spec = do
             "end",
             "return g (10)"
            ])
-        `shouldBe` Left "TODO: expects ref"
+        `shouldBe` Left "(line 4, column 8):\ntypes do not match : expected '(Int -> ?)' : found '(ref Int -> ())'\n"
 
       it "y = &(10+10)" $
         (run True $
@@ -242,7 +242,7 @@ spec = do
            ])
         `shouldBe` Right (EData ["Int","20"] EUnit)
 
-      it "y = &10 ; y=5 ; ret y" $
+      it "TODO: y = &10 ; y=5 ; ret y" $
         (run True $
           unlines [
             "var y : ref Int = ref 10",
@@ -335,7 +335,7 @@ spec = do
            ])
         `shouldBe` Right (EData ["Int","10"] EUnit)
 
-      it "FuncClosure return - not required" $
+      it "TODO: FuncClosure return - not required" $
         (run True $
           unlines [
             "func g () : (() -> (() -> Int)) do",
@@ -345,7 +345,7 @@ spec = do
            ])
         `shouldBe` Left "new not required"
 
-      it "FuncNested return - reference in body (not args)" $
+      it "TODO: FuncNested return - reference in body (not args)" $
         (run True $
           unlines [
             "func g x : (Int -> (() -> Int)) do",
@@ -357,7 +357,7 @@ spec = do
            ])
         `shouldBe` Left "TODO: cannot return"
 
-      it "FuncClosure return - reference in args" $
+      it "TODO: FuncClosure return - reference in args" $
         (run True $
           unlines [
             "func g x : (ref Int -> (() -> Int)) do",
@@ -369,7 +369,7 @@ spec = do
            ])
         `shouldBe` Left "TODO: 10"
 
-      it "escape scope - var a - func " $
+      it "TODO: escape scope - var a - func " $
         (run True $
           unlines [
             "func g () : (() -> (() -> Int)) do",
@@ -381,7 +381,7 @@ spec = do
            ])
         `shouldBe` Left "new required"
 
-      it "escape scope - var a - new func " $
+      it "TODO: escape scope - var a - new func " $
         (run True $
           unlines [
             "func g () : (() -> (() -> Int)) do",
