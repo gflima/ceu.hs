@@ -82,6 +82,7 @@ toDer (TData  True x y z)  = TData  False x y z
 toDer (TTuple True x    )  = TTuple False x
 toDer (TFunc  True x y  )  = TFunc  False x y
 toDer (TAny   True x    )  = TAny   False x
+--toDer x = error $ show x
 
 -------------------------------------------------------------------------------
 

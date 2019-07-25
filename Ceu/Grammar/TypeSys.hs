@@ -620,7 +620,7 @@ expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, funcType' lnr, toDer $ EVar z{
 
 expr' (rel,txpC) ids (ERefRef z exp) = (es, ftp, ERefRef z{typec=T.toRefC $ typec $ getAnn exp'} exp')
   where
-    (es, ftp, exp') = expr z (rel,T.toDerC txpC) ids exp
+    (es, ftp, exp') = expr z (rel,T.toDerC' txpC) ids exp
 
 expr' (rel,(txp_,cxp)) ids (ECall z f exp) = (bool ese esf (null ese) ++ esa,
                                               funcType ftp1 ftp2,

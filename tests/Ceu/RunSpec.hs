@@ -363,10 +363,11 @@ spec = do
             "func g x : (ref Int -> (() -> Int)) do",
             "   return func () : (()->Int) do return x end",
             "end",
-            "var a : ref Int",
-            "return (g (a)) ()"
+            "var b : Int = 10",
+            "var a : ref Int = ref b",
+            "return (g (ref a)) ()"
            ])
-        `shouldBe` Left "TODO: 99"
+        `shouldBe` Left "TODO: 10"
 
       it "escape scope - var a - func " $
         (run True $
