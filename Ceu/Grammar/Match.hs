@@ -76,9 +76,9 @@ expandE ids (ECall z e1 e2) = foldr f [] (combos [expandE ids e1, expandE ids e2
 expandE ids (ETuple z l)    = foldr f [] (combos $ map (expandE ids) l) where
                                 f l' exps = (ETuple z l') : exps
 
-expandE ids e@(EVar z id)   = foldr f [] (expandT ids tp_) where
-                                f tp_' exps = (EVar z{type_=(tp_',ctrs)} id) : exps
-                                (tp_,ctrs) = type_ $ getAnn e
+expandE ids e@(EVar z id)   = foldr f [] (expandT ids tp) where
+                                f tp' exps = (EVar z{type_=(tp',ctrs)} id) : exps
+                                (tp,ctrs) = type_ $ getAnn e
 
 expandE _ e = [e]
 

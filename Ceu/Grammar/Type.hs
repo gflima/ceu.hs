@@ -44,6 +44,9 @@ ref2str False = ""
 
 -------------------------------------------------------------------------------
 
+isRefC :: TypeC -> Bool
+isRefC (tp,cz) = isRef tp
+
 isRef :: Type -> Bool
 isRef (TBot   ref      )  = ref
 isRef (TTop   ref      )  = ref
