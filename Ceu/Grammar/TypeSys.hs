@@ -11,9 +11,9 @@ import Ceu.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Constraints as Cs  (Pair, cz, toList, hasClass)
 import Ceu.Grammar.Type        as T   (Type(..), TypeC, show', sort', instantiate, getDs,
-                                       getSuper, hier2str, isSupOf,
+                                       getSuper, hier2str, isSupOfC,
                                        isRef, isRefC, toRef, toRefC, toDeref, toDerefC,
-                                       Relation(..), relates, isRel, relatesErrors)
+                                       Relation(..), relatesC, isRelC, relatesErrorsC)
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
 import Ceu.Grammar.Match
@@ -63,14 +63,14 @@ findVar' :: Ann -> (ID_Var,Relation,TypeC) -> [Stmt] -> Either (Bool,Errors) (St
 findVar' z (id,rel,txpc) ids =   -- TODO: not currently using second return value
   case find f ids of
     Just s@(SVar _ _ tpc' _)   -> Right (s, ret) where
-                                    Right ret = relates rel txpc tpc'
+                                    Right ret = relatesC rel txpc tpc'
     Nothing ->
       case find (isVar id) ids of
         Nothing                -> Left (False, [toError z $ "variable '" ++ id ++ "' is not declared"])
         Just (SVar _ _ tpc' _) -> Left (True, map (toError z) es) where
-                                    Left es = relates rel txpc tpc'
+                                    Left es = relatesC rel txpc tpc'
   where
-    f (SVar _ id' tpc' _) = id==id' && (isRight $ relates rel txpc tpc')
+    f (SVar _ id' tpc' _) = id==id' && (isRight $ relatesC rel txpc tpc')
     f _                   = False
 
 -------------------------------------------------------------------------------
@@ -174,7 +174,7 @@ fPat ids ini (ECons  z h)   = (es, FuncGlobal, tp, ECons z{typec=tp} h) where
                                   Just (SData _ _ tp _ _) -> case tp of
                                     (TData False _ ofs st, ctrs) -> (es,tp') where
                                       tp' = (TData False (take 1 h) ofs st, ctrs)
-                                      es  = []-- map (toError z) (relatesErrors SUB tp tp')
+                                      es  = []-- map (toError z) (relatesErrorsC SUB tp tp')
 fPat ids ini (ETuple z ls)  = (concat ess, ftp, (TTuple False (map fst tps),cz), ETuple z ls') where   -- TODO: cz should be union of all snd
                                 (ess, ftps, tps, ls') = unzip4 $ map (fPat ids ini) ls
                                 ftp = foldr funcType FuncUnknown ftps
@@ -224,7 +224,7 @@ getErrsTypesDeclared z ids tp = concatMap f (T.getDs tp) where
   f :: Type -> Errors
   f (TData _ hier _ tp_) = case find (isData id) ids of
     Nothing                  -> [toError z $ "data '" ++ id ++ "' is not declared"]
-    Just (SData _ _ tp' _ _) -> [] --relatesErrors SUP tp' (tp_,cz)
+    Just (SData _ _ tp' _ _) -> [] --relatesErrorsC SUP tp' (tp_,cz)
 -- TODO
     where
       id = hier2str hier
@@ -275,7 +275,7 @@ stmt ids tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ftp, p'') where
                   Nothing -> [toError z $ "instance '" ++ sup ++ " for " ++
                               (T.show' itp) ++ "' is not declared"]
                   Just _  -> []
-                isInstOf x y (SInst _ x' y' _ _) = (x'==x && y' `T.isSupOf` y)
+                isInstOf x y (SInst _ x' y' _ _) = (x'==x && y' `T.isSupOfC` y)
                 isInstOf _ _ _                   = False
 
               ---------------------------------------------------------------------
@@ -292,7 +292,7 @@ stmt ids tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ftp, p'') where
               -- funcs in both: check sigs // check impls
               ez = concat $ Map.elems $ Map.intersectionWith f hcls hinst where
                       f (_,_,tp1,_) (z2,id2,tp2,impl) =
-                        case relates SUP tp1 tp2 of
+                        case relatesC SUP tp1 tp2 of
                           Left es -> map (toError z2) es
                           Right (_,insts) ->
                             let tp' = T.instantiate insts (TAny False clss_var) in
@@ -341,7 +341,7 @@ stmt ids tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ftp, p'') where
                         pred (SVar _ id1 tpc@(_,ctrs) (SSeq _ (SMatch _ True False body [(_,EVar _ id2,_)]) _)) =
                           id1==id2 && (not inInsts) && (Cs.hasClass cls ctrs) where
                             inInsts = not $ null $ Map.filter f hinst where
-                                        f (_,id',tpc',_) = id1==id' && (isRight $ relates SUP tpc' tpc)
+                                        f (_,id',tpc',_) = id1==id' && (isRight $ relatesC SUP tpc' tpc)
                                             -- see GenSpec:CASE-1
                         pred _ = False
 
@@ -499,7 +499,7 @@ expr z (rel,txp) ids exp = (es1++es2, ftp, exp') where
                            -- only force expected type on SUP
   (es1, ftp, exp') = expr' (rel,txp) ids exp
   es2 = if not.null $ es1 then [] else
-          map (toError z) (relatesErrors rel txp (typec $ getAnn exp'))
+          map (toError z) (relatesErrorsC rel txp (typec $ getAnn exp'))
 
   -- https://en.wikipedia.org/wiki/Subtyping
   -- SIf S is a subtype of T, the subtyping relation is often written S <: T,
@@ -570,7 +570,7 @@ expr' (rel,txp) ids (ECons z hr) = (es1++es2, FuncGlobal, ECons z{typec=tpc2} hr
     f (tp@(TData False _ ofs (TUnit False)), ctrs) = (tp,            ctrs)
     f (tp@(TData False _ ofs tpst),          ctrs) = (TFunc False tpst tp, ctrs)
 
-    (es2,tpc2) = case relates SUP txp tpc1 of
+    (es2,tpc2) = case relatesC SUP txp tpc1 of
       Left es      -> (map (toError z) es,tpc1)
       Right (tp,_) -> ([],(tp,ctrs)) where (_,ctrs)=tpc1
 
@@ -606,7 +606,7 @@ expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, funcType' lnr, toRefAcc $ EVar
               Nothing -> (id, (TAny False "?",cz), lnr, err)
             where
               pred :: Stmt -> Bool
-              pred (SVar _ k tpc@(tp,_) _) = (idtp id tp == k) && (isRight $ relates SUP txp tpc)
+              pred (SVar _ k tpc@(tp,_) _) = (idtp id tp == k) && (isRight $ relatesC SUP txp tpc)
               pred _                       = False
 
               err = [toError z $ "variable '" ++ id ++

@@ -6,7 +6,7 @@ import Data.Bool  (bool)
 import Ceu.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann        (typec, getAnn)
-import Ceu.Grammar.Type as T  (Type(..), isRel_, Relation(..))
+import Ceu.Grammar.Type as T  (Type(..), isRel, Relation(..))
 import qualified Ceu.Grammar.Basic   as B
 import qualified Ceu.Grammar.TypeSys as T
 
@@ -154,10 +154,10 @@ match vars (EVar id)   v = (Right True, envWrite vars id v)
 match vars EUnit       v = (Right True, vars)
 match vars (EData hrp _)
            (EData hre _) = (Right ret, vars) where
-                            ret = T.isRel_ T.SUP (TData False hrp [] (TUnit False)) (TData False hre [] (TUnit False))
+                            ret = T.isRel T.SUP (TData False hrp [] (TUnit False)) (TData False hre [] (TUnit False))
 match vars (ECall (ECons hrp) l)
            (EData hre e) = (ret', vars')  where
-                            v1 = T.isRel_ T.SUP (TData False hrp [] (TUnit False)) (TData False hre [] (TUnit False))
+                            v1 = T.isRel T.SUP (TData False hrp [] (TUnit False)) (TData False hre [] (TUnit False))
                             (ret2,vars') = match vars l e
                             ret' = case ret2 of
                               Left  x  -> Left  x

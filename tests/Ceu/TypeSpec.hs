@@ -24,7 +24,7 @@ spec = do
   describe "TODO:" $ do
 
     it "((a,a) -> (a,a)) > ((X,X.A) -> (X.A,X.A.B)" $
-      relates_ SUP
+      relates SUP
       (TFunc False (TTuple False [TAny False "a", TAny False "a"])
             (TTuple False [TAny False "a", TAny False "a"]))
       (TFunc False (TTuple False [TData False ["X"],     TData False ["X","A"]])
@@ -66,62 +66,62 @@ spec = do
         (TData False ["Pair"] [TAny False "a",TAny False "b"] (TTuple False [TAny False "a",TAny False "b"]))
       `shouldBe` (True,TData False ["Pair"] [TData False ["Int"] [] (TUnit False),TData False ["Int"] [] (TUnit False)] (TTuple False [TData False ["Int"] [] (TUnit False),TData False ["Int"] [] (TUnit False)]),[("a",TData False ["Int"] [] (TUnit False),SUB),("b",TData False ["Int"] [] (TUnit False),SUB)])
 
-  describe "relates_" $ do
+  describe "relates" $ do
 
     it "b > b" $
-      relates_ SUP (TAny False "b") (TAny False "b")
+      relates SUP (TAny False "b") (TAny False "b")
       `shouldBe` Right (TAny False "b",[("b",TAny False "b")])
 
     it "(a -> a) > (Int -> Int)" $
-      relates_ SUP (TFunc False (TAny False "a") (TAny False "a")) (TFunc False (int) (int))
+      relates SUP (TFunc False (TAny False "a") (TAny False "a")) (TFunc False (int) (int))
       `shouldBe` Right ((TFunc False (int) (int)), [("a", int)])
 
     it "(a -> b) > (A -> B)" $
-      relates_ SUP (TFunc False (TAny False "a") (TAny False "b")) (TFunc False (TData False ["A"] [] (TUnit False)) (TData False ["B"] [] (TUnit False)))
+      relates SUP (TFunc False (TAny False "a") (TAny False "b")) (TFunc False (TData False ["A"] [] (TUnit False)) (TData False ["B"] [] (TUnit False)))
       `shouldBe` Right ((TFunc False (TData False ["A"] [] (TUnit False)) (TData False ["B"] [] (TUnit False))), [("a", TData False ["A"] [] (TUnit False)), ("b", TData False ["B"] [] (TUnit False))])
 
     it "(a -> a) > (Int -> ())" $
-      relates_ SUP (TFunc False (TAny False "a") (TAny False "a")) (TFunc False (int) (TUnit False))
+      relates SUP (TFunc False (TAny False "a") (TAny False "a")) (TFunc False (int) (TUnit False))
       `shouldBe` Left ["types do not match : expected '(a -> a)' : found '(Int -> ())'","ambiguous instances for 'a' : 'Int', '()'"]
 
     it "(a,b) > (Int,())" $
-      relates_ SUP (TTuple False [(TAny False "a"),(TAny False "b")]) (TTuple False [(int),(TUnit False)])
+      relates SUP (TTuple False [(TAny False "a"),(TAny False "b")]) (TTuple False [(int),(TUnit False)])
       `shouldBe` Right (TTuple False [int,(TUnit False)],[("a",int),("b",(TUnit False))])
 
     it "(a,b,c) /> (Int,())" $
-      relates_ SUP (TTuple False [(TAny False "a"),(TAny False "b"),(TAny False "c")]) (TTuple False [(int),(TUnit False)])
+      relates SUP (TTuple False [(TAny False "a"),(TAny False "b"),(TAny False "c")]) (TTuple False [(int),(TUnit False)])
       `shouldBe` Left ["types do not match : expected '(a,b,c)' : found '(Int,())'"]
 
     it "(a,b) /> (Int,(),Int)" $
-      relates_ SUP (TTuple False [(TAny False "a"),(TAny False "b")]) (TTuple False [(int),(TUnit False),(int)])
+      relates SUP (TTuple False [(TAny False "a"),(TAny False "b")]) (TTuple False [(int),(TUnit False),(int)])
       `shouldBe` Left ["types do not match : expected '(a,b)' : found '(Int,(),Int)'"]
 
     it "(a -> a) > (Int -> Int.1)" $
-      relates_ SUP (TFunc False (TAny False "a") (TAny False "a")) (TFunc False (int) (int1))
+      relates SUP (TFunc False (TAny False "a") (TAny False "a")) (TFunc False (int) (int1))
       `shouldBe` Right (TFunc False (int) (int1),[("a",int)])
 
     it "(Int -> Int.1) > (a -> a)" $
-      relates_ SUP (TFunc False (int) (int1)) (TFunc False (TAny False "a") (TAny False "a"))
+      relates SUP (TFunc False (int) (int1)) (TFunc False (TAny False "a") (TAny False "a"))
       `shouldBe` Left ["types do not match : expected '(Int -> Int.1)' : found '(a -> a)'","type variance does not match : 'Int.1' should be supertype of 'Int'"]
 
     it "(Int -> Int) /> (Int.1 -> Int)" $
-      relates_ SUP (TFunc False (int) (int)) (TFunc False (int1) (int))
+      relates SUP (TFunc False (int) (int)) (TFunc False (int1) (int))
       `shouldBe` Left ["types do not match : expected '(Int -> Int)' : found '(Int.1 -> Int)'"]
 
     it "(Int.1 -> Int) > (a -> a)" $
-      relates_ SUP (TFunc False (int1) (int)) (TFunc False (TAny False "a") (TAny False "a"))
+      relates SUP (TFunc False (int1) (int)) (TFunc False (TAny False "a") (TAny False "a"))
       `shouldBe` Right (TFunc False int1 int,[("a",int)])
 
     it "(True -> Bool) > (Bool -> Bool)" $
-      relates_ SUP (TFunc False (boolt) (bool)) (TFunc False (bool) (bool))
+      relates SUP (TFunc False (boolt) (bool)) (TFunc False (bool) (bool))
       `shouldBe` Right (TFunc False (bool) (bool),[])
 
     it "(True -> Bool) > (Bool -> True)" $
-      relates_ SUP (TFunc False (boolt) (bool)) (TFunc False (bool) (boolt))
+      relates SUP (TFunc False (boolt) (bool)) (TFunc False (bool) (boolt))
       `shouldBe` Right (TFunc False (bool) (bool),[])
 
     it "((a,a) -> ()) > ((X,X.A) -> ()" $
-      relates_ SUP
+      relates SUP
       (TFunc False (TTuple False [TAny False "a", TAny False "a"])
              (TUnit False))
       (TFunc False (TTuple False [TData False ["X"] [] (TUnit False), TData False ["X","A"] [] (TUnit False)])
@@ -129,7 +129,7 @@ spec = do
       `shouldBe` Right (TFunc False (TTuple False [TData False ["X"] [] (TUnit False),TData False ["X","A"] [] (TUnit False)]) (TUnit False),[("a",TData False ["X","A"] [] (TUnit False))])
 
     it "((a,a) -> ()) > ((Y,X.A) -> ()" $
-      relates_ SUP
+      relates SUP
       (TFunc False (TTuple False [TAny False "a", TAny False "a"])
              (TUnit False))
       (TFunc False (TTuple False [TData False ["Y"] [] (TUnit False), TData False ["X","A"] [] (TUnit False)])
@@ -137,7 +137,7 @@ spec = do
       `shouldBe` Left ["types do not match : expected '((a,a) -> ())' : found '((Y,X.A) -> ())'","ambiguous instances for 'a' : 'Y', 'X.A'"]
 
     it "((a,a)->(a,a)) SUP ((X,X.A)->(X.A,X.A.B)" $
-      relates_ SUP
+      relates SUP
       (TFunc False (TTuple False [TAny False "a", TAny False "a"])
              (TTuple False [TAny False "a", TAny False "a"]))
       (TFunc False (TTuple False [TData False ["X"] [] (TUnit False),     TData False ["X","A"] [] (TUnit False)])
@@ -145,7 +145,7 @@ spec = do
       `shouldBe` Right (TFunc False (TTuple False [TData False ["X"] [] (TUnit False),TData False ["X","A"] [] (TUnit False)]) (TTuple False [TData False ["X","A"] [] (TUnit False),TData False ["X","A","B"] [] (TUnit False)]),[("a",TData False ["X","A"] [] (TUnit False))])
 
     it "((X,X.A)->(X.A,X.A.B) SUP ((a,a)->(a,a))" $
-      relates_ SUP
+      relates SUP
       (TFunc False (TTuple False [TData False ["X"] [] (TUnit False),     TData False ["X","A"] [] (TUnit False)])
              (TTuple False [TData False ["X","A"] [] (TUnit False), TData False ["X","A","B"] [] (TUnit False)]))
       (TFunc False (TTuple False [TAny False "a", TAny False "a"])
@@ -153,7 +153,7 @@ spec = do
       `shouldBe` Left ["types do not match : expected '((X,X.A) -> (X.A,X.A.B))' : found '((a,a) -> (a,a))'","type variance does not match : 'X.A.B' should be supertype of 'X'"]
 
     it "((a,a) -> (a,a)) > ((X,X.A) -> (X,X.A.B)" $
-      relates_ SUP
+      relates SUP
       (TFunc False (TTuple False [TAny False "a", TAny False "a"])
              (TTuple False [TAny False "a", TAny False "a"]))
       (TFunc False (TTuple False [TData False ["X"] [] (TUnit False), TData False ["X","A"] [] (TUnit False)])
@@ -161,19 +161,19 @@ spec = do
       `shouldBe` Left ["types do not match : expected '((a,a) -> (a,a))' : found '((X,X.A) -> (X,X.A.B))'","type variance does not match : 'X.A' should be supertype of 'X'"]
 
     it "(True,False)->() > (a,a)->()" $
-      relates_ SUP
+      relates SUP
       (TFunc False (TTuple False [TData False ["X","Bool","True"] [] (TUnit False), TData False ["X","Bool","False"] [] (TUnit False)]) (TUnit False))
       (TFunc False (TTuple False [TAny False "a",                          TAny False "a"])                           (TUnit False))
       `shouldBe` Right (TFunc False (TTuple False [TData False ["X","Bool","True"] [] (TUnit False),TData False ["X","Bool","False"] [] (TUnit False)]) (TUnit False),[("a",TData False ["X","Bool"] [] (TUnit False))])
 
     it "()->(True,False) SUP ()->(a,a)" $
-      relates_ SUP
+      relates SUP
       (TFunc False (TUnit False) (TTuple False [TData False ["X","Bool","True"] [] (TUnit False), TData False ["X","Bool","False"] [] (TUnit False)]))
       (TFunc False (TUnit False) (TTuple False [TAny False "a",                 TAny False "a"]))
       `shouldBe` Left ["types do not match : expected '(() -> (X.Bool.True,X.Bool.False))' : found '(() -> (a,a))'","ambiguous instances for 'a' : 'X.Bool.True', 'X.Bool.False'"]
 
     it "(True,False)->(True,False) SUP (a,a)->(a,a)" $
-      relates_ SUP
+      relates SUP
       (TFunc False (TTuple False [TData False ["X","Bool","True"] [] (TUnit False), TData False ["X","Bool","False"] [] (TUnit False)])
              (TTuple False [TData False ["X","Bool","True"] [] (TUnit False), TData False ["X","Bool","False"] [] (TUnit False)]))
       (TFunc False (TTuple False [TAny False "a", TAny False "a"])
@@ -181,13 +181,13 @@ spec = do
       `shouldBe` Left ["types do not match : expected '((X.Bool.True,X.Bool.False) -> (X.Bool.True,X.Bool.False))' : found '((a,a) -> (a,a))'","ambiguous instances for 'a' : 'X.Bool.True', 'X.Bool.False', 'X.Bool.True', 'X.Bool.False'"]
 
     it "(True,False)->top SUP (a,a)->a" $
-      relates_ SUP
+      relates SUP
       (TFunc False (TTuple False [boolt,     boolf])     (TTop False))
       (TFunc False (TTuple False [TAny False "a", TAny False "a"]) (TAny False "a"))
       `shouldBe` Right (TFunc False (TTuple False [boolt,boolf]) bool,[("a",bool)])
 
     it "((1,2),(1,1))->? SUP (Int,Int)->Bool" $
-      relates_ SUP
+      relates SUP
         (TFunc False (TTuple False [
                 TTuple False [int1,int2],
                 TTuple False [int1,int1]
@@ -201,7 +201,7 @@ spec = do
       `shouldBe` Right (TFunc False (TTuple False [TTuple False [int,int],TTuple False [int,int]]) (bool),[("?",bool)])
 
     it "((1,2),(1,1))->? SUP (a,a)->Bool" $
-      relates_ SUP
+      relates SUP
         (TFunc False (TTuple False [
                 TTuple False [int1,int2],
                 TTuple False [int1,int1]
@@ -215,7 +215,7 @@ spec = do
       `shouldBe` Right (TFunc False (TTuple False [TTuple False [int1,int2],TTuple False [int1,int1]]) (bool),[("?",bool),("a",TTuple False [int1,int])])
 
     it "((1,2),(1,1))->? SUB (a,a)->Bool" $
-      relates_ SUP
+      relates SUP
         (TFunc False (TTuple False [
                 TTuple False [int1,int2],
                 TTuple False [int1,int1]
@@ -229,25 +229,25 @@ spec = do
       `shouldBe` Right (TFunc False (TTuple False [TTuple False [int1,int2],TTuple False [int1,int1]]) (bool),[("?",bool),("a",TTuple False [int1,int])])
 
     it "(a,a) > (370,10)" $
-      relates_ SUP
+      relates SUP
         (TTuple False [TAny False "a",                   TAny False "a"])
         (TTuple False [TData False ["Int","370"] [] (TUnit False),TData False ["Int","10"] [] (TUnit False)])
       `shouldBe` Right (TTuple False [TData False ["Int","370"] [] (TUnit False),TData False ["Int","10"] [] (TUnit False)],[("a",TData False ["Int"] [] (TUnit False))])
 
     it "(a,a) > (X 370,X 10)" $
-      relates_ SUP
+      relates SUP
         (TTuple False [TAny False "a",                                     TAny False "a"])
         (TTuple False [TData False ["X"] [] $ TData False ["Int","370"] [] (TUnit False), TData False ["X"] [] $ TData False ["Int","10"] [] (TUnit False)])
       `shouldBe` Right (TTuple False [TData False ["X"] [] (TData False ["Int","370"] [] (TUnit False)),TData False ["X"] [] (TData False ["Int","10"] [] (TUnit False))],[("a",TData False ["X"] [] (TData False ["Int"] [] (TUnit False)))])
 
     it "X of a" $
-      relates_ SUP
+      relates SUP
         (TFunc False (TUnit False)       (TAny False "?"))
         (TFunc False (TAny False "a") (TData False ["X"] [TAny False "a"] (TAny False "a")))
         `shouldBe` Right (TFunc False (TUnit False) (TData False ["X"] [(TUnit False)] ((TUnit False))),[("?",TData False ["X"] [TAny False "a"] (TAny False "a")),("a",(TUnit False))])
 
     it "X of a" $
-      relates_ SUP
+      relates SUP
         (TTuple False [(TUnit False),     TAny False "?"])
         (TTuple False [TAny False "a", (TData False ["X"] [TAny False "a"] (TAny False "a"))])
         `shouldBe` Right (TTuple False [(TUnit False), TData False ["X"] [(TUnit False)] ((TUnit False))],[("?",TData False ["X"] [TAny False "a"] (TAny False "a")),("a",(TUnit False))])
@@ -255,28 +255,28 @@ spec = do
   describe "isSupOf / isSubOf" $ do
 
     it "(bot -> top) > (bot -> top)" $
-      TFunc False (TBot False) (TTop False) `isSupOf_` TFunc False (TBot False) (TTop False)
+      TFunc False (TBot False) (TTop False) `isSupOf` TFunc False (TBot False) (TTop False)
       `shouldBe` True
     it "(bot -> top) < (bot -> top)" $
-      TFunc False (TBot False) (TTop False) `isSubOf_` TFunc False (TBot False) (TTop False)
+      TFunc False (TBot False) (TTop False) `isSubOf` TFunc False (TBot False) (TTop False)
       `shouldBe` True
 
     it "(bot -> top) > (bot -> bot)" $
-      TFunc False (TBot False) (TTop False) `isSupOf_` TFunc False (TBot False) (TBot False)
+      TFunc False (TBot False) (TTop False) `isSupOf` TFunc False (TBot False) (TBot False)
       `shouldBe` True
     it "(top -> top) > (bot -> bot)" $
-      TFunc False (TTop False) (TTop False) `isSupOf_` TFunc False (TBot False) (TBot False)
+      TFunc False (TTop False) (TTop False) `isSupOf` TFunc False (TBot False) (TBot False)
       `shouldBe` False
 
     it "top > Int" $
-      (TTop False) `isSupOf_` (int)
+      (TTop False) `isSupOf` (int)
       `shouldBe` True
     it "(() -> top) > (() -> Int)" $
-      TFunc False (TUnit False) (TTop False) `isSupOf_` TFunc False (TUnit False) (int)
+      TFunc False (TUnit False) (TTop False) `isSupOf` TFunc False (TUnit False) (int)
       `shouldBe` True
 
     it "Bool > Bool.True" $
-      (bool `isSupOf_` boolt)
+      (bool `isSupOf` boolt)
       `shouldBe` True
 
   describe "instantiate" $ do
@@ -406,6 +406,6 @@ spec = do
   where
     inst' :: Type -> (Type,Type) -> Type
     inst' tp (sup,sub) =
-      case relates_ SUP sup sub of
+      case relates SUP sup sub of
         Right (_,insts) -> instantiate insts tp
         Left _          -> (TTop False)

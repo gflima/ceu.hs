@@ -145,24 +145,24 @@ instantiate _    tp                         = tp
 
 -------------------------------------------------------------------------------
 
-isRel :: Relation -> TypeC -> TypeC -> Bool
-isRel rel (tp1_,_) (tp2_,_) = isRel_ rel tp1_ tp2_
+isRelC :: Relation -> TypeC -> TypeC -> Bool
+isRelC rel (tp1_,_) (tp2_,_) = isRel rel tp1_ tp2_
 
-isRel_ :: Relation -> Type -> Type -> Bool
-isRel_ rel tp1 tp2 = either (const False) (const True) (relates_ rel tp1 tp2)
+isRel :: Relation -> Type -> Type -> Bool
+isRel rel tp1 tp2 = either (const False) (const True) (relates rel tp1 tp2)
 
-relatesErrors :: Relation -> TypeC -> TypeC -> Errors
-relatesErrors rel (tp1_,_) (tp2_,_) = relatesErrors_ rel tp1_ tp2_
+relatesErrorsC :: Relation -> TypeC -> TypeC -> Errors
+relatesErrorsC rel (tp1_,_) (tp2_,_) = relatesErrors rel tp1_ tp2_
 
-relatesErrors_ :: Relation -> Type -> Type -> Errors
-relatesErrors_ rel tp1 tp2 = either id (const []) (relates_ rel tp1 tp2)
+relatesErrors :: Relation -> Type -> Type -> Errors
+relatesErrors rel tp1 tp2 = either id (const []) (relates rel tp1 tp2)
 
 -- TODO: relates deve levar em consideracao os ctrs (e depende da REL)
-relates :: Relation -> TypeC -> TypeC -> Either Errors (Type, [(ID_Var,Type)])
-relates rel (tp1_,_) (tp2_,_) = relates_ rel tp1_ tp2_
+relatesC :: Relation -> TypeC -> TypeC -> Either Errors (Type, [(ID_Var,Type)])
+relatesC rel (tp1_,_) (tp2_,_) = relates rel tp1_ tp2_
 
-relates_ :: Relation -> Type -> Type -> Either Errors (Type, [(ID_Var,Type)])
-relates_ rel tp1 tp2 =
+relates :: Relation -> Type -> Type -> Either Errors (Type, [(ID_Var,Type)])
+relates rel tp1 tp2 =
   if ret && null esi then Right (instantiate right tp, right)
                      else Left $ es_tps ++ esi
   where
@@ -188,16 +188,16 @@ relates_ rel tp1 tp2 =
           -- input
           sups    = comPre' $ map gettp $ filter isSUP l
           supest  = supest' sups
-          sups_ok = all (isSupOf_ supest) sups
+          sups_ok = all (isSupOf supest) sups
 
           -- output
           subs    = comPre' $ map gettp $ filter (not.isSUP) l
           subest  = subest' subs
-          subs_ok = all (isSubOf_ subest) subs
+          subs_ok = all (isSubOf subest) subs
 
           ok      = --traceShow (subs,supest, sups,subest)
                     sups_ok && subs_ok &&
-                    (sups==[] || subs==[] || subest `isSupOf_` supest)
+                    (sups==[] || subs==[] || subest `isSupOf` supest)
       in
         if ok then
           ((var, bool subest supest (subs==[])), [])
@@ -205,7 +205,7 @@ relates_ rel tp1 tp2 =
           --traceShow (rel, tp1, tp2, sups_ok, ret,tp,insts) $
           --traceShow (sups_ok,grouped) $
           ((var,TBot False),
-            if sups_ok && subs_ok && sups/=[] && subs/=[] && (subest `isSubOf_` supest) then
+            if sups_ok && subs_ok && sups/=[] && subs/=[] && (subest `isSubOf` supest) then
               ["type variance does not match : '" ++ show' subest ++
                "' should be supertype of '" ++ show' supest ++ "'"]
             else
@@ -220,8 +220,8 @@ relates_ rel tp1 tp2 =
 
     -- the types have no total order but there should be a min
     --sort' :: Bool -> [Type] -> Type
-    supest' tps = head $ sortBy (\t1 t2 -> bool GT LT (t1 `isSupOf_` t2)) tps
-    subest' tps = head $ sortBy (\t1 t2 -> bool GT LT (t1 `isSubOf_` t2)) tps
+    supest' tps = head $ sortBy (\t1 t2 -> bool GT LT (t1 `isSupOf` t2)) tps
+    subest' tps = head $ sortBy (\t1 t2 -> bool GT LT (t1 `isSubOf` t2)) tps
 
     comPre' :: [Type] -> [Type]
     comPre' tps = case comPre tps of
@@ -297,14 +297,14 @@ comPre tps = yyy where
 
 -------------------------------------------------------------------------------
 
-isSupOf :: TypeC -> TypeC -> Bool
-isSupOf (sup_,_) (sub_,_) = isSupOf_ sup_ sub_
+isSupOfC :: TypeC -> TypeC -> Bool
+isSupOfC (sup_,_) (sub_,_) = isSupOf sup_ sub_
 
-isSupOf_ :: Type -> Type -> Bool
-isSupOf_ sup sub = b where (b,_,_) = sup `supOf` sub
+isSupOf :: Type -> Type -> Bool
+isSupOf sup sub = b where (b,_,_) = sup `supOf` sub
 
-isSubOf_ :: Type -> Type -> Bool
-isSubOf_ sub sup = b where (b,_,_) = sup `supOf` sub
+isSubOf :: Type -> Type -> Bool
+isSubOf sub sup = b where (b,_,_) = sup `supOf` sub
 
 -- Is first argument a supertype of second argument?
 --  * Bool: whether it is or not
@@ -333,7 +333,7 @@ supOf sup                 (TTop False)        = (False, sup,         [])
 supOf sup@(TData ref1 x ofs1 st1) sub@(TData ref2 y ofs2 st2)
   | ref1 /= ref2 = (False, sup,   [])
   | not $ x `isPrefixOf` y = (False, sup,   [])
-  | not $ (TTuple False ofs1) `isSupOf_` (TTuple False ofs2) = (False, sup,   [])
+  | not $ (TTuple False ofs1) `isSupOf` (TTuple False ofs2) = (False, sup,   [])
   | otherwise              = (ret, TData False x ofs1 sup, es)
   where
     (ret,sup,es) = f st1 st2

@@ -9,7 +9,7 @@ import Ceu.Grammar.Globals
 import Ceu.Grammar.Basic
 import Ceu.Grammar.Constraints as Cs  (Pair, cz, toList, hasClass)
 import Ceu.Grammar.Type        as T   (Type(..), TypeC, hier2str,
-                                       Relation(..), relatesErrors)
+                                       Relation(..), relatesErrorsC)
 
 -------------------------------------------------------------------------------
 
@@ -126,7 +126,7 @@ matchE l e | (isE l && isE e) = (False, [toError (getAnn l) $ "match never succe
 
 -- contravariant on constants (SUB)
 matchE (EUnit  z)      exp    = (False, es) where
-                                  es = (relatesErrors SUB (TUnit False,cz) (typec $ getAnn exp))
+                                  es = (relatesErrorsC SUB (TUnit False,cz) (typec $ getAnn exp))
 
 -- non-constants: LAny,LVar (no fail) // LExp (may fail)
 matchE (EVar _ _)      _      = (True,  [])
