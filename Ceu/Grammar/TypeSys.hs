@@ -11,7 +11,7 @@ import Ceu.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Constraints as Cs  (Pair, cz, toList, hasClass)
 import Ceu.Grammar.Type        as T   (Type(..), TypeC, show', sort', instantiate, getDs,
-                                       getSuper, hier2str, isSupOf, isRef, toRef, toDeref,
+                                       getSuper, hier2str, isSupOf, isRef, toRef, toRefC, toDeref, toDerefC,
                                        Relation(..), relates, isRel, relatesErrors)
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
@@ -619,9 +619,9 @@ expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, funcType' lnr, toRefAcc $ EVar
                  where
                   (tp_,cz) = type_ $ getAnn exp
 
-expr' txp ids (ERefRef z exp) = (es, ftp, ERefRef z{type_=(T.toRef tp,cz)} exp')
+expr' (rel,txpC) ids (ERefRef z exp) = (es, ftp, ERefRef z{type_=(T.toRef tp,cz)} exp')
   where
-    (es, ftp, exp') = expr z txp ids exp
+    (es, ftp, exp') = expr z (rel,T.toDerefC txpC) ids exp
     (tp,cz) = type_ $ getAnn exp'
 
 expr' (rel,(txp_,cxp)) ids (ECall z f exp) = (bool ese esf (null ese) ++ esa,

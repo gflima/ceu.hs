@@ -53,6 +53,9 @@ isRef (TTuple ref _    )  = ref
 isRef (TFunc  ref _ _  )  = ref
 isRef (TAny   ref _    )  = ref
 
+toRefC :: TypeC -> TypeC
+toRefC (tp,cz) = (toRef tp, cz)
+
 toRef :: Type -> Type
 toRef (TBot   False      )  = TBot   True
 toRef (TTop   False      )  = TTop   True
@@ -61,6 +64,9 @@ toRef (TData  False x y z)  = TData  True x y z
 toRef (TTuple False x    )  = TTuple True x
 toRef (TFunc  False x y  )  = TFunc  True x y
 toRef (TAny   False x    )  = TAny   True x
+
+toDerefC :: TypeC -> TypeC
+toDerefC (tp,cz) = (toDeref tp, cz)
 
 toDeref :: Type -> Type
 toDeref (TBot   True      )  = TBot   False
@@ -322,7 +328,7 @@ supOf sup                 (TUnit False)       = (False, sup,         [])
 supOf sup                 (TTop False)        = (False, sup,         [])
 
 supOf sup@(TData ref1 x ofs1 st1) sub@(TData ref2 y ofs2 st2)
-  -- | ref1 /= ref2 = (False, sup,   [])
+  | ref1 /= ref2 = (False, sup,   [])
   | not $ x `isPrefixOf` y = (False, sup,   [])
   | not $ (TTuple False ofs1) `isSupOf_` (TTuple False ofs2) = (False, sup,   [])
   | otherwise              = (ret, TData False x ofs1 sup, es)
