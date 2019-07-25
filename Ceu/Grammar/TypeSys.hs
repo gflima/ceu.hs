@@ -157,15 +157,16 @@ fPat :: Envs -> Bool -> Exp -> (Errors,FuncType,TypeC,Exp)
 fPat ids ini (EAny   z)     = ([], FuncGlobal, (TAny False "?",cz), EAny z)
 fPat ids ini (EUnit  z)     = ([], FuncGlobal, (TUnit False,   cz), EUnit z)
 fPat ids ini (EVar   z id)  = case findVar z (id,SUP,(TAny False "?",cz)) ids of
-                                Right (lnr, SVar _ _ tpc _, _) -> ([], funcType' lnr, tpc, toRef tpc $ EVar z id)
+                                Right (lnr, SVar _ _ tpc _, _) -> ([], funcType' lnr, tpc', exp') where
+                                                                    (tpc',exp') = toRef tpc (EVar z id)
                                 Left  es                       -> (es, FuncGlobal, (TAny False "?",cz), EVar z id)
                               where
                                 toRef tpc exp = if not $ isRefC tpc then
-                                                  exp
+                                                  (tpc,exp)
                                                 else if ini then
-                                                  ERefIni z exp
+                                                  (tpc,ERefIni z exp)
                                                 else
-                                                  ERefDer z{typec=T.toDerC tpc} exp
+                                                  (T.toDerC tpc, ERefDer z{typec=T.toDerC tpc} exp)
 
 fPat ids ini (ECons  z h)   = (es, FuncGlobal, tp, ECons z{typec=tp} h) where
                                 (es,tp) = case find (isData $ hier2str h) (concat ids) of
