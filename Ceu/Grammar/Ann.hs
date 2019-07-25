@@ -6,7 +6,7 @@ import Ceu.Grammar.Globals      (Source, Errors)
 import Ceu.Grammar.Type         (Type(TBot),TypeC)
 import Ceu.Grammar.Constraints  (cz)
 
-data Ann = Ann { type_  :: TypeC
+data Ann = Ann { typec  :: TypeC
                , name   :: String
                , source :: Source
                , nn     :: Int
@@ -17,7 +17,7 @@ class HasAnn a where
     getAnn :: a -> Ann
 
 annz :: Ann
-annz = Ann { type_  = (TBot False,cz)
+annz = Ann { typec  = (TBot False,cz)
            , name   = ""
            , source = ("",0,0)
            , nn     = (-1)

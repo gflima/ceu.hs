@@ -19,7 +19,7 @@ import Ceu.Parser.Stmt
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Constraints  (cz,cv,cvc)
 import Ceu.Grammar.Type         (Type(..))
-import Ceu.Grammar.Ann          (annz,source,type_)
+import Ceu.Grammar.Ann          (annz,source,typec)
 import Ceu.Grammar.Full.Full    (Stmt(..), Exp(..))
 import Ceu.Grammar.Full.Eval    (prelude, compile')
 import qualified Ceu.Grammar.Basic as B

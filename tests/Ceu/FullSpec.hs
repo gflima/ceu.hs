@@ -8,7 +8,7 @@ import Data.Map as M (fromList)
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Constraints  (cz,cv,cvc)
 import Ceu.Grammar.Type         (Type(..))
-import Ceu.Grammar.Ann          (Ann(type_),annz)
+import Ceu.Grammar.Ann          (Ann(typec),annz)
 
 import qualified Ceu.Grammar.Basic as B
 import qualified Ceu.Eval as E
@@ -68,7 +68,7 @@ spec = do
 
       it "scope var x end ; x=1" $ do
         compile' (SSeq annz (SScope annz (SVar annz "x" (int,cz))) (SSet annz True False (EVar annz "x") (ECons annz ["Int","1"])))
-        `shouldBe` (["data 'Int' is not declared","variable 'x' is not declared","data 'Int.1' is not declared"], B.SSeq annz (B.SVar annz "x" (int,cz) (B.SNop annz)) (setb annz False (B.EVar annz "x") (B.ECons (annz{type_=(TAny False "?",cz)}) ["Int","1"]) (B.SNop annz) (B.SRet annz (B.EError annz (-2)))))
+        `shouldBe` (["data 'Int' is not declared","variable 'x' is not declared","data 'Int.1' is not declared"], B.SSeq annz (B.SVar annz "x" (int,cz) (B.SNop annz)) (setb annz False (B.EVar annz "x") (B.ECons (annz{typec=(TAny False "?",cz)}) ["Int","1"]) (B.SNop annz) (B.SRet annz (B.EError annz (-2)))))
 
   --------------------------------------------------------------------------
 
@@ -80,11 +80,11 @@ spec = do
 
     it "do var x; x = 1 end" $ do
       compile' (SVar'' annz "x" (int,cz) (set' annz False (EVar annz "x") (ECons annz ["Int","1"]) (SNop annz) (SNop annz)))
-      `shouldBe` (["data 'Int' is not declared","data 'Int.1' is not declared"], (B.SVar annz "x" (int,cz) (setb annz False (B.EVar annz "x") (B.ECons annz{type_=(TData False ["Int"] [] (TUnit False),cz)} ["Int","1"]) (B.SNop annz) (B.SNop annz))))
+      `shouldBe` (["data 'Int' is not declared","data 'Int.1' is not declared"], (B.SVar annz "x" (int,cz) (setb annz False (B.EVar annz "x") (B.ECons annz{typec=(TData False ["Int"] [] (TUnit False),cz)} ["Int","1"]) (B.SNop annz) (B.SNop annz))))
 
     it "do var x; x = 1 end" $ do
       compile' (SVar'' annz "x" (int,cz) (set' annz False (EVar annz "x") (ECons annz ["Int","1"]) (SNop annz) (SNop annz)))
-      `shouldBe` (["data 'Int' is not declared","data 'Int.1' is not declared"], (B.SVar annz "x" (int,cz) (setb annz False (B.EVar annz "x") (B.ECons annz{type_=(TData False ["Int"] [] (TUnit False),cz)} ["Int","1"]) (B.SNop annz) (B.SNop annz))))
+      `shouldBe` (["data 'Int' is not declared","data 'Int.1' is not declared"], (B.SVar annz "x" (int,cz) (setb annz False (B.EVar annz "x") (B.ECons annz{typec=(TData False ["Int"] [] (TUnit False),cz)} ["Int","1"]) (B.SNop annz) (B.SNop annz))))
 
     it "if" $
       compile

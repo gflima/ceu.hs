@@ -5,7 +5,7 @@ import Data.Bool  (bool)
 
 import Ceu.Trace
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Ann        (type_, getAnn)
+import Ceu.Grammar.Ann        (typec, getAnn)
 import Ceu.Grammar.Type as T  (Type(..), isRel_, Relation(..))
 import qualified Ceu.Grammar.Basic   as B
 import qualified Ceu.Grammar.TypeSys as T
@@ -51,7 +51,7 @@ fromExp :: B.Exp -> Exp
 fromExp (B.EError  _ v)   = EError  v
 fromExp (B.EVar    _ id)  = EVar id
 fromExp (B.EUnit   _)     = EUnit
-fromExp (B.ECons   z id)  = case type_ z of
+fromExp (B.ECons   z id)  = case typec z of
                              (TData False _ _ (TUnit False), _) -> EData id EUnit
                              otherwise            -> ECons id
 fromExp (B.ETuple  _ vs)  = ETuple (map fromExp vs)

@@ -4,7 +4,7 @@ import Data.Bool (bool)
 import Data.List (find, unzip, unzip3, isPrefixOf)
 
 import Ceu.Trace
-import Ceu.Grammar.Ann                (getAnn, type_, toError)
+import Ceu.Grammar.Ann                (getAnn, typec, toError)
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Basic
 import Ceu.Grammar.Constraints as Cs  (Pair, cz, toList, hasClass)
@@ -77,8 +77,8 @@ expandE ids (ETuple z l)    = foldr f [] (combos $ map (expandE ids) l) where
                                 f l' exps = (ETuple z l') : exps
 
 expandE ids e@(EVar z id)   = foldr f [] (expandT ids tp) where
-                                f tp' exps = (EVar z{type_=(tp',ctrs)} id) : exps
-                                (tp,ctrs) = type_ $ getAnn e
+                                f tp' exps = (EVar z{typec=(tp',ctrs)} id) : exps
+                                (tp,ctrs) = typec $ getAnn e
 
 expandE _ e = [e]
 
@@ -126,7 +126,7 @@ matchE l e | (isE l && isE e) = (False, [toError (getAnn l) $ "match never succe
 
 -- contravariant on constants (SUB)
 matchE (EUnit  z)      exp    = (False, es) where
-                                  es = (relatesErrors SUB (TUnit False,cz) (type_ $ getAnn exp))
+                                  es = (relatesErrors SUB (TUnit False,cz) (typec $ getAnn exp))
 
 -- non-constants: LAny,LVar (no fail) // LExp (may fail)
 matchE (EVar _ _)      _      = (True,  [])
@@ -134,7 +134,7 @@ matchE (EAny _)        _      = (True,  [])
 matchE (EExp _ _)      exp    = (False, [])
 
 -- rec
-matchE loc             exp    = matchT loc (type_ $ getAnn exp)
+matchE loc             exp    = matchT loc (typec $ getAnn exp)
 
 -------------------------------------------------------------------------------
 
