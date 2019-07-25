@@ -12,7 +12,7 @@ import Ceu.Grammar.Globals
 import Ceu.Grammar.Constraints as Cs  (Pair, cz, toList, hasClass)
 import Ceu.Grammar.Type        as T   (Type(..), TypeC, show', sort', instantiate, getDs,
                                        getSuper, hier2str, isSupOfC,
-                                       isRef, isRefC, toRef, toRefC, toDeref, toDerefC,
+                                       isRef, isRefC, toRef, toRefC, toDer, toDerC,
                                        Relation(..), relatesC, isRelC, relatesErrorsC)
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
@@ -165,7 +165,7 @@ fPat ids ini (EVar   z id)  = case findVar z (id,SUP,(TAny False "?",cz)) ids of
                                                 else if ini then
                                                   ERefIni z exp
                                                 else
-                                                  ERefAcc z exp
+                                                  ERefDer z{typec=T.toDerC tpc} exp
 
 fPat ids ini (ECons  z h)   = (es, FuncGlobal, tp, ECons z{typec=tp} h) where
                                 (es,tp) = case find (isData $ hier2str h) (concat ids) of
@@ -614,13 +614,13 @@ expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, funcType' lnr, toRefAcc $ EVar
                      T.show' txp_ ++ "'"]
 
   toRefAcc exp = if not $ T.isRefC tpc then exp else
-                  ERefAcc z{typec=T.toDerefC tpc} exp
+                  ERefDer z{typec=T.toDerC tpc} exp
                  where
                   tpc = typec $ getAnn exp
 
 expr' (rel,txpC) ids (ERefRef z exp) = (es, ftp, ERefRef z{typec=T.toRefC $ typec $ getAnn exp'} exp')
   where
-    (es, ftp, exp') = expr z (rel,T.toDerefC txpC) ids exp
+    (es, ftp, exp') = expr z (rel,T.toDerC txpC) ids exp
 
 expr' (rel,(txp_,cxp)) ids (ECall z f exp) = (bool ese esf (null ese) ++ esa,
                                               funcType ftp1 ftp2,

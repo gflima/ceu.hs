@@ -145,7 +145,7 @@ matchT (EVar  _ _)     _  = (True,  [])
 matchT (EAny  _)       _  = (True,  [])
 matchT (EExp  _ _)     tp = (False, [])
 
-matchT (ERefAcc _ e)   tp = matchT e tp
+matchT (ERefDer _ e)   tp = matchT e tp
 matchT (ERefIni _ e)   tp = matchT e tp
 
 matchT (ECons z hrP)   tp =

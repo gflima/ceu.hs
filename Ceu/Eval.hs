@@ -31,7 +31,7 @@ data Exp
     | EExp   Exp
     | EMatch Exp Exp
     | ERefRef Exp            -- &a
-    | ERefAcc Exp            -- *&a
+    | ERefDer Exp            -- *&a
     | ERefIni Exp            -- a =
     deriving (Eq, Show)
 
@@ -62,7 +62,7 @@ fromExp (B.EArg    _)     = EVar "_arg"
 fromExp (B.EExp    _ e)   = EExp (fromExp e)
 fromExp (B.EMatch  _ e p) = EMatch (fromExp e) (fromExp p)
 fromExp (B.ERefRef _ e)   = ERefRef (fromExp e)
-fromExp (B.ERefAcc _ e)   = ERefAcc (fromExp e)
+fromExp (B.ERefDer _ e)   = ERefDer (fromExp e)
 fromExp (B.ERefIni _ e)   = ERefIni (fromExp e)
 
 -------------------------------------------------------------------------------
@@ -116,7 +116,7 @@ envEval vars e = case e of
                         (Right True,  _) -> EData ["Bool","True"]  EUnit
 
     ERefRef exp -> exp
-    ERefAcc exp -> envEval vars $ envEval vars exp
+    ERefDer exp -> envEval vars $ envEval vars exp
 
     ECall  f e' ->
       case (envEval vars f, envEval vars e') of
@@ -174,7 +174,7 @@ match vars (EExp x)    v = case envEval vars x of
                             e'       -> (Right $ e' == v, vars)
 
 match vars (ERefIni x) v = match vars x v
-match vars (ERefAcc x) v = match vars (envEval vars x) v
+match vars (ERefDer x) v = match vars (envEval vars x) v
 
 match x y z = error $ show (y,z)
 --err xp got = error $ "assignment does not match : expected '" ++ show xp ++

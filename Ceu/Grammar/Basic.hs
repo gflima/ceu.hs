@@ -25,7 +25,7 @@ data Exp
     | EExp    Ann Exp
     | EMatch  Ann Exp Exp
     | ERefRef Ann Exp            -- &a    // get reference of expression
-    | ERefAcc Ann Exp            -- *&a   // dereference expression
+    | ERefDer Ann Exp            -- *&a   // dereference expression
     | ERefIni Ann Exp            -- a =   // bind reference
     deriving (Eq, Show)
 
@@ -44,7 +44,7 @@ instance HasAnn Exp where
     getAnn (EExp    z _)   = z
     getAnn (EMatch  z _ _) = z
     getAnn (ERefRef z _)   = z
-    getAnn (ERefAcc z _)   = z
+    getAnn (ERefDer z _)   = z
     getAnn (ERefIni z _)   = z
 
 -------------------------------------------------------------------------------
@@ -149,7 +149,7 @@ show_exp spc (EMatch _ exp pat)   = "match" ++ " " ++ show_exp spc exp ++ " with
 show_exp spc (EExp   _ exp)       = show_exp spc exp
 show_exp spc (ERefRef _ exp)      = "ref " ++ show_exp spc exp
 show_exp spc (ERefIni _ exp)      = show_exp spc exp
-show_exp spc (ERefAcc _ exp)      = "acc " ++ show_exp spc exp
+show_exp spc (ERefDer _ exp)      = "acc " ++ show_exp spc exp
 show_exp spc e                    = error $ show e
 
 -------------------------------------------------------------------------------
