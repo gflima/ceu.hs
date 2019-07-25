@@ -71,6 +71,9 @@ toRef (TAny   False x    )  = TAny   True x
 toDerC :: TypeC -> TypeC
 toDerC (tp,cz) = (toDer tp, cz)
 
+toDerC' :: TypeC -> TypeC
+toDerC' tpc = bool tpc (toDerC tpc) (isRefC tpc)
+
 toDer :: Type -> Type
 toDer (TBot   True      )  = TBot   False
 toDer (TTop   True      )  = TTop   False

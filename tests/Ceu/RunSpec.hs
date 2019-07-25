@@ -349,11 +349,11 @@ spec = do
         (run True $
           unlines [
             "func g x : (Int -> (() -> Int)) do",
-            "   var ref a = x",
+            "   var a : ref Int = ref x",
             "   return func () : (()->Int) do return a end",
             "end",
             "var a : Int = 99",
-            "return (g ()) ()"
+            "return (g (10)) ()"
            ])
         `shouldBe` Left "TODO: cannot return"
 

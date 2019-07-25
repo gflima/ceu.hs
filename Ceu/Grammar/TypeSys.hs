@@ -12,7 +12,7 @@ import Ceu.Grammar.Globals
 import Ceu.Grammar.Constraints as Cs  (Pair, cz, toList, hasClass)
 import Ceu.Grammar.Type        as T   (Type(..), TypeC, show', sort', instantiate, getDs,
                                        getSuper, hier2str, isSupOfC,
-                                       isRef, isRefC, toRef, toRefC, toDer, toDerC,
+                                       isRef, isRefC, toRef, toRefC, toDer, toDerC, toDerC',
                                        Relation(..), relatesC, isRelC, relatesErrorsC)
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
@@ -63,14 +63,14 @@ findVar' :: Ann -> (ID_Var,Relation,TypeC) -> [Stmt] -> Either (Bool,Errors) (St
 findVar' z (id,rel,txpc) ids =   -- TODO: not currently using second return value
   case find f ids of
     Just s@(SVar _ _ tpc' _)   -> Right (s, ret) where
-                                    Right ret = relatesC rel txpc tpc'
+                                    Right ret = relatesC rel txpc (T.toDerC' tpc')
     Nothing ->
       case find (isVar id) ids of
         Nothing                -> Left (False, [toError z $ "variable '" ++ id ++ "' is not declared"])
         Just (SVar _ _ tpc' _) -> Left (True, map (toError z) es) where
-                                    Left es = relatesC rel txpc tpc'
+                                    Left es = relatesC rel txpc (T.toDerC' tpc')
   where
-    f (SVar _ id' tpc' _) = id==id' && (isRight $ relatesC rel txpc tpc')
+    f (SVar _ id' tpc' _) = id==id' && (isRight $ relatesC rel txpc (T.toDerC' tpc'))
     f _                   = False
 
 -------------------------------------------------------------------------------
@@ -583,7 +583,7 @@ expr' _ ids (ETuple z exps) = (es, ftp, ETuple z{typec=(tps',cz)} exps') where
                               tps'  = TTuple False (map (fst.typec.getAnn) exps')
                               ftp   = foldr funcType FuncUnknown $ map snd3 rets
 
-expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, funcType' lnr, toRefAcc $ EVar z{typec=tpc} id') where    -- EVar x
+expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, funcType' lnr, toDer $ EVar z{typec=tpc} id') where    -- EVar x
   (id', tpc, lnr, es)
     | (id == "_INPUT") = (id, (TData False ["Int"] [] (TUnit False),cz), (0,0,False), [])
     | otherwise        =
@@ -591,19 +591,18 @@ expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, funcType' lnr, toRefAcc $ EVar
       case findVar z (id,rel,txp) ids of
         Left  es -> (id, (TAny False "?",cz), (0,0,False), es)
         Right (lnr, SVar _ id' tpc@(_,ctrs) _,_) ->
-          if ctrs == cz then (id, tpc, lnr, []) else
-            --[] | tp==tp' -> (id, tp, [])
-               -- | otherwise -> error $ show (id, tp, tp')
-               -- | otherwise -> (id, tp, [])
+          if ctrs == cz then
+            (id, tpc, lnr, [])
+          else
             case find pred (concat ids) of            -- find instance
-              Just (SVar _ _ tpc''@(tp'',ctrs) _) ->
+              Just (SVar _ _ tpc@(tp,ctrs) _) ->
                 if null ctrs then
-                  (idtp id tp'', tpc'', lnr, [])
+                  (idtp id tp, tpc, lnr, [])
                 else
                   if null cxp then
                     (id, (TAny False "?",cz), lnr, err)
                   else
-                    (id, tpc'', lnr, [])
+                    (id, tpc, lnr, [])
               Nothing -> (id, (TAny False "?",cz), lnr, err)
             where
               pred :: Stmt -> Bool
@@ -614,10 +613,10 @@ expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, funcType' lnr, toRefAcc $ EVar
                      "' has no associated instance for '" ++
                      T.show' txp_ ++ "'"]
 
-  toRefAcc exp = if not $ T.isRefC tpc then exp else
-                  ERefDer z{typec=T.toDerC tpc} exp
-                 where
-                  tpc = typec $ getAnn exp
+  toDer exp = if not $ T.isRefC tpc then exp else
+                ERefDer z{typec=T.toDerC tpc} exp
+              where
+                tpc = typec $ getAnn exp
 
 expr' (rel,txpC) ids (ERefRef z exp) = (es, ftp, ERefRef z{typec=T.toRefC $ typec $ getAnn exp'} exp')
   where
