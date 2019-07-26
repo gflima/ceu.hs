@@ -45,19 +45,16 @@ go p = (es,p') where
 
 -------------------------------------------------------------------------------
 
-findVar :: Ann -> (ID_Var,Relation,TypeC) -> Envs -> Either Errors ((Int,Int,Bool), Stmt, (Type, [(ID_Var,Type)]))
-findVar z x envs = g $ aux envs (0,undefined) where
-  aux []         ret   = ret
-  aux (env:envs) (n,_) = case findVar' z x env of
-    Right (i,j)      -> (n, Right (getRef i, i, j))
-    Left  (True, es) -> (n, Left  (True, es))          -- True = stop here with error
-    Left  (False,es) -> aux envs (n+1, Left (False,es))
-
-  g (_, Left  (_,ret))   = Left  ret
-  g (n, Right (ref,i,j)) = Right ((length envs, n, ref), i, j)
-
-  getRef :: Stmt -> Bool
-  getRef (SVar _ _ tpc _) = T.isRefC tpc
+findVar :: Ann -> (ID_Var,Relation,TypeC) -> Envs -> Either Errors ((Int,Bool), Stmt, (Type, [(ID_Var,Type)]))
+findVar z x (env:envs) =
+  case (envs, findVar' z x env) of
+    (_,  Right (i,j)     ) -> Right ((length envs, getRef i), i, j)
+    (_,  Left  (True, es)) -> Left es          -- True = stop here with error
+    ([], Left  (False,es)) -> Left es
+    (_,  Left  (False,es)) -> findVar z x envs
+  where
+    getRef :: Stmt -> Bool
+    getRef (SVar _ _ tpc _) = T.isRefC tpc
 
 findVar' :: Ann -> (ID_Var,Relation,TypeC) -> [Stmt] -> Either (Bool,Errors) (Stmt, (Type, [(ID_Var,Type)]))
 findVar' z (id,rel,txpc) ids =   -- TODO: not currently using second return value
@@ -157,7 +154,7 @@ fPat :: Envs -> Bool -> Exp -> (Errors,FuncType,TypeC,Exp)
 fPat ids ini (EAny   z)     = ([], FuncGlobal, (TAny False "?",cz), EAny z)
 fPat ids ini (EUnit  z)     = ([], FuncGlobal, (TUnit False,   cz), EUnit z)
 fPat ids ini (EVar   z id)  = case findVar z (id,SUP,(TAny False "?",cz)) ids of
-                                Right (lnr, SVar _ _ tpc _, _) -> ([], funcType' lnr, tpc', exp') where
+                                Right (lnr, SVar _ _ tpc _, _) -> ([], funcType' (length ids) lnr, tpc', exp') where
                                                                     (tpc',exp') = toRef tpc (EVar z id)
                                 Left  es                       -> (es, FuncGlobal, (TAny False "?",cz), EVar z id)
                               where
@@ -583,18 +580,18 @@ expr' _ ids (ETuple z exps) = (es, ftp, ETuple z{typec=(tps',cz)} exps') where
                               tps'  = TTuple False (map (fst.typec.getAnn) exps')
                               ftp   = foldr funcType FuncUnknown $ map snd3 rets
 
-expr' (rel,txp@(txp_,cxp)) ids (EVar z id) = (es, funcType' lnr, toDer $ EVar z{typec=tpc} id') where    -- EVar x
+expr' (rel,txp@(txp_,cxp)) envs (EVar z id) = (es, funcType' (length envs) lnr, toDer $ EVar z{typec=tpc} id') where    -- EVar x
   (id', tpc, lnr, es)
-    | (id == "_INPUT") = (id, (TData False ["Int"] [] (TUnit False),cz), (0,0,False), [])
+    | (id == "_INPUT") = (id, (TData False ["Int"] [] (TUnit False),cz), (0,False), [])
     | otherwise        =
-      -- find in top-level ids | id : a
-      case findVar z (id,rel,txp) ids of
-        Left  es -> (id, (TAny False "?",cz), (0,0,False), es)
+      -- find in top-level envs | id : a
+      case findVar z (id,rel,txp) envs of
+        Left  es -> (id, (TAny False "?",cz), (0,False), es)
         Right (lnr, SVar _ id' tpc@(_,ctrs) _,_) ->
           if ctrs == cz then
             (id, tpc, lnr, [])
           else
-            case find pred (concat ids) of            -- find instance
+            case find pred (concat envs) of            -- find instance
               Just (SVar _ _ tpc@(tp,ctrs) _) ->
                 if null ctrs then
                   (idtp id tp, tpc, lnr, [])

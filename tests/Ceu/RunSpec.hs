@@ -335,7 +335,7 @@ spec = do
            ])
         `shouldBe` Right (EData ["Int","10"] EUnit)
 
-      it "TODO: FuncClosure return - not required" $
+      it "TODO: FuncClosure return - new not required" $
         (run True $
           unlines [
             "func g () : (() -> (() -> Int)) do",

@@ -88,12 +88,12 @@ funcType FuncGlobal  _           = FuncGlobal
 funcType _           FuncGlobal  = FuncGlobal
 funcType _           _           = FuncUnknown
 
---     0    1     2    3         l-2  l-1  len
--- [ locs,args, lvl1,args, ..., glbs,args ]
-funcType' :: (Int,Int,Bool) -> FuncType  -- (length,n,ref)
-funcType' (len,n,_)   | n<2 || n>=len-2 = FuncGlobal
-funcType' (len,n,ref) | ref && n/=20    = FuncClosure   -- exclude 1st non-local body
-funcType' _                             = FuncNested
+-- len  l-1  l-2   l-3  l-4  ...    1    0
+--   [ locs,args, lvl1,args, ..., glbs,args ]
+funcType' :: Int -> (Int,Bool) -> FuncType  -- (length,n,ref)
+funcType' len (n,_)   | n>=len-2 || n<=1 = FuncGlobal
+funcType' len (n,ref) | ref && n/=len-3  = FuncClosure   -- exclude 1st non-local body (lvl1)
+funcType' _   _                          = FuncNested
 
 -------------------------------------------------------------------------------
 

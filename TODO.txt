@@ -1,7 +1,20 @@
 - runhaskell -itests/ tests/Spec.hs
 - 7 -- Basic=1, Type=0, Eval=1, Full=0, Parser=1, Run=0, Book=4, Gen=0
 
+- rename ids envs
+- inverter 0=locs, N=glbs
 - new, verificar tpf
+    - new somente na criacao da closure
+        - Full:
+            - EFunc isNew ...
+    - closure guarda o nível mais baixo do upvalue capturado
+        - TypeSys infere
+        - Basic:
+            - TFunc (lvl,[vars])
+    - o tipo das refs a funcoes guardam o maior valor entre todas as possibilidades de atribuicao
+        - tambem precisa copiar o tamanho maximo de memoria
+    - uma ref nao pode escapar do seu nivel
+    - retorno de nivel copia as referencias dos upvalues
 
 - match ser obrigatorio com dcls de vars?
 - match ter um campo de INIT/Bool
