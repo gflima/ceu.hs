@@ -19,9 +19,8 @@ import Ceu.Parser.Type          (pTypeContext,pContext)
 
 import Ceu.Grammar.Globals            (Source, ID_Var, ID_Class)
 import Ceu.Grammar.Constraints as Cs  (cz,cv,cvc)
-import Ceu.Grammar.Type               (Type(..), TypeC)
+import Ceu.Grammar.Type               (Type(..), TypeC, FuncType(..))
 import Ceu.Grammar.Ann                (annz, source, getAnn, Ann(..))
-import Ceu.Grammar.Basic      (FuncType(..))
 import Ceu.Grammar.Full.Full
 
 singleton x = [x]

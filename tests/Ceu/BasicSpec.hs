@@ -6,7 +6,7 @@ import Test.Hspec
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann          (annz, Ann(..))
 import Ceu.Grammar.Constraints  (cz,cv,cvc)
-import Ceu.Grammar.Type         (Type(..))
+import Ceu.Grammar.Type         (Type(..), FuncType(..))
 import Ceu.Grammar.Basic
 import qualified Ceu.Grammar.Simplify as Simplify
 import qualified Ceu.Grammar.TypeSys  as TypeSys

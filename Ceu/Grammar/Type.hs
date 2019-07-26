@@ -26,6 +26,31 @@ type TypeC = (Type, Cs.Map)
 
 -------------------------------------------------------------------------------
 
+data FuncType = FuncUnknown
+              | FuncGlobal    -- cannot access non-locals         // can    be passed and returned
+              | FuncNested    -- can    access non-locals         // cannot be passed or  returned
+              | FuncClosure   -- can    access non-locals by ref  // can    be passed and returned
+                              --        starting from args        // requires "new"
+  deriving (Eq, Show)
+
+funcType :: FuncType -> FuncType -> FuncType
+funcType FuncNested  _           = FuncNested
+funcType _           FuncNested  = FuncNested
+funcType FuncClosure _           = FuncClosure
+funcType _           FuncClosure = FuncClosure
+funcType FuncGlobal  _           = FuncGlobal
+funcType _           FuncGlobal  = FuncGlobal
+funcType _           _           = FuncUnknown
+
+-- len  l-1  l-2   l-3  l-4  ...    1    0
+--   [ locs,args, lvl1,args, ..., glbs,args ]
+funcType' :: Int -> (Int,Bool) -> FuncType  -- (length,n,ref)
+funcType' len (n,_)   | n>=len-2 || n<=1 = FuncGlobal
+funcType' len (n,ref) | ref && n/=len-3  = FuncClosure   -- exclude 1st non-local body (lvl1)
+funcType' _   _                          = FuncNested
+
+-------------------------------------------------------------------------------
+
 hier2str = intercalate "."
 
 show' :: Type -> String

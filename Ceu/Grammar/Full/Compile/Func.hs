@@ -4,7 +4,6 @@ import Debug.Trace
 import qualified Data.Set as S
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Basic     (FuncType(..))
 import Ceu.Grammar.Full.Full
 import qualified Ceu.Grammar.Constraints as Cs
 import qualified Ceu.Grammar.Type        as T
@@ -29,7 +28,7 @@ stmt (SInst  z cls tp@(_,ctrs) imp)    = SInst  z cls tp (stmt $ aux imp)
     aux (SFunc z id (tp_',ctrs') imp) = SFunc z id (tp_',Cs.union ctrs ctrs') imp
     aux p                             = p
 
-stmt (SFunc z k tp@(tp_,ctrs) imp)    = SSeq z (SVar z k tp) (SSet z True False (EVar z k) (EFunc z FuncUnknown tp (stmt imp')))
+stmt (SFunc z k tp@(tp_,ctrs) imp)    = SSeq z (SVar z k tp) (SSet z True False (EVar z k) (EFunc z T.FuncUnknown tp (stmt imp')))
  where
   imp' = if ctrs == Cs.cz then imp else
           map_stmt (id,id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) imp

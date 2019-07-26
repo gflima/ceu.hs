@@ -5,7 +5,7 @@ import Debug.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann               (Ann, HasAnn(..), annz)
 import Ceu.Grammar.Constraints as Cs (Map)
-import Ceu.Grammar.Type        as T  (TypeC)
+import Ceu.Grammar.Type        as T  (TypeC, FuncType)
 import qualified Ceu.Grammar.Basic as B
 
 -------------------------------------------------------------------------------
@@ -19,7 +19,7 @@ data Exp
     | EField Ann ID_Data_Hier String -- List.Cons._1 / Student.age
     | EArg   Ann
     | ETuple Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
-    | EFunc  Ann B.FuncType TypeC Stmt -- function implementation
+    | EFunc  Ann FuncType TypeC Stmt -- function implementation
     | ECall  Ann Exp Exp        -- f a ; f(a) ; f(1,2)
     | EAny   Ann
     | EExp   Ann Exp

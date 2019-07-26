@@ -6,9 +6,8 @@ import Data.Bool (bool)
 
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Type               (Type(..),TypeC,instantiate,getSuper,hier2str)
+import Ceu.Grammar.Type               (Type(..),TypeC,instantiate,getSuper,hier2str,FuncType(..))
 import Ceu.Grammar.Constraints as Cs
-import Ceu.Grammar.Basic              (FuncType(..))
 import Ceu.Grammar.Full.Full
 
 compile :: Stmt -> Stmt

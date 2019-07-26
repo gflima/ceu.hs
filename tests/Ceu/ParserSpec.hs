@@ -18,7 +18,7 @@ import Ceu.Parser.Stmt
 --import Ceu.Grammar.Ann
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Constraints  (cz,cv,cvc)
-import Ceu.Grammar.Type         (Type(..))
+import Ceu.Grammar.Type         (Type(..), FuncType(..))
 import Ceu.Grammar.Ann          (annz,source,typec)
 import Ceu.Grammar.Full.Full    (Stmt(..), Exp(..))
 import Ceu.Grammar.Full.Eval    (prelude, compile')
@@ -554,7 +554,7 @@ end
                 `shouldBe` Right (SSeq annz{source = ("",1,1)} (SSeq annz (SVar annz{source = ("",1,1)} "add" (TFunc False (TTuple False [int,int]) (int),cz)) (SNop annz)) (SNop annz{source = ("",1,1)}))
             it "var add : ... =  func ..." $
                 parse stmt "var add : ((Int, Int) -> Int) =  func (a,_) : ((Int, Int) -> Int) do end"
-                `shouldBe` Right (SSeq annz{source=("",1,1)} (SSeq annz (SVar annz{source=("",1,1)} "add" (TFunc False (TTuple False [int,int]) (int),cz)) (SNop annz)) (SSet annz{source=("",1,1)} True False (EVar annz{source=("",1,5)} "add") (EFunc annz{source=("",1,34)} B.FuncUnknown (TFunc False (TTuple False [int,int]) (int),cz) (SSeq annz{source=("",1,34)} (SSeq annz (SVar annz{source=("",1,34)} "a" (int,cz)) (SNop annz)) (SSeq annz{source=("",1,34)} (SSet annz{source=("",1,34)} True False (ETuple annz{source=("",1,39)} [EVar annz{source=("",1,40)} "a",EAny annz{source=("",1,42)}]) (EArg annz{source=("",1,34)})) (SNop annz{source=("",1,70)}))))))
+                `shouldBe` Right (SSeq annz{source=("",1,1)} (SSeq annz (SVar annz{source=("",1,1)} "add" (TFunc False (TTuple False [int,int]) (int),cz)) (SNop annz)) (SSet annz{source=("",1,1)} True False (EVar annz{source=("",1,5)} "add") (EFunc annz{source=("",1,34)} FuncUnknown (TFunc False (TTuple False [int,int]) (int),cz) (SSeq annz{source=("",1,34)} (SSeq annz (SVar annz{source=("",1,34)} "a" (int,cz)) (SNop annz)) (SSeq annz{source=("",1,34)} (SSet annz{source=("",1,34)} True False (ETuple annz{source=("",1,39)} [EVar annz{source=("",1,40)} "a",EAny annz{source=("",1,42)}]) (EArg annz{source=("",1,34)})) (SNop annz{source=("",1,70)}))))))
             it "func add : (...) do end" $
                 parse stmt_funcs "func add (a,_) : ((Int, Int) -> Int) do end"
                 `shouldBe` Right (SFunc annz{source=("",1,1)} "add" (TFunc False (TTuple False [int,int]) (int),cz) (SSeq annz{source=("",1,1)} (SSeq annz{source=("",0,0)} (SVar annz{source=("",1,1)} "a" (int,cz)) (SNop annz{source=("",0,0)})) (SSeq annz{source=("",1,1)} (SSet annz{source=("",1,1)} True False (ETuple annz{source=("",1,10)} [EVar annz{source=("",1,11)} "a",EAny annz{source=("",1,13)}]) (EArg annz{source=("",1,1)})) (SNop annz{source=("",1,41)}))))

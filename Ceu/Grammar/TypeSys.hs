@@ -10,10 +10,7 @@ import qualified Data.Set as Set
 import Ceu.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Constraints as Cs  (Pair, cz, toList, hasClass)
-import Ceu.Grammar.Type        as T   (Type(..), TypeC, show', sort', instantiate, getDs,
-                                       getSuper, hier2str, isSupOfC,
-                                       isRef, isRefC, toRef, toRefC, toDer, toDerC, toDerC',
-                                       Relation(..), relatesC, isRelC, relatesErrorsC)
+import Ceu.Grammar.Type        as T
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
 import Ceu.Grammar.Match
