@@ -14,7 +14,7 @@ import Ceu.Grammar.Type        as T   (Type(..), TypeC, hier2str,
 -------------------------------------------------------------------------------
 
 subs :: [Stmt] -> ID_Data_Hier -> [ID_Data_Hier]
-subs ids hr = g $ ints ++ (map f $ filter pred ids) where
+subs envs hr = g $ ints ++ (map f $ filter pred envs) where
   ints = if hr == ["Int"] then
           [["Int","?"]]
          else if take 1 hr == ["Int"] then
@@ -46,13 +46,13 @@ subs ids hr = g $ ints ++ (map f $ filter pred ids) where
 --  LTuple  (a,b) <- x      # match  # (B,B) SUB x      | a match x1, b match x2
 
 matchX :: [Stmt] -> [Exp] -> Exp -> (Bool, Errors)
-matchX ids pats exp = matchX' ids pats (expandE ids exp) where
+matchX envs pats exp = matchX' envs pats (expandE envs exp) where
   matchX' :: [Stmt] -> [Exp] -> [Exp] -> (Bool, Errors)
   matchX' _ [] [] = (True,  [])   -- OK
   matchX' _ l  [] = (True,  map (\pat -> toError (getAnn pat) "pattern is redundant") l)
   matchX' _ [] _  = (False, [])   -- non-exhaustive
 
-  matchX' ids (pat:pats) exps = (ret, es'++es) where
+  matchX' envs (pat:pats) exps = (ret, es'++es) where
     (exps',es') = foldr f ([],[]) exps
 
     f :: Exp -> ([Exp],Errors) -> ([Exp],Errors)
@@ -60,23 +60,23 @@ matchX ids pats exp = matchX' ids pats (expandE ids exp) where
                         (True, es') -> (exps,     es'++es)
                         (False,es') -> (exp:exps, es'++es)
 
-    (ret,es) = matchX' ids pats exps'
+    (ret,es) = matchX' envs pats exps'
 
 -------------------------------------------------------------------------------
 
 expandE :: [Stmt] -> Exp -> [Exp]
 
-expandE ids (ECons z hrE)   = foldr f [] (subs ids hrE) where
+expandE envs (ECons z hrE)   = foldr f [] (subs envs hrE) where
                                 f hr exps = (ECons z hr) : exps
 
-expandE ids (ECall z e1 e2) = foldr f [] (combos [expandE ids e1, expandE ids e2]) where
+expandE envs (ECall z e1 e2) = foldr f [] (combos [expandE envs e1, expandE envs e2]) where
                                 f :: [Exp] -> [Exp] -> [Exp]
                                 f [e1,e2] exps = (ECall z e1 e2) : exps
 
-expandE ids (ETuple z l)    = foldr f [] (combos $ map (expandE ids) l) where
+expandE envs (ETuple z l)    = foldr f [] (combos $ map (expandE envs) l) where
                                 f l' exps = (ETuple z l') : exps
 
-expandE ids e@(EVar z id)   = foldr f [] (expandT ids tp) where
+expandE envs e@(EVar z id)   = foldr f [] (expandT envs tp) where
                                 f tp' exps = (EVar z{typec=(tp',ctrs)} id) : exps
                                 (tp,ctrs) = typec $ getAnn e
 
@@ -86,13 +86,13 @@ expandE _ e = [e]
 
 expandT :: [Stmt] -> Type -> [Type]
 
-expandT ids (TData False hrT ofs st) = foldr f [] (subs ids hrT) where
-                                        f hr tps = (TData False hr ofs st) : tps
+expandT envs (TData False hrT ofs st) = foldr f [] (subs envs hrT) where
+                                          f hr tps = (TData False hr ofs st) : tps
 
-expandT ids (TTuple False l)         = foldr f [] (combos $ map (expandT ids) l) where
-                                        f l' tps = (TTuple False l') : tps
+expandT envs (TTuple False l)         = foldr f [] (combos $ map (expandT envs) l) where
+                                          f l' tps = (TTuple False l') : tps
 
-expandT _   tp                       = [tp]
+expandT _    tp                       = [tp]
 
 -------------------------------------------------------------------------------
 
