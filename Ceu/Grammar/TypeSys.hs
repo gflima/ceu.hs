@@ -513,14 +513,16 @@ expr' _       _   (EError  z v)     = ([], FuncGlobal, EError  z{typec=(TBot Fal
 expr' _       _   (EUnit   z)       = ([], FuncGlobal, EUnit   z{typec=(TUnit False,cz)})
 expr' (_,txp) _   (EArg    z)       = ([], FuncGlobal, EArg    z{typec=txp})
 
-expr' _ envs (EFunc z tpc@(TFunc False ftp inp out,cs) p) = (es++esf, ftp', EFunc z{typec=tpc'} tpc' p')
+expr' _ envs (EFunc z tpc@(TFunc False ftp inp out,cs) p) = (es++esf, FuncGlobal, EFunc z{typec=tpc'} tpc' p')
  where
   tpc' = (TFunc False ftp' inp out,cs)
   (es,ftp',p') = stmt ([]:envs) (out,cs) p      -- add args environment, locals to be added on Match...EArg
   esf = case (ftp,ftp') of
           (_,_) | ftp == ftp' -> []
-          (FuncUnknown,_)      -> []
-          (FuncClosure,_)      -> [toError z "unexpected `new`: function is not a closure"]
+          (FuncClosure,FuncClosure) -> []
+          (FuncClosure,_)           -> [toError z "unexpected `new`: function is not a closure"]
+          (_,FuncClosure)           -> [toError z "expected `new`: function is a closure"]
+          (FuncUnknown,_)           -> []
 
 expr' _ envs (EMatch z exp pat) = (esp++esem++esc, funcType ftp1 ftp2,
                                   EMatch z{typec=(TData False ["Bool"] [] (TUnit False),cz)} exp' pat')

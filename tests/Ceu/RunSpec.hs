@@ -335,7 +335,7 @@ spec = do
            ])
         `shouldBe` Right (EData ["Int","10"] EUnit)
 
-      it "FuncClosure return - new not required" $
+      it "FuncGlobal return - new not required" $
         (run True $
           unlines [
             "func g () : (() -> (() -> Int)) do",
@@ -357,7 +357,7 @@ spec = do
            ])
         `shouldBe` Left "(line 3, column 11):\ncannot return nested function\n"
 
-      it "XXX: TODO: FuncClosure return - reference in args" $
+      it "FuncClosure return - reference in args" $
         (run True $
           unlines [
             "func g x : (ref Int -> (() -> Int)) do",
@@ -367,31 +367,31 @@ spec = do
             "var a : ref Int = ref b",
             "return (g (ref a)) ()"
            ])
+        `shouldBe` Left "(line 2, column 11):\nexpected `new`: function is a closure\n"
+
+      it "XXX: TODO: FuncClosure return - reference in args" $
+        (run True $
+          unlines [
+            "func g x : (ref Int -> (() -> Int)) do",
+            "   return new func () : (()->Int) do return x end",
+            "end",
+            "var b : Int = 10",
+            "var a : ref Int = ref b",
+            "return (g (ref a)) ()"
+           ])
         `shouldBe` Left "TODO: 10"
 
-      it "TODO: escape scope - var a - func " $
+      it "TODO: FuncClosure return - one level more than allowed" $
         (run True $
           unlines [
-            "func g () : (() -> (() -> Int)) do",
-            "   var a : Int =10",
-            "   return func () : (()->Int) do return a end",
+            "func g x : (ref Int -> (() -> Int)) do",
+            "   return new func () : (()->Int) do return x end",
             "end",
-            "var a : Int = 99",
-            "return (g ()) ()"
+            "var b : Int = 10",
+            "var a : ref Int = ref b",
+            "return (g (ref a))"
            ])
-        `shouldBe` Left "new required"
-
-      it "TODO: escape scope - var a - new func " $
-        (run True $
-          unlines [
-            "func g () : (() -> (() -> Int)) do",
-            "   var a : Int =10",
-            "   return new func () : (()->Int) do return a end",
-            "end",
-            "var a : Int = 99",
-            "return (g ()) ()"
-           ])
-        `shouldBe` Right (EData ["Int","10"] EUnit)
+        `shouldBe` Left "TODO: 10"
 
     describe "data:" $ do
 
