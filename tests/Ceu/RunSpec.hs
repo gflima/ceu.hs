@@ -335,7 +335,7 @@ spec = do
            ])
         `shouldBe` Right (EData ["Int","10"] EUnit)
 
-      it "TODO: FuncClosure return - new not required" $
+      it "FuncClosure return - new not required" $
         (run True $
           unlines [
             "func g () : (() -> (() -> Int)) do",
@@ -343,7 +343,7 @@ spec = do
             "end",
             "return (g ()) ()"
            ])
-        `shouldBe` Left "new not required"
+        `shouldBe` Left "(line 2, column 11):\nunexpected `new`: function is not a closure\n"
 
       it "FuncNested return - reference in body (not args)" $
         (run True $
