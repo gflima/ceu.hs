@@ -48,7 +48,7 @@ stmt _  p                         = p
 expr :: [Stmt] -> Exp -> Exp
 expr ds (ETuple z es)            = ETuple z (map (expr ds) es)
 expr ds (ECall  z e1 e2)         = ECall  z (expr ds e1) (expr ds e2)
-expr ds (EFunc  z ftp tp p)      = EFunc  z ftp tp (stmt ds p)
+expr ds (EFunc  z tp p)          = EFunc  z tp (stmt ds p)
 expr _  e                        = e
 
 -------------------------------------------------------------------------------
@@ -88,7 +88,7 @@ fvar ds (tp_,ctrs) = (fvar' ds tp_, ctrs)
         Nothing -> fvar' ds st
         Just (SData'' _ _ (TData False _ ofs' st',_) _ _)
                 -> instantiate (zip (map (\(TAny False v)->v) ofs') ofs) st'
-    fvar' ds (TFunc False inp out) = TFunc False (fvar' ds inp) (fvar' ds out)
+    fvar' ds (TFunc False ftp inp out) = TFunc False ftp (fvar' ds inp) (fvar' ds out)
     fvar' ds (TTuple False tps)    = TTuple False $ map (fvar' ds) tps
     fvar' _  tp                    = tp
 
@@ -110,13 +110,13 @@ faccs z nms (tpD@(TData False hr _ st),cz) p = accs where
   g tp               = [tp]
 
   f :: Type -> (Stmt,Int) -> (Stmt,Int)
-  f tp (p,idx) = (SVar'' z id (TFunc False tpD tp,cz)
+  f tp (p,idx) = (SVar'' z id (TFunc False FuncGlobal tpD tp,cz)
                     (SMatch' z True False body [(SNop z, EVar z id, nm p)])
                  ,idx+1)
                  where
                   id = hr_str ++ "._" ++ show idx
 
-                  body = EFunc z FuncGlobal (TFunc False tpD tp,cz)
+                  body = EFunc z (TFunc False FuncGlobal tpD tp,cz)
                           (SVar'' z "ret" (tp,cz)
                             (SMatch' z True False (EArg z) [(SNop z, ret, SRet z (EVar z "ret"))]))
                   ret  = ECall z (ECons z hr) (bool (ETuple z repl) (repl!!0) (len st == 1))
@@ -128,9 +128,9 @@ faccs z nms (tpD@(TData False hr _ st),cz) p = accs where
 
                   nm p = case nms of
                           Nothing -> p
-                          Just l  -> SVar'' z idm (TFunc False tpD tp,cz)
+                          Just l  -> SVar'' z idm (TFunc False FuncGlobal tpD tp,cz)
                                       (SMatch' z True False body [(SNop z, EVar z idm, p)])
                                      where
                                       idm = hr_str ++ "." ++ (l!!(idx-1))
-                                      body = EFunc z FuncGlobal (TFunc False tpD tp,cz)
+                                      body = EFunc z (TFunc False FuncGlobal tpD tp,cz)
                                               (SRet z (ECall z (EVar z id) (EArg z)))

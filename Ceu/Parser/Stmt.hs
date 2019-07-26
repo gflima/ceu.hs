@@ -373,11 +373,13 @@ expr_ref = do
 
 expr_func :: Parser Exp
 expr_func = do
-  pos      <- pos2src <$> getPosition
-  new      <- optionMaybe $ try $ tk_key "new"
-  void     <- try $ tk_key "func"
-  (tp,imp) <- func pos
-  return $ EFunc annz{source=pos} (bool FuncUnknown FuncClosure (isJust new)) tp imp
+  pos       <- pos2src <$> getPosition
+  new       <- optionMaybe $ try $ tk_key "new"
+  void      <- try $ tk_key "func"
+  (tpc,imp) <- func pos
+  return $ let (TFunc x FuncUnknown inp out,cz) = tpc
+               tp' = (TFunc x (bool FuncUnknown FuncClosure (isJust new)) inp out,cz) in
+            EFunc annz{source=pos} tp' imp
 
 expr_unit :: Parser Exp
 expr_unit = do
@@ -449,7 +451,7 @@ func pos = do
   void <- tk_sym ":"
   tp   <- pTypeContext
 
-  dcls <- let (TFunc False tp' _,ctrs) = tp
+  dcls <- let (TFunc False _ tp' _,ctrs) = tp
               dcls = (matchLocType1 pos loc (tp',ctrs))
           in
             case dcls of

@@ -55,7 +55,7 @@ fromExp (B.ECons   z id)  = case typec z of
                              (TData False _ _ (TUnit False), _) -> EData id EUnit
                              otherwise            -> ECons id
 fromExp (B.ETuple  _ vs)  = ETuple (map fromExp vs)
-fromExp (B.EFunc   _ _ _ p) = EFunc (fromStmt p)
+fromExp (B.EFunc   _ _ p) = EFunc (fromStmt p)
 fromExp (B.ECall   _ f e) = ECall (fromExp f) (fromExp e)
 fromExp (B.EAny    _)     = EAny
 fromExp (B.EArg    _)     = EVar "_arg"

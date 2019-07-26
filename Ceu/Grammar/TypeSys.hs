@@ -28,9 +28,9 @@ trd4 (_,_,x,_) = x
 fou4 (_,_,_,x) = x
 
 checkFunc :: String -> Exp -> Errors
-checkFunc str (EFunc  z FuncNested _ _) = [toError z str]
-checkFunc str (ETuple _ l)              = concatMap (checkFunc str) l
-checkFunc _   _                         = []
+checkFunc str (EFunc  z (TFunc _ FuncNested _ _,_) _) = [toError z str]
+checkFunc str (ETuple _ l)                            = concatMap (checkFunc str) l
+checkFunc _   _                                       = []
 
 idtp id tp = "$" ++ id ++ "$" ++ T.show' tp ++ "$"
 
@@ -179,8 +179,8 @@ fPat envs ini (ECall  z f e) = (esf++ese, funcType ftp1 ftp2, (tp',ctrs), ECall 
                                 (ese,ftp2,e') = expr z (SUP,(TAny False "?",cz)) envs e
                                 (tp,ctrs) = typec $ getAnn f'
                                 tp'       = case tp of
-                                  TFunc False _ tp -> tp
-                                  tp         -> tp
+                                  TFunc False _ _ tp -> tp
+                                  tp                 -> tp
 fPat envs ini (EExp   z e)   = (es, ftp, tpc, EExp z e') where
                                 (es,ftp,tpc,e') = fPat envs ini e
 
@@ -385,8 +385,8 @@ stmt envs tpr s@(SVar z id tpc@(tp,ctrs) p) = (es_data ++ es_id ++ es, ftp, f p'
   es_data = getErrsTypesDeclared z (concat envs) tp
   es_id   = errDeclared z (Just chk) "variable" id (concat envs) where
               chk :: Stmt -> Bool
-              chk (SVar _ id1 tpc'@(TFunc False _ _,_) (SMatch _ True False _ [(_,EVar _ id2,_)])) = (id1 /= id2)
-              chk (SVar _ id1 tpc'@(TFunc False _ _,_) _) = (tpc == tpc') -- function prototype
+              chk (SVar _ id1 tpc'@(TFunc False _ _ _,_) (SMatch _ True False _ [(_,EVar _ id2,_)])) = (id1 /= id2)
+              chk (SVar _ id1 tpc'@(TFunc False _ _ _,_) _) = (tpc == tpc') -- function prototype
               chk _ = False
   (es,ftp,p'') = stmt (envsAdd envs s) tpr p'
 
@@ -478,7 +478,7 @@ stmt envs tpr (SRet z exp)   = (es ++ ese, ftp, SRet z exp') where
 {-
                                 -- TODO: closures
                                 xxx = f $ fst $ typec $ getAnn exp' where
-                                  f (TFunc False _ _) = True
+                                  f (TFunc False _ _ _) = True
                                   f (TTuple False l)  = or $ map f l
                                   f _           = False
 -}
@@ -513,12 +513,12 @@ expr' _       _   (EError  z v)     = ([], FuncGlobal, EError  z{typec=(TBot Fal
 expr' _       _   (EUnit   z)       = ([], FuncGlobal, EUnit   z{typec=(TUnit False,cz)})
 expr' (_,txp) _   (EArg    z)       = ([], FuncGlobal, EArg    z{typec=txp})
 
-expr' _ envs (EFunc z ftp1 tpc p) = (es++esf, ftp2, EFunc z{typec=tpc} ftp2 tpc p')
+expr' _ envs (EFunc z tpc@(TFunc False ftp inp out,cs) p) = (es++esf, ftp', EFunc z{typec=tpc'} tpc' p')
  where
-  (es,ftp2,p') = stmt ([]:envs) (out,cs) p      -- add args environment, locals to be added on Match...EArg
-  (TFunc False _ out,cs) = tpc
-  esf = case (ftp1,ftp2) of
-          (_,_) | ftp1 == ftp2 -> []
+  tpc' = (TFunc False ftp' inp out,cs)
+  (es,ftp',p') = stmt ([]:envs) (out,cs) p      -- add args environment, locals to be added on Match...EArg
+  esf = case (ftp,ftp') of
+          (_,_) | ftp == ftp' -> []
           (FuncUnknown,_)      -> []
           (FuncClosure,_)      -> [toError z "unexpected `new`: function is not a closure"]
 
@@ -534,7 +534,7 @@ expr' _ envs (EMatch z exp pat) = (esp++esem++esc, funcType ftp1 ftp2,
           else
             []
 
-expr' _ envs (EField z hr fld) = (es, FuncGlobal, EVar z{typec=(TFunc False inp out,cz)} (hr_str ++ "." ++ fld))
+expr' _ envs (EField z hr fld) = (es, FuncGlobal, EVar z{typec=(TFunc False FuncGlobal inp out,cz)} (hr_str ++ "." ++ fld))
   where
     hr_str = T.hier2str hr
 
@@ -565,7 +565,7 @@ expr' (rel,txp) envs (ECons z hr) = (es1++es2, FuncGlobal, ECons z{typec=tpc2} h
       Just (SData _ _ tpc False _) -> (f tpc, [])
 
     f (tp@(TData False _ ofs (TUnit False)), ctrs) = (tp,            ctrs)
-    f (tp@(TData False _ ofs tpst),          ctrs) = (TFunc False tpst tp, ctrs)
+    f (tp@(TData False _ ofs tpst),          ctrs) = (TFunc False FuncGlobal tpst tp, ctrs)
 
     (es2,tpc2) = case relatesC SUP txp tpc1 of
       Left es      -> (map (toError z) es,tpc1)
@@ -623,12 +623,12 @@ expr' (rel,(txp_,cxp)) envs (ECall z f exp) = (bool ese esf (null ese) ++ esa,
                                               ECall z{typec=tpc_out} f' exp')
   where
     (ese, ftp1, exp') = expr z (rel, (TAny False "?",cz)) envs exp
-    (esf, ftp2, f')   = expr z (rel, (TFunc False (fst$typec$getAnn$exp') txp_, cxp)) envs f
+    (esf, ftp2, f')   = expr z (rel, (TFunc False FuncUnknown (fst$typec$getAnn$exp') txp_, cxp)) envs f
                                       -- TODO: ctrs of exp'
 
     tpc_out = case typec $ getAnn f' of
-      (TFunc False _ out_,ctrs) -> (out_,ctrs)
-      otherwise           -> (txp_,cxp)
+      (TFunc False _ _ out_,ctrs) -> (out_,ctrs)
+      otherwise                   -> (txp_,cxp)
 
     esa = checkFunc "cannot pass nested function" exp'
 

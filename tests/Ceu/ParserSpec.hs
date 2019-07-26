@@ -48,7 +48,7 @@ clearExp (EVar   _ v)     = EVar   annz v
 clearExp (EArg   _)       = EArg   annz
 clearExp (EUnit  _)       = EUnit  annz
 clearExp (ETuple _ es)    = ETuple annz (map clearExp es)
-clearExp (EFunc  _ ftp tp p) = EFunc  annz ftp tp (clearStmt p)
+clearExp (EFunc  _ tp p)  = EFunc  annz tp (clearStmt p)
 clearExp (ECall  _ e1 e2) = ECall  annz (clearExp e1) (clearExp e2)
 
 fromRight' :: Either a b -> b
@@ -283,10 +283,10 @@ spec = do
         describe "typeF" $ do
             it "(Int -> Int)" $
                 parse (type_F False) "(Int -> Int)"
-                `shouldBe` Right (TFunc False (int) (int))
+                `shouldBe` Right (TFunc False FuncUnknown (int) (int))
             it "(a -> Int)" $
                 parse (type_F False) "(a -> Int)"
-                `shouldBe` Right (TFunc False (TAny False "a") (int))
+                `shouldBe` Right (TFunc False FuncUnknown (TAny False "a") (int))
             it "a -> Int" $
                 parse (type_F False) "a -> Int"
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"a\"\nexpecting \"(\""
@@ -551,19 +551,19 @@ end
         describe "func:" $ do
             it "var add : ..." $
                 parse stmt "var add : ((Int, Int) -> Int)"
-                `shouldBe` Right (SSeq annz{source = ("",1,1)} (SSeq annz (SVar annz{source = ("",1,1)} "add" (TFunc False (TTuple False [int,int]) (int),cz)) (SNop annz)) (SNop annz{source = ("",1,1)}))
+                `shouldBe` Right (SSeq annz{source = ("",1,1)} (SSeq annz (SVar annz{source = ("",1,1)} "add" (TFunc False FuncUnknown (TTuple False [int,int]) (int),cz)) (SNop annz)) (SNop annz{source = ("",1,1)}))
             it "var add : ... =  func ..." $
                 parse stmt "var add : ((Int, Int) -> Int) =  func (a,_) : ((Int, Int) -> Int) do end"
-                `shouldBe` Right (SSeq annz{source=("",1,1)} (SSeq annz (SVar annz{source=("",1,1)} "add" (TFunc False (TTuple False [int,int]) (int),cz)) (SNop annz)) (SSet annz{source=("",1,1)} True False (EVar annz{source=("",1,5)} "add") (EFunc annz{source=("",1,34)} FuncUnknown (TFunc False (TTuple False [int,int]) (int),cz) (SSeq annz{source=("",1,34)} (SSeq annz (SVar annz{source=("",1,34)} "a" (int,cz)) (SNop annz)) (SSeq annz{source=("",1,34)} (SSet annz{source=("",1,34)} True False (ETuple annz{source=("",1,39)} [EVar annz{source=("",1,40)} "a",EAny annz{source=("",1,42)}]) (EArg annz{source=("",1,34)})) (SNop annz{source=("",1,70)}))))))
+                `shouldBe` Right (SSeq annz{source=("",1,1)} (SSeq annz (SVar annz{source=("",1,1)} "add" (TFunc False FuncUnknown (TTuple False [int,int]) (int),cz)) (SNop annz)) (SSet annz{source=("",1,1)} True False (EVar annz{source=("",1,5)} "add") (EFunc annz{source=("",1,34)} (TFunc False FuncUnknown (TTuple False [int,int]) (int),cz) (SSeq annz{source=("",1,34)} (SSeq annz (SVar annz{source=("",1,34)} "a" (int,cz)) (SNop annz)) (SSeq annz{source=("",1,34)} (SSet annz{source=("",1,34)} True False (ETuple annz{source=("",1,39)} [EVar annz{source=("",1,40)} "a",EAny annz{source=("",1,42)}]) (EArg annz{source=("",1,34)})) (SNop annz{source=("",1,70)}))))))
             it "func add : (...) do end" $
                 parse stmt_funcs "func add (a,_) : ((Int, Int) -> Int) do end"
-                `shouldBe` Right (SFunc annz{source=("",1,1)} "add" (TFunc False (TTuple False [int,int]) (int),cz) (SSeq annz{source=("",1,1)} (SSeq annz{source=("",0,0)} (SVar annz{source=("",1,1)} "a" (int,cz)) (SNop annz{source=("",0,0)})) (SSeq annz{source=("",1,1)} (SSet annz{source=("",1,1)} True False (ETuple annz{source=("",1,10)} [EVar annz{source=("",1,11)} "a",EAny annz{source=("",1,13)}]) (EArg annz{source=("",1,1)})) (SNop annz{source=("",1,41)}))))
+                `shouldBe` Right (SFunc annz{source=("",1,1)} "add" (TFunc False FuncUnknown (TTuple False [int,int]) (int),cz) (SSeq annz{source=("",1,1)} (SSeq annz{source=("",0,0)} (SVar annz{source=("",1,1)} "a" (int,cz)) (SNop annz{source=("",0,0)})) (SSeq annz{source=("",1,1)} (SSet annz{source=("",1,1)} True False (ETuple annz{source=("",1,10)} [EVar annz{source=("",1,11)} "a",EAny annz{source=("",1,13)}]) (EArg annz{source=("",1,1)})) (SNop annz{source=("",1,41)}))))
             it "func add (...) : (...)" $
                 parse stmt_funcs "func add (a,_) : ((Int, Int) -> Int)"
                 `shouldBe` Left "(line 1, column 37):\nunexpected end of input\nexpecting \"where\" or \"do\""
             it "func add : (...)" $
                 parse stmt_funcs "func add : ((Int, Int) -> Int)"
-                `shouldBe` Right (SVar annz{source=("",1,1)} "add" (TFunc False (TTuple False [int,int]) (int),cz))
+                `shouldBe` Right (SVar annz{source=("",1,1)} "add" (TFunc False FuncUnknown (TTuple False [int,int]) (int),cz))
             it "func (_,_,_) : (_,_)" $
                 parse stmt_funcs "func add (_,_,_) : ((Int, Int) -> Int) do end"
                 `shouldBe` Left "(line 1, column 40):\nunexpected \"d\"\nexpecting \"where\"\narity mismatch"
@@ -585,7 +585,7 @@ end
                   "end",
                   "return (Bool.True) and (Bool.True)"
                  ])
-              `shouldBe` Right (SSeq annz (SFunc annz "and" (TFunc False (TTuple False [bool,bool]) (bool),cz) (SSeq annz (SSeq annz (SVar annz "x" (bool,cz)) (SSeq annz (SVar annz "y" (bool,cz)) (SNop annz))) (SSeq annz (SSet annz True False (ETuple annz [EVar annz "x",EVar annz "y"]) (EArg annz)) (SRet annz (ECons annz ["Bool","False"]))))) (SRet annz (ECall annz (EVar annz "and") (ETuple annz [ECons annz ["Bool","True"],ECons annz ["Bool","True"]]))))
+              `shouldBe` Right (SSeq annz (SFunc annz "and" (TFunc False FuncUnknown (TTuple False [bool,bool]) (bool),cz) (SSeq annz (SSeq annz (SVar annz "x" (bool,cz)) (SSeq annz (SVar annz "y" (bool,cz)) (SNop annz))) (SSeq annz (SSet annz True False (ETuple annz [EVar annz "x",EVar annz "y"]) (EArg annz)) (SRet annz (ECons annz ["Bool","False"]))))) (SRet annz (ECall annz (EVar annz "and") (ETuple annz [ECons annz ["Bool","True"],ECons annz ["Bool","True"]]))))
 
         describe "data" $ do
 
@@ -695,12 +695,12 @@ end
               (SClass annz{source=("",1,1)} "IF3able" (cv "a")
                 (SSeq annz{source=("",2,2)}
                 (SSeq annz{source=("",0,0)}
-                (SVar annz{source=("",2,2)} "f3" (TFunc False (TAny False "a") (int),cz))
+                (SVar annz{source=("",2,2)} "f3" (TFunc False FuncUnknown (TAny False "a") (int),cz))
                 (SNop annz{source=("",0,0)}))
                 (SNop annz{source=("",2,2)})))
               (SSeq annz{source=("",1,1)}
               (SInst annz{source=("",4,1)} "IF3able" (int,cz)
-                (SFunc annz{source=("",5,2)} "f3" (TFunc False (TAny False "a") (int),cz)
+                (SFunc annz{source=("",5,2)} "f3" (TFunc False FuncUnknown (TAny False "a") (int),cz)
                   (SSeq annz{source=("",5,2)}
                   (SSeq annz{source=("",0,0)}
                   (SVar annz{source=("",5,2)} "v" (TAny False "a",cz))
@@ -733,17 +733,17 @@ end
             `shouldBe` Right
               (SSeq annz
               (SClass annz "IEq" (cv "a")
-                (SVar annz "==" (TFunc False (TTuple False [TAny False "a",TAny False "a"]) (bool),cz)))
+                (SVar annz "==" (TFunc False FuncUnknown (TTuple False [TAny False "a",TAny False "a"]) (bool),cz)))
               (SSeq annz
               (SClass annz "IOrd" (cvc("a","IEq"))
-                (SVar annz ">=" (TFunc False (TTuple False [TAny False "a",TAny False "a"]) (bool),cz)))
+                (SVar annz ">=" (TFunc False FuncUnknown (TTuple False [TAny False "a",TAny False "a"]) (bool),cz)))
               (SSeq annz
               (SInst annz "IEq" (bool,cz)
-                (SFunc annz "==" (TFunc False (TTuple False [TAny False "a",TAny False "a"]) (bool),cz)
+                (SFunc annz "==" (TFunc False FuncUnknown (TTuple False [TAny False "a",TAny False "a"]) (bool),cz)
                   (SSeq annz (SSeq annz (SVar annz "x" (TAny False "a",cz)) (SSeq annz (SVar annz "y" (TAny False "a",cz)) (SNop annz))) (SSeq annz (SSet annz True False (ETuple annz [EVar annz "x",EVar annz "y"]) (EArg annz)) (SRet annz (ECons annz ["Bool","True"]))))))
               (SSeq annz
               (SInst annz "IOrd" (bool,cz)
-                (SFunc annz ">=" (TFunc False (TTuple False [TAny False "a",TAny False "a"]) (bool),cz)
+                (SFunc annz ">=" (TFunc False FuncUnknown (TTuple False [TAny False "a",TAny False "a"]) (bool),cz)
                   (SSeq annz (SSeq annz (SVar annz "x" (TAny False "a",cz)) (SSeq annz (SVar annz "y" (TAny False "a",cz)) (SNop annz))) (SSeq annz (SSet annz True False (ETuple annz [EVar annz "x",EVar annz "y"]) (EArg annz)) (SRet annz (ECons annz ["Bool","True"]))))))
               (SRet annz (ECall annz (EVar annz ">=") (ETuple annz [ECons annz ["Bool","True"],ECons annz ["Bool","False"]])))))))
 
@@ -772,9 +772,9 @@ end
             `shouldBe` Right
               (SSeq annz
                 (SClass annz "IFable" (cv "a")
-                  (SVar annz "f" (TFunc False (TAny False "a") (bool),cz)))
+                  (SVar annz "f" (TFunc False FuncUnknown (TAny False "a") (bool),cz)))
               (SSeq annz
-                (SFunc annz "g" (TFunc False (TAny False "a") (bool),cvc("a","IFable"))
+                (SFunc annz "g" (TFunc False FuncUnknown (TAny False "a") (bool),cvc("a","IFable"))
                   (SSeq annz
                   (SSeq annz
                     (SVar annz "x" (TAny False "a",cvc("a","IFable"))) (SNop annz))

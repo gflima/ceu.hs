@@ -63,5 +63,5 @@ stmt p = p
 expr :: Exp -> Exp
 
 expr (ECall z e1 e2)    = ECall z (expr e1) (expr e2)
-expr (EFunc z env tp p) = EFunc z env tp (stmt p)
+expr (EFunc z tp p)     = EFunc z tp (stmt p)
 expr e                  = e

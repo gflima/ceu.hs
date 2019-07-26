@@ -28,7 +28,7 @@ stmt (SInst  z cls tp@(_,ctrs) imp)    = SInst  z cls tp (stmt $ aux imp)
     aux (SFunc z id (tp_',ctrs') imp) = SFunc z id (tp_',Cs.union ctrs ctrs') imp
     aux p                             = p
 
-stmt (SFunc z k tp@(tp_,ctrs) imp)    = SSeq z (SVar z k tp) (SSet z True False (EVar z k) (EFunc z T.FuncUnknown tp (stmt imp')))
+stmt (SFunc z k tp@(tp_,ctrs) imp)    = SSeq z (SVar z k tp) (SSet z True False (EVar z k) (EFunc z tp (stmt imp')))
  where
   imp' = if ctrs == Cs.cz then imp else
           map_stmt (id,id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) imp
@@ -47,5 +47,5 @@ stmt p                      = p
 expr :: Exp -> Exp
 expr (ETuple z es)          = ETuple z (map expr es)
 expr (ECall  z e1 e2)       = ECall  z (expr e1) (expr e2)
-expr (EFunc  z ftp tp p)    = EFunc  z ftp tp (stmt p)
+expr (EFunc  z tp p)        = EFunc  z tp (stmt p)
 expr e                      = e

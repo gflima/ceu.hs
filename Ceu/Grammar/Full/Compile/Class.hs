@@ -46,5 +46,5 @@ stmt p                       = p
 expr :: Exp -> Exp
 expr (ETuple z es)           = ETuple z (map expr es)
 expr (ECall  z e1 e2)        = ECall  z (expr e1) (expr e2)
-expr (EFunc  z ftp tp p)     = EFunc  z ftp tp (stmt p)
+expr (EFunc  z tp p)         = EFunc  z tp (stmt p)
 expr e                       = e

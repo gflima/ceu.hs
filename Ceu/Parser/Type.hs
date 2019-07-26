@@ -13,7 +13,7 @@ import Ceu.Parser.Token         (tk_sym, tk_key, tk_class, tk_var, tk_data_hier)
 
 import Ceu.Grammar.Globals            (ID_Var, ID_Class)
 import Ceu.Grammar.Constraints as Cs  (Pair, insert, cz)
-import Ceu.Grammar.Type               (Type(..), TypeC)
+import Ceu.Grammar.Type               (Type(..), TypeC, FuncType(..))
 
 singleton x = [x]
 
@@ -46,7 +46,7 @@ type_F ref = do
     void <- tk_sym "->"
     out  <- pType
     void <- tk_sym ")"
-    return $ TFunc ref inp out
+    return $ TFunc ref FuncUnknown inp out
 
 type_V :: Bool -> Parser Type
 type_V ref = do
