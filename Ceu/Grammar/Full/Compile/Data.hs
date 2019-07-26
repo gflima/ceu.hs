@@ -8,6 +8,7 @@ import Ceu.Grammar.Ann
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Type               (Type(..),TypeC,instantiate,getSuper,hier2str)
 import Ceu.Grammar.Constraints as Cs
+import Ceu.Grammar.Basic              (FuncType(..))
 import Ceu.Grammar.Full.Full
 
 compile :: Stmt -> Stmt
@@ -48,7 +49,7 @@ stmt _  p                         = p
 expr :: [Stmt] -> Exp -> Exp
 expr ds (ETuple z es)            = ETuple z (map (expr ds) es)
 expr ds (ECall  z e1 e2)         = ECall  z (expr ds e1) (expr ds e2)
-expr ds (EFunc  z tp p)          = EFunc  z tp (stmt ds p)
+expr ds (EFunc  z ftp tp p)      = EFunc  z ftp tp (stmt ds p)
 expr _  e                        = e
 
 -------------------------------------------------------------------------------
@@ -116,7 +117,7 @@ faccs z nms (tpD@(TData False hr _ st),cz) p = accs where
                  where
                   id = hr_str ++ "._" ++ show idx
 
-                  body = EFunc z (TFunc False tpD tp,cz)
+                  body = EFunc z FuncGlobal (TFunc False tpD tp,cz)
                           (SVar'' z "ret" (tp,cz)
                             (SMatch' z True False (EArg z) [(SNop z, ret, SRet z (EVar z "ret"))]))
                   ret  = ECall z (ECons z hr) (bool (ETuple z repl) (repl!!0) (len st == 1))
@@ -132,5 +133,5 @@ faccs z nms (tpD@(TData False hr _ st),cz) p = accs where
                                       (SMatch' z True False body [(SNop z, EVar z idm, p)])
                                      where
                                       idm = hr_str ++ "." ++ (l!!(idx-1))
-                                      body = EFunc z (TFunc False tpD tp,cz)
+                                      body = EFunc z FuncGlobal (TFunc False tpD tp,cz)
                                               (SRet z (ECall z (EVar z id) (EArg z)))

@@ -345,7 +345,7 @@ spec = do
            ])
         `shouldBe` Left "new not required"
 
-      it "TODO: FuncNested return - reference in body (not args)" $
+      it "FuncNested return - reference in body (not args)" $
         (run True $
           unlines [
             "func g x : (Int -> (() -> Int)) do",
@@ -355,9 +355,9 @@ spec = do
             "var a : Int = 99",
             "return (g (10)) ()"
            ])
-        `shouldBe` Left "TODO: cannot return"
+        `shouldBe` Left "(line 3, column 11):\ncannot return nested function\n"
 
-      it "TODO: FuncClosure return - reference in args" $
+      it "XXX: TODO: FuncClosure return - reference in args" $
         (run True $
           unlines [
             "func g x : (ref Int -> (() -> Int)) do",

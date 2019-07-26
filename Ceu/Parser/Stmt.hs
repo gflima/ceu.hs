@@ -21,6 +21,7 @@ import Ceu.Grammar.Globals            (Source, ID_Var, ID_Class)
 import Ceu.Grammar.Constraints as Cs  (cz,cv,cvc)
 import Ceu.Grammar.Type               (Type(..), TypeC)
 import Ceu.Grammar.Ann                (annz, source, getAnn, Ann(..))
+import Ceu.Grammar.Basic      (FuncType(..))
 import Ceu.Grammar.Full.Full
 
 singleton x = [x]
@@ -377,7 +378,7 @@ expr_func = do
   new      <- optionMaybe $ try $ tk_key "new"
   void     <- try $ tk_key "func"
   (tp,imp) <- func pos
-  return $ EFunc annz{source=pos} {-(bool FuncUnknown FuncClosure (isJust new))-} tp imp
+  return $ EFunc annz{source=pos} (bool FuncUnknown FuncClosure (isJust new)) tp imp
 
 expr_unit :: Parser Exp
 expr_unit = do

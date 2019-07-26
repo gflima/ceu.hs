@@ -24,12 +24,6 @@
 - if / case as expressions
 - where ... end
 
-- modificador de referencia
-- escopos: fora, imediato, local
-- 3 tipos de funcao
-    - verificar retorno
-- implementar closure
-
 - set! List.Cons (xs_,x) <- xs
     - x/xs_ invertido nao ta dando erro
     - case (Either.Right =xr, Either.Right =yr) : (a,a) then
