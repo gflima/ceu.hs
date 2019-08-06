@@ -1,7 +1,7 @@
 - runhaskell -itests/ tests/Spec.hs
 - 7 -- Basic=1, Type=0, Eval=1, Full=0, Parser=1, Run=0, Book=4, Gen=0
 
-- testar arity mismatch em RunSpec
+- EUpv
 
 - FuncClosure Int [IDS]
     - precisa mudar o prototipo para incluir os IDS args

@@ -203,6 +203,10 @@ spec = do
           ])
         `shouldBe` Left "(line 2, column 11):\ntypes do not match : expected 'Int' : found 'Bool.True'\n"
 
+      it "TODO: func (_,_,_) : (_,_)" $
+        (run True "func add (_,_,_) : ((Int, Int) -> Int) do end")
+          `shouldBe` Left "TODO: arity mismatch"
+
     describe "refs:" $ do
 
       it "y = &x" $
