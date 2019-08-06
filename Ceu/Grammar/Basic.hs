@@ -18,7 +18,7 @@ data Exp
     | ECons   Ann ID_Data_Hier   -- Bool.True ; Int.1 ; Tree.Node
     | EField  Ann ID_Data_Hier String -- List.Cons._1 // Student.age
     | ETuple  Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
-    | EFunc   Ann TypeC Stmt -- function implementation
+    | EFunc   Ann TypeC Stmt     -- function implementation
     | ECall   Ann Exp Exp        -- f a ; f(a) ; f(1,2)
     | EAny    Ann
     | EArg    Ann

@@ -30,24 +30,25 @@ data FuncType = FuncUnknown
               | FuncGlobal    -- cannot access non-locals         // can    be passed and returned
               | FuncNested    -- can    access non-locals         // cannot be passed or  returned
               | FuncClosure   -- can    access non-locals by ref  // can    be passed and returned
-                  --Int [ID_Var] --       starting from args        // requires "new"
+                  Int --[ID_Var] --       starting from args        // requires "new"
   deriving (Eq, Show)
 
-funcType :: FuncType -> FuncType -> FuncType
-funcType FuncNested  _           = FuncNested
-funcType _           FuncNested  = FuncNested
-funcType FuncClosure _           = FuncClosure
-funcType _           FuncClosure = FuncClosure
-funcType FuncGlobal  _           = FuncGlobal
-funcType _           FuncGlobal  = FuncGlobal
-funcType _           _           = FuncUnknown
+minFuncType :: FuncType -> FuncType -> FuncType
+minFuncType FuncNested      _               = FuncNested
+minFuncType _               FuncNested      = FuncNested
+minFuncType (FuncClosure x) (FuncClosure y) = FuncClosure (max x y)
+minFuncType (FuncClosure x) _               = FuncClosure x
+minFuncType _               (FuncClosure y) = FuncClosure y
+minFuncType FuncGlobal      _               = FuncGlobal
+minFuncType _               FuncGlobal      = FuncGlobal
+minFuncType _               _               = FuncUnknown
 
 -- len  l-1  l-2   l-3  l-4  ...    1    0
 --   [ locs,args, lvl1,args, ..., glbs,args ]
-funcType' :: Int -> (Int,Bool) -> FuncType  -- (length,n,ref)
-funcType' len (n,_)   | n>=len-2 || n<=1 = FuncGlobal
-funcType' len (n,ref) | ref && n/=len-3  = FuncClosure   -- exclude 1st non-local body (lvl1)
-funcType' _   _                          = FuncNested
+reqFuncType :: Int -> (Int,Bool) -> FuncType  -- (length,n,ref)
+reqFuncType len (n,ref) | ref && n==len-4  = FuncClosure maxBound    -- only args by ref
+reqFuncType len (n,_)   | n>=len-2 || n<=1 = FuncGlobal
+reqFuncType _   _                          = FuncNested
 
 -------------------------------------------------------------------------------
 
@@ -61,7 +62,7 @@ show' (TUnit  False)            = "()"
 show' (TData  ref hier []  _)   = ref2str ref ++ hier2str hier
 show' (TData  ref hier [x] _)   = "(" ++ ref2str ref ++ hier2str hier ++ " of " ++ show' x ++ ")"
 show' (TData  ref hier ofs _)   = "(" ++ ref2str ref ++ hier2str hier ++ " of " ++ "(" ++ intercalate "," (map show' ofs) ++ ")" ++ ")"
-show' (TFunc  False FuncClosure inp out) = "new (" ++ show' inp ++ " -> " ++ show' out ++ ")"
+show' (TFunc  False (FuncClosure _) inp out) = "new (" ++ show' inp ++ " -> " ++ show' out ++ ")"
 show' (TFunc  False _           inp out) = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
 show' (TTuple False tps)        = "(" ++ intercalate "," (map show' tps) ++ ")"
 
