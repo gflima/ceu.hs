@@ -19,7 +19,8 @@ data Exp
     | EField Ann ID_Data_Hier String -- List.Cons._1 / Student.age
     | EArg   Ann
     | ETuple Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
-    | EFunc  Ann TypeC Stmt     -- function implementation
+    | EFunc  Ann TypeC Exp Stmt -- function implementation
+    | EFunc' Ann TypeC     Stmt
     | ECall  Ann Exp Exp        -- f a ; f(a) ; f(1,2)
     | EAny   Ann
     | EExp   Ann Exp
@@ -35,7 +36,7 @@ toBasicExp (ECons  z v)     = B.ECons  z v
 toBasicExp (EField z f e)   = B.EField z f e
 toBasicExp (EArg   z)       = B.EArg   z
 toBasicExp (ETuple z es)    = B.ETuple z (map toBasicExp es)
-toBasicExp (EFunc  z tp p)  = B.EFunc  z tp (toBasicStmt p)
+toBasicExp (EFunc' z tp p)  = B.EFunc  z tp (toBasicStmt p)
 toBasicExp (ECall  z e1 e2) = B.ECall  z (toBasicExp e1) (toBasicExp e2)
 toBasicExp (EAny   z)       = B.EAny   z
 toBasicExp (EExp   z e)     = B.EExp   z (toBasicExp e)
@@ -50,7 +51,7 @@ instance HasAnn Exp where
     getAnn (EArg   z)     = z
     getAnn (EUnit  z)     = z
     getAnn (ETuple z _)   = z
-    getAnn (EFunc  z _ _) = z
+    getAnn (EFunc' z _ _) = z
     getAnn (ECall  z _ _) = z
 
 -------------------------------------------------------------------------------
@@ -62,7 +63,7 @@ data Stmt
   | SInst'    Ann ID_Class TypeC [(Ann,ID_Var,TypeC,Bool)] -- new class instance
   | SData     Ann (Maybe [ID_Var]) TypeC Bool      -- new type declaration
   | SVar      Ann ID_Var TypeC                     -- variable declaration
-  | SFunc     Ann ID_Var TypeC Stmt                -- function declaration
+  | SFunc     Ann ID_Var TypeC Exp Stmt            -- function declaration
   | SMatch    Ann Bool Bool Exp [(Stmt,Exp,Stmt)]  -- match
   | SMatch'   Ann Bool Bool Exp [(Stmt,Exp,Stmt)]  -- match w/ chk
   | SSet      Ann Bool Bool Exp Exp                -- assignment statement
@@ -89,7 +90,7 @@ instance HasAnn Stmt where
     getAnn (SInst     z _ _ _)     = z
     getAnn (SData     z _ _ _)     = z
     getAnn (SVar      z _ _)       = z
-    getAnn (SFunc     z _ _ _)     = z
+    getAnn (SFunc     z _ _ _ _)   = z
     getAnn (SMatch'   z _ _ _ _)   = z
     getAnn (SSeq      z _ _  )     = z
     getAnn (SLoop     z _)         = z
@@ -120,7 +121,7 @@ map_stmt f@(fs,_,_)  (SClass z id  cs p)  = fs (SClass z id  cs (map_stmt f p))
 map_stmt f@(fs,_,ft) (SInst  z cls tp p)  = fs (SInst  z cls (ft tp) (map_stmt f p))
 map_stmt f@(fs,_,ft) (SData  z nms tp abs)= fs (SData  z nms (ft tp) abs)
 map_stmt f@(fs,_,ft) (SVar   z id tp)     = fs (SVar   z id (ft tp))
-map_stmt f@(fs,_,ft) (SFunc  z id tp p)   = fs (SFunc  z id (ft tp) (map_stmt f p))
+map_stmt f@(fs,_,ft) (SFunc  z id tp ps bd) = fs (SFunc  z id (ft tp) (map_exp f ps) (map_stmt f bd))
 map_stmt f@(fs,_,_)  (SMatch z ini chk exp cses) = fs (SMatch z ini chk (map_exp f exp)
                                                     (map (\(ds,pt,st) -> (map_stmt f ds, map_exp f pt, map_stmt f st)) cses))
 map_stmt f@(fs,_,_)  (SSet   z ini b loc exp) = fs (SSet   z ini b loc (map_exp f exp))
@@ -135,6 +136,7 @@ map_stmt f@(fs,_,_)  (SNop   z)           = fs (SNop   z)
 map_exp :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Exp -> Exp
 map_exp f@(_,fe,_)  (ECons  z id)       = fe (ECons  z id)
 map_exp f@(_,fe,_)  (ETuple z es)       = fe (ETuple z (map (map_exp f) es))
-map_exp f@(_,fe,ft) (EFunc  z tp p)     = fe (EFunc  z (ft tp) (map_stmt f p))
+map_exp f@(_,fe,ft) (EFunc  z tp ps bd) = fe (EFunc  z (ft tp) (map_exp f ps) (map_stmt f bd))
+map_exp f@(_,fe,ft) (EFunc' z tp bd)    = fe (EFunc' z (ft tp) (map_stmt f bd))
 map_exp f@(_,fe,_)  (ECall  z e1 e2)    = fe (ECall  z (map_exp f e1) (map_exp f e2))
 map_exp f@(_,fe,_)  exp                 = fe exp

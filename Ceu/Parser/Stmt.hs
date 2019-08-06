@@ -76,22 +76,6 @@ pPat v = lany  <|> lvar <|> try lunit  <|> lnumber <|>
                 exp  <- expr
                 return $ EExp annz{source=pos} exp
 
-matchLocType1 :: Source -> Exp -> TypeC -> Maybe [Stmt]
-matchLocType1 src loc (tp_,ctrs) = aux src loc tp_
-  where
-    aux :: Source -> Exp -> Type -> Maybe [Stmt]
-    aux pos (EAny   _)     _                 = Just []
-    aux pos (EUnit  _)     (TUnit False)     = Just []
-    aux pos (EVar   _ var) tp_               = Just [SVar annz{source=pos} var (tp_,ctrs)]
-    aux pos (ETuple _ [])  (TTuple False []) = Just []
-    aux pos (ETuple _ [])  _                 = Nothing
-    aux pos (ETuple _ _)   (TTuple False []) = Nothing
-    aux pos (ETuple _ (v1:vs1))
-            (TTuple False (v2:vs2))          = (fmap (++) (aux pos v1 v2)) <*>
-                                                (aux pos (ETuple annz{source=pos} vs1) (TTuple False vs2))
-    aux pos (ETuple _ _)  _                  = Nothing
-    aux pos loc         tp_                  = error $ show (pos,loc,tp_)
-
 matchLocType2 :: Source -> Exp -> TypeC -> Maybe Stmt
 matchLocType2 src loc (tp_,ctrs) = if length vars /= length tps_ then Nothing else
                                     Just $ foldr (SSeq annz) (SNop annz) dcls
@@ -443,24 +427,17 @@ expr = do
 
 -------------------------------------------------------------------------------
 
-func :: Source -> Parser (TypeC, [Stmt], Stmt)
+func :: Source -> Parser (TypeC, Exp, Stmt)
 func pos = do
   loc  <- pPat SET
   void <- tk_sym ":"
   tp   <- pTypeContext
 
-  dcls <- let (TFunc False _ tp' _,ctrs) = tp
-              dcls = (matchLocType1 pos loc (tp',ctrs))
-          in
-            case dcls of
-              Nothing    -> do { fail "arity mismatch" }
-              Just dcls' -> return dcls'
-
   void <- tk_key "do"
   imp  <- stmt
   void <- tk_key "end"
 
-  return (tp, dcls, imp)
+  return (tp, loc, imp)
 
 stmt_funcs :: Parser Stmt
 stmt_funcs = do
