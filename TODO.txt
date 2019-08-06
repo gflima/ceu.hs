@@ -23,6 +23,11 @@
         - rref caso contrario
         - ERefWr, ERefRd, ERefAq
 
+- eliminar EArg de Full
+    - fazer parser de parameters mais simples (EVar,EUnit,ETuple simples)
+    - EFunc receber [Stmt] que sao os parametros
+    - adicionar DCLS e SET DCLS = EARG em Compile/Func.hs
+
 - if / case as expressions
 - where ... end
 

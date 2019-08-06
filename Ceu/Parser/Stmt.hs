@@ -76,10 +76,8 @@ pPat v = lany  <|> lvar <|> try lunit  <|> lnumber <|>
                 exp  <- expr
                 return $ EExp annz{source=pos} exp
 
-matchLocType1 :: Source -> Exp -> TypeC -> Maybe Stmt
-matchLocType1 src loc (tp_,ctrs) = case (aux src loc tp_) of
-                                    Nothing -> Nothing
-                                    Just v  -> Just $ foldr (SSeq annz) (SNop annz) v
+matchLocType1 :: Source -> Exp -> TypeC -> Maybe [Stmt]
+matchLocType1 src loc (tp_,ctrs) = aux src loc tp_
   where
     aux :: Source -> Exp -> Type -> Maybe [Stmt]
     aux pos (EAny   _)     _                 = Just []
@@ -376,10 +374,10 @@ expr_func = do
   pos       <- pos2src <$> getPosition
   new       <- optionMaybe $ try $ tk_key "new"
   void      <- try $ tk_key "func"
-  (tpc,imp) <- func pos
+  (tpc,pars,imp) <- func pos
   return $ let (TFunc x FuncUnknown inp out,cz) = tpc
                tp' = (TFunc x (bool FuncUnknown FuncClosure (isJust new)) inp out,cz) in
-            EFunc annz{source=pos} tp' imp
+            EFunc annz{source=pos} tp' pars imp
 
 expr_unit :: Parser Exp
 expr_unit = do
@@ -445,7 +443,7 @@ expr = do
 
 -------------------------------------------------------------------------------
 
-func :: Source -> Parser (TypeC, Stmt)
+func :: Source -> Parser (TypeC, [Stmt], Stmt)
 func pos = do
   loc  <- pPat SET
   void <- tk_sym ":"
@@ -462,14 +460,7 @@ func pos = do
   imp  <- stmt
   void <- tk_key "end"
 
-  ann  <- do { return annz{source=pos} }
-
-  return $ (tp,
-            SSeq ann
-                dcls
-                (SSeq ann
-                  (SSet ann True False loc (EArg ann))
-                  imp))
+  return (tp, dcls, imp)
 
 stmt_funcs :: Parser Stmt
 stmt_funcs = do
@@ -477,13 +468,13 @@ stmt_funcs = do
   new    <- optionMaybe $ try $ tk_key "new"
   void   <- tk_key "func"
   f      <- tk_op <|> tk_var
-  tp_imp <- optionMaybe $ try $ func pos
+  tp_pars_imp <- optionMaybe $ try $ func pos
   ann    <- do { return annz{source=pos} }
-  ret    <- case tp_imp of
+  ret    <- case tp_pars_imp of
               Nothing -> do
                 void <- tk_sym ":"
                 tp   <- pTypeContext
                 return $ SVar ann f tp
-              Just (tp,imp) -> do
-                return $ SFunc ann f {-(bool Nothing (Just "?") (isJust new))-} tp imp
+              Just (tp,pars,imp) -> do
+                return $ SFunc ann f {-(bool Nothing (Just "?") (isJust new))-} tp pars imp
   return ret

@@ -105,7 +105,9 @@ spec = do
         (SInst'' annz "F3able" (int,cz)
           [(annz,"f3",(TFunc False FuncGlobal (TAny False "Int") (int),cz),True)]
         (SVar'' annz "$f3$(Int -> Int)$" (TFunc False FuncGlobal (TAny False "Int") (int),cz)
-          (set' annz False (EVar annz "$f3$(Int -> Int)$") (EFunc annz (TFunc False FuncGlobal (TAny False "Int") (int),cz) (SRet annz (ECons annz ["Int","10"]))) (SNop annz) (SRet annz (EError annz (-2))))))
+          (set' annz False (EVar annz "$f3$(Int -> Int)$")
+            (EFunc annz (TFunc False FuncGlobal (TAny False "Int") (int),cz) (SRet annz (ECons annz ["Int","10"])))
+            (SNop annz) (SRet annz (EError annz (-2))))))
 
     it "class/inst/1" $ do
       compile (SSeq annz
