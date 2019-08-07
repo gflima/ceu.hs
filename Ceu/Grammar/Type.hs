@@ -26,33 +26,31 @@ type TypeC = (Type, Cs.Map)
 
 -------------------------------------------------------------------------------
 
-type FT_Upv = (FuncType, Set.Set ID_Var)
+type FuncUpvals = Set.Set (ID_Var,Int) --  [(upval id, abs scope)]
 
 data FuncType = FuncUnknown
-              | FuncGlobal      -- cannot access non-locals             // can    be passed and returned
-              | FuncNested      -- can    access non-locals             // cannot be passed or  returned
-              | FuncClosure Int -- can    access non-local args by ref  // can    be passed and returned
+              | FuncGlobal  -- cannot access non-locals             // can    be passed and returned
+              | FuncNested  -- can    access non-locals             // cannot be passed or  returned
+              | FuncClosure -- can    access non-local args by ref  // can    be passed and returned
+                  FuncUpvals --  [(upval id, abs scope)]
   deriving (Eq, Show)
 
-ftupvEmpty :: FuncType -> FT_Upv
-ftupvEmpty ftp = (ftp, Set.empty)
-
-ftupvMin :: FT_Upv -> FT_Upv -> FT_Upv
-ftupvMin (FuncNested,_)     _                  = (FuncNested,  Set.empty)
-ftupvMin _                  (FuncNested,_)     = (FuncNested,  Set.empty)
-ftupvMin (FuncClosure x,lx) (FuncClosure y,ly) = (FuncClosure (max x y), Set.union lx ly)
-ftupvMin (FuncClosure x,lx) _                  = (FuncClosure x, lx)
-ftupvMin _                  (FuncClosure y,ly) = (FuncClosure y, ly)
-ftupvMin (FuncGlobal,_)         _              = (FuncGlobal,  Set.empty)
-ftupvMin _                  (FuncGlobal,_)     = (FuncGlobal,  Set.empty)
-ftupvMin _                  _                  = (FuncUnknown, Set.empty)
+ftMin :: FuncType -> FuncType -> FuncType
+ftMin FuncNested      _               = FuncNested
+ftMin _               FuncNested      = FuncNested
+ftMin (FuncClosure x) (FuncClosure y) = FuncClosure $ Set.union x y
+ftMin (FuncClosure x) _               = FuncClosure x
+ftMin _               (FuncClosure y) = FuncClosure y
+ftMin FuncGlobal      _               = FuncGlobal
+ftMin _               FuncGlobal      = FuncGlobal
+ftMin _               _               = FuncUnknown
 
 -- len  l-1  l-2   l-3  l-4  ...    1    0
 --   [ locs,args, lvl1,args, ..., glbs,args ]
-ftupvReq :: Int -> (Int,Bool) -> ID_Var -> FT_Upv  -- (length,n,ref)
-ftupvReq len (n,ref) id | ref && n==len-4  = (FuncClosure maxBound, Set.singleton id)    -- only non-local args by ref
-ftupvReq len (n,_)   _  | n>=len-2 || n<=1 = (FuncGlobal, Set.empty)
-ftupvReq _   _       _                     = (FuncNested, Set.empty)
+ftReq :: Int -> (ID_Var,Bool,Int) -> FuncType  -- (length, (id,ref,n)
+ftReq len (id,ref,n) | ref && n==len-4  = FuncClosure $ Set.singleton $ (id,0)    -- only non-local args by ref
+ftReq len (_,_,   n) | n>=len-2 || n<=1 = FuncGlobal
+ftReq _   _                             = FuncNested
 
 -------------------------------------------------------------------------------
 
@@ -174,7 +172,7 @@ instantiate vars (TAny   False var)         = case find (\(var',_) -> var==var')
                                                 Nothing    -> TAny False var
                                                 Just (_,v) -> v
 instantiate vars (TData  False hier ofs st) = TData  False hier (map (instantiate vars) ofs) (instantiate vars st)
-instantiate vars (TFunc  False ftp inp out) = TFunc  False ftp (instantiate vars inp) (instantiate vars out)
+instantiate vars (TFunc  False ft inp out)  = TFunc  False ft (instantiate vars inp) (instantiate vars out)
 instantiate vars (TTuple False tps)         = TTuple False $ map (instantiate vars) tps
 instantiate _    tp                         = tp
 
@@ -283,11 +281,11 @@ comPre tps = yyy where
                                     tp -> case comPre $ map (\(TData False _ _ st)->st) $ filter isTData tps of
                                       Nothing  -> Just $ TData False tp x y
                                       Just tp' -> Just $ TData False tp x tp'
-            TFunc False ftp inp out -> f $ unzip $ map (\(TFunc False ftp inp out)->(inp,out)) $ filter isTFunc tps
+            TFunc False ft inp out -> f $ unzip $ map (\(TFunc False ft inp out)->(inp,out)) $ filter isTFunc tps
                                     where
                                       f (inps,outs) =
                                         case (comPre inps, comPre outs) of
-                                          (Just inp, Just out) -> Just $ TFunc False ftp inp out
+                                          (Just inp, Just out) -> Just $ TFunc False ft inp out
                                           otherwise            -> Nothing
 
             TTuple False ts      -> if all isJust yyy then
@@ -397,9 +395,9 @@ supOf sup@(TData ref1 x ofs1 st1) sub@(TData ref2 y ofs2 st2)
 supOf sup@(TData False _ _ _) _                   = (False, sup,   [])
 supOf sup                     (TData False _ _ _) = (False, sup,   [])
 
-supOf (TFunc False ftp1 inp1 out1) (TFunc False ftp2 inp2 out2) = (ret, TFunc False ftp inp out, k++z) where
-  ftp = case (ftp1,ftp2) of
-          (_,_) | ftp1==ftp2 -> ftp1
+supOf (TFunc False ft1 inp1 out1) (TFunc False ft2 inp2 out2) = (ret, TFunc False ft inp out, k++z) where
+  ft = case (ft1,ft2) of
+          (_,_) | ft1==ft2 -> ft1
   (i,inp,k) = inp2 `supOf` inp1      -- contravariance on inputs
   (x,out,z) = out1 `supOf` out2
   ret = i && x

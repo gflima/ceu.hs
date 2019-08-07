@@ -9,7 +9,7 @@
     - verificar se a declaração (new ou não) corresponde ao tipo sintetizado
     - alterar a árvore de EFunc para fazer
         - (upv1,upv2) = EUpv
-    - guardar em EFunc os ids
+    - guardar em EFunc os ids para serem passados na chamada
 - Cada ECall em tempo de execucao
     - se EFunc tiver lista de upvs
         - EUpv = (upv1,...)

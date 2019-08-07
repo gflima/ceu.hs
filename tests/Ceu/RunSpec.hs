@@ -407,7 +407,7 @@ spec = do
            ])
         `shouldBe` Left "TODO: 10"
 
-      it "FuncClosure return - reference in two levels" $
+      it "TODO: FuncClosure return - reference in two levels" $
         (run True $
           unlines [
             "func h () : (() -> Int) do",

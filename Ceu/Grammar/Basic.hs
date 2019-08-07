@@ -18,10 +18,11 @@ data Exp
     | ECons   Ann ID_Data_Hier   -- Bool.True ; Int.1 ; Tree.Node
     | EField  Ann ID_Data_Hier String -- List.Cons._1 // Student.age
     | ETuple  Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
-    | EFunc   Ann TypeC Stmt     -- function implementation
+    | EFunc   Ann TypeC Exp Stmt -- function implementation
     | ECall   Ann Exp Exp        -- f a ; f(a) ; f(1,2)
     | EAny    Ann
     | EArg    Ann
+    | EUpv    Ann
     | EExp    Ann Exp
     | EMatch  Ann Exp Exp
     | ERefRef Ann Exp            -- &a    // get reference of expression
@@ -37,10 +38,11 @@ instance HasAnn Exp where
     getAnn (ECons   z _)   = z
     getAnn (EField  z _ _) = z
     getAnn (ETuple  z _)   = z
-    getAnn (EFunc   z _ _) = z
+    getAnn (EFunc   z _ _ _) = z
     getAnn (ECall   z _ _) = z
     getAnn (EAny    z)     = z
     getAnn (EArg    z)     = z
+    getAnn (EUpv    z)     = z
     getAnn (EExp    z _)   = z
     getAnn (EMatch  z _ _) = z
     getAnn (ERefRef z _)   = z
@@ -119,8 +121,9 @@ show_exp spc (ECons  _ ["Int",n]) = n
 show_exp spc (ECons  _ id)        = hier2str id
 show_exp spc (EVar   _ id)        = id
 show_exp spc (EArg   _)           = "arg"
+show_exp spc (EUpv   _)           = "upv"
 show_exp spc (ETuple _ es)        = "(" ++ intercalate "," (map (show_exp spc) es) ++ ")"
-show_exp spc (EFunc  _ _ p)       = "func" ++ "\n" ++ show_stmt (spc+4) p
+show_exp spc (EFunc  _ _ _ p)     = "func" ++ "\n" ++ show_stmt (spc+4) p
 show_exp spc (ECall  _ e1 e2)     = "call" ++ " " ++ show_exp spc e1 ++ " " ++ show_exp spc e2
 show_exp spc (EMatch _ exp pat)   = "match" ++ " " ++ show_exp spc exp ++ " with " ++ show_exp spc pat
 show_exp spc (EExp   _ exp)       = show_exp spc exp
@@ -148,7 +151,7 @@ map_stmt f@(fs,_,_)  (SNop   z)                  = fs (SNop   z)
 map_exp :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Exp -> Exp
 map_exp f@(_,fe,_)  (ECons  z id)    = fe (ECons  z id)
 map_exp f@(_,fe,_)  (ETuple z es)    = fe (ETuple z (map (map_exp f) es))
-map_exp f@(_,fe,ft) (EFunc  z tp p)  = fe (EFunc  z (ft tp) (map_stmt f p))
+map_exp f@(_,fe,ft) (EFunc  z tp us p) = fe (EFunc  z (ft tp) (map_exp f us) (map_stmt f p))
 map_exp f@(_,fe,_)  (ECall  z e1 e2) = fe (ECall  z (map_exp f e1) (map_exp f e2))
 map_exp f@(_,fe,_)  exp              = fe exp
 

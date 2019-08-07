@@ -1,5 +1,6 @@
 module Ceu.Parser.Type where
 
+import qualified Data.Set as Set
 import Control.Exception        (assert)
 
 import Text.Parsec.Prim         ((<|>), (<?>), try)
@@ -42,14 +43,14 @@ type_N ref = do
 type_F :: Bool -> Parser Type
 type_F ref = do
     void <- tk_sym "("
-    ftp  <- option FuncUnknown $ do
+    ft   <- option FuncUnknown $ do
                                   void <- try $ tk_key "new"
-                                  return $ FuncClosure maxBound
+                                  return $ FuncClosure $ Set.empty
     inp  <- pType
     void <- tk_sym "->"
     out  <- pType
     void <- tk_sym ")"
-    return $ TFunc ref ftp inp out
+    return $ TFunc ref ft inp out
 
 type_V :: Bool -> Parser Type
 type_V ref = do

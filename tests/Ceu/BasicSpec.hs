@@ -27,7 +27,7 @@ mmm' z b pat exp p1 p2 = SMatch z True b exp [(SNop z,pat,p1),(SNop z,EAny z, SR
 
 func id tp p = SVar annz id tp
                 (mmm annz False (EVar annz id)
-                  (EFunc annz tp (SRet annz (EError annz 99)))
+                  (EFunc annz tp (EUnit annz) (SRet annz (EError annz 99)))
                   p
                   (SRet annz (EError annz 99)))
 
@@ -265,7 +265,7 @@ spec = do
       (fst $ TypeSys.go
         (SVar annz "f" (TFunc False FuncGlobal (TUnit False) (TUnit False),cz)
         (mmm annz False (EVar annz "f")
-          (EFunc annz (TFunc False FuncGlobal (TUnit False) (TUnit False),cz)
+          (EFunc annz (TFunc False FuncGlobal (TUnit False) (TUnit False),cz) (EUnit annz)
             (SRet annz (EArg annz)))
           (SNop annz)
           (SNop annz))))
@@ -294,7 +294,7 @@ spec = do
             (SVar annz "fff" (TFunc False FuncGlobal (int) (int),cz)
             (mmm annz False
               (EVar annz "fff")
-              (EFunc annz (TFunc False FuncGlobal (int) (int),cz)
+              (EFunc annz (TFunc False FuncGlobal (int) (int),cz) (EUnit annz)
                 (SRet annz (ECons annz ["Int","1"])))
               (SSeq annz
                 (SNop annz)
@@ -730,7 +730,7 @@ spec = do
         (SVar annz "$fff$((A,A) -> ())$" (TFunc False FuncGlobal (TTuple False [TData False ["A"] [] (TUnit False),TData False ["A"] [] (TUnit False)]) (TUnit False),cz)
         (SVar annz "$fff$((A,A) -> ())$" (TFunc False FuncGlobal (TTuple False [TData False ["A"] [] (TUnit False),TData False ["A"] [] (TUnit False)]) (TUnit False),cz)
         (mmm annz False (EVar annz "$fff$((A,A) -> ())$")
-          (EFunc (annz {typec = (TFunc False FuncGlobal (TTuple False [TData False ["A"] [] (TUnit False),TData False ["A"] [] (TUnit False)]) (TUnit False),cz)}) (TFunc False FuncGlobal (TTuple False [TData False ["A"] [] (TUnit False),TData False ["A"] [] (TUnit False)]) (TUnit False),cz) (SRet annz (EError annz 99)))
+          (EFunc (annz {typec = (TFunc False FuncGlobal (TTuple False [TData False ["A"] [] (TUnit False),TData False ["A"] [] (TUnit False)]) (TUnit False),cz)}) (TFunc False FuncGlobal (TTuple False [TData False ["A"] [] (TUnit False),TData False ["A"] [] (TUnit False)]) (TUnit False),cz) (EUnit annz) (SRet annz (EError annz 99)))
           (SCall annz
             (ECall (annz {typec = ((TUnit False),cz)})
               (EVar (annz {typec = (TFunc False FuncGlobal (TTuple False [TData False ["A"] [] (TUnit False),TData False ["A"] [] (TUnit False)]) (TUnit False),cz)}) "$fff$((A,A) -> ())$")

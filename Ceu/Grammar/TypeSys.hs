@@ -1,6 +1,6 @@
 module Ceu.Grammar.TypeSys where
 
-import Data.List (find, intercalate, unzip, unzip3, unzip4, isPrefixOf, elemIndex)
+import Data.List (sort, find, intercalate, unzip, unzip3, unzip4, isPrefixOf, elemIndex)
 import Data.Maybe (isNothing, isJust, fromJust)
 import Data.Bool (bool)
 import Data.Either (isRight)
@@ -28,9 +28,9 @@ trd4 (_,_,x,_) = x
 fou4 (_,_,_,x) = x
 
 checkFuncNested :: String -> Exp -> Errors
-checkFuncNested str (EFunc  z (TFunc _ FuncNested _ _,_) _) = [toError z str]
-checkFuncNested str (ETuple _ l)                            = concatMap (checkFuncNested str) l
-checkFuncNested _   _                                       = []
+checkFuncNested str (EFunc  z (TFunc _ FuncNested _ _,_) _ _) = [toError z str]
+checkFuncNested str (ETuple _ l)                              = concatMap (checkFuncNested str) l
+checkFuncNested _   _                                         = []
 
 idtp id tp = "$" ++ id ++ "$" ++ T.show' tp ++ "$"
 
@@ -42,10 +42,10 @@ go p = (es,p') where
 
 -------------------------------------------------------------------------------
 
-findVar :: Ann -> (ID_Var,Relation,TypeC) -> Envs -> Either Errors ((Int,Bool), Stmt, (Type, [(ID_Var,Type)]))
+findVar :: Ann -> (ID_Var,Relation,TypeC) -> Envs -> Either Errors ((Bool,Int), Stmt, (Type, [(ID_Var,Type)]))
 findVar z x (env:envs) =
   case (envs, findVar' z x env) of
-    (_,  Right (i,j)     ) -> Right ((length envs, getRef i), i, j)
+    (_,  Right (i,j)     ) -> Right ((getRef i, length envs), i, j)
     (_,  Left  (True, es)) -> Left es          -- True = stop here with error
     ([], Left  (False,es)) -> Left es
     (_,  Left  (False,es)) -> findVar z x envs
@@ -147,22 +147,24 @@ combos' lvl envs clss = combos insts where
 
 -------------------------------------------------------------------------------
 
-fPat :: Envs -> Bool -> Exp -> (Errors,FT_Upv,TypeC,Exp)
-fPat envs ini (EAny   z)     = ([], ftupvEmpty FuncGlobal, (TAny False "?",cz), EAny z)
-fPat envs ini (EUnit  z)     = ([], ftupvEmpty FuncGlobal, (TUnit False,   cz), EUnit z)
-fPat envs ini (EVar   z id)  = case findVar z (id,SUP,(TAny False "?",cz)) envs of
-                                Right (lnr, SVar _ _ tpc _, _) -> ([], ftupvReq (length envs) lnr id, tpc', exp') where
-                                                                    (tpc',exp') = toRef tpc (EVar z id)
-                                Left  es                       -> (es, ftupvEmpty FuncGlobal, (TAny False "?",cz), EVar z id)
-                              where
-                                toRef tpc exp = if not $ isRefC tpc then
-                                                  (tpc,exp)
-                                                else if ini then
-                                                  (tpc,ERefIni z exp)
-                                                else
-                                                  (T.toDerC tpc, ERefDer z{typec=T.toDerC tpc} exp)
+fPat :: Envs -> Bool -> Exp -> (Errors,FuncType,TypeC,Exp)
+fPat envs ini (EAny   z)     = ([], FuncGlobal, (TAny False "?",cz), EAny z)
+fPat envs ini (EUnit  z)     = ([], FuncGlobal, (TUnit False,   cz), EUnit z)
+fPat envs ini (EVar   z id)  =
+  case findVar z (id,SUP,(TAny False "?",cz)) envs of
+    Left  es -> (es, FuncGlobal, (TAny False "?",cz), EVar z id)
+    Right ((ref,n), SVar _ _ tpc _, _) ->
+      ([], ftReq (length envs) (id,ref,n), tpc', exp')
+        where
+          (tpc',exp') = toRef tpc (EVar z id)
+          toRef tpc exp = if not $ isRefC tpc then
+                            (tpc,exp)
+                          else if ini then
+                            (tpc,ERefIni z exp)
+                          else
+                            (T.toDerC tpc, ERefDer z{typec=T.toDerC tpc} exp)
 
-fPat envs ini (ECons  z h)   = (es, ftupvEmpty FuncGlobal, tp, ECons z{typec=tp} h) where
+fPat envs ini (ECons  z h)   = (es, FuncGlobal, tp, ECons z{typec=tp} h) where
                                 (es,tp) = case find (isData $ hier2str h) (concat envs) of
                                   Nothing -> ([toError z $ "data '" ++ (hier2str h) ++ "' is not declared"],
                                               (TData False [] [] (TAny False "?"),cz))
@@ -170,19 +172,20 @@ fPat envs ini (ECons  z h)   = (es, ftupvEmpty FuncGlobal, tp, ECons z{typec=tp}
                                     (TData False _ ofs st, ctrs) -> (es,tp') where
                                       tp' = (TData False (take 1 h) ofs st, ctrs)
                                       es  = []-- map (toError z) (relatesErrorsC SUB tp tp')
-fPat envs ini (ETuple z ls)  = (concat ess, ftp, (TTuple False (map fst tps),cz), ETuple z ls') where   -- TODO: cz should be union of all snd
-                                (ess, ftps, tps, ls') = unzip4 $ map (fPat envs ini) ls
-                                ftp = foldr ftupvMin (ftupvEmpty FuncUnknown) ftps
-fPat envs ini (ECall  z f e) = (esf++ese, ftupvMin ftp1 ftp2, (tp',ctrs), ECall z f' e') where
-                                (esf,ftp1,tpf,f') = fPat envs ini f
-                                --(esf,f')   = expr z (SUP,(TAny False "?",cz)) envs f
-                                (ese,(ftp2,_),e') = expr z (SUP,(TAny False "?",cz)) envs e
+fPat envs ini (ETuple z ls)  = (concat ess, ft, (TTuple False (map fst tps),cz), ETuple z ls') where   -- TODO: cz should be union of all snd
+                                (ess, fts, tps, ls') = unzip4 $ map (fPat envs ini) ls
+                                ft = foldr ftMin FuncUnknown fts
+
+fPat envs ini (ECall  z f e) = (esf++ese, ftMin ft1 ft2, (tp',ctrs), ECall z f' e') where
+                                (esf,ft1,tpf,f') = fPat envs ini f
+                                (ese,ft2,e')     = expr z (SUP,(TAny False "?",cz)) envs e
                                 (tp,ctrs) = typec $ getAnn f'
                                 tp'       = case tp of
                                   TFunc False _ _ tp -> tp
                                   tp                 -> tp
-fPat envs ini (EExp   z e)   = (es, ftp, tpc, EExp z e') where
-                                (es,ftp,tpc,e') = fPat envs ini e
+
+fPat envs ini (EExp   z e)   = (es, ft, tpc, EExp z e') where
+                                (es,ft,tpc,e') = fPat envs ini e
 
 -------------------------------------------------------------------------------
 
@@ -226,9 +229,9 @@ getErrsTypesDeclared z envs tp = concatMap f (T.getDs tp) where
 
 -------------------------------------------------------------------------------
 
-stmt :: Envs -> TypeC -> Stmt -> (Errors, FT_Upv, Stmt)
+stmt :: Envs -> TypeC -> Stmt -> (Errors, FuncType, Stmt)
 
-stmt envs tpr s@(SClass z id ctrs ifc p) = (esMe ++ esExts ++ es, ftp, p') where
+stmt envs tpr s@(SClass z id ctrs ifc p) = (esMe ++ esExts ++ es, ft, p') where
   esMe    = errDeclared z Nothing "constraint" id (concat envs)
   esExts  = case Cs.toList ctrs of
               [(_,sups)] -> concatMap f sups where
@@ -236,10 +239,10 @@ stmt envs tpr s@(SClass z id ctrs ifc p) = (esMe ++ esExts ++ es, ftp, p') where
                   Nothing -> [toError z $ "constraint '" ++ sup ++ "' is not declared"]
                   Just _  -> []
               otherwise  -> error "TODO: multiple vars"
-  (es,ftp,p') = stmt (envsAdd envs s) tpr p
+  (es,ft,p') = stmt (envsAdd envs s) tpr p
 
-stmt envs tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ftp, p'') where
-  (esP, ftp, p'') = stmt (envsAdd envs s) tpr p'
+stmt envs tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ft, p'') where
+  (esP, ft, p'') = stmt (envsAdd envs s) tpr p'
   (p', es)  =
     case find (isClass cls) (concat envs) of
       -- class is not declared
@@ -373,22 +376,22 @@ stmt envs tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ftp, p'') wher
 
 stmt envs tpr s@(SData z nms (tpD@(TData False hr _ st),cz) abs p) =
   (es_dcl ++ (errDeclared z Nothing "data" (T.hier2str hr) (concat envs)) ++ es,
-  ftp,
+  ft,
   SData z nms (tpD,cz) abs p')
   where
-    (es,ftp,p') = stmt (envsAdd envs s) tpr p
+    (es,ft,p') = stmt (envsAdd envs s) tpr p
     es_dcl = (getErrsTypesDeclared z (concat envs) st) ++ case T.getSuper hr of
                 Nothing  -> []
                 Just sup -> (getErrsTypesDeclared z (concat envs) (TData False sup [] (TUnit False)))
 
-stmt envs tpr s@(SVar z id tpc@(tp,ctrs) p) = (es_data ++ es_id ++ es, ftp, f p'') where
+stmt envs tpr s@(SVar z id tpc@(tp,ctrs) p) = (es_data ++ es_id ++ es, ft, f p'') where
   es_data = getErrsTypesDeclared z (concat envs) tp
   es_id   = errDeclared z (Just chk) "variable" id (concat envs) where
               chk :: Stmt -> Bool
               chk (SVar _ id1 tpc'@(TFunc False _ _ _,_) (SMatch _ True False _ [(_,EVar _ id2,_)])) = (id1 /= id2)
               chk (SVar _ id1 tpc'@(TFunc False _ _ _,_) _) = (tpc == tpc') -- function prototype
               chk _ = False
-  (es,ftp,p'') = stmt (envsAdd envs s) tpr p'
+  (es,ft,p'') = stmt (envsAdd envs s) tpr p'
 
   -- In case of a parametric/generic var with a constraint, instantiate it for
   -- each instance of the constraint:
@@ -410,15 +413,15 @@ stmt envs tpr s@(SVar z id tpc@(tp,ctrs) p) = (es_data ++ es_id ++ es, ftp, f p'
 
 -------------------------------------------------------------------------------
 
-stmt envs tpr (SMatch z ini fce exp cses) = (es', ftupvMin ftp1 ftp2, SMatch z ini fce exp' cses'') where
-  es'                   = esc ++ escs ++ esem
-  (ese, (ftp1,_),exp')  = expr z (SUP,tpl) envs exp
-  (escs,ftp2,tpl,cses') = (es, ftp, tpl, cses')
+stmt envs tpr (SMatch z ini fce exp cses) = (es', ftMin ft1 ft2, SMatch z ini fce exp' cses'') where
+  es'                  = esc ++ escs ++ esem
+  (ese, ft1,exp')      = expr z (SUP,tpl) envs exp
+  (escs,ft2,tpl,cses') = (es, ft, tpl, cses')
     where
       --(l1,l2) :: ( [(Errors,TypeC,Exp)] , [(Errors,Stmt)] )
       (l0,l1,l2) = unzip3 $ map f cses where
-                    f (ds,pt,st) = ((es,ftp,ds'), fPat envs' ini pt, stmt envs' tpr st) where
-                      (es,ftp,ds') = stmt envs tpr ds
+                    f (ds,pt,st) = ((es,ft,ds'), fPat envs' ini pt, stmt envs' tpr st) where
+                      (es,ft,ds') = stmt envs tpr ds
                       envs' = (g ds' x):xs where
                                 (x:xs) = envs
                                 g   (SNop _)       env = env
@@ -433,8 +436,8 @@ stmt envs tpr (SMatch z ini fce exp cses) = (es', ftupvMin ftp1 ftp2, SMatch z i
       cses' :: [(Stmt,Exp,Stmt)]
       cses' = zip3 (map trd3 l0) (map fou4 l1) (map trd3 l2)
 
-      ftp :: FT_Upv
-      ftp = foldr ftupvMin (ftupvEmpty FuncUnknown) $ (map snd3 l0) ++ (map snd4 l1) ++ (map snd3 l2)
+      ft :: FuncType
+      ft = foldr ftMin FuncUnknown $ (map snd3 l0) ++ (map snd4 l1) ++ (map snd3 l2)
 
   (ok, esm) = matchX (concat envs) (map snd3 cses') exp'
   esem      = bool esm ese (null esm)    -- hide ese if esm
@@ -455,49 +458,44 @@ stmt envs tpr (SMatch z ini fce exp cses) = (es', ftupvMin ftp1 ftp2, SMatch z i
 
 -------------------------------------------------------------------------------
 
-stmt envs _   (SCall z exp)  = (ese++esf, ftp, SCall z exp') where
-                                (ese,(ftp,_),exp') = expr z (SUP, (TAny False "?",cz)) envs exp
+stmt envs _   (SCall z exp)  = (ese++esf, ft, SCall z exp') where
+                                (ese,ft,exp') = expr z (SUP, (TAny False "?",cz)) envs exp
                                 esf = case exp' of
                                   ECall _ _ _ -> []
                                   otherwise  -> [toError z "expected call"]
 
-stmt envs tpr (SSeq z p1 p2) = (es1++es2, ftupvMin ftp1 ftp2, SSeq z p1' p2')
+stmt envs tpr (SSeq z p1 p2) = (es1++es2, ftMin ft1 ft2, SSeq z p1' p2')
   where
-    (es1,ftp1,p1') = stmt envs  tpr p1
-    (es2,ftp2,p2') = stmt envs' tpr p2
+    (es1,ft1,p1') = stmt envs  tpr p1
+    (es2,ft2,p2') = stmt envs' tpr p2
     envs' = case p1' of
               (SMatch _ True False (EArg _) [_]) -> []:envs  -- add body environment after args assignment
               _ -> envs
 
-stmt envs tpr (SLoop z p)    = (es, ftp, SLoop z p') where
-                                (es,ftp,p') = stmt envs tpr p
+stmt envs tpr (SLoop z p)    = (es, ft, SLoop z p') where
+                                (es,ft,p') = stmt envs tpr p
 
-stmt envs tpr (SRet z exp)   = (es ++ es1 ++ es2, ftp, SRet z exp') where
-                                (es,(ftp,_),exp') = expr z (SUP,tpr) envs exp
+stmt envs tpr (SRet z exp)   = (es ++ es1 ++ es2, ft, SRet z exp') where
+                                (es,ft,exp') = expr z (SUP,tpr) envs exp
                                 es1 = checkFuncNested "cannot return nested function" exp'
                                 es2 = case fst $ typec $ getAnn exp' of
-                                        TFunc _ (FuncClosure n) _ _ | n  > length envs -> []
-                                                                    | n <= length envs -> ["cannot return closure at this level"]
+                                        TFunc _ (FuncClosure us) _ _ | n  < length envs -> []
+                                                                     | n >= length envs -> ["cannot return closure : upvalues go out of scope"]
+                                          where
+                                            n = traceShow us $ Set.fold (max.snd) 0 us
                                         otherwise                                      -> []
-{-
-                                -- TODO: closures
-                                xxx = f $ fst $ typec $ getAnn exp' where
-                                  f (TFunc False _ _ _) = True
-                                  f (TTuple False l)  = or $ map f l
-                                  f _           = False
--}
 
-stmt _   _   (SNop z)       = ([], ftupvEmpty FuncGlobal, SNop z)
+stmt _   _   (SNop z)       = ([], FuncGlobal, SNop z)
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
-expr :: Ann -> (Relation,TypeC) -> Envs -> Exp -> (Errors, (FT_Upv,Int), Exp)
-expr z (rel,txp) envs exp = (es1++es2, (ftp,lvl), exp') where
+expr :: Ann -> (Relation,TypeC) -> Envs -> Exp -> (Errors, FuncType, Exp)
+expr z (rel,txp) envs exp = (es1++es2, ft, exp') where
   --(es1, exp') = expr' (rel,bool (TAny False "?" []) txp (rel/=ANY)) envs exp
   --(es1, exp') = expr' (rel,bool (TAny False "?" []) txp (rel==SUP)) envs exp
                            -- only force expected type on SUP
-  (es1, (ftp,lvl), exp') = expr' (rel,txp) envs exp
+  (es1, ft, exp') = expr' (rel,txp) envs exp
   es2 = if not.null $ es1 then [] else
           map (toError z) (relatesErrorsC rel txp (typec $ getAnn exp'))
 
@@ -512,40 +510,40 @@ expr z (rel,txp) envs exp = (es1++es2, (ftp,lvl), exp') where
 --  * cons:   ?
 --  * tuple:  instantiate sub exps
 
-expr' :: (Relation,TypeC) -> Envs -> Exp -> (Errors, (FT_Upv,Int), Exp)
+expr' :: (Relation,TypeC) -> Envs -> Exp -> (Errors, FuncType, Exp)
 
-expr' _       _   (EError  z v)     = ([], (ftupvEmpty FuncGlobal,0), EError  z{typec=(TBot False,cz)} v)
-expr' _       _   (EUnit   z)       = ([], (ftupvEmpty FuncGlobal,0), EUnit   z{typec=(TUnit False,cz)})
-expr' (_,txp) _   (EArg    z)       = ([], (ftupvEmpty FuncGlobal,0), EArg    z{typec=txp})
+expr' _       _   (EError  z v)     = ([], FuncGlobal, EError  z{typec=(TBot False,cz)} v)
+expr' _       _   (EUnit   z)       = ([], FuncGlobal, EUnit   z{typec=(TUnit False,cz)})
+expr' (_,txp) _   (EArg    z)       = ([], FuncGlobal, EArg    z{typec=txp})
 
-expr' _ envs (EFunc z tpc@(TFunc False ftp inp out,cs) p) = (es++esf, (ftupvEmpty FuncGlobal,0), EFunc z{typec=tpc'} tpc' p'')
+expr' _ envs (EFunc z tpc@(TFunc False ft inp out,cs) (EUnit _) p) = (es++esf, FuncGlobal, EFunc z{typec=tpc'} tpc' (EUnit z) p'')
  where
-  tpc' = (TFunc False ftp' inp out,cs)
-  (es,(ftp',_),p') = stmt ([]:envs) (out,cs) p      -- add args environment, locals to be added on Match...EArg
-  esf = case (ftp,ftp') of
-          (_,_) | ftp == ftp' -> []
+  tpc' = (TFunc False ft' inp out,cs)
+  (es,ft',p') = stmt ([]:envs) (out,cs) p      -- add args environment, locals to be added on Match...EArg
+  esf = case (ft,ft') of
+          (_,_) | ft == ft' -> []
           (FuncClosure _,FuncClosure _) -> []
           (FuncClosure _,_)             -> [toError z "unexpected `new`: function is not a closure"]
           (_,FuncClosure _)             -> [toError z "expected `new`: function is a closure"]
           (FuncUnknown,_)               -> []
 
-  p'' = case ftp' of
-          FuncClosure _ -> p'
+  p'' = case ft' of
+          FuncClosure l -> traceShow l p'
           otherwise     -> p'
 
-expr' _ envs (EMatch z exp pat) = (esp++esem++esc, (ftupvMin ftp1 ftp2,0),
+expr' _ envs (EMatch z exp pat) = (esp++esem++esc, ftMin ft1 ft2,
                                   EMatch z{typec=(TData False ["Bool"] [] (TUnit False),cz)} exp' pat')
   where
-    (esp,ftp1,tpp,pat') = fPat envs False pat
-    (ese,(ftp2,_),exp') = expr z (SUP,tpp) envs exp
-    (ok, esm)           = (ok, map (toError z) esm) where (ok,esm) = matchX (concat envs) [pat'] exp'
-    esem                = bool esm ese (null esm)    -- hide ese if esm
+    (esp,ft1,tpp,pat') = fPat envs False pat
+    (ese,ft2,exp')     = expr z (SUP,tpp) envs exp
+    (ok, esm)          = (ok, map (toError z) esm) where (ok,esm) = matchX (concat envs) [pat'] exp'
+    esem               = bool esm ese (null esm)    -- hide ese if esm
     esc = if null esem then
             bool [] [toError z "match is exhaustive"] ok
           else
             []
 
-expr' _ envs (EField z hr fld) = (es, (ftupvEmpty FuncGlobal,0), EVar z{typec=(TFunc False FuncGlobal inp out,cz)} (hr_str ++ "." ++ fld))
+expr' _ envs (EField z hr fld) = (es, FuncGlobal, EVar z{typec=(TFunc False FuncGlobal inp out,cz)} (hr_str ++ "." ++ fld))
   where
     hr_str = T.hier2str hr
 
@@ -566,7 +564,7 @@ expr' _ envs (EField z hr fld) = (es, (ftupvEmpty FuncGlobal,0), EVar z{typec=(T
                     (_, Nothing)  -> (TAny False "?", [toError z $ "field '" ++ fld ++ "' is not declared"])
                     (_, Just idx) -> (sts!!idx, [])
 
-expr' (rel,txp) envs (ECons z hr) = (es1++es2, (ftupvEmpty FuncGlobal,0), ECons z{typec=tpc2} hr)
+expr' (rel,txp) envs (ECons z hr) = (es1++es2, FuncGlobal, ECons z{typec=tpc2} hr)
   where
     hr_str = T.hier2str hr
     (tpc1,es1) = case find (isData hr_str) (concat envs) of
@@ -582,22 +580,21 @@ expr' (rel,txp) envs (ECons z hr) = (es1++es2, (ftupvEmpty FuncGlobal,0), ECons 
       Left es      -> (map (toError z) es,tpc1)
       Right (tp,_) -> ([],(tp,ctrs)) where (_,ctrs)=tpc1
 
-expr' _ envs (ETuple z exps) = (es, (ftp,lvl), ETuple z{typec=(tps',cz)} exps') where
-                                rets :: [(Errors,(FT_Upv,Int),Exp)]
+expr' _ envs (ETuple z exps) = (es, ft, ETuple z{typec=(tps',cz)} exps') where
+                                rets :: [(Errors,FuncType,Exp)]
                                 rets  = map (\e -> expr z (SUP,(TAny False "?",cz)) envs e) exps
                                 es    = concat $ map fst3 rets
                                 exps' = map trd3 rets
                                 tps'  = TTuple False (map (fst.typec.getAnn) exps')
-                                ftp   = foldr ftupvMin (ftupvEmpty FuncUnknown) $ map (fst.snd3) rets
-                                lvl   = foldr max         0           $ map (snd.snd3) rets
+                                ft    = foldr ftMin FuncUnknown $ map snd3 rets
 
-expr' (rel,txp@(txp_,cxp)) envs (EVar z id) = (es, (ftupvReq (length envs) lnr id,0), toDer $ EVar z{typec=tpc} id') where    -- EVar x
-  (id', tpc, lnr, es)
-    | (id == "_INPUT") = (id, (TData False ["Int"] [] (TUnit False),cz), (0,False), [])
+expr' (rel,txp@(txp_,cxp)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n), toDer $ EVar z{typec=tpc} id') where    -- EVar x
+  (id', tpc, (ref,n), es)
+    | (id == "_INPUT") = (id, (TData False ["Int"] [] (TUnit False),cz), (False,0), [])
     | otherwise        =
       -- find in top-level envs | id : a
       case findVar z (id,rel,txp) envs of
-        Left  es -> (id, (TAny False "?",cz), (0,False), es)
+        Left  es -> (id, (TAny False "?",cz), (False,0), es)
         Right (lnr, SVar _ id' tpc@(_,ctrs) _,_) ->
           if ctrs == cz then
             (id, tpc, lnr, [])
@@ -626,21 +623,19 @@ expr' (rel,txp@(txp_,cxp)) envs (EVar z id) = (es, (ftupvReq (length envs) lnr i
               where
                 tpc = typec $ getAnn exp
 
-expr' (rel,txpC) envs (ERefRef z exp) = (es, (ftp,lvl), ERefRef z{typec=T.toRefC $ typec $ getAnn exp'} exp')
+expr' (rel,txpC) envs (ERefRef z exp) = (es, ft, ERefRef z{typec=T.toRefC $ typec $ getAnn exp'} exp')
   where
-    (es, (ftp,_), exp') = expr z (rel,T.toDerC' txpC) envs exp
+    (es, ft, exp') = expr z (rel,T.toDerC' txpC) envs exp
     EVar _ id = case exp' of
                   (EVar    _ id)            -> exp'
                   (ERefDer _ e@(EVar _ id)) -> e
-    lvl = case findVar z (id,SUP,(TAny False "?",cz)) envs of
-            Right ((lvl,_),_,_) -> lvl
 
 expr' (rel,(txp_,cxp)) envs (ECall z f exp) = (bool ese esf (null ese) ++ esa,
-                                              (ftupvMin ftp1 ftp2, 0),
+                                              ftMin ft1 ft2,
                                               ECall z{typec=tpc_out'} f' exp')
   where
-    (ese, (ftp1,lvl), exp') = expr z (rel, (TAny False "?",cz)) envs exp
-    (esf, (ftp2,_),   f')   = expr z (rel, (TFunc False FuncUnknown (fst$typec$getAnn$exp') txp_, cxp)) envs f
+    (ese, ft1, exp') = expr z (rel, (TAny False "?",cz)) envs exp
+    (esf, ft2, f')   = expr z (rel, (TFunc False FuncUnknown (fst$typec$getAnn$exp') txp_, cxp)) envs f
                                       -- TODO: ctrs of exp'
 
     tpc_out = case typec $ getAnn f' of
@@ -648,11 +643,13 @@ expr' (rel,(txp_,cxp)) envs (ECall z f exp) = (bool ese esf (null ese) ++ esa,
       otherwise                   -> (txp_,cxp)
 
     tpc_out' = case tpc_out of
-                (TFunc False (FuncClosure maxBound) inp out, cs) -> (TFunc False (FuncClosure lvl) inp out, cs)
+                (TFunc False (FuncClosure us) inp out, cs) -> (TFunc False (FuncClosure us') inp out, cs)
+                  where
+                    us' = traceShowId us
                 otherwise -> tpc_out
 
     esa = checkFuncNested "cannot pass nested function" exp'
 
-expr' (_,txp) envs (EAny z) = ([], (ftupvEmpty FuncGlobal,0), EAny z{typec=txp})
+expr' (_,txp) envs (EAny z) = ([], FuncGlobal, EAny z{typec=txp})
 
 --expr' _ _ e = error $ show e
