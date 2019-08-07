@@ -384,7 +384,7 @@ spec = do
            ])
         `shouldBe` Left "(line 2, column 11):\nexpected `new`: function is a closure\n"
 
-      it "XXX: TODO: FuncClosure return - reference in args" $
+      it "XXX1: TODO: FuncClosure return - reference in args" $
         (run True $
           unlines [
             "func g x : (ref Int -> (new () -> Int)) do",

@@ -1,6 +1,19 @@
 - runhaskell -itests/ tests/Spec.hs
 - 7 -- Basic=1, Type=0, Eval=1, Full=0, Parser=1, Run=0, Book=4, Gen=0
 
+- Cada acesso a EVar
+    - identificar o tipo da função atual dado o acesso à variável
+    - se for um upval, subir com o identificador até a função atual
+    - (FuncType, [ID_Var])
+- Cada EFunc
+    - verificar se a declaração (new ou não) corresponde ao tipo sintetizado
+    - alterar a árvore de EFunc para fazer
+        - (upv1,upv2) = EUpv
+    - guardar em EFunc os ids
+- Cada ECall em tempo de execucao
+    - se EFunc tiver lista de upvs
+        - EUpv = (upv1,...)
+
 - EUpv
 
 - FuncClosure Int [IDS]

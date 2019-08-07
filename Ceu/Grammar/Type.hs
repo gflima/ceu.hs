@@ -26,28 +26,33 @@ type TypeC = (Type, Cs.Map)
 
 -------------------------------------------------------------------------------
 
+type FT_Upv = (FuncType, Set.Set ID_Var)
+
 data FuncType = FuncUnknown
               | FuncGlobal      -- cannot access non-locals             // can    be passed and returned
               | FuncNested      -- can    access non-locals             // cannot be passed or  returned
               | FuncClosure Int -- can    access non-local args by ref  // can    be passed and returned
   deriving (Eq, Show)
 
-minFuncType :: FuncType -> FuncType -> FuncType
-minFuncType FuncNested      _               = FuncNested
-minFuncType _               FuncNested      = FuncNested
-minFuncType (FuncClosure x) (FuncClosure y) = FuncClosure (max x y)
-minFuncType (FuncClosure x) _               = FuncClosure x
-minFuncType _               (FuncClosure y) = FuncClosure y
-minFuncType FuncGlobal      _               = FuncGlobal
-minFuncType _               FuncGlobal      = FuncGlobal
-minFuncType _               _               = FuncUnknown
+ftupvEmpty :: FuncType -> FT_Upv
+ftupvEmpty ftp = (ftp, Set.empty)
+
+ftupvMin :: FT_Upv -> FT_Upv -> FT_Upv
+ftupvMin (FuncNested,_)     _                  = (FuncNested,  Set.empty)
+ftupvMin _                  (FuncNested,_)     = (FuncNested,  Set.empty)
+ftupvMin (FuncClosure x,lx) (FuncClosure y,ly) = (FuncClosure (max x y), Set.union lx ly)
+ftupvMin (FuncClosure x,lx) _                  = (FuncClosure x, lx)
+ftupvMin _                  (FuncClosure y,ly) = (FuncClosure y, ly)
+ftupvMin (FuncGlobal,_)         _              = (FuncGlobal,  Set.empty)
+ftupvMin _                  (FuncGlobal,_)     = (FuncGlobal,  Set.empty)
+ftupvMin _                  _                  = (FuncUnknown, Set.empty)
 
 -- len  l-1  l-2   l-3  l-4  ...    1    0
 --   [ locs,args, lvl1,args, ..., glbs,args ]
-reqFuncType :: Int -> (Int,Bool) -> FuncType  -- (length,n,ref)
-reqFuncType len (n,ref) | ref && n==len-4  = FuncClosure maxBound    -- only non-local args by ref
-reqFuncType len (n,_)   | n>=len-2 || n<=1 = FuncGlobal
-reqFuncType _   _                          = FuncNested
+ftupvReq :: Int -> (Int,Bool) -> ID_Var -> FT_Upv  -- (length,n,ref)
+ftupvReq len (n,ref) id | ref && n==len-4  = (FuncClosure maxBound, Set.singleton id)    -- only non-local args by ref
+ftupvReq len (n,_)   _  | n>=len-2 || n<=1 = (FuncGlobal, Set.empty)
+ftupvReq _   _       _                     = (FuncNested, Set.empty)
 
 -------------------------------------------------------------------------------
 
