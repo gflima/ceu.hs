@@ -27,10 +27,9 @@ type TypeC = (Type, Cs.Map)
 -------------------------------------------------------------------------------
 
 data FuncType = FuncUnknown
-              | FuncGlobal    -- cannot access non-locals         // can    be passed and returned
-              | FuncNested    -- can    access non-locals         // cannot be passed or  returned
-              | FuncClosure   -- can    access non-locals by ref  // can    be passed and returned
-                  Int --[ID_Var] --       starting from args        // requires "new"
+              | FuncGlobal      -- cannot access non-locals             // can    be passed and returned
+              | FuncNested      -- can    access non-locals             // cannot be passed or  returned
+              | FuncClosure Int -- can    access non-local args by ref  // can    be passed and returned
   deriving (Eq, Show)
 
 minFuncType :: FuncType -> FuncType -> FuncType
@@ -46,7 +45,7 @@ minFuncType _               _               = FuncUnknown
 -- len  l-1  l-2   l-3  l-4  ...    1    0
 --   [ locs,args, lvl1,args, ..., glbs,args ]
 reqFuncType :: Int -> (Int,Bool) -> FuncType  -- (length,n,ref)
-reqFuncType len (n,ref) | ref && n==len-4  = FuncClosure maxBound    -- only args by ref
+reqFuncType len (n,ref) | ref && n==len-4  = FuncClosure maxBound    -- only non-local args by ref
 reqFuncType len (n,_)   | n>=len-2 || n<=1 = FuncGlobal
 reqFuncType _   _                          = FuncNested
 

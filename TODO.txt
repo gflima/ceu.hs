@@ -5,6 +5,11 @@
 
 - FuncClosure Int [IDS]
     - precisa mudar o prototipo para incluir os IDS args
+- EFunc ... [ID_Var]
+    - lista de upvalues que precisam ser acessados e guardados na closure em RT
+        - toda vez que a funcao for chamada:
+            - na chamada: esses valores tem que ser copiados para EUpv: EUpv <- vals
+            - na funcao:  os ids tem que copiar EUpv: ids <- EUpv
 - remover ref de TFunc
     - é sempre ref
 
