@@ -37,8 +37,8 @@ idtp id tp = "$" ++ id ++ "$" ++ T.show' tp ++ "$"
 go :: Stmt -> (Errors, Stmt)
 go p = (es,p') where
         (es,_,_,p') = stmt [[],[]] (TAny False "?",cz) p
-        --(es,_,p') = f $ stmt [[],[]] (TAny False "?",cz) p where f (e,x,s) = traceShow s (e,x,s)
-        --(es,_,p') = f $ stmt [[],[]] (TAny False "?",cz) p where f (e,x,s) = traceShow (show_stmt 0 s) (e,x,s)
+        --(es,_,_,p') = f $ stmt [[],[]] (TAny False "?",cz) p where f (e,x,y,s) = traceShow s (e,x,y,s)
+        --(es,_,_,p') = f $ stmt [[],[]] (TAny False "?",cz) p where f (e,x,s) = traceShow (show_stmt 0 s) (e,x,s)
 
 -------------------------------------------------------------------------------
 
@@ -469,11 +469,21 @@ stmt envs _   (SCall z exp)  = (ese++esf, ft, fts, SCall z exp') where
 
 stmt envs tpr (SSeq z p1 p2) = (es1++es2, ftMin ft1 ft2, fts1++fts2, SSeq z p1' p2')
   where
-    (es1,ft1,fts1,p1') = stmt envs  tpr p1
-    (es2,ft2,fts2,p2') = stmt envs' tpr p2
+    (es1,ft1,fts1,p1') = stmt envs   tpr p1
+    (es2,ft2,fts2,p2') = stmt envs'' tpr p2
     envs' = case p1' of
               (SMatch _ True False (EArg _) [_]) -> []:envs  -- add body environment after args assignment
               _ -> envs
+
+    -- if "g := func" and func returns closure,
+    --  copy FuncClosure complete type from body to function ID
+    envs'' = case p1' of
+              (SMatch _ True _ exp [(_,(EVar _ id),_)]) ->
+                case findVar z (id,SUP,(TAny False "?",cz)) envs' of
+                  Right (_, SVar z _ (TFunc _ _ _ (TFunc _ (FuncClosure us) _ _),_) _, _) ->
+                    envsAdd envs' (SVar z id (typec $ getAnn exp) (SNop z))
+                  _ -> envs'
+              _ -> envs'
 
 stmt envs tpr (SLoop z p)    = (es, ft, fts, SLoop z p') where
                                 (es,ft,fts,p') = stmt envs tpr p
@@ -519,10 +529,10 @@ expr' _       _   (EError  z v)     = ([], FuncGlobal, [], EError  z{typec=(TBot
 expr' _       _   (EUnit   z)       = ([], FuncGlobal, [], EUnit   z{typec=(TUnit False,cz)})
 expr' (_,txp) _   (EArg    z)       = ([], FuncGlobal, [], EArg    z{typec=txp})
 
-expr' _ envs (EFunc z tpc@(TFunc False ft inp out,cs) (EUnit _) p) = (es++esf, FuncGlobal, [ft'], EFunc z{typec=tpc'} tpc' (EUnit z) p'')
+expr' _ envs (EFunc z tpc@(TFunc False ft inp out,cs) (EUnit _) p) = (es++esf, FuncGlobal, [ft'], EFunc z{typec=tpc'} tpc' (EUnit z) p')
  where
-  tpc' = (TFunc False ft' inp out,cs)
-  (es,ft',_,p') = stmt ([]:envs) (out,cs) p      -- add args environment, locals to be added on Match...EArg
+  tpc' = (TFunc False ft' inp out',cs)
+  (es,ft',fts,p') = stmt ([]:envs) (out,cs) p      -- add args environment, locals to be added on Match...EArg
   esf = case (ft,ft') of
           (_,_) | ft == ft' -> []
           (FuncClosure _,FuncClosure _) -> []
@@ -530,9 +540,13 @@ expr' _ envs (EFunc z tpc@(TFunc False ft inp out,cs) (EUnit _) p) = (es++esf, F
           (_,FuncClosure _)             -> [toError z "expected `new`: function is a closure"]
           (FuncUnknown,_)               -> []
 
-  p'' = case ft' of
-          FuncClosure l -> p'   -- TODO
-          otherwise     -> p'
+  fts' = case ft' of
+    FuncClosure _ -> [ft']
+    otherwise     -> []
+
+  out' = case out of
+    (TFunc False (FuncClosure _) x y) -> (TFunc False f x y) where [f] = fts  -- TODO: multiple closures
+    otherwise                         -> out
 
 expr' _ envs (EMatch z exp pat) = (esp++esem++esc, ftMin ft1 ft2, fts2,
                                   EMatch z{typec=(TData False ["Bool"] [] (TUnit False),cz)} exp' pat')
@@ -649,7 +663,13 @@ expr' (rel,(txp_,cxp)) envs (ECall z f exp) = (bool ese esf (null ese) ++ esa,
     tpc_out' = case tpc_out of
                 (TFunc False (FuncClosure us) inp out, cs) -> (TFunc False (FuncClosure us') inp out, cs)
                   where
-                    us' = traceShow f us
+                    us' = Set.map (\(id,_)->(id,s)) us
+                    s = scope envs exp
+
+                    scope :: Envs -> Exp -> Int
+                    scope envs (EVar _ id) = case findVar z (id,SUP,(TAny False "?",cz)) envs of
+                                              Right ((_,n), SVar _ _ tpc _, _) -> n
+                    scope envs (ERefRef _ e) = scope envs e
                 otherwise -> tpc_out
 
     esa = checkFuncNested "cannot pass nested function" exp'
