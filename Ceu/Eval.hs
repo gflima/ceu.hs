@@ -26,6 +26,7 @@ data Exp
     | ECons  ID_Data_Hier     -- X         (functions)
     | ETuple [Exp]            -- (1,2) ; ((1),2) ; ((1,2),3) ; ((),()) // (len >= 2)
     | EFunc  Exp Stmt
+    | EFNew  Exp Exp
     | ECall  Exp Exp          -- f a ; f(a) ; f(1,2)
     | EAny
     | EExp   Exp
@@ -56,9 +57,11 @@ fromExp (B.ECons   z id)  = case typec z of
                              otherwise            -> ECons id
 fromExp (B.ETuple  _ vs)  = ETuple (map fromExp vs)
 fromExp (B.EFunc   _ _ us p) = EFunc (fromExp us) (fromStmt p)
+fromExp (B.EFNew   _ ids f) = EFNew (fromExp ids) (fromExp f)
 fromExp (B.ECall   _ f e) = ECall (fromExp f) (fromExp e)
 fromExp (B.EAny    _)     = EAny
 fromExp (B.EArg    _)     = EVar "_arg"
+fromExp (B.EUpv    _)     = EVar "_upv"
 fromExp (B.EExp    _ e)   = EExp (fromExp e)
 fromExp (B.EMatch  _ e p) = EMatch (fromExp e) (fromExp p)
 fromExp (B.ERefRef _ e)   = ERefRef (fromExp e)
@@ -118,6 +121,8 @@ envEval vars e = case e of
     ERefRef exp -> exp
     ERefDer exp -> envEval vars $ envEval vars exp
 
+    EFNew ids (EFunc _ p) -> envEval vars (EFunc (envEval vars ids) p)
+
     ECall  f e' ->
       case (envEval vars f, envEval vars e') of
         (EError x, _)                                   -> EError x
@@ -141,7 +146,7 @@ envEval vars e = case e of
         (EVar "<",      ETuple [EData ["Int",x] EUnit,
                                 EData ["Int",y] EUnit]) -> EData (bool ["Bool","False"] ["Bool","True"] (read' x < read' y))  EUnit
         (ECons id,       e)                             -> EData id (envEval vars e)
-        (EFunc _ p,      arg)                           -> steps (p, ("_arg",Just arg):vars)
+        (EFunc upv p,    arg)                           -> steps (p, ("_upv",Just upv):("_arg",Just arg):vars) where
         --x                                               -> error $ show (x,f,e',vars)
 
     e         -> e

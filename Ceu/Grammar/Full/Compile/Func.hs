@@ -49,6 +49,7 @@ stmt p                      = p
 expr :: Exp -> Exp
 expr (ETuple z es)          = ETuple z (map expr es)
 expr (ECall  z e1 e2)       = ECall  z (expr e1) (expr e2)
+expr (EFNew  z ids f)       = EFNew  z (expr ids) (expr f)
 
 expr (EFunc  z tpc@(TFunc _ _ inp _,cs) pars imp) = EFunc' z tpc (stmt imp')
   where

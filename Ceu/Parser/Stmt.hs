@@ -359,9 +359,10 @@ expr_func = do
   new       <- optionMaybe $ try $ tk_key "new"
   void      <- try $ tk_key "func"
   (tpc,pars,imp) <- func pos
-  return $ let (TFunc x FuncUnknown inp out,cz) = tpc
-               tp' = (TFunc x (bool FuncUnknown (FuncCloseBody $ Set.empty) (isJust new)) inp out,cz) in
-            EFunc annz{source=pos} tp' pars imp
+  return $ let f = EFunc annz{source=pos} tpc pars imp in
+            case new of
+              Just _  -> EFNew annz{source=pos} (EUnit annz{source=pos}) f
+              Nothing -> f
 
 expr_unit :: Parser Exp
 expr_unit = do

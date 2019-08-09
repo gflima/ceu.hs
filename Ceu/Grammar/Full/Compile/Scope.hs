@@ -31,5 +31,6 @@ expr :: Exp -> Exp
 expr (ETuple z es)                        = ETuple   z (map expr es)
 expr (ECall  z e1 e2)                     = ECall    z (expr e1) (expr e2)
 expr (EFunc' z tp imp)                    = EFunc'   z tp (stmt imp)
+expr (EFNew  z ids f)                     = EFNew  z (expr ids) (expr f)
 expr e                                    = e
 

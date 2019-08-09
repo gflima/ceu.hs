@@ -229,6 +229,8 @@ getErrsTypesDeclared z envs tp = concatMap f (T.getDs tp) where
 
 -------------------------------------------------------------------------------
 
+                                          -- am I a global, nested or closure?
+                                                    -- nested closures inside me
 stmt :: Envs -> TypeC -> Stmt -> (Errors, FuncType, [FuncType], Stmt)
 
 stmt envs tpr s@(SClass z id ctrs ifc p) = (esMe ++ esExts ++ es, ft, fts, p') where
@@ -527,10 +529,11 @@ expr' _       _   (EError  z v)     = ([], FuncGlobal, [], EError  z{typec=(TBot
 expr' _       _   (EUnit   z)       = ([], FuncGlobal, [], EUnit   z{typec=(TUnit False,cz)})
 expr' (_,txp) _   (EArg    z)       = ([], FuncGlobal, [], EArg    z{typec=txp})
 
-expr' _ envs (EFunc z tpc@(TFunc False ft inp out,cs) (EUnit _) p) = (es++esf, FuncGlobal, [ft'], EFunc z{typec=tpc'} tpc' (EUnit z) p')
+expr' _ envs (EFunc z tpc@(TFunc False ft inp out,cs) upv p) = (es++esf, FuncGlobal, [ft'], EFunc z{typec=tpc'} tpc' upv p'')
  where
   tpc' = (TFunc False ft' inp out',cs)
   (es,ft',fts,p') = stmt ([]:envs) (out,cs) p      -- add args environment, locals to be added on Match...EArg
+
   esf = case (ft,ft') of
           (_,_) | ft == ft' -> []
           (FuncCloseBody _,FuncCloseBody _) -> []
@@ -541,11 +544,30 @@ expr' _ envs (EFunc z tpc@(TFunc False ft inp out,cs) (EUnit _) p) = (es++esf, F
   out' = case out of
     (TFunc False (FuncCloseOuter 0) x y) -> (TFunc False f x y) where
                                               f = case fts of
-                                                [FuncCloseBody upvs] -> FuncCloseOuter $ Set.size upvs
+                                                [FuncCloseBody ups] -> FuncCloseOuter $ Set.size ups
                                                 --[x] -> x
                                                 --_ -> error $ show fts
                                                 -- TODO: multiple closures
     otherwise -> out
+
+  -- (up1,...,upN) = EUps
+  p'' = case ft' of
+    FuncCloseBody ups -> SSeq z (f $ Set.toAscList ups) p' where
+                          f :: [ID_Var] -> Stmt
+                          f [id] = SMatch z True False (EUpv z) [(SNop z,EVar z id,SNop z)]
+                          f ids  = SMatch z True False (EUpv z) [(SNop z,ETuple z $ map (EVar z) ids,SNop z)]
+    otherwise -> p'
+
+expr' _ envs (EFNew z (EUnit _) (EFunc z1 (TFunc False FuncUnknown inp out,cs) upv p)) = (es, ft, fts, EFNew z ids f'')
+  where
+    (es,ft,fts,f'') = expr z (SUP,(TAny False "?",cz)) envs f' where
+                        f' = EFunc z1 (TFunc False (FuncCloseBody $ Set.empty) inp out,cs) upv p
+    ids = case f'' of
+            EFunc _ (TFunc False (FuncCloseBody ids) _ _,_) _ _ -> toExp $ Set.toAscList ids
+
+    toExp :: [ID_Var] -> Exp
+    toExp [id] = EVar z id
+    toExp ids  = ETuple z $ map (EVar z) ids
 
 expr' _ envs (EMatch z exp pat) = (esp++esem++esc, ftMin ft1 ft2, fts2,
                                   EMatch z{typec=(TData False ["Bool"] [] (TUnit False),cz)} exp' pat')
