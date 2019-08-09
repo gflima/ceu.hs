@@ -360,7 +360,7 @@ expr_func = do
   void      <- try $ tk_key "func"
   (tpc,pars,imp) <- func pos
   return $ let (TFunc x FuncUnknown inp out,cz) = tpc
-               tp' = (TFunc x (bool FuncUnknown (FuncClosure Set.empty) (isJust new)) inp out,cz) in
+               tp' = (TFunc x (bool FuncUnknown (FuncCloseBody $ Set.empty) (isJust new)) inp out,cz) in
             EFunc annz{source=pos} tp' pars imp
 
 expr_unit :: Parser Exp

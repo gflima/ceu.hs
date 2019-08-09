@@ -476,11 +476,11 @@ stmt envs tpr (SSeq z p1 p2) = (es1++es2, ftMin ft1 ft2, fts1++fts2, SSeq z p1' 
               _ -> envs
 
     -- if "g := func" and func returns closure,
-    --  copy FuncClosure complete type from body to function ID
+    --  copy FuncCloseOuter complete type from body to function ID
     envs'' = case p1' of
               (SMatch _ True _ exp [(_,(EVar _ id),_)]) ->
                 case findVar z (id,SUP,(TAny False "?",cz)) envs' of
-                  Right (_, SVar z _ (TFunc _ _ _ (TFunc _ (FuncClosure us) _ _),_) _, _) ->
+                  Right (_, SVar z _ (TFunc _ _ _ (TFunc _ (FuncCloseOuter _) _ _),_) _, _) ->
                     envsAdd envs' (SVar z id (typec $ getAnn exp) (SNop z))
                   _ -> envs'
               _ -> envs'
@@ -492,11 +492,9 @@ stmt envs tpr (SRet z exp)   = (es ++ es1 ++ es2, ft, fts, SRet z exp') where
                                 (es,ft,fts,exp') = expr z (SUP,tpr) envs exp
                                 es1 = checkFuncNested "cannot return nested function" exp'
                                 es2 = case fst $ typec $ getAnn exp' of
-                                        TFunc _ (FuncClosure us) _ _ | n  < length envs -> []
-                                                                     | n >= length envs -> ["cannot return closure : upvalues go out of scope"]
-                                          where
-                                            n = Set.fold (max.snd) 0 us
-                                        otherwise                                      -> []
+                                        TFunc _ (FuncCloseCall _ depth) _ _ | depth  < length envs -> []
+                                                                            | depth >= length envs -> ["cannot return closure : upvalues go out of scope"]
+                                        otherwise -> []
 
 stmt _   _   (SNop z)       = ([], FuncGlobal, [], SNop z)
 
@@ -535,18 +533,19 @@ expr' _ envs (EFunc z tpc@(TFunc False ft inp out,cs) (EUnit _) p) = (es++esf, F
   (es,ft',fts,p') = stmt ([]:envs) (out,cs) p      -- add args environment, locals to be added on Match...EArg
   esf = case (ft,ft') of
           (_,_) | ft == ft' -> []
-          (FuncClosure _,FuncClosure _) -> []
-          (FuncClosure _,_)             -> [toError z "unexpected `new`: function is not a closure"]
-          (_,FuncClosure _)             -> [toError z "expected `new`: function is a closure"]
-          (FuncUnknown,_)               -> []
-
-  fts' = case ft' of
-    FuncClosure _ -> [ft']
-    otherwise     -> []
+          (FuncCloseBody _,FuncCloseBody _) -> []
+          (FuncCloseBody _,_)               -> [toError z "unexpected `new`: function is not a closure"]
+          (_,FuncCloseBody _)               -> [toError z "expected `new`: function is a closure"]
+          (FuncUnknown,_)                   -> []
 
   out' = case out of
-    (TFunc False (FuncClosure _) x y) -> (TFunc False f x y) where [f] = fts  -- TODO: multiple closures
-    otherwise                         -> out
+    (TFunc False (FuncCloseOuter 0) x y) -> (TFunc False f x y) where
+                                              f = case fts of
+                                                [FuncCloseBody upvs] -> FuncCloseOuter $ Set.size upvs
+                                                --[x] -> x
+                                                --_ -> error $ show fts
+                                                -- TODO: multiple closures
+    otherwise -> out
 
 expr' _ envs (EMatch z exp pat) = (esp++esem++esc, ftMin ft1 ft2, fts2,
                                   EMatch z{typec=(TData False ["Bool"] [] (TUnit False),cz)} exp' pat')
@@ -661,15 +660,13 @@ expr' (rel,(txp_,cxp)) envs (ECall z f exp) = (bool ese esf (null ese) ++ esa,
       otherwise                   -> (txp_,cxp)
 
     tpc_out' = case tpc_out of
-                (TFunc False (FuncClosure us) inp out, cs) -> (TFunc False (FuncClosure us') inp out, cs)
-                  where
-                    us' = Set.map (\(id,_)->(id,s)) us
-                    s = scope envs exp
-
+                (TFunc False (FuncCloseOuter n) inp out, cs) ->
+                  (TFunc False (FuncCloseCall n (scope envs exp)) inp out, cs) where
                     scope :: Envs -> Exp -> Int
                     scope envs (EVar _ id) = case findVar z (id,SUP,(TAny False "?",cz)) envs of
                                               Right ((_,n), SVar _ _ tpc _, _) -> n
                     scope envs (ERefRef _ e) = scope envs e
+                    scope _ _ = error $ "TODO: tuples, etc"
                 otherwise -> tpc_out
 
     esa = checkFuncNested "cannot pass nested function" exp'

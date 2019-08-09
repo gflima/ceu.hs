@@ -26,29 +26,33 @@ type TypeC = (Type, Cs.Map)
 
 -------------------------------------------------------------------------------
 
-type FuncUpvals = Set.Set (ID_Var,Int) --  [(upval id, abs scope)]
-
 data FuncType = FuncUnknown
-              | FuncGlobal  -- cannot access non-locals             // can    be passed and returned
-              | FuncNested  -- can    access non-locals             // cannot be passed or  returned
-              | FuncClosure -- can    access non-local args by ref  // can    be passed and returned
-                  FuncUpvals --  [(upval id, abs scope)]
+              | FuncGlobal    -- cannot access non-locals             // can    be passed and returned
+              | FuncNested    -- can    access non-locals             // cannot be passed or  returned
+              | FuncCloseBody -- can    access non-local args by ref  // can    be passed and returned
+                  (Set.Set ID_Var)  -- upvalues in asc ID order
+                                    -- on enter, (x,z) = EUps
+              | FuncCloseOuter
+                  Int               -- n mem slots, max among all nested FuncCloseBody
+                                    -- on "new", EUps = (x,z)
+              | FuncCloseCall
+                  Int Int           -- n mem slots // max upvs scope depth
   deriving (Eq, Show)
 
 ftMin :: FuncType -> FuncType -> FuncType
-ftMin FuncNested      _               = FuncNested
-ftMin _               FuncNested      = FuncNested
-ftMin (FuncClosure x) (FuncClosure y) = FuncClosure $ Set.union x y
-ftMin (FuncClosure x) _               = FuncClosure x
-ftMin _               (FuncClosure y) = FuncClosure y
-ftMin FuncGlobal      _               = FuncGlobal
-ftMin _               FuncGlobal      = FuncGlobal
-ftMin _               _               = FuncUnknown
+ftMin FuncNested        _                 = FuncNested
+ftMin _                 FuncNested        = FuncNested
+ftMin (FuncCloseBody x) (FuncCloseBody y) = FuncCloseBody $ Set.union x y
+ftMin (FuncCloseBody x) _                 = FuncCloseBody x
+ftMin _                 (FuncCloseBody y) = FuncCloseBody y
+ftMin FuncGlobal        _                 = FuncGlobal
+ftMin _                 FuncGlobal        = FuncGlobal
+ftMin _                 _                 = FuncUnknown
 
 -- len  l-1  l-2   l-3  l-4  ...    1    0
 --   [ locs,args, lvl1,args, ..., glbs,args ]
 ftReq :: Int -> (ID_Var,Bool,Int) -> FuncType  -- (length, (id,ref,n)
-ftReq len (id,ref,n) | ref && n==len-4  = FuncClosure $ Set.singleton $ (id,0)    -- only non-local args by ref
+ftReq len (id,ref,n) | ref && n==len-4  = FuncCloseBody $ Set.singleton id -- only non-local args by ref
 ftReq len (_,_,   n) | n>=len-2 || n<=1 = FuncGlobal
 ftReq _   _                             = FuncNested
 
@@ -64,7 +68,7 @@ show' (TUnit  False)            = "()"
 show' (TData  ref hier []  _)   = ref2str ref ++ hier2str hier
 show' (TData  ref hier [x] _)   = "(" ++ ref2str ref ++ hier2str hier ++ " of " ++ show' x ++ ")"
 show' (TData  ref hier ofs _)   = "(" ++ ref2str ref ++ hier2str hier ++ " of " ++ "(" ++ intercalate "," (map show' ofs) ++ ")" ++ ")"
-show' (TFunc  False (FuncClosure _) inp out) = "new (" ++ show' inp ++ " -> " ++ show' out ++ ")"
+--show' (TFunc  False (FuncClosure _) inp out) = "new (" ++ show' inp ++ " -> " ++ show' out ++ ")"
 show' (TFunc  False _           inp out) = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
 show' (TTuple False tps)        = "(" ++ intercalate "," (map show' tps) ++ ")"
 

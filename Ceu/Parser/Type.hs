@@ -43,14 +43,11 @@ type_N ref = do
 type_F :: Bool -> Parser Type
 type_F ref = do
     void <- tk_sym "("
-    ft   <- option FuncUnknown $ do
-                                  void <- try $ tk_key "new"
-                                  return $ FuncClosure $ Set.empty
     inp  <- pType
     void <- tk_sym "->"
     out  <- pType
     void <- tk_sym ")"
-    return $ TFunc ref ft inp out
+    return $ TFunc ref FuncUnknown inp out
 
 type_V :: Bool -> Parser Type
 type_V ref = do

@@ -364,7 +364,7 @@ spec = do
       it "FuncClosure return - reference in args" $
         (run True $
           unlines [
-            "func g x : (ref Int -> (new () -> Int)) do",
+            "func g x : (ref Int -> (() -> Int)) do",
             "   return func () : (()->Int) do return x end",
             "end",
             "var b : Int = 10",
@@ -376,7 +376,7 @@ spec = do
       it "FuncClosure return - reference in args" $
         (run True $
           unlines [
-            "func g x : (ref Int -> (new () -> Int)) do",
+            "func g x : (ref Int -> (() -> Int)) do",
             "   return func () : (()->Int) do return x end",
             "end",
             "var b : Int = 10",
@@ -384,10 +384,10 @@ spec = do
            ])
         `shouldBe` Left "(line 2, column 11):\nexpected `new`: function is a closure\n"
 
-      it "XXX1: TODO: FuncClosure return - reference in args" $
+      it "TODO: FuncClosure return - reference in args" $
         (run True $
           unlines [
-            "func g x : (ref Int -> (new () -> Int)) do",
+            "func g x : (ref Int -> (() -> Int)) do",
             "   return new func () : (()->Int) do return x end",
             "end",
             "var b : Int = 10",
@@ -399,22 +399,22 @@ spec = do
       it "XXX: TODO: FuncClosure return - reference in args" $
         (run True $
           unlines [
-            "func g x : (ref Int -> (new () -> Int)) do",
+            "func g x : (ref Int -> (() -> Int)) do",
             "   return new func () : (()->Int) do return x end",
             "end",
-            "var a : ref Int = ref b",
-            "return (g (ref b)) ()"
+            "var a : Int",
+            "return (g (ref a)) ()"
            ])
         `shouldBe` Left "TODO: 10"
 
-      it "YYY: TODO: FuncClosure return - reference in two levels" $
+      it "TODO: FuncClosure return - reference in two levels" $
         (run True $
           unlines [
             "func h () : (() -> Int) do",
-            " func f () : (() -> (new () -> Int)) do",
+            " func f () : (() -> (() -> Int)) do",
             "   var b : Int = 10",
             "   var a : ref Int = ref b",
-            "   func g x : (ref Int -> (new () -> Int)) do",
+            "   func g x : (ref Int -> (() -> Int)) do",
             "     return new func () : (()->Int) do return x end",
             "   end",
             "   return (g (ref a))",
@@ -425,14 +425,14 @@ spec = do
            ])
         `shouldBe` Left "cannot return closure at this level\n"
 
-      it "XXX: TODO: FuncClosure return - reference in two levels" $
+      it "TODO: FuncClosure return - reference in two levels" $
         (run True $
           unlines [
             "func h () : (() -> Int) do",
             " var b : Int = 10",
             " var a : ref Int = ref b",
-            " func f () : (() -> (new () -> Int)) do",
-            "   func g x : (ref Int -> (new () -> Int)) do",
+            " func f () : (() -> (() -> Int)) do",
+            "   func g x : (ref Int -> (() -> Int)) do",
             "     return new func () : (()->Int) do return x end",
             "   end",
             "   return (g (ref a))",
