@@ -12,8 +12,8 @@ import qualified Ceu.Grammar.TypeSys as T
 
 type Vars = [(ID_Var, Maybe Exp)]
 
-type DescS = (Stmt, Vars)
-type DescE = (Exp,  Vars)
+type DescS = (Vars, Stmt)
+type DescE = (Vars, Exp)
 
 error_terminate :: Int
 error_match     :: Int
@@ -107,98 +107,98 @@ read' :: String -> Int
 read' x = read x
 
 envEval :: DescE -> DescE
-envEval (e,vars) = case e of
-    EVar  var -> (envRead vars var, vars)
+envEval (vars,e) = case e of
+    EVar  var -> (vars, envRead vars var)
     ETuple es -> case find isError es' of
-                    Nothing  -> (ETuple es', vars')
-                    Just exp -> (exp, vars')
+                    Nothing  -> (vars', ETuple es')
+                    Just exp -> (vars', exp)
                   where
                     isError (EError _) = True
                     isError _         = False
 
-                    (es', vars') = f (es,vars)
+                    (vars',es') = f (vars, es)
 
-                    f :: ([Exp],Vars) -> ([Exp],Vars)
-                    f ((e:l),vars) = (e':l', vars'') where
-                                      (e',vars')  = envEval (e,vars)
-                                      (l',vars'') = f (l,vars')
-                    f ([],vars)    = ([],vars)
+                    f :: (Vars,[Exp]) -> (Vars,[Exp])
+                    f (vars,(e:l)) = (vars'', e':l') where
+                                      (vars', e') = envEval (vars,e)
+                                      (vars'',l') = f (vars',l)
+                    f (vars,[])    = (vars,[])
 
     EMatch exp pat -> case match vars' pat exp' of
-                        (Left  err,   _) -> (err, vars')
-                        (Right False, _) -> (EData ["Bool","False"] EUnit, vars')
-                        (Right True,  _) -> (EData ["Bool","True"]  EUnit, vars')
+                        (vars'', Left  err)   -> (vars'', err)
+                        (vars'', Right False) -> (vars'', EData ["Bool","False"] EUnit)
+                        (vars'', Right True)  -> (vars'', EData ["Bool","True"]  EUnit)
                       where
-                        (exp',vars') = envEval (exp,vars)
+                        (vars',exp') = envEval (vars, exp)
 
-    ERefRef exp -> (exp, vars)
-    ERefDer exp -> envEval $ envEval (exp,vars)
+    ERefRef exp -> (vars, exp)
+    ERefDer exp -> envEval $ envEval (vars, exp)
 
-    EFNew ids (EFunc _ p) -> envEval ((EFunc e' p), vars') where
-                              (e',vars') = envEval (ids,vars)
+    EFNew ids (EFunc _ p) -> envEval (vars', (EFunc e' p)) where
+                              (vars',e') = envEval (vars,ids)
 
     ECall f arg ->
       case (f', arg') of
-        (EError x, _)                                   -> (EError x, vars)
-        (_, EError x)                                   -> (EError x, vars)
-        (EVar "print",  x)                              -> (traceShowId x, vars)
-        (EVar "negate", EData ["Int",x] EUnit)          -> (EData ["Int",show (- (read x))] EUnit, vars)
+        (EError x, _)                                   -> (vars,  EError x)
+        (_, EError x)                                   -> (vars,  EError x)
+        (EVar "print",  x)                              -> (vars,  traceShowId x)
+        (EVar "negate", EData ["Int",x] EUnit)          -> (vars,  EData ["Int",show (- (read x))] EUnit)
         (EVar "+",      ETuple [EData ["Int",x] EUnit,
-                                EData ["Int",y] EUnit]) -> (EData ["Int",show (read x   +   read y)] EUnit, vars)
+                                EData ["Int",y] EUnit]) -> (vars,  EData ["Int",show (read x   +   read y)] EUnit)
         (EVar "-",      ETuple [EData ["Int",x] EUnit,
-                                EData ["Int",y] EUnit]) -> (EData ["Int",show (read x   -   read y)] EUnit, vars)
+                                EData ["Int",y] EUnit]) -> (vars,  EData ["Int",show (read x   -   read y)] EUnit)
         (EVar "*",      ETuple [EData ["Int",x] EUnit,
-                                EData ["Int",y] EUnit]) -> (EData ["Int",show (read x   *   read y)] EUnit, vars)
+                                EData ["Int",y] EUnit]) -> (vars,  EData ["Int",show (read x   *   read y)] EUnit)
         (EVar "/",      ETuple [EData ["Int",x] EUnit,
-                                EData ["Int",y] EUnit]) -> (EData ["Int",show (read x `div` read y)] EUnit, vars)
+                                EData ["Int",y] EUnit]) -> (vars,  EData ["Int",show (read x `div` read y)] EUnit)
         (EVar "rem",    ETuple [EData ["Int",x] EUnit,
-                                EData ["Int",y] EUnit]) -> (EData ["Int",show (read x `rem` read y)] EUnit, vars)
+                                EData ["Int",y] EUnit]) -> (vars,  EData ["Int",show (read x `rem` read y)] EUnit)
         (EVar "==",     ETuple [EData ["Int",x] EUnit,
-                                EData ["Int",y] EUnit]) -> (EData (bool ["Bool","False"] ["Bool","True"] (read' x == read' y)) EUnit, vars)
+                                EData ["Int",y] EUnit]) -> (vars,  EData (bool ["Bool","False"] ["Bool","True"] (read' x == read' y)) EUnit)
         (EVar "<=",     ETuple [EData ["Int",x] EUnit,
-                                EData ["Int",y] EUnit]) -> (EData (bool ["Bool","False"] ["Bool","True"] (read' x <= read' y)) EUnit, vars)
+                                EData ["Int",y] EUnit]) -> (vars,  EData (bool ["Bool","False"] ["Bool","True"] (read' x <= read' y)) EUnit)
         (EVar "<",      ETuple [EData ["Int",x] EUnit,
-                                EData ["Int",y] EUnit]) -> (EData (bool ["Bool","False"] ["Bool","True"] (read' x < read' y))  EUnit, vars)
-        (ECons id,       e)                             -> (EData id e', vars') where (e',vars') = envEval (e,vars)
-        (EFunc upv p,    arg)                           -> steps (p, ("_upv",Just upv):("_arg",Just arg):vars) where
+                                EData ["Int",y] EUnit]) -> (vars,  EData (bool ["Bool","False"] ["Bool","True"] (read' x < read' y))  EUnit)
+        (ECons id,       e)                             -> (vars', EData id e') where (vars',e') = envEval (vars,e)
+        (EFunc upv p,    arg)                           -> steps (("_upv",Just upv):("_arg",Just arg):vars, p) where
         --x                                               -> error $ show (x,f,e',vars)
       where
-        (f',  vars')  = envEval (f,   vars)
-        (arg',vars'') = envEval (arg, vars')
+        (vars',  f')   = envEval (vars,  f)
+        (vars'', arg') = envEval (vars', arg)
 
-    e         -> (e, vars)
+    e         -> (vars, e)
 
 ----------------------------------------------------------------------------
 
-match :: Vars -> Exp -> Exp -> (Either Exp Bool, Vars)
-match vars EAny        _ = (Right True, vars)
-match vars (EVar id)   v = (Right True, envWrite vars id v)
-match vars EUnit       v = (Right True, vars)
+match :: Vars -> Exp -> Exp -> (Vars, Either Exp Bool)
+match vars EAny        _ = (vars, Right True)
+match vars (EVar id)   v = (envWrite vars id v, Right True)
+match vars EUnit       v = (vars, Right True)
 match vars (EData hrp _)
-           (EData hre _) = (Right ret, vars) where
+           (EData hre _) = (vars, Right ret) where
                             ret = T.isRel T.SUP (TData False hrp [] (TUnit False)) (TData False hre [] (TUnit False))
 match vars (ECall (ECons hrp) l)
-           (EData hre e) = (ret', vars')  where
+           (EData hre e) = (vars', ret')  where
                             v1 = T.isRel T.SUP (TData False hrp [] (TUnit False)) (TData False hre [] (TUnit False))
-                            (ret2,vars') = match vars l e
+                            (vars', ret2) = match vars l e
                             ret' = case ret2 of
                               Left  x  -> Left  x
                               Right v2 -> Right (v1 && v2)
 match vars (ETuple ps)
            (ETuple es)   = foldr
-                            (\(loc,e) (b1,vars1) ->
-                              if b1/=(Right True) then (b1,vars1) else
+                            (\(loc,e) (vars1,b1) ->
+                              if b1/=(Right True) then (vars1,b1) else
                                 match vars1 loc e)
-                            (Right True, vars)
+                            (vars, Right True)
                             (zip ps es)
 match vars (EExp x)    v = case x of
-                            EError y -> (Left  $ EError y, vars')
-                            e'       -> (Right $ e' == v,  vars')
+                            EError y -> (vars', Left  $ EError y)
+                            e'       -> (vars', Right $ e' == v)
                            where
-                            (x',vars') = envEval (x,vars)
+                            (vars',x') = envEval (vars,x)
 
 match vars (ERefIni x) v = match vars x v
-match vars (ERefDer x) v = match vars' x' v where (x',vars') = envEval (x,vars)
+match vars (ERefDer x) v = match vars' x' v where (vars',x') = envEval (vars,x)
 
 match x y z = error $ show (y,z)
 --err xp got = error $ "assignment does not match : expected '" ++ show xp ++
@@ -208,27 +208,26 @@ match x y z = error $ show (y,z)
 
 step :: DescS -> DescS
 
-step (SVar  id p,       vars) = (SVar' p,  (id,Nothing):vars)
+step (  vars, SVar  id p)      = ((id,Nothing):vars,  SVar' p)
 
-step (SVar' SNop,      _:vars) = (SNop,     vars)
-step (SVar' (SRet' e), _:vars) = (SRet' e,  vars)
-step (SVar' p,           vars) = (SVar' p', vars') where
-                                  (p',vars') = step (p,vars)
+step (_:vars, SVar' SNop)      = (vars,  SNop)
+step (_:vars, SVar' (SRet' e)) = (vars,  SRet' e)
+step (  vars, SVar' p)         = (vars', SVar' p') where (vars',p') = step (vars,p)
 
-step (SCall e,          vars) = (p,        vars') where
-                                  (e', vars') = envEval (e,vars)
+step (vars, SCall e)           = (vars', p) where
+                                  (vars', e') = envEval (vars,e)
                                   p = case e' of
                                         EError v  -> SRet e'
                                         otherwise -> SNop
 
-step (SMatch e cses,  vars)   = case e' of
-                                  EError x  -> (SRet (EError x), vars')
+step (vars, SMatch e cses)     = case e' of
+                                  EError x  -> (vars', SRet (EError x))
                                   otherwise -> toDesc $ foldl (aux e') (Right False, vars', SNop) cses
   where
-    (e', vars') = envEval (e,vars)
+    (vars', e') = envEval (vars,e)
 
     toDesc :: (Either Exp Bool, Vars, Stmt) -> DescS
-    toDesc (_, vars, stmt) = (stmt,vars)
+    toDesc (_, vars, stmt) = (vars,stmt)
 
     aux :: Exp -> (Either Exp Bool, Vars, Stmt) -> (Stmt,Exp,Stmt) -> (Either Exp Bool, Vars, Stmt)
     aux exp all@(ret,vars0,stmt) (ds,pat,stmt') =
@@ -238,34 +237,33 @@ step (SMatch e cses,  vars)   = case e' of
         (Right False, Left  err)   -> (ret', vars2, SRet err)
         (Right False, Right _)     -> (ret', vars2, stmt')
       where
-        (ret', vars2) = match vars1 pat exp
+        (vars2, ret') = match vars1 pat exp
         vars1 = f ds vars0 where
           f SNop        vars = vars
           f (SVar id p) vars = (id,Nothing) : (f p vars)    -- TODO: maybe wrong
 
-step (SSeq SNop     q,  vars)  = (q,           vars)
-step (SSeq (SRet e) q,  vars)  = (SRet e,      vars)
-step (SSeq p        q,  vars)  = (SSeq p' q,   vars') where (p',vars') = step (p,vars)
+step (vars, SSeq   SNop     q) = (vars,  q)
+step (vars, SSeq   (SRet e) q) = (vars,  SRet e)
+step (vars, SSeq   p        q) = (vars', SSeq p' q) where (vars',p') = step (vars,p)
 
-step (SLoop' SNop     q, vars) = (SLoop' q q,  vars)
-step (SLoop' (SRet e) q, vars) = (SRet e,      vars)
-step (SLoop' p q, vars)        = (SLoop' p' q, vars') where (p',vars') = step (p,vars)
+step (vars, SLoop' SNop     q) = (vars,  SLoop' q q)
+step (vars, SLoop' (SRet e) q) = (vars,  SRet e)
+step (vars, SLoop' p        q) = (vars', SLoop' p' q) where (vars',p') = step (vars,p)
 
-step (SRet e, vars) = (SRet' e', vars') where
-                        (e', vars') = envEval (e,vars)
+step (vars, SRet e) = (vars', SRet' e') where (vars',e') = envEval (vars,e)
 
 step p =  error $ "step: cannot advance : " ++ (show p)
 
 ----------------------------------------------------------------------------
 
 steps :: DescS -> DescE
-steps (SRet' e, vars) = (e, vars)
+steps (vars, SRet' e) = (vars, e)
 steps d               = if (envRead vars "_steps") == (EData ["Int",show 1000] EUnit) then
-                          (EError error_terminate, vars)
+                          (vars, EError error_terminate)
                         else
                           steps (step d') where
-                            (s,vars)              = d
-                            d'                    = (s,vars')
+                            (vars,s)              = d
+                            d'                    = (vars',s)
                             vars'                 = envWrite vars "_steps" (EData ["Int", show (read v+1)] EUnit)
                             EData ["Int",v] EUnit = envRead  vars "_steps"
 
@@ -275,4 +273,4 @@ go p = case T.go p of
     (es, _) -> error $ "compile error : " ++ show es
 
 go' :: B.Stmt -> Exp
-go' p = fst $ steps (fromStmt p, [("_steps",Just $ EData ["Int","0"] EUnit)])
+go' p = snd $ steps ([("_steps",Just $ EData ["Int","0"] EUnit)], fromStmt p)
