@@ -193,10 +193,10 @@ step (SVar _  SNop,     vars)  = (SNop,        vars)
 step (SVar vv (SRet e), vars)  = (SRet e,      vv:vars)
 step (SVar vv p,        vars)  = (SVar vv' p', vars') where (p',vv':vars') = step (p,vv:vars)
 
-step (SCall e,          vars)  = (p,          vars) where
+step (SCall e,          vars)  = (p,           vars) where
                                   ret = envEval vars e
                                   p   = case ret of
-                                          EError v   -> SRet ret
+                                          EError v  -> SRet ret
                                           otherwise -> SNop
 
 step (SMatch e cses,    vars)  = case envEval vars e of

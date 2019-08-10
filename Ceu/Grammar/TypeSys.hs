@@ -38,7 +38,7 @@ go :: Stmt -> (Errors, Stmt)
 go p = (es,p') where
         (es,_,_,p') = stmt [[],[]] (TAny False "?",cz) p
         --(es,_,_,p') = f $ stmt [[],[]] (TAny False "?",cz) p where f (e,x,y,s) = traceShow s (e,x,y,s)
-        --(es,_,_,p') = f $ stmt [[],[]] (TAny False "?",cz) p where f (e,x,s) = traceShow (show_stmt 0 s) (e,x,s)
+        --(es,_,_,p') = f $ stmt [[],[]] (TAny False "?",cz) p where f (e,x,y,s) = traceShow (show_stmt 0 s) (e,x,y,s)
 
 -------------------------------------------------------------------------------
 
@@ -552,10 +552,19 @@ expr' _ envs (EFunc z tpc@(TFunc False ft inp out,cs) upv p) = (es++esf, FuncGlo
 
   -- (up1,...,upN) = EUps
   p'' = case ft' of
-    FuncCloseBody ups -> SSeq z (f $ Set.toAscList ups) p' where
-                          f :: [ID_Var] -> Stmt
-                          f [id] = SMatch z True False (EUpv z) [(SNop z,EVar z id,SNop z)]
-                          f ids  = SMatch z True False (EUpv z) [(SNop z,ETuple z $ map (EVar z) ids,SNop z)]
+    FuncCloseBody ups -> dcls ups' $ SSeq z (attr ups') p' where
+                          ups' = Set.toAscList ups
+
+                          attr :: [ID_Var] -> Stmt
+                          attr [id] = SMatch z True False (EUpv z) [(SNop z,EVar z id,SNop z)]
+                          attr ids  = SMatch z True False (EUpv z) [(SNop z,ETuple z $ map (EVar z) ids,SNop z)]
+
+                          dcls :: [ID_Var] -> Stmt -> Stmt
+                          dcls ids acc = foldr (\id -> (SVar z id (getTP id))) acc ids
+
+                          getTP :: ID_Var -> TypeC
+                          getTP id = case findVar z (id,SUP,(TAny False "?",cz)) envs of
+                                              Right (_, SVar _ _ tpc _, _) -> tpc
     otherwise -> p'
 
 expr' _ envs (EFNew z (EUnit _) (EFunc z1 (TFunc False FuncUnknown inp out,cs) upv p)) = (es, ft, fts, EFNew z ids f'')

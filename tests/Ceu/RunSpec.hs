@@ -182,6 +182,19 @@ spec = do
            ])
         `shouldBe` Left "(line 6, column 4):\nvariable 'a' is already declared\n"
 
+      it "YYY: TODO: nested f" $
+        (run True $
+          unlines [
+            "var a : Int = 0",
+            "func f () : (() -> ()) do",
+            "   set a = 10",
+            "   return ()",
+            "end",
+            "call f ()",
+            "return a"
+           ])
+        `shouldBe` Right (EData ["Int","10"] EUnit)
+
       it "fst : (a,a) -> a" $
         (run True $
           unlines [
@@ -235,6 +248,32 @@ spec = do
             "   return ()",
             "end",
             "return g (10)"
+           ])
+        `shouldBe` Left "(line 4, column 8):\ntypes do not match : expected '(Int -> ?)' : found '(ref Int -> ())'\n"
+
+      it "XXX: ref - change from func" $
+        (run True $
+          unlines [
+            "func g x : (ref Int -> ()) do",
+            "   set x = 10",
+            "   return ()",
+            "end",
+            "var y : Int = 0",
+            "call g (ref y)",
+            "return y"
+           ])
+        `shouldBe` Left "(line 4, column 8):\ntypes do not match : expected '(Int -> ?)' : found '(ref Int -> ())'\n"
+
+      it "XXX: ref - change from func" $
+        (run True $
+          unlines [
+            "func g x : (ref Int -> ()) do",
+            "   set x = 10",
+            "   return ()",
+            "end",
+            "var x : Int = 0",
+            "call g (ref x)",
+            "return x"
            ])
         `shouldBe` Left "(line 4, column 8):\ntypes do not match : expected '(Int -> ?)' : found '(ref Int -> ())'\n"
 
@@ -384,7 +423,7 @@ spec = do
            ])
         `shouldBe` Left "(line 2, column 11):\nexpected `new`: function is a closure\n"
 
-      it "TODO: FuncClosure return - reference in args" $
+      it "FuncClosure return - reference in args" $
         (run True $
           unlines [
             "func g x : (ref Int -> (() -> Int)) do",
@@ -394,18 +433,29 @@ spec = do
             "var a : ref Int = ref b",
             "return (g (ref a)) ()"
            ])
-        `shouldBe` Left "TODO: 10"
+        `shouldBe` Right (EData ["Int","10"] EUnit)
 
-      it "XXX: TODO: FuncClosure return - reference in args" $
+      it "FuncClosure return - reference in args" $
         (run True $
           unlines [
             "func g x : (ref Int -> (() -> Int)) do",
             "   return new func () : (()->Int) do return x end",
             "end",
-            "var a : Int",
+            "var a : Int = 10",
             "return (g (ref a)) ()"
            ])
-        `shouldBe` Left "TODO: 10"
+        `shouldBe` Right (EData ["Int","10"] EUnit)
+
+      it "FuncClosure return - reference in args" $
+        (run True $
+          unlines [
+            "func g x : (ref Int -> (() -> Int)) do",
+            "   return new func () : (()->Int) do var v:Int=x ; set x=5 ; return v end",
+            "end",
+            "var a : Int = 10",
+            "return ((g (ref a))()) + a"
+           ])
+        `shouldBe` Right (EData ["Int","15"] EUnit)
 
       it "TODO: FuncClosure return - reference in two levels" $
         (run True $
@@ -425,7 +475,7 @@ spec = do
            ])
         `shouldBe` Left "cannot return closure at this level\n"
 
-      it "TODO: FuncClosure return - reference in two levels" $
+      it "FuncClosure return - reference in two levels" $
         (run True $
           unlines [
             "func h () : (() -> Int) do",
@@ -441,7 +491,7 @@ spec = do
             "end",
             "return h()"
            ])
-        `shouldBe` Left "TODO: 10"
+        `shouldBe` Right (EData ["Int","10"] EUnit)
 
     describe "data:" $ do
 
