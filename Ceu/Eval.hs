@@ -139,29 +139,30 @@ envEval (vars,e) = case e of
 
     ECall f arg ->
       case (f', arg') of
-        (EError x, _)                                   -> (vars,  EError x)
-        (_, EError x)                                   -> (vars,  EError x)
-        (EVar "print",  x)                              -> (vars,  traceShowId x)
-        (EVar "negate", EData ["Int",x] EUnit)          -> (vars,  EData ["Int",show (- (read x))] EUnit)
+        (EError x, _)                                   -> (vars'', EError x)
+        (_, EError x)                                   -> (vars'', EError x)
+        (EVar "print",  x)                              -> (vars'', traceShowId x)
+        (EVar "negate", EData ["Int",x] EUnit)          -> (vars'', EData ["Int",show (- (read x))] EUnit)
         (EVar "+",      ETuple [EData ["Int",x] EUnit,
-                                EData ["Int",y] EUnit]) -> (vars,  EData ["Int",show (read x   +   read y)] EUnit)
+                                EData ["Int",y] EUnit]) -> (vars'', EData ["Int",show (read x   +   read y)] EUnit)
         (EVar "-",      ETuple [EData ["Int",x] EUnit,
-                                EData ["Int",y] EUnit]) -> (vars,  EData ["Int",show (read x   -   read y)] EUnit)
+                                EData ["Int",y] EUnit]) -> (vars'', EData ["Int",show (read x   -   read y)] EUnit)
         (EVar "*",      ETuple [EData ["Int",x] EUnit,
-                                EData ["Int",y] EUnit]) -> (vars,  EData ["Int",show (read x   *   read y)] EUnit)
+                                EData ["Int",y] EUnit]) -> (vars'', EData ["Int",show (read x   *   read y)] EUnit)
         (EVar "/",      ETuple [EData ["Int",x] EUnit,
-                                EData ["Int",y] EUnit]) -> (vars,  EData ["Int",show (read x `div` read y)] EUnit)
+                                EData ["Int",y] EUnit]) -> (vars'', EData ["Int",show (read x `div` read y)] EUnit)
         (EVar "rem",    ETuple [EData ["Int",x] EUnit,
-                                EData ["Int",y] EUnit]) -> (vars,  EData ["Int",show (read x `rem` read y)] EUnit)
+                                EData ["Int",y] EUnit]) -> (vars'', EData ["Int",show (read x `rem` read y)] EUnit)
         (EVar "==",     ETuple [EData ["Int",x] EUnit,
-                                EData ["Int",y] EUnit]) -> (vars,  EData (bool ["Bool","False"] ["Bool","True"] (read' x == read' y)) EUnit)
+                                EData ["Int",y] EUnit]) -> (vars'', EData (bool ["Bool","False"] ["Bool","True"] (read' x == read' y)) EUnit)
         (EVar "<=",     ETuple [EData ["Int",x] EUnit,
-                                EData ["Int",y] EUnit]) -> (vars,  EData (bool ["Bool","False"] ["Bool","True"] (read' x <= read' y)) EUnit)
+                                EData ["Int",y] EUnit]) -> (vars'', EData (bool ["Bool","False"] ["Bool","True"] (read' x <= read' y)) EUnit)
         (EVar "<",      ETuple [EData ["Int",x] EUnit,
-                                EData ["Int",y] EUnit]) -> (vars,  EData (bool ["Bool","False"] ["Bool","True"] (read' x < read' y))  EUnit)
-        (ECons id,       e)                             -> (vars', EData id e') where (vars',e') = envEval (vars,e)
-        (EFunc upv p,    arg)                           -> steps (("_upv",Just upv):("_arg",Just arg):vars, p) where
-        --x                                               -> error $ show (x,f,e',vars)
+                                EData ["Int",y] EUnit]) -> (vars'', EData (bool ["Bool","False"] ["Bool","True"] (read' x < read' y))  EUnit)
+        (ECons id,       e)                             -> (vars'', EData id e)
+        (EFunc upv p,    arg)                           -> (vars''', e) where
+                                                            (_:_:vars''', e) = steps (("_upv",Just upv):("_arg",Just arg):vars'', p)
+        --x                                             -> error $ show (x,f,e',vars)
       where
         (vars',  f')   = envEval (vars,  f)
         (vars'', arg') = envEval (vars', arg)
@@ -191,7 +192,7 @@ match vars (ETuple ps)
                                 match vars1 loc e)
                             (vars, Right True)
                             (zip ps es)
-match vars (EExp x)    v = case x of
+match vars (EExp x)    v = case x' of
                             EError y -> (vars', Left  $ EError y)
                             e'       -> (vars', Right $ e' == v)
                            where
@@ -242,13 +243,13 @@ step (vars, SMatch e cses)     = case e' of
           f SNop        vars = vars
           f (SVar id p) vars = (id,Nothing) : (f p vars)    -- TODO: maybe wrong
 
-step (vars, SSeq   SNop     q) = (vars,  q)
-step (vars, SSeq   (SRet e) q) = (vars,  SRet e)
-step (vars, SSeq   p        q) = (vars', SSeq p' q) where (vars',p') = step (vars,p)
+step (vars, SSeq   SNop      q) = (vars,  q)
+step (vars, SSeq   (SRet' e) q) = (vars,  SRet' e)
+step (vars, SSeq   p         q) = (vars', SSeq p' q) where (vars',p') = step (vars,p)
 
-step (vars, SLoop' SNop     q) = (vars,  SLoop' q q)
-step (vars, SLoop' (SRet e) q) = (vars,  SRet e)
-step (vars, SLoop' p        q) = (vars', SLoop' p' q) where (vars',p') = step (vars,p)
+step (vars, SLoop' SNop      q) = (vars,  SLoop' q q)
+step (vars, SLoop' (SRet' e) q) = (vars,  SRet' e)
+step (vars, SLoop' p         q) = (vars', SLoop' p' q) where (vars',p') = step (vars,p)
 
 step (vars, SRet e) = (vars', SRet' e') where (vars',e') = envEval (vars,e)
 
@@ -258,7 +259,7 @@ step p =  error $ "step: cannot advance : " ++ (show p)
 
 steps :: DescS -> DescE
 steps (vars, SRet' e) = (vars, e)
-steps d               = if (envRead vars "_steps") == (EData ["Int",show 1000] EUnit) then
+steps d               = if (envRead vars "_steps") == (EData ["Int",show 10000] EUnit) then
                           (vars, EError error_terminate)
                         else
                           steps (step d') where
