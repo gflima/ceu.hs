@@ -399,12 +399,14 @@ supOf sup@(TData ref1 x ofs1 st1) sub@(TData ref2 y ofs2 st2)
 supOf sup@(TData False _ _ _) _                   = (False, sup,   [])
 supOf sup                     (TData False _ _ _) = (False, sup,   [])
 
-supOf (TFunc False ft1 inp1 out1) (TFunc False ft2 inp2 out2) = (ret, TFunc False ft inp out, k++z) where
-  ft = case (ft1,ft2) of
-          (_,_) | ft1==ft2 -> ft1
-  (i,inp,k) = inp2 `supOf` inp1      -- contravariance on inputs
-  (x,out,z) = out1 `supOf` out2
-  ret = i && x
+supOf sup@(TFunc ref1 ft1 inp1 out1) (TFunc ref2 ft2 inp2 out2)
+  | ref1 /= ref2 = (False, sup, [])
+  | otherwise    = (ret, TFunc False ft inp out, k++z) where
+    ft = case (ft1,ft2) of
+            (_,_) | ft1==ft2 -> ft1
+    (i,inp,k) = inp2 `supOf` inp1      -- contravariance on inputs
+    (x,out,z) = out1 `supOf` out2
+    ret = i && x
 
 supOf sup@(TFunc False _ _ _)   _                 = (False, sup,   [])
 supOf sup                     (TFunc False _ _ _) = (False, sup,   [])
