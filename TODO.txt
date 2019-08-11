@@ -1,5 +1,5 @@
 - runhaskell -itests/ tests/Spec.hs
-- 9 -- Basic=1, Type=0, Eval=1, Full=0, Parser=0, Run=3, Book=4, Gen=0
+- 10 -- Basic=1, Type=0, Eval=1, Full=0, Parser=0, Run=4, Book=4, Gen=0
 
 - Cada acesso a EVar
     - identificar o tipo da função atual dado o acesso à variável

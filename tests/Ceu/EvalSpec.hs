@@ -119,14 +119,15 @@ spec = do
         (SVar ("negate",Nothing)
         (SVar ("+",Nothing)
         (SVar ("x",(Just (EData ["Int","-6"] EUnit))) SNop)), [])
+-}
 
   describe "seq" $ do
       it "nop" $
-        step (SSeq SNop SNop, [])
-        `shouldBe` (SNop, [])
+        step ([], SSeq SNop SNop)
+        `shouldBe` ([], SNop)
       it "adv" $
-        step (SSeq (SSeq SNop SNop) SNop, [])
-        `shouldBe` (SSeq SNop SNop, [])
+        step ([], SSeq (SSeq SNop SNop) SNop)
+        `shouldBe` ([], SSeq SNop SNop)
 
 {-
   describe "if" $ do
@@ -140,8 +141,8 @@ spec = do
 
   describe "loop" $ do
       it "nop" $
-        step (SLoop' SNop SNop, [])
-        `shouldBe` (SLoop' SNop SNop, [])
+        step ([], SLoop' SNop SNop)
+        `shouldBe` ([], SLoop' SNop SNop)
 {-
   describe "(SLoop' (Escape 0) q)" $ do
       it "pass: lvl == 0" $
@@ -153,9 +154,10 @@ spec = do
         `shouldBe` ((Escape 0), [])
 -}
       it "adv" $
-        step (SLoop' (SSeq SNop SNop) SNop, [])
-        `shouldBe` (SLoop' SNop SNop, [])
+        step ([], SLoop' (SSeq SNop SNop) SNop)
+        `shouldBe` ([], SLoop' SNop SNop)
 
+{-
   describe "func" $ do
     it "ret f()" $
       steps (
@@ -179,6 +181,7 @@ spec = do
         (SRet (ECall (EVar "f") (ETuple [EData ["Int","1"] EUnit,EData ["Int","2"] EUnit])))))
         , [("_steps",Just $ EData ["Int","0"] EUnit)]) )
       `shouldBe` (EData ["Int","3"] EUnit)
+-}
 
   --------------------------------------------------------------------------
   describe "go" $ do
@@ -356,7 +359,7 @@ spec = do
             (B.SRet annz (B.EError annz 99)))))
           `shouldBe` (EData ["Int","1"] EUnit)
 
-      it "(TODO: loc lifetime) g' <- nil ; { loc <- 1 ; f() -> g() -> glb ; g' <- f() } ; ret g'()" $
+      it "g' <- nil ; { loc <- 1 ; f() -> g() -> glb ; g' <- f() } ; ret g'()" $
         go
           (B.SData  annz Nothing (int,cz) False
           (B.SVar   annz "g'" (TFunc False FuncGlobal (TUnit False) (int),cz)
@@ -543,7 +546,6 @@ spec = do
         (B.SRet annz (B.ECons annz ["Int","1"]) `B.sSeq`
             B.SVar annz "_" (int,cz) (B.SRet annz (B.ECons annz ["Int","2"])) `B.sSeq`
             B.SNop annz)
--}
 
       where
         evalProgItSuccess res p =
