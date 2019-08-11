@@ -182,7 +182,7 @@ spec = do
            ])
         `shouldBe` Left "(line 6, column 4):\nvariable 'a' is already declared\n"
 
-      it "YYY: TODO: nested f" $
+      it "nested f" $
         (run True $
           unlines [
             "var a : Int = 0",
@@ -251,7 +251,7 @@ spec = do
            ])
         `shouldBe` Left "(line 4, column 8):\ntypes do not match : expected '(Int -> ?)' : found '(ref Int -> ())'\n"
 
-      it "XXX: ref - change from func" $
+      it "ref - change from func" $
         (run True $
           unlines [
             "func g x : (ref Int -> ()) do",
@@ -262,9 +262,9 @@ spec = do
             "call g (ref y)",
             "return y"
            ])
-        `shouldBe` Left "(line 4, column 8):\ntypes do not match : expected '(Int -> ?)' : found '(ref Int -> ())'\n"
+        `shouldBe` Right (EData ["Int","10"] EUnit)
 
-      it "XXX: ref - change from func" $
+      it "TODO: ref - change from func - same ID" $
         (run True $
           unlines [
             "func g x : (ref Int -> ()) do",
@@ -275,7 +275,7 @@ spec = do
             "call g (ref x)",
             "return x"
            ])
-        `shouldBe` Left "(line 4, column 8):\ntypes do not match : expected '(Int -> ?)' : found '(ref Int -> ())'\n"
+        `shouldBe` Right (EData ["Int","10"] EUnit)
 
       it "y = &(10+10)" $
         (run True $
@@ -457,7 +457,7 @@ spec = do
            ])
         `shouldBe` Right (EData ["Int","15"] EUnit)
 
-      it "TODO: FuncClosure return - reference in two levels" $
+      it "FuncClosure return - reference in two levels" $
         (run True $
           unlines [
             "func h () : (() -> Int) do",
@@ -473,7 +473,7 @@ spec = do
             "end",
             "return h()"
            ])
-        `shouldBe` Left "cannot return closure at this level\n"
+        `shouldBe` Left "cannot return closure : upvalues go out of scope\n"
 
       it "FuncClosure return - reference in two levels" $
         (run True $

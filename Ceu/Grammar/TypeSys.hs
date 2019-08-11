@@ -475,17 +475,17 @@ stmt envs tpr (SSeq z p1 p2) = (es1++es2, ftMin ft1 ft2, fts1++fts2, SSeq z p1' 
     (es2,ft2,fts2,p2') = stmt envs'' tpr p2
     envs' = case p1' of
               (SMatch _ True False (EArg _) [_]) -> []:envs  -- add body environment after args assignment
-              _ -> envs
+              otherwise -> envs
 
     -- if "g := func" and func returns closure,
     --  copy FuncCloseOuter complete type from body to function ID
     envs'' = case p1' of
               (SMatch _ True _ exp [(_,(EVar _ id),_)]) ->
                 case findVar z (id,SUP,(TAny False "?",cz)) envs' of
-                  Right (_, SVar z _ (TFunc _ _ _ (TFunc _ (FuncCloseOuter _) _ _),_) _, _) ->
+                  Right (_, SVar z _ (TFunc _ _ _ (TFunc _ _ _ _),_) _, _) ->
                     envsAdd envs' (SVar z id (typec $ getAnn exp) (SNop z))
-                  _ -> envs'
-              _ -> envs'
+                  otherwise -> envs'
+              otherwise -> envs'
 
 stmt envs tpr (SLoop z p)    = (es, ft, fts, SLoop z p') where
                                 (es,ft,fts,p') = stmt envs tpr p
@@ -494,8 +494,8 @@ stmt envs tpr (SRet z exp)   = (es ++ es1 ++ es2, ft, fts, SRet z exp') where
                                 (es,ft,fts,exp') = expr z (SUP,tpr) envs exp
                                 es1 = checkFuncNested "cannot return nested function" exp'
                                 es2 = case fst $ typec $ getAnn exp' of
-                                        TFunc _ (FuncCloseCall _ depth) _ _ | depth  < length envs -> []
-                                                                            | depth >= length envs -> ["cannot return closure : upvalues go out of scope"]
+                                        TFunc _ (FuncCloseCall _ depth) _ _ | depth  < (length envs - 2) -> []
+                                                                            | depth >= (length envs - 2) -> ["cannot return closure : upvalues go out of scope"]
                                         otherwise -> []
 
 stmt _   _   (SNop z)       = ([], FuncGlobal, [], SNop z)
@@ -529,7 +529,7 @@ expr' _       _   (EError  z v)     = ([], FuncGlobal, [], EError  z{typec=(TBot
 expr' _       _   (EUnit   z)       = ([], FuncGlobal, [], EUnit   z{typec=(TUnit False,cz)})
 expr' (_,txp) _   (EArg    z)       = ([], FuncGlobal, [], EArg    z{typec=txp})
 
-expr' _ envs (EFunc z tpc@(TFunc False ft inp out,cs) upv p) = (es++esf, FuncGlobal, [ft'], EFunc z{typec=tpc'} tpc' upv p'')
+expr' _ envs (EFunc z tpc@(TFunc False ft inp out,cs) upv p) = (es++esf, FuncGlobal, closes, EFunc z{typec=tpc'} tpc' upv p'')
  where
   tpc' = (TFunc False ft' inp out',cs)
   (es,ft',fts,p') = stmt ([]:envs) (out,cs) p      -- add args environment, locals to be added on Match...EArg
@@ -542,12 +542,13 @@ expr' _ envs (EFunc z tpc@(TFunc False ft inp out,cs) upv p) = (es++esf, FuncGlo
           (FuncUnknown,_)                   -> []
 
   out' = case out of
-    (TFunc False (FuncCloseOuter 0) x y) -> (TFunc False f x y) where
-                                              f = case fts of
-                                                [FuncCloseBody ups] -> FuncCloseOuter $ Set.size ups
-                                                --[x] -> x
-                                                --_ -> error $ show fts
-                                                -- TODO: multiple closures
+    (TFunc False f x y) -> (TFunc False f' x y) where
+                            f' = case fts of
+                              []                  -> f
+                              [FuncCloseBody ups] -> FuncCloseOuter $ Set.size ups
+                              --[x] -> x
+                              --_ -> error $ show fts
+                              -- TODO: multiple closures
     otherwise -> out
 
   -- (up1,...,upN) = EUps
@@ -566,6 +567,10 @@ expr' _ envs (EFunc z tpc@(TFunc False ft inp out,cs) upv p) = (es++esf, FuncGlo
                           getTP id = case findVar z (id,SUP,(TAny False "?",cz)) envs of
                                               Right (_, SVar _ _ tpc _, _) -> tpc
     otherwise -> p'
+
+  closes = case ft' of
+    FuncCloseBody _ -> [ft']
+    otherwise       -> []
 
 expr' _ envs (EFNew z (EUnit _) (EFunc z1 (TFunc False FuncUnknown inp out,cs) upv p)) = (es, ft, fts, EFNew z ids f'')
   where
