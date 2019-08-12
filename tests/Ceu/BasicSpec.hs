@@ -243,8 +243,8 @@ spec = do
         `shouldBe` (["variable 'f' is already declared"],SVar annz "f" (TFunc False FuncGlobal (TVar False "a") (TVar False "a"),cz) (SVar annz "f" (TFunc False FuncGlobal (TUnit False) (TUnit False),cz) (SNop annz)))
 
     it "func f; func ~f" $
-      TypeSys.go (SVar annz "f" (TFunc False FuncGlobal (TUnit False) (TUnit False),cz) (SVar annz "f" (TFunc False FuncGlobal (TUnit False) TTop,cz) (SNop annz)))
-        `shouldBe` (["variable 'f' is already declared"],SVar annz "f" (TFunc False FuncGlobal (TUnit False) (TUnit False),cz) (SVar annz "f" (TFunc False FuncGlobal (TUnit False) TTop,cz) (SNop annz)))
+      TypeSys.go (SVar annz "f" (TFunc False FuncGlobal (TUnit False) (TUnit False),cz) (SVar annz "f" (TFunc False FuncGlobal (TUnit False) TAny,cz) (SNop annz)))
+        `shouldBe` (["variable 'f' is already declared"],SVar annz "f" (TFunc False FuncGlobal (TUnit False) (TUnit False),cz) (SVar annz "f" (TFunc False FuncGlobal (TUnit False) TAny,cz) (SNop annz)))
 
     it "func first :: (a,a)->a ; var a::Int ; a = first((),1)" $
       (fst $ TypeSys.go (prelude annz (SVar annz "first" (TFunc False FuncGlobal (TTuple False [(TVar False "a"),(TVar False "a")]) (TVar False "a"),cz) (SVar annz "a" (int,cz) (mmm annz False (EVar annz "a") (ECall annz (EVar annz "first") (ETuple annz [(EUnit annz),(ECons annz ["Int","1"])])) (SNop annz) (SNop annz))))))

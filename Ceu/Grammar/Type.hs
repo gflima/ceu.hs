@@ -13,6 +13,7 @@ import Ceu.Grammar.Constraints as Cs
 
 data Type = TBot
           | TTop
+          | TAny
           | TUnit  Bool
           | TData  Bool ID_Data_Hier [Type] Type    -- X of [Y] with (Y,Int)
           | TTuple Bool [Type]    -- (len >= 2)
@@ -61,9 +62,10 @@ ftReq _   _                             = FuncNested
 hier2str = intercalate "."
 
 show' :: Type -> String
-show' TTop                      = "?"
+show' TTop                      = "top"
 show' TBot                      = "bot"
-show' (TVar   False id)         = id
+show' TAny                      = "?"
+show' (TVar   ref id)           = ref2str ref ++ id
 show' (TUnit  False)            = "()"
 show' (TData  ref hier []  _)   = ref2str ref ++ hier2str hier
 show' (TData  ref hier [x] _)   = "(" ++ ref2str ref ++ hier2str hier ++ " of " ++ show' x ++ ")"
@@ -77,6 +79,10 @@ ref2str False = ""
 
 -------------------------------------------------------------------------------
 
+isAnyC :: TypeC -> Bool
+isAnyC (TAny, _) = True
+isAnyC _         = False
+
 isRefC :: TypeC -> Bool
 isRefC (tp,cz) = isRef tp
 
@@ -86,6 +92,8 @@ isRef (TData  ref _ _ _)  = ref
 isRef (TTuple ref _    )  = ref
 isRef (TFunc  ref _ _ _)  = ref
 isRef (TVar   ref _    )  = ref
+--isRef _ = False
+--isRef x = error $ show x
 
 toRefC :: TypeC -> TypeC
 toRefC (tp,cz) = (toRef tp, cz)
@@ -101,7 +109,7 @@ toDerC :: TypeC -> TypeC
 toDerC (tp,cz) = (toDer tp, cz)
 
 toDerC' :: TypeC -> TypeC
-toDerC' tpc = bool tpc (toDerC tpc) (isRefC tpc)
+toDerC' tpc = bool tpc (toDerC tpc) ((not $ isAnyC tpc) && isRefC tpc)
 
 toDer :: Type -> Type
 toDer (TUnit  True      )  = TUnit  False
@@ -143,6 +151,7 @@ sort' ts = map (\(TTuple False l)->l) $ sort $ map (TTuple False) ts
 getDs :: Type -> [Type]
 getDs    TTop                = []
 getDs    TBot                = []
+getDs    TAny                = []
 getDs    (TVar   _ _)        = []
 getDs    (TUnit  _)          = []
 getDs tp@(TData  _ _ ofs st) = [tp] ++ concatMap getDs ofs ++ getDs st
@@ -350,30 +359,28 @@ supOf :: Type -> Type -> (Bool, Type, [(ID_Var,Type,Relation)])
                                         -- "a" <= tp (False)
 
 supOf TTop sub  = (True,  sub,  [])
+supOf TAny sub  = (True,  sub,  [("?",sub,SUP)])
+supOf sup  TAny = (True,  sup,  [("?",sup,SUB)])
 supOf _    TBot = (True,  TBot, [])
 supOf TBot _    = (False, TBot, [])
+supOf sup  TTop = (False, sup,  [])
 
-supOf t1 t2 = supOf' t1 t2
-{-
 supOf t1 t2 = if isRef t1 /= isRef t2 then
                 (False, t1, [])
               else
                 (supOf' t1 t2)
--}
 
 -------------------------------------------------------------------------------
 
 supOf' :: Type -> Type -> (Bool, Type, [(ID_Var,Type,Relation)])
 
-supOf' sup@(TVar False a1) sub@(TVar False a2) = (True,  sub,         [(a1,sub,SUP),(a2,sup,SUB)])
-supOf' (TVar False a1)     sub                 = (True,  sub,         [(a1,sub,SUP)])
-supOf' sup                 sub@(TVar False a2) = (True,  sup,         [(a2,sup,SUB)])
+supOf' sup@(TVar _ a1)     sub@(TVar _ a2)     = (True,  sub,         [(a1,sub,SUP),(a2,sup,SUB)])
+supOf' (TVar _ a1)         sub                 = (True,  sub,         [(a1,sub,SUP)])
+supOf' sup                 sub@(TVar _ a2)     = (True,  sup,         [(a2,sup,SUB)])
 
 supOf' (TUnit False)       (TUnit False)       = (True,  TUnit False, [])
 supOf' (TUnit False)       _                   = (False, TUnit False, [])
 supOf' sup                 (TUnit False)       = (False, sup,         [])
-
-supOf' sup                 TTop                = (False, sup,         [])
 
 supOf' sup@(TData _ x ofs1 st1) sub@(TData _ y ofs2 st2)
   | not $ x `isPrefixOf` y = (False, sup,   [])

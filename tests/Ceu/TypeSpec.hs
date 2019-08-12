@@ -200,6 +200,24 @@ spec = do
               (bool))
       `shouldBe` Right (TFunc False FuncGlobal (TTuple False [TTuple False [int,int],TTuple False [int,int]]) (bool),[("?",bool)])
 
+    it "ref Int vs Int" $
+      relates SUP
+        (TData False ["Int"] [] (TUnit False))
+        (TData True  ["Int"] [] (TUnit False))
+      `shouldBe` Left ["types do not match : expected 'Int' : found 'ref Int'"]
+
+    it "ref Int vs Int" $
+      relates SUP
+        (TFunc False FuncUnknown (TData False ["Int"] [] (TUnit False)) TTop)
+        (TFunc False FuncUnknown (TData True ["Int"] [] (TUnit False)) (TUnit False))
+      `shouldBe` Left ["types do not match : expected '(Int -> top)' : found '(ref Int -> ())'"]
+
+    it "ref Int vs Int" $
+      relates SUP
+        (TFunc False FuncUnknown (TData False ["Int"] [] (TUnit False)) TAny)
+        (TFunc False FuncUnknown (TData True ["Int"] [] (TUnit False)) (TUnit False))
+      `shouldBe` Left ["types do not match : expected '(Int -> ?)' : found '(ref Int -> ())'"]
+
     it "((1,2),(1,1))->? SUP (a,a)->Bool" $
       relates SUP
         (TFunc False FuncGlobal (TTuple False [
