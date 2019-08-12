@@ -17,7 +17,7 @@ class HasAnn a where
     getAnn :: a -> Ann
 
 annz :: Ann
-annz = Ann { typec  = (TBot False,cz)
+annz = Ann { typec  = (TBot,cz)
            , name   = ""
            , source = ("",0,0)
            , nn     = (-1)

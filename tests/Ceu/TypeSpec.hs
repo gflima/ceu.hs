@@ -35,9 +35,9 @@ spec = do
   describe "supOf" $ do
 
     it "Int > BOT" $
-      int `supOf` (TBot False)       `shouldBe` (True,  (TBot False),       [])
+      int `supOf` TBot `shouldBe` (True, TBot, [])
     it "BOT > Int" $
-      (TBot False)       `supOf` int `shouldBe` (False, (TBot False),       [])
+      TBot `supOf` int `shouldBe` (False, TBot, [])
     it "a > Int" $
       TAny False "a" `supOf` int `shouldBe` (True,  int, [("a",int,SUP)])
     it "a > b" $
@@ -182,7 +182,7 @@ spec = do
 
     it "(True,False)->top SUP (a,a)->a" $
       relates SUP
-      (TFunc False FuncGlobal (TTuple False [boolt,     boolf])     (TTop False))
+      (TFunc False FuncGlobal (TTuple False [boolt,     boolf])     TTop)
       (TFunc False FuncGlobal (TTuple False [TAny False "a", TAny False "a"]) (TAny False "a"))
       `shouldBe` Right (TFunc False FuncGlobal (TTuple False [boolt,boolf]) bool,[("a",bool)])
 
@@ -255,24 +255,24 @@ spec = do
   describe "isSupOf / isSubOf" $ do
 
     it "(bot -> top) > (bot -> top)" $
-      TFunc False FuncGlobal (TBot False) (TTop False) `isSupOf` TFunc False FuncGlobal (TBot False) (TTop False)
+      TFunc False FuncGlobal TBot TTop `isSupOf` TFunc False FuncGlobal TBot TTop
       `shouldBe` True
     it "(bot -> top) < (bot -> top)" $
-      TFunc False FuncGlobal (TBot False) (TTop False) `isSubOf` TFunc False FuncGlobal (TBot False) (TTop False)
+      TFunc False FuncGlobal TBot TTop `isSubOf` TFunc False FuncGlobal TBot TTop
       `shouldBe` True
 
     it "(bot -> top) > (bot -> bot)" $
-      TFunc False FuncGlobal (TBot False) (TTop False) `isSupOf` TFunc False FuncGlobal (TBot False) (TBot False)
+      TFunc False FuncGlobal TBot TTop `isSupOf` TFunc False FuncGlobal TBot TBot
       `shouldBe` True
     it "(top -> top) > (bot -> bot)" $
-      TFunc False FuncGlobal (TTop False) (TTop False) `isSupOf` TFunc False FuncGlobal (TBot False) (TBot False)
+      TFunc False FuncGlobal TTop TTop `isSupOf` TFunc False FuncGlobal TBot TBot
       `shouldBe` False
 
     it "top > Int" $
-      (TTop False) `isSupOf` (int)
+      TTop `isSupOf` (int)
       `shouldBe` True
     it "(() -> top) > (() -> Int)" $
-      TFunc False FuncGlobal (TUnit False) (TTop False) `isSupOf` TFunc False FuncGlobal (TUnit False) (int)
+      TFunc False FuncGlobal (TUnit False) TTop `isSupOf` TFunc False FuncGlobal (TUnit False) (int)
       `shouldBe` True
 
     it "Bool > Bool.True" $
@@ -319,7 +319,7 @@ spec = do
 
     it "a : ((a,a) ~ (Int,Bool)) ~> ERROR" $
       inst' (TAny False "a") (TTuple False [TAny False "a",TAny False "a"], TTuple False [int,bool])
-      `shouldBe` (TTop False)
+      `shouldBe` TTop
 
     it "a : ((a,b) ~ (Int,Bool)) ~> Int" $
       inst' (TAny False "a") (TTuple False [TAny False "a",TAny False "b"], TTuple False [int,bool])
@@ -408,4 +408,4 @@ spec = do
     inst' tp (sup,sub) =
       case relates SUP sup sub of
         Right (_,insts) -> instantiate insts tp
-        Left _          -> (TTop False)
+        Left _          -> TTop

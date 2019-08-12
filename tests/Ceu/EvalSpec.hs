@@ -191,8 +191,8 @@ spec = do
       it "(a,b) <- (1,2)" $
         go
           (B.SData annz Nothing (int,cz) False
-          (B.SVar annz "a" ((TTop False),cz)
-          (B.SVar annz "b" ((TTop False),cz)
+          (B.SVar annz "a" (TAny False "?",cz)
+          (B.SVar annz "b" (TAny False "?",cz)
           (mmmOne annz False (B.ETuple annz [B.EVar annz "a",B.EVar annz "b"]) (B.ETuple annz [B.ECons annz ["Int","1"],B.ECons annz ["Int","2"]])
             (B.SRet annz (B.EVar annz "b"))
             (B.SRet annz (B.EError annz 99))))))
@@ -201,8 +201,8 @@ spec = do
       it "(_,b) <- (1,2)" $
         go
           (B.SData annz Nothing (int,cz) False
-          (B.SVar annz "a" ((TTop False),cz)
-          (B.SVar annz "b" ((TTop False),cz)
+          (B.SVar annz "a" (TAny False "?",cz)
+          (B.SVar annz "b" (TAny False "?",cz)
           (mmmOne annz False (B.ETuple annz [B.EAny annz,B.EVar annz "b"]) (B.ETuple annz [B.ECons annz ["Int","1"],B.ECons annz ["Int","2"]])
             (B.SRet annz (B.EVar annz "b"))
             (B.SRet annz (B.EError annz 99))))))

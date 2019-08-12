@@ -72,11 +72,11 @@ spec = do
            ])
         `shouldBe` Right (EData ["Int","25"] EUnit)
 
+      -- TODO-3-delta
+
 -------------------------------------------------------------------------------
 
     describe "Chapter 1.2 - Evaluation:" $ do                 -- pg 4
-
-      -- TODO-3
 
       it "three" $            -- pg 5
         (run True $
@@ -150,15 +150,81 @@ spec = do
 
     describe "Chapter 1.4 - Functions:" $ do                  -- pg 9
 
-      it "twice" $            -- pg 12
-        (run True $
-          unlines [
-            "func twice (f,x) : (((Int->Int), Int) -> Int) do",
-            "   return f (f x)",
-            "end",
-            "return twice (negate,3)"
-           ])
-        `shouldBe` Right (EData ["Int","3"] EUnit)
+      describe "Chapter 1.4.2 - Currying:" $ do               -- pg 11
+
+        it "smallerc" $            -- pg 11
+          (run True $
+            unlines [
+              "func smallerc x : (ref Int -> (Int->Int)) do",
+              "   return new func y : (Int -> Bool) do",
+              "               return x < y",
+              "              end",
+              "end",
+              "var z : Int = 10",
+              "return (smallerc (ref z))(12)"
+             ])
+          `shouldBe` Right (EData ["Bool","True"] EUnit)
+
+        it "twice" $            -- pg 12
+          (run True $
+            unlines [
+              "func square (x) : (Int -> Int) do",
+              "   return x * x",
+              "end",
+              "func twice (f,x) : (((Int->Int), Int) -> Int) do",
+              "   return f(f x)",
+              "end",
+              "return twice (square, 2)"
+             ])
+          `shouldBe` Right (EData ["Int","16"] EUnit)
+
+        it "twicec" $            -- pg 12
+          (run True $
+            unlines [
+              "func square (x) : (Int -> Int) do",
+              "   return x * x",
+              "end",
+              "func twicec f : (ref (Int->Int) -> (Int->Int)) do",
+              "   return new func x : (Int -> Int) do return f(f x) end",
+              "end",
+              "return (twicec (ref square)) 2"
+             ])
+          `shouldBe` Right (EData ["Int","16"] EUnit)
+
+        it "quad" $            -- pg 12
+          (run True $
+            unlines [
+              "func square (x) : (Int -> Int) do",
+              "   return x * x",
+              "end",
+              "func twicec f : (ref (Int->Int) -> (Int->Int)) do",
+              "   return new func x : (Int -> Int) do return f(f x) end",
+              "end",
+              "var quad : (Int -> Int) = twicec (ref square)",
+              "return quad 2"
+             ])
+          `shouldBe` Right (EData ["Int","16"] EUnit)
+
+        it "curry" $            -- pg 13
+          (run True $
+            unlines [
+              "func square (x) : (Int -> Int) do",
+              "   return x * x",
+              "end",
+              "func twice (f,x) : (((Int->Int), Int) -> Int) do",
+              "   return f(f x)",
+              "end",
+              "func curry f : (ref ((ref a,b)->c) -> ((a -> (b -> c)))) do",
+              "   return new func x : (ref a -> (b -> c)) do",
+              "               return new func y : (b -> c) do",
+              "                           return f(x,y)",
+              "                          end",
+              "              end",
+              "end",
+              "var twicec : (Int -> (Int -> Int)) = curry twice",
+              "return (twicec (ref square)) 2"
+             ])
+          `shouldBe` Right (EData ["Int","16"] EUnit)
 
       it "+" $                -- pg 12
         (run True $

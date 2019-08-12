@@ -958,7 +958,7 @@ $f3$(Int -> Int)$ 10                       // EVar
             "",
             "return (Bool.True) =>= (Bool.False)"
           ])
-        --`shouldBe` Left "(line 9, column 1):\ninstance 'IEq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated instance for data '((Bool,Bool) -> top)' in class 'IEq'\n"
+        --`shouldBe` Left "(line 9, column 1):\ninstance 'IEq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated instance for data '((Bool,Bool) -> ?)' in class 'IEq'\n"
         `shouldBe` Left "(line 9, column 1):\ninstance 'IEq for Bool' is not declared\n(line 9, column 1):\nmissing instance of '==='\n"
 
       it "IOrd extends IEq" $

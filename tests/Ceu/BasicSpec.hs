@@ -167,43 +167,43 @@ spec = do
     it "ret = 1" $
       (fst $ TypeSys.go
         (SData annz Nothing (int,cz) False
-        (SVar annz "ret" ((TTop False),cz)
+        (SVar annz "ret" (TAny False "?",cz)
         (mmm annz False (EVar annz "ret") (ECons annz ["Int","1"]) (SNop annz) (SNop annz)))))
         `shouldBe` []
     it "ret = 1" $
       (fst $ TypeSys.go
         (SData annz Nothing (int,cz) False
-        (SVar annz "ret" ((TTop False),cz)
+        (SVar annz "ret" (TAny False "?",cz)
         (mmm annz True (EVar annz "ret") (ECons annz ["Int","1"]) (SNop annz) (SNop annz)))))
         `shouldBe` ["match is exhaustive"]
     it "(a,b) = (1,2)" $
       (fst $ TypeSys.go
         (SData annz Nothing (int,cz) False
-        (SVar annz "a" ((TTop False),cz)
-        (SVar annz "b" ((TTop False),cz)
+        (SVar annz "a" (TAny False "?",cz)
+        (SVar annz "b" (TAny False "?",cz)
         (mmm annz False (ETuple annz [EVar annz "a",EVar annz "b"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]]) (SNop annz) (SNop annz))))))
         `shouldBe` []
     it "(a,b) = (1,2)" $
       (fst $ TypeSys.go
         (SData annz Nothing (int,cz) False
-        (SVar annz "a" ((TTop False),cz)
-        (SVar annz "b" ((TTop False),cz)
+        (SVar annz "a" (TAny False "?",cz)
+        (SVar annz "b" (TAny False "?",cz)
         (mmm annz True (ETuple annz [EVar annz "a",EVar annz "b"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]]) (SNop annz) (SNop annz))))))
         `shouldBe` ["match is exhaustive"]
     it "(a,b) = (1,2,3)" $
       (fst $ TypeSys.go
         (SData annz Nothing (int,cz) False
-        (SVar annz "a" ((TTop False),cz)
-        (SVar annz "b" ((TTop False),cz)
+        (SVar annz "a" (TAny False "?",cz)
+        (SVar annz "b" (TAny False "?",cz)
         (mmm annz False (ETuple annz [EVar annz "a",EVar annz "b"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"],ECons annz ["Int","3"]]) (SNop annz) (SNop annz))))))
         `shouldBe` ["match never succeeds : arity mismatch"]
           --["types do not match : expected '(?,?)' : found '(Int.1,Int.2,Int.3)'"]
     it "(a,b,c) = (1,2)" $
       (fst $ TypeSys.go
         (SData annz Nothing (int,cz) False
-        (SVar annz "a" ((TTop False),cz)
-        (SVar annz "b" ((TTop False),cz)
-        (SVar annz "c" ((TTop False),cz)
+        (SVar annz "a" (TAny False "?",cz)
+        (SVar annz "b" (TAny False "?",cz)
+        (SVar annz "c" (TAny False "?",cz)
         (mmm annz False (ETuple annz [EVar annz "a",EVar annz "b",EVar annz "c"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]]) (SNop annz) (SNop annz)))))))
         `shouldBe` ["match never succeeds : arity mismatch"]
           --["types do not match : expected '(?,?,?)' : found '(Int.1,Int.2)'"]
@@ -211,7 +211,7 @@ spec = do
       (fst $ TypeSys.go
         (SData annz Nothing (int,cz) False
         (SVar annz "f" (TFunc False FuncGlobal (TUnit False) (int),cz)
-        (SVar annz "ret" ((TTop False),cz)
+        (SVar annz "ret" (TAny False "?",cz)
         (mmm annz False (EVar annz "ret") (ECall annz (EVar annz "f") (EUnit annz)) (SNop annz) (SNop annz))))))
         `shouldBe` []
 
@@ -243,8 +243,8 @@ spec = do
         `shouldBe` (["variable 'f' is already declared"],SVar annz "f" (TFunc False FuncGlobal (TAny False "a") (TAny False "a"),cz) (SVar annz "f" (TFunc False FuncGlobal (TUnit False) (TUnit False),cz) (SNop annz)))
 
     it "func f; func ~f" $
-      TypeSys.go (SVar annz "f" (TFunc False FuncGlobal (TUnit False) (TUnit False),cz) (SVar annz "f" (TFunc False FuncGlobal (TUnit False) (TTop False),cz) (SNop annz)))
-        `shouldBe` (["variable 'f' is already declared"],SVar annz "f" (TFunc False FuncGlobal (TUnit False) (TUnit False),cz) (SVar annz "f" (TFunc False FuncGlobal (TUnit False) (TTop False),cz) (SNop annz)))
+      TypeSys.go (SVar annz "f" (TFunc False FuncGlobal (TUnit False) (TUnit False),cz) (SVar annz "f" (TFunc False FuncGlobal (TUnit False) TTop,cz) (SNop annz)))
+        `shouldBe` (["variable 'f' is already declared"],SVar annz "f" (TFunc False FuncGlobal (TUnit False) (TUnit False),cz) (SVar annz "f" (TFunc False FuncGlobal (TUnit False) TTop,cz) (SNop annz)))
 
     it "func first :: (a,a)->a ; var a::Int ; a = first((),1)" $
       (fst $ TypeSys.go (prelude annz (SVar annz "first" (TFunc False FuncGlobal (TTuple False [(TAny False "a"),(TAny False "a")]) (TAny False "a"),cz) (SVar annz "a" (int,cz) (mmm annz False (EVar annz "a") (ECall annz (EVar annz "first") (ETuple annz [(EUnit annz),(ECons annz ["Int","1"])])) (SNop annz) (SNop annz))))))
@@ -306,24 +306,24 @@ spec = do
   describe "pattern matching" $ do
     it "1 = 1" $
       TypeSys.go (prelude annz $ mmm annz False (ECons annz ["Int","1"]) (ECons annz ["Int","1"]) (SNop annz) (SNop annz))
-      `shouldBe` ([],SData annz Nothing (TData False ["Int"] [] (TUnit False),cz) False (SData annz Nothing (TData False ["Bool"] [] (TUnit False),cz) True (SData annz Nothing (TData False ["Bool","True"] [] (TUnit False),cz) False (SData annz Nothing (TData False ["Bool","False"] [] (TUnit False),cz) False (mmm annz{typec=((TBot False),cz)} False (ECons annz{typec = (TData False ["Int"] [] (TUnit False),cz)} ["Int","1"]) (ECons annz{typec=(TData False ["Int"] [] (TUnit False),cz)} ["Int","1"]) (SNop annz) (SNop annz))))))
+      `shouldBe` ([],SData annz Nothing (TData False ["Int"] [] (TUnit False),cz) False (SData annz Nothing (TData False ["Bool"] [] (TUnit False),cz) True (SData annz Nothing (TData False ["Bool","True"] [] (TUnit False),cz) False (SData annz Nothing (TData False ["Bool","False"] [] (TUnit False),cz) False (mmm annz{typec=(TBot,cz)} False (ECons annz{typec = (TData False ["Int"] [] (TUnit False),cz)} ["Int","1"]) (ECons annz{typec=(TData False ["Int"] [] (TUnit False),cz)} ["Int","1"]) (SNop annz) (SNop annz))))))
     it "1 <- 2" $
       TypeSys.go (prelude annz $ mmm annz True (ECons annz ["Int","1"]) (ECons annz ["Int","2"]) (SNop annz) (SNop annz))
       `shouldBe` (["match never succeeds : data mismatch"],SData annz Nothing (TData False ["Int"] [] (TUnit False),cz) False (SData annz Nothing (TData False ["Bool"] [] (TUnit False),cz) True (SData annz Nothing (TData False ["Bool","True"] [] (TUnit False),cz) False (SData annz Nothing (TData False ["Bool","False"] [] (TUnit False),cz) False (mmm' annz True (ECons annz{typec = (TData False ["Int"] [] (TUnit False),cz)} ["Int","1"]) (ECons (annz {typec = (TData False ["Int"] [] (TUnit False),cz)}) ["Int","2"]) (SNop annz) (SNop annz))))))
     it "_ = 1" $
       TypeSys.go (mmm annz False (EAny annz) (ECons annz ["Int","1"]) (SNop annz) (SNop annz))
-      `shouldBe` (["data 'Int.1' is not declared"],mmm annz{typec=((TBot False),cz)} False (EAny annz) (ECons annz{typec=(TAny False "?",cz)} ["Int","1"]) (SNop annz) (SNop annz))
+      `shouldBe` (["data 'Int.1' is not declared"],mmm annz{typec=(TBot,cz)} False (EAny annz) (ECons annz{typec=(TBot,cz)} ["Int","1"]) (SNop annz) (SNop annz))
     it "(x,_) = 1" $
       TypeSys.go (prelude annz
             (SVar annz "x" (int,cz)
               (mmm annz False (ETuple annz [EVar annz "x", (EAny annz)]) (ECons annz ["Int","1"]) (SNop annz) (SNop annz))))
-      `shouldBe` (["match never succeeds"],SData annz Nothing (int,cz) False (SData annz Nothing (bool,cz) True (SData annz Nothing (boolt,cz) False (SData annz Nothing (boolf,cz) False (SVar annz{typec=((TBot False),cz)} "x" (int,cz) (mmm annz{typec=((TBot False),cz)} False (ETuple annz [EVar annz "x",(EAny annz)]) (ECons annz{typec=(TData False ["Int"] [] (TUnit False),cz)} ["Int","1"]) (SNop annz) (SNop annz)))))))
+      `shouldBe` (["match never succeeds"],SData annz Nothing (int,cz) False (SData annz Nothing (bool,cz) True (SData annz Nothing (boolt,cz) False (SData annz Nothing (boolf,cz) False (SVar annz{typec=(TBot,cz)} "x" (int,cz) (mmm annz{typec=(TBot,cz)} False (ETuple annz [EVar annz "x",(EAny annz)]) (ECons annz{typec=(TData False ["Int"] [] (TUnit False),cz)} ["Int","1"]) (SNop annz) (SNop annz)))))))
 
     it "(x,_) = (1,1)" $
       TypeSys.go (prelude annz
             (SVar annz "x" (int,cz)
               (mmm annz False (ETuple annz [EVar annz "x", (EAny annz)]) (ETuple annz [ECons annz ["Int","1"], ECons annz ["Int","1"]]) (SNop annz) (SNop annz))))
-      `shouldBe` ([],SData annz Nothing (int,cz) False (SData annz Nothing (bool,cz) True (SData annz Nothing (boolt,cz) False (SData annz Nothing (boolf,cz) False (SVar (annz{typec = ((TBot False),cz)}) "x" (int,cz) (mmm (annz{typec = ((TBot False),cz)}) False (ETuple annz [EVar annz "x",(EAny annz)]) (ETuple (annz{typec = (TTuple False [TData False ["Int"] [] (TUnit False),TData False ["Int"] [] (TUnit False)],cz)}) [ECons (annz{typec = (TData False ["Int"] [] (TUnit False),cz)}) ["Int","1"],ECons (annz{typec = (TData False ["Int"] [] (TUnit False),cz)}) ["Int","1"]]) (SNop annz) (SNop annz)))))))
+      `shouldBe` ([],SData annz Nothing (int,cz) False (SData annz Nothing (bool,cz) True (SData annz Nothing (boolt,cz) False (SData annz Nothing (boolf,cz) False (SVar (annz{typec = (TBot,cz)}) "x" (int,cz) (mmm (annz{typec = (TBot,cz)}) False (ETuple annz [EVar annz "x",(EAny annz)]) (ETuple (annz{typec = (TTuple False [TData False ["Int"] [] (TUnit False),TData False ["Int"] [] (TUnit False)],cz)}) [ECons (annz{typec = (TData False ["Int"] [] (TUnit False),cz)}) ["Int","1"],ECons (annz{typec = (TData False ["Int"] [] (TUnit False),cz)}) ["Int","1"]]) (SNop annz) (SNop annz)))))))
 
     it "((_,x),_) = (y,1)" $
       TypeSys.go (prelude annz
@@ -334,16 +334,16 @@ spec = do
                   (ETuple annz [EVar annz "y", ECons annz ["Int","1"]])
                   (SNop annz)
                   (SNop annz)))))
-      `shouldBe` ([],SData annz Nothing (int,cz) False (SData annz Nothing (bool,cz) True (SData annz Nothing (boolt,cz) False (SData annz Nothing (boolf,cz) False (SVar (annz{typec = ((TBot False),cz)}) "x" (int,cz) (SVar (annz{typec = ((TBot False),cz)}) "y" (TTuple False [(TUnit False),int],cz) (mmm (annz{typec = ((TBot False),cz)}) False (ETuple annz [ETuple annz [(EAny annz),EVar annz "x"],(EAny annz)]) (ETuple (annz{typec = (TTuple False [TTuple False [(TUnit False),int],TData False ["Int"] [] (TUnit False)],cz)}) [EVar (annz{typec = (TTuple False [(TUnit False),int],cz)}) "y",ECons annz{typec = (TData False ["Int"] [] (TUnit False),cz)} ["Int","1"]]) (SNop annz) (SNop annz))))))))
+      `shouldBe` ([],SData annz Nothing (int,cz) False (SData annz Nothing (bool,cz) True (SData annz Nothing (boolt,cz) False (SData annz Nothing (boolf,cz) False (SVar (annz{typec = (TBot,cz)}) "x" (int,cz) (SVar (annz{typec = (TBot,cz)}) "y" (TTuple False [(TUnit False),int],cz) (mmm (annz{typec = (TBot,cz)}) False (ETuple annz [ETuple annz [(EAny annz),EVar annz "x"],(EAny annz)]) (ETuple (annz{typec = (TTuple False [TTuple False [(TUnit False),int],TData False ["Int"] [] (TUnit False)],cz)}) [EVar (annz{typec = (TTuple False [(TUnit False),int],cz)}) "y",ECons annz{typec = (TData False ["Int"] [] (TUnit False),cz)} ["Int","1"]]) (SNop annz) (SNop annz))))))))
 
     it "`a` = 1" $
       TypeSys.go (prelude annz
         (SVar annz "a" (int,cz) (mmm annz True (EExp annz $ EVar annz "a") (ECons annz ["Int","1"]) (SNop annz) (SNop annz))))
-      `shouldBe` ([],SData annz Nothing (int,cz) False (SData annz Nothing (bool,cz) True (SData annz Nothing (boolt,cz) False (SData annz Nothing (boolf,cz) False (SVar annz "a" (int,cz) (mmm' annz True (EExp annz $ EVar annz{typec = ((TBot False),cz)} "a") (ECons annz{typec=(TData False ["Int"] [] (TUnit False),cz)} ["Int","1"]) (SNop annz) (SNop annz)))))))
+      `shouldBe` ([],SData annz Nothing (int,cz) False (SData annz Nothing (bool,cz) True (SData annz Nothing (boolt,cz) False (SData annz Nothing (boolf,cz) False (SVar annz "a" (int,cz) (mmm' annz True (EExp annz $ EVar annz{typec = (TBot,cz)} "a") (ECons annz{typec=(TData False ["Int"] [] (TUnit False),cz)} ["Int","1"]) (SNop annz) (SNop annz)))))))
     it "`a` = 1" $
       TypeSys.go (prelude annz
         (SVar annz "a" ((TUnit False),cz) (mmm annz True (EExp annz $ EVar annz "a") (ECons annz ["Int","1"]) (SNop annz) (SNop annz))))
-      `shouldBe` (["types do not match : expected '()' : found 'Int'"],SData annz Nothing (int,cz) False (SData annz Nothing (bool,cz) True (SData annz Nothing (boolt,cz) False (SData annz Nothing (boolf,cz) False (SVar annz "a" ((TUnit False),cz) (mmm' annz True (EExp annz $ EVar annz{typec = ((TBot False),cz)} "a") (ECons annz{typec=(TData False ["Int"] [] (TUnit False),cz)} ["Int","1"]) (SNop annz) (SNop annz)))))))
+      `shouldBe` (["types do not match : expected '()' : found 'Int'"],SData annz Nothing (int,cz) False (SData annz Nothing (bool,cz) True (SData annz Nothing (boolt,cz) False (SData annz Nothing (boolf,cz) False (SVar annz "a" ((TUnit False),cz) (mmm' annz True (EExp annz $ EVar annz{typec = (TBot,cz)} "a") (ECons annz{typec=(TData False ["Int"] [] (TUnit False),cz)} ["Int","1"]) (SNop annz) (SNop annz)))))))
 
     it "data X with Int ; X 1 <- X 2" $
       (fst $ TypeSys.go (prelude annz
