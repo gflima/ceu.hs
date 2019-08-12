@@ -52,7 +52,7 @@ type_F ref = do
 type_V :: Bool -> Parser Type
 type_V ref = do
     var <- tk_var
-    return $ TAny ref var
+    return $ TVar ref var
 
 type_parens :: Parser Type
 type_parens = do

@@ -286,7 +286,7 @@ spec = do
                 `shouldBe` Right (TFunc False FuncUnknown (int) (int))
             it "(a -> Int)" $
                 parse (type_F False) "(a -> Int)"
-                `shouldBe` Right (TFunc False FuncUnknown (TAny False "a") (int))
+                `shouldBe` Right (TFunc False FuncUnknown (TVar False "a") (int))
             it "a -> Int" $
                 parse (type_F False) "a -> Int"
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"a\"\nexpecting \"(\""
@@ -297,7 +297,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 1):\nunexpected \"I\""
             it "a" $
                 parse (type_V False) "a"
-                `shouldBe` Right (TAny False "a")
+                `shouldBe` Right (TVar False "a")
 
         describe "pType" $ do
             it "()" $
@@ -655,27 +655,27 @@ end
 
             it "EUnit a/IEq" $
               parse' stmt "data EUnit for a with a where a is IEq"
-              `shouldBe` Right (SData annz Nothing (TData False ["EUnit"] [TAny False "a"] (TAny False "a"),M.fromList [("a",S.fromList ["IEq"])]) False)
+              `shouldBe` Right (SData annz Nothing (TData False ["EUnit"] [TVar False "a"] (TVar False "a"),M.fromList [("a",S.fromList ["IEq"])]) False)
             it "Pair (a,a)" $
               parse' stmt "data Pair for a with (a,a)"
-              `shouldBe` Right (SData annz Nothing (TData False ["Pair"] [TAny False "a"] (TTuple False [TAny False "a",TAny False "a"]),M.fromList []) False)
+              `shouldBe` Right (SData annz Nothing (TData False ["Pair"] [TVar False "a"] (TTuple False [TVar False "a",TVar False "a"]),M.fromList []) False)
             it "Pair (a,a)/IEq" $
               parse' stmt "data Pair for a with (a,a) where (a is IEq)"
-              `shouldBe` Right (SData annz Nothing (TData False ["Pair"] [TAny False "a"] (TTuple False [TAny False "a",TAny False "a"]),M.fromList [("a",S.fromList ["IEq"])]) False)
+              `shouldBe` Right (SData annz Nothing (TData False ["Pair"] [TVar False "a"] (TTuple False [TVar False "a",TVar False "a"]),M.fromList [("a",S.fromList ["IEq"])]) False)
             it "Pair (a,b)" $
               parse' stmt "data Pair for (a,b) with (a,b)"
-              `shouldBe` Right (SData annz Nothing (TData False ["Pair"] [TAny False "a",TAny False "b"] (TTuple False [TAny False "a",TAny False "b"]),M.fromList []) False)
+              `shouldBe` Right (SData annz Nothing (TData False ["Pair"] [TVar False "a",TVar False "b"] (TTuple False [TVar False "a",TVar False "b"]),M.fromList []) False)
             it "Pair (a,b)/IEq" $
               parse' stmt "data Pair for (a,b) with (a,b) where (a is IEq, b is IEq)"
-              `shouldBe` Right (SData annz Nothing (TData False ["Pair"] [TAny False "a",TAny False "b"] (TTuple False [TAny False "a",TAny False "b"]),M.fromList [("a",S.fromList ["IEq"]),("b",S.fromList ["IEq"])]) False)
+              `shouldBe` Right (SData annz Nothing (TData False ["Pair"] [TVar False "a",TVar False "b"] (TTuple False [TVar False "a",TVar False "b"]),M.fromList [("a",S.fromList ["IEq"]),("b",S.fromList ["IEq"])]) False)
 
             it "Pair (a,a) ; p1:Pair(Int,Int)" $
               parse' stmt "data Pair for a with (a,a) ; var p1 : Pair of Int"
-              `shouldBe` Right (SSeq annz (SData annz Nothing (TData False ["Pair"] [TAny False "a"] (TTuple False [TAny False "a",TAny False "a"]),M.fromList []) False) (SSeq annz (SSeq annz (SVar annz "p1" (TData False ["Pair"] [int] (TUnit False),M.fromList [])) (SNop annz)) (SNop annz)))
+              `shouldBe` Right (SSeq annz (SData annz Nothing (TData False ["Pair"] [TVar False "a"] (TTuple False [TVar False "a",TVar False "a"]),M.fromList []) False) (SSeq annz (SSeq annz (SVar annz "p1" (TData False ["Pair"] [int] (TUnit False),M.fromList [])) (SNop annz)) (SNop annz)))
 
             it "Either" $
               parse' stmt "data Either for (a,b) ; data Either.Left  with a ; data Either.Right with b"
-              `shouldBe` Right (SSeq annz (SData annz Nothing (TData False ["Either"] [TAny False "a",TAny False "b"] (TUnit False),M.fromList []) False) (SSeq annz (SData annz Nothing (TData False ["Either","Left"] [] (TAny False "a"),M.fromList []) False) (SData annz Nothing (TData False ["Either","Right"] [] (TAny False "b"),M.fromList []) False)))
+              `shouldBe` Right (SSeq annz (SData annz Nothing (TData False ["Either"] [TVar False "a",TVar False "b"] (TUnit False),M.fromList []) False) (SSeq annz (SData annz Nothing (TData False ["Either","Left"] [] (TVar False "a"),M.fromList []) False) (SData annz Nothing (TData False ["Either","Right"] [] (TVar False "b"),M.fromList []) False)))
 
         describe "constraint:" $ do
 
@@ -697,12 +697,12 @@ end
               (SClass annz{source=("",1,1)} "IF3able" (cv "a")
                 (SSeq annz{source=("",2,2)}
                 (SSeq annz{source=("",0,0)}
-                (SVar annz{source=("",2,2)} "f3" (TFunc False FuncUnknown (TAny False "a") (int),cz))
+                (SVar annz{source=("",2,2)} "f3" (TFunc False FuncUnknown (TVar False "a") (int),cz))
                 (SNop annz{source=("",0,0)}))
                 (SNop annz{source=("",2,2)})))
               (SSeq annz{source=("",1,1)}
               (SInst annz{source=("",4,1)} "IF3able" (int,cz)
-                (SFunc annz{source=("",5,2)} "f3" (TFunc False FuncUnknown (TAny False "a") (int),cz) (EVar annz{source=("",5,11)} "v") (SRet annz{source=("",6,4)} (EVar annz{source=("",6,11)} "v"))))
+                (SFunc annz{source=("",5,2)} "f3" (TFunc False FuncUnknown (TVar False "a") (int),cz) (EVar annz{source=("",5,11)} "v") (SRet annz{source=("",6,4)} (EVar annz{source=("",6,11)} "v"))))
               (SRet annz{source=("",9,1)} (ECall annz{source=("",9,8)} (EVar annz{source=("",9,8)} "f3") (ECons annz{source=("",9,11)} ["Int","10"])))))
 
           it "IOrd extends IEq" $
@@ -729,21 +729,21 @@ end
             `shouldBe` Right
               (SSeq annz
               (SClass annz "IEq" (cv "a")
-                (SVar annz "==" (TFunc False FuncUnknown (TTuple False [TAny False "a",TAny False "a"]) (bool),cz)))
+                (SVar annz "==" (TFunc False FuncUnknown (TTuple False [TVar False "a",TVar False "a"]) (bool),cz)))
               (SSeq annz
               (SClass annz "IOrd" (cvc("a","IEq"))
-                (SVar annz ">=" (TFunc False FuncUnknown (TTuple False [TAny False "a",TAny False "a"]) (bool),cz)))
+                (SVar annz ">=" (TFunc False FuncUnknown (TTuple False [TVar False "a",TVar False "a"]) (bool),cz)))
               (SSeq annz
               (SInst annz "IEq" (bool,cz)
-                (SFunc annz "==" (TFunc False FuncUnknown (TTuple False [TAny False "a",TAny False "a"]) (bool),cz) (ETuple annz [EVar annz "x",EVar annz "y"]) (SRet annz (ECons annz ["Bool","True"]))))
+                (SFunc annz "==" (TFunc False FuncUnknown (TTuple False [TVar False "a",TVar False "a"]) (bool),cz) (ETuple annz [EVar annz "x",EVar annz "y"]) (SRet annz (ECons annz ["Bool","True"]))))
               (SSeq annz
               (SInst annz "IOrd" (bool,cz)
-                (SFunc annz ">=" (TFunc False FuncUnknown (TTuple False [TAny False "a",TAny False "a"]) (bool),cz) (ETuple annz [EVar annz "x",EVar annz "y"]) (SRet annz (ECons annz ["Bool","True"]))))
+                (SFunc annz ">=" (TFunc False FuncUnknown (TTuple False [TVar False "a",TVar False "a"]) (bool),cz) (ETuple annz [EVar annz "x",EVar annz "y"]) (SRet annz (ECons annz ["Bool","True"]))))
               (SRet annz (ECall annz (EVar annz ">=") (ETuple annz [ECons annz ["Bool","True"],ECons annz ["Bool","False"]])))))))
 
           it "IFable f ; g a is IFable" $
             (parse' stmt $ "var x : a where (a is IFable,b is IFable)") -- (a,b) vs (IFable), arity mismatch
-            `shouldBe` Right (SSeq annz (SSeq annz (SVar annz "x" (TAny False "a",M.fromList [("a",S.fromList ["IFable"]),("b",S.fromList ["IFable"])])) (SNop annz)) (SNop annz))
+            `shouldBe` Right (SSeq annz (SSeq annz (SVar annz "x" (TVar False "a",M.fromList [("a",S.fromList ["IFable"]),("b",S.fromList ["IFable"])])) (SNop annz)) (SNop annz))
 
           it "IFable f ; g a is IFable" $
             (parse' stmt $
@@ -766,9 +766,9 @@ end
             `shouldBe` Right
               (SSeq annz
                 (SClass annz "IFable" (cv "a")
-                  (SVar annz "f" (TFunc False FuncUnknown (TAny False "a") (bool),cz)))
+                  (SVar annz "f" (TFunc False FuncUnknown (TVar False "a") (bool),cz)))
               (SSeq annz
-                (SFunc annz "g" (TFunc False FuncUnknown (TAny False "a") (bool),cvc("a","IFable")) (EVar annz "x") (SRet annz (ECall annz (EVar annz "f") (EVar annz "x")))) (SRet annz (ECall annz (EVar annz "g") (ECons annz ["Bool","True"])))))
+                (SFunc annz "g" (TFunc False FuncUnknown (TVar False "a") (bool),cvc("a","IFable")) (EVar annz "x") (SRet annz (ECall annz (EVar annz "f") (EVar annz "x")))) (SRet annz (ECall annz (EVar annz "g") (ECons annz ["Bool","True"])))))
 
         describe "seq:" $ do
             it "x =  k k =  1" $

@@ -37,8 +37,8 @@ idtp id tp = "$" ++ id ++ "$" ++ T.show' tp ++ "$"
 go :: Stmt -> (Errors, Stmt)
 go p = (es,p') where
         (es,_,_,p') = stmt [[],[]] (TTop,cz) p
-        --(es,_,_,p') = f $ stmt [[],[]] (TAny False "?",cz) p where f (e,x,y,s) = traceShow s (e,x,y,s)
-        --(es,_,_,p') = f $ stmt [[],[]] (TAny False "?",cz) p where f (e,x,y,s) = traceShow (show_stmt 0 s) (e,x,y,s)
+        --(es,_,_,p') = f $ stmt [[],[]] (TVar False "?",cz) p where f (e,x,y,s) = traceShow s (e,x,y,s)
+        --(es,_,_,p') = f $ stmt [[],[]] (TVar False "?",cz) p where f (e,x,y,s) = traceShow (show_stmt 0 s) (e,x,y,s)
 
 -------------------------------------------------------------------------------
 
@@ -295,7 +295,7 @@ stmt envs tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ft, fts, p'') 
                         case relatesC SUP tp1 tp2 of
                           Left es -> map (toError z2) es
                           Right (_,insts) ->
-                            let tp' = T.instantiate insts (TAny False clss_var) in
+                            let tp' = T.instantiate insts (TVar False clss_var) in
                               if tp' == itp then
                                 []
                               else
@@ -505,8 +505,8 @@ stmt _   _   (SNop z)       = ([], FuncGlobal, [], SNop z)
 
 expr :: Ann -> (Relation,TypeC) -> Envs -> Exp -> (Errors, FuncType, [FuncType], Exp)
 expr z (rel,txp) envs exp = (es1++es2, ft, fts, exp') where
-  --(es1, exp') = expr' (rel,bool (TAny False "?" []) txp (rel/=ANY)) envs exp
-  --(es1, exp') = expr' (rel,bool (TAny False "?" []) txp (rel==SUP)) envs exp
+  --(es1, exp') = expr' (rel,bool (TVar False "?" []) txp (rel/=ANY)) envs exp
+  --(es1, exp') = expr' (rel,bool (TVar False "?" []) txp (rel==SUP)) envs exp
                            -- only force expected type on SUP
   (es1, ft, fts, exp') = expr' (rel,txp) envs exp
   es2 = if not.null $ es1 then [] else
@@ -647,7 +647,7 @@ expr' (rel,txp@(txp_,cxp)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n
     | otherwise        =
       -- find in top-level envs | id : a
       case findVar z (id,rel,txp) envs of
-        Left  es -> (id, (TAny False "?",cz), (False,0), es)
+        Left  es -> (id, (TVar False "?",cz), (False,0), es)
         Right (lnr, SVar _ id' tpc@(_,ctrs) _,_) ->
           if ctrs == cz then
             (id, tpc, lnr, [])
@@ -661,7 +661,7 @@ expr' (rel,txp@(txp_,cxp)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n
                     (id, (TTop,cz), lnr, err)
                   else
                     (id, tpc, lnr, [])
-              Nothing -> (id, (TAny False "?",cz), lnr, err)
+              Nothing -> (id, (TVar False "?",cz), lnr, err)
             where
               pred :: Stmt -> Bool
               pred (SVar _ k tpc@(tp,_) _) = (idtp id tp == k) && (isRight $ relatesC SUP txp tpc)
@@ -687,7 +687,7 @@ expr' (rel,(txp_,cxp)) envs (ECall z f exp) = (bool ese esf (null ese) ++ esa,
                                               ftMin ft1 ft2, fts1++fts2,
                                               ECall z{typec=tpc_out'} f' exp')
   where
-    (ese, ft1, fts1, exp') = expr z (rel, (TAny False "?",cz)) envs exp
+    (ese, ft1, fts1, exp') = expr z (rel, (TVar False "?",cz)) envs exp
     (esf, ft2, fts2, f')   = expr z (rel, (TFunc False FuncUnknown (fst$typec$getAnn$exp') txp_, cxp)) envs f
                                       -- TODO: ctrs of exp'
 

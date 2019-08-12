@@ -165,7 +165,7 @@ stmt_data = do
   void    <- try $ tk_key "data"
   id      <- tk_data_hier
   nms     <- optionMaybe $ try ((list1 tk_var) <|> (singleton <$> tk_var))
-  ofs     <- option [] $ try $ tk_key "for" *> (map (TAny False) <$> (try (list1 tk_var) <|> (singleton <$> tk_var)))
+  ofs     <- option [] $ try $ tk_key "for" *> (map (TVar False) <$> (try (list1 tk_var) <|> (singleton <$> tk_var)))
   (st,cs) <- option (TUnit False,cz) $ try $ tk_key "with" *> pTypeContext
   isAbs   <- option False $ do
                               void <- try $ tk_key "is"

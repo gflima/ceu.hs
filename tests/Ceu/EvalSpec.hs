@@ -191,8 +191,8 @@ spec = do
       it "(a,b) <- (1,2)" $
         go
           (B.SData annz Nothing (int,cz) False
-          (B.SVar annz "a" (TAny False "?",cz)
-          (B.SVar annz "b" (TAny False "?",cz)
+          (B.SVar annz "a" (TVar False "?",cz)
+          (B.SVar annz "b" (TVar False "?",cz)
           (mmmOne annz False (B.ETuple annz [B.EVar annz "a",B.EVar annz "b"]) (B.ETuple annz [B.ECons annz ["Int","1"],B.ECons annz ["Int","2"]])
             (B.SRet annz (B.EVar annz "b"))
             (B.SRet annz (B.EError annz 99))))))
@@ -201,8 +201,8 @@ spec = do
       it "(_,b) <- (1,2)" $
         go
           (B.SData annz Nothing (int,cz) False
-          (B.SVar annz "a" (TAny False "?",cz)
-          (B.SVar annz "b" (TAny False "?",cz)
+          (B.SVar annz "a" (TVar False "?",cz)
+          (B.SVar annz "b" (TVar False "?",cz)
           (mmmOne annz False (B.ETuple annz [B.EAny annz,B.EVar annz "b"]) (B.ETuple annz [B.ECons annz ["Int","1"],B.ECons annz ["Int","2"]])
             (B.SRet annz (B.EVar annz "b"))
             (B.SRet annz (B.EError annz 99))))))
@@ -430,8 +430,8 @@ spec = do
         go
           (B.SData annz Nothing (int,cz) False
           (B.SClass annz "X" (cv "a")
-            [(annz,"f3",(TFunc False FuncGlobal (TAny False "a") (int),cvc ("a","X")),False)]
-          (B.SVar annz "f3" (TFunc False FuncGlobal (TAny False "a") (int),cvc ("a","X"))
+            [(annz,"f3",(TFunc False FuncGlobal (TVar False "a") (int),cvc ("a","X")),False)]
+          (B.SVar annz "f3" (TFunc False FuncGlobal (TVar False "a") (int),cvc ("a","X"))
           (B.SInst annz "X" (int,cz)
             [(annz,"f3",(TFunc False FuncGlobal (int) (int),cz),True)]
             (B.SVar annz "$f3$(Int -> Int)$" (TFunc False FuncGlobal (int) (int),cz)
@@ -451,8 +451,8 @@ spec = do
           (B.SVar annz "+" (TFunc False FuncGlobal (TTuple False [int, int]) (int),cz)
           (B.SData annz Nothing (bool,cz) False
           (B.SClass annz "X" (cv "a")
-            [(annz,"f2",(TFunc False FuncGlobal (TAny False "a") (int),cvc ("a","X")),False)]
-          (B.SVar annz "f2" (TFunc False FuncGlobal (TAny False "a") (int),cvc ("a","X"))
+            [(annz,"f2",(TFunc False FuncGlobal (TVar False "a") (int),cvc ("a","X")),False)]
+          (B.SVar annz "f2" (TFunc False FuncGlobal (TVar False "a") (int),cvc ("a","X"))
           (B.SInst annz "X" (bool,cz)
             [(annz,"f2",(TFunc False FuncGlobal (bool) (int),cz),True)]
             (B.SVar annz "$f2$(Bool -> Int)$" (TFunc False FuncGlobal (bool) (int),cz)
@@ -491,8 +491,8 @@ spec = do
           (B.SVar annz "+" (TFunc False FuncGlobal (TTuple False [int, int]) (int),cz)
           (B.SData annz Nothing (bool,cz) False
           (B.SClass annz "X" (cv "a")
-            [(annz,"f4",(TFunc False FuncGlobal (TAny False "a") (int),cvc ("a","X")),False)]
-          (B.SVar annz "f4" (TFunc False FuncGlobal (TAny False "a") (int),cvc ("a","X"))
+            [(annz,"f4",(TFunc False FuncGlobal (TVar False "a") (int),cvc ("a","X")),False)]
+          (B.SVar annz "f4" (TFunc False FuncGlobal (TVar False "a") (int),cvc ("a","X"))
           (B.SInst annz "X" (int,cz)
             [(annz,"f4",(TFunc False FuncGlobal (int) (int),cz),True)]
             (B.SVar annz "$f4$(Int -> Int)$" (TFunc False FuncGlobal (int) (int),cz)

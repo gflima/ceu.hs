@@ -88,7 +88,7 @@ fvar ds (tp_,ctrs) = (fvar' ds tp_, ctrs)
       case find (\(SData'' _ _ (TData False h' _ _,_) _ _) -> h'==hier) ds of
         Nothing -> fvar' ds st
         Just (SData'' _ _ (TData False _ ofs' st',_) _ _)
-                -> instantiate (zip (map (\(TAny False v)->v) ofs') ofs) st'
+                -> instantiate (zip (map (\(TVar False v)->v) ofs') ofs) st'
     fvar' ds (TFunc False ftp inp out) = TFunc False ftp (fvar' ds inp) (fvar' ds out)
     fvar' ds (TTuple False tps)    = TTuple False $ map (fvar' ds) tps
     fvar' _  tp                    = tp

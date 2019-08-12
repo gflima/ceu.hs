@@ -17,7 +17,7 @@ data Type = TBot
           | TData  Bool ID_Data_Hier [Type] Type    -- X of [Y] with (Y,Int)
           | TTuple Bool [Type]    -- (len >= 2)
           | TFunc  Bool FuncType Type Type
-          | TAny   Bool ID_Var
+          | TVar   Bool ID_Var
     deriving (Eq,Show)
 
 data Relation = SUP | SUB | ANY | NONE deriving (Eq, Show)
@@ -63,7 +63,7 @@ hier2str = intercalate "."
 show' :: Type -> String
 show' TTop                      = "?"
 show' TBot                      = "bot"
-show' (TAny   False id)         = id
+show' (TVar   False id)         = id
 show' (TUnit  False)            = "()"
 show' (TData  ref hier []  _)   = ref2str ref ++ hier2str hier
 show' (TData  ref hier [x] _)   = "(" ++ ref2str ref ++ hier2str hier ++ " of " ++ show' x ++ ")"
@@ -85,7 +85,7 @@ isRef (TUnit  ref      )  = ref
 isRef (TData  ref _ _ _)  = ref
 isRef (TTuple ref _    )  = ref
 isRef (TFunc  ref _ _ _)  = ref
-isRef (TAny   ref _    )  = ref
+isRef (TVar   ref _    )  = ref
 
 toRefC :: TypeC -> TypeC
 toRefC (tp,cz) = (toRef tp, cz)
@@ -95,7 +95,7 @@ toRef (TUnit  False      )  = TUnit  True
 toRef (TData  False x y z)  = TData  True x y z
 toRef (TTuple False x    )  = TTuple True x
 toRef (TFunc  False x y z)  = TFunc  True x y z
-toRef (TAny   False x    )  = TAny   True x
+toRef (TVar   False x    )  = TVar   True x
 
 toDerC :: TypeC -> TypeC
 toDerC (tp,cz) = (toDer tp, cz)
@@ -108,7 +108,7 @@ toDer (TUnit  True      )  = TUnit  False
 toDer (TData  True x y z)  = TData  False x y z
 toDer (TTuple True x    )  = TTuple False x
 toDer (TFunc  True x y z)  = TFunc  False x y z
-toDer (TAny   True x    )  = TAny   False x
+toDer (TVar   True x    )  = TVar   False x
 --toDer x = error $ show x
 
 -------------------------------------------------------------------------------
@@ -133,7 +133,7 @@ instance Ord Type where
                                                | otherwise = (TTuple False l1 <= TTuple False l2)
   (<=) (TTuple False _)          _                         = True
   (<=) _                         (TTuple False _)          = False
-  (<=) (TAny False v1)           (TAny False v2)           = v1<=v2
+  (<=) (TVar False v1)           (TVar False v2)           = v1<=v2
 
 sort' :: [[Type]] -> [[Type]]
 sort' ts = map (\(TTuple False l)->l) $ sort $ map (TTuple False) ts
@@ -143,7 +143,7 @@ sort' ts = map (\(TTuple False l)->l) $ sort $ map (TTuple False) ts
 getDs :: Type -> [Type]
 getDs    TTop                = []
 getDs    TBot                = []
-getDs    (TAny   _ _)        = []
+getDs    (TVar   _ _)        = []
 getDs    (TUnit  _)          = []
 getDs tp@(TData  _ _ ofs st) = [tp] ++ concatMap getDs ofs ++ getDs st
 getDs    (TFunc  _ _ inp out) = getDs inp ++ getDs out
@@ -162,12 +162,12 @@ splitOn d s = x : splitOn d (drop 1 y) where (x,y) = span (/= d) s
 -------------------------------------------------------------------------------
 
 -- list: list with instantiated pairs (var,Type)
--- Type: type (possibly TAny) we want to instantiate
+-- Type: type (possibly TVar) we want to instantiate
 -- Type: type of the instantiated variable
--- [(a,TData "Bool"),...] -> TAny "a" -> TData "Bool"
+-- [(a,TData "Bool"),...] -> TVar "a" -> TData "Bool"
 instantiate :: [(ID_Var,Type)] -> Type -> Type
-instantiate vars (TAny   False var)         = case find (\(var',_) -> var==var') vars of
-                                                Nothing    -> TAny False var
+instantiate vars (TVar   False var)         = case find (\(var',_) -> var==var') vars of
+                                                Nothing    -> TVar False var
                                                 Just (_,v) -> v
 instantiate vars (TData  False hier ofs st) = TData  False hier (map (instantiate vars) ofs) (instantiate vars st)
 instantiate vars (TFunc  False ft inp out)  = TFunc  False ft (instantiate vars inp) (instantiate vars out)
@@ -265,7 +265,7 @@ comPre tps = yyy where
 
   xxx = find isNotV tps
         where
-          isNotV (TAny False _) = False
+          isNotV (TVar False _) = False
           isNotV _              = True
 
   yyy = case xxx of
@@ -365,9 +365,9 @@ supOf t1 t2 = if isRef t1 /= isRef t2 then
 
 supOf' :: Type -> Type -> (Bool, Type, [(ID_Var,Type,Relation)])
 
-supOf' sup@(TAny False a1) sub@(TAny False a2) = (True,  sub,         [(a1,sub,SUP),(a2,sup,SUB)])
-supOf' (TAny False a1)     sub                 = (True,  sub,         [(a1,sub,SUP)])
-supOf' sup                 sub@(TAny False a2) = (True,  sup,         [(a2,sup,SUB)])
+supOf' sup@(TVar False a1) sub@(TVar False a2) = (True,  sub,         [(a1,sub,SUP),(a2,sup,SUB)])
+supOf' (TVar False a1)     sub                 = (True,  sub,         [(a1,sub,SUP)])
+supOf' sup                 sub@(TVar False a2) = (True,  sup,         [(a2,sup,SUB)])
 
 supOf' (TUnit False)       (TUnit False)       = (True,  TUnit False, [])
 supOf' (TUnit False)       _                   = (False, TUnit False, [])
