@@ -530,6 +530,44 @@ spec = do
            ])
         `shouldBe` Right (EData ["Int","16"] EUnit)
 
+      it "curry-1" $            -- pg 13
+        (run True $
+          unlines [
+            "func add (x,y) : ((Int, Int) -> Int) do",
+            "   return x+y",
+            "end",
+            "func curry f : (ref ((a,b)->c) -> ((ref a -> (b -> c)))) do",
+            "   return new func x : (ref a -> (b -> c)) do",
+            "               return new func y : (b -> c) do",
+            "                           return f(x,y)",
+            "                          end",
+            "              end",
+            "end",
+            "var addc : (ref Int -> (Int -> Int)) = curry (ref add)",
+            "var i : Int = 10",
+            "return (addc (ref i)) 2"
+           ])
+        `shouldBe` Right (EData ["Int","12"] EUnit)
+
+      it "curry-2" $            -- pg 13
+        (run True $
+          unlines [
+            "func add (x,y) : ((ref Int, Int) -> Int) do",
+            "   return x+y",
+            "end",
+            "func curry f : (ref ((ref a,b)->c) -> ((ref a -> (b -> c)))) do",
+            "   return new func x : (ref a -> (b -> c)) do",
+            "               return new func y : (b -> c) do",
+            "                           return f(ref x,y)",
+            "                          end",
+            "              end",
+            "end",
+            "var addc : (ref Int -> (Int -> Int)) = curry (ref add)",
+            "var i : Int = 10",
+            "return (addc (ref i)) 2"
+           ])
+        `shouldBe` Right (EData ["Int","12"] EUnit)
+
     describe "data:" $ do
 
       it "data Xxx" $

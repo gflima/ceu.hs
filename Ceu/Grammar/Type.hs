@@ -182,13 +182,16 @@ splitOn d s = x : splitOn d (drop 1 y) where (x,y) = span (/= d) s
 -- Type: type of the instantiated variable
 -- [(a,TData "Bool"),...] -> TVar "a" -> TData "Bool"
 instantiate :: [(ID_Var,Type)] -> Type -> Type
+--instantiate x tp | traceShow (x,tp) $ False = TBot
+instantiate _    TBot                       = TBot
+instantiate _    (TUnit  False)             = TUnit False
 instantiate vars (TVar   False var)         = case find (\(var',_) -> var==var') vars of
                                                 Nothing    -> TVar False var
                                                 Just (_,v) -> v
 instantiate vars (TData  False hier ofs st) = TData  False hier (map (instantiate vars) ofs) (instantiate vars st)
 instantiate vars (TFunc  False ft inp out)  = TFunc  False ft (instantiate vars inp) (instantiate vars out)
 instantiate vars (TTuple False tps)         = TTuple False $ map (instantiate vars) tps
-instantiate _    tp                         = tp
+--instantiate _ tp = error $ show tp
 
 -------------------------------------------------------------------------------
 
