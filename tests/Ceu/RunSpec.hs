@@ -294,16 +294,16 @@ spec = do
            ])
         `shouldBe` Left "TODO: ref should be constant"
 
-      it "XXX: ident" $
+      it "ident" $
         (run True $
           unlines [
             "func id x : (ref a -> a) do",
             "   return x",
             "end",
-            "var x : Int = 10",
-            "return id (ref x)"
+            "var y : Int = 10",
+            "return id (ref y)"
            ])
-        `shouldBe` Right (EData ["Int","16"] EUnit)
+        `shouldBe` Right (EData ["Int","10"] EUnit)
 
     describe "closure:" $ do
 

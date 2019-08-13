@@ -83,6 +83,10 @@ isAnyC :: TypeC -> Bool
 isAnyC (TAny, _) = True
 isAnyC _         = False
 
+isAny :: Type -> Bool
+isAny TAny = True
+isAny _    = False
+
 isRefC :: TypeC -> Bool
 isRefC (tp,cz) = isRef tp
 
@@ -109,7 +113,10 @@ toDerC :: TypeC -> TypeC
 toDerC (tp,cz) = (toDer tp, cz)
 
 toDerC' :: TypeC -> TypeC
-toDerC' tpc = bool tpc (toDerC tpc) ((not $ isAnyC tpc) && isRefC tpc)
+toDerC' (tp,cz) = (toDer' tp, cz)
+
+toDer' :: Type -> Type
+toDer' tp = bool tp (toDer tp) ((not $ isAny tp) && isRef tp)
 
 toDer :: Type -> Type
 toDer (TUnit  True      )  = TUnit  False
@@ -374,9 +381,9 @@ supOf t1 t2 = if isRef t1 /= isRef t2 then
 
 supOf' :: Type -> Type -> (Bool, Type, [(ID_Var,Type,Relation)])
 
-supOf' sup@(TVar _ a1)     sub@(TVar _ a2)     = (True,  sub,         [(a1,sub,SUP),(a2,sup,SUB)])
-supOf' (TVar _ a1)         sub                 = (True,  sub,         [(a1,sub,SUP)])
-supOf' sup                 sub@(TVar _ a2)     = (True,  sup,         [(a2,sup,SUB)])
+supOf' sup@(TVar _ a1)     sub@(TVar _ a2)     = (True,  sub,         [(a1,toDer' sub,SUP),(a2,toDer' sup,SUB)])
+supOf' (TVar _ a1)         sub                 = (True,  sub,         [(a1,toDer' sub,SUP)])
+supOf' sup                 sub@(TVar _ a2)     = (True,  sup,         [(a2,toDer' sup,SUB)])
 
 supOf' (TUnit False)       (TUnit False)       = (True,  TUnit False, [])
 supOf' (TUnit False)       _                   = (False, TUnit False, [])
