@@ -415,8 +415,7 @@ supOf' sup                     (TData False _ _ _) = (False, sup,   [])
 
 supOf' sup@(TFunc ref1 ft1 inp1 out1) (TFunc _ ft2 inp2 out2)
   | otherwise    = (ret, TFunc ref1 ft inp out, k++z) where
-    ft = case (ft1,ft2) of
-            (_,_) | ft1==ft2 -> ft1
+    ft = ft1 --case traceShowId (sup,sub) of (_,_) | ft1==ft2 -> ft1
     (i,inp,k) = inp2 `supOf` inp1      -- contravariance on inputs
     (x,out,z) = out1 `supOf` out2
     ret = i && x

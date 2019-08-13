@@ -294,6 +294,17 @@ spec = do
            ])
         `shouldBe` Left "TODO: ref should be constant"
 
+      it "XXX: ident" $
+        (run True $
+          unlines [
+            "func id x : (ref a -> a) do",
+            "   return x",
+            "end",
+            "var x : Int = 10",
+            "return id (ref x)"
+           ])
+        `shouldBe` Right (EData ["Int","16"] EUnit)
+
     describe "closure:" $ do
 
       it "FuncGlobal pass" $
@@ -492,6 +503,32 @@ spec = do
             "return h()"
            ])
         `shouldBe` Right (EData ["Int","10"] EUnit)
+
+      it "apply" $
+        (run True $
+          unlines [
+            "func square (x) : (Int -> Int) do",
+            "   return x * x",
+            "end",
+            "func apply (f,x) : ((ref (a->b),a) -> b) do",
+            "   return f x",
+            "end",
+            "return apply (ref square,4)"
+           ])
+        `shouldBe` Right (EData ["Int","16"] EUnit)
+
+      it "ident" $
+        (run True $
+          unlines [
+            "func square (x) : (Int -> Int) do",
+            "   return x * x",
+            "end",
+            "func id x : ((ref a) -> (() -> a)) do",
+            "   return new func () : (() -> a) do return x end",
+            "end",
+            "return ((id (ref square))()) 4"
+           ])
+        `shouldBe` Right (EData ["Int","16"] EUnit)
 
     describe "data:" $ do
 
