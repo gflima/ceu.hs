@@ -89,8 +89,8 @@ expandT :: [Stmt] -> Type -> [Type]
 expandT envs (TData False hrT ofs st) = foldr f [] (subs envs hrT) where
                                           f hr tps = (TData False hr ofs st) : tps
 
-expandT envs (TTuple False l)         = foldr f [] (combos $ map (expandT envs) l) where
-                                          f l' tps = (TTuple False l') : tps
+expandT envs (TTuple l)               = foldr f [] (combos $ map (expandT envs) l) where
+                                          f l' tps = (TTuple l') : tps
 
 expandT _    tp                       = [tp]
 
@@ -126,7 +126,7 @@ matchE l e | (isE l && isE e) = (False, [toError (getAnn l) $ "match never succe
 
 -- contravariant on constants (SUB)
 matchE (EUnit  z)      exp    = (False, es) where
-                                  es = (relatesErrorsC SUB (TUnit False,cz) (typec $ getAnn exp))
+                                  es = (relatesErrorsC SUB (TUnit,cz) (typec $ getAnn exp))
 
 -- non-constants: LAny,LVar (no fail) // LExp (may fail)
 matchE (EVar _ _)      _      = (True,  [])
@@ -159,7 +159,7 @@ matchT (ECons z hrP)   tp =
 
 matchT (ETuple _ ls)   tp =
   case tp of
-    (TTuple False tps, ctrs)       -> (and oks, concat ess) where
+    (TTuple tps, ctrs)             -> (and oks, concat ess) where
                                         (oks, ess) = unzip $ zipWith matchT ls (map f tps)
                                         f tp = (tp,ctrs)
     otherwise                      -> (True, [])

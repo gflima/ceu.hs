@@ -9,13 +9,13 @@ import Ceu.Grammar.Type
 main :: IO ()
 main = hspec spec
 
-int  = TData False ["Int"]     [] (TUnit False)
-int1 = TData False ["Int","1"] [] (TUnit False)
-int2 = TData False ["Int","2"] [] (TUnit False)
+int  = TData False ["Int"]     [] TUnit
+int1 = TData False ["Int","1"] [] TUnit
+int2 = TData False ["Int","2"] [] TUnit
 
-bool  = TData False ["Bool"]         [] (TUnit False)
-boolf = TData False ["Bool","False"] [] (TUnit False)
-boolt = TData False ["Bool","True"]  [] (TUnit False)
+bool  = TData False ["Bool"]         [] TUnit
+boolf = TData False ["Bool","False"] [] TUnit
+boolt = TData False ["Bool","True"]  [] TUnit
 
 spec :: Spec
 spec = do
@@ -25,11 +25,11 @@ spec = do
 
     it "((a,a) -> (a,a)) > ((X,X.A) -> (X.A,X.A.B)" $
       relates SUP
-      (TFunc False FuncGlobal (TTuple False [TVar False "a", TVar False "a"])
-            (TTuple False [TVar False "a", TVar False "a"]))
-      (TFunc False FuncGlobal (TTuple False [TData False ["X"],     TData False ["X","A"]])
-            (TTuple False [TData False ["X","A"], TData False ["X","A","B"]]))
-      `shouldBe` Right (TFunc False FuncGlobal (TTuple False [TData False ["X"],TData False ["X","A"]]) (TTuple False [TData False ["X","A"],TData False ["X","A","B"]]),[("a",TData False ["X","A"])])
+      (TFunc FuncGlobal (TTuple [TVar False "a", TVar False "a"])
+            (TTuple [TVar False "a", TVar False "a"]))
+      (TFunc FuncGlobal (TTuple [TData False ["X"],     TData False ["X","A"]])
+            (TTuple [TData False ["X","A"], TData False ["X","A","B"]]))
+      `shouldBe` Right (TFunc FuncGlobal (TTuple [TData False ["X"],TData False ["X","A"]]) (TTuple [TData False ["X","A"],TData False ["X","A","B"]]),[("a",TData False ["X","A"])])
 -}
 
   describe "supOf" $ do
@@ -46,25 +46,25 @@ spec = do
       TVar False "b" `supOf` TVar False "b" `shouldBe` (True,TVar False "b",[("b",TVar False "b",SUP),("b",TVar False "b",SUB)])
 
     it "Int > a" $
-      supOf (TData False ["Int"] [] (TUnit False)) (TVar False "a")
-      `shouldBe` (True,TData False ["Int"] [] (TUnit False),[("a",TData False ["Int"] [] (TUnit False),SUB)])
+      supOf (TData False ["Int"] [] TUnit) (TVar False "a")
+      `shouldBe` (True,TData False ["Int"] [] TUnit,[("a",TData False ["Int"] [] TUnit,SUB)])
 
     it "[I] > [a]" $
       supOf
-        (TTuple False [TData False ["Int"] [] (TUnit False)]) (TTuple False [TVar False "a"])
-      `shouldBe` (True,TTuple False [TData False ["Int"] [] (TUnit False)],[("a",TData False ["Int"] [] (TUnit False),SUB)])
+        (TTuple [TData False ["Int"] [] TUnit]) (TTuple [TVar False "a"])
+      `shouldBe` (True,TTuple [TData False ["Int"] [] TUnit],[("a",TData False ["Int"] [] TUnit,SUB)])
 
     it "P I > P a" $
       supOf
-        (TData False ["Pair"] [TData False ["Int"] [] (TUnit False)] (TTuple False [TData False ["Int"] [] (TUnit False)]))
-        (TData False ["Pair"] [TVar False "a"]              (TTuple False [TVar False "a"]))
-      `shouldBe` (True,TData False ["Pair"] [TData False ["Int"] [] (TUnit False)] (TTuple False [TData False ["Int"] [] (TUnit False)]),[("a",TData False ["Int"] [] (TUnit False),SUB)])
+        (TData False ["Pair"] [TData False ["Int"] [] TUnit] (TTuple [TData False ["Int"] [] TUnit]))
+        (TData False ["Pair"] [TVar False "a"]              (TTuple [TVar False "a"]))
+      `shouldBe` (True,TData False ["Pair"] [TData False ["Int"] [] TUnit] (TTuple [TData False ["Int"] [] TUnit]),[("a",TData False ["Int"] [] TUnit,SUB)])
 
     it "P I I > P a a" $
       supOf
-        (TData False ["Pair"] [TData False ["Int"] [] (TUnit False),TData False ["Int"] [] (TUnit False)] (TTuple False [TData False ["Int"] [] (TUnit False),TData False ["Int"] [] (TUnit False)]))
-        (TData False ["Pair"] [TVar False "a",TVar False "b"] (TTuple False [TVar False "a",TVar False "b"]))
-      `shouldBe` (True,TData False ["Pair"] [TData False ["Int"] [] (TUnit False),TData False ["Int"] [] (TUnit False)] (TTuple False [TData False ["Int"] [] (TUnit False),TData False ["Int"] [] (TUnit False)]),[("a",TData False ["Int"] [] (TUnit False),SUB),("b",TData False ["Int"] [] (TUnit False),SUB)])
+        (TData False ["Pair"] [TData False ["Int"] [] TUnit,TData False ["Int"] [] TUnit] (TTuple [TData False ["Int"] [] TUnit,TData False ["Int"] [] TUnit]))
+        (TData False ["Pair"] [TVar False "a",TVar False "b"] (TTuple [TVar False "a",TVar False "b"]))
+      `shouldBe` (True,TData False ["Pair"] [TData False ["Int"] [] TUnit,TData False ["Int"] [] TUnit] (TTuple [TData False ["Int"] [] TUnit,TData False ["Int"] [] TUnit]),[("a",TData False ["Int"] [] TUnit,SUB),("b",TData False ["Int"] [] TUnit,SUB)])
 
   describe "relates" $ do
 
@@ -73,224 +73,224 @@ spec = do
       `shouldBe` Right (TVar False "b",[("b",TVar False "b")])
 
     it "(a -> a) > (Int -> Int)" $
-      relates SUP (TFunc False FuncGlobal (TVar False "a") (TVar False "a")) (TFunc False FuncGlobal (int) (int))
-      `shouldBe` Right ((TFunc False FuncGlobal (int) (int)), [("a", int)])
+      relates SUP (TFunc FuncGlobal (TVar False "a") (TVar False "a")) (TFunc FuncGlobal (int) (int))
+      `shouldBe` Right ((TFunc FuncGlobal (int) (int)), [("a", int)])
 
     it "(a -> b) > (A -> B)" $
-      relates SUP (TFunc False FuncGlobal (TVar False "a") (TVar False "b")) (TFunc False FuncGlobal (TData False ["A"] [] (TUnit False)) (TData False ["B"] [] (TUnit False)))
-      `shouldBe` Right ((TFunc False FuncGlobal (TData False ["A"] [] (TUnit False)) (TData False ["B"] [] (TUnit False))), [("a", TData False ["A"] [] (TUnit False)), ("b", TData False ["B"] [] (TUnit False))])
+      relates SUP (TFunc FuncGlobal (TVar False "a") (TVar False "b")) (TFunc FuncGlobal (TData False ["A"] [] TUnit) (TData False ["B"] [] TUnit))
+      `shouldBe` Right ((TFunc FuncGlobal (TData False ["A"] [] TUnit) (TData False ["B"] [] TUnit)), [("a", TData False ["A"] [] TUnit), ("b", TData False ["B"] [] TUnit)])
 
     it "(a -> a) > (Int -> ())" $
-      relates SUP (TFunc False FuncGlobal (TVar False "a") (TVar False "a")) (TFunc False FuncGlobal (int) (TUnit False))
+      relates SUP (TFunc FuncGlobal (TVar False "a") (TVar False "a")) (TFunc FuncGlobal (int) TUnit)
       `shouldBe` Left ["types do not match : expected '(a -> a)' : found '(Int -> ())'","ambiguous instances for 'a' : 'Int', '()'"]
 
     it "(a,b) > (Int,())" $
-      relates SUP (TTuple False [(TVar False "a"),(TVar False "b")]) (TTuple False [(int),(TUnit False)])
-      `shouldBe` Right (TTuple False [int,(TUnit False)],[("a",int),("b",(TUnit False))])
+      relates SUP (TTuple [(TVar False "a"),(TVar False "b")]) (TTuple [(int),TUnit])
+      `shouldBe` Right (TTuple [int,TUnit],[("a",int),("b",TUnit)])
 
     it "(a,b,c) /> (Int,())" $
-      relates SUP (TTuple False [(TVar False "a"),(TVar False "b"),(TVar False "c")]) (TTuple False [(int),(TUnit False)])
+      relates SUP (TTuple [(TVar False "a"),(TVar False "b"),(TVar False "c")]) (TTuple [(int),TUnit])
       `shouldBe` Left ["types do not match : expected '(a,b,c)' : found '(Int,())'"]
 
     it "(a,b) /> (Int,(),Int)" $
-      relates SUP (TTuple False [(TVar False "a"),(TVar False "b")]) (TTuple False [(int),(TUnit False),(int)])
+      relates SUP (TTuple [(TVar False "a"),(TVar False "b")]) (TTuple [(int),TUnit,(int)])
       `shouldBe` Left ["types do not match : expected '(a,b)' : found '(Int,(),Int)'"]
 
     it "(a -> a) > (Int -> Int.1)" $
-      relates SUP (TFunc False FuncGlobal (TVar False "a") (TVar False "a")) (TFunc False FuncGlobal (int) (int1))
-      `shouldBe` Right (TFunc False FuncGlobal (int) (int1),[("a",int)])
+      relates SUP (TFunc FuncGlobal (TVar False "a") (TVar False "a")) (TFunc FuncGlobal (int) (int1))
+      `shouldBe` Right (TFunc FuncGlobal (int) (int1),[("a",int)])
 
     it "(Int -> Int.1) > (a -> a)" $
-      relates SUP (TFunc False FuncGlobal (int) (int1)) (TFunc False FuncGlobal (TVar False "a") (TVar False "a"))
+      relates SUP (TFunc FuncGlobal (int) (int1)) (TFunc FuncGlobal (TVar False "a") (TVar False "a"))
       `shouldBe` Left ["types do not match : expected '(Int -> Int.1)' : found '(a -> a)'","type variance does not match : 'Int.1' should be supertype of 'Int'"]
 
     it "(Int -> Int) /> (Int.1 -> Int)" $
-      relates SUP (TFunc False FuncGlobal (int) (int)) (TFunc False FuncGlobal (int1) (int))
+      relates SUP (TFunc FuncGlobal (int) (int)) (TFunc FuncGlobal (int1) (int))
       `shouldBe` Left ["types do not match : expected '(Int -> Int)' : found '(Int.1 -> Int)'"]
 
     it "(Int.1 -> Int) > (a -> a)" $
-      relates SUP (TFunc False FuncGlobal (int1) (int)) (TFunc False FuncGlobal (TVar False "a") (TVar False "a"))
-      `shouldBe` Right (TFunc False FuncGlobal int1 int,[("a",int)])
+      relates SUP (TFunc FuncGlobal (int1) (int)) (TFunc FuncGlobal (TVar False "a") (TVar False "a"))
+      `shouldBe` Right (TFunc FuncGlobal int1 int,[("a",int)])
 
     it "(True -> Bool) > (Bool -> Bool)" $
-      relates SUP (TFunc False FuncGlobal (boolt) (bool)) (TFunc False FuncGlobal (bool) (bool))
-      `shouldBe` Right (TFunc False FuncGlobal (bool) (bool),[])
+      relates SUP (TFunc FuncGlobal (boolt) (bool)) (TFunc FuncGlobal (bool) (bool))
+      `shouldBe` Right (TFunc FuncGlobal (bool) (bool),[])
 
     it "(True -> Bool) > (Bool -> True)" $
-      relates SUP (TFunc False FuncGlobal (boolt) (bool)) (TFunc False FuncGlobal (bool) (boolt))
-      `shouldBe` Right (TFunc False FuncGlobal (bool) (bool),[])
+      relates SUP (TFunc FuncGlobal (boolt) (bool)) (TFunc FuncGlobal (bool) (boolt))
+      `shouldBe` Right (TFunc FuncGlobal (bool) (bool),[])
 
     it "((a,a) -> ()) > ((X,X.A) -> ()" $
       relates SUP
-      (TFunc False FuncGlobal (TTuple False [TVar False "a", TVar False "a"])
-             (TUnit False))
-      (TFunc False FuncGlobal (TTuple False [TData False ["X"] [] (TUnit False), TData False ["X","A"] [] (TUnit False)])
-             (TUnit False))
-      `shouldBe` Right (TFunc False FuncGlobal (TTuple False [TData False ["X"] [] (TUnit False),TData False ["X","A"] [] (TUnit False)]) (TUnit False),[("a",TData False ["X","A"] [] (TUnit False))])
+      (TFunc FuncGlobal (TTuple [TVar False "a", TVar False "a"])
+             TUnit)
+      (TFunc FuncGlobal (TTuple [TData False ["X"] [] TUnit, TData False ["X","A"] [] TUnit])
+             TUnit)
+      `shouldBe` Right (TFunc FuncGlobal (TTuple [TData False ["X"] [] TUnit,TData False ["X","A"] [] TUnit]) TUnit,[("a",TData False ["X","A"] [] TUnit)])
 
     it "((a,a) -> ()) > ((Y,X.A) -> ()" $
       relates SUP
-      (TFunc False FuncGlobal (TTuple False [TVar False "a", TVar False "a"])
-             (TUnit False))
-      (TFunc False FuncGlobal (TTuple False [TData False ["Y"] [] (TUnit False), TData False ["X","A"] [] (TUnit False)])
-             (TUnit False))
+      (TFunc FuncGlobal (TTuple [TVar False "a", TVar False "a"])
+             TUnit)
+      (TFunc FuncGlobal (TTuple [TData False ["Y"] [] TUnit, TData False ["X","A"] [] TUnit])
+             TUnit)
       `shouldBe` Left ["types do not match : expected '((a,a) -> ())' : found '((Y,X.A) -> ())'","ambiguous instances for 'a' : 'Y', 'X.A'"]
 
     it "((a,a)->(a,a)) SUP ((X,X.A)->(X.A,X.A.B)" $
       relates SUP
-      (TFunc False FuncGlobal (TTuple False [TVar False "a", TVar False "a"])
-             (TTuple False [TVar False "a", TVar False "a"]))
-      (TFunc False FuncGlobal (TTuple False [TData False ["X"] [] (TUnit False),     TData False ["X","A"] [] (TUnit False)])
-             (TTuple False [TData False ["X","A"] [] (TUnit False), TData False ["X","A","B"] [] (TUnit False)]))
-      `shouldBe` Right (TFunc False FuncGlobal (TTuple False [TData False ["X"] [] (TUnit False),TData False ["X","A"] [] (TUnit False)]) (TTuple False [TData False ["X","A"] [] (TUnit False),TData False ["X","A","B"] [] (TUnit False)]),[("a",TData False ["X","A"] [] (TUnit False))])
+      (TFunc FuncGlobal (TTuple [TVar False "a", TVar False "a"])
+             (TTuple [TVar False "a", TVar False "a"]))
+      (TFunc FuncGlobal (TTuple [TData False ["X"] [] TUnit,     TData False ["X","A"] [] TUnit])
+             (TTuple [TData False ["X","A"] [] TUnit, TData False ["X","A","B"] [] TUnit]))
+      `shouldBe` Right (TFunc FuncGlobal (TTuple [TData False ["X"] [] TUnit,TData False ["X","A"] [] TUnit]) (TTuple [TData False ["X","A"] [] TUnit,TData False ["X","A","B"] [] TUnit]),[("a",TData False ["X","A"] [] TUnit)])
 
     it "((X,X.A)->(X.A,X.A.B) SUP ((a,a)->(a,a))" $
       relates SUP
-      (TFunc False FuncGlobal (TTuple False [TData False ["X"] [] (TUnit False),     TData False ["X","A"] [] (TUnit False)])
-             (TTuple False [TData False ["X","A"] [] (TUnit False), TData False ["X","A","B"] [] (TUnit False)]))
-      (TFunc False FuncGlobal (TTuple False [TVar False "a", TVar False "a"])
-             (TTuple False [TVar False "a", TVar False "a"]))
+      (TFunc FuncGlobal (TTuple [TData False ["X"] [] TUnit,     TData False ["X","A"] [] TUnit])
+             (TTuple [TData False ["X","A"] [] TUnit, TData False ["X","A","B"] [] TUnit]))
+      (TFunc FuncGlobal (TTuple [TVar False "a", TVar False "a"])
+             (TTuple [TVar False "a", TVar False "a"]))
       `shouldBe` Left ["types do not match : expected '((X,X.A) -> (X.A,X.A.B))' : found '((a,a) -> (a,a))'","type variance does not match : 'X.A.B' should be supertype of 'X'"]
 
     it "((a,a) -> (a,a)) > ((X,X.A) -> (X,X.A.B)" $
       relates SUP
-      (TFunc False FuncGlobal (TTuple False [TVar False "a", TVar False "a"])
-             (TTuple False [TVar False "a", TVar False "a"]))
-      (TFunc False FuncGlobal (TTuple False [TData False ["X"] [] (TUnit False), TData False ["X","A"] [] (TUnit False)])
-             (TTuple False [TData False ["X"] [] (TUnit False), TData False ["X","A","B"] [] (TUnit False)]))
+      (TFunc FuncGlobal (TTuple [TVar False "a", TVar False "a"])
+             (TTuple [TVar False "a", TVar False "a"]))
+      (TFunc FuncGlobal (TTuple [TData False ["X"] [] TUnit, TData False ["X","A"] [] TUnit])
+             (TTuple [TData False ["X"] [] TUnit, TData False ["X","A","B"] [] TUnit]))
       `shouldBe` Left ["types do not match : expected '((a,a) -> (a,a))' : found '((X,X.A) -> (X,X.A.B))'","type variance does not match : 'X.A' should be supertype of 'X'"]
 
     it "(True,False)->() > (a,a)->()" $
       relates SUP
-      (TFunc False FuncGlobal (TTuple False [TData False ["X","Bool","True"] [] (TUnit False), TData False ["X","Bool","False"] [] (TUnit False)]) (TUnit False))
-      (TFunc False FuncGlobal (TTuple False [TVar False "a",                          TVar False "a"])                           (TUnit False))
-      `shouldBe` Right (TFunc False FuncGlobal (TTuple False [TData False ["X","Bool","True"] [] (TUnit False),TData False ["X","Bool","False"] [] (TUnit False)]) (TUnit False),[("a",TData False ["X","Bool"] [] (TUnit False))])
+      (TFunc FuncGlobal (TTuple [TData False ["X","Bool","True"] [] TUnit, TData False ["X","Bool","False"] [] TUnit]) TUnit)
+      (TFunc FuncGlobal (TTuple [TVar False "a",                          TVar False "a"])                           TUnit)
+      `shouldBe` Right (TFunc FuncGlobal (TTuple [TData False ["X","Bool","True"] [] TUnit,TData False ["X","Bool","False"] [] TUnit]) TUnit,[("a",TData False ["X","Bool"] [] TUnit)])
 
     it "()->(True,False) SUP ()->(a,a)" $
       relates SUP
-      (TFunc False FuncGlobal (TUnit False) (TTuple False [TData False ["X","Bool","True"] [] (TUnit False), TData False ["X","Bool","False"] [] (TUnit False)]))
-      (TFunc False FuncGlobal (TUnit False) (TTuple False [TVar False "a",                 TVar False "a"]))
+      (TFunc FuncGlobal TUnit (TTuple [TData False ["X","Bool","True"] [] TUnit, TData False ["X","Bool","False"] [] TUnit]))
+      (TFunc FuncGlobal TUnit (TTuple [TVar False "a",                 TVar False "a"]))
       `shouldBe` Left ["types do not match : expected '(() -> (X.Bool.True,X.Bool.False))' : found '(() -> (a,a))'","ambiguous instances for 'a' : 'X.Bool.True', 'X.Bool.False'"]
 
     it "(True,False)->(True,False) SUP (a,a)->(a,a)" $
       relates SUP
-      (TFunc False FuncGlobal (TTuple False [TData False ["X","Bool","True"] [] (TUnit False), TData False ["X","Bool","False"] [] (TUnit False)])
-             (TTuple False [TData False ["X","Bool","True"] [] (TUnit False), TData False ["X","Bool","False"] [] (TUnit False)]))
-      (TFunc False FuncGlobal (TTuple False [TVar False "a", TVar False "a"])
-             (TTuple False [TVar False "a", TVar False "a"]))
+      (TFunc FuncGlobal (TTuple [TData False ["X","Bool","True"] [] TUnit, TData False ["X","Bool","False"] [] TUnit])
+             (TTuple [TData False ["X","Bool","True"] [] TUnit, TData False ["X","Bool","False"] [] TUnit]))
+      (TFunc FuncGlobal (TTuple [TVar False "a", TVar False "a"])
+             (TTuple [TVar False "a", TVar False "a"]))
       `shouldBe` Left ["types do not match : expected '((X.Bool.True,X.Bool.False) -> (X.Bool.True,X.Bool.False))' : found '((a,a) -> (a,a))'","ambiguous instances for 'a' : 'X.Bool.True', 'X.Bool.False', 'X.Bool.True', 'X.Bool.False'"]
 
     it "(True,False)->top SUP (a,a)->a" $
       relates SUP
-      (TFunc False FuncGlobal (TTuple False [boolt,     boolf])     TTop)
-      (TFunc False FuncGlobal (TTuple False [TVar False "a", TVar False "a"]) (TVar False "a"))
-      `shouldBe` Right (TFunc False FuncGlobal (TTuple False [boolt,boolf]) bool,[("a",bool)])
+      (TFunc FuncGlobal (TTuple [boolt,     boolf])     TTop)
+      (TFunc FuncGlobal (TTuple [TVar False "a", TVar False "a"]) (TVar False "a"))
+      `shouldBe` Right (TFunc FuncGlobal (TTuple [boolt,boolf]) bool,[("a",bool)])
 
     it "((1,2),(1,1))->? SUP (Int,Int)->Bool" $
       relates SUP
-        (TFunc False FuncGlobal (TTuple False [
-                TTuple False [int1,int2],
-                TTuple False [int1,int1]
+        (TFunc FuncGlobal (TTuple [
+                TTuple [int1,int2],
+                TTuple [int1,int1]
               ])
               (TVar False "?"))
-        (TFunc False FuncGlobal (TTuple False [
-                TTuple False [int,int],
-                TTuple False [int,int]
+        (TFunc FuncGlobal (TTuple [
+                TTuple [int,int],
+                TTuple [int,int]
               ])
               (bool))
-      `shouldBe` Right (TFunc False FuncGlobal (TTuple False [TTuple False [int,int],TTuple False [int,int]]) (bool),[("?",bool)])
+      `shouldBe` Right (TFunc FuncGlobal (TTuple [TTuple [int,int],TTuple [int,int]]) (bool),[("?",bool)])
 
     it "ref Int vs Int" $
       relates SUP
-        (TData False ["Int"] [] (TUnit False))
-        (TData True  ["Int"] [] (TUnit False))
+        (TData False ["Int"] [] TUnit)
+        (TData True  ["Int"] [] TUnit)
       `shouldBe` Left ["types do not match : expected 'Int' : found 'ref Int'"]
 
     it "ref Int vs Int" $
       relates SUP
-        (TFunc False FuncUnknown (TData False ["Int"] [] (TUnit False)) TTop)
-        (TFunc False FuncUnknown (TData True ["Int"] [] (TUnit False)) (TUnit False))
+        (TFunc FuncUnknown (TData False ["Int"] [] TUnit) TTop)
+        (TFunc FuncUnknown (TData True ["Int"] [] TUnit) TUnit)
       `shouldBe` Left ["types do not match : expected '(Int -> top)' : found '(ref Int -> ())'"]
 
     it "ref Int vs Int" $
       relates SUP
-        (TFunc False FuncUnknown (TData False ["Int"] [] (TUnit False)) TAny)
-        (TFunc False FuncUnknown (TData True ["Int"] [] (TUnit False)) (TUnit False))
+        (TFunc FuncUnknown (TData False ["Int"] [] TUnit) TAny)
+        (TFunc FuncUnknown (TData True ["Int"] [] TUnit) TUnit)
       `shouldBe` Left ["types do not match : expected '(Int -> ?)' : found '(ref Int -> ())'"]
 
     it "((1,2),(1,1))->? SUP (a,a)->Bool" $
       relates SUP
-        (TFunc False FuncGlobal (TTuple False [
-                TTuple False [int1,int2],
-                TTuple False [int1,int1]
+        (TFunc FuncGlobal (TTuple [
+                TTuple [int1,int2],
+                TTuple [int1,int1]
               ])
               (TVar False "?"))
-        (TFunc False FuncGlobal (TTuple False [
+        (TFunc FuncGlobal (TTuple [
                 TVar False "a",
                 TVar False "a"
               ])
               (bool))
-      `shouldBe` Right (TFunc False FuncGlobal (TTuple False [TTuple False [int1,int2],TTuple False [int1,int1]]) (bool),[("?",bool),("a",TTuple False [int1,int])])
+      `shouldBe` Right (TFunc FuncGlobal (TTuple [TTuple [int1,int2],TTuple [int1,int1]]) (bool),[("?",bool),("a",TTuple [int1,int])])
 
     it "((1,2),(1,1))->? SUB (a,a)->Bool" $
       relates SUP
-        (TFunc False FuncGlobal (TTuple False [
-                TTuple False [int1,int2],
-                TTuple False [int1,int1]
+        (TFunc FuncGlobal (TTuple [
+                TTuple [int1,int2],
+                TTuple [int1,int1]
               ])
               (TVar False "?"))
-        (TFunc False FuncGlobal (TTuple False [
+        (TFunc FuncGlobal (TTuple [
                 TVar False "a",
                 TVar False "a"
               ])
               (bool))
-      `shouldBe` Right (TFunc False FuncGlobal (TTuple False [TTuple False [int1,int2],TTuple False [int1,int1]]) (bool),[("?",bool),("a",TTuple False [int1,int])])
+      `shouldBe` Right (TFunc FuncGlobal (TTuple [TTuple [int1,int2],TTuple [int1,int1]]) (bool),[("?",bool),("a",TTuple [int1,int])])
 
     it "(a,a) > (370,10)" $
       relates SUP
-        (TTuple False [TVar False "a",                   TVar False "a"])
-        (TTuple False [TData False ["Int","370"] [] (TUnit False),TData False ["Int","10"] [] (TUnit False)])
-      `shouldBe` Right (TTuple False [TData False ["Int","370"] [] (TUnit False),TData False ["Int","10"] [] (TUnit False)],[("a",TData False ["Int"] [] (TUnit False))])
+        (TTuple [TVar False "a",                   TVar False "a"])
+        (TTuple [TData False ["Int","370"] [] TUnit,TData False ["Int","10"] [] TUnit])
+      `shouldBe` Right (TTuple [TData False ["Int","370"] [] TUnit,TData False ["Int","10"] [] TUnit],[("a",TData False ["Int"] [] TUnit)])
 
     it "(a,a) > (X 370,X 10)" $
       relates SUP
-        (TTuple False [TVar False "a",                                     TVar False "a"])
-        (TTuple False [TData False ["X"] [] $ TData False ["Int","370"] [] (TUnit False), TData False ["X"] [] $ TData False ["Int","10"] [] (TUnit False)])
-      `shouldBe` Right (TTuple False [TData False ["X"] [] (TData False ["Int","370"] [] (TUnit False)),TData False ["X"] [] (TData False ["Int","10"] [] (TUnit False))],[("a",TData False ["X"] [] (TData False ["Int"] [] (TUnit False)))])
+        (TTuple [TVar False "a",                                     TVar False "a"])
+        (TTuple [TData False ["X"] [] $ TData False ["Int","370"] [] TUnit, TData False ["X"] [] $ TData False ["Int","10"] [] TUnit])
+      `shouldBe` Right (TTuple [TData False ["X"] [] (TData False ["Int","370"] [] TUnit),TData False ["X"] [] (TData False ["Int","10"] [] TUnit)],[("a",TData False ["X"] [] (TData False ["Int"] [] TUnit))])
 
     it "X of a" $
       relates SUP
-        (TFunc False FuncGlobal (TUnit False)       (TVar False "?"))
-        (TFunc False FuncGlobal (TVar False "a") (TData False ["X"] [TVar False "a"] (TVar False "a")))
-        `shouldBe` Right (TFunc False FuncGlobal (TUnit False) (TData False ["X"] [(TUnit False)] ((TUnit False))),[("?",TData False ["X"] [TVar False "a"] (TVar False "a")),("a",(TUnit False))])
+        (TFunc FuncGlobal TUnit       (TVar False "?"))
+        (TFunc FuncGlobal (TVar False "a") (TData False ["X"] [TVar False "a"] (TVar False "a")))
+        `shouldBe` Right (TFunc FuncGlobal TUnit (TData False ["X"] [TUnit] (TUnit)),[("?",TData False ["X"] [TVar False "a"] (TVar False "a")),("a",TUnit)])
 
     it "X of a" $
       relates SUP
-        (TTuple False [(TUnit False),     TVar False "?"])
-        (TTuple False [TVar False "a", (TData False ["X"] [TVar False "a"] (TVar False "a"))])
-        `shouldBe` Right (TTuple False [(TUnit False), TData False ["X"] [(TUnit False)] ((TUnit False))],[("?",TData False ["X"] [TVar False "a"] (TVar False "a")),("a",(TUnit False))])
+        (TTuple [TUnit,     TVar False "?"])
+        (TTuple [TVar False "a", (TData False ["X"] [TVar False "a"] (TVar False "a"))])
+        `shouldBe` Right (TTuple [TUnit, TData False ["X"] [TUnit] (TUnit)],[("?",TData False ["X"] [TVar False "a"] (TVar False "a")),("a",TUnit)])
 
   describe "isSupOf / isSubOf" $ do
 
     it "(bot -> top) > (bot -> top)" $
-      TFunc False FuncGlobal TBot TTop `isSupOf` TFunc False FuncGlobal TBot TTop
+      TFunc FuncGlobal TBot TTop `isSupOf` TFunc FuncGlobal TBot TTop
       `shouldBe` True
     it "(bot -> top) < (bot -> top)" $
-      TFunc False FuncGlobal TBot TTop `isSubOf` TFunc False FuncGlobal TBot TTop
+      TFunc FuncGlobal TBot TTop `isSubOf` TFunc FuncGlobal TBot TTop
       `shouldBe` True
 
     it "(bot -> top) > (bot -> bot)" $
-      TFunc False FuncGlobal TBot TTop `isSupOf` TFunc False FuncGlobal TBot TBot
+      TFunc FuncGlobal TBot TTop `isSupOf` TFunc FuncGlobal TBot TBot
       `shouldBe` True
     it "(top -> top) > (bot -> bot)" $
-      TFunc False FuncGlobal TTop TTop `isSupOf` TFunc False FuncGlobal TBot TBot
+      TFunc FuncGlobal TTop TTop `isSupOf` TFunc FuncGlobal TBot TBot
       `shouldBe` False
 
     it "top > Int" $
       TTop `isSupOf` (int)
       `shouldBe` True
     it "(() -> top) > (() -> Int)" $
-      TFunc False FuncGlobal (TUnit False) TTop `isSupOf` TFunc False FuncGlobal (TUnit False) (int)
+      TFunc FuncGlobal TUnit TTop `isSupOf` TFunc FuncGlobal TUnit (int)
       `shouldBe` True
 
     it "Bool > Bool.True" $
@@ -300,16 +300,16 @@ spec = do
   describe "instantiate" $ do
 
     it "A in [...] ~> A" $
-      instantiate [("a",TData False ["A"] [] (TUnit False)), ("b",TData False ["B"] [] (TUnit False))] (TData False ["A"] [] (TUnit False))
-      `shouldBe` (TData False ["A"] [] (TUnit False))
+      instantiate [("a",TData False ["A"] [] TUnit), ("b",TData False ["B"] [] TUnit)] (TData False ["A"] [] TUnit)
+      `shouldBe` (TData False ["A"] [] TUnit)
 
     it "(a,b) in [(a,A),(b,B)] ~> (A,B)" $
-      instantiate [("a",TData False ["A"] [] (TUnit False)), ("b",TData False ["B"] [] (TUnit False))] (TTuple False [TVar False "a", TVar False "b"])
-      `shouldBe` (TTuple False [TData False ["A"] [] (TUnit False), TData False ["B"] [] (TUnit False)])
+      instantiate [("a",TData False ["A"] [] TUnit), ("b",TData False ["B"] [] TUnit)] (TTuple [TVar False "a", TVar False "b"])
+      `shouldBe` (TTuple [TData False ["A"] [] TUnit, TData False ["B"] [] TUnit])
 
     it "(a->C) in [(a,A),(b,B)] ~> (A->C)" $
-      instantiate [("a",TData False ["A"] [] (TUnit False)), ("b",TData False ["B"] [] (TUnit False))] (TFunc False FuncGlobal (TVar False "a") (TData False ["C"] [] (TUnit False)))
-      `shouldBe` (TFunc False FuncGlobal (TData False ["A"] [] (TUnit False)) (TData False ["C"] [] (TUnit False)))
+      instantiate [("a",TData False ["A"] [] TUnit), ("b",TData False ["B"] [] TUnit)] (TFunc FuncGlobal (TVar False "a") (TData False ["C"] [] TUnit))
+      `shouldBe` (TFunc FuncGlobal (TData False ["A"] [] TUnit) (TData False ["C"] [] TUnit))
 
     it "Int : (Int ~ Int) ~> Int" $
       inst' (int) (int, int)
@@ -324,101 +324,101 @@ spec = do
       `shouldBe` (int)
 
     it "a : ((Int,a) ~ (Int,Int)) ~> Int" $
-      inst' (TVar False "a") (TTuple False [int,TVar False "a"], TTuple False [int,int])
+      inst' (TVar False "a") (TTuple [int,TVar False "a"], TTuple [int,int])
       `shouldBe` (int)
 
     it "a : ((a,Int) ~ (Int,Int)) ~> Int" $
-      inst' (TVar False "a") (TTuple False [TVar False "a",int], TTuple False [int,int])
+      inst' (TVar False "a") (TTuple [TVar False "a",int], TTuple [int,int])
       `shouldBe` (int)
 
     it "a : ((a,a) ~ (Int,Int)) ~> Int" $
-      inst' (TVar False "a") (TTuple False [TVar False "a",TVar False "a"], TTuple False [int,int])
+      inst' (TVar False "a") (TTuple [TVar False "a",TVar False "a"], TTuple [int,int])
       `shouldBe` (int)
 
     it "a : ((a,a) ~ (Int,Bool)) ~> ERROR" $
-      inst' (TVar False "a") (TTuple False [TVar False "a",TVar False "a"], TTuple False [int,bool])
+      inst' (TVar False "a") (TTuple [TVar False "a",TVar False "a"], TTuple [int,bool])
       `shouldBe` TTop
 
     it "a : ((a,b) ~ (Int,Bool)) ~> Int" $
-      inst' (TVar False "a") (TTuple False [TVar False "a",TVar False "b"], TTuple False [int,bool])
+      inst' (TVar False "a") (TTuple [TVar False "a",TVar False "b"], TTuple [int,bool])
       `shouldBe` (int)
 
     it "b : ((a,b) ~ (Int,Bool)) ~> Bool" $
-      inst' (TVar False "b") (TTuple False [TVar False "a",TVar False "b"], TTuple False [int,bool])
+      inst' (TVar False "b") (TTuple [TVar False "a",TVar False "b"], TTuple [int,bool])
       `shouldBe` (bool)
 
   describe "comPre" $ do
 
     it "[A.1,A.1]" $
-      comPre [TData False ["A","1"] [] (TUnit False), TData False ["A","1"] [] (TUnit False)]
-      `shouldBe` Just (TData False ["A","1"] [] (TUnit False))
+      comPre [TData False ["A","1"] [] TUnit, TData False ["A","1"] [] TUnit]
+      `shouldBe` Just (TData False ["A","1"] [] TUnit)
 
     it "[A.1,A.2]" $
-      comPre [TData False ["A","1"] [] (TUnit False), TData False ["A","2"] [] (TUnit False)]
-      `shouldBe` Just (TData False ["A"] [] (TUnit False))
+      comPre [TData False ["A","1"] [] TUnit, TData False ["A","2"] [] TUnit]
+      `shouldBe` Just (TData False ["A"] [] TUnit)
 
     it "[A.1,A.2,a]" $
-      comPre [TData False ["A","1"] [] (TUnit False), TData False ["A","2"] [] (TUnit False), TVar False "a"]
-      `shouldBe` Just (TData False ["A"] [] (TUnit False))
+      comPre [TData False ["A","1"] [] TUnit, TData False ["A","2"] [] TUnit, TVar False "a"]
+      `shouldBe` Just (TData False ["A"] [] TUnit)
 
     it "[A.1,A.2,a,(A.1,a),(A.2,a)]" $
-      comPre [TData False ["A","1"] [] (TUnit False), TData False ["A","2"] [] (TUnit False), TVar False "a",
-              TTuple False [TData False ["A","1"] [] (TUnit False), TVar False "a"], TTuple False [TData False ["A","2"] [] (TUnit False), TVar False "a"] ]
-      `shouldBe` Just (TData False ["A"] [] (TUnit False))
+      comPre [TData False ["A","1"] [] TUnit, TData False ["A","2"] [] TUnit, TVar False "a",
+              TTuple [TData False ["A","1"] [] TUnit, TVar False "a"], TTuple [TData False ["A","2"] [] TUnit, TVar False "a"] ]
+      `shouldBe` Just (TData False ["A"] [] TUnit)
 
     it "[(A.1->A.2), (A.2->a)]" $
-      comPre [TFunc False FuncGlobal (TData False ["A","1"] [] (TUnit False)) (TData False ["A","2"] [] (TUnit False)),
-              TFunc False FuncGlobal (TData False ["A","2"] [] (TUnit False)) (TVar False "a")]
-      `shouldBe` Just (TFunc False FuncGlobal (TData False ["A"] [] (TUnit False)) (TData False ["A","2"] [] (TUnit False)))
+      comPre [TFunc FuncGlobal (TData False ["A","1"] [] TUnit) (TData False ["A","2"] [] TUnit),
+              TFunc FuncGlobal (TData False ["A","2"] [] TUnit) (TVar False "a")]
+      `shouldBe` Just (TFunc FuncGlobal (TData False ["A"] [] TUnit) (TData False ["A","2"] [] TUnit))
 
     it "[a,(A.1,a),(A.2,a)]" $
       comPre [ TVar False "a",
-               TTuple False [TData False ["A","1"] [] (TUnit False), TVar False "a"],
-               TTuple False [TData False ["A","2"] [] (TUnit False), TVar False "a"] ]
-      `shouldBe` Just (TTuple False [TData False ["A"] [] (TUnit False),TVar False "a"])
+               TTuple [TData False ["A","1"] [] TUnit, TVar False "a"],
+               TTuple [TData False ["A","2"] [] TUnit, TVar False "a"] ]
+      `shouldBe` Just (TTuple [TData False ["A"] [] TUnit,TVar False "a"])
 
     it "[ [True,False] ]" $
-      comPre [TTuple False [boolt,boolf]]
-      `shouldBe` Just (TTuple False [boolt,boolf])
+      comPre [TTuple [boolt,boolf]]
+      `shouldBe` Just (TTuple [boolt,boolf])
 
 {-
     it "OK: [ [True,False], [True] ]" $ -- arity mismatch
-      comPre [ TTuple False [boolt,boolf],
-               TTuple False [boolt] ]
-      `shouldBe` Just (TTuple False [boolt,boolf])
+      comPre [ TTuple [boolt,boolf],
+               TTuple [boolt] ]
+      `shouldBe` Just (TTuple [boolt,boolf])
 -}
 
   describe "sort" $ do
 
     it "(Bool,Bool) <= Bool" $
-      TTuple False [TData False ["Bool"] [] (TUnit False), TData False ["Bool"] [] (TUnit False)] <= TData False ["Bool"] [] (TUnit False)
+      TTuple [TData False ["Bool"] [] TUnit, TData False ["Bool"] [] TUnit] <= TData False ["Bool"] [] TUnit
       `shouldBe` False
     it "Bool <= (Bool,Bool)" $
-      TData False ["Bool"] [] (TUnit False) <= TTuple False [TData False ["Bool"] [] (TUnit False), TData False ["Bool"] [] (TUnit False)]
+      TData False ["Bool"] [] TUnit <= TTuple [TData False ["Bool"] [] TUnit, TData False ["Bool"] [] TUnit]
       `shouldBe` True
     it "((Int,(Bool,Int)) <= (Bool,Int)" $
-      TTuple False [int, TTuple False [bool,int]] <= TTuple False [bool, int]
+      TTuple [int, TTuple [bool,int]] <= TTuple [bool, int]
       `shouldBe` False
     it "(Bool,Int) <= ((Int,(Bool,Int))" $
-      TTuple False [bool, int] <= TTuple False [int, TTuple False [bool,int]]
+      TTuple [bool, int] <= TTuple [int, TTuple [bool,int]]
       `shouldBe` True
     it "[Bool,Int] <= [Int,(Int,Int)]" $
-      TTuple False [bool, int] <= TTuple False [int, TTuple False [int,int]]
+      TTuple [bool, int] <= TTuple [int, TTuple [int,int]]
       `shouldBe` True
     it "list" $
       sort' [
-        [TTuple False [TData False ["Bool"] [] (TUnit False),TData False ["Bool"] [] (TUnit False)],TTuple False [TData False ["Bool"] [] (TUnit False),TData False ["Int"] [] (TUnit False)]],
-        [TData False ["Int"] [] (TUnit False),TTuple False [TData False ["Bool"] [] (TUnit False),TData False ["Int"] [] (TUnit False)]]
+        [TTuple [TData False ["Bool"] [] TUnit,TData False ["Bool"] [] TUnit],TTuple [TData False ["Bool"] [] TUnit,TData False ["Int"] [] TUnit]],
+        [TData False ["Int"] [] TUnit,TTuple [TData False ["Bool"] [] TUnit,TData False ["Int"] [] TUnit]]
        ]
-      `shouldBe` [[TData False ["Int"] [] (TUnit False),TTuple False [TData False ["Bool"] [] (TUnit False),TData False ["Int"] [] (TUnit False)]],[TTuple False [TData False ["Bool"] [] (TUnit False),TData False ["Bool"] [] (TUnit False)],TTuple False [TData False ["Bool"] [] (TUnit False),TData False ["Int"] [] (TUnit False)]]]
+      `shouldBe` [[TData False ["Int"] [] TUnit,TTuple [TData False ["Bool"] [] TUnit,TData False ["Int"] [] TUnit]],[TTuple [TData False ["Bool"] [] TUnit,TData False ["Bool"] [] TUnit],TTuple [TData False ["Bool"] [] TUnit,TData False ["Int"] [] TUnit]]]
     it "list" $
       sort' [
-        [TData False ["Int"]  [] (TUnit False),TTuple False [TData False ["Int"]  [] (TUnit False),TData False ["Int"] [] (TUnit False)]],
-        [TData False ["Int"]  [] (TUnit False),TData False ["Int"] [] (TUnit False)]
+        [TData False ["Int"]  [] TUnit,TTuple [TData False ["Int"]  [] TUnit,TData False ["Int"] [] TUnit]],
+        [TData False ["Int"]  [] TUnit,TData False ["Int"] [] TUnit]
        ]
       `shouldBe` [
-        [TData False ["Int"]  [] (TUnit False),TData False ["Int"] [] (TUnit False)],
-        [TData False ["Int"]  [] (TUnit False),TTuple False [TData False ["Int"]  [] (TUnit False),TData False ["Int"] [] (TUnit False)]]
+        [TData False ["Int"]  [] TUnit,TData False ["Int"] [] TUnit],
+        [TData False ["Int"]  [] TUnit,TTuple [TData False ["Int"]  [] TUnit,TData False ["Int"] [] TUnit]]
        ]
 
   where

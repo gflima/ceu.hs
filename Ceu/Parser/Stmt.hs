@@ -95,9 +95,9 @@ matchLocType2 src loc (tp_,ctrs) = if length vars /= length tps_ then Nothing el
     getVars (ECall  _ (ECons _ _) e) = getVars e
 
     tp2list :: Int -> Type -> [Type]
-    tp2list 1 tp_@(TTuple False tps_) = [tp_]
-    tp2list _     (TTuple False tps_) = tps_
-    tp2list _     tp_                 = [tp_]
+    tp2list 1 tp_@(TTuple tps_) = [tp_]
+    tp2list _     (TTuple tps_) = tps_
+    tp2list _     tp_           = [tp_]
 
 -------------------------------------------------------------------------------
 
@@ -166,7 +166,7 @@ stmt_data = do
   id      <- tk_data_hier
   nms     <- optionMaybe $ try ((list1 tk_var) <|> (singleton <$> tk_var))
   ofs     <- option [] $ try $ tk_key "for" *> (map (TVar False) <$> (try (list1 tk_var) <|> (singleton <$> tk_var)))
-  (st,cs) <- option (TUnit False,cz) $ try $ tk_key "with" *> pTypeContext
+  (st,cs) <- option (TUnit,cz) $ try $ tk_key "with" *> pTypeContext
   isAbs   <- option False $ do
                               void <- try $ tk_key "is"
                               void <- tk_key "abstract"

@@ -18,10 +18,10 @@ import qualified Ceu.Grammar.Full.Compile.Match as Match
 import qualified Ceu.Grammar.Full.Compile.Class as Class
 import qualified Ceu.Grammar.Full.Compile.Func  as Func
 
-int   = TData False ["Int"]          [] (TUnit False)
-bool  = TData False ["Bool"]         [] (TUnit False)
-boolf = TData False ["Bool","False"] [] (TUnit False)
-boolt = TData False ["Bool","True"]  [] (TUnit False)
+int   = TData False ["Int"]          [] TUnit
+bool  = TData False ["Bool"]         [] TUnit
+boolf = TData False ["Bool","False"] [] TUnit
+boolt = TData False ["Bool","True"]  [] TUnit
 
 prelude :: Ann -> Stmt -> Stmt
 prelude z p =
@@ -31,16 +31,16 @@ prelude z p =
     (SSeq z (SData z Nothing (boolt,cz) False)
     (SSeq z (SVar  z "_true"  (bool,cz))
     (SSeq z (SSet  z True False (EVar z "_true") (ECons z ["Bool","True"]))
-    (SSeq z (SVar  z "print"  (TFunc False FuncGlobal (TVar False "?")          (TVar False "?"), cz))
-    (SSeq z (SVar  z "negate" (TFunc False FuncGlobal int                       int,              cz))
-    (SSeq z (SVar  z "=="     (TFunc False FuncGlobal (TTuple False [int, int]) bool,             cz))
-    (SSeq z (SVar  z "<="     (TFunc False FuncGlobal (TTuple False [int, int]) bool,             cz))
-    (SSeq z (SVar  z "<"      (TFunc False FuncGlobal (TTuple False [int, int]) bool,             cz))
-    (SSeq z (SVar  z "+"      (TFunc False FuncGlobal (TTuple False [int, int]) int,              cz))
-    (SSeq z (SVar  z "-"      (TFunc False FuncGlobal (TTuple False [int, int]) int,              cz))
-    (SSeq z (SVar  z "/"      (TFunc False FuncGlobal (TTuple False [int, int]) int,              cz))
-    (SSeq z (SVar  z "*"      (TFunc False FuncGlobal (TTuple False [int, int]) int,              cz))
-    (SSeq z (SVar  z "rem"    (TFunc False FuncGlobal (TTuple False [int, int]) int,              cz))
+    (SSeq z (SVar  z "print"  (TFunc FuncGlobal (TVar False "?")    (TVar False "?"), cz))
+    (SSeq z (SVar  z "negate" (TFunc FuncGlobal int                 int,              cz))
+    (SSeq z (SVar  z "=="     (TFunc FuncGlobal (TTuple [int, int]) bool,             cz))
+    (SSeq z (SVar  z "<="     (TFunc FuncGlobal (TTuple [int, int]) bool,             cz))
+    (SSeq z (SVar  z "<"      (TFunc FuncGlobal (TTuple [int, int]) bool,             cz))
+    (SSeq z (SVar  z "+"      (TFunc FuncGlobal (TTuple [int, int]) int,              cz))
+    (SSeq z (SVar  z "-"      (TFunc FuncGlobal (TTuple [int, int]) int,              cz))
+    (SSeq z (SVar  z "/"      (TFunc FuncGlobal (TTuple [int, int]) int,              cz))
+    (SSeq z (SVar  z "*"      (TFunc FuncGlobal (TTuple [int, int]) int,              cz))
+    (SSeq z (SVar  z "rem"    (TFunc FuncGlobal (TTuple [int, int]) int,              cz))
            p))))))))))))))))
 
 compile :: Stmt -> Stmt

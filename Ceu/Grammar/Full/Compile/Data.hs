@@ -71,12 +71,12 @@ fdata ds nms tp@(TData False id ofs st, ctrs) = case getSuper id of
                                       (Just l1,Just l2) -> Just $ l1 ++ l2
   where
     cat :: Type -> Type -> Type
-    cat (TUnit False)     tp                = tp
-    cat tp                (TUnit False)     = tp
-    cat (TTuple False l1) (TTuple False l2) = TTuple False $ l1 ++ l2
-    cat (TTuple False l1) tp                = TTuple False $ l1 ++ [tp]
-    cat tp                (TTuple False l2) = TTuple False $ tp :  l2
-    cat tp1               tp2               = TTuple False $ [tp1,tp2]
+    cat TUnit       tp          = tp
+    cat tp          TUnit       = tp
+    cat (TTuple l1) (TTuple l2) = TTuple $ l1 ++ l2
+    cat (TTuple l1) tp          = TTuple $ l1 ++ [tp]
+    cat tp          (TTuple l2) = TTuple $ tp :  l2
+    cat tp1         tp2         = TTuple $ [tp1,tp2]
 
 -------------------------------------------------------------------------------
 
@@ -89,9 +89,9 @@ fvar ds (tp_,ctrs) = (fvar' ds tp_, ctrs)
         Nothing -> fvar' ds st
         Just (SData'' _ _ (TData False _ ofs' st',_) _ _)
                 -> instantiate (zip (map (\(TVar False v)->v) ofs') ofs) st'
-    fvar' ds (TFunc False ftp inp out) = TFunc False ftp (fvar' ds inp) (fvar' ds out)
-    fvar' ds (TTuple False tps)    = TTuple False $ map (fvar' ds) tps
-    fvar' _  tp                    = tp
+    fvar' ds (TFunc ftp inp out) = TFunc ftp (fvar' ds inp) (fvar' ds out)
+    fvar' ds (TTuple tps)        = TTuple $ map (fvar' ds) tps
+    fvar' _  tp                  = tp
 
 -------------------------------------------------------------------------------
 
@@ -106,32 +106,32 @@ faccs z nms (tpD@(TData False hr _ st),cz) p = accs where
   hr_str = hier2str hr
 
   g :: Type -> [Type]
-  g (TTuple False l) = l
-  g (TUnit False)    = []
-  g tp               = [tp]
+  g (TTuple l) = l
+  g TUnit      = []
+  g tp         = [tp]
 
   f :: Type -> (Stmt,Int) -> (Stmt,Int)
-  f tp (p,idx) = (SVar'' z id (TFunc False FuncGlobal tpD tp,cz)
+  f tp (p,idx) = (SVar'' z id (TFunc FuncGlobal tpD tp,cz)
                     (SMatch' z True False body [(SNop z, EVar z id, nm p)])
                  ,idx+1)
                  where
                   id = hr_str ++ "._" ++ show idx
 
-                  body = EFunc' z (TFunc False FuncGlobal tpD tp,cz)
+                  body = EFunc' z (TFunc FuncGlobal tpD tp,cz)
                           (SVar'' z "ret" (tp,cz)
                             (SMatch' z True False (EArg z) [(SNop z, ret, SRet z (EVar z "ret"))]))
                   ret  = ECall z (ECons z hr) (bool (ETuple z repl) (repl!!0) (len st == 1))
                   repl = take (idx-1) anys ++ [EVar z "ret"] ++ drop idx anys
                   anys = replicate (len st) (EAny z)
 
-                  len (TTuple False l) = length l
+                  len (TTuple l) = length l
                   len _          = 1
 
                   nm p = case nms of
                           Nothing -> p
-                          Just l  -> SVar'' z idm (TFunc False FuncGlobal tpD tp,cz)
+                          Just l  -> SVar'' z idm (TFunc FuncGlobal tpD tp,cz)
                                       (SMatch' z True False body [(SNop z, EVar z idm, p)])
                                      where
                                       idm = hr_str ++ "." ++ (l!!(idx-1))
-                                      body = EFunc' z (TFunc False FuncGlobal tpD tp,cz)
+                                      body = EFunc' z (TFunc FuncGlobal tpD tp,cz)
                                               (SRet z (ECall z (EVar z id) (EArg z)))

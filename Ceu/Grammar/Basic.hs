@@ -205,7 +205,7 @@ instance HasAnn Stmt where
     getAnn (SRet   z _)         = z
     getAnn (SNop   z)           = z
 
-prelude z p = (SData z Nothing (TData False ["Int"]          [] (TUnit False),cz) False
-              (SData z Nothing (TData False ["Bool"]         [] (TUnit False),cz) True
-              (SData z Nothing (TData False ["Bool","True"]  [] (TUnit False),cz) False
-              (SData z Nothing (TData False ["Bool","False"] [] (TUnit False),cz) False p))))
+prelude z p = (SData z Nothing (TData False ["Int"]          [] TUnit,cz) False
+              (SData z Nothing (TData False ["Bool"]         [] TUnit,cz) True
+              (SData z Nothing (TData False ["Bool","True"]  [] TUnit,cz) False
+              (SData z Nothing (TData False ["Bool","False"] [] TUnit,cz) False p))))

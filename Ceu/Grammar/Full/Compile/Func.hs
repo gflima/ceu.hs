@@ -51,7 +51,7 @@ expr (ETuple z es)          = ETuple z (map expr es)
 expr (ECall  z e1 e2)       = ECall  z (expr e1) (expr e2)
 expr (EFNew  z ids f)       = EFNew  z (expr ids) (expr f)
 
-expr (EFunc  z tpc@(TFunc _ _ inp _,cs) pars imp) = EFunc' z tpc (stmt imp')
+expr (EFunc  z tpc@(TFunc _ inp _,cs) pars imp) = EFunc' z tpc (stmt imp')
   where
     pars' = expr pars
     imp' = tmp $ SSeq z
@@ -64,16 +64,16 @@ expr (EFunc  z tpc@(TFunc _ _ inp _,cs) pars imp) = EFunc' z tpc (stmt imp')
     toStmts src loc (tp_,ctrs) = aux src loc tp_
       where
         aux :: Ann -> Exp -> Type -> [Stmt]
-        aux z (EAny   _)     _                 = []
-        aux z (EUnit  _)     (TUnit False)     = []
-        aux z (EVar   _ var) tp_               = [SVar z var (tp_,ctrs)]
-        aux z (ETuple _ [])  (TTuple False []) = []
-        aux z (ETuple _ [])  _                 = error "arity mismatch"
-        aux z (ETuple _ _)   (TTuple False []) = error "arity mismatch"
+        aux z (EAny   _)     _           = []
+        aux z (EUnit  _)     TUnit       = []
+        aux z (EVar   _ var) tp_         = [SVar z var (tp_,ctrs)]
+        aux z (ETuple _ [])  (TTuple []) = []
+        aux z (ETuple _ [])  _           = error "arity mismatch"
+        aux z (ETuple _ _)   (TTuple []) = error "arity mismatch"
         aux z (ETuple _ (v1:vs1))
-                (TTuple False (v2:vs2))        = (aux z v1 v2) ++ (aux z (ETuple z vs1) (TTuple False vs2))
-        aux z (ETuple _ _)  _                  = error "arity mismatch"
-        aux z loc           tp                 = error $ show (z,loc,tp)
+                (TTuple (v2:vs2))        = (aux z v1 v2) ++ (aux z (ETuple z vs1) (TTuple vs2))
+        aux z (ETuple _ _)  _            = error "arity mismatch"
+        aux z loc           tp           = error $ show (z,loc,tp)
 
     tmp p = case pars of
               (EAny _) -> imp

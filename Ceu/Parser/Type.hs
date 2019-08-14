@@ -18,39 +18,45 @@ import Ceu.Grammar.Type               (Type(..), TypeC, FuncType(..))
 
 singleton x = [x]
 
-type_0 :: Bool -> Parser Type
-type_0 ref = do
+type_0 :: Parser Type
+type_0 = do
     void <- tk_sym "("
     void <- tk_sym ")"
-    return $ TUnit ref
+    return TUnit
 
 f tp = case tp of
-  TUnit _    -> []
-  TTuple _ l -> l
-  _          -> [tp]
+  TUnit    -> []
+  TTuple l -> l
+  _        -> [tp]
 
-type_D :: Bool -> Parser Type
-type_D ref = do
+type_D :: Parser Type
+type_D = do
+    ref  <- option False $ do
+                            void <- try $ tk_key "ref"
+                            return True
     hier <- tk_data_hier
-    ofs  <- option (TUnit False) $ try (tk_key "of" *> pType)
-    return $ TData ref hier (f ofs) (TUnit False)
+    ofs  <- option TUnit $ try (tk_key "of" *> pType)
+    return $ TData ref hier (f ofs) TUnit
 
-type_N :: Bool -> Parser Type
-type_N ref = do
+type_N :: Parser Type
+type_N = do
     tps <- list2 pType
-    return $ TTuple ref tps
+    return $ TTuple tps
 
-type_F :: Bool -> Parser Type
-type_F ref = do
+type_F :: Parser Type
+type_F = do
     void <- tk_sym "("
     inp  <- pType
     void <- tk_sym "->"
     out  <- pType
     void <- tk_sym ")"
-    return $ TFunc ref FuncUnknown inp out
+    return $ TFunc FuncUnknown inp out
 
-type_V :: Bool -> Parser Type
-type_V ref = do
+type_V :: Parser Type
+type_V = do
+    ref <- option False $ do
+                            void <- try $ tk_key "ref"
+                            return True
     var <- tk_var
     return $ TVar ref var
 
@@ -61,18 +67,10 @@ type_parens = do
   void <- tk_sym ")"
   return tp
 
-pType' :: Parser Type
-pType' = do
-  ref <- option False $ do
-                          void <- try $ tk_key "ref"
-                          return True
-  tp  <- type_D ref <|> try (type_V ref) <|> try (type_0 ref) <|>
-          try (type_N ref) <|> try (type_F ref) <|> type_parens
-  return tp
-
 pType :: Parser Type
 pType = do
-  tp <- pType' <?> "type"
+  tp  <- type_D <|> try type_V <|> try type_0 <|>
+          try type_N <|> try type_F <|> type_parens <?> "type"
   return tp
 
 pTypeContext :: Parser TypeC
