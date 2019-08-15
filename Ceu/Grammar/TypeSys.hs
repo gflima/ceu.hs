@@ -643,11 +643,10 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n
       -- find in top-level envs | id : a
       case findVars z id envs of
         Left  es -> (id, (TAny,cz), (False,0), es)
-        Right xs -> case find f xs of
-          Nothing -> (id, (TAny,cz), (False,0), map (toError z) $ fromLeft $ relatesC rel txpc tpc)
-                      where
-                        (SVar _ _ tpc _) = last (map snd xs)
-          Just (lnr, SVar _ _ tpc@(_,ctrs) _) ->
+        Right xs -> case find f xs' of
+          Nothing -> (id, (TAny,cz), (False,0),
+                      map (toError z) $ fromLeft $ relatesC rel txpc (last (map snd xs')))
+          Just (lnr, tpc@(_,ctrs)) ->
             if ctrs == cz then
               (id, tpc, lnr, [])
             else
@@ -669,8 +668,12 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n
                 err = [toError z $ "variable '" ++ id ++
                        "' has no associated instance for '" ++
                        T.show' txp ++ "'"]
-        where
-          f (_, SVar _ _ tpc _) = isRight $ relatesC rel txpc tpc
+          where
+            xs' = map (\(lnr, SVar _ _ tpc _) -> (lnr, tpc)) xs
+            f (_, tpc) = isRight $ relatesC rel txpc (toDer tpc) where
+                          -- accept ref variables in non-ref context
+                          toDer tpc = if not (T.isRefableRefC tpc) then tpc else
+                                        T.toDerC tpc
 
   toDer exp = if not (T.isRefableRefC tpc) then exp else
                 ERefDer z{typec=T.toDerC tpc} exp
