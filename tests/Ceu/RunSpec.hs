@@ -521,23 +521,23 @@ spec = do
             "func square (x) : (Int -> Int) do",
             "   return x * x",
             "end",
-            "func apply (f,x) : ((ref (a->b),a) -> b) do",
+            "func apply (f,x) : (((a->b),a) -> b) do",
             "   return f x",
             "end",
-            "return apply (ref square,4)"
+            "return apply (square,4)"
            ])
         `shouldBe` Right (EData ["Int","16"] EUnit)
 
-      it "ident" $
+      it "ident-func" $
         (run True $
           unlines [
             "func square (x) : (Int -> Int) do",
             "   return x * x",
             "end",
-            "func id x : ((ref a) -> (() -> a)) do",
-            "   return new func () : (() -> a) do return x end",
+            "func id x : ((ref a) -> (() -> ref a)) do",
+            "   return new func () : (() -> ref a) do return x end",
             "end",
-            "return ((id (ref square))()) 4"
+            "return ((id square)()) 4"
            ])
         `shouldBe` Right (EData ["Int","16"] EUnit)
 
