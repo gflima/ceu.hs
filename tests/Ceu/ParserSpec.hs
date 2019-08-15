@@ -437,7 +437,7 @@ spec = do
             it "var x: ref () =  ()" $
                 parse stmt_var "var x: ref () =  ()"
                 --`shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "x" (TUnit,cz)) (SNop (annz{source = ("",0,0)}))) (SSet (annz{source = ("",1,1)}) True False (EVar annz{source = ("",1,5)} "x") (EUnit (annz{source = ("",1,18)}))))
-                `shouldBe` Left "(line 1, column 12):\nunexpected \"(\""
+                `shouldBe` Left "(line 1, column 12):\nunexpected \"(\"\nexpecting type"
             it "var x:(ref Int,()) =  (1 ())" $
                 parse stmt_var "var x:(ref Int,()) =  (1,())"
                 `shouldBe` Right (SSeq (annz{source = ("",1,1)}) (SSeq (annz{source = ("",0,0)}) (SVar (annz{source = ("",1,1)}) "x" (TTuple [int',TUnit],cz)) (SNop (annz{source = ("",0,0)}))) (SSet (annz{source = ("",1,1)}) True False (EVar annz{source = ("",1,5)} "x") (ETuple (annz{source = ("",1,23)}) [ECons (annz{source = ("",1,24)}) ["Int","1"],EUnit (annz{source = ("",1,26)})])))

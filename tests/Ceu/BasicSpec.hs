@@ -38,7 +38,7 @@ spec = do
 
   describe "declarations" $ do
 
-    it "XXX: Bool ; (True == False)" $
+    it "Bool ; (True == False)" $
       (fst $ TypeSys.go
         (SData annz Nothing (bool, cz) True
         (SData annz Nothing (boolt,cz) False
@@ -126,6 +126,12 @@ spec = do
     it "a:Int ; True <- a" $
       (fst $ TypeSys.go (prelude annz (SVar annz "a" (int,cz) (mmm annz True (ECons annz ["Bool","True"]) (EVar annz "a") (SNop annz) (SNop annz)))))
         `shouldBe` ["types do not match : expected 'Bool' : found 'Int'"]
+    it "a:Bool ; 1 <- a" $
+      (fst $ TypeSys.go (prelude annz (SVar annz "a" (bool,cz) (mmm annz True (ECons annz ["Int","1"]) (EVar annz "a") (SNop annz) (SNop annz)))))
+        `shouldBe` ["types do not match : expected 'Int' : found 'Bool'"]
+    it "a:Int ; 1 <- a" $
+      (fst $ TypeSys.go (prelude annz (SVar annz "a" (int,cz) (mmm annz True (ECons annz ["Int","1"]) (EVar annz "a") (SNop annz) (SNop annz)))))
+        `shouldBe` []
 
     it "a:Bool ; True <- a" $
       (fst $ TypeSys.go (prelude annz (SVar annz "a" (bool,cz) (mmm annz True (ECons annz ["Bool","True"]) (EVar annz "a") (SNop annz) (SNop annz)))))

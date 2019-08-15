@@ -15,7 +15,7 @@ import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
 import Ceu.Grammar.Match
 
---fromLeft  (Left  v) = v
+fromLeft  (Left  v) = v
 --fromRight (Right v) = v
 
 fst3 (x,_,_) = x
@@ -42,29 +42,24 @@ go p = (es,p') where
 
 -------------------------------------------------------------------------------
 
-findVar :: Ann -> (ID_Var,Relation,TypeC) -> Envs -> Either Errors ((Bool,Int), Stmt)
-findVar z x (env:envs) =
-  case (envs, findVar' z x env) of
-    (_,  Right (i,j)     ) -> Right ((getRef i, length envs), i)
+findVars :: Ann -> ID_Var -> Envs -> Either Errors [((Bool,Int), Stmt)]
+findVars z id (env:envs) =
+  case (envs, findVars' z id env) of
+    (_,  Right xs)         -> Right $ map (\x -> ((getRef x, length envs), x)) xs
     (_,  Left  (True, es)) -> Left es          -- True = stop here with error
     ([], Left  (False,es)) -> Left es
-    (_,  Left  (False,es)) -> findVar z x envs
+    (_,  Left  (False,es)) -> findVars z id envs
   where
     getRef :: Stmt -> Bool
     getRef (SVar _ _ tpc _) = T.isRefC tpc
 
-findVar' :: Ann -> (ID_Var,Relation,TypeC) -> [Stmt] -> Either (Bool,Errors) (Stmt, (Type, [(ID_Var,Type)]))
-findVar' z (id,rel,txpc) envs =   -- TODO: not currently using second return value
-  case find f envs of
-    Just s@(SVar _ _ tpc' _)   -> Right (s, ret) where
-                                    Right ret = relatesC rel txpc tpc'
-    Nothing ->
-      case find (isVar id) envs of
-        Nothing                -> Left (False, [toError z $ "variable '" ++ id ++ "' is not declared"])
-        Just (SVar _ _ tpc' _) -> Left (True, map (toError z) es) where
-                                    Left es = relatesC rel txpc tpc'
+findVars' :: Ann -> ID_Var -> [Stmt] -> Either (Bool,Errors) [Stmt]
+findVars' z id envs =
+  case filter f envs of
+    [] -> Left (False, [toError z $ "variable '" ++ id ++ "' is not declared"])
+    xs -> Right xs
   where
-    f (SVar _ id' tpc' _) = id==id' && (isRight $ relatesC rel txpc tpc')
+    f (SVar _ id' tpc' _) = id==id'
     f _                   = False
 
 -------------------------------------------------------------------------------
@@ -151,9 +146,9 @@ fPat :: Envs -> Bool -> Exp -> (Errors,FuncType,TypeC,Exp)
 fPat envs ini (EAny   z)     = ([], FuncGlobal, (TAny, cz), EAny z)
 fPat envs ini (EUnit  z)     = ([], FuncGlobal, (TUnit,cz), EUnit z)
 fPat envs ini (EVar   z id)  =
-  case findVar z (id,SUP,(TAny,cz)) envs of
+  case findVars z id envs of
     Left  es -> (es, FuncGlobal, (TAny,cz), EVar z id)
-    Right ((ref,n), SVar _ _ tpc _) ->
+    Right (((ref,n), SVar _ _ tpc _) : _) ->  -- latest definition
       ([], ftReq (length envs) (id,ref,n), tpc', exp')
         where
           (tpc',exp') = toRef tpc (EVar z id)
@@ -481,8 +476,8 @@ stmt envs tpr (SSeq z p1 p2) = (es1++es2, ftMin ft1 ft2, fts1++fts2, SSeq z p1' 
     --  copy FuncCloseOuter complete type from body to function ID
     envs'' = case p1' of
               (SMatch _ True _ exp [(_,(EVar _ id),_)]) ->
-                case findVar z (id,SUP,(TAny,cz)) envs' of
-                  Right (_, SVar z _ (TFunc _ _ (TFunc _ _ _),_) _) ->
+                case findVars z id envs' of
+                  Right [(_, SVar z _ (TFunc _ _ (TFunc _ _ _),_) _)] ->
                     envsAdd envs' (SVar z id (typec $ getAnn exp) (SNop z))
                   otherwise -> envs'
               otherwise -> envs'
@@ -564,8 +559,8 @@ expr' _ envs (EFunc z tpc@(TFunc ft inp out,cs) upv p) = (es++esf, FuncGlobal, c
                           dcls ids acc = foldr (\id -> (SVar z id (getTP id))) acc ids
 
                           getTP :: ID_Var -> TypeC
-                          getTP id = case findVar z (id,SUP,(TAny,cz)) envs of
-                                              Right (_, SVar _ _ tpc _) -> tpc
+                          getTP id = case findVars z id envs of
+                                              Right [(_, SVar _ _ tpc _)] -> tpc
     otherwise -> p'
 
   closes = case ft' of
@@ -646,30 +641,36 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n
     | (id == "_INPUT") = (id, (TData False ["Int"] [] TUnit,cz), (False,0), [])
     | otherwise        =
       -- find in top-level envs | id : a
-      case findVar z (id,rel,txpc) envs of
+      case findVars z id envs of
         Left  es -> (id, (TAny,cz), (False,0), es)
-        Right (lnr, SVar _ id' tpc@(_,ctrs) _) ->
-          if ctrs == cz then
-            (id, tpc, lnr, [])
-          else
-            case find pred (concat envs) of            -- find instance
-              Just (SVar _ _ tpc@(tp,ctrs) _) ->
-                if null ctrs then
-                  (idtp id tp, tpc, lnr, [])
-                else
-                  if null cxp then
-                    (id, (TAny,cz), lnr, err)
+        Right xs -> case find f xs of
+          Nothing -> (id, (TAny,cz), (False,0), map (toError z) $ fromLeft $ relatesC rel txpc tpc)
+                      where
+                        (SVar _ _ tpc _) = last (map snd xs)
+          Just (lnr, SVar _ _ tpc@(_,ctrs) _) ->
+            if ctrs == cz then
+              (id, tpc, lnr, [])
+            else
+              case find pred (concat envs) of            -- find instance
+                Just (SVar _ _ tpc@(tp,ctrs) _) ->
+                  if null ctrs then
+                    (idtp id tp, tpc, lnr, [])
                   else
-                    (id, tpc, lnr, [])
-              Nothing -> (id, (TAny,cz), lnr, err)
-            where
-              pred :: Stmt -> Bool
-              pred (SVar _ k tpc@(tp,_) _) = (idtp id tp == k) && (isRight $ relatesC SUP txpc tpc)
-              pred _                       = False
+                    if null cxp then
+                      (id, (TAny,cz), lnr, err)
+                    else
+                      (id, tpc, lnr, [])
+                Nothing -> (id, (TAny,cz), lnr, err)
+              where
+                pred :: Stmt -> Bool
+                pred (SVar _ k tpc@(tp,_) _) = (idtp id tp == k) && (isRight $ relatesC SUP txpc tpc)
+                pred _                       = False
 
-              err = [toError z $ "variable '" ++ id ++
-                     "' has no associated instance for '" ++
-                     T.show' txp ++ "'"]
+                err = [toError z $ "variable '" ++ id ++
+                       "' has no associated instance for '" ++
+                       T.show' txp ++ "'"]
+        where
+          f (_, SVar _ _ tpc _) = isRight $ relatesC rel txpc tpc
 
   toDer exp = if not (T.isRefableRefC tpc) then exp else
                 ERefDer z{typec=T.toDerC tpc} exp
@@ -699,8 +700,8 @@ expr' (rel,(txp_,cxp)) envs (ECall z f exp) = (bool ese esf (null ese) ++ esa,
                 (TFunc (FuncCloseOuter n) inp out, cs) ->
                   (TFunc (FuncCloseCall n (scope envs exp)) inp out, cs) where
                     scope :: Envs -> Exp -> Int
-                    scope envs (EVar _ id) = case findVar z (id,SUP,(TAny,cz)) envs of
-                                              Right ((_,n), SVar _ _ tpc _) -> n
+                    scope envs (EVar _ id) = case findVars z id envs of
+                                              Right [((_,n), SVar _ _ tpc _)] -> n
                     scope envs (ERefRef _ e) = scope envs e
                     scope _ _ = error $ "TODO: tuples, etc"
                 otherwise -> tpc_out

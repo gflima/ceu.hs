@@ -294,7 +294,7 @@ spec = do
            ])
         `shouldBe` Left "TODO: ref should be constant"
 
-      it "ident" $
+      it "ident-ref" $
         (run True $
           unlines [
             "func id x : (ref Int -> Int) do",
@@ -305,7 +305,7 @@ spec = do
            ])
         `shouldBe` Right (EData ["Int","10"] EUnit)
 
-      it "ident" $
+      it "ident-a-ref" $
         (run True $
           unlines [
             "func id x : (ref a -> a) do",
