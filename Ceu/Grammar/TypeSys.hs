@@ -157,7 +157,7 @@ fPat envs ini (EVar   z id)  =
       ([], ftReq (length envs) (id,ref,n), tpc', exp')
         where
           (tpc',exp') = toRef tpc (EVar z id)
-          toRef tpc exp = if not $ (isRefableC tpc && isRefC tpc) then
+          toRef tpc exp = if not $ (T.isRefableRefC tpc) then
                             (tpc,exp)
                           else if ini then
                             (tpc,ERefIni z exp)
@@ -641,12 +641,12 @@ expr' _ envs (ETuple z exps) = (es, ft, fts, ETuple z{typec=(tps',cz)} exps') wh
                                 ft    = foldr ftMin FuncUnknown $ map snd4 rets
                                 fts   = concatMap trd4 rets
 
-expr' (rel,txp@(txp_,cxp)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n), [], toDer $ EVar z{typec=tpc} id') where    -- EVar x
+expr' (rel,txpc@(txp,cxp)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n), [], toDer $ EVar z{typec=tpc} id') where    -- EVar x
   (id', tpc, (ref,n), es)
     | (id == "_INPUT") = (id, (TData False ["Int"] [] TUnit,cz), (False,0), [])
     | otherwise        =
       -- find in top-level envs | id : a
-      case findVar z (id,rel,txp) envs of
+      case findVar z (id,rel,txpc) envs of
         Left  es -> (id, (TAny,cz), (False,0), es)
         Right (lnr, SVar _ id' tpc@(_,ctrs) _,_) ->
           if ctrs == cz then
@@ -664,21 +664,21 @@ expr' (rel,txp@(txp_,cxp)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n
               Nothing -> (id, (TAny,cz), lnr, err)
             where
               pred :: Stmt -> Bool
-              pred (SVar _ k tpc@(tp,_) _) = (idtp id tp == k) && (isRight $ relatesC SUP txp tpc)
+              pred (SVar _ k tpc@(tp,_) _) = (idtp id tp == k) && (isRight $ relatesC SUP txpc tpc)
               pred _                       = False
 
               err = [toError z $ "variable '" ++ id ++
                      "' has no associated instance for '" ++
-                     T.show' txp_ ++ "'"]
+                     T.show' txp ++ "'"]
 
-  toDer exp = if not (isRefableC tpc && T.isRefC tpc) then exp else
+  toDer exp = if not (T.isRefableRefC tpc) then exp else
                 ERefDer z{typec=T.toDerC tpc} exp
               where
                 tpc = typec $ getAnn exp
 
 expr' (rel,txpC) envs (ERefRef z exp) = (es, ft, fts, ERefRef z{typec=T.toRefC $ typec $ getAnn exp'} exp')
   where
-    (es, ft, fts, exp') = expr z (rel,T.toDerC txpC) envs exp
+    (es, ft, fts, exp') = expr z (rel,bool txpC (T.toDerC txpC) (isRefableRefC txpC)) envs exp
     EVar _ id = case exp' of
                   (EVar    _ id)            -> exp'
                   (ERefDer _ e@(EVar _ id)) -> e

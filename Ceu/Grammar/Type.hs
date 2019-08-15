@@ -89,6 +89,9 @@ isAny TAny = True
 isAny _    = False
 -}
 
+isRefableRefC :: TypeC -> Bool
+isRefableRefC tpc = isRefableC tpc && isRefC tpc
+
 isRefableC :: TypeC -> Bool
 isRefableC (tp,_) = isRefable tp
 

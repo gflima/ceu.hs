@@ -297,6 +297,17 @@ spec = do
       it "ident" $
         (run True $
           unlines [
+            "func id x : (ref Int -> Int) do",
+            "   return x",
+            "end",
+            "var y : Int = 10",
+            "return id (ref y)"
+           ])
+        `shouldBe` Right (EData ["Int","10"] EUnit)
+
+      it "ident" $
+        (run True $
+          unlines [
             "func id x : (ref a -> a) do",
             "   return x",
             "end",

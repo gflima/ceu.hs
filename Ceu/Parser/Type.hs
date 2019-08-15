@@ -69,7 +69,7 @@ type_parens = do
 
 pType :: Parser Type
 pType = do
-  tp  <- type_D <|> try type_V <|> try type_0 <|>
+  tp  <- try type_D <|> try type_V <|> try type_0 <|>
           try type_N <|> try type_F <|> type_parens <?> "type"
   return tp
 
