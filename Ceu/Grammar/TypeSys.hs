@@ -42,10 +42,10 @@ go p = (es,p') where
 
 -------------------------------------------------------------------------------
 
-findVar :: Ann -> (ID_Var,Relation,TypeC) -> Envs -> Either Errors ((Bool,Int), Stmt, (Type, [(ID_Var,Type)]))
+findVar :: Ann -> (ID_Var,Relation,TypeC) -> Envs -> Either Errors ((Bool,Int), Stmt)
 findVar z x (env:envs) =
   case (envs, findVar' z x env) of
-    (_,  Right (i,j)     ) -> Right ((getRef i, length envs), i, j)
+    (_,  Right (i,j)     ) -> Right ((getRef i, length envs), i)
     (_,  Left  (True, es)) -> Left es          -- True = stop here with error
     ([], Left  (False,es)) -> Left es
     (_,  Left  (False,es)) -> findVar z x envs
@@ -153,7 +153,7 @@ fPat envs ini (EUnit  z)     = ([], FuncGlobal, (TUnit,cz), EUnit z)
 fPat envs ini (EVar   z id)  =
   case findVar z (id,SUP,(TAny,cz)) envs of
     Left  es -> (es, FuncGlobal, (TAny,cz), EVar z id)
-    Right ((ref,n), SVar _ _ tpc _, _) ->
+    Right ((ref,n), SVar _ _ tpc _) ->
       ([], ftReq (length envs) (id,ref,n), tpc', exp')
         where
           (tpc',exp') = toRef tpc (EVar z id)
@@ -482,7 +482,7 @@ stmt envs tpr (SSeq z p1 p2) = (es1++es2, ftMin ft1 ft2, fts1++fts2, SSeq z p1' 
     envs'' = case p1' of
               (SMatch _ True _ exp [(_,(EVar _ id),_)]) ->
                 case findVar z (id,SUP,(TAny,cz)) envs' of
-                  Right (_, SVar z _ (TFunc _ _ (TFunc _ _ _),_) _, _) ->
+                  Right (_, SVar z _ (TFunc _ _ (TFunc _ _ _),_) _) ->
                     envsAdd envs' (SVar z id (typec $ getAnn exp) (SNop z))
                   otherwise -> envs'
               otherwise -> envs'
@@ -565,7 +565,7 @@ expr' _ envs (EFunc z tpc@(TFunc ft inp out,cs) upv p) = (es++esf, FuncGlobal, c
 
                           getTP :: ID_Var -> TypeC
                           getTP id = case findVar z (id,SUP,(TAny,cz)) envs of
-                                              Right (_, SVar _ _ tpc _, _) -> tpc
+                                              Right (_, SVar _ _ tpc _) -> tpc
     otherwise -> p'
 
   closes = case ft' of
@@ -648,7 +648,7 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n
       -- find in top-level envs | id : a
       case findVar z (id,rel,txpc) envs of
         Left  es -> (id, (TAny,cz), (False,0), es)
-        Right (lnr, SVar _ id' tpc@(_,ctrs) _,_) ->
+        Right (lnr, SVar _ id' tpc@(_,ctrs) _) ->
           if ctrs == cz then
             (id, tpc, lnr, [])
           else
@@ -700,7 +700,7 @@ expr' (rel,(txp_,cxp)) envs (ECall z f exp) = (bool ese esf (null ese) ++ esa,
                   (TFunc (FuncCloseCall n (scope envs exp)) inp out, cs) where
                     scope :: Envs -> Exp -> Int
                     scope envs (EVar _ id) = case findVar z (id,SUP,(TAny,cz)) envs of
-                                              Right ((_,n), SVar _ _ tpc _, _) -> n
+                                              Right ((_,n), SVar _ _ tpc _) -> n
                     scope envs (ERefRef _ e) = scope envs e
                     scope _ _ = error $ "TODO: tuples, etc"
                 otherwise -> tpc_out
