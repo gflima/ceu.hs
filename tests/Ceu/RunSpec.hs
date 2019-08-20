@@ -410,11 +410,11 @@ spec = do
            ])
         `shouldBe` Left "(line 2, column 11):\nunexpected `new`: function is not a closure\n"
 
-      it "FuncNested return - reference in body (not args)" $
+      it "FuncNested return - no new" $
         (run True $
           unlines [
             "func g x : (Int -> (() -> Int)) do",
-            "   var a : ref Int = ref x",
+            "   var a : Int = x",
             "   return func () : (()->Int) do return a end",
             "end",
             "var a : Int = 99",
@@ -422,51 +422,58 @@ spec = do
            ])
         `shouldBe` Left "(line 3, column 11):\ncannot return nested function\n"
 
-      it "FuncClosure return - reference in args" $
+      it "FuncNested return - no new" $
         (run True $
           unlines [
-            "func g x : (ref Int -> (() -> Int)) do",
-            "   return func () : (()->Int) do return x end",
+            "func g x : (Int -> (() -> Int)) do",
+            "   var a : Int = x",
+            "   return func () : (()->Int) do return a end",
             "end",
-            "var b : Int = 10",
-            "var a : ref Int = ref b",
-            "return (g (ref a)) ()"
+            "var a : Int = 99",
+            "return (g (10)) ()"
            ])
-        `shouldBe` Left "(line 2, column 11):\nexpected `new`: function is a closure\n"
+        `shouldBe` Left "(line 3, column 11):\ncannot return nested function\n"
 
-      it "FuncClosure return - reference in args" $
+      it "FuncClosure return" $
         (run True $
           unlines [
-            "func g x : (ref Int -> (() -> Int)) do",
-            "   return func () : (()->Int) do return x end",
-            "end",
-            "var b : Int = 10",
-            "return (g (ref b)) ()"
-           ])
-        `shouldBe` Left "(line 2, column 11):\nexpected `new`: function is a closure\n"
-
-      it "FuncClosure return - reference in args" $
-        (run True $
-          unlines [
-            "func g x : (ref Int -> (() -> Int)) do",
+            "func g x : (Int -> new (() -> Int)) do",
             "   return new func () : (()->Int) do return x end",
             "end",
-            "var b : Int = 10",
-            "var a : ref Int = ref b",
-            "return (g (ref a)) ()"
+            "return (g 10) ()"
            ])
         `shouldBe` Right (EData ["Int","10"] EUnit)
 
-      it "FuncClosure return - reference in args" $
+      it "FuncClosure return" $
+        (run True $
+          unlines [
+            "func g x : (Int -> (() -> Int)) do",
+            "   return new func () : (()->Int) do return x end",
+            "end",
+            "return (g 10) ()"
+           ])
+        `shouldBe` Right (EData ["Int","10"] EUnit)
+
+      it "FuncClosure return" $
+        (run True $
+          unlines [
+            "func g x : (Int -> new (() -> Int)) do",
+            "   return func () : (()->Int) do return x end",
+            "end",
+            "return (g 10) ()"
+           ])
+        `shouldBe` Left "(line 2, column 11):\ncannot return nested function\n"
+
+      it "FuncNested return - reference in args" $
         (run True $
           unlines [
             "func g x : (ref Int -> (() -> Int)) do",
-            "   return new func () : (()->Int) do return x end",
+            "   return func () : (()->Int) do return x end",
             "end",
             "var a : Int = 10",
             "return (g (ref a)) ()"
            ])
-        `shouldBe` Right (EData ["Int","10"] EUnit)
+        `shouldBe` Left "(line 2, column 11):\ncannot return nested function\n"
 
       it "FuncClosure return - reference in args" $
         (run True $
@@ -477,37 +484,47 @@ spec = do
             "var a : Int = 10",
             "return ((g (ref a))()) + a"
            ])
-        `shouldBe` Right (EData ["Int","15"] EUnit)
+        `shouldBe` Left "(line 2, column 11):\nunexpected `new`: function is not a closure\n"
+
+      it "FuncClosure return" $
+        (run True $
+          unlines [
+            "func g x : (Int -> (() -> Int)) do",
+            "   return new func () : (()->Int) do var v:Int=x ; set x=5 ; return v end",
+            "end",
+            "var a : Int = 10",
+            "return ((g 10)()) + a"
+           ])
+        `shouldBe` Right (EData ["Int","20"] EUnit)
 
       it "FuncClosure return - reference in two levels" $
         (run True $
           unlines [
             "func h () : (() -> Int) do",
             " func f () : (() -> (() -> Int)) do",
-            "   var b : Int = 10",
-            "   var a : ref Int = ref b",
-            "   func g x : (ref Int -> (() -> Int)) do",
+            "   func g x : (Int -> (() -> Int)) do",
             "     return new func () : (()->Int) do return x end",
             "   end",
-            "   return (g (ref a))",
+            "   return (g 10)",
             " end",
             " return (f())()",
             "end",
             "return h()"
            ])
-        `shouldBe` Left "cannot return closure : upvalues go out of scope\n"
+        `shouldBe` Right (EData ["Int","10"] EUnit)
+        --`shouldBe` Left "cannot return closure : upvalues go out of scope\n"
 
       it "FuncClosure return - reference in two levels" $
         (run True $
           unlines [
             "func h () : (() -> Int) do",
             " var b : Int = 10",
-            " var a : ref Int = ref b",
+            " var a : Int = b",
             " func f () : (() -> (() -> Int)) do",
-            "   func g x : (ref Int -> (() -> Int)) do",
+            "   func g x : (Int -> (() -> Int)) do",
             "     return new func () : (()->Int) do return x end",
             "   end",
-            "   return (g (ref a))",
+            "   return (g a)",
             " end",
             " return (f())()",
             "end",
@@ -534,8 +551,8 @@ spec = do
             "func square (x) : (Int -> Int) do",
             "   return x * x",
             "end",
-            "func id x : ((ref a) -> (() -> ref a)) do",
-            "   return new func () : (() -> ref a) do return x end",
+            "func id x : (a -> (() -> a)) do",
+            "   return new func () : (() -> a) do return x end",
             "end",
             "return ((id square)()) 4"
            ])
@@ -547,35 +564,33 @@ spec = do
             "func add (x,y) : ((Int, Int) -> Int) do",
             "   return x+y",
             "end",
-            "func curry f : (ref ((a,b)->c) -> ((ref a -> (b -> c)))) do",
-            "   return new func x : (ref a -> (b -> c)) do",
+            "func curry f : (((a,b)->c) -> ((a -> (b -> c)))) do",
+            "   return new func x : (a -> (b -> c)) do",
             "               return new func y : (b -> c) do",
             "                           return f(x,y)",
             "                          end",
             "              end",
             "end",
-            "var addc : (ref Int -> (Int -> Int)) = curry (ref add)",
-            "var i : Int = 10",
-            "return (addc (ref i)) 2"
+            "var addc : (Int -> (Int -> Int)) = curry (add)",
+            "return (addc 10) 2"
            ])
         `shouldBe` Right (EData ["Int","12"] EUnit)
 
       it "curry-2" $            -- pg 13
         (run True $
           unlines [
-            "func add (x,y) : ((ref Int, Int) -> Int) do",
+            "func add (x,y) : ((Int, Int) -> Int) do",
             "   return x+y",
             "end",
-            "func curry f : (ref ((ref a,b)->c) -> ((ref a -> (b -> c)))) do",
-            "   return new func x : (ref a -> (b -> c)) do",
+            "func curry f : (((a,b)->c) -> ((a -> (b -> c)))) do",
+            "   return new func x : (a -> (b -> c)) do",
             "               return new func y : (b -> c) do",
-            "                           return f(ref x,y)",
+            "                           return f(x,y)",
             "                          end",
             "              end",
             "end",
-            "var addc : (ref Int -> (Int -> Int)) = curry (ref add)",
-            "var i : Int = 10",
-            "return (addc (ref i)) 2"
+            "var addc : (Int -> (Int -> Int)) = curry (add)",
+            "return (addc 10) 2"
            ])
         `shouldBe` Right (EData ["Int","12"] EUnit)
 

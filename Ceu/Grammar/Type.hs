@@ -33,11 +33,9 @@ data FuncType = FuncUnknown
               | FuncCloseBody -- can    access non-local args by ref  // can    be passed and returned
                   (Set.Set ID_Var)  -- upvalues in asc ID order
                                     -- on enter, (x,z) = EUps
-              | FuncCloseOuter
+              | FuncCloseVar
                   Int               -- n mem slots, max among all nested FuncCloseBody
                                     -- on "new", EUps = (x,z)
-              | FuncCloseCall
-                  Int Int           -- n mem slots // max upvs scope depth
   deriving (Eq, Show)
 
 ftMin :: FuncType -> FuncType -> FuncType
@@ -50,12 +48,12 @@ ftMin FuncGlobal        _                 = FuncGlobal
 ftMin _                 FuncGlobal        = FuncGlobal
 ftMin _                 _                 = FuncUnknown
 
--- len  l-1  l-2   l-3  l-4  ...    1    0
---   [ locs,args, lvl1,args, ..., glbs,args ]
+-- len  l-1  l-2   ...    0
+--   [ locs, lvl1, ..., glbs ]
 ftReq :: Int -> (ID_Var,Bool,Int) -> FuncType  -- (length, (id,ref,n)
-ftReq len (id,ref,n) | ref && n==len-4  = FuncCloseBody $ Set.singleton id -- only non-local args by ref
-ftReq len (_,_,   n) | n>=len-2 || n<=1 = FuncGlobal
-ftReq _   _                             = FuncNested
+ftReq len (id,ref,n) | (not ref) && n<len-1 && n/=0 = FuncCloseBody $ Set.singleton id -- only non-ref non-local non-global IDs
+ftReq len (id,_,  n) | n>=len-1 || n==0 = FuncGlobal
+ftReq _   (_, _,  _)                    = FuncNested
 
 -------------------------------------------------------------------------------
 
@@ -107,7 +105,7 @@ isRef :: Type -> Bool
 isRef TUnit               = False
 isRef (TData  ref _ _ _)  = ref
 isRef (TTuple _    )      = False
-isRef (TFunc  _ _ _)      = True
+isRef (TFunc  _ _ _)      = False
 isRef (TVar   ref _    )  = ref
 --isRef _ = False
 --isRef x = error $ show x

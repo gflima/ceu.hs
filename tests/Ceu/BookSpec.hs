@@ -155,13 +155,13 @@ spec = do
         it "smallerc" $            -- pg 11
           (run True $
             unlines [
-              "func smallerc x : (ref Int -> (Int->Int)) do",
+              "func smallerc x : (Int -> (Int->Int)) do",
               "   return new func y : (Int -> Bool) do",
               "               return x < y",
               "              end",
               "end",
               "var z : Int = 10",
-              "return (smallerc (ref z))(12)"
+              "return (smallerc (z))(12)"
              ])
           `shouldBe` Right (EData ["Bool","True"] EUnit)
 
@@ -184,10 +184,10 @@ spec = do
               "func square (x) : (Int -> Int) do",
               "   return x * x",
               "end",
-              "func twice (f,x) : ((ref (Int->Int), Int) -> Int) do",
+              "func twice (f,x) : (((Int->Int), Int) -> Int) do",
               "   return f(f x)",
               "end",
-              "return twice (ref square, 2)"
+              "return twice (square, 2)"
              ])
           `shouldBe` Right (EData ["Int","16"] EUnit)
 
@@ -197,10 +197,10 @@ spec = do
               "func square (x) : (Int -> Int) do",
               "   return x * x",
               "end",
-              "func twicec f : (ref (Int->Int) -> (Int->Int)) do",
+              "func twicec f : ((Int->Int) -> (Int->Int)) do",
               "   return new func x : (Int -> Int) do return f(f x) end",
               "end",
-              "return (twicec (ref square)) 2"
+              "return (twicec (square)) 2"
              ])
           `shouldBe` Right (EData ["Int","16"] EUnit)
 
@@ -210,10 +210,10 @@ spec = do
               "func square (x) : (Int -> Int) do",
               "   return x * x",
               "end",
-              "func twicec f : (ref (Int->Int) -> (Int->Int)) do",
+              "func twicec f : ((Int->Int) -> (Int->Int)) do",
               "   return new func x : (Int -> Int) do return f(f x) end",
               "end",
-              "var quad : (Int -> Int) = twicec (ref square)",
+              "var quad : (Int -> Int) = twicec (square)",
               "return quad 2"
              ])
           `shouldBe` Right (EData ["Int","16"] EUnit)
@@ -224,18 +224,18 @@ spec = do
               "func square (x) : (Int -> Int) do",
               "   return x * x",
               "end",
-              "func twice (f,x) : ((ref (Int->Int), Int) -> Int) do",
+              "func twice (f,x) : (((Int->Int), Int) -> Int) do",
               "   return f(f x)",
               "end",
-              "func curry f : (ref ((ref a,b)->c) -> ((ref a -> (b -> c)))) do",
-              "   return new func x : (ref a -> (b -> c)) do",
+              "func curry f : (((a,b)->c) -> ((a -> (b -> c)))) do",
+              "   return new func x : (a -> (b -> c)) do",
               "               return new func y : (b -> c) do",
-              "                           return f(ref x,y)",
+              "                           return f(x,y)",
               "                          end",
               "              end",
               "end",
-              "var twicec : (ref (Int->Int) -> (Int -> Int)) = curry (ref twice)",
-              "return (twicec (ref square)) 2"
+              "var twicec : ((Int->Int) -> (Int -> Int)) = curry (twice)",
+              "return (twicec (square)) 2"
              ])
           `shouldBe` Right (EData ["Int","16"] EUnit)
 
@@ -1144,6 +1144,7 @@ spec = do
             "return t1 =/= t2"
            ])
         `shouldBe` Left "(line 79, column 11):\ntypes do not match : expected '(((Triple of (Int,Int,Int)),(Triple of (Bool,Bool,Bool))) -> ?)' : found '((a,a) -> Bool)'\n(line 79, column 11):\nambiguous instances for 'a' : '(Triple of (Int,Int,Int))', '(Triple of (Bool,Bool,Bool))'\n"
+        --`shouldBe` Left "(line 79, column 11):\nvariable '=/=' has no associated instance for '(((Triple of (Int,Int,Int)),(Triple of (Bool,Bool,Bool))) -> ?)'\n"
 
       it "Date - age" $         -- pg 45
         (run True $
