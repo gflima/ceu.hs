@@ -28,12 +28,12 @@ type TypeC = (Type, Cs.Map)
 -------------------------------------------------------------------------------
 
 data FuncType = FuncUnknown
-              | FuncGlobal    -- cannot access non-locals             // can    be passed and returned
-              | FuncNested    -- can    access non-locals             // cannot be passed or  returned
-              | FuncCloseBody -- can    access non-local args by ref  // can    be passed and returned
+              | FuncGlobal    -- cannot access non-locals          // can    be passed and returned
+              | FuncNested    -- can    access non-locals          // cannot be passed or  returned
+              | FuncCloseBody -- can    access non-locals by copy  // can    be passed and returned
                   (Set.Set ID_Var)  -- upvalues in asc ID order
                                     -- on enter, (x,z) = EUps
-              | FuncCloseVar
+              | FuncCloseVal
                   Int               -- n mem slots, max among all nested FuncCloseBody
                                     -- on "new", EUps = (x,z)
   deriving (Eq, Show)

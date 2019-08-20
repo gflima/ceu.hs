@@ -470,7 +470,7 @@ stmt envs tpr (SSeq z p1 p2) = (es1++es2, ftMin ft1 ft2, fts1++fts2, SSeq z p1' 
     (es2,ft2,fts2,p2') = stmt envs' tpr p2
 
     -- if "g := func" and func returns closure,
-    --  copy FuncCloseVar complete type from body to function ID
+    --  copy FuncCloseVal complete type from body to function ID
     envs' = case p1' of
               (SMatch _ True _ exp [(_,(EVar _ id),_)]) ->
                 case findVars z id envs of
@@ -537,7 +537,7 @@ expr' _ envs (EFunc z tpc@(TFunc ft inp out,cs) upv p) = (es++esf, FuncGlobal, c
     (TFunc f x y) -> (TFunc f' x y) where
                       f' = case fts of
                         []                  -> f
-                        [FuncCloseBody ups] -> FuncCloseVar $ Set.size ups
+                        [FuncCloseBody ups] -> FuncCloseVal $ Set.size ups
                         --[x] -> x
                         --_ -> error $ show fts
                         -- TODO: multiple closures

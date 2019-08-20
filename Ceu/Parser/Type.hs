@@ -47,7 +47,7 @@ type_F :: Parser Type
 type_F = do
     ft   <- option FuncUnknown $ do
                                   void <- try $ tk_key "new"
-                                  return $ FuncCloseVar 0   -- max of 0 upvs slots
+                                  return $ FuncCloseVal 0   -- max of 0 upvs slots
     void <- tk_sym "("
     inp  <- pType
     void <- tk_sym "->"
