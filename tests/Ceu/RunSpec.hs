@@ -404,7 +404,7 @@ spec = do
         (run True $
           unlines [
             "func g () : (() -> (() -> Int)) do",
-            "   return new func () : (()->Int) do return 10 end",
+            "   return func () : (()->Int)[0] do return 10 end",
             "end",
             "return (g ()) ()"
            ])
@@ -434,11 +434,11 @@ spec = do
            ])
         `shouldBe` Left "(line 3, column 11):\ncannot return nested function\n"
 
-      it "FuncClosure return" $
+      it "XXX: FuncClosure return" $
         (run True $
           unlines [
-            "func g x : (Int -> new (() -> Int)) do",
-            "   return new func () : (()->Int) do return x end",
+            "func g x : (Int -> (() -> Int)[1])  do",
+            "   return func () : (()->Int) [1] do return x end",
             "end",
             "return (g 10) ()"
            ])
@@ -448,7 +448,7 @@ spec = do
         (run True $
           unlines [
             "func g x : (Int -> (() -> Int)) do",
-            "   return new func () : (()->Int) do return x end",
+            "   return func () : (()->Int) [1] do return x end",
             "end",
             "return (g 10) ()"
            ])
@@ -457,7 +457,7 @@ spec = do
       it "FuncClosure return" $
         (run True $
           unlines [
-            "func g x : (Int -> new (() -> Int)) do",
+            "func g x : (Int -> (() -> Int)[1]) do",
             "   return func () : (()->Int) do return x end",
             "end",
             "return (g 10) ()"
@@ -479,7 +479,7 @@ spec = do
         (run True $
           unlines [
             "func g x : (ref Int -> (() -> Int)) do",
-            "   return new func () : (()->Int) do var v:Int=x ; set x=5 ; return v end",
+            "   return func () : (()->Int) [1] do var v:Int=x ; set x=5 ; return v end",
             "end",
             "var a : Int = 10",
             "return ((g (ref a))()) + a"
@@ -490,7 +490,7 @@ spec = do
         (run True $
           unlines [
             "func g x : (Int -> (() -> Int)) do",
-            "   return new func () : (()->Int) do var v:Int=x ; set x=5 ; return v end",
+            "   return func () : (()->Int) [1] do var v:Int=x ; set x=5 ; return v end",
             "end",
             "var a : Int = 10",
             "return ((g 10)()) + a"
@@ -503,7 +503,7 @@ spec = do
             "func h () : (() -> Int) do",
             " func f () : (() -> (() -> Int)) do",
             "   func g x : (Int -> (() -> Int)) do",
-            "     return new func () : (()->Int) do return x end",
+            "     return func () : (()->Int)[1] do return x end",
             "   end",
             "   return (g 10)",
             " end",
@@ -522,7 +522,7 @@ spec = do
             " var a : Int = b",
             " func f () : (() -> (() -> Int)) do",
             "   func g x : (Int -> (() -> Int)) do",
-            "     return new func () : (()->Int) do return x end",
+            "     return func () : (()->Int)[1] do return x end",
             "   end",
             "   return (g a)",
             " end",
@@ -552,7 +552,7 @@ spec = do
             "   return x * x",
             "end",
             "func id x : (a -> (() -> a)) do",
-            "   return new func () : (() -> a) do return x end",
+            "   return func () : (() -> a)[1] do return x end",
             "end",
             "return ((id square)()) 4"
            ])
@@ -565,8 +565,8 @@ spec = do
             "   return x+y",
             "end",
             "func curry f : (((a,b)->c) -> ((a -> (b -> c)))) do",
-            "   return new func x : (a -> (b -> c)) do",
-            "               return new func y : (b -> c) do",
+            "   return func x : (a -> (b -> c)[1]) do",
+            "               return func y : (b -> c)[1] do",
             "                           return f(x,y)",
             "                          end",
             "              end",
@@ -583,8 +583,8 @@ spec = do
             "   return x+y",
             "end",
             "func curry f : (((a,b)->c) -> ((a -> (b -> c)))) do",
-            "   return new func x : (a -> (b -> c)) do",
-            "               return new func y : (b -> c) do",
+            "   return func x : (a -> (b -> c)[1]) do",
+            "               return func y : (b -> c)[1] do",
             "                           return f(x,y)",
             "                          end",
             "              end",

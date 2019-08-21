@@ -10,7 +10,7 @@ import Text.Parsec.Prim         (many)
 import Text.Parsec.Combinator   (option)
 
 import Ceu.Parser.Common
-import Ceu.Parser.Token         (tk_sym, tk_key, tk_class, tk_var, tk_data_hier)
+import Ceu.Parser.Token         (tk_sym, tk_key, tk_class, tk_var, tk_data_hier, tk_num)
 
 import Ceu.Grammar.Globals            (ID_Var, ID_Class)
 import Ceu.Grammar.Constraints as Cs  (Pair, insert, cz)
@@ -45,14 +45,16 @@ type_N = do
 
 type_F :: Parser Type
 type_F = do
-    ft   <- option FuncUnknown $ do
-                                  void <- try $ tk_key "new"
-                                  return $ FuncCloseVal 0   -- max of 0 upvs slots
     void <- tk_sym "("
     inp  <- pType
     void <- tk_sym "->"
     out  <- pType
     void <- tk_sym ")"
+    ft   <- option FuncUnknown $ do
+                                  void <- try $ tk_sym "["
+                                  n    <- tk_num
+                                  void <- tk_sym "]"
+                                  return $ FuncClosure n Set.empty
     return $ TFunc ft inp out
 
 type_V :: Parser Type

@@ -289,7 +289,7 @@ spec = do
                 `shouldBe` Right (TFunc FuncUnknown (TVar False "a") (int))
             it "a -> Int" $
                 parse type_F "a -> Int"
-                `shouldBe` Left "(line 1, column 1):\nunexpected \"a\"\nexpecting \"new\" or \"(\""
+                `shouldBe` Left "(line 1, column 1):\nunexpected \"a\"\nexpecting \"[\" or \"(\""
 
         describe "typeV" $ do
             it "Int" $

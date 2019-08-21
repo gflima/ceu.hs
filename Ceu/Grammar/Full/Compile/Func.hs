@@ -16,23 +16,23 @@ stmt :: Stmt -> Stmt
 stmt (SClass z cls ctrs ifc) =
   case Cs.toList ctrs of
     [(var,_)]  -> SClass z cls ctrs (stmt $ aux ifc) where
-      aux (SSeq  z p1 p2)                  = SSeq  z (aux p1) (aux p2)
-      aux (SVar  z id (tp_,ctrs))          = SVar  z id (tp_, Cs.insert (var,cls) ctrs)
-      aux (SFunc z id (tp_,ctrs) pars imp) = SFunc z id (tp_, Cs.insert (var,cls) ctrs) pars imp
-      aux p                                = p
+      aux (SSeq  z p1 p2)                 = SSeq  z (aux p1) (aux p2)
+      aux (SVar  z id (tp_,ctrs))         = SVar  z id (tp_, Cs.insert (var,cls) ctrs)
+      aux (SFunc z id (tp_,ctrs) par imp) = SFunc z id (tp_, Cs.insert (var,cls) ctrs) par imp
+      aux p                               = p
     otherwise  -> error "TODO: multiple vars"
 
 stmt (SInst  z cls tp@(_,ctrs) imp)    = SInst  z cls tp (stmt $ aux imp)
   where
-    aux (SSeq  z p1 p2)                    = SSeq  z (aux p1) (aux p2)
-    aux (SVar  z id (tp_',ctrs'))          = SVar  z id (tp_',Cs.union ctrs ctrs')
-    aux (SFunc z id (tp_',ctrs') pars imp) = SFunc z id (tp_',Cs.union ctrs ctrs') pars imp
-    aux p                                  = p
+    aux (SSeq  z p1 p2)                   = SSeq  z (aux p1) (aux p2)
+    aux (SVar  z id (tp_',ctrs'))         = SVar  z id (tp_',Cs.union ctrs ctrs')
+    aux (SFunc z id (tp_',ctrs') par imp) = SFunc z id (tp_',Cs.union ctrs ctrs') par imp
+    aux p                                 = p
 
-stmt (SFunc z k tp@(tp_,ctrs) pars imp)    = SSeq z (SVar z k tp) (SSet z True False (EVar z k) (expr $ EFunc z tp pars' imp'))
+stmt (SFunc z k tp@(tp_,ctrs) par imp)    = SSeq z (SVar z k tp) (SSet z True False (EVar z k) (expr $ EFunc z tp par' imp'))
  where
-  (pars',imp') = if ctrs == Cs.cz then (pars,imp) else
-                  (map_exp  (id,id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) pars
+  (par',imp') = if ctrs == Cs.cz then (par,imp) else
+                  (map_exp  (id,id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) par
                   ,map_stmt (id,id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) imp)
 
 stmt (SVar   z id tp)       = SVar   z id tp
@@ -49,15 +49,14 @@ stmt p                      = p
 expr :: Exp -> Exp
 expr (ETuple z es)          = ETuple z (map expr es)
 expr (ECall  z e1 e2)       = ECall  z (expr e1) (expr e2)
-expr (EFNew  z ids f)       = EFNew  z (expr ids) (expr f)
 
-expr (EFunc  z tpc@(TFunc _ inp _,cs) pars imp) = EFunc' z tpc (stmt imp')
+expr (EFunc  z tpc@(TFunc _ inp _,cs) par imp) = EFunc' z tpc (stmt imp')
   where
-    pars' = expr pars
+    par' = expr par
     imp' = tmp $ SSeq z
-            (foldr (SSeq z) (SNop z) (toStmts z pars' (inp,cs)))
+            (foldr (SSeq z) (SNop z) (toStmts z par' (inp,cs)))
             (SSeq z
-              (SSet z True False pars' (EArg z))
+              (SSet z True False par' (EArg z))
               imp)
 
     toStmts :: Ann -> Exp -> TypeC -> [Stmt]
@@ -75,7 +74,7 @@ expr (EFunc  z tpc@(TFunc _ inp _,cs) pars imp) = EFunc' z tpc (stmt imp')
         aux z (ETuple _ _)  _            = error "arity mismatch"
         aux z loc           tp           = error $ show (z,loc,tp)
 
-    tmp p = case pars of
+    tmp p = case par of
               (EAny _) -> imp
               _        -> p
 

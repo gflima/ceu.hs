@@ -19,7 +19,6 @@ data Exp
     | EField  Ann ID_Data_Hier String -- List.Cons._1 // Student.age
     | ETuple  Ann [Exp]          -- (1,2) ; ((1,2),3) ; ((),()) // (len >= 2)
     | EFunc   Ann TypeC Exp Stmt -- function implementation
-    | EFNew   Ann Exp Exp        -- closure creation: ids/func
     | ECall   Ann Exp Exp        -- f a ; f(a) ; f(1,2)
     | EAny    Ann
     | EArg    Ann
@@ -40,7 +39,6 @@ instance HasAnn Exp where
     getAnn (EField  z _ _) = z
     getAnn (ETuple  z _)   = z
     getAnn (EFunc   z _ _ _) = z
-    getAnn (EFNew   z _ _) = z
     getAnn (ECall   z _ _) = z
     getAnn (EAny    z)     = z
     getAnn (EArg    z)     = z
@@ -126,7 +124,6 @@ show_exp spc (EArg   _)           = "arg"
 show_exp spc (EUpv   _)           = "upv"
 show_exp spc (ETuple _ es)        = "(" ++ intercalate "," (map (show_exp spc) es) ++ ")"
 show_exp spc (EFunc  _ _ _ p)     = "func" ++ "\n" ++ show_stmt (spc+4) p
-show_exp spc (EFNew  _ _ f)       = "new " ++ show_exp spc f
 show_exp spc (ECall  _ e1 e2)     = "call" ++ " " ++ show_exp spc e1 ++ " " ++ show_exp spc e2
 show_exp spc (EMatch _ exp pat)   = "match" ++ " " ++ show_exp spc exp ++ " with " ++ show_exp spc pat
 show_exp spc (EExp   _ exp)       = show_exp spc exp
@@ -155,7 +152,6 @@ map_exp :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Exp -> Exp
 map_exp f@(_,fe,_)  (ECons  z id)    = fe (ECons  z id)
 map_exp f@(_,fe,_)  (ETuple z es)    = fe (ETuple z (map (map_exp f) es))
 map_exp f@(_,fe,ft) (EFunc  z tp upv p) = fe (EFunc  z (ft tp) (map_exp f upv) (map_stmt f p))
-map_exp f@(_,fe,ft) (EFNew  z ups e) = fe (EFNew  z ups (map_exp f e))
 map_exp f@(_,fe,_)  (ECall  z e1 e2) = fe (ECall  z (map_exp f e1) (map_exp f e2))
 map_exp f@(_,fe,_)  exp              = fe exp
 

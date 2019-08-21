@@ -88,6 +88,7 @@ spec = do
            ])
         `shouldBe` Right (EData ["Int","3"] EUnit)
 
+{-
       it "infinity" $         -- pg 5
         (run True $
           unlines [
@@ -110,6 +111,7 @@ spec = do
             "return three (infinity ())"
            ])
         `shouldBe` Right (EError (-1))
+-}
 
 -------------------------------------------------------------------------------
 
@@ -129,6 +131,7 @@ spec = do
            ])
         `shouldBe` Right (EData ["Int","12"] EUnit)
 
+{-
       it "multiply 3 infinity" $  -- pg 9
         (run True $
           unlines [
@@ -145,6 +148,7 @@ spec = do
             "return multiply (3,infinity())"
            ])
         `shouldBe` Right (EError (-1))
+-}
 
 -------------------------------------------------------------------------------
 

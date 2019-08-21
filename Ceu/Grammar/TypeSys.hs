@@ -466,18 +466,8 @@ stmt envs _   (SCall z exp)  = (ese++esf, ft, fts, SCall z exp') where
 
 stmt envs tpr (SSeq z p1 p2) = (es1++es2, ftMin ft1 ft2, fts1++fts2, SSeq z p1' p2')
   where
-    (es1,ft1,fts1,p1') = stmt envs  tpr p1
-    (es2,ft2,fts2,p2') = stmt envs' tpr p2
-
-    -- if "g := func" and func returns closure,
-    --  copy FuncCloseVal complete type from body to function ID
-    envs' = case p1' of
-              (SMatch _ True _ exp [(_,(EVar _ id),_)]) ->
-                case findVars z id envs of
-                  Right [(_, SVar z _ (TFunc _ _ (TFunc _ _ _),_) _)] ->
-                    envsAdd envs (SVar z id (typec $ getAnn exp) (SNop z))
-                  otherwise -> envs
-              otherwise -> envs
+    (es1,ft1,fts1,p1') = stmt envs tpr p1
+    (es2,ft2,fts2,p2') = stmt envs tpr p2
 
 stmt envs tpr (SLoop z p)    = (es, ft, fts, SLoop z p') where
                                 (es,ft,fts,p') = stmt envs tpr p
@@ -517,59 +507,45 @@ expr' _       _   (EError  z v)     = ([], FuncGlobal, [], EError  z{typec=(TBot
 expr' _       _   (EUnit   z)       = ([], FuncGlobal, [], EUnit   z{typec=(TUnit,cz)})
 expr' (_,txp) _   (EArg    z)       = ([], FuncGlobal, [], EArg    z{typec=txp})
 
-expr' _ envs (EFunc z tpc@(TFunc ft inp out,cs) upv p) = (es++esf, FuncGlobal, closes, EFunc z{typec=tpc'} tpc' upv p'')
- where
-  tpc' = (TFunc ft'' inp out',cs)
-  (es,ft',fts,p') = stmt ([]:envs) (out,cs) p -- add new environment
-
-  -- ft:  how it is defined by the programmer
-  -- ft': how it is inferred by its body
-  (esf,ft'') = case (ft,ft') of
-          (_,_) | ft == ft'                 -> ([], ft')
-          (FuncCloseBody _,FuncCloseBody _) -> ([], ft')
-          (FuncCloseBody _,_)               -> ([toError z "unexpected `new`: function is not a closure"], ft')
-          --(_,FuncCloseBody _)               -> ([toError z "expected `new`: function is a closure"], ft')
-          (FuncUnknown,FuncCloseBody _)     -> ([], FuncNested)
-          (FuncUnknown,_)                   -> ([], ft')
-          _ -> error $ show (ft,ft')
-
-  out' = case out of
-    (TFunc f x y) -> (TFunc f' x y) where
-                      f' = case fts of
-                        []                  -> f
-                        [FuncCloseBody ups] -> FuncCloseVal $ Set.size ups
-                        --[x] -> x
-                        --_ -> error $ show fts
-                        -- TODO: multiple closures
-    otherwise -> out
-
-  -- (up1,...,upN) = EUps
-  p'' = case ft'' of
-    FuncCloseBody ups -> dcls ups' $ SSeq z (attr ups') p' where
-                          ups' = Set.toAscList ups
-
-                          attr :: [ID_Var] -> Stmt
-                          attr [id] = SMatch z True False (EUpv z) [(SNop z,EVar z id,SNop z)]
-                          attr ids  = SMatch z True False (EUpv z) [(SNop z,ETuple z $ map (EVar z) ids,SNop z)]
-
-                          dcls :: [ID_Var] -> Stmt -> Stmt
-                          dcls ids acc = foldr (\id -> (SVar z id (getTP id))) acc ids
-
-                          getTP :: ID_Var -> TypeC
-                          getTP id = case findVars z id envs of
-                                              Right [(_, SVar _ _ tpc _)] -> tpc
-    otherwise -> p'
-
-  closes = case ft'' of
-    FuncCloseBody _ -> [ft'']
-    otherwise       -> []
-
-expr' _ envs (EFNew z (EUnit _) (EFunc z1 (TFunc FuncUnknown inp out,cs) upv p)) = (es, ft, fts, EFNew z ids f'')
+expr' _ envs (EFunc z tpc@(TFunc ft inp out,cs) upv p) = (es++esf, FuncGlobal, closes, EFunc z{typec=tpc'} tpc' upv' p'')
   where
-    (es,ft,fts,f'') = expr z (SUP,(TAny,cz)) envs f' where
-                        f' = EFunc z1 (TFunc (FuncCloseBody $ Set.empty) inp out,cs) upv p
-    ids = case f'' of
-            EFunc _ (TFunc (FuncCloseBody ids) _ _,_) _ _ -> toExp $ Set.toAscList ids
+    tpc' = (TFunc ft'' inp out,cs)
+    (es,ft',fts,p') = stmt ([]:envs) (out,cs) p -- add new environment
+
+    -- ft:  how it is defined by the programmer
+    -- ft': how it is inferred by its body
+    (esf,ft'') = case (ft,ft') of
+            (_,_) | ft == ft'                 -> ([], ft')
+            (FuncClosure _ _,FuncClosure _ _) -> ([], ft')
+            (FuncClosure _ _,_)               -> ([toError z "unexpected `new`: function is not a closure"], ft')
+            --(_,FuncClosure _)               -> ([toError z "expected `new`: function is a closure"], ft')
+            (FuncUnknown,FuncClosure _ _)     -> ([], FuncNested)
+            (FuncUnknown,_)                   -> ([], ft')
+            _ -> error $ show (ft,ft')
+
+    -- (up1,...,upN) = EUps
+    p'' = case ft'' of
+      FuncClosure _ ups -> dcls ups' $ SSeq z (attr ups') p' where
+                            ups' = Set.toAscList ups
+
+                            attr :: [ID_Var] -> Stmt
+                            attr [id] = SMatch z True False (EUpv z) [(SNop z,EVar z id,SNop z)]
+                            attr ids  = SMatch z True False (EUpv z) [(SNop z,ETuple z $ map (EVar z) ids,SNop z)]
+
+                            dcls :: [ID_Var] -> Stmt -> Stmt
+                            dcls ids acc = foldr (\id -> (SVar z id (getTP id))) acc ids
+
+                            getTP :: ID_Var -> TypeC
+                            getTP id = case findVars z id envs of
+                                                Right [(_, SVar _ _ tpc _)] -> tpc
+      otherwise -> p'
+
+    closes = case ft'' of
+      FuncClosure _ _ -> [ft'']
+      otherwise       -> []
+
+    upv' = case tpc' of
+            (TFunc (FuncClosure _ ids) _ _,_) -> toExp $ Set.toAscList ids
 
     toExp :: [ID_Var] -> Exp
     toExp [id] = EVar z id

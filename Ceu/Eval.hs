@@ -28,7 +28,6 @@ data Exp
     | ECons  ID_Data_Hier     -- X         (functions)
     | ETuple [Exp]            -- (1,2) ; ((1),2) ; ((1,2),3) ; ((),()) // (len >= 2)
     | EFunc  Exp Stmt
-    | EFNew  Exp Exp
     | ECall  Exp Exp          -- f a ; f(a) ; f(1,2)
     | EAny
     | EExp   Exp
@@ -61,7 +60,6 @@ fromExp (B.ECons   z id)  = case typec z of
                              otherwise            -> ECons id
 fromExp (B.ETuple  _ vs)  = ETuple (map fromExp vs)
 fromExp (B.EFunc   _ _ us p) = EFunc (fromExp us) (fromStmt p)
-fromExp (B.EFNew   _ ids f) = EFNew (fromExp ids) (fromExp f)
 fromExp (B.ECall   _ f e) = ECall (fromExp f) (fromExp e)
 fromExp (B.EAny    _)     = EAny
 fromExp (B.EArg    _)     = EVar "_arg"
@@ -134,9 +132,6 @@ envEval (vars,e) = case e of
     ERefRef exp -> (vars, exp)
     ERefDer exp -> envEval $ envEval (vars, exp)
 
-    EFNew ids (EFunc _ p) -> envEval (vars', (EFunc e' p)) where
-                              (vars',e') = envEval (vars,ids)
-
     ECall f arg ->
       case (f', arg') of
         (EError x, _)                                   -> (vars'', EError x)
@@ -160,12 +155,14 @@ envEval (vars,e) = case e of
         (EVar "<",      ETuple [EData ["Int",x] EUnit,
                                 EData ["Int",y] EUnit]) -> (vars'', EData (bool ["Bool","False"] ["Bool","True"] (read' x < read' y))  EUnit)
         (ECons id,       e)                             -> (vars'', EData id e)
-        (EFunc upv p,    arg)                           -> (vars''', e) where
-                                                            (_:_:vars''', e) = steps (("_upv",Just upv):("_arg",Just arg):vars'', p)
+        (EFunc upv p,    arg)                           -> (vars'''', e) where
+                                                            (_:_:vars'''', e) = steps (("_upv",Just upv):("_arg",Just arg):vars''', p)
+                                                            (vars''', arg') = envEval (vars'', arg)
         --(x,y) -> error $ show (x,arg)
       where
-        (vars',  f')   = envEval (vars,  f)
-        (vars'', arg') = envEval (vars', arg)
+        (vars',   f')   = envEval (vars,   f)
+        (vars'',  upv') = envEval (vars',  upv)
+
 
     e         -> (vars, e)
 

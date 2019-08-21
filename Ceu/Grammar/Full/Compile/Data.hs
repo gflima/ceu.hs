@@ -49,7 +49,6 @@ expr :: [Stmt] -> Exp -> Exp
 expr ds (ETuple z es)            = ETuple z (map (expr ds) es)
 expr ds (ECall  z e1 e2)         = ECall  z (expr ds e1) (expr ds e2)
 expr ds (EFunc' z tp imp)        = EFunc' z tp (stmt ds imp)
-expr ds (EFNew  z ids f)         = EFNew  z (expr ds ids) (expr ds f)
 expr _  e                        = e
 
 -------------------------------------------------------------------------------
