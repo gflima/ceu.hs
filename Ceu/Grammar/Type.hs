@@ -32,28 +32,31 @@ data FuncType = FuncUnknown
               | FuncNested    -- can    access non-locals          // cannot be passed or  returned
               | FuncClosure   -- can    access non-locals by copy  // can    be passed and returned
                   Int               -- n mem slots, max among all nested FuncClosure
-                  (Set.Set ID_Var)  -- upvalues in asc ID order
+                  --(Set.Set ID_Var)  -- upvalues in asc ID order
                                     -- on enter, (x,z) = EUps
                                     -- on "new", EUps = (x,z)
   deriving (Eq, Show)
 
-ftMin :: FuncType -> FuncType -> FuncType
-ftMin FuncNested        _                 = FuncNested
-ftMin _                 FuncNested        = FuncNested
-ftMin (FuncClosure _ x) (FuncClosure _ y) = FuncClosure n s where s = Set.union x y
-                                                                  n = Set.size s
-ftMin (FuncClosure n s) _                 = FuncClosure n s
-ftMin _                 (FuncClosure n s) = FuncClosure n s
-ftMin FuncGlobal        _                 = FuncGlobal
-ftMin _                 FuncGlobal        = FuncGlobal
-ftMin _                 _                 = FuncUnknown
+type FT_Ups = (FuncType, Maybe (Set.Set ID_Var))
+
+ftMin :: FT_Ups -> FT_Ups -> FT_Ups
+ftMin (FuncNested,_)          _                       = (FuncNested,    Nothing)
+ftMin _                       (FuncNested,_)          = (FuncNested,    Nothing)
+ftMin (FuncClosure _, Just x) (FuncClosure _, Just y) = (FuncClosure n, Just s) where
+                                                          s = Set.union x y
+                                                          n = Set.size s
+ftMin (FuncClosure n, Just s) _                       = (FuncClosure n, Just s)
+ftMin _                       (FuncClosure n, Just s) = (FuncClosure n, Just s)
+ftMin (FuncGlobal,_)    _                             = (FuncGlobal,    Nothing)
+ftMin _                 (FuncGlobal,_)                = (FuncGlobal,    Nothing)
+ftMin _                 _                             = (FuncUnknown,   Nothing)
 
 -- len  l-1  l-2   ...    0
 --   [ locs, lvl1, ..., glbs ]
-ftReq :: Int -> (ID_Var,Bool,Int) -> FuncType  -- (length, (id,ref,n)
-ftReq len (id,ref,n) | (not ref) && n<len-1 && n/=0 = FuncClosure 1 $ Set.singleton id -- only non-ref non-local non-global IDs
-ftReq len (id,_,  n) | n>=len-1 || n==0 = FuncGlobal
-ftReq _   (_, _,  _)                    = FuncNested
+ftReq :: Int -> (ID_Var,Bool,Int) -> FT_Ups  -- (length, (id,ref,n)
+ftReq len (id,ref,n) | (not ref) && n<len-1 && n/=0 = (FuncClosure 1, Just $ Set.singleton id) -- only non-ref non-local non-global IDs
+ftReq len (id,_,  n) | n>=len-1 || n==0 = (FuncGlobal, Nothing)
+ftReq _   (_, _,  _)                    = (FuncNested, Nothing)
 
 -------------------------------------------------------------------------------
 

@@ -54,7 +54,7 @@ type_F = do
                                   void <- try $ tk_sym "["
                                   n    <- tk_num
                                   void <- tk_sym "]"
-                                  return $ FuncClosure n Set.empty
+                                  return $ FuncClosure n
     return $ TFunc ft inp out
 
 type_V :: Parser Type
