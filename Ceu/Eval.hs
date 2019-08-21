@@ -157,11 +157,11 @@ envEval (vars,e) = case e of
         (ECons id,       e)                             -> (vars'', EData id e)
         (EFunc upv p,    arg)                           -> (vars'''', e) where
                                                             (_:_:vars'''', e) = steps (("_upv",Just upv):("_arg",Just arg):vars''', p)
-                                                            (vars''', arg') = envEval (vars'', arg)
+                                                            (vars''',  upv') = envEval (vars'',  upv)
         --(x,y) -> error $ show (x,arg)
       where
-        (vars',   f')   = envEval (vars,   f)
-        (vars'',  upv') = envEval (vars',  upv)
+        (vars',  f')   = envEval (vars,   f)
+        (vars'', arg') = envEval (vars', arg)
 
 
     e         -> (vars, e)

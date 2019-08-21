@@ -546,6 +546,7 @@ expr' _ envs (EFunc z tpc@(TFunc ft inp out,cs) upv p) = (es++esf, FuncGlobal, c
 
     upv' = case tpc' of
             (TFunc (FuncClosure _ ids) _ _,_) -> toExp $ Set.toAscList ids
+            otherwise                         -> upv
 
     toExp :: [ID_Var] -> Exp
     toExp [id] = EVar z id

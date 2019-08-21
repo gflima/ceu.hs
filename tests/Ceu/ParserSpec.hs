@@ -289,7 +289,7 @@ spec = do
                 `shouldBe` Right (TFunc FuncUnknown (TVar False "a") (int))
             it "a -> Int" $
                 parse type_F "a -> Int"
-                `shouldBe` Left "(line 1, column 1):\nunexpected \"a\"\nexpecting \"[\" or \"(\""
+                `shouldBe` Left "(line 1, column 1):\nunexpected \"a\"\nexpecting \"(\""
 
         describe "typeV" $ do
             it "Int" $
@@ -561,7 +561,7 @@ end
                 `shouldBe` Right (SFunc annz{source=("",1,1)} "add" (TFunc FuncUnknown (TTuple [int,int]) (int),cz) (ETuple annz{source=("",1,10)} [EVar annz{source=("",1,11)} "a",EAny annz{source=("",1,13)}]) (SNop annz{source=("",1,41)}))
             it "func add (...) : (...)" $
                 parse stmt_funcs "func add (a,_) : ((Int, Int) -> Int)"
-                `shouldBe` Left "(line 1, column 37):\nunexpected end of input\nexpecting \"where\" or \"do\""
+                `shouldBe` Left "(line 1, column 37):\nunexpected end of input\nexpecting \"[\", \"where\" or \"do\""
             it "func add : (...)" $
                 parse stmt_funcs "func add : ((Int, Int) -> Int)"
                 `shouldBe` Right (SVar annz{source=("",1,1)} "add" (TFunc FuncUnknown (TTuple [int,int]) (int),cz))
@@ -575,7 +575,7 @@ end
                 `shouldBe` Right (EFunc annz (TFunc FuncUnknown (TTuple [TData False ["Int"] [] TUnit,TData False ["Int"] [] TUnit]) (TData False ["Int"] [] TUnit),cz) (ETuple annz [EAny annz,EAny annz,EAny annz]) (SNop annz))
             it "func add" $
                 parse stmt_funcs "func add : ((Int, Int) -> Int) do end"
-                `shouldBe` Left "(line 1, column 32):\nunexpected 'd'\nexpecting \"where\" or end of input"
+                `shouldBe` Left "(line 1, column 32):\nunexpected 'd'\nexpecting \"[\", \"where\" or end of input"
             it "func add" $
                 parse expr_func "func ((Int, Int) -> Int) do end"
                 `shouldBe` Left "(line 1, column 18):\nunexpected \"-\"\nexpecting \")\""
