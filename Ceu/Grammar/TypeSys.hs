@@ -507,7 +507,7 @@ expr' _       _   (EError  z v)     = ([], (FuncGlobal,Nothing), [], EError  z{t
 expr' _       _   (EUnit   z)       = ([], (FuncGlobal,Nothing), [], EUnit   z{typec=(TUnit,cz)})
 expr' (_,txp) _   (EArg    z)       = ([], (FuncGlobal,Nothing), [], EArg    z{typec=txp})
 
-expr' _ envs (EFunc z tpc@(TFunc ft inp out,cs) upv p) = (es++esf, (FuncGlobal,Nothing), closes, EFunc z{typec=tpc'} tpc' upv' p'')
+expr' _ envs (EFunc z tpc@(TFunc ft inp out,cs) upv@(EUnit _) p) = (es++esf, traceShowId (FuncGlobal,ups), closes, EFunc z{typec=tpc'} tpc' upv' p'')
   where
     tpc' = (TFunc ft'' inp out,cs)
     (es,(ft',ups),fts,p') = stmt ([]:envs) (out,cs) p -- add new environment
@@ -516,8 +516,11 @@ expr' _ envs (EFunc z tpc@(TFunc ft inp out,cs) upv p) = (es++esf, (FuncGlobal,N
     -- ft': how it is inferred by its body
     (esf,ft'') = case (ft,ft') of
             (_,_) | ft == ft'             -> ([], ft')
-            (FuncClosure _,FuncClosure _) -> ([], ft')
-            (FuncClosure _,_)             -> ([toError z "unexpected `new`: function is not a closure"], ft')
+            (FuncGlobal,   FuncGlobal)    -> ([], ft')
+            (FuncClosure x,FuncClosure y) -> (es, ft') where
+                                              es = if x >= y then [] else
+                                                [toError z "not enough memory : more closures than slots"]
+            (FuncClosure _,_)             -> ([toError z "unexpected dimension: function is not a closure"], ft')
             --(_,FuncClosure _)           -> ([toError z "expected `new`: function is a closure"], ft')
             (FuncUnknown,FuncClosure _)   -> ([], FuncNested)
             (FuncUnknown,_)               -> ([], ft')

@@ -408,7 +408,7 @@ spec = do
             "end",
             "return (g ()) ()"
            ])
-        `shouldBe` Left "(line 2, column 11):\nunexpected `new`: function is not a closure\n"
+        `shouldBe` Left "(line 2, column 11):\nunexpected dimension: function is not a closure\n"
 
       it "FuncNested return - no new" $
         (run True $
@@ -484,7 +484,7 @@ spec = do
             "var a : Int = 10",
             "return ((g (ref a))()) + a"
            ])
-        `shouldBe` Left "(line 2, column 11):\nunexpected `new`: function is not a closure\n(line 2, column 11):\ncannot return nested function\n"
+        `shouldBe` Left "(line 2, column 11):\nunexpected dimension: function is not a closure\n(line 2, column 11):\ncannot return nested function\n"
 
       it "FuncClosure return" $
         (run True $
@@ -558,7 +558,7 @@ spec = do
            ])
         `shouldBe` Right (EData ["Int","16"] EUnit)
 
-      it "curry-1" $            -- pg 13
+      it "curry-1 - no slots" $            -- pg 13
         (run True $
           unlines [
             "func add (x,y) : ((Int, Int) -> Int) do",
@@ -567,6 +567,24 @@ spec = do
             "func curry f : (((a,b)->c) -> ((a -> (b -> c)))) do",
             "   return func x : (a -> (b -> c)[1]) do",
             "               return func y : (b -> c)[1] do",
+            "                           return f(x,y)",
+            "                          end",
+            "              end",
+            "end",
+            "var addc : (Int -> (Int -> Int)) = curry (add)",
+            "return (addc 10) 2"
+           ])
+        `shouldBe` Left "(line 6, column 23):\nnot enough memory : more closures than slots\n"
+
+      it "XXX: curry-1" $            -- pg 13
+        (run True $
+          unlines [
+            "func add (x,y) : ((Int, Int) -> Int) do",
+            "   return x+y",
+            "end",
+            "func curry f : (((a,b)->c) -> ((a -> (b -> c)))) do",
+            "   return func x : (a -> (b -> c)[1]) do",  -- 1st [1] should be [2]
+            "               return func y : (b -> c)[2] do",
             "                           return f(x,y)",
             "                          end",
             "              end",
@@ -584,7 +602,7 @@ spec = do
             "end",
             "func curry f : (((a,b)->c) -> ((a -> (b -> c)))) do",
             "   return func x : (a -> (b -> c)[1]) do",
-            "               return func y : (b -> c)[1] do",
+            "               return func y : (b -> c)[2] do",
             "                           return f(x,y)",
             "                          end",
             "              end",
