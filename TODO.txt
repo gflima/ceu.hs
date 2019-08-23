@@ -1,44 +1,6 @@
 - runhaskell -itests/ tests/Spec.hs
 - 10 -- Basic=1, Type=0, Eval=1, Full=0, Parser=0, Run=4, Book=4, Gen=0
 
-- supOf
-    - FuncClosure 2 > FuncClosure 1
-
-- Cada acesso a EVar
-    - identificar o tipo da função atual dado o acesso à variável
-    - se for um upval, subir com o identificador até a função atual
-    - (FuncType, [ID_Var])
-- Cada EFunc
-    - verificar se a declaração (new ou não) corresponde ao tipo sintetizado
-    - alterar a árvore de EFunc para fazer
-        - (upv1,upv2) = EUpv
-    - guardar em EFunc os ids para serem passados na chamada
-- Cada ECall em tempo de execucao
-    - se EFunc tiver lista de upvs
-        - EUpv = (upv1,...)
-
-- EUpv
-
-- FuncClosure Int [IDS]
-    - precisa mudar o prototipo para incluir os IDS args
-- EFunc ... [ID_Var]
-    - lista de upvalues que precisam ser acessados e guardados na closure em RT
-        - toda vez que a funcao for chamada:
-            - na chamada: esses valores tem que ser copiados para EUpv: EUpv <- vals
-            - na funcao:  os ids tem que copiar EUpv: ids <- EUpv
-- remover ref de TFunc
-    - é sempre ref
-
-- closures
-    - closure guarda o nível mais baixo do upvalue capturado
-        - TypeSys infere
-        - Basic:
-            - TFunc (lvl,[vars])
-    - o tipo das refs a funcoes guardam o maior valor entre todas as possibilidades de atribuicao
-        - tambem precisa copiar o tamanho maximo de memoria
-    - uma ref nao pode escapar do seu nivel
-    - retorno de nivel copia as referencias dos upvalues
-
 - match ser obrigatorio com dcls de vars?
 - match ter um campo de INIT/Bool
     - em typesys, transformar accessos a tipos ref como
@@ -525,5 +487,40 @@ find' f ls = foldr g Nothing ls where
                           Just x    -> Just x
                           otherwise -> acc
 -}
+
+===============================================================================
+
+- Cada acesso a EVar
+    - identificar o tipo da função atual dado o acesso à variável
+    - se for um upval, subir com o identificador até a função atual
+    - (FuncType, [ID_Var])
+- Cada EFunc
+    - verificar se a declaração (new ou não) corresponde ao tipo sintetizado
+    - alterar a árvore de EFunc para fazer
+        - (upv1,upv2) = EUpv
+    - guardar em EFunc os ids para serem passados na chamada
+- Cada ECall em tempo de execucao
+    - se EFunc tiver lista de upvs
+        - EUpv = (upv1,...)
+
+- FuncClosure Int [IDS]
+    - precisa mudar o prototipo para incluir os IDS args
+- EFunc ... [ID_Var]
+    - lista de upvalues que precisam ser acessados e guardados na closure em RT
+        - toda vez que a funcao for chamada:
+            - na chamada: esses valores tem que ser copiados para EUpv: EUpv <- vals
+            - na funcao:  os ids tem que copiar EUpv: ids <- EUpv
+- remover ref de TFunc
+    - é sempre ref
+
+- closures
+    - closure guarda o nível mais baixo do upvalue capturado
+        - TypeSys infere
+        - Basic:
+            - TFunc (lvl,[vars])
+    - o tipo das refs a funcoes guardam o maior valor entre todas as possibilidades de atribuicao
+        - tambem precisa copiar o tamanho maximo de memoria
+    - uma ref nao pode escapar do seu nivel
+    - retorno de nivel copia as referencias dos upvalues
 
 

@@ -270,6 +270,24 @@ spec = do
              ])
           `shouldBe` Right (EData ["Bool","True"] EUnit)
 
+      describe "Chapter 1.4.7 - Composition:" $ do               -- pg 15
+
+        it "compose" $         -- pg 15
+          (run True $
+            pre ++ unlines [
+              "func compose (f,g) : (((a->b),(b->c)) -> (a -> c)[2]) do",
+              "   return func x : (a -> c)[2] do",
+              "           return f (g x)",
+              "          end",
+              "end",
+              "func square (x) : (Int -> Int) do",
+              "   return x * x",
+              "end",
+              "var quad : (Int -> Int)[2] = compose (square,square)",
+              "return quad 2"
+             ])
+          `shouldBe` Right (EData ["Int","16"] EUnit)
+
 -------------------------------------------------------------------------------
 
     describe "Chapter 1.5 - Definitions:" $ do                -- pg 17
