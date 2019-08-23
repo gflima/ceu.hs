@@ -612,6 +612,55 @@ spec = do
            ])
         `shouldBe` Right (EData ["Int","12"] EUnit)
 
+      it "twicec" $          -- pg 14
+        (run True $
+          unlines [
+            "func square (x) : (Int -> Int) do",
+            "   return x * x",
+            "end",
+            "func twicec (f) : ((Int -> Int) -> (Int -> Int)[1]) do",
+            "   return func x : (Int -> Int)[1] do",
+            "     return f(x)",
+            "   end",
+            "end",
+            "return (twicec (square)) 2"
+           ])
+        `shouldBe` Right (EData ["Int","4"] EUnit)
+
+      it "uncurry-1" $            -- pg 11
+        (run True $
+          unlines [
+            "func smallerc x : (Int -> (Int->Bool)[1]) do",
+            "   return func y : (Int -> Bool)[1] do",
+            "           return x < y",
+            "          end",
+            "end",
+            "func uncurry f : ((Int -> (Int->Bool)[1]) -> ((Int,Int)->Bool)[1]) do",
+            "   return func (i,j) : ((Int,Int) -> Bool)[1] do",
+            "           return (f i) j",
+            "          end",
+            "end",
+            "return (uncurry smallerc)(10,12)"
+           ])
+        `shouldBe` Right (EData ["Bool","True"] EUnit)
+
+      it "uncurry-2" $            -- pg 11
+        (run True $
+          unlines [
+            "func smallerc x : (Int -> (Int->Bool)[1]) do",
+            "   return func y : (Int -> Bool)[1] do",
+            "           return x < y",
+            "          end",
+            "end",
+            "func uncurry f : ((a -> (b->c)[1]) -> ((a,b)->c)[1]) do",
+            "   return func (i,j) : ((a,b) -> c)[1] do",
+            "           return (f i) j",
+            "          end",
+            "end",
+            "return (uncurry smallerc)(10,12)"
+           ])
+        `shouldBe` Right (EData ["Bool","True"] EUnit)
+
     describe "data:" $ do
 
       it "data Xxx" $

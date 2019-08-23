@@ -243,12 +243,32 @@ spec = do
              ])
           `shouldBe` Right (EData ["Int","16"] EUnit)
 
-      it "+" $                -- pg 12
-        (run True $
-          unlines [
-            "return 1 + (+ (2,3))"
-           ])
-        `shouldBe` Right (EData ["Int","6"] EUnit)
+      describe "Chapter 1.4.3 - Operators:" $ do               -- pg 13
+
+        it "+" $                -- pg 13
+          (run True $
+            unlines [
+              "return 1 + (+ (2,3))"
+             ])
+          `shouldBe` Right (EData ["Int","6"] EUnit)
+
+        it "uncurry" $            -- pg 11
+          (run True $
+            unlines [
+              "func smallerc x : (Int -> (Int->Bool)[1]) do",
+              "   return func y : (Int -> Bool)[1] do",
+              "           return x < y",
+              "          end",
+              "end",
+              "func uncurry f : ((a -> (b->c)[1]) -> ((a,b)->c)[1]) do",
+              "   return func (i,j) : ((a,b) -> c)[1] do",
+              "           return (f i) j",
+              "          end",
+              "end",
+              "var g : ((a,b)->c)[1] = uncurry smallerc",
+              "return g(10,12)"
+             ])
+          `shouldBe` Right (EData ["Bool","True"] EUnit)
 
 -------------------------------------------------------------------------------
 
