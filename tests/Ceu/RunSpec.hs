@@ -565,7 +565,7 @@ spec = do
             "   return x+y",
             "end",
             "func curry f : (((a,b)->c) -> ((a -> (b -> c))[1])) do",
-            "   return func x : (a -> (b -> c)[1]) do",
+            "   return func x : (a -> (b -> c)[1])[1] do",
             "               return func y : (b -> c)[1] do",
             "                           return f(x,y)",
             "                          end",
