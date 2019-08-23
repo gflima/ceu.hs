@@ -132,6 +132,8 @@ envEval (vars,e) = case e of
     ERefRef exp -> (vars, exp)
     ERefDer exp -> envEval $ envEval (vars, exp)
 
+    EFunc upv p -> (vars', EFunc upv' p) where (vars',upv') = envEval (vars,upv)
+
     ECall f arg ->
       case (f', arg') of
         (EError x, _)                                   -> (vars'', EError x)
@@ -155,9 +157,8 @@ envEval (vars,e) = case e of
         (EVar "<",      ETuple [EData ["Int",x] EUnit,
                                 EData ["Int",y] EUnit]) -> (vars'', EData (bool ["Bool","False"] ["Bool","True"] (read' x < read' y))  EUnit)
         (ECons id,       e)                             -> (vars'', EData id e)
-        (EFunc upv p,    arg)                           -> (vars'''', e) where
-                                                            (_:_:vars'''', e) = steps (("_upv",Just upv):("_arg",Just arg):vars''', p)
-                                                            (vars''',  upv') = envEval (vars'',  upv)
+        (EFunc upv p,    arg)                           -> (vars''', e) where
+                                                            (_:_:vars''', e) = steps (("_upv",Just upv):("_arg",Just arg):vars'', p)
         --(x,y) -> error $ show (x,arg)
       where
         (vars',  f')   = envEval (vars,   f)

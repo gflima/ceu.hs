@@ -434,7 +434,7 @@ spec = do
            ])
         `shouldBe` Left "(line 3, column 11):\ncannot return nested function\n"
 
-      it "XXX: FuncClosure return" $
+      it "FuncClosure return" $
         (run True $
           unlines [
             "func g x : (Int -> (() -> Int)[1])  do",
@@ -484,7 +484,7 @@ spec = do
             "var a : Int = 10",
             "return ((g (ref a))()) + a"
            ])
-        `shouldBe` Left "(line 2, column 11):\nunexpected `new`: function is not a closure\n"
+        `shouldBe` Left "(line 2, column 11):\nunexpected `new`: function is not a closure\n(line 2, column 11):\ncannot return nested function\n"
 
       it "FuncClosure return" $
         (run True $
