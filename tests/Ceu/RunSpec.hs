@@ -564,7 +564,7 @@ spec = do
             "func add (x,y) : ((Int, Int) -> Int) do",
             "   return x+y",
             "end",
-            "func curry f : (((a,b)->c) -> ((a -> (b -> c)))) do",
+            "func curry f : (((a,b)->c) -> ((a -> (b -> c))[1])) do",
             "   return func x : (a -> (b -> c)[1]) do",
             "               return func y : (b -> c)[1] do",
             "                           return f(x,y)",
@@ -576,32 +576,14 @@ spec = do
            ])
         `shouldBe` Left "(line 6, column 23):\nnot enough memory : more closures than slots\n"
 
-      it "XXX: curry-1" $            -- pg 13
+      it "curry-1" $            -- pg 13
         (run True $
           unlines [
             "func add (x,y) : ((Int, Int) -> Int) do",
             "   return x+y",
             "end",
-            "func curry f : (((a,b)->c) -> ((a -> (b -> c)))) do",
-            "   return func x : (a -> (b -> c)[1]) do",  -- 1st [1] should be [2]
-            "               return func y : (b -> c)[2] do",
-            "                           return f(x,y)",
-            "                          end",
-            "              end",
-            "end",
-            "var addc : (Int -> (Int -> Int)) = curry (add)",
-            "return (addc 10) 2"
-           ])
-        `shouldBe` Right (EData ["Int","12"] EUnit)
-
-      it "curry-2" $            -- pg 13
-        (run True $
-          unlines [
-            "func add (x,y) : ((Int, Int) -> Int) do",
-            "   return x+y",
-            "end",
-            "func curry f : (((a,b)->c) -> ((a -> (b -> c)))) do",
-            "   return func x : (a -> (b -> c)[1]) do",
+            "func curry f : (((a,b)->c) -> ((a -> (b -> c))[1])) do",
+            "   return func x : (a -> (b -> c)[1])[1] do",  -- 1st [1] should be [2]
             "               return func y : (b -> c)[2] do",
             "                           return f(x,y)",
             "                          end",

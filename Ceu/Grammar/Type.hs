@@ -37,7 +37,7 @@ data FuncType = FuncUnknown
                                     -- on "new", EUps = (x,z)
   deriving (Eq, Show)
 
-type FT_Ups = (FuncType, Maybe (Set.Set ID_Var))
+type FT_Ups = (FuncType, Maybe (Set.Set (ID_Var,Int)))
 
 ftMin :: FT_Ups -> FT_Ups -> FT_Ups
 ftMin (FuncNested,_)          _                       = (FuncNested,    Nothing)
@@ -54,7 +54,7 @@ ftMin _                 _                             = (FuncUnknown,   Nothing)
 -- len  l-1  l-2   ...    0
 --   [ locs, lvl1, ..., glbs ]
 ftReq :: Int -> (ID_Var,Bool,Int) -> FT_Ups  -- (length, (id,ref,n)
-ftReq len (id,ref,n) | (not ref) && n<len-1 && n/=0 = (FuncClosure 1, Just $ Set.singleton id) -- only non-ref non-local non-global IDs
+ftReq len (id,ref,n) | (not ref) && n<len-1 && n/=0 = (FuncClosure 1, Just $ Set.singleton (id,n)) -- only non-ref non-local non-global IDs
 ftReq len (id,_,  n) | n>=len-1 || n==0 = (FuncGlobal, Nothing)
 ftReq _   (_, _,  _)                    = (FuncNested, Nothing)
 

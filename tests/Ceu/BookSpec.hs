@@ -159,10 +159,10 @@ spec = do
         it "smallerc" $            -- pg 11
           (run True $
             unlines [
-              "func smallerc x : (Int -> (Int->Int)) do",
-              "   return new func y : (Int -> Bool) do",
-              "               return x < y",
-              "              end",
+              "func smallerc x : (Int -> (Int->Bool)[1]) do",
+              "   return func y : (Int -> Bool)[1] do",
+              "           return x < y",
+              "          end",
               "end",
               "var z : Int = 10",
               "return (smallerc (z))(12)"
@@ -201,8 +201,8 @@ spec = do
               "func square (x) : (Int -> Int) do",
               "   return x * x",
               "end",
-              "func twicec f : ((Int->Int) -> (Int->Int)) do",
-              "   return new func x : (Int -> Int) do return f(f x) end",
+              "func twicec f : ((Int->Int) -> (Int->Int)[1]) do",
+              "   return func x : (Int -> Int)[1] do return f(f x) end",
               "end",
               "return (twicec (square)) 2"
              ])
@@ -214,8 +214,8 @@ spec = do
               "func square (x) : (Int -> Int) do",
               "   return x * x",
               "end",
-              "func twicec f : ((Int->Int) -> (Int->Int)) do",
-              "   return new func x : (Int -> Int) do return f(f x) end",
+              "func twicec f : ((Int->Int) -> (Int->Int)[1]) do",
+              "   return func x : (Int -> Int)[1] do return f(f x) end",
               "end",
               "var quad : (Int -> Int) = twicec (square)",
               "return quad 2"
@@ -231,12 +231,12 @@ spec = do
               "func twice (f,x) : (((Int->Int), Int) -> Int) do",
               "   return f(f x)",
               "end",
-              "func curry f : (((a,b)->c) -> ((a -> (b -> c)))) do",
-              "   return new func x : (a -> (b -> c)) do",
-              "               return new func y : (b -> c) do",
-              "                           return f(x,y)",
-              "                          end",
-              "              end",
+              "func curry f : (((a,b)->c) -> ((a -> (b -> c)[1]))) do",
+              "   return func x : (a -> (b -> c)[2])[1] do",
+              "           return func y : (b -> c)[2] do",
+              "                   return f(x,y)",
+              "                  end",
+              "          end",
               "end",
               "var twicec : ((Int->Int) -> (Int -> Int)) = curry (twice)",
               "return (twicec (square)) 2"

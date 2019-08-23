@@ -507,10 +507,18 @@ expr' _       _   (EError  z v)     = ([], (FuncGlobal,Nothing), [], EError  z{t
 expr' _       _   (EUnit   z)       = ([], (FuncGlobal,Nothing), [], EUnit   z{typec=(TUnit,cz)})
 expr' (_,txp) _   (EArg    z)       = ([], (FuncGlobal,Nothing), [], EArg    z{typec=txp})
 
-expr' _ envs (EFunc z tpc@(TFunc ft inp out,cs) upv@(EUnit _) p) = (es++esf, traceShowId (FuncGlobal,ups), closes, EFunc z{typec=tpc'} tpc' upv' p'')
+expr' _ envs (EFunc z tpc@(TFunc ft inp out,cs) upv@(EUnit _) p) = (es++esf, ft_ups', closes, EFunc z{typec=tpc'} tpc' upv' p'')
   where
     tpc' = (TFunc ft'' inp out,cs)
     (es,(ft',ups),fts,p') = stmt ([]:envs) (out,cs) p -- add new environment
+
+    ft_ups' = case ups of
+                Nothing -> (FuncGlobal, Nothing)
+                Just s  -> let s' = (Set.filter (\(_,n) -> n<(length envs - 1))) s in
+                            if Set.null s' then
+                              (FuncGlobal, Nothing)
+                            else
+                              (FuncClosure $ Set.size s', Just s')
 
     -- ft:  how it is defined by the programmer
     -- ft': how it is inferred by its body
@@ -529,7 +537,7 @@ expr' _ envs (EFunc z tpc@(TFunc ft inp out,cs) upv@(EUnit _) p) = (es++esf, tra
     -- (up1,...,upN) = EUps
     p'' = case ft'' of
       FuncClosure _ -> dcls ups' $ SSeq z (attr ups') p' where
-                        ups' = Set.toAscList $ fromJust ups
+                        ups' = map fst $ Set.toAscList $ fromJust ups
 
                         attr :: [ID_Var] -> Stmt
                         attr [id] = SMatch z True False (EUpv z) [(SNop z,EVar z id,SNop z)]
@@ -548,7 +556,7 @@ expr' _ envs (EFunc z tpc@(TFunc ft inp out,cs) upv@(EUnit _) p) = (es++esf, tra
       otherwise     -> []
 
     upv' = case ft'' of
-            FuncClosure _ -> toExp $ Set.toAscList $ fromJust ups
+            FuncClosure _ -> toExp $ map fst $ Set.toAscList $ fromJust ups
             otherwise     -> upv
 
     toExp :: [ID_Var] -> Exp
