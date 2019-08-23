@@ -231,7 +231,7 @@ spec = do
               "func twice (f,x) : (((Int->Int), Int) -> Int) do",
               "   return f(f x)",
               "end",
-              "func curry f : (((a,b)->c) -> ((a -> (b -> c)[1]))) do",
+              "func curry f : (((a,b)->c) -> ((a -> (b -> c))[1])) do",
               "   return func x : (a -> (b -> c)[2])[1] do",
               "           return func y : (b -> c)[2] do",
               "                   return f(x,y)",

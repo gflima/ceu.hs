@@ -457,7 +457,7 @@ spec = do
       it "FuncClosure return" $
         (run True $
           unlines [
-            "func g x : (Int -> (() -> Int)[1]) do",
+            "func g x : (Int -> (() -> Int)) do",
             "   return func () : (()->Int) do return x end",
             "end",
             "return (g 10) ()"
@@ -584,6 +584,24 @@ spec = do
             "end",
             "func curry f : (((a,b)->c) -> ((a -> (b -> c))[1])) do",
             "   return func x : (a -> (b -> c)[1])[1] do",  -- 1st [1] should be [2]
+            "               return func y : (b -> c)[2] do",
+            "                           return f(x,y)",
+            "                          end",
+            "              end",
+            "end",
+            "var addc : (Int -> (Int -> Int)) = curry (add)",
+            "return (addc 10) 2"
+           ])
+        `shouldBe` Left "(line 6, column 16):\ntypes do not match : expected '(b -> c)' : found '(b -> c)'\n"
+
+      it "curry-1" $            -- pg 13
+        (run True $
+          unlines [
+            "func add (x,y) : ((Int, Int) -> Int) do",
+            "   return x+y",
+            "end",
+            "func curry f : (((a,b)->c) -> ((a -> (b -> c))[1])) do",
+            "   return func x : (a -> (b -> c)[2])[1] do",
             "               return func y : (b -> c)[2] do",
             "                           return f(x,y)",
             "                          end",

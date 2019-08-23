@@ -429,12 +429,15 @@ supOf' sup@(TData _ x ofs1 st1) sub@(TData _ y ofs2 st2)
 supOf' sup@(TData False _ _ _) _                   = (False, sup, [])
 supOf' sup                     (TData False _ _ _) = (False, sup, [])
 
-supOf' sup@(TFunc ft1 inp1 out1) (TFunc ft2 inp2 out2)
-  | otherwise    = (ret, TFunc ft inp out, k++z) where
-    ft = ft1 --case traceShowId (sup,sub) of (_,_) | ft1==ft2 -> ft1
+supOf' sup@(TFunc ft1 inp1 out1) (TFunc ft2 inp2 out2) = (ret, TFunc ft1 inp out, k++z)
+  where
     (i,inp,k) = inp2 `supOf` inp1      -- contravariance on inputs
     (x,out,z) = out1 `supOf` out2
-    ret = i && x
+    ret = i && x && f ft1 ft2 where
+          f (FuncClosure x) (FuncClosure y) = (x >= y)
+          f (FuncClosure _) FuncGlobal      = True
+          f (FuncClosure _) FuncNested      = False
+          f _               _               = True
 
 supOf' sup@(TFunc _ _ _)   _             = (False, sup, [])
 supOf' sup                 (TFunc _ _ _) = (False, sup, [])
