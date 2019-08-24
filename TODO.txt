@@ -1,6 +1,11 @@
 - runhaskell -itests/ tests/Spec.hs
 - 10 -- Basic=1, Type=0, Eval=1, Full=0, Parser=0, Run=4, Book=4, Gen=0
 
+- refazer GenSpec.hs
+- pool
+- strings e show
+- C runtime
+
 - match ser obrigatorio com dcls de vars?
 - match ter um campo de INIT/Bool
     - em typesys, transformar accessos a tipos ref como
@@ -39,90 +44,10 @@ x = alias y
 match 10 with =X._1 x
     - questoes de refs (tipos recursivos)
 
-- mudar para lista completa com todos os niveis e nao so glb,non,lcl
-- detectar refs somente em args ou outro escopo
-- usar ref em expressao e fazer funcionar
-
-- closures
-    - (f,data)
-        - so posso sair N niveis onde N é a distancia para o escopo da referencia mais proxima/aninhada
-            - da pra verificar isso estaticamente?
-    - todos os ponteiros para funcoes na verdade sao closures
-        - os que forem fc vao ficar com data=null
-            - se a funcao for estatica/constante:
-                - func f ...
-    - double escape
-    - recursive
-    - compositions
-    - partial evaluation
-    - refactor generics
-    - new/ref syntax?
-    - raciocino de escape de funcao vale p/ qq referencia, ex:
-        - return &x
-    - why?
-        - function factories
-            - compose
-            - partial application, currying
-        - encapsulation
-            - private fields, methods
-
-- strings e show?
-    - acho que nao
-- pool
-- C runtime
-
-- referencias
-    - tipos recursivos  - ponteiro para filho
-    - ref               - é um ponteiro
-    - closures          - ponteiro para ambiente
-    --
-    - tipo new func
-        - new (Int -> Int)
-        - new func (x) : new (Int->Int) do
-
-    - 3 tipos de funcoes aninhadas:
-        - save f type in fat pointer
-        - closures
-            - modificador
-                - explicita o custo
-                - diferencia de globais
-                    - as duas podem ser retornadas
-                        - assim, o chamador precisa saber para criar ou nao a closure
-            - acessa nao locais somente por referencia
-            - precisa de trabalho no momento da sua criacao
-                - ou melhor, logo ao retornar para quem a criou
-                    - ARGS os argumentos ficam guardados em uma struct
-                    - a closure fica (FPTR,APTR)
-                        - quando retorna outro nivel, os ARGS sao copiados e APTR modificado
-        - referencia
-            - assumir que pode guardar os tres tipos
-            - nao necessita de modificador
-            - nao pode ser retornada (pois pode ser uma nested)
-
-F = factory(x,y,z)
-F ~ (f, (x,y,z))
-F(i,j,k) ~ f(x,y,z,i,j,k)
-
-func compose (f,g) : (((a->b),(b->c)) -> new (a -> c)) do
-   return new func x : new (a -> c) do
-           return f (g x)
-          end
-end
-func inc x : (Int -> Int) do
-   return x+1
-end
-func dec x : (Int -> Int) do
-   return x-1
-end
-func dup x : (Int -> Int) do
-   return x*2
-end
-return (compose (dec, compose(dup,inc))) 10
-
 - list,vector,hash
+    - <Int>
     - [Int]
     - {String->Int}
-    - <Int>
 
 - set x = 1
     = &x 1
@@ -522,5 +447,80 @@ find' f ls = foldr g Nothing ls where
         - tambem precisa copiar o tamanho maximo de memoria
     - uma ref nao pode escapar do seu nivel
     - retorno de nivel copia as referencias dos upvalues
+
+- mudar para lista completa com todos os niveis e nao so glb,non,lcl
+- detectar refs somente em args ou outro escopo
+- usar ref em expressao e fazer funcionar
+
+- closures
+    - (f,data)
+        - so posso sair N niveis onde N é a distancia para o escopo da referencia mais proxima/aninhada
+            - da pra verificar isso estaticamente?
+    - todos os ponteiros para funcoes na verdade sao closures
+        - os que forem fc vao ficar com data=null
+            - se a funcao for estatica/constante:
+                - func f ...
+    - double escape
+    - recursive
+    - compositions
+    - partial evaluation
+    - refactor generics
+    - new/ref syntax?
+    - raciocino de escape de funcao vale p/ qq referencia, ex:
+        - return &x
+    - why?
+        - function factories
+            - compose
+            - partial application, currying
+        - encapsulation
+            - private fields, methods
+
+- referencias
+    - tipos recursivos  - ponteiro para filho
+    - ref               - é um ponteiro
+    - closures          - ponteiro para ambiente
+    --
+    - tipo new func
+        - new (Int -> Int)
+        - new func (x) : new (Int->Int) do
+
+    - 3 tipos de funcoes aninhadas:
+        - save f type in fat pointer
+        - closures
+            - modificador
+                - explicita o custo
+                - diferencia de globais
+                    - as duas podem ser retornadas
+                        - assim, o chamador precisa saber para criar ou nao a closure
+            - acessa nao locais somente por referencia
+            - precisa de trabalho no momento da sua criacao
+                - ou melhor, logo ao retornar para quem a criou
+                    - ARGS os argumentos ficam guardados em uma struct
+                    - a closure fica (FPTR,APTR)
+                        - quando retorna outro nivel, os ARGS sao copiados e APTR modificado
+        - referencia
+            - assumir que pode guardar os tres tipos
+            - nao necessita de modificador
+            - nao pode ser retornada (pois pode ser uma nested)
+
+F = factory(x,y,z)
+F ~ (f, (x,y,z))
+F(i,j,k) ~ f(x,y,z,i,j,k)
+
+func compose (f,g) : (((a->b),(b->c)) -> new (a -> c)) do
+   return new func x : new (a -> c) do
+           return f (g x)
+          end
+end
+func inc x : (Int -> Int) do
+   return x+1
+end
+func dec x : (Int -> Int) do
+   return x-1
+end
+func dup x : (Int -> Int) do
+   return x*2
+end
+return (compose (dec, compose(dup,inc))) 10
 
 

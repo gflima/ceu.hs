@@ -360,8 +360,6 @@ spec = do
            ])
         `shouldBe` Right (EData ["Int","48"] EUnit)
 
-      -- TODO-20
-
 -------------------------------------------------------------------------------
 
     --describe "Chapter 1.6 - Types:" $ do                      -- pg 21
@@ -1052,11 +1050,11 @@ spec = do
            ])
         `shouldBe` Right (ETuple [EData ["Bool","True"] EUnit,EData ["Int","6"] EUnit])
 
-      it "TODO-CLOSURE: compose" $         -- pg 42
+      it "compose" $         -- pg 42
         (run True $
           pre ++ unlines [
-            "func compose (f,g) : (((a->b),(b->c)) -> (a -> c)) do",
-            "   return func x : (a -> c) do",
+            "func compose (f,g) : (((a->b),(b->c)) -> (a -> c)[2]) do",
+            "   return func x : (a -> c)[2] do",
             "           return f (g x)",
             "          end",
             "end",

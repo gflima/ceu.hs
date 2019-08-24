@@ -661,6 +661,46 @@ spec = do
            ])
         `shouldBe` Right (EData ["Bool","True"] EUnit)
 
+      it "curry-uncurry" $            -- pg 13
+        (run True $
+          unlines [
+            "func square (x) : (Int -> Int) do",
+            "   return x * x",
+            "end",
+            "func twice (f,x) : (((Int->Int), Int) -> Int) do",
+            "   return f(f x)",
+            "end",
+            "func curry f : (((a,b)->c) -> ((a -> (b -> c))[1])) do",
+            "   return func x : (a -> (b -> c)[2])[1] do",
+            "           return func y : (b -> c)[2] do",
+            "                   return f(x,y)",
+            "                  end",
+            "          end",
+            "end",
+            "func uncurry f : ((a -> (b->c)[1]) -> ((a,b)->c)[1]) do",
+            "   return func (i,j) : ((a,b) -> c)[1] do",
+            "           return (f i) j",
+            "          end",
+            "end",
+            "var twicec  : ((Int->Int) -> (Int -> Int)) = curry twice",
+            "var twicecu : (((Int->Int),Int) -> Int) = uncurry twicec",
+            "return twicecu (square,2)"
+           ])
+        `shouldBe` Right (EData ["Int","16"] EUnit)
+
+      it "uncurry" $            -- pg 11
+        (run True $
+          unlines [
+            "func smallerc x : (Int -> (Int->Bool)[1]) do",
+            "   return func y : (Int -> Bool)[1] do",
+            "           return x < y",
+            "          end",
+            "end",
+            "var g : ((a,b)->c)[1] = uncurry smallerc",
+            "return g(10,12)"
+           ])
+        `shouldBe` Right (EData ["Bool","True"] EUnit)
+
     describe "data:" $ do
 
       it "data Xxx" $
