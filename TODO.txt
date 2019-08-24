@@ -2,6 +2,7 @@
 - 10 -- Basic=1, Type=0, Eval=1, Full=0, Parser=0, Run=4, Book=4, Gen=0
 
 - refazer GenSpec.hs
+    - multiplas ifcs
 - pool
 - strings e show
 - C runtime
@@ -522,5 +523,75 @@ func dup x : (Int -> Int) do
    return x*2
 end
 return (compose (dec, compose(dup,inc))) 10
+
+===============================================================================
+
+constraint IEq for a with
+    var eq  : ((a,a) -> Int)
+    //var neq : ((a,a) -> Int)
+    func neq (x,y) : ((a,a) -> Int) do
+        return 1 - (x eq y)
+    end
+end
+
+instance of IEq for Int with
+    func eq (x,y) : ((Int,Int) -> Int) do
+        if y matches x then return 1 else return 0 end
+    end
+end
+
+func f x : (a -> Int) where a is IEq do
+    return x eq x
+end
+
+return eq (1,2) // f 1
+
+-------------------------------------------------------------------------------
+
+// CONSTRAINT
+
+data DEq (eq,neq) for a with (
+    ((DEq for a, a,a) -> Int),     // eq
+    ((DEq for a, a,a) -> Int),     // neq
+)
+
+func neq (deq,x,y) : ((DEq for a,a,a) -> Int) do
+    return 1 - (x deq.eq y)
+end
+
+// INSTANCE
+
+func _eq_int (deq,x,y) : ((DEq for Int,Int,Int) -> Int) do
+    if y matches x then return 1 else return 0 end
+end
+
+var deq_int : DEq for Int = (_eq_int,neq)
+
+func eq_int (x,y) : ((Int,Int) -> Int) do
+    return _eq_int(deq_int,x,y)
+end
+
+// FUNCTION
+
+func f (deq,x) : ((DEq for a,Int) -> Int) do
+    return x deq.eq x
+end
+
+var f_int x : (Int -> Int) do
+    return f (deq_int,x)
+end
+
+// CALL
+
+return eq_int(1,2) // f_int 1
+
+===============================================================================
+
+stmt (SClass z id  ctrs ifc) = SSeq z (SClass' z id  ctrs ps) (SSeq z dict ifc) where
+                                ps   = protos ifc
+                                dict = SData z (Just pars) (tdat,Cs.cz) False where
+                                        tdat = TData False [id] [] tps
+                                        pars = map (\(_,id,_,_)->id) ps
+                                        tps  = TTuple (tdat : map (\(_,_,(tp,_),_)->tp) ps)
 
 

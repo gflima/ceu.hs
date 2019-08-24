@@ -11,6 +11,10 @@ import Ceu.Grammar.Full.Full
 compile :: Stmt -> Stmt
 compile p = stmt p
 
+-- convert from sequence of declarations to list of prototypes:
+--    constraint IEq for a with (eq:tp1, neq:tp2)
+-- becomes
+--    [(.,eq,tp1,.),(.,neq,tp2,.)]
 protos :: Stmt -> [(Ann, ID_Var, TypeC, Bool)]
 protos (SSeq  _ (SVar z id tp) (SSet _ _ False (EVar _ id') _)) | id==id' = [(z,id,tp,True)]
 protos (SSeq  _ p1 p2) = (protos p1) ++ (protos p2)

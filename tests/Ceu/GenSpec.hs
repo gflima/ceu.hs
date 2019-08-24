@@ -21,7 +21,7 @@ spec = do
 
     describe "constraint:" $ do
 
-      it "IEq" $
+      it "XXX: IEq" $
         (run True $
           unlines [
             "constraint IEq for a with"          ,
