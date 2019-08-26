@@ -1,6 +1,10 @@
 - runhaskell -itests/ tests/Spec.hs
 - 10 -- Basic=1, Type=0, Eval=1, Full=0, Parser=0, Run=4, Book=4, Gen=0
 
+- mover struct from TData to SData
+    - permitir TData recursivo
+        - continuar dicts em typeclass
+
 - refazer GenSpec.hs
     - multiplas ifcs
 - pool

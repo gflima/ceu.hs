@@ -23,11 +23,11 @@ subs envs hr = g $ ints ++ (map f $ filter pred envs) where
           []
           -- Int that will never match any numeric pattern
 
-  pred (SData  _ _ (TData False hrD _ _,_) False _) = gt hr hrD
+  pred (SData  _ (TData False hrD _) _ _ _ False _) = gt hr hrD
           -- ignore abstract data
   pred _ = False
 
-  f (SData  _ _ (TData False hrD _ _,_) _ _) = hrD
+  f (SData  _ (TData False hrD _) _ _ _ _ _) = hrD
 
   gt sup sub = (sup `isPrefixOf` sub) -- && (length sup < length sub)
 
@@ -86,8 +86,8 @@ expandE _ e = [e]
 
 expandT :: [Stmt] -> Type -> [Type]
 
-expandT envs (TData False hrT ofs st) = foldr f [] (subs envs hrT) where
-                                          f hr tps = (TData False hr ofs st) : tps
+expandT envs (TData False hrT ofs)    = foldr f [] (subs envs hrT) where
+                                          f hr tps = (TData False hr ofs) : tps
 
 expandT envs (TTuple l)               = foldr f [] (combos $ map (expandT envs) l) where
                                           f l' tps = (TTuple l') : tps
@@ -150,7 +150,7 @@ matchT (ERefIni _ e)   tp = matchT e tp
 
 matchT (ECons z hrP)   tp =
   case tp of
-    (TData False hrE ofs st, ctrs) -> if hrP `isPrefixOf` hrE then (True,[]) else
+    (TData False hrE ofs, ctrs)    -> if hrP `isPrefixOf` hrE then (True,[]) else
                                         if take 1 hrE `isPrefixOf` take 1 hrP then
                                           (False, [])
                                         else
@@ -166,7 +166,5 @@ matchT (ETuple _ ls)   tp =
 
 matchT (ECall _ el er) tp =
   case tp of
-    (TData False h ofs st, ctrs)   -> (ok1 && ok2, es1 ++ es2) where
-                                        (ok1, es1) = matchT el tp
-                                        (ok2, es2) = matchT er (st,ctrs)
+    (TData False h ofs, ctrs)      -> matchT el tp
     otherwise                      -> (True, [])

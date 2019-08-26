@@ -54,7 +54,7 @@ instance HasAnn Exp where
 data Stmt
     = SClass  Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class declaration
     | SInst   Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class instance
-    | SData   Ann (Maybe [String]) TypeC Bool Stmt               -- new type declaration
+    | SData   Ann Type (Maybe [String]) Type Cs.Map Bool Stmt  -- new type declaration
     | SVar    Ann ID_Var TypeC Stmt            -- variable declaration
     | SMatch  Ann Bool Bool Exp [(Stmt,Exp,Stmt)]   -- match/assignment/if statement
     | SCall   Ann Exp                          -- call function
@@ -79,7 +79,7 @@ envsAdd (x:xs) s = (s:x) : xs
 isClass id1 (SClass _ id2 _ _ _) = (id1 == id2)
 isClass _   _                    = False
 
-isData  hr1 (SData  _ _ (TData False hr2 _ _,_) _ _) = (hr1' == hier2str hr2) where
+isData  hr1 (SData  _ (TData False hr2 _) _ _ _ _ _) = (hr1' == hier2str hr2) where
                                                         hr1' = bool hr1 "Int" (take 4 hr1 == "Int.")
 isData  _   _                                        = False
 
@@ -93,7 +93,7 @@ rep spc = replicate spc ' '
 show_stmt :: Int -> Stmt -> String
 --show_stmt spc (SClass _ (id,_) _ _ p) = rep spc ++ "class "  ++ id ++ "\n" ++ show_stmt spc p
 --show_stmt spc (SInst  _ (id,_) _ p)   = rep spc ++ "inst "   ++ id ++ "\n" ++ show_stmt spc p
-show_stmt spc (SData _ _ (TData False id _ _,_) _ p) = rep spc ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
+show_stmt spc (SData _ (TData False id _) _ _ _ _ p) = rep spc ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
 show_stmt spc (SVar _ id (tp,_) p)     = rep spc ++ "var "    ++ id ++ ": " ++ T.show' tp ++ "\n" ++ show_stmt spc p
 show_stmt spc (SCall _ e)              = rep spc ++ "call " ++ show_exp spc e
 show_stmt spc (SRet _ e)               = rep spc ++ "return " ++ show_exp spc e
@@ -139,7 +139,7 @@ map_stmt f@(fs,_,ft) (SClass z id ctr ifc p)     = fs (SClass z id ctr ifc' (map
                                                     where ifc' = map (\(x,y,tp,z)->(x,y,ft tp,z)) ifc
 map_stmt f@(fs,_,ft) (SInst  z cls tp imp p)     = fs (SInst  z cls tp imp' (map_stmt f p))
                                                     where imp' = map (\(x,y,tp,z)->(x,y,ft tp,z)) imp
-map_stmt f@(fs,_,ft) (SData  z nms tp abs p)     = fs (SData  z nms (ft tp) abs (map_stmt f p))
+map_stmt f@(fs,_,ft) (SData  z tdat nms flds ctrs abs p) = fs (SData z tdat nms flds ctrs abs (map_stmt f p))
 map_stmt f@(fs,_,ft) (SVar   z id tp p)          = fs (SVar   z id (ft tp) (map_stmt f p))
 map_stmt f@(fs,_,_)  (SMatch z ini b exp cses)   = fs (SMatch z ini b (map_exp f exp) (map (\(ds,pt,st) -> (map_stmt f ds, map_exp f pt, map_stmt f st)) cses))
 map_stmt f@(fs,_,_)  (SCall z exp)               = fs (SCall z (map_exp f exp))
@@ -192,7 +192,7 @@ instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
     getAnn (SClass z _ _ _ _)   = z
     getAnn (SInst  z _ _ _ _)   = z
-    getAnn (SData  z _ _ _ _)   = z
+    getAnn (SData  z _ _ _ _ _ _) = z
     getAnn (SVar   z _ _ _)     = z
     getAnn (SMatch z _ _ _ _)   = z
     getAnn (SCall z _)          = z
@@ -201,7 +201,7 @@ instance HasAnn Stmt where
     getAnn (SRet   z _)         = z
     getAnn (SNop   z)           = z
 
-prelude z p = (SData z Nothing (TData False ["Int"]          [] TUnit,cz) False
-              (SData z Nothing (TData False ["Bool"]         [] TUnit,cz) True
-              (SData z Nothing (TData False ["Bool","True"]  [] TUnit,cz) False
-              (SData z Nothing (TData False ["Bool","False"] [] TUnit,cz) False p))))
+prelude z p = (SData z (TData False ["Int"]          []) Nothing TUnit cz False
+              (SData z (TData False ["Bool"]         []) Nothing TUnit cz True
+              (SData z (TData False ["Bool","True"]  []) Nothing TUnit cz False
+              (SData z (TData False ["Bool","False"] []) Nothing TUnit cz False p))))

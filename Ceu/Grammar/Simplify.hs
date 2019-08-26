@@ -22,10 +22,10 @@ stmt (SInst z cls tp imp p) =
     otherwise -> SInst z cls tp imp p'
   where p' = stmt p
 
-stmt (SData z nms tp abs p) =
+stmt (SData z tdat nms flds ctrs abs p) =
   case p' of
     SNop z'   -> SNop z'
-    otherwise -> SData z nms tp abs p'
+    otherwise -> SData z tdat nms flds ctrs abs p'
   where p' = stmt p
 
 stmt (SVar z id tp p) =
