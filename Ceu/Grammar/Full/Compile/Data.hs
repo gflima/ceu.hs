@@ -30,11 +30,11 @@ compile p = stmt [] p
 stmt :: [Stmt] -> Stmt -> Stmt
 stmt ds (SClass'' z id  cs ifc p) = SClass'' z id  cs ifc (stmt ds p)
 stmt ds (SInst''  z cls tp imp p) = SInst''  z cls tp imp (stmt ds p)
-stmt ds (SData''  z nms tp abs p) = SData''  z nms' tp' abs (stmt (d':ds) (faccs z nms' tp' p))
-                                    where
-                                      (nms',tp') = fdata ds nms tp
-                                      d'         = SData'' z nms' tp' abs p
-stmt ds (SVar''   z var tp p)     = SVar''   z var (fvar ds tp) (stmt ds p)
+stmt ds (SData''  z tp nms st cs abs p) = SData'' z tp' nms' st' cs' abs (stmt (d':ds) (faccs z nms' (tp',st',cs') p))
+                                          where
+                                            (tp',nms',st',cs') = fdata ds (tp,nms,st,cs)
+                                            d' = SData'' z tp' nms' st' cs' abs p
+stmt ds (SVar''   z var tp p)     = SVar''   z var tp (stmt ds p)
 stmt ds (SMatch'  z ini chk exp cses) = SMatch' z ini chk (expr ds exp)
                                           (map (\(xs,pt,st) -> (stmt ds xs, expr ds pt, stmt ds st)) cses)
 stmt ds (SCall    z exp)          = SCall    z (expr ds exp)
@@ -53,15 +53,15 @@ expr _  e                        = e
 
 -------------------------------------------------------------------------------
 
-fdata :: [Stmt] -> Maybe [String] -> TypeC -> (Maybe [String], TypeC)
-fdata ds nms tp@(TData False id ofs st, ctrs) = case getSuper id of
-  Nothing  -> (nms,tp)
-  Just sup -> case find (\(SData'' _ _ (TData False id' _ _,_) _ _) -> id'==sup) ds of
-                Nothing -> (nms,tp)
-                Just (SData'' _ nms' (TData False _ ofs' st',ctrs') _ _) ->
+fdata :: [Stmt] -> (Type, Maybe [String], Type, Cs.Map) -> (Type, Maybe [String], Type, Cs.Map)
+fdata ds (tp@(TData False id ofs), nms, st, cs) = case getSuper id of
+  Nothing  -> (tp,nms,st,cs)
+  Just sup -> case find (\(SData'' _ (TData False id' _) _ _ _ _ _) -> id'==sup) ds of
+                Nothing -> (tp,nms,st,cs)
+                Just (SData'' _ (TData False _ ofs') nms' st' cs' _ _) ->
                   case any (\v2 -> elem v2 ofs) ofs' of
                     True  -> error $ "TODO: repeated variables"
-                    False -> (ret, (TData False id (ofs' ++ ofs) (cat st' st), Cs.union ctrs' ctrs))
+                    False -> (TData False id (ofs' ++ ofs), ret, cat st' st, Cs.union cs' cs)
                              where
                               ret = case (nms',nms) of
                                       (Nothing,Nothing) -> Nothing
@@ -79,27 +79,12 @@ fdata ds nms tp@(TData False id ofs st, ctrs) = case getSuper id of
 
 -------------------------------------------------------------------------------
 
-fvar :: [Stmt] -> TypeC -> TypeC
-fvar ds (tp_,ctrs) = (fvar' ds tp_, ctrs)
-  where
-    fvar' :: [Stmt] -> Type -> Type
-    fvar' ds (TData False hier ofs st) = TData False hier ofs $
-      case find (\(SData'' _ _ (TData False h' _ _,_) _ _) -> h'==hier) ds of
-        Nothing -> fvar' ds st
-        Just (SData'' _ _ (TData False _ ofs' st',_) _ _)
-                -> instantiate (zip (map (\(TVar False v)->v) ofs') ofs) st'
-    fvar' ds (TFunc ftp inp out) = TFunc ftp (fvar' ds inp) (fvar' ds out)
-    fvar' ds (TTuple tps)        = TTuple $ map (fvar' ds) tps
-    fvar' _  tp                  = tp
-
--------------------------------------------------------------------------------
-
 -- accessors
 -- data X with (...,Int,...)
 -- X_2 : (X -> Int)
 
-faccs :: Ann -> Maybe [ID_Var] -> TypeC -> Stmt -> Stmt
-faccs z nms (tpD@(TData False hr _ st),cz) p = accs where
+faccs :: Ann -> Maybe [ID_Var] -> (Type,Type,Cs.Map) -> Stmt -> Stmt
+faccs z nms (tpD@(TData False hr _),st,cs) p = accs where
   (accs,_) = foldr f (p, 1) (g st)
 
   hr_str = hier2str hr
@@ -110,14 +95,14 @@ faccs z nms (tpD@(TData False hr _ st),cz) p = accs where
   g tp         = [tp]
 
   f :: Type -> (Stmt,Int) -> (Stmt,Int)
-  f tp (p,idx) = (SVar'' z id (TFunc FuncGlobal tpD tp,cz)
+  f tp (p,idx) = (SVar'' z id (TFunc FuncGlobal tpD tp,cs)
                     (SMatch' z True False body [(SNop z, EVar z id, nm p)])
                  ,idx+1)
                  where
                   id = hr_str ++ "._" ++ show idx
 
-                  body = EFunc' z (TFunc FuncGlobal tpD tp,cz)
-                          (SVar'' z "ret" (tp,cz)
+                  body = EFunc' z (TFunc FuncGlobal tpD tp,cs)
+                          (SVar'' z "ret" (tp,cs)
                             (SMatch' z True False (EArg z) [(SNop z, ret, SRet z (EVar z "ret"))]))
                   ret  = ECall z (ECons z hr) (bool (ETuple z repl) (repl!!0) (len st == 1))
                   repl = take (idx-1) anys ++ [EVar z "ret"] ++ drop idx anys
@@ -128,9 +113,9 @@ faccs z nms (tpD@(TData False hr _ st),cz) p = accs where
 
                   nm p = case nms of
                           Nothing -> p
-                          Just l  -> SVar'' z idm (TFunc FuncGlobal tpD tp,cz)
+                          Just l  -> SVar'' z idm (TFunc FuncGlobal tpD tp,cs)
                                       (SMatch' z True False body [(SNop z, EVar z idm, p)])
                                      where
                                       idm = hr_str ++ "." ++ (l!!(idx-1))
-                                      body = EFunc' z (TFunc FuncGlobal tpD tp,cz)
+                                      body = EFunc' z (TFunc FuncGlobal tpD tp,cs)
                                               (SRet z (ECall z (EVar z id) (EArg z)))

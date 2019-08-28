@@ -5,7 +5,7 @@ import Debug.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann               (Ann, HasAnn(..), annz)
 import Ceu.Grammar.Constraints as Cs (Map)
-import Ceu.Grammar.Type        as T  (TypeC, FuncType)
+import Ceu.Grammar.Type        as T  (Type, TypeC, FuncType)
 import qualified Ceu.Grammar.Basic as B
 
 -------------------------------------------------------------------------------
@@ -61,7 +61,7 @@ data Stmt
   | SClass'   Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] -- interface w/ body
   | SInst     Ann ID_Class TypeC Stmt              -- new class instance
   | SInst'    Ann ID_Class TypeC [(Ann,ID_Var,TypeC,Bool)] -- new class instance
-  | SData     Ann (Maybe [ID_Var]) TypeC Bool      -- new type declaration
+  | SData     Ann Type (Maybe [ID_Var]) Type Cs.Map Bool      -- new type declaration
   | SVar      Ann ID_Var TypeC                     -- variable declaration
   | SFunc     Ann ID_Var TypeC Exp Stmt            -- function declaration
   | SMatch    Ann Bool Bool Exp [(Stmt,Exp,Stmt)]  -- match
@@ -77,7 +77,7 @@ data Stmt
   -- declarations w/ scope
   | SClass''  Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt
   | SInst''   Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt
-  | SData''   Ann (Maybe [ID_Var]) TypeC Bool Stmt
+  | SData''   Ann Type (Maybe [ID_Var]) Type Cs.Map Bool Stmt
   | SVar''    Ann ID_Var TypeC Stmt
   deriving (Eq, Show)
 
@@ -88,7 +88,7 @@ instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
     getAnn (SClass    z _ _ _)     = z
     getAnn (SInst     z _ _ _)     = z
-    getAnn (SData     z _ _ _)     = z
+    getAnn (SData     z _ _ _ _ _) = z
     getAnn (SVar      z _ _)       = z
     getAnn (SFunc     z _ _ _ _)   = z
     getAnn (SMatch'   z _ _ _ _)   = z
@@ -97,13 +97,13 @@ instance HasAnn Stmt where
     getAnn (SScope    z _)         = z
     getAnn (SNop      z)           = z
     getAnn (SRet      z _)         = z
-    getAnn (SData''   z _ _ _ _)   = z
+    getAnn (SData''   z _ _ _ _ _ _) = z
     getAnn (SVar''    z _ _ _)     = z
 
 toBasicStmt :: Stmt -> B.Stmt
 toBasicStmt (SClass'' z id  cs ifc p) = B.SClass z id  cs ifc (toBasicStmt p)
 toBasicStmt (SInst''  z cls tp imp p) = B.SInst  z cls tp imp (toBasicStmt p)
-toBasicStmt (SData''  z nms tp abs p) = B.SData  z nms tp abs (toBasicStmt p)
+toBasicStmt (SData''  z tp nms st cs abs p) = B.SData z tp nms st cs abs (toBasicStmt p)
 toBasicStmt (SVar''   z var tp p)     = B.SVar   z var tp (toBasicStmt p)
 toBasicStmt (SMatch'  z ini chk exp cses) = B.SMatch z ini chk (toBasicExp exp)
                                               (map (\(ds,pt,st) -> (toBasicStmt ds, toBasicExp pt, toBasicStmt st)) cses)
@@ -119,7 +119,7 @@ toBasicStmt p                         = error $ "toBasicStmt: unexpected stateme
 map_stmt :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Stmt -> Stmt
 map_stmt f@(fs,_,_)  (SClass z id  cs p)  = fs (SClass z id  cs (map_stmt f p))
 map_stmt f@(fs,_,ft) (SInst  z cls tp p)  = fs (SInst  z cls (ft tp) (map_stmt f p))
-map_stmt f@(fs,_,ft) (SData  z nms tp abs)= fs (SData  z nms (ft tp) abs)
+map_stmt f@(fs,_,ft) (SData  z tp nms st cs abs)= fs (SData z tp nms st cs abs)
 map_stmt f@(fs,_,ft) (SVar   z id tp)     = fs (SVar   z id (ft tp))
 map_stmt f@(fs,_,ft) (SFunc  z id tp ps bd) = fs (SFunc  z id (ft tp) (map_exp f ps) (map_stmt f bd))
 map_stmt f@(fs,_,_)  (SMatch z ini chk exp cses) = fs (SMatch z ini chk (map_exp f exp)

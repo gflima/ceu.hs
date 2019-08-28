@@ -163,10 +163,14 @@ fPat envs ini (ECons  z h)   = (es, (FuncGlobal,Nothing), tp, ECons z{typec=tp} 
                                 (es,tp) = case find (isData $ hier2str h) (concat envs) of
                                   Nothing -> ([toError z $ "data '" ++ (hier2str h) ++ "' is not declared"],
                                               (TData False [] [],cz))
-                                  Just (SData _ tp _ _ ctrs _ _) -> case tp of
+                                  Just (SData _ tp _ st ctrs _ _) -> case tp of
                                     TData False _ ofs -> (es,(tp',ctrs)) where
-                                      tp' = TData False (take 1 h) ofs
+                                      tp' = f (TData False (take 1 h) ofs) st
                                       es  = []-- map (toError z) (relatesErrorsC SUB tp tp')
+
+                                      f tdat TUnit = tdat
+                                      f tdat st    = TFunc FuncGlobal st tdat
+
 fPat envs ini (ETuple z ls)  = (concat ess, ft, (TTuple (map fst tps),cz), ETuple z ls') where   -- TODO: cz should be union of all snd
                                 (ess, fts, tps, ls') = unzip4 $ map (fPat envs ini) ls
                                 ft = foldr ftMin (FuncUnknown,Nothing) fts

@@ -18,17 +18,17 @@ import qualified Ceu.Grammar.Full.Compile.Match as Match
 import qualified Ceu.Grammar.Full.Compile.Class as Class
 import qualified Ceu.Grammar.Full.Compile.Func  as Func
 
-int   = TData False ["Int"]          [] TUnit
-bool  = TData False ["Bool"]         [] TUnit
-boolf = TData False ["Bool","False"] [] TUnit
-boolt = TData False ["Bool","True"]  [] TUnit
+int   = TData False ["Int"]          []
+bool  = TData False ["Bool"]         []
+boolf = TData False ["Bool","False"] []
+boolt = TData False ["Bool","True"]  []
 
 prelude :: Ann -> Stmt -> Stmt
 prelude z p =
-    (SSeq z (SData z Nothing (int,  cz) False)  -- TODO: should be abstract
-    (SSeq z (SData z Nothing (bool, cz) True)
-    (SSeq z (SData z Nothing (boolf,cz) False)
-    (SSeq z (SData z Nothing (boolt,cz) False)
+    (SSeq z (SData z int   Nothing TUnit cz False)  -- TODO: should be abstract
+    (SSeq z (SData z bool  Nothing TUnit cz True)
+    (SSeq z (SData z boolf Nothing TUnit cz False)
+    (SSeq z (SData z boolt Nothing TUnit cz False)
     (SSeq z (SVar  z "_true"  (bool,cz))
     (SSeq z (SSet  z True False (EVar z "_true") (ECons z ["Bool","True"]))
     (SSeq z (SVar  z "print"  (TFunc FuncGlobal (TVar False "?")    (TVar False "?"), cz))

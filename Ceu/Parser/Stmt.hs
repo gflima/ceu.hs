@@ -171,7 +171,7 @@ stmt_data = do
                               void <- try $ tk_key "is"
                               void <- tk_key "abstract"
                               return True
-  return $ SData annz{source=pos} nms (TData False id ofs st, cs) isAbs
+  return $ SData annz{source=pos} (TData False id ofs) nms st cs isAbs
 
 pMatch :: Source -> Bool -> Exp -> Parser Stmt
 pMatch pos chk loc = do

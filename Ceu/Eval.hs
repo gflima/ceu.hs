@@ -55,9 +55,9 @@ fromExp :: B.Exp -> Exp
 fromExp (B.EError  _ v)   = EError  v
 fromExp (B.EVar    _ id)  = EVar id
 fromExp (B.EUnit   _)     = EUnit
-fromExp (B.ECons   z id)  = case typec z of
-                             (TData False _ _ TUnit, _) -> EData id EUnit
-                             otherwise            -> ECons id
+fromExp (B.ECons   z id)  = case fst $ typec z of
+                             TData False _ _ -> EData id EUnit
+                             otherwise       -> ECons id
 fromExp (B.ETuple  _ vs)  = ETuple (map fromExp vs)
 fromExp (B.EFunc   _ _ us p) = EFunc (fromExp us) (fromStmt p)
 fromExp (B.ECall   _ f e) = ECall (fromExp f) (fromExp e)
@@ -73,7 +73,7 @@ fromExp (B.ERefIni _ e)   = ERefIni (fromExp e)
 -------------------------------------------------------------------------------
 
 fromStmt :: B.Stmt -> Stmt
-fromStmt (B.SData   _ _ _ _ p)       = fromStmt p
+fromStmt (B.SData   _ _ _ _ _ _ p)   = fromStmt p
 fromStmt (B.SVar    _ id _ p)        = SVar id (fromStmt p)
 fromStmt (B.SCall   _ e)             = SCall (fromExp e)
 fromStmt (B.SSeq    _ p1 p2)         = SSeq (fromStmt p1) (fromStmt p2)
@@ -175,10 +175,10 @@ match vars (EVar id)   v = (envWrite vars id v, Right True)
 match vars EUnit       v = (vars, Right True)
 match vars (EData hrp _)
            (EData hre _) = (vars, Right ret) where
-                            ret = T.isRel T.SUP (TData False hrp [] TUnit) (TData False hre [] TUnit)
+                            ret = T.isRel T.SUP (TData False hrp []) (TData False hre [])
 match vars (ECall (ECons hrp) l)
            (EData hre e) = (vars', ret')  where
-                            v1 = T.isRel T.SUP (TData False hrp [] TUnit) (TData False hre [] TUnit)
+                            v1 = T.isRel T.SUP (TData False hrp []) (TData False hre [])
                             (vars', ret2) = match vars l e
                             ret' = case ret2 of
                               Left  x  -> Left  x

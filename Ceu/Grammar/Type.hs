@@ -399,9 +399,10 @@ supOf' TUnit               _                   = (False, TUnit, [])
 supOf' sup                 TUnit               = (False, sup,   [])
 
 supOf' sup@(TData _ x ofs1) sub@(TData _ y ofs2)
-  | not $ x `isPrefixOf` y = (False, sup,   [])
-  | not $ (TTuple ofs1) `isSupOf` (TTuple ofs2) = (False, sup,   [])
-  | otherwise              = (True, TData False x ofs1, [])
+  | not $ x `isPrefixOf` y = (False, sup, [])
+  | otherwise              = (ret, TData False x sup', es)
+  where
+    (ret,TTuple sup',es) = (TTuple ofs1) `supOf'` (TTuple ofs2)
 {-
   where
     (ret,sup,es) = f st1 st2

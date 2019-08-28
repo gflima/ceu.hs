@@ -36,7 +36,7 @@ type_D = do
                             return True
     hier <- tk_data_hier
     ofs  <- option TUnit $ try (tk_key "of" *> pType)
-    return $ TData ref hier (f ofs) TUnit
+    return $ TData ref hier (f ofs)
 
 type_N :: Parser Type
 type_N = do
