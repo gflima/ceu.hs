@@ -56,7 +56,7 @@ matchX envs pats exp = matchX' envs pats (expandE envs exp) where
     (exps',es') = foldr f ([],[]) exps
 
     f :: Exp -> ([Exp],Errors) -> ([Exp],Errors)
-    f exp (exps,es) = case matchE pat exp of
+    f exp (exps,es) = case matchE envs pat exp of
                         (True, es') -> (exps,     es'++es)
                         (False,es') -> (exp:exps, es'++es)
 
@@ -96,28 +96,28 @@ expandT _    tp                       = [tp]
 
 -------------------------------------------------------------------------------
 
-matchE :: Exp -> Exp -> (Bool, Errors)
+matchE :: [Stmt] -> Exp -> Exp -> (Bool, Errors)
 
-matchE _                 (EArg   _)         = (True, [])
+matchE _    _                 (EArg   _)         = (True, [])
 
 -- structural match
-matchE (EUnit _)         (EUnit  _)         = (True, [])
-matchE (ECons z hrP)     (ECons  _ hrE)     = if hrP `isPrefixOf` hrE then (True,[]) else
-                                                (False, [toError z $ "match never succeeds : data mismatch"])
-matchE (ECall _ el1 er1) (ECall  _ el2 er2) = (ok1 && ok2, es1++es2) where
-                                                (ok1, es1) = matchE el1 el2
-                                                (ok2, es2) = matchE er1 er2
-matchE (ETuple z1 els)   (ETuple z2 ers)    = (ok && and oks, concat eses ++ es) where
+matchE _    (EUnit _)         (EUnit  _)         = (True, [])
+matchE _    (ECons z hrP)     (ECons  _ hrE)     = if hrP `isPrefixOf` hrE then (True,[]) else
+                                                    (False, [toError z $ "match never succeeds : data mismatch"])
+matchE envs (ECall _ el1 er1) (ECall  _ el2 er2) = (ok1 && ok2, es1++es2) where
+                                                    (ok1, es1) = matchE envs el1 el2
+                                                    (ok2, es2) = matchE envs er1 er2
+matchE envs (ETuple z1 els)   (ETuple z2 ers)    = (ok && and oks, concat eses ++ es) where
                                                 (ok,es) = if lenl == lene then (True,[]) else
                                                             (False, [toError z1 $ "match never succeeds : arity mismatch"])
-                                                (oks, eses) = unzip $ zipWith matchE els' ers' where
+                                                (oks, eses) = unzip $ zipWith (matchE envs) els' ers' where
                                                   els' = els ++ replicate (lene - lenl) (EAny z1)
                                                   ers' = ers ++ replicate (lenl - lene) (EError z2 (-2))
                                                 lenl  = length els
                                                 lene  = length ers
 
 -- structural fail
-matchE l e | (isE l && isE e) = (False, [toError (getAnn l) $ "match never succeeds"]) where
+matchE _    l e | (isE l && isE e) = (False, [toError (getAnn l) $ "match never succeeds"]) where
   isE (EUnit  _)              = True
   isE (ETuple _ _)            = True
   isE (ECons  _ _)            = True
@@ -125,46 +125,52 @@ matchE l e | (isE l && isE e) = (False, [toError (getAnn l) $ "match never succe
   isE _                       = False
 
 -- contravariant on constants (SUB)
-matchE (EUnit  z)      exp    = (False, es) where
+matchE _    (EUnit  z)      exp    = (False, es) where
                                   es = (relatesErrorsC SUB (TUnit,cz) (typec $ getAnn exp))
 
 -- non-constants: LAny,LVar (no fail) // LExp (may fail)
-matchE (EVar _ _)      _      = (True,  [])
-matchE (EAny _)        _      = (True,  [])
-matchE (EExp _ _)      exp    = (False, [])
+matchE _    (EVar _ _)      _      = (True,  [])
+matchE _    (EAny _)        _      = (True,  [])
+matchE _    (EExp _ _)      exp    = (False, [])
 
 -- rec
-matchE loc             exp    = matchT loc (typec $ getAnn exp)
+matchE envs loc             exp    = matchT envs loc (typec $ getAnn exp)
 
 -------------------------------------------------------------------------------
 
-matchT :: Exp -> TypeC -> (Bool, Errors)
+matchT :: [Stmt] -> Exp -> TypeC -> (Bool, Errors)
 
-matchT (EUnit _)       tp = (True,  [])
-matchT (EVar  _ _)     _  = (True,  [])
-matchT (EAny  _)       _  = (True,  [])
-matchT (EExp  _ _)     tp = (False, [])
+matchT _    (EUnit _)       tp = (True,  [])
+matchT _    (EVar  _ _)     _  = (True,  [])
+matchT _    (EAny  _)       _  = (True,  [])
+matchT _    (EExp  _ _)     tp = (False, [])
 
-matchT (ERefDer _ e)   tp = matchT e tp
-matchT (ERefIni _ e)   tp = matchT e tp
+matchT envs (ERefDer _ e)   tp = matchT envs e tp
+matchT envs (ERefIni _ e)   tp = matchT envs e tp
 
-matchT (ECons z hrP)   tp =
+matchT envs (ECons z hrP)   tp =
   case tp of
     (TData False hrE ofs, ctrs)    -> if hrP `isPrefixOf` hrE then (True,[]) else
                                         if take 1 hrE `isPrefixOf` take 1 hrP then
                                           (False, [])
                                         else
                                           (False, [toError z $ "match never succeeds : data mismatch"])
+{-
+    (TData False h ofs st, ctrs)   -> (ok1 && ok2, es1 ++ es2) where
+                                        (ok1, es1) = matchT el tp
+                                        (ok2, es2) = matchT er (st,ctrs)
+
+-}
     otherwise                      -> (True, [])
 
-matchT (ETuple _ ls)   tp =
+matchT envs (ETuple _ ls)   tp =
   case tp of
     (TTuple tps, ctrs)             -> (and oks, concat ess) where
-                                        (oks, ess) = unzip $ zipWith matchT ls (map f tps)
+                                        (oks, ess) = unzip $ zipWith (matchT envs) ls (map f tps)
                                         f tp = (tp,ctrs)
     otherwise                      -> (True, [])
 
-matchT (ECall _ el er) tp =
+matchT envs (ECall _ el er) tp =
   case tp of
-    (TData False h ofs, ctrs)      -> matchT el tp
+    (TData False h ofs, ctrs)      -> matchT envs el tp
     otherwise                      -> (True, [])

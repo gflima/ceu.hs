@@ -696,6 +696,11 @@ spec = do
             "           return x < y",
             "          end",
             "end",
+            "func uncurry f : ((a -> (b->c)[1]) -> ((a,b)->c)[1]) do",
+            "   return func (i,j) : ((a,b) -> c)[1] do",
+            "           return (f i) j",
+            "          end",
+            "end",
             "var g : ((a,b)->c)[1] = uncurry smallerc",
             "return g(10,12)"
            ])
@@ -1013,7 +1018,7 @@ spec = do
         (run True "data Xxx with Int ; set Xxx 2 =  Xxx 1 ; return 1")
         `shouldBe` Left "(line 1, column 29):\nmatch never succeeds : data mismatch\n"
 
-      it "x = (10,2) ; (i,2) = x" $
+      it "XXX: x = (10,2) ; (i,2) = x" $
         (run True "data Xxx with (Int,Int) ; var x : Xxx = Xxx (10,2) ; var i : int ; set! Xxx (i,2) = x ; return i")
         `shouldBe` Right (EData ["Int","10"] EUnit)
 
