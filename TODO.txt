@@ -550,18 +550,18 @@ return eq (1,2) // f 1
 
 // CONSTRAINT
 
-data DEq (eq,neq) for a with (
-    ((DEq for a, a,a) -> Int),     // eq
-    ((DEq for a, a,a) -> Int),     // neq
+data _IEq (eq,neq) for a with (
+    ((_IEq for a, a,a) -> Int),     // eq
+    ((_IEq for a, a,a) -> Int),     // neq
 )
 
-func neq (deq,x,y) : ((DEq for a,a,a) -> Int) do
-    return 1 - (x deq.eq y)
+func neq (_dict,x,y) : ((DEq for a,a,a) -> Int) do
+    return 1 - (x _dict.eq y)
 end
 
 // INSTANCE
 
-func _eq_int (deq,x,y) : ((DEq for Int,Int,Int) -> Int) do
+func _eq_int (_dict,x,y) : ((DEq for Int,Int,Int) -> Int) do
     if y matches x then return 1 else return 0 end
 end
 
@@ -573,8 +573,8 @@ end
 
 // FUNCTION
 
-func f (deq,x) : ((DEq for a,Int) -> Int) do
-    return x deq.eq x
+func f (_dict,x) : ((DEq for a,Int) -> Int) do
+    return x _dict.eq x
 end
 
 var f_int x : (Int -> Int) do
