@@ -153,7 +153,7 @@ spec = do
         (run True $ "call print 1 ; return print 2")
         `shouldBe` Right (EData ["Int","2"] EUnit)
 
-      it "recursion" $
+      it "recursion - fat" $
         (run True $
           unlines [
             "func fat (v) : (Int -> Int) do",
@@ -166,6 +166,14 @@ spec = do
             "return fat 5"
            ])
         `shouldBe` Right (EData ["Int","120"] EUnit)
+
+      it "recursion - data" $
+        (run True $
+          unlines [
+            "data X with X",
+            "return X()"
+           ])
+        `shouldBe` Left "(line 2, column 8):\ntypes do not match : expected '(() -> ?)' : found '(X -> X)'\n"
 
       it "dynamic scope" $
         (run True $

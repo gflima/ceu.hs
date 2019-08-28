@@ -1,9 +1,5 @@
 - runhaskell -itests/ tests/Spec.hs
-- 10 -- Basic=1, Type=0, Eval=1, Full=0, Parser=0, Run=4, Book=4, Gen=0
-
-- mover struct from TData to SData
-    - permitir TData recursivo
-        - continuar dicts em typeclass
+- 9 -- Basic=1, Type=0, Eval=1, Full=0, Parser=0, Run=4, Book=3, Gen=0
 
 - refazer GenSpec.hs
     - multiplas ifcs
@@ -590,12 +586,3 @@ end
 return eq_int(1,2) // f_int 1
 
 ===============================================================================
-
-stmt (SClass z id  ctrs ifc) = SSeq z (SClass' z id  ctrs ps) (SSeq z dict ifc) where
-                                ps   = protos ifc
-                                dict = SData z (Just pars) (tdat,Cs.cz) False where
-                                        tdat = TData False [id] [] tps
-                                        pars = map (\(_,id,_,_)->id) ps
-                                        tps  = TTuple (tdat : map (\(_,_,(tp,_),_)->tp) ps)
-
-

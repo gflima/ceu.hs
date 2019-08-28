@@ -4,8 +4,9 @@ import Debug.Trace
 import qualified Data.Set as S
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Ann      (Ann)
-import Ceu.Grammar.Type     (TypeC, show')
+import Ceu.Grammar.Constraints (cz)
+import Ceu.Grammar.Ann         (Ann)
+import Ceu.Grammar.Type        (TypeC, show', Type(..))
 import Ceu.Grammar.Full.Full
 
 compile :: Stmt -> Stmt
@@ -34,7 +35,14 @@ idtp id (tp_,ctrs) = if null ctrs then "$" ++ id ++ "$" ++ show' tp_ ++ "$" else
 
 stmt :: Stmt -> Stmt
 
-stmt (SClass z id  ctrs ifc) = SSeq z (SClass' z id  ctrs (protos ifc)) ifc
+stmt (SClass z id  ctrs ifc) = SSeq z cls (SSeq z dict ifc) where
+                                cls  = SClass' z id ctrs ps
+                                ps   = protos ifc
+                                dict = SData z tdat (Just $ "_dict":pars) tps cz False where
+                                        tdat = TData False ["_"++id] []
+                                        pars = map (\(_,id,_,_)->id) ps
+                                        tps  = TTuple (tdat : map (\(_,_,(tp,_),_)->tp) ps)
+--stmt (SClass z id  ctrs ifc) = SSeq z (SClass' z id  ctrs (protos ifc)) ifc
 stmt (SInst  z cls tp   imp) = SSeq z (SInst'  z cls tp   (protos imp)) (rename imp)
 stmt (SSet   z ini chk loc exp)  = SSet   z ini chk loc (expr exp)
 stmt (SMatch z ini chk exp cses) = SMatch z ini chk (expr exp)

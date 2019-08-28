@@ -4,6 +4,7 @@ import Debug.Trace
 import Data.List (find)
 import Data.Bool (bool)
 
+import Ceu.Trace
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Type               (Type(..),TypeC,instantiate,getSuper,hier2str,FuncType(..))

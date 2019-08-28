@@ -380,8 +380,9 @@ stmt envs tpr s@(SData z tpD@(TData False hr _) nms st cz abs p) =
   ft, fts,
   SData z tpD nms st cz abs p')
   where
-    (es,ft,fts,p') = stmt (envsAdd envs s) tpr p
-    es_dcl = (getErrsTypesDeclared z (concat envs) st) ++ case T.getSuper hr of
+    envs' = envsAdd envs s
+    (es,ft,fts,p') = stmt envs' tpr p
+    es_dcl = (getErrsTypesDeclared z (concat envs') st) ++ case T.getSuper hr of
                 Nothing  -> []
                 Just sup -> (getErrsTypesDeclared z (concat envs) (TData False sup []))
 
