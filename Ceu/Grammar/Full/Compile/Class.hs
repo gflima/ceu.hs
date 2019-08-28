@@ -10,7 +10,7 @@ import Ceu.Grammar.Type        (TypeC, show', Type(..))
 import Ceu.Grammar.Full.Full
 
 compile :: Stmt -> Stmt
-compile p = stmt p
+compile p = map_stmt (stmt,id,id) p
 
 -------------------------------------------------------------------------------
 
@@ -98,19 +98,5 @@ stmt (SClass z id ctrs ifc) = SSeq z cls ifc -- SSeq z dict (SSeq z cls (addDict
 
 stmt (SInst  z cls tp  imp)  = SSeq z (SInst' z cls tp (protos imp))
                                       (addDict (TData False ["_"++cls] []) $ renameID imp)
-stmt (SSet   z ini chk loc exp)  = SSet   z ini chk loc (expr exp)
-stmt (SMatch z ini chk exp cses) = SMatch z ini chk (expr exp)
-                               (map (\(ds,pt,st) -> (stmt ds, expr pt, stmt st)) cses)
-stmt (SCall z exp)           = SCall z (expr exp)
-stmt (SIf    z exp p1 p2)    = SIf    z (expr exp) (stmt p1) (stmt p2)
-stmt (SSeq   z p1 p2)        = SSeq   z (stmt p1) (stmt p2)
-stmt (SLoop  z p)            = SLoop  z (stmt p)
-stmt (SScope z p)            = SScope z (stmt p)
-stmt (SRet   z exp)          = SRet   z (expr exp)
-stmt p                       = p
 
-expr :: Exp -> Exp
-expr (ETuple z es)           = ETuple z (map expr es)
-expr (ECall  z e1 e2)        = ECall  z (expr e1) (expr e2)
-expr (EFunc' z tp imp)       = EFunc' z tp (stmt imp)
-expr e                       = e
+stmt p = p

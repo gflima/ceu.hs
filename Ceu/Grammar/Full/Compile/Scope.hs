@@ -12,9 +12,9 @@ compile p = stmt p
 stmt :: Stmt -> Stmt
 stmt (SClass' z id  cs ifc)               = SClass'' z id  cs ifc (SNop z)
 stmt (SInst'  z cls tp imp)               = SInst''  z cls tp imp (SNop z)
-stmt (SData   z tp nms st cs abs)        = SData''   z tp nms st cs abs (SNop z)
+stmt (SData   z tp nms st cs abs)         = SData''  z tp nms st cs abs (SNop z)
 stmt (SVar    z var tp)                   = SVar''   z var tp (SNop z)
-stmt (SMatch' z ini chk exp cses)         = SMatch'  z ini chk (expr exp)
+stmt (SMatch  z ini chk exp cses)         = SMatch   z ini chk (expr exp)
                                               (map (\(ds,pt,st) -> (stmt ds, expr pt, stmt st)) cses)
 stmt (SCall  z exp)                       = SCall   z (expr exp)
 stmt (SSeq _ s@(SClass' z id  cs ifc) p2) = SClass'' z id  cs ifc (stmt p2)

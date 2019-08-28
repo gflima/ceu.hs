@@ -65,7 +65,6 @@ data Stmt
   | SVar      Ann ID_Var TypeC                     -- variable declaration
   | SFunc     Ann ID_Var TypeC Exp Stmt            -- function declaration
   | SMatch    Ann Bool Bool Exp [(Stmt,Exp,Stmt)]  -- match
-  | SMatch'   Ann Bool Bool Exp [(Stmt,Exp,Stmt)]  -- match w/ chk
   | SSet      Ann Bool Bool Exp Exp                -- assignment statement
   | SCall     Ann Exp                              -- call function
   | SIf       Ann Exp Stmt Stmt                    -- conditional
@@ -91,7 +90,6 @@ instance HasAnn Stmt where
     getAnn (SData     z _ _ _ _ _) = z
     getAnn (SVar      z _ _)       = z
     getAnn (SFunc     z _ _ _ _)   = z
-    getAnn (SMatch'   z _ _ _ _)   = z
     getAnn (SSeq      z _ _  )     = z
     getAnn (SLoop     z _)         = z
     getAnn (SScope    z _)         = z
@@ -105,7 +103,7 @@ toBasicStmt (SClass'' z id  cs ifc p) = B.SClass z id  cs ifc (toBasicStmt p)
 toBasicStmt (SInst''  z cls tp imp p) = B.SInst  z cls tp imp (toBasicStmt p)
 toBasicStmt (SData''  z tp nms st cs abs p) = B.SData z tp nms st cs abs (toBasicStmt p)
 toBasicStmt (SVar''   z var tp p)     = B.SVar   z var tp (toBasicStmt p)
-toBasicStmt (SMatch'  z ini chk exp cses) = B.SMatch z ini chk (toBasicExp exp)
+toBasicStmt (SMatch   z ini chk exp cses) = B.SMatch z ini chk (toBasicExp exp)
                                               (map (\(ds,pt,st) -> (toBasicStmt ds, toBasicExp pt, toBasicStmt st)) cses)
 toBasicStmt (SCall   z e)             = B.SCall z (toBasicExp e)
 toBasicStmt (SSeq     z p1 p2)        = B.SSeq   z (toBasicStmt p1) (toBasicStmt p2)
@@ -118,11 +116,16 @@ toBasicStmt p                         = error $ "toBasicStmt: unexpected stateme
 
 map_stmt :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Stmt -> Stmt
 map_stmt f@(fs,_,_)  (SClass z id  cs p)  = fs (SClass z id  cs (map_stmt f p))
+map_stmt f@(fs,_,_)  (SClass' z id cs ifc) = fs (SClass' z id cs ifc)
 map_stmt f@(fs,_,ft) (SInst  z cls tp p)  = fs (SInst  z cls (ft tp) (map_stmt f p))
+map_stmt f@(fs,_,ft) (SInst' z cls tp ifc) = fs (SInst' z cls (ft tp) ifc)
 map_stmt f@(fs,_,ft) (SData  z tp nms st cs abs)= fs (SData z tp nms st cs abs)
 map_stmt f@(fs,_,ft) (SVar   z id tp)     = fs (SVar   z id (ft tp))
+map_stmt f@(fs,_,ft) (SVar'' z id tp p)   = fs (SVar'' z id (ft tp) (map_stmt f p))
 map_stmt f@(fs,_,ft) (SFunc  z id tp ps bd) = fs (SFunc  z id (ft tp) (map_exp f ps) (map_stmt f bd))
 map_stmt f@(fs,_,_)  (SMatch z ini chk exp cses) = fs (SMatch z ini chk (map_exp f exp)
+                                                    (map (\(ds,pt,st) -> (map_stmt f ds, map_exp f pt, map_stmt f st)) cses))
+map_stmt f@(fs,_,_)  (SMatch  z ini chk exp cses) = fs (SMatch  z ini chk (map_exp f exp)
                                                     (map (\(ds,pt,st) -> (map_stmt f ds, map_exp f pt, map_stmt f st)) cses))
 map_stmt f@(fs,_,_)  (SSet   z ini b loc exp) = fs (SSet   z ini b loc (map_exp f exp))
 map_stmt f@(fs,_,_)  (SCall  z exp)       = fs (SCall z (map_exp f exp))
@@ -132,6 +135,7 @@ map_stmt f@(fs,_,_)  (SLoop  z p)         = fs (SLoop  z (map_stmt f p))
 map_stmt f@(fs,_,_)  (SScope z p)         = fs (SScope z (map_stmt f p))
 map_stmt f@(fs,_,_)  (SRet   z exp)       = fs (SRet   z (map_exp f exp))
 map_stmt f@(fs,_,_)  (SNop   z)           = fs (SNop   z)
+map_stmt _ p = error $ show p
 
 map_exp :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Exp -> Exp
 map_exp f@(_,fe,_)  (ECons  z id)       = fe (ECons  z id)

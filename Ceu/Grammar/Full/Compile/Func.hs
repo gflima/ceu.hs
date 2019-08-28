@@ -10,9 +10,12 @@ import qualified Ceu.Grammar.Constraints as Cs
 import Ceu.Grammar.Type
 
 compile :: Stmt -> Stmt
-compile p = stmt p
+compile p = map_stmt (stmt,expr,id) p
+
+-------------------------------------------------------------------------------
 
 stmt :: Stmt -> Stmt
+
 stmt (SClass z cls ctrs ifc) =
   case Cs.toList ctrs of
     [(var,_)]  -> SClass z cls ctrs (stmt $ aux ifc) where
@@ -35,20 +38,11 @@ stmt (SFunc z k tp@(tp_,ctrs) par imp)    = SSeq z (SVar z k tp) (SSet z True Fa
                   (map_exp  (id,id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) par
                   ,map_stmt (id,id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) imp)
 
-stmt (SVar   z id tp)       = SVar   z id tp
-stmt (SSet   z ini chk loc exp) = SSet   z ini chk loc (expr exp)
-stmt (SMatch z ini chk exp cses)= SMatch z ini chk (expr exp) (map (\(ds,pt,st) -> (stmt ds, expr pt, stmt st)) cses)
-stmt (SCall z exp)          = SCall z (expr exp)
-stmt (SIf    z exp p1 p2)   = SIf    z (expr exp) (stmt p1) (stmt p2)
-stmt (SSeq   z p1 p2)       = SSeq   z (stmt p1) (stmt p2)
-stmt (SLoop  z p)           = SLoop  z (stmt p)
-stmt (SScope z p)           = SScope z (stmt p)
-stmt (SRet   z exp)         = SRet   z (expr exp)
-stmt p                      = p
+stmt p = p
+
+-------------------------------------------------------------------------------
 
 expr :: Exp -> Exp
-expr (ETuple z es)          = ETuple z (map expr es)
-expr (ECall  z e1 e2)       = ECall  z (expr e1) (expr e2)
 
 expr (EFunc  z tpc@(TFunc _ inp _,cs) par imp) = EFunc' z tpc (stmt imp')
   where
@@ -78,4 +72,4 @@ expr (EFunc  z tpc@(TFunc _ inp _,cs) par imp) = EFunc' z tpc (stmt imp')
               (EAny _) -> imp
               _        -> p
 
-expr e                      = e
+expr e = e
