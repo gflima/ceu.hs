@@ -1018,7 +1018,7 @@ spec = do
         (run True "data Xxx with Int ; set Xxx 2 =  Xxx 1 ; return 1")
         `shouldBe` Left "(line 1, column 29):\nmatch never succeeds : data mismatch\n"
 
-      it "XXX: x = (10,2) ; (i,2) = x" $
+      it "x = (10,2) ; (i,2) = x" $
         (run True "data Xxx with (Int,Int) ; var x : Xxx = Xxx (10,2) ; var i : int ; set! Xxx (i,2) = x ; return i")
         `shouldBe` Right (EData ["Int","10"] EUnit)
 

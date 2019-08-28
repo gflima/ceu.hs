@@ -155,12 +155,6 @@ matchT envs (ECons z hrP)   tp =
                                           (False, [])
                                         else
                                           (False, [toError z $ "match never succeeds : data mismatch"])
-{-
-    (TData False h ofs st, ctrs)   -> (ok1 && ok2, es1 ++ es2) where
-                                        (ok1, es1) = matchT el tp
-                                        (ok2, es2) = matchT er (st,ctrs)
-
--}
     otherwise                      -> (True, [])
 
 matchT envs (ETuple _ ls)   tp =
@@ -172,5 +166,9 @@ matchT envs (ETuple _ ls)   tp =
 
 matchT envs (ECall _ el er) tp =
   case tp of
-    (TData False h ofs, ctrs)      -> matchT envs el tp
+    (TData False h ofs, ctrs)      -> (ok1 && ok2, es1 ++ es2) where
+      (ok1, es1) = matchT envs el tp
+      (ok2, es2) = matchT envs er $
+                    case find (isData $ hier2str h) envs of
+                      Just (SData _ _ _ st ctrs _ _) -> (st,ctrs)
     otherwise                      -> (True, [])
