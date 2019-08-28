@@ -40,32 +40,64 @@ idtp id (tp_,ctrs) = if null ctrs then "$" ++ id ++ "$" ++ show' tp_ ++ "$" else
 
 -------------------------------------------------------------------------------
 
-addDict :: ID_Data -> Stmt -> Stmt
+addDict :: Type -> Stmt -> Stmt
+addDict _    p              = p
 addDict dict (SSeq z (SVar z1 id1 tpc1)
                      (SSet z2 True False (EVar z3 id3) (EFunc' z4 tp4 p4)))
-             | id1==id3     = SSeq z (SVar z1 id1 (addDict' dict tpc1))
+             | id1==id3     = SSeq z (traceShowId $ SVar z1 id1 (aux1 dict tpc1))
                                      (SSet z2 True False (EVar z3 id3)
-                                           (EFunc' z4 (addDict' dict tp4) p4))
+                                           (EFunc' z4 (aux1 dict tp4) (aux2 dict p4)))
 addDict dict (SSeq z p1 p2) = SSeq z (addDict dict p1) (addDict dict p2)
-addDict dict (SVar z id tp) = SVar z id (addDict' dict tp)
+addDict dict (SVar z id tp) = traceShowId $ SVar z id (aux1 dict tp)
 addDict _    p              = p
 
-addDict' :: ID_Data -> TypeC -> TypeC
-addDict' dict tpc = tpc
+aux1 :: Type -> TypeC -> TypeC
+aux1 dict (TFunc ft inp out, cs) = (TFunc ft (f dict inp) out, cs) where
+  f :: Type -> Type -> Type
+  --f _ tp = tp
+  f dict (TTuple l) = TTuple (dict: l)
+  f dict tp         = TTuple [dict,tp]
+
+aux2 _ x = x
+{-
+aux2 :: Type -> Exp -> Exp
+aux2 dict (EFunc ft inp out, cs) = (TFunc ft (f dict inp) out, cs) where
+  f :: Type -> Type -> Type
+  --f _ tp = tp
+  f dict (TTuple l) = TTuple (dict: l)
+  f dict tp         = TTuple [dict,tp]
+-}
 
 -------------------------------------------------------------------------------
 
 stmt :: Stmt -> Stmt
 
-stmt (SClass z id  ctrs ifc) = SSeq z cls (SSeq z dict (addDict "XXX" ifc)) where
-                                cls  = SClass' z id ctrs ps
-                                ps   = protos ifc
-                                dict = SData z tdat (Just $ "_dict":pars) tps cz False where
-                                        tdat = TData False ["_"++id] []
-                                        pars = map (\(_,id,_,_)->id) ps
-                                        tps  = TTuple (tdat : map (\(_,_,(tp,_),_)->tp) ps)
 --stmt (SClass z id  ctrs ifc) = SSeq z (SClass' z id  ctrs (protos ifc)) ifc
-stmt (SInst  z cls tp   imp) = SSeq z (SInst'  z cls tp   (protos imp)) (addDict "XXX" $ renameID imp)
+
+-- data _IEq ; class IEq ; Ifc ; var _IEq_int : _IEq = ...
+stmt (SClass z id ctrs ifc) = SSeq z cls ifc -- SSeq z dict (SSeq z cls (addDict tpd ifc'))
+  where
+    cls  = SClass' z id ctrs ps
+    ps   = protos ifc
+    tpd  = TData False ["_"++id] []
+    dict = SData z tpd (Just $ "_dict":pars) tps cz False where
+            pars = map (\(_,id,_,_)->id) ps
+            tps  = TTuple (tpd : map (\(_,_,(tp,_),_)->tp) ps)
+
+    -- (x eq y) --> (x (_IEq.eq _dict) y)
+    ifc' = map_stmt (Prelude.id, f, Prelude.id) ifc where
+      set :: S.Set ID_Var
+      set = foldr (\(_,id,_,_) s -> S.insert id s) S.empty ps
+
+      f :: Exp -> Exp
+      f (EVar z id) = if S.member id set then
+                        (ECall z (EField z ["_"++id] id) (EVar z "_dict"))
+                      else
+                        EVar z id
+      f e           = e
+
+stmt (SInst  z cls tp  imp)  = SSeq z (SInst' z cls tp (protos imp))
+                                      (addDict (TData False ["_"++cls] []) $ renameID imp)
 stmt (SSet   z ini chk loc exp)  = SSet   z ini chk loc (expr exp)
 stmt (SMatch z ini chk exp cses) = SMatch z ini chk (expr exp)
                                (map (\(ds,pt,st) -> (stmt ds, expr pt, stmt st)) cses)

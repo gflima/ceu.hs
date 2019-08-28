@@ -21,7 +21,7 @@ spec = do
 
     describe "constraint:" $ do
 
-      it "XXX: IEq" $
+      it "IEq" $
         (run True $
           unlines [
             "constraint IEq for a with"          ,
@@ -35,7 +35,7 @@ spec = do
       it "IEq + default" $
         (run True $
           unlines [
-            "constraint IEq for a with"          ,
+            "constraint IEq for a with"         ,
             " var eq  : ((a,a) -> Int)"         ,
             " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
             "end"                               ,
@@ -43,7 +43,7 @@ spec = do
           ])
         `shouldBe` Right (EData ["Int","1"] EUnit)
 
-      it "IEq + default + Int" $
+      it "XXX: IEq + default + Int" $
         (run True $
           unlines [
             "constraint IEq for a with"          ,

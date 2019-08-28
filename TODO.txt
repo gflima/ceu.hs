@@ -555,30 +555,34 @@ data _IEq (eq,neq) for a with (
     ((_IEq for a, a,a) -> Int),     // neq
 )
 
-func neq (_dict,x,y) : ((DEq for a,a,a) -> Int) do
+func neq (_dict,x,y) : ((_IEq for a,a,a) -> Int) do
     return 1 - (x _dict.eq y)
 end
 
 // INSTANCE
 
-func _eq_int (_dict,x,y) : ((DEq for Int,Int,Int) -> Int) do
+func _eq_int (_dict,x,y) : ((_IEq for Int,Int,Int) -> Int) do
     if y matches x then return 1 else return 0 end
 end
 
-var deq_int : DEq for Int = (_eq_int,neq)
-
 func eq_int (x,y) : ((Int,Int) -> Int) do
-    return _eq_int(deq_int,x,y)
+    return _eq_int(_IEq_int,x,y)
 end
+
+// DATA
+
+var _IEq_int : _IEq for Int = (_eq_int,neq)
+
+l
 
 // FUNCTION
 
-func f (_dict,x) : ((DEq for a,Int) -> Int) do
+func f (_dict,x) : ((_IEq for a,Int) -> Int) do
     return x _dict.eq x
 end
 
 var f_int x : (Int -> Int) do
-    return f (deq_int,x)
+    return f (_IEq_int,x)
 end
 
 // CALL
