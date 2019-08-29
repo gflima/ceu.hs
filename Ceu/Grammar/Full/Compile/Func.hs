@@ -10,7 +10,20 @@ import qualified Ceu.Grammar.Constraints as Cs
 import Ceu.Grammar.Type
 
 compile :: Stmt -> Stmt
-compile p = map_stmt (stmt,expr,id) p
+compile p = map_stmt (stmt,expr,id) $ map_stmt (remSFunc,id,id) p where
+
+-------------------------------------------------------------------------------
+
+remSFunc :: Stmt -> Stmt
+
+remSFunc (SFunc z k tp@(tp_,ctrs) par imp) = SSeq z (SVar z k tp)
+                                                    (SSet z True False (EVar z k) (EFunc z tp par' imp'))
+  where
+    (par',imp') = if ctrs == Cs.cz then (par,imp) else
+                    (map_exp  (id,id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) par
+                    ,map_stmt (id,id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) imp)
+
+remSFunc p = p
 
 -------------------------------------------------------------------------------
 
@@ -18,25 +31,19 @@ stmt :: Stmt -> Stmt
 
 stmt (SClass z cls ctrs ifc) =
   case Cs.toList ctrs of
-    [(var,_)]  -> SClass z cls ctrs (stmt $ aux ifc) where
+    [(var,_)]  -> SClass z cls ctrs (aux ifc) where
       aux (SSeq  z p1 p2)                 = SSeq  z (aux p1) (aux p2)
       aux (SVar  z id (tp_,ctrs))         = SVar  z id (tp_, Cs.insert (var,cls) ctrs)
       aux (SFunc z id (tp_,ctrs) par imp) = SFunc z id (tp_, Cs.insert (var,cls) ctrs) par imp
       aux p                               = p
     otherwise  -> error "TODO: multiple vars"
 
-stmt (SInst  z cls tp@(_,ctrs) imp)    = SInst  z cls tp (stmt $ aux imp)
+stmt (SInst  z cls tp@(_,ctrs) imp)    = SInst  z cls tp (aux imp)
   where
     aux (SSeq  z p1 p2)                   = SSeq  z (aux p1) (aux p2)
     aux (SVar  z id (tp_',ctrs'))         = SVar  z id (tp_',Cs.union ctrs ctrs')
     aux (SFunc z id (tp_',ctrs') par imp) = SFunc z id (tp_',Cs.union ctrs ctrs') par imp
     aux p                                 = p
-
-stmt (SFunc z k tp@(tp_,ctrs) par imp)    = SSeq z (SVar z k tp) (SSet z True False (EVar z k) (expr $ EFunc z tp par' imp'))
- where
-  (par',imp') = if ctrs == Cs.cz then (par,imp) else
-                  (map_exp  (id,id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) par
-                  ,map_stmt (id,id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) imp)
 
 stmt p = p
 
@@ -44,13 +51,12 @@ stmt p = p
 
 expr :: Exp -> Exp
 
-expr (EFunc  z tpc@(TFunc _ inp _,cs) par imp) = EFunc' z tpc (stmt imp')
+expr (EFunc  z tpc@(TFunc _ inp _,cs) par imp) = EFunc' z tpc imp'
   where
-    par' = expr par
     imp' = tmp $ SSeq z
-            (foldr (SSeq z) (SNop z) (toStmts z par' (inp,cs)))
+            (foldr (SSeq z) (SNop z) (toStmts z par (inp,cs)))
             (SSeq z
-              (SSet z True False par' (EArg z))
+              (SSet z True False par (EArg z))
               imp)
 
     toStmts :: Ann -> Exp -> TypeC -> [Stmt]
