@@ -14,13 +14,9 @@ import qualified Ceu.Grammar.Full.Compile.Match as Match
 
 -------------------------------------------------------------------------------
 
-remSFunc :: Stmt -> Stmt  -- SFunc -> (SSeq,SVar,SSet)
+remSFunc :: Stmt -> Stmt
 
-remSFunc (SFunc z k tp@(tp_,ctrs) par imp) = SSeq z (SVar z k tp)
-                                                    (SSet z True False (EVar z k) (EFunc z tp par' imp'))
---remSFunc (SFunc z k tp@(tp_,ctrs) par imp) = Match.compile $
-                                              --SVar'' z k tp $
-                                               --SSet z True False (EVar z k) (EFunc z tp par' imp')
+remSFunc (SFunc z k tp@(tp_,ctrs) par imp) = SVar z k tp (Just $ EFunc z tp par' imp')
   where
     (par',imp') = if ctrs == Cs.cz then (par,imp) else
                     (map_exp  (id,id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) par
@@ -43,7 +39,7 @@ remEFuncPar (EFunc z tpc@(TFunc _ inp _,cs) par imp) = EFunc' z tpc imp'
         aux :: Ann -> Exp -> Type -> [Stmt->Stmt]
         aux z (EAny   _)     _           = []
         aux z (EUnit  _)     TUnit       = []
-        aux z (EVar   _ var) tp_         = [SVar'' z var (tp_,ctrs)]
+        aux z (EVar   _ var) tp_         = [SVar'' z var (tp_,ctrs) Nothing]
         aux z (ETuple _ [])  (TTuple []) = []
         aux z (ETuple _ [])  _           = error "arity mismatch"
         aux z (ETuple _ _)   (TTuple []) = error "arity mismatch"

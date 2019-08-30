@@ -51,7 +51,7 @@ findVars z id (env:envs) =
     (_,  Left  (False,es)) -> findVars z id envs
   where
     getRef :: Stmt -> Bool
-    getRef (SVar _ _ tpc _) = T.isRefC tpc
+    getRef (SVar _ _ tpc _ _) = T.isRefC tpc
 
 findVars' :: Ann -> ID_Var -> [Stmt] -> Either (Bool,Errors) [Stmt]
 findVars' z id envs =
@@ -59,8 +59,8 @@ findVars' z id envs =
     [] -> Left (False, [toError z $ "variable '" ++ id ++ "' is not declared"])
     xs -> Right xs
   where
-    f (SVar _ id' tpc' _) = id==id'
-    f _                   = False
+    f (SVar _ id' tpc' _ _) = id==id'
+    f _                     = False
 
 -------------------------------------------------------------------------------
 
@@ -102,18 +102,12 @@ inst2table envs (SInst z cls tpc imp _) = Map.union (f2 imp) sups where
 
 -------------------------------------------------------------------------------
 
-wrap :: [(ID_Var,Type)] -> Stmt -> Stmt -> Stmt
-wrap insts (SVar z1 id1 (tp,_) (SSeq z2 (SMatch z3 True False body [(ds,EVar z4 id2,p)]) _)) acc | id1==id2 =
-  SVar z1 id' (tp',cz)
-    (SSeq z2
-      (SMatch z3 True False body' [(ds,EVar z4 id',p)])
-      acc)
+wrap :: [(ID_Var,Type)] -> Stmt -> Stmt
+wrap insts (SVar z id (tp,_) (Just body) acc) = SVar z (idtp id tp') (tp',cz) (Just body') acc
   where
-    id'   = idtp id1 tp'
     tp'   = T.instantiate insts tp
-    body' = map_exp (Prelude.id,Prelude.id,ftp) body
-      where
-        ftp (tp,_) = (T.instantiate insts tp,cz)
+    body' = map_exp (Prelude.id,Prelude.id,ftp) body where
+              ftp (tp,_) = (T.instantiate insts tp,cz)
 
 -- [ [Ia], [Ib], ... ]
 -- [ [A1,A2,...], [B1,B2,...], ... ]
@@ -149,7 +143,7 @@ fPat envs ini (EUnit  z)     = ([], (FuncGlobal,Nothing), (TUnit,cz), EUnit z)
 fPat envs ini (EVar   z id)  =
   case findVars z id envs of
     Left  es -> (es, (FuncGlobal,Nothing), (TAny,cz), EVar z id)
-    Right (((ref,n), SVar _ _ tpc _) : _) ->  -- latest definition
+    Right (((ref,n), SVar _ _ tpc _ _) : _) ->  -- latest definition
       ([], ftReq (length envs) (id,ref,n), tpc', exp')
         where
           (tpc',exp') = toRef tpc (EVar z id)
@@ -197,8 +191,8 @@ errDeclared :: Ann -> Maybe (Stmt->Bool) -> String -> String -> [Stmt] -> Errors
 errDeclared z chk str id envs =
     if (take 1 id == "_") || (take 1 id == "$") then [] else    -- nested _ret, __and (par/and)
         case find (isAny id) envs of
-            Nothing                      -> []
-            Just s@(SVar _ _ (_,ctrs) _) ->
+            Nothing                        -> []
+            Just s@(SVar _ _ (_,ctrs) _ _) ->
               if chk' s then [] else
                 case find (isInst (\id -> Cs.hasClass id ctrs)) envs of
                   Just _                 -> []
@@ -324,24 +318,24 @@ stmt envs tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ft, fts, p'') 
               -- HINST does not have `neq`, so we will copy it from HCLS,
               -- instantiate with the instance type, changing all HCLS
               -- with HINST type.
-              p1 = foldr ($) p (concatMap wrap'' fs) where
-                wrap'' :: Stmt -> [Stmt -> Stmt]
-                wrap'' f@(SVar _ _ (_,ctrs) _) = map wrap' itpss where
+              p1 = foldr append p (concatMap wrap'' fs) where
+                append (SVar a b c d (SNop _)) p = SVar a b c d p
+                wrap'' :: Stmt -> [Stmt]
+                wrap'' f@(SVar _ _ (_,ctrs) _ _) = map wrap' itpss where
                   itpss :: [[Type]] -- only combos with new itp (others are already instantiated)
                   itpss = T.sort' $ combos' 1 (s:(concat envs)) (map Set.toList $ Map.elems $ ctrs)
                                      -- include this instance "s"
                   --itpss = filter (\l -> elem itp l) $ combos' 1 (s:envs) (map Set.toList $ Map.elems ctrs)
-                  wrap' :: [Type] -> (Stmt -> Stmt)
+                  wrap' :: [Type] -> Stmt
                   wrap' itps = wrap (zip (Map.keys ctrs) itps) f
 
   -- TODO: relates deve levar em consideracao os ctrs (e depende da REL)
                 -- functions to instantiate
                 fs :: [Stmt]
                 fs  = filter pred (concat envs) where
-                        pred (SVar _ id1 tpc@(_,ctrs) (SSeq _ (SMatch _ True False body [(_,EVar _ id2,_)]) _)) =
-                          id1==id2 && (not inInsts) && (Cs.hasClass cls ctrs) where
-                            inInsts = not $ null $ Map.filter f hinst where
-                                        f (_,id',tpc',_) = id1==id' && (isRight $ relatesC SUP tpc' tpc)
+                        pred (SVar _ id tpc@(_,ctrs) (Just _) _) = (not inInsts) && (Cs.hasClass cls ctrs) where
+                          inInsts = not $ null $ Map.filter f hinst where
+                                      f (_,id',tpc',_) = id==id' && (isRight $ relatesC SUP tpc' tpc)
                                             -- see GenSpec:CASE-1
                         pred _ = False
 
@@ -351,7 +345,7 @@ stmt envs tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ft, fts, p'') 
                     inst' :: (Ann,ID_Var,TypeC,Bool) -> [Stmt -> Stmt]
                     inst' (_,id,(tp,_),_) = map inst itps where
                       inst :: Type -> (Stmt -> Stmt)
-                      inst itp = SVar z (idtp id tp') (tp',cz) where
+                      inst itp = SVar z (idtp id tp') (tp',cz) Nothing where
                         tp' = T.instantiate [(clss_var,itp)] tp
 
                     -- functions to instantiate
@@ -389,15 +383,17 @@ stmt envs tpr s@(SData z tpD@(TData False hr _) nms st cz abs p) =
                 Nothing  -> []
                 Just sup -> (getErrsTypesDeclared z (concat envs) (TData False sup []))
 
-stmt envs tpr s@(SVar z id tpc@(tp,ctrs) p) = (es_data ++ es_id ++ es, ft, fts, p') where
+stmt envs tpr s@(SVar z id tpc@(tp,ctrs) ini p) = (es_data ++ es_id ++ es, ft, fts, p') where
   es_data = getErrsTypesDeclared z (concat envs) tp
   es_id   = errDeclared z (Just chk) "variable" id (concat envs) where
               chk :: Stmt -> Bool
-              chk (SVar _ id1 tpc'@(TFunc _ _ _,_) (SMatch _ True False _ [(_,EVar _ id2,_)])) = (id1 /= id2)
-              chk (SVar _ id1 tpc'@(TFunc _ _ _,_) _) = (tpc == tpc') -- function prototype
+              chk (SVar _ _      (TFunc _ _ _,_) (Just _) _) = False
+              chk (SVar _ _ tpc'@(TFunc _ _ _,_) Nothing  _) = (tpc == tpc') -- function prototype
               chk _ = False
 
   f p = stmt (envsAdd envs s) tpr p
+
+  ini' = ini  -- TODO
 
   -- In case of a parametric/generic var with a constraint, instantiate it for
   -- each instance of the constraint:
@@ -409,16 +405,16 @@ stmt envs tpr s@(SVar z id tpc@(tp,ctrs) p) = (es_data ++ es_id ++ es, ft, fts, 
   (es,ft,fts,p') =
     if ctrs == cz then              -- normal concrete declarations
       let (es,ft,fts,x') = f p in
-        (es,ft,fts, SVar z id tpc x')
+        (es,ft,fts, SVar z id tpc ini' x')
     else                            -- parametric declarations
-      case p of
-        SSeq _ (SMatch z2 True False body [(_,EVar _ id',_)]) s
-          | id==id' -> f $ foldr ($) s funcs -- instantiate for all available implementations
-        _           -> f $ p                 -- just ignore parametric declarations
+      case ini of
+        Nothing -> f $ p                 -- just ignore parametric declarations
+        Just _  -> f $ foldr append s funcs -- instantiate for all available implementations
         where
-          funcs :: [Stmt->Stmt]
+          append (SVar a b c d (SNop _)) p = SVar a b c d p
+          funcs :: [Stmt]
           funcs = map wrap' itpss where
-                    wrap' :: [Type] -> (Stmt -> Stmt)
+                    wrap' :: [Type] -> Stmt
                     wrap' itps = wrap (zip (Map.keys ctrs) itps) s
 
                     itpss :: [[Type]]
@@ -438,8 +434,8 @@ stmt envs tpr (SMatch z ini fce exp cses) = (es', ftMin ft1 ft2, fts1++fts2, SMa
                       (es,ft,fts,ds') = stmt envs tpr ds
                       envs' = (g ds' x):xs where
                                 (x:xs) = envs
-                                g   (SNop _)       env = env
-                                g s@(SVar _ _ _ p) env = s : (g p env)
+                                g   (SNop _)         env = env
+                                g s@(SVar _ _ _ _ p) env = s : (g p env)
 
       es :: Errors
       es = concat $ (map fst4 l0) ++ (map fst4 l1) ++ (map fst4 l2)
@@ -561,11 +557,11 @@ expr' _ envs (EFunc z tpc@(TFunc ft inp out,cs) upv@(EUnit _) p) = (es++esf, ft_
                         attr ids  = SMatch z True False (EUpv z) [(SNop z,ETuple z $ map (EVar z) ids,SNop z)]
 
                         dcls :: [ID_Var] -> Stmt -> Stmt
-                        dcls ids acc = foldr (\id -> (SVar z id (getTP id))) acc ids
+                        dcls ids acc = foldr (\id -> (SVar z id (getTP id) Nothing)) acc ids
 
                         getTP :: ID_Var -> TypeC
                         getTP id = case findVars z id envs of
-                                            Right [(_, SVar _ _ tpc _)] -> tpc
+                                            Right [(_, SVar _ _ tpc _ _)] -> tpc
       otherwise -> p'
 
     closes = case ft'' of
@@ -653,7 +649,7 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n
               (id, tpc, lnr, [])
             else
               case find pred (concat envs) of            -- find instance
-                Just (SVar _ _ tpc@(tp,ctrs) _) ->
+                Just (SVar _ _ tpc@(tp,ctrs) _ _) ->
                   if null ctrs then
                     (idtp id tp, tpc, lnr, [])
                   else
@@ -664,14 +660,14 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n
                 Nothing -> (id, (TAny,cz), lnr, err)
               where
                 pred :: Stmt -> Bool
-                pred (SVar _ k tpc@(tp,_) _) = (idtp id tp == k) && (isRight $ relatesC SUP txpc tpc)
-                pred _                       = False
+                pred (SVar _ k tpc@(tp,_) _ _) = (idtp id tp == k) && (isRight $ relatesC SUP txpc tpc)
+                pred _                         = False
 
                 err = [toError z $ "variable '" ++ id ++
                        "' has no associated instance for '" ++
                        T.show' txp ++ "'"]
           where
-            xs' = map (\(lnr, SVar _ _ tpc _) -> (lnr, tpc)) xs
+            xs' = map (\(lnr, SVar _ _ tpc _ _) -> (lnr, tpc)) xs
             f (_, tpc) = isRight $ relatesC rel txpc (toDer tpc) where
                           -- accept ref variables in non-ref context
                           toDer tpc = if not (T.isRefableRefC tpc) then tpc else

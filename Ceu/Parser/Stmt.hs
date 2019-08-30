@@ -78,13 +78,13 @@ pPat v = lany  <|> lvar <|> try lunit  <|> lnumber <|>
 
 matchLocType2 :: Source -> Exp -> TypeC -> Maybe Stmt
 matchLocType2 src loc (tp_,ctrs) = if length vars /= length tps_ then Nothing else
-                                    Just $ foldr (SSeq annz) (SNop annz) dcls
+                                    Just $ foldr1 (SSeq annz) dcls
   where
     tps_ = tp2list (length vars) tp_
     vars = getVars loc
 
     dcls = map f $ map (\(Just v,t) -> (v,t)) $ filter (\(v,_) -> isJust v) $ zip vars tps_ where
-            f (var,tp_) = SVar annz{source=src} var (tp_,ctrs)
+            f (var,tp_) = SVar annz{source=src} var (tp_,ctrs) Nothing
 
     getVars :: Exp -> [Maybe ID_Var]
     getVars (EAny   _)               = []
@@ -191,6 +191,14 @@ stmt_var = do
   s    <- option (SNop $ annz{source=pos}) $
                  try $ pMatch pos (var=="var!") pat
   return $ SSeq annz{source=pos} (fromJust $ matchLocType2 pos pat tp) s
+
+{-
+  s    <- optionMaybe $ try $ pMatch pos (var=="var!") pat
+  return $ case (s, fromJust $ matchLocType2 pos pat tp) of
+            (Nothing, p)                    -> p
+            (Just s', p@(SSeq _ _ _))       -> SSeq annz{source=pos} p s'  -- multiple dcls (no ini possible)
+            (Just s', SVar z id tp Nothing) -> SVar z id tp (Just s')      -- single dcl with ini
+-}
 
 stmt_set :: Parser Stmt
 stmt_set = do
@@ -448,7 +456,7 @@ stmt_funcs = do
               Nothing -> do
                 void <- tk_sym ":"
                 tp   <- pTypeContext
-                return $ SVar ann f tp
+                return $ SVar ann f tp Nothing
               Just (tp,par,imp) -> do
                 return $ SFunc ann f {-(bool Nothing (Just "?") (isJust new))-} tp par imp
   return ret

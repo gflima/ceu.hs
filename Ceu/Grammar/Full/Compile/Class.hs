@@ -16,16 +16,16 @@ insConstraints :: Stmt -> Stmt  -- () -> (SSeq,SVar,SFunc)
 insConstraints (SClass z cls cs ifc) =
   case Cs.toList cs of
     [(var,_)]  -> SClass z cls cs (aux ifc) where
-      aux (SSeq  z p1 p2)       = SSeq  z (aux p1) (aux p2)
-      aux (SVar  z id (tp_,cs)) = SVar  z id (tp_, Cs.insert (var,cls) cs)
+      aux (SSeq  z p1 p2)           = SSeq  z (aux p1) (aux p2)
+      aux (SVar  z id (tp_,cs) ini) = SVar  z id (tp_, Cs.insert (var,cls) cs) ini
       --aux (SFunc z id (tp_,cs) par imp) = SFunc z id (tp_, Cs.insert (var,cls) cs) par imp
       aux p                     = p
     otherwise  -> error "TODO: multiple vars"
 
 insConstraints (SInst  z cls tp@(_,cs) imp) = SInst  z cls tp (aux imp)
   where
-    aux (SSeq  z p1 p2)         = SSeq  z (aux p1) (aux p2)
-    aux (SVar  z id (tp_',cs')) = SVar  z id (tp_',Cs.union cs cs')
+    aux (SSeq  z p1 p2)             = SSeq  z (aux p1) (aux p2)
+    aux (SVar  z id (tp_',cs') ini) = SVar  z id (tp_',Cs.union cs cs') ini
     --aux (SFunc z id (tp_',cs') par imp) = SFunc z id (tp_',Cs.union cs cs') par imp
     aux p                       = p
 
@@ -72,21 +72,16 @@ adjSClassSInst p = p
 --    [(.,eq,tp1,.),(.,neq,tp2,.)]
 
 protos :: Stmt -> [(Ann, ID_Var, TypeC, Bool)]
-protos (SSeq  _ (SVar z id tp) (SSet _ _ False (EVar _ id') _)) | id==id' = [(z,id,tp,True)]
-protos (SSeq  _ p1 p2) = (protos p1) ++ (protos p2)
-protos (SVar z id tp)  = [(z,id,tp,False)]
-protos p              = []
+protos (SSeq _ p1 p2)   = (protos p1) ++ (protos p2)
+protos (SVar z id tp _) = [(z,id,tp,False)]
+protos p                = []
 
 -------------------------------------------------------------------------------
 
 renameID :: Stmt -> Stmt
-renameID (SSeq z (SVar z1 id tp)
-                 (SSet z2 True False (EVar z3 id') exp))
-          | id==id'     = SSeq z (SVar z1 (idtp id tp) tp)
-                                 (SSet z2 True False (EVar z3 $ idtp id' tp) exp)
-renameID (SSeq z p1 p2) = SSeq z (renameID p1) (renameID p2)
-renameID (SVar z id tp) = SVar z (idtp id tp) tp
-renameID p              = p
+renameID (SSeq z p1 p2)     = SSeq z (renameID p1) (renameID p2)
+renameID (SVar z id tp ini) = SVar z (idtp id tp) tp ini
+renameID p                  = p
 
 idtp id (tp_,ctrs) = if null ctrs then "$" ++ id ++ "$" ++ show' tp_ ++ "$" else id
 

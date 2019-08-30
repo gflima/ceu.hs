@@ -62,7 +62,7 @@ data Stmt
   | SInst     Ann ID_Class TypeC Stmt              -- new class instance
   | SInst'    Ann ID_Class TypeC [(Ann,ID_Var,TypeC,Bool)] -- new class instance
   | SData     Ann Type (Maybe [ID_Var]) Type Cs.Map Bool      -- new type declaration
-  | SVar      Ann ID_Var TypeC                     -- variable declaration
+  | SVar      Ann ID_Var TypeC (Maybe Exp)         -- (z id tp ini)   -- variable declaration
   | SFunc     Ann ID_Var TypeC Exp Stmt            -- function declaration
   | SMatch    Ann Bool Bool Exp [(Stmt,Exp,Stmt)]  -- match
   | SSet      Ann Bool Bool Exp Exp                -- assignment statement
@@ -77,7 +77,7 @@ data Stmt
   | SClass''  Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt
   | SInst''   Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt
   | SData''   Ann Type (Maybe [ID_Var]) Type Cs.Map Bool Stmt
-  | SVar''    Ann ID_Var TypeC Stmt
+  | SVar''    Ann ID_Var TypeC (Maybe Exp) Stmt
   deriving (Eq, Show)
 
 sSeq a b = SSeq annz a b
@@ -88,7 +88,7 @@ instance HasAnn Stmt where
     getAnn (SClass    z _ _ _)     = z
     getAnn (SInst     z _ _ _)     = z
     getAnn (SData     z _ _ _ _ _) = z
-    getAnn (SVar      z _ _)       = z
+    getAnn (SVar      z _ _ _)     = z
     getAnn (SFunc     z _ _ _ _)   = z
     getAnn (SSeq      z _ _  )     = z
     getAnn (SLoop     z _)         = z
@@ -96,13 +96,13 @@ instance HasAnn Stmt where
     getAnn (SNop      z)           = z
     getAnn (SRet      z _)         = z
     getAnn (SData''   z _ _ _ _ _ _) = z
-    getAnn (SVar''    z _ _ _)     = z
+    getAnn (SVar''    z _ _ _ _)   = z
 
 toBasicStmt :: Stmt -> B.Stmt
 toBasicStmt (SClass'' z id  cs ifc p) = B.SClass z id  cs ifc (toBasicStmt p)
 toBasicStmt (SInst''  z cls tp imp p) = B.SInst  z cls tp imp (toBasicStmt p)
 toBasicStmt (SData''  z tp nms st cs abs p) = B.SData z tp nms st cs abs (toBasicStmt p)
-toBasicStmt (SVar''   z var tp p)     = B.SVar   z var tp (toBasicStmt p)
+toBasicStmt (SVar''   z var tp ini p) = B.SVar   z var tp (fmap toBasicExp ini) (toBasicStmt p)
 toBasicStmt (SMatch   z ini chk exp cses) = B.SMatch z ini chk (toBasicExp exp)
                                               (map (\(ds,pt,st) -> (toBasicStmt ds, toBasicExp pt, toBasicStmt st)) cses)
 toBasicStmt (SCall   z e)             = B.SCall z (toBasicExp e)
@@ -123,8 +123,8 @@ map_stmt f@(fs,_,ft) (SInst' z cls tp ifc)          = fs (SInst'   z cls (ft tp)
 map_stmt f@(fs,_,ft) (SInst'' z cls tp ifc p)       = fs (SInst''  z cls (ft tp) ifc (map_stmt f p))
 map_stmt f@(fs,_,ft) (SData  z tp nms st cs abs)    = fs (SData    z tp nms st cs abs)
 map_stmt f@(fs,_,ft) (SData'' z tp nms st cs abs p) = fs (SData''  z tp nms st cs abs (map_stmt f p))
-map_stmt f@(fs,_,ft) (SVar   z id tp)               = fs (SVar     z id (ft tp))
-map_stmt f@(fs,_,ft) (SVar'' z id tp p)             = fs (SVar''   z id (ft tp) (map_stmt f p))
+map_stmt f@(fs,_,ft) (SVar   z id tp ini)           = fs (SVar     z id (ft tp) (fmap (map_exp f) ini))
+map_stmt f@(fs,_,ft) (SVar'' z id tp ini p)         = fs (SVar''   z id (ft tp) (fmap (map_exp f) ini) (map_stmt f p))
 map_stmt f@(fs,_,ft) (SFunc  z id tp ps bd)         = fs (SFunc    z id (ft tp) (map_exp f ps) (map_stmt f bd))
 map_stmt f@(fs,_,_)  (SMatch z ini chk exp cses)    = fs (SMatch   z ini chk (map_exp f exp)
                                                         (map (\(ds,pt,st) -> (map_stmt f ds, map_exp f pt, map_stmt f st)) cses))
