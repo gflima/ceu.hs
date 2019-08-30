@@ -11,25 +11,25 @@ import Ceu.Grammar.Full.Full
 
 -------------------------------------------------------------------------------
 
-insSVarCtrs :: Stmt -> Stmt  -- () -> (SSeq,SVar,SFunc)
+insConstraints :: Stmt -> Stmt  -- () -> (SSeq,SVar,SFunc)
 
-insSVarCtrs (SClass z cls cs ifc) =
+insConstraints (SClass z cls cs ifc) =
   case Cs.toList cs of
     [(var,_)]  -> SClass z cls cs (aux ifc) where
-      aux (SSeq  z p1 p2)               = SSeq  z (aux p1) (aux p2)
-      aux (SVar  z id (tp_,cs))         = SVar  z id (tp_, Cs.insert (var,cls) cs)
+      aux (SSeq  z p1 p2)       = SSeq  z (aux p1) (aux p2)
+      aux (SVar  z id (tp_,cs)) = SVar  z id (tp_, Cs.insert (var,cls) cs)
       --aux (SFunc z id (tp_,cs) par imp) = SFunc z id (tp_, Cs.insert (var,cls) cs) par imp
-      aux p                             = p
+      aux p                     = p
     otherwise  -> error "TODO: multiple vars"
 
-insSVarCtrs (SInst  z cls tp@(_,cs) imp)    = SInst  z cls tp (aux imp)
+insConstraints (SInst  z cls tp@(_,cs) imp) = SInst  z cls tp (aux imp)
   where
-    aux (SSeq  z p1 p2)                 = SSeq  z (aux p1) (aux p2)
-    aux (SVar  z id (tp_',cs'))         = SVar  z id (tp_',Cs.union cs cs')
+    aux (SSeq  z p1 p2)         = SSeq  z (aux p1) (aux p2)
+    aux (SVar  z id (tp_',cs')) = SVar  z id (tp_',Cs.union cs cs')
     --aux (SFunc z id (tp_',cs') par imp) = SFunc z id (tp_',Cs.union cs cs') par imp
-    aux p                               = p
+    aux p                       = p
 
-insSVarCtrs p = p
+insConstraints p = p
 
 -------------------------------------------------------------------------------
 
@@ -94,6 +94,7 @@ idtp id (tp_,ctrs) = if null ctrs then "$" ++ id ++ "$" ++ show' tp_ ++ "$" else
 
 addDict :: Type -> Stmt -> Stmt
 addDict _    p              = p
+{-
 addDict dict (SSeq z (SVar z1 id1 tpc1)
                      (SSet z2 True False (EVar z3 id3) (EFunc z4 tp4 par4 p4)))
              | id1==id3     = SSeq z (traceShowId $ SVar z1 id1 (aux1 dict tpc1))
@@ -102,6 +103,7 @@ addDict dict (SSeq z (SVar z1 id1 tpc1)
 addDict dict (SSeq z p1 p2) = SSeq z (addDict dict p1) (addDict dict p2)
 addDict dict (SVar z id tp) = traceShowId $ SVar z id (aux1 dict tp)
 addDict _    p              = p
+-}
 
 aux1 :: Type -> TypeC -> TypeC
 aux1 dict (TFunc ft inp out, cs) = (TFunc ft (f dict inp) out, cs) where

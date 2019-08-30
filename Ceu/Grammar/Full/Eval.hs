@@ -53,7 +53,7 @@ compile p =
   map_stmt (Scope.setScope,id,id)       $
   map_stmt (Seq.adjSSeq,id,id)          $
   map_stmt (Class.adjSClassSInst,id,id) $
-  map_stmt (Class.insSVarCtrs,id,id)    $
+  map_stmt (Class.insConstraints,id,id) $
   map_stmt (Func.remSFunc,id,id)        $
   p where
 
