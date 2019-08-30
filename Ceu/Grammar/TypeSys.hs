@@ -102,6 +102,7 @@ inst2table envs (SInst z cls tpc imp _) = Map.union (f2 imp) sups where
 
 -------------------------------------------------------------------------------
 
+wrap :: [(ID_Var,Type)] -> Stmt -> Stmt -> Stmt
 wrap insts (SVar z1 id1 (tp,_) (SSeq z2 (SMatch z3 True False body [(ds,EVar z4 id2,p)]) _)) acc | id1==id2 =
   SVar z1 id' (tp',cz)
     (SSeq z2
@@ -323,15 +324,15 @@ stmt envs tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ft, fts, p'') 
               -- HINST does not have `neq`, so we will copy it from HCLS,
               -- instantiate with the instance type, changing all HCLS
               -- with HINST type.
-              p1 = foldr cat p fs where
-                cat :: Stmt -> Stmt -> Stmt
-                cat f@(SVar _ id (_,ctrs) _) acc = foldr cat' acc itpss where
+              p1 = foldr ($) p (concatMap wrap'' fs) where
+                wrap'' :: Stmt -> [Stmt -> Stmt]
+                wrap'' f@(SVar _ _ (_,ctrs) _) = map wrap' itpss where
                   itpss :: [[Type]] -- only combos with new itp (others are already instantiated)
                   itpss = T.sort' $ combos' 1 (s:(concat envs)) (map Set.toList $ Map.elems $ ctrs)
                                      -- include this instance "s"
                   --itpss = filter (\l -> elem itp l) $ combos' 1 (s:envs) (map Set.toList $ Map.elems ctrs)
-                  cat' :: [Type] -> Stmt -> Stmt
-                  cat' itps acc = wrap (zip (Map.keys ctrs) itps) f acc
+                  wrap' :: [Type] -> (Stmt -> Stmt)
+                  wrap' itps = wrap (zip (Map.keys ctrs) itps) f
 
   -- TODO: relates deve levar em consideracao os ctrs (e depende da REL)
                 -- functions to instantiate
@@ -346,9 +347,11 @@ stmt envs tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ft, fts, p'') 
 
               -- Prototype all HCLS as HINST signatures (not declared yet) before
               -- the implementations appear to prevent "undeclared" errors.
-              p2 = foldr cat p1 fs where
-                    cat (_,id,(tp,_),_) acc = foldr cat' acc itps where
-                      cat' itp acc = SVar z (idtp id tp') (tp',cz) acc where
+              p2 = foldr ($) p1 (concatMap inst' fs) where
+                    inst' :: (Ann,ID_Var,TypeC,Bool) -> [Stmt -> Stmt]
+                    inst' (_,id,(tp,_),_) = map inst itps where
+                      inst :: Type -> (Stmt -> Stmt)
+                      inst itp = SVar z (idtp id tp') (tp',cz) where
                         tp' = T.instantiate [(clss_var,itp)] tp
 
                     -- functions to instantiate
@@ -386,14 +389,15 @@ stmt envs tpr s@(SData z tpD@(TData False hr _) nms st cz abs p) =
                 Nothing  -> []
                 Just sup -> (getErrsTypesDeclared z (concat envs) (TData False sup []))
 
-stmt envs tpr s@(SVar z id tpc@(tp,ctrs) p) = (es_data ++ es_id ++ es, ft, fts, f p'') where
+stmt envs tpr s@(SVar z id tpc@(tp,ctrs) p) = (es_data ++ es_id ++ es, ft, fts, p') where
   es_data = getErrsTypesDeclared z (concat envs) tp
   es_id   = errDeclared z (Just chk) "variable" id (concat envs) where
               chk :: Stmt -> Bool
               chk (SVar _ id1 tpc'@(TFunc _ _ _,_) (SMatch _ True False _ [(_,EVar _ id2,_)])) = (id1 /= id2)
               chk (SVar _ id1 tpc'@(TFunc _ _ _,_) _) = (tpc == tpc') -- function prototype
               chk _ = False
-  (es,ft,fts,p'') = stmt (envsAdd envs s) tpr p'
+
+  f p = stmt (envsAdd envs s) tpr p
 
   -- In case of a parametric/generic var with a constraint, instantiate it for
   -- each instance of the constraint:
@@ -402,16 +406,24 @@ stmt envs tpr s@(SVar z id tpc@(tp,ctrs) p) = (es_data ++ es_id ++ es, ft, fts, 
   --    $f$X$
   --    $f$Y$
   --    ...
-  (f,p') = if ctrs == cz then (SVar z id tpc, p) else -- normal concrete declarations
-    case p of
-      SSeq _ (SMatch z2 True False body [(_,EVar _ id',_)]) s
-        | id==id' -> (Prelude.id, funcs s)    -- instantiate for all available implementations
-      _   -> (Prelude.id, p)                  -- just ignore parametric declarations
-      where
-        funcs :: Stmt -> Stmt
-        funcs p = foldr cat p (T.sort' $ combos' 1 (concat envs) (map Set.toList $ Map.elems ctrs)) where
-                    cat :: [Type] -> Stmt -> Stmt
-                    cat itps acc = wrap (zip (Map.keys ctrs) itps) s acc
+  (es,ft,fts,p') =
+    if ctrs == cz then              -- normal concrete declarations
+      let (es,ft,fts,x') = f p in
+        (es,ft,fts, SVar z id tpc x')
+    else                            -- parametric declarations
+      case p of
+        SSeq _ (SMatch z2 True False body [(_,EVar _ id',_)]) s
+          | id==id' -> f $ foldr ($) s funcs -- instantiate for all available implementations
+        _           -> f $ p                 -- just ignore parametric declarations
+        where
+          funcs :: [Stmt->Stmt]
+          funcs = map wrap' itpss where
+                    wrap' :: [Type] -> (Stmt -> Stmt)
+                    wrap' itps = wrap (zip (Map.keys ctrs) itps) s
+
+                    itpss :: [[Type]]
+                    itpss = T.sort' $ combos' 1 (concat envs) (map Set.toList $ Map.elems ctrs)
+
 
 -------------------------------------------------------------------------------
 
