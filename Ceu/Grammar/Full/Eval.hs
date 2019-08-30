@@ -44,7 +44,18 @@ prelude z p =
            p))))))))))))))))
 
 compile :: Stmt -> Stmt
-compile p = Data.compile $ Scope.compile $ Seq.compile $ Match.compile $ Class.compile $ Func.compile p
+compile p =
+  map_stmt (Scope.remSScope,id,id)      $
+  map_stmt (Match.remSSetSIf,id,id)     $
+  map_stmt (id,Func.remEFuncPar,id)     $
+  map_stmt (Data.addAccs,id,id)         $
+  Data.expHier []                       $
+  map_stmt (Scope.setScope,id,id)       $
+  map_stmt (Seq.adjSSeq,id,id)          $
+  map_stmt (Class.adjSClassSInst,id,id) $
+  map_stmt (Class.insSVarCtrs,id,id)    $
+  map_stmt (Func.remSFunc,id,id)        $
+  p where
 
 compile' :: Stmt -> (Errors, B.Stmt)
 compile' p = (es4, p4)

@@ -128,8 +128,6 @@ map_stmt f@(fs,_,ft) (SVar'' z id tp p)             = fs (SVar''   z id (ft tp) 
 map_stmt f@(fs,_,ft) (SFunc  z id tp ps bd)         = fs (SFunc    z id (ft tp) (map_exp f ps) (map_stmt f bd))
 map_stmt f@(fs,_,_)  (SMatch z ini chk exp cses)    = fs (SMatch   z ini chk (map_exp f exp)
                                                         (map (\(ds,pt,st) -> (map_stmt f ds, map_exp f pt, map_stmt f st)) cses))
-map_stmt f@(fs,_,_)  (SMatch  z ini chk exp cses) = fs (SMatch  z ini chk (map_exp f exp)
-                                                    (map (\(ds,pt,st) -> (map_stmt f ds, map_exp f pt, map_stmt f st)) cses))
 map_stmt f@(fs,_,_)  (SSet   z ini b loc exp) = fs (SSet   z ini b loc (map_exp f exp))
 map_stmt f@(fs,_,_)  (SCall  z exp)           = fs (SCall  z (map_exp f exp))
 map_stmt f@(fs,_,_)  (SIf    z exp p1 p2)     = fs (SIf    z (map_exp f exp) (map_stmt f p1) (map_stmt f p2))
@@ -138,7 +136,6 @@ map_stmt f@(fs,_,_)  (SLoop  z p)             = fs (SLoop  z (map_stmt f p))
 map_stmt f@(fs,_,_)  (SScope z p)             = fs (SScope z (map_stmt f p))
 map_stmt f@(fs,_,_)  (SRet   z exp)           = fs (SRet   z (map_exp f exp))
 map_stmt f@(fs,_,_)  (SNop   z)               = fs (SNop   z)
-map_stmt _ p = error $ show p
 
 map_exp :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Exp -> Exp
 map_exp f@(_,fe,_)  (ECons  z id)       = fe (ECons  z id)

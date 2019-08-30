@@ -41,7 +41,8 @@ spec = do
   describe "EFunc.compile" $ do
 
     it "func id : (a->a) do end" $ do
-      Func.compile (SFunc annz "id" (TFunc FuncGlobal (TVar False "a") (TVar False "a"),cz) (EAny annz) (SNop annz))
+      (map_stmt (id,Func.remEFuncPar,id) . map_stmt (Func.remSFunc,id,id))
+       (SFunc annz "id" (TFunc FuncGlobal (TVar False "a") (TVar False "a"),cz) (EAny annz) (SNop annz))
       `shouldBe` (SSeq annz
                   (SVar annz "id" (TFunc FuncGlobal (TVar False "a") (TVar False "a"),cz))
                   (SSet annz True False (EVar annz "id")
@@ -51,19 +52,19 @@ spec = do
 
     describe "var:" $ do
       it "var x" $ do
-        Scope.compile (SVar annz "x" (TUnit,cz))
+        (map_stmt (Scope.setScope,id,id)) (SVar annz "x" (TUnit,cz))
         `shouldBe` (SVar'' annz "x" (TUnit,cz) (SNop annz))
 
       it "var x; (SNop annz)" $ do
-        Scope.compile (SSeq annz (SVar annz "x" (TUnit,cz)) (SNop annz))
+        (map_stmt (Scope.setScope,id,id)) (SSeq annz (SVar annz "x" (TUnit,cz)) (SNop annz))
         `shouldBe` (SVar'' annz "x" (TUnit,cz) (SNop annz))
 
       it "var x <- 1 ; (SNop annz)" $ do
-        Scope.compile (SSeq annz (SVar annz "x" (int,cz)) (SSeq annz (SSet annz True False (EVar annz "x") (ECons annz ["Int","1"])) (SNop annz)))
+        (map_stmt (Scope.setScope,id,id)) (SSeq annz (SVar annz "x" (int,cz)) (SSeq annz (SSet annz True False (EVar annz "x") (ECons annz ["Int","1"])) (SNop annz)))
         `shouldBe` (SVar'' annz "x" (int,cz) (SSeq annz (SSet annz True False (EVar annz "x") (ECons annz ["Int","1"])) (SNop annz)))
 
       it "scope var x end ; var y" $ do
-        Scope.compile (SSeq annz (SScope annz (SVar annz "x" (TUnit,cz))) (SVar annz "y" (TUnit,cz)))
+        (map_stmt (Scope.remSScope,id,id) . map_stmt (Scope.setScope,id,id)) (SSeq annz (SScope annz (SVar annz "x" (TUnit,cz))) (SVar annz "y" (TUnit,cz)))
         `shouldBe` SSeq annz (SVar'' annz "x" (TUnit,cz) (SNop annz)) (SVar'' annz "y" (TUnit,cz) (SNop annz))
 
       it "scope var x end ; x=1" $ do
@@ -200,7 +201,7 @@ spec = do
                         (SNop annz))
                         (SSet annz True False (EVar annz "y") (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]])))))))
       `shouldBe`
-        SData'' annz (TData False ["Int"] []) Nothing TUnit (fromList []) False (SData'' annz (TData False ["Xxx"] []) Nothing (TData False ["Int"] []) (fromList []) True (SVar'' annz "Xxx._1" (TFunc FuncGlobal (TData False ["Xxx"] []) (TData False ["Int"] []),fromList []) (SMatch  annz True False (EFunc' annz (TFunc FuncGlobal (TData False ["Xxx"] []) (TData False ["Int"] []),fromList []) (SVar'' annz "ret" (TData False ["Int"] [],fromList []) (SMatch  annz True False (EArg annz) [(SNop annz,ECall annz (ECons annz ["Xxx"]) (EVar annz "ret"),SRet annz (EVar annz "ret"))]))) [(SNop annz,EVar annz "Xxx._1",SData'' annz (TData False ["Xxx","Yyy"] []) Nothing (TTuple [TData False ["Int"] [],TData False ["Int"] []]) (fromList []) False (SVar'' annz "Xxx.Yyy._2" (TFunc FuncGlobal (TData False ["Xxx","Yyy"] []) (TData False ["Int"] []),fromList []) (SMatch  annz True False (EFunc' annz (TFunc FuncGlobal (TData False ["Xxx","Yyy"] []) (TData False ["Int"] []),fromList []) (SVar'' annz "ret" (TData False ["Int"] [],fromList []) (SMatch  annz True False (EArg annz) [(SNop annz,ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [EAny annz,EVar annz "ret"]),SRet annz (EVar annz "ret"))]))) [(SNop annz,EVar annz "Xxx.Yyy._2",SVar'' annz "Xxx.Yyy._1" (TFunc FuncGlobal (TData False ["Xxx","Yyy"] []) (TData False ["Int"] []),fromList []) (SMatch  annz True False (EFunc' annz (TFunc FuncGlobal (TData False ["Xxx","Yyy"] []) (TData False ["Int"] []),fromList []) (SVar'' annz "ret" (TData False ["Int"] [],fromList []) (SMatch  annz True False (EArg annz) [(SNop annz,ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [EVar annz "ret",EAny annz]),SRet annz (EVar annz "ret"))]))) [(SNop annz,EVar annz "Xxx.Yyy._1",SVar'' annz "y" (TData False ["Xxx","Yyy"] [],fromList []) (SSeq annz (SNop annz) (SMatch  annz True False (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]])) [(SNop annz,EVar annz "y",SNop annz)])))]))])))])))
+        SData'' annz (TData False ["Int"] []) Nothing TUnit (fromList []) False (SData'' annz (TData False ["Xxx"] []) Nothing (TData False ["Int"] []) (fromList []) True (SVar'' annz "Xxx._1" (TFunc FuncGlobal (TData False ["Xxx"] []) (TData False ["Int"] []),fromList []) (SMatch  annz True False (EFunc' annz (TFunc FuncGlobal (TData False ["Xxx"] []) (TData False ["Int"] []),fromList []) (SVar'' annz "_ret" (TData False ["Int"] [],fromList []) (SMatch  annz True False (EArg annz) [(SNop annz,ECall annz (ECons annz ["Xxx"]) (EVar annz "_ret"),SRet annz (EVar annz "_ret"))]))) [(SNop annz,EVar annz "Xxx._1",SData'' annz (TData False ["Xxx","Yyy"] []) Nothing (TTuple [TData False ["Int"] [],TData False ["Int"] []]) (fromList []) False (SVar'' annz "Xxx.Yyy._2" (TFunc FuncGlobal (TData False ["Xxx","Yyy"] []) (TData False ["Int"] []),fromList []) (SMatch  annz True False (EFunc' annz (TFunc FuncGlobal (TData False ["Xxx","Yyy"] []) (TData False ["Int"] []),fromList []) (SVar'' annz "_ret" (TData False ["Int"] [],fromList []) (SMatch  annz True False (EArg annz) [(SNop annz,ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [EAny annz,EVar annz "_ret"]),SRet annz (EVar annz "_ret"))]))) [(SNop annz,EVar annz "Xxx.Yyy._2",SVar'' annz "Xxx.Yyy._1" (TFunc FuncGlobal (TData False ["Xxx","Yyy"] []) (TData False ["Int"] []),fromList []) (SMatch  annz True False (EFunc' annz (TFunc FuncGlobal (TData False ["Xxx","Yyy"] []) (TData False ["Int"] []),fromList []) (SVar'' annz "_ret" (TData False ["Int"] [],fromList []) (SMatch  annz True False (EArg annz) [(SNop annz,ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [EVar annz "_ret",EAny annz]),SRet annz (EVar annz "_ret"))]))) [(SNop annz,EVar annz "Xxx.Yyy._1",SVar'' annz "y" (TData False ["Xxx","Yyy"] [],fromList []) (SSeq annz (SNop annz) (SMatch  annz True False (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]])) [(SNop annz,EVar annz "y",SNop annz)])))]))])))])))
 
   --------------------------------------------------------------------------
 

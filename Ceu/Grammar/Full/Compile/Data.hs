@@ -11,9 +11,6 @@ import Ceu.Grammar.Type               (Type(..),TypeC,instantiate,getSuper,hier2
 import Ceu.Grammar.Constraints as Cs
 import Ceu.Grammar.Full.Full
 
-compile :: Stmt -> Stmt
-compile p = stmt [] p
-
 -- Instantiates variable declarations of TData with their complete types:
 --
 -- data Pair with (Int,Int)
@@ -28,28 +25,28 @@ compile p = stmt [] p
 
 -------------------------------------------------------------------------------
 
-stmt :: [Stmt] -> Stmt -> Stmt
-stmt ds (SClass'' z id  cs ifc p) = SClass'' z id  cs ifc (stmt ds p)
-stmt ds (SInst''  z cls tp imp p) = SInst''  z cls tp imp (stmt ds p)
-stmt ds (SData''  z tp nms st cs abs p) = SData'' z tp' nms' st' cs' abs (stmt (d':ds) (faccs z nms' (tp',st',cs') p))
-                                          where
-                                            (tp',nms',st',cs') = fdata ds (tp,nms,st,cs)
-                                            d' = SData'' z tp' nms' st' cs' abs p
-stmt ds (SVar''   z var tp p)     = SVar''   z var tp (stmt ds p)
-stmt ds (SMatch   z ini chk exp cses) = SMatch  z ini chk (expr ds exp)
-                                          (map (\(xs,pt,st) -> (stmt ds xs, expr ds pt, stmt ds st)) cses)
-stmt ds (SCall    z exp)          = SCall    z (expr ds exp)
-stmt ds (SSeq     z p1 p2)        = SSeq     z (stmt ds p1) (stmt ds p2)
-stmt ds (SLoop    z p)            = SLoop    z (stmt ds p)
-stmt ds (SRet     z exp)          = SRet     z (expr ds exp)
-stmt _  p                         = p
+expHier :: [Stmt] -> Stmt -> Stmt
+expHier ds (SClass'' z id  cs ifc p) = SClass'' z id  cs ifc (expHier ds p)
+expHier ds (SInst''  z cls tp imp p) = SInst''  z cls tp imp (expHier ds p)
+expHier ds (SData''  z tp nms st cs abs p) = SData'' z tp' nms' st' cs' abs (expHier (d':ds) p)
+                                             where
+                                              (tp',nms',st',cs') = fdata ds (tp,nms,st,cs)
+                                              d' = SData'' z tp' nms' st' cs' abs p
+expHier ds (SVar''   z var tp p)     = SVar''   z var tp (expHier ds p)
+expHier ds (SMatch   z ini chk exp cses) = SMatch  z ini chk (expr ds exp)
+                                          (map (\(xs,pt,st) -> (expHier ds xs, expr ds pt, expHier ds st)) cses)
+expHier ds (SCall    z exp)          = SCall    z (expr ds exp)
+expHier ds (SSeq     z p1 p2)        = SSeq     z (expHier ds p1) (expHier ds p2)
+expHier ds (SLoop    z p)            = SLoop    z (expHier ds p)
+expHier ds (SRet     z exp)          = SRet     z (expr ds exp)
+expHier _  p                         = p
 
 -------------------------------------------------------------------------------
 
 expr :: [Stmt] -> Exp -> Exp
 expr ds (ETuple z es)            = ETuple z (map (expr ds) es)
 expr ds (ECall  z e1 e2)         = ECall  z (expr ds e1) (expr ds e2)
-expr ds (EFunc' z tp imp)        = EFunc' z tp (stmt ds imp)
+expr ds (EFunc  z tp par imp)    = EFunc  z tp par (expHier ds imp)
 expr _  e                        = e
 
 -------------------------------------------------------------------------------
@@ -80,6 +77,12 @@ fdata ds (tp@(TData False id ofs), nms, st, cs) = case getSuper id of
 
 -------------------------------------------------------------------------------
 
+addAccs :: Stmt -> Stmt
+addAccs (SData''  z tp nms st cs abs p) = SData'' z tp nms st cs abs (faccs z nms (tp,st,cs) p)
+addAccs p = p
+
+-------------------------------------------------------------------------------
+
 -- accessors
 -- data X with (...,Int,...)
 -- X_2 : (X -> Int)
@@ -102,11 +105,12 @@ faccs z nms (tpD@(TData False hr _),st,cs) p = accs where
                  where
                   id = hr_str ++ "._" ++ show idx
 
-                  body = EFunc' z (TFunc FuncGlobal tpD tp,cs)
-                          (SVar'' z "ret" (tp,cs)
-                            (SMatch  z True False (EArg z) [(SNop z, ret, SRet z (EVar z "ret"))]))
+                  body = EFunc z (TFunc FuncGlobal tpD tp,cs) (EAny z)
+                          (SVar'' z "_ret" (tp,cs)
+                            (SMatch z True False (EArg z) [(SNop z, ret, SRet z (EVar z "_ret"))]))
+
                   ret  = ECall z (ECons z hr) (bool (ETuple z repl) (repl!!0) (len st == 1))
-                  repl = take (idx-1) anys ++ [EVar z "ret"] ++ drop idx anys
+                  repl = take (idx-1) anys ++ [EVar z "_ret"] ++ drop idx anys
                   anys = replicate (len st) (EAny z)
 
                   len (TTuple l) = length l
@@ -118,5 +122,5 @@ faccs z nms (tpD@(TData False hr _),st,cs) p = accs where
                                       (SMatch  z True False body [(SNop z, EVar z idm, p)])
                                      where
                                       idm = hr_str ++ "." ++ (l!!(idx-1))
-                                      body = EFunc' z (TFunc FuncGlobal tpD tp,cs)
-                                              (SRet z (ECall z (EVar z id) (EArg z)))
+                                      body = EFunc z (TFunc FuncGlobal tpD tp,cs) (EAny z)
+                                                     (SRet z (ECall z (EVar z id) (EArg z)))

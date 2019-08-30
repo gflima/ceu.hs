@@ -4,13 +4,65 @@ import Debug.Trace
 import qualified Data.Set as S
 
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Constraints (cz)
+import qualified Ceu.Grammar.Constraints as Cs
 import Ceu.Grammar.Ann         (Ann)
 import Ceu.Grammar.Type        (TypeC, show', Type(..))
 import Ceu.Grammar.Full.Full
 
-compile :: Stmt -> Stmt
-compile p = map_stmt (stmt,id,id) p
+-------------------------------------------------------------------------------
+
+insSVarCtrs :: Stmt -> Stmt  -- () -> (SSeq,SVar,SFunc)
+
+insSVarCtrs (SClass z cls cs ifc) =
+  case Cs.toList cs of
+    [(var,_)]  -> SClass z cls cs (aux ifc) where
+      aux (SSeq  z p1 p2)               = SSeq  z (aux p1) (aux p2)
+      aux (SVar  z id (tp_,cs))         = SVar  z id (tp_, Cs.insert (var,cls) cs)
+      --aux (SFunc z id (tp_,cs) par imp) = SFunc z id (tp_, Cs.insert (var,cls) cs) par imp
+      aux p                             = p
+    otherwise  -> error "TODO: multiple vars"
+
+insSVarCtrs (SInst  z cls tp@(_,cs) imp)    = SInst  z cls tp (aux imp)
+  where
+    aux (SSeq  z p1 p2)                 = SSeq  z (aux p1) (aux p2)
+    aux (SVar  z id (tp_',cs'))         = SVar  z id (tp_',Cs.union cs cs')
+    --aux (SFunc z id (tp_',cs') par imp) = SFunc z id (tp_',Cs.union cs cs') par imp
+    aux p                               = p
+
+insSVarCtrs p = p
+
+-------------------------------------------------------------------------------
+
+adjSClassSInst :: Stmt -> Stmt    -- (SClass,SInts,SSet,SVar) -> (SSeq,SData,SSet,SVar)
+
+--adjSClassSInst (SClass z id  ctrs ifc) = SSeq z (SClass' z id  ctrs (protos ifc)) ifc
+
+-- data _IEq ; class IEq ; Ifc ; var _IEq_int : _IEq = ...
+adjSClassSInst (SClass z id ctrs ifc) = SSeq z cls ifc -- SSeq z dict (SSeq z cls (addDict tpd ifc'))
+  where
+    cls  = SClass' z id ctrs ps
+    ps   = protos ifc
+    tpd  = TData False ["_"++id] []
+    dict = SData z tpd (Just $ "_dict":pars) tps Cs.cz False where
+            pars = map (\(_,id,_,_)->id) ps
+            tps  = TTuple (tpd : map (\(_,_,(tp,_),_)->tp) ps)
+
+    -- (x eq y) --> (x (_IEq.eq _dict) y)
+    ifc' = map_stmt (Prelude.id, f, Prelude.id) ifc where
+      set :: S.Set ID_Var
+      set = foldr (\(_,id,_,_) s -> S.insert id s) S.empty ps
+
+      f :: Exp -> Exp
+      f (EVar z id) = if S.member id set then
+                        (ECall z (EField z ["_"++id] id) (EVar z "_dict"))
+                      else
+                        EVar z id
+      f e           = e
+
+adjSClassSInst (SInst  z cls tp  imp)  = SSeq z (SInst' z cls tp (protos imp))
+                                                (addDict (TData False ["_"++cls] []) $ renameID imp)
+
+adjSClassSInst p = p
 
 -------------------------------------------------------------------------------
 
@@ -43,10 +95,10 @@ idtp id (tp_,ctrs) = if null ctrs then "$" ++ id ++ "$" ++ show' tp_ ++ "$" else
 addDict :: Type -> Stmt -> Stmt
 addDict _    p              = p
 addDict dict (SSeq z (SVar z1 id1 tpc1)
-                     (SSet z2 True False (EVar z3 id3) (EFunc' z4 tp4 p4)))
+                     (SSet z2 True False (EVar z3 id3) (EFunc z4 tp4 par4 p4)))
              | id1==id3     = SSeq z (traceShowId $ SVar z1 id1 (aux1 dict tpc1))
                                      (SSet z2 True False (EVar z3 id3)
-                                           (EFunc' z4 (aux1 dict tp4) (aux2 dict p4)))
+                                           (EFunc z4 (aux1 dict tp4) par4 (aux2 dict p4)))
 addDict dict (SSeq z p1 p2) = SSeq z (addDict dict p1) (addDict dict p2)
 addDict dict (SVar z id tp) = traceShowId $ SVar z id (aux1 dict tp)
 addDict _    p              = p
@@ -67,36 +119,3 @@ aux2 dict (EFunc ft inp out, cs) = (TFunc ft (f dict inp) out, cs) where
   f dict (TTuple l) = TTuple (dict: l)
   f dict tp         = TTuple [dict,tp]
 -}
-
--------------------------------------------------------------------------------
-
-stmt :: Stmt -> Stmt
-
---stmt (SClass z id  ctrs ifc) = SSeq z (SClass' z id  ctrs (protos ifc)) ifc
-
--- data _IEq ; class IEq ; Ifc ; var _IEq_int : _IEq = ...
-stmt (SClass z id ctrs ifc) = SSeq z cls ifc -- SSeq z dict (SSeq z cls (addDict tpd ifc'))
-  where
-    cls  = SClass' z id ctrs ps
-    ps   = protos ifc
-    tpd  = TData False ["_"++id] []
-    dict = SData z tpd (Just $ "_dict":pars) tps cz False where
-            pars = map (\(_,id,_,_)->id) ps
-            tps  = TTuple (tpd : map (\(_,_,(tp,_),_)->tp) ps)
-
-    -- (x eq y) --> (x (_IEq.eq _dict) y)
-    ifc' = map_stmt (Prelude.id, f, Prelude.id) ifc where
-      set :: S.Set ID_Var
-      set = foldr (\(_,id,_,_) s -> S.insert id s) S.empty ps
-
-      f :: Exp -> Exp
-      f (EVar z id) = if S.member id set then
-                        (ECall z (EField z ["_"++id] id) (EVar z "_dict"))
-                      else
-                        EVar z id
-      f e           = e
-
-stmt (SInst  z cls tp  imp)  = SSeq z (SInst' z cls tp (protos imp))
-                                      (addDict (TData False ["_"++cls] []) $ renameID imp)
-
-stmt p = p

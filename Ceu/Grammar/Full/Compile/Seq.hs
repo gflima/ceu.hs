@@ -5,12 +5,9 @@ import Debug.Trace
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Full.Full
 
-compile :: Stmt -> Stmt
-compile p = map_stmt (stmt,id,id) p
+adjSSeq :: Stmt -> Stmt
 
-stmt :: Stmt -> Stmt
+adjSSeq (SSeq z (SSeq z' p1 p2) p3) = adjSSeq $ SSeq z p1 (SSeq z' p2 p3)
+adjSSeq (SSeq z p1 p2)              = SSeq z (adjSSeq p1) (adjSSeq p2)
 
-stmt (SSeq z (SSeq z' p1 p2) p3) = stmt $ SSeq z p1 (SSeq z' p2 p3)
-stmt (SSeq z p1 p2)              = SSeq z (stmt p1) (stmt p2)
-
-stmt p = p
+adjSSeq p = p
