@@ -4,6 +4,8 @@ import Debug.Trace
 import Ceu.Eval (error_match)
 import Ceu.Grammar.Full.Full
 
+-------------------------------------------------------------------------------
+
 remSSetSIf :: Stmt -> Stmt
 
 remSSetSIf (SSet z ini chk pat exp) = SMatch z ini chk exp [(SNop z,pat,SNop z)]
@@ -12,3 +14,15 @@ remSSetSIf (SIf  z exp p1 p2)       = SMatch z False False exp [
                                         (SNop z, EAny z,                  p2)
                                       ]
 remSSetSIf p = p
+
+-------------------------------------------------------------------------------
+
+remIni :: Stmt -> Stmt
+
+remIni (SVar'' z var tp ini p) = SVar'' z var tp Nothing $
+  case ini of
+    Nothing -> p
+    Just e  -> SVar'' z var tp Nothing $
+                SSeq z (SSet z True False (EVar z var) e) p
+
+remIni p = p

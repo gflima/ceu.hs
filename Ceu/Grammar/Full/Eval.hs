@@ -46,6 +46,7 @@ compile :: Stmt -> Stmt
 compile p =
   map_stmt (Scope.remSScope,id,id)      $
   map_stmt (Match.remSSetSIf,id,id)     $
+  map_stmt (Match.remIni,id,id)         $
   map_stmt (id,Func.remEFuncPar,id)     $
   map_stmt (Data.addAccs,id,id)         $
   Data.expHier []                       $

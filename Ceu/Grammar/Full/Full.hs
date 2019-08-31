@@ -102,7 +102,7 @@ toBasicStmt :: Stmt -> B.Stmt
 toBasicStmt (SClass'' z id  cs ifc p) = B.SClass z id  cs ifc (toBasicStmt p)
 toBasicStmt (SInst''  z cls tp imp p) = B.SInst  z cls tp imp (toBasicStmt p)
 toBasicStmt (SData''  z tp nms st cs abs p) = B.SData z tp nms st cs abs (toBasicStmt p)
-toBasicStmt (SVar''   z var tp ini p) = B.SVar   z var tp (fmap toBasicExp ini) (toBasicStmt p)
+toBasicStmt (SVar''   z var tp Nothing p) = B.SVar   z var tp (toBasicStmt p)
 toBasicStmt (SMatch   z ini chk exp cses) = B.SMatch z ini chk (toBasicExp exp)
                                               (map (\(ds,pt,st) -> (toBasicStmt ds, toBasicExp pt, toBasicStmt st)) cses)
 toBasicStmt (SCall   z e)             = B.SCall z (toBasicExp e)

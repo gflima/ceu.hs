@@ -2,6 +2,7 @@ module Ceu.Grammar.Full.Compile.Class where
 
 import Debug.Trace
 import qualified Data.Set as S
+import Data.Maybe (isJust)
 
 import Ceu.Grammar.Globals
 import qualified Ceu.Grammar.Constraints as Cs
@@ -72,9 +73,9 @@ adjSClassSInst p = p
 --    [(.,eq,tp1,.),(.,neq,tp2,.)]
 
 protos :: Stmt -> [(Ann, ID_Var, TypeC, Bool)]
-protos (SSeq _ p1 p2)   = (protos p1) ++ (protos p2)
-protos (SVar z id tp _) = [(z,id,tp,False)]
-protos p                = []
+protos (SSeq _ p1 p2)     = (protos p1) ++ (protos p2)
+protos (SVar z id tp ini) = [(z,id,tp,isJust ini)]
+protos p                  = []
 
 -------------------------------------------------------------------------------
 

@@ -192,14 +192,6 @@ stmt_var = do
                  try $ pMatch pos (var=="var!") pat
   return $ SSeq annz{source=pos} (fromJust $ matchLocType2 pos pat tp) s
 
-{-
-  s    <- optionMaybe $ try $ pMatch pos (var=="var!") pat
-  return $ case (s, fromJust $ matchLocType2 pos pat tp) of
-            (Nothing, p)                    -> p
-            (Just s', p@(SSeq _ _ _))       -> SSeq annz{source=pos} p s'  -- multiple dcls (no ini possible)
-            (Just s', SVar z id tp Nothing) -> SVar z id tp (Just s')      -- single dcl with ini
--}
-
 stmt_set :: Parser Stmt
 stmt_set = do
   pos  <- pos2src <$> getPosition
