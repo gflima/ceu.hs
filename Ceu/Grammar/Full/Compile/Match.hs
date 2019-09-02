@@ -20,9 +20,9 @@ remSSetSIf p = p
 remIni :: Stmt -> Stmt
 
 remIni (SVar'' z var tp ini p) = SVar'' z var tp Nothing $
-  case ini of
-    Nothing -> p
-    Just e  -> SVar'' z var tp Nothing $
-                SSeq z (SSet z True False (EVar z var) e) p
+  case (ini,p) of
+    (Nothing,_)      -> p
+    (Just e, SNop _) -> SSet z True False (EVar z var) e
+    (Just e, _)      -> SSeq z (SSet z True False (EVar z var) e) p
 
 remIni p = p
