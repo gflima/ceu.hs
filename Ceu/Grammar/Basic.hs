@@ -52,8 +52,8 @@ instance HasAnn Exp where
 -------------------------------------------------------------------------------
 
 data Stmt
-    = SClass  Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class declaration
-    | SInst   Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class instance
+    = SClass  Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt -- new constraint declaration
+    | SInst   Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt -- new constraint instance
     | SData   Ann Type (Maybe [String]) Type Cs.Map Bool Stmt  -- new type declaration
     | SVar    Ann ID_Var TypeC Stmt            -- variable declaration
     | SMatch  Ann Bool Bool Exp [(Stmt,Exp,Stmt)]   -- match/assignment/if statement
@@ -112,6 +112,9 @@ show_stmt spc (SMatch _ _ chk exp cses)  = rep spc ++ "match " ++ show_exp spc e
                                                           show_stmt (spc+8) st ++ "\n"
 show_stmt spc (SNop _)                 = rep spc ++ "nop"
 show_stmt spc p = error $ show p
+
+traceStmt :: Stmt -> Stmt
+traceStmt s = traceShow (show_stmt 0 s) s
 
 show_exp :: Int -> Exp -> String
 show_exp spc (EAny   _)           = "_"

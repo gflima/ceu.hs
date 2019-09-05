@@ -34,12 +34,19 @@ insConstraints p = p
 
 -------------------------------------------------------------------------------
 
-adjSClassSInst :: Stmt -> Stmt    -- (SClass,SInts,SSet,SVar) -> (SSeq,SData,SSet,SVar)
+-- Each constraint (IEq(eq,neq)) has an associated "dict" (_IEq(eq,neq))
+-- (actually a static struct) in which each field (_IEq.eq) corresponds to a
+-- method of the same name in the constraint (IEq.eq).
+-- Each instance (IEq for Int) has a dict instance (_IEq_int) in which each
+-- field (_IEq.eq) points to the actual implementation (eq_int).
+-- data _IEq ; class IEq ; Ifc ; var _IEq_int : _IEq = ...
+
+adjSClassSInst :: Stmt -> Stmt
 
 --adjSClassSInst (SClass z id  ctrs ifc) = SSeq z (SClass' z id  ctrs (protos ifc)) ifc
+--adjSClassSInst (SClass z id ctrs ifc) = SSeq z cls ifc
 
--- data _IEq ; class IEq ; Ifc ; var _IEq_int : _IEq = ...
-adjSClassSInst (SClass z id ctrs ifc) = SSeq z cls ifc -- SSeq z dict (SSeq z cls (addDict tpd ifc'))
+adjSClassSInst (SClass z id ctrs ifc) = traceStmt $ SSeq z dict (SSeq z cls (addDict tpd ifc'))
   where
     cls  = SClass' z id ctrs ps
     ps   = protos ifc
@@ -88,18 +95,21 @@ idtp id (tp_,ctrs) = if null ctrs then "$" ++ id ++ "$" ++ show' tp_ ++ "$" else
 
 -------------------------------------------------------------------------------
 
+-- Each method needs to receive an extra "_dict" argument to access the other
+-- methods of the constraint.
+--  eq : Int -> Int
+--  eq : (_IEq,Int) -> Int
+
 addDict :: Type -> Stmt -> Stmt
-addDict _    p              = p
 {-
-addDict dict (SSeq z (SVar z1 id1 tpc1)
-                     (SSet z2 True False (EVar z3 id3) (EFunc z4 tp4 par4 p4)))
-             | id1==id3     = SSeq z (traceShowId $ SVar z1 id1 (aux1 dict tpc1))
-                                     (SSet z2 True False (EVar z3 id3)
-                                           (EFunc z4 (aux1 dict tp4) par4 (aux2 dict p4)))
-addDict dict (SSeq z p1 p2) = SSeq z (addDict dict p1) (addDict dict p2)
-addDict dict (SVar z id tp) = traceShowId $ SVar z id (aux1 dict tp)
 addDict _    p              = p
 -}
+addDict dict (SVar z1 id1 tpc1 (Just (EFunc z2 tp2 par2 p2)))
+                                    = SVar z1 id1 (aux1 dict tpc1)
+                                        (Just $ EFunc z2 (aux1 dict tp2) par2 (aux2 dict p2))
+addDict dict (SVar z id tp Nothing) = SVar z id (aux1 dict tp) Nothing
+addDict dict (SSeq z p1 p2)         = SSeq z (addDict dict p1) (addDict dict p2)
+addDict _    p                      = p
 
 aux1 :: Type -> TypeC -> TypeC
 aux1 dict (TFunc ft inp out, cs) = (TFunc ft (f dict inp) out, cs) where
