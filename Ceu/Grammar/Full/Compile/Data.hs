@@ -104,7 +104,8 @@ faccs z nms (tpD@(TData False hr _),st,cs) p = accs where
                   id = hr_str ++ "._" ++ show idx
 
                   body = EFunc z (TFunc FuncGlobal tpD tp,cs) (EAny z)
-                          (SVar'' z "_ret" (tp,cs) (Just $ EArg z) (SRet z (EVar z "_ret")))
+                          (SVar'' z "_ret" (tp,cs) Nothing -- (Just $ EArg z) (SRet z (EVar z "_ret")))
+                            (SMatch z True False (EArg z) [(SNop z, ret, SRet z (EVar z "_ret"))]))
 
                   ret  = ECall z (ECons z hr) (bool (ETuple z repl) (repl!!0) (len st == 1))
                   repl = take (idx-1) anys ++ [EVar z "_ret"] ++ drop idx anys
