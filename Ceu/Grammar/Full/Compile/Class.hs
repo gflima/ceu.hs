@@ -12,41 +12,122 @@ import Ceu.Grammar.Full.Full
 
 -------------------------------------------------------------------------------
 
-insConstraints :: Stmt -> Stmt  -- () -> (SSeq,SVar,SFunc)
+-- Insert constraint in each nested method in outer contraint/instance.
+--
+--    contraint IEq        (eq,neq)
+--    instance  IEq for Int(eq,neq)
+--
+--    contraint IEq        (eq where a is IEq,neq where a is IEq)
+--    instance  IEq for Int(eq where a is IEq,neq where a is IEq)
 
-insConstraints (SClass z cls cs ifc) =
+insConstraint :: Stmt -> Stmt
+
+insConstraint (SClass z cls cs ifc) =
   case Cs.toList cs of
-    [(var,_)]  -> SClass z cls cs (aux ifc) where
-      aux (SSeq  z p1 p2)           = SSeq  z (aux p1) (aux p2)
-      aux (SVar  z id (tp_,cs) ini) = SVar  z id (tp_, Cs.insert (var,cls) cs) ini
-      --aux (SFunc z id (tp_,cs) par imp) = SFunc z id (tp_, Cs.insert (var,cls) cs) par imp
-      aux p                     = p
+    [(var,_)]  -> SClass z cls cs ifc' where
+                    ifc' = map_stmt (f, Prelude.id, Prelude.id) ifc
+                    f (SVar z id (tp',cs') ini) = SVar  z id (tp', Cs.insert (var,cls) cs') ini
+                    f p = p
     otherwise  -> error "TODO: multiple vars"
 
-insConstraints (SInst  z cls tp@(_,cs) imp) = SInst  z cls tp (aux imp)
+insConstraint (SInst z cls tp@(_,cs) imp) = SInst z cls tp imp'
   where
-    aux (SSeq  z p1 p2)             = SSeq  z (aux p1) (aux p2)
-    aux (SVar  z id (tp_',cs') ini) = SVar  z id (tp_',Cs.union cs cs') ini
-    --aux (SFunc z id (tp_',cs') par imp) = SFunc z id (tp_',Cs.union cs cs') par imp
-    aux p                       = p
+    imp' = map_stmt (f, Prelude.id, Prelude.id) imp
+    f (SVar z id (tp',cs') ini) = SVar  z id (tp', Cs.union cs cs') ini
+    f p = p
 
-insConstraints p = p
+insConstraint p = p
 
 -------------------------------------------------------------------------------
 
+-- Declare an associated dictionay for each constraint.
+--
+-- Each constraint (IEq(eq,neq)) has an associated "dict" (_IEq(eq,neq))
+-- (actually a static struct) in which each field (_IEq.eq) corresponds to a
+-- method of the same name in the constraint (IEq.eq):
+--    contraint IEq(eq,neq)
+--
+--    data      _IEq(eq,neq)
+--    contraint IEq(eq,neq)
+
+dclDicts :: Stmt -> Stmt
+
+dclDicts cls@(SClass z id _ ifc) = SSeq z dict cls
+  where
+    ps   = protos ifc
+    tpd  = TData False ["_"++id] []
+    dict = SData z tpd (Just $ "_dict":pars) tps Cs.cz False where
+            pars = map (\(_,id,_,_)->id) ps
+            tps  = TTuple (tpd : map (\(_,_,(tp,_),_)->tp) ps)
+
+dclDicts p = p
+
+-------------------------------------------------------------------------------
+
+-- Duplicate and rename implementation methods from xxx to _xxx.
+--
+--    constraint IEq(eq,neq(...))
+--    func neq (x,y)            // keep just the declaration
+--    func _neq (x,y) do        // rename for the actual implementation
+--
+--    instance of IEq for Int (eq)
+--    func neq_Int (x,y)        // wrapper to call _neq_Int with _dict
+--    func _neq_Int (x,y)       // actual impl. with _dict
+
+dupRenImpls :: Stmt -> Stmt
+
+dupRenImpls (SClass z id ctrs ifc) = SClass z id ctrs ifc' where
+  ifc' = map_stmt (f, Prelude.id, Prelude.id) ifc
+  f (SVar z id tpc (Just imp)) = SSeq z (SVar z id tpc Nothing)
+                                        (SVar z ("_"++id) tpc (Just imp))
+  f p = p
+
+dupRenImpls (SInst z cls tpc@(tp,_) imp) = SInst z cls tpc imp' where
+  imp' = map_stmt (f, Prelude.id, Prelude.id) imp
+  f s@(SVar z id tpc' p) = SSeq z s (SVar z ("_"++id++"_"++show' tp) tpc' p)
+  f p = p
+
+dupRenImpls p = p
+
+-------------------------------------------------------------------------------
+
+-- For each existing implementation (constraint or instance), insert dict
+-- wrappers for all constraint methods.
+--
+--    constraint IEq(eq,neq(...))
+--
+--    func _neq (_dict,x,y) do
+--      eq = func (x,y) do return _dict.eq(_dict,x,y)
+--    end
+
+insWrappers :: Stmt -> Stmt
+
+insWrappers (SClass z id ctrs ifc) = SClass z id ctrs ifc' where
+  ps   = protos ifc
+  ifc' = map_stmt (f, Prelude.id, Prelude.id) ifc
+
+  f (SVar z id tpc (Just (EFunc z2 tp2 par2 p2))) = SVar z id tpc (Just (EFunc z2 tp2 par2 p2')) where
+    p2' = foldr (SSeq z) p2 $ map (\(_,id,_,_)->SNop z) ps
+  f p = p
+
+insWrappers p = p
+
+-------------------------------------------------------------------------------
+
+{-
 -- Each constraint (IEq(eq,neq)) has an associated "dict" (_IEq(eq,neq))
 -- (actually a static struct) in which each field (_IEq.eq) corresponds to a
 -- method of the same name in the constraint (IEq.eq).
 -- Each instance (IEq for Int) has a dict instance (_IEq_int) in which each
 -- field (_IEq.eq) points to the actual implementation (eq_int).
--- data _IEq ; class IEq ; Ifc ; var _IEq_int : _IEq = ...
+-- data _IEq ; contraint IEq ; Ifc ; var _IEq_int : _IEq = ...
 
 adjSClassSInst :: Stmt -> Stmt
 
 --adjSClassSInst (SClass z id  ctrs ifc) = SSeq z (SClass' z id  ctrs (protos ifc)) ifc
 --adjSClassSInst (SClass z id ctrs ifc) = SSeq z cls ifc
 
-adjSClassSInst (SClass z id ctrs ifc) = traceStmt $ SSeq z dict (SSeq z cls (addDict tpd ifc'))
+adjSClassSInst (SClass z id ctrs ifc) = SClass z id ctrs (insDict ifc)
   where
     cls  = SClass' z id ctrs ps
     ps   = protos ifc
@@ -56,7 +137,7 @@ adjSClassSInst (SClass z id ctrs ifc) = traceStmt $ SSeq z dict (SSeq z cls (add
             tps  = TTuple (tpd : map (\(_,_,(tp,_),_)->tp) ps)
 
     -- (x eq y) --> (x (_IEq.eq _dict) y)
-    ifc' = map_stmt (Prelude.id, f, Prelude.id) ifc where
+    ifc' = map_stmt (f, Prelude.id, Prelude.id) ifc where
       set :: S.Set ID_Var
       set = foldr (\(_,id,_,_) s -> S.insert id s) S.empty ps
 
@@ -71,7 +152,24 @@ adjSClassSInst (SInst  z cls tp  imp)  = SSeq z (SInst' z cls tp (protos imp))
                                                 (addDict (TData False ["_"++cls] []) $ renameID imp)
 
 adjSClassSInst p = p
+-}
 
+-------------------------------------------------------------------------------
+
+-- Remove contraint/inst from the program (split actual dcls/impls from their
+-- abstract prototypes).
+--    contraint IEq        (eq,neq)
+--    instance  IEq for Int(eq,neq)
+--
+--    contraint IEq        (eq,neq) ; eq ; neq
+--    instance  IEq for Int(eq,neq) ; eq ; neq
+
+remClassInst :: Stmt -> Stmt
+remClassInst (SClass z id ctrs ifc) = traceStmt $ SSeq z (SClass' z id  ctrs (protos ifc)) ifc
+remClassInst (SInst  z cls tp  imp) = traceStmt $ SSeq z (SInst'  z cls tp   (protos imp)) imp
+remClassInst p = p
+
+-------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
 -- convert from sequence of declarations to list of prototypes:
@@ -85,6 +183,8 @@ protos (SVar z id tp ini) = [(z,id,tp,isJust ini)]
 protos p                  = []
 
 -------------------------------------------------------------------------------
+
+{--
 
 renameID :: Stmt -> Stmt
 renameID (SSeq z p1 p2)     = SSeq z (renameID p1) (renameID p2)
@@ -127,3 +227,5 @@ aux2 dict (EFunc ft inp out, cs) = (TFunc ft (f dict inp) out, cs) where
   f dict (TTuple l) = TTuple (dict: l)
   f dict tp         = TTuple [dict,tp]
 -}
+
+--}

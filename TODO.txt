@@ -554,18 +554,21 @@ return eq (1,2) // f 1
 
 // CONSTRAINT
 
-data _IEq (eq,neq) for a with (
+data _IEq (eq,neq) for a with (                         // dclDicts
     ((_IEq for a, a,a) -> Int),     // eq
     ((_IEq for a, a,a) -> Int),     // neq
 )
 
-func neq (_dict,x,y) : ((_IEq for a,a,a) -> Int) do
-    return 1 - (x _dict.eq y)
+func _neq (_dict,x,y) : ((_IEq for a,a,a) -> Int) do    // dupRenImpls
+    eq = func (x,y) : ((Int,Int) -> Int)[1] do          // insAliases
+            return _dict.eq(_dict,x,y)
+         end
+    return 1 - (x eq y)
 end
 
 // INSTANCE
 
-func _eq_int (_dict,x,y) : ((_IEq for Int,Int,Int) -> Int) do
+func _eq_Int (_dict,x,y) : ((_IEq for Int,Int,Int) -> Int) do
     if y matches x then return 1 else return 0 end
 end
 
