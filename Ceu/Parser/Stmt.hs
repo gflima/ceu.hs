@@ -79,7 +79,7 @@ pPat v = lany  <|> lvar <|> try lunit  <|> lnumber <|>
 matchLocType2 :: Source -> Exp -> TypeC -> Maybe Stmt
 matchLocType2 src loc (tp_,ctrs) = if length vars /= length tps_ then Nothing else
                                     Just $ foldr (SSeq annz) (SNop annz) dcls
-                                    --Just $ foldr1 (SSeq annz) dcls
+                                    -- Just $ foldr1 (SSeq annz) dcls
   where
     tps_ = tp2list (length vars) tp_
     vars = getVars loc

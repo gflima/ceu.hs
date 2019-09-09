@@ -23,6 +23,7 @@ remIni (SVar'' z var tp ini p) = SVar'' z var tp Nothing $
   case (ini,p) of
     (Nothing,_)      -> p
     (Just e, SNop _) -> SSet z True False (EVar z var) e
-    (Just e, _)      -> SSeq z (SSet z True False (EVar z var) e) p
+    (Just e, _)      -> SMatch z True False e [(SNop z,EVar z var,p)]
+                        -- SSeq z (SSet z True False (EVar z var) e) p
 
 remIni p = p
