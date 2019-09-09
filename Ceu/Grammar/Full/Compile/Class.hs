@@ -107,7 +107,7 @@ insWrappers (SClass z id ctrs ifc) = SClass z id ctrs ifc' where
   ifc' = map_stmt (f, Prelude.id, Prelude.id) ifc
 
   f (SVar z id tpc (Just (EFunc z2 tp2 par2 p2))) = SVar z id tpc (Just (EFunc z2 tp2 par2 p2')) where
-    p2' = foldr (SSeq z) p2 $ map (\(_,id,_,_)->SNop z) ps
+    p2' = foldr (SSeq z) p2 $ map (\(_,id',_,_)->SVar z id' tpc Nothing) ps
   f p = p
 
 insWrappers p = p
