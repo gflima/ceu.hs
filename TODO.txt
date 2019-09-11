@@ -556,13 +556,13 @@ return eq (1,2) // f 1
 
 // CONSTRAINT
 
-data _IEq (eq,neq) for a with (                         // dclDicts
+data _IEq (eq,neq) for a with (                         // dclClassDicts
     ((_IEq for a, a,a) -> Int),     // eq
     ((_IEq for a, a,a) -> Int),     // neq
 )
 
 func _neq (_dict,x,y) : ((_IEq for a,a,a) -> Int) do    // dupRenImpls, insDict
-    eq = func (x,y) : ((a,a) -> a)] do                  // insWrappers
+    eq = func (x,y) : ((a,a) -> a) do                   // insWrappers
             return _dict.eq(_dict,x,y)
          end
     return 1 - (x eq y)
@@ -570,17 +570,24 @@ end
 
 // INSTANCE
 
-func _neq_Int (x,y) : ((Int,Int) -> Int) do              // dupRenImpls
-    return _neq(_IEq_int,x,y)
+func _neq_Int (x,y) : ((Int,Int) -> Int) do             // dupRenImpls
+    return _neq(_IEq_Int,x,y)
 end
 
-func eq_int (x,y) : ((Int,Int) -> Int) do
-    return _eq_int(_IEq_int,x,y)
+func eq_Int (x,y) : ((Int,Int) -> Int) do
+    neq = func (x,y) : ((Int,Int) -> Int) do            // insWrappers
+            return _neq(_IEq_Int,x,y)
+         end
+    if y matches x then return 1 else return 0 end
+end
+
+func _eq_Int (_dict,x,y) : ((_IEq_Int,Int,Int) -> Int) do   // insDict
+    return eq_Int(x,y)                                  // addInstCall
 end
 
 // DATA
 
-var _IEq_int : _IEq for Int = (_eq_int,neq)
+var _IEq_Int : _IEq for Int = (_eq_Int,neq)
 
 l
 
@@ -590,12 +597,12 @@ func f (_dict,x) : ((_IEq for a,Int) -> Int) do
     return x _dict.eq x
 end
 
-var f_int x : (Int -> Int) do
-    return f (_IEq_int,x)
+var f_Int x : (Int -> Int) do
+    return f (_IEq_Int,x)
 end
 
 // CALL
 
-return eq_int(1,2) // f_int 1
+return eq_Int(1,2) // f_Int 1
 
 ===============================================================================

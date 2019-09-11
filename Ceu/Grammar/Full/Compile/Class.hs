@@ -50,9 +50,9 @@ insConstraint p = p
 --    data      _IEq(eq,neq)
 --    contraint IEq(eq,neq)
 
-dclDicts :: Stmt -> Stmt
+dclClassDicts :: Stmt -> Stmt
 
-dclDicts cls@(SClass z id _ ifc) = SSeq z dict cls
+dclClassDicts cls@(SClass z id _ ifc) = SSeq z dict cls
   where
     ps   = protos ifc
     tpd  = TData False ['_':id] []
@@ -60,7 +60,7 @@ dclDicts cls@(SClass z id _ ifc) = SSeq z dict cls
             pars = map (\(_,id,_,_)->id) ps
             tps  = TTuple (tpd : map (\(_,_,(tp,_),_)->tp) ps)
 
-dclDicts p = p
+dclClassDicts p = p
 
 -------------------------------------------------------------------------------
 
@@ -84,20 +84,30 @@ dupRenImpls (SClass z id ctrs ifc) = SClass z id ctrs ifc' where
 
 dupRenImpls (SInst z cls tpc@(tp,_) imp) = SInst z cls tpc imp' where
   imp' = map_stmt (f, Prelude.id, Prelude.id) imp
-  f s@(SVar z id tpc' p) = SSeq z s (SVar z ("_"++id++"_"++show' tp) tpc' p)
+  f s@(SVar z id tpc' p) = SSeq z s
+                                  (SVar z ("_"++id++"_"++show' tp) tpc' p)
   f p = p
 
 dupRenImpls p = p
 
 -------------------------------------------------------------------------------
 
--- For each existing implementation (constraint or instance), insert dict
--- wrappers for all constraint methods.
+-- For each existing constraint/default or instance implementation, insert dict
+-- wrappers for all other constraint methods.
 --
---    constraint IEq(eq,neq(...))
+--    constraint  IEq         (eq,neq(...))
+--    instance of IEq for Int (eq(...))
 --
 --    func _neq (x,y) do
---      eq = func (x,y) do return _dict.eq(_dict,x,y)
+--      eq = func (x,y) do return _dict.eq(_dict,x,y) end
+--      ... -- one for each other method
+--      ... -- original default implementation
+--    end
+--
+--    func eq_int (x,y) : ((Int,Int) -> Int) do
+--      neq = func (x,y) do return _neq(_IEq_int,x,y) end
+--      ... -- one for each other method
+--      ... -- original instance implementation
 --    end
 
 insWrappers :: Stmt -> Stmt
@@ -106,14 +116,28 @@ insWrappers (SClass z cls ctrs ifc) = SClass z cls ctrs ifc' where
   ps   = protos ifc
   ifc' = map_stmt (f, Prelude.id, Prelude.id) ifc
 
-  f (SVar z id tpc (Just (EFunc z2 tp2 par2 p2))) = SVar z id tpc (Just (EFunc z2 tp2 par2 p2')) where
-    p2' = foldr (SSeq z) p2 (map g (filter h ps)) where
-            h :: (Ann, ID_Var, TypeC, Bool) -> Bool
-            h (_,('_':_),_,_) = False
-            h (_,id',_,_)     = id /= '_':id'
+  f (SVar z ('_':id) tpc (Just (EFunc z2 tp2 par2 p2))) =
+    SVar z id tpc (Just (EFunc z2 tp2 par2 p2')) where
+      p2' = foldr (SSeq z) p2 (map g (filter notme ps)) where
+              notme (_,id',_,_) = id /= ('_':id')
 
-            g (_,id',_,_) = SVar z id' tpc (Just (EFunc z tp2 par2 p)) where
-                              p = SRet z (ECall z (EField z ['_':cls] id') (insTuple z (EVar z "_dict") par2))
+              g (_,id',_,_) = SVar z id' tpc (Just (EFunc z tp2 par2 p)) where
+                                p = SRet z (ECall z (EField z ['_':cls] id') (insTuple z (EVar z "_dict") par2))
+  f p = p
+
+  insTuple z e (ETuple _ l)  = ETuple z (e:l)
+  insTuple z e f             = ETuple z [e,f]
+
+insWrappers (SInst z cls tpc@(tp,_) imp) = SInst z cls tpc imp' where
+  ps   = protos imp
+  imp' = map_stmt (f, Prelude.id, Prelude.id) imp
+
+  f (SVar z (c:id) tpc (Just (EFunc z2 tp2 par2 p2))) | c/='_' =
+    SVar z id tpc (Just (EFunc z2 tp2 par2 p2')) where
+      p2' = foldr (SSeq z) p2 (map g (filter notme ps)) where
+              notme (_,id',_,_) = id /= id'
+              g (_,id',_,_) = SVar z id' tpc (Just (EFunc z tp2 par2 p)) where
+                                p = SRet z (ECall z (EVar z ('_':id')) (insTuple z (EVar z ("_"++cls++"_"++show' tp)) par2))
   f p = p
 
   insTuple z e (ETuple _ l)  = ETuple z (e:l)
@@ -126,10 +150,11 @@ insWrappers p = p
 -- For each existing implementation (constraint or instance), insert dict
 -- parameters for all constraint methods.
 --
---    constraint  IEq         (...,_neq(x,y))
---    instance of IEq for Int (...,_neq(x,y))
+--    constraint  IEq         (...,neq(x,y))
+--    instance of IEq for Int (...,eq(x,y))
 --
 --    func _neq (_dict,x,y)
+--    func _eq_Int (_dict,x,y)
 
 insDict :: Stmt -> Stmt
 
@@ -157,45 +182,26 @@ insTupleE z e1 e2            = ETuple z [e1,e2]
 
 -------------------------------------------------------------------------------
 
-{-
--- Each constraint (IEq(eq,neq)) has an associated "dict" (_IEq(eq,neq))
--- (actually a static struct) in which each field (_IEq.eq) corresponds to a
--- method of the same name in the constraint (IEq.eq).
--- Each instance (IEq for Int) has a dict instance (_IEq_int) in which each
--- field (_IEq.eq) points to the actual implementation (eq_int).
--- data _IEq ; contraint IEq ; Ifc ; var _IEq_int : _IEq = ...
+-- For each existing implementation (constraint or instance), insert dict
+-- parameters for all constraint methods.
+--
+--    instance of IEq for Int (...,eq(x,y))
+--
+--    func _eq_Int (_dict,x,y) return eq_Int(x,y)
 
-adjSClassSInst :: Stmt -> Stmt
+addInstCall :: Stmt -> Stmt
 
---adjSClassSInst (SClass z id  ctrs ifc) = SSeq z (SClass' z id  ctrs (protos ifc)) ifc
---adjSClassSInst (SClass z id ctrs ifc) = SSeq z cls ifc
+addInstCall (SInst z cls tpc imp) = SInst z cls tpc imp' where
+  imp' = map_stmt (f, Prelude.id, Prelude.id) imp where
+    f (SVar z ('_':id) tpc (Just (EFunc z2 tp2 par2 _))) =
+       SVar z ('_':id) tpc (Just (EFunc z2 tp2 par2 p2)) where
+      p2 = SRet z (ECall z (EVar z id) (remTuple par2))
+    f p = p
 
-adjSClassSInst (SClass z id ctrs ifc) = SClass z id ctrs (insDict ifc)
-  where
-    cls  = SClass' z id ctrs ps
-    ps   = protos ifc
-    tpd  = TData False ["_"++id] []
-    dict = SData z tpd (Just $ "_dict":pars) tps Cs.cz False where
-            pars = map (\(_,id,_,_)->id) ps
-            tps  = TTuple (tpd : map (\(_,_,(tp,_),_)->tp) ps)
+  remTuple (ETuple _ [EVar _ "_dict", y])  = y
+  remTuple (ETuple z (EVar _ "_dict" : l)) = ETuple z l
 
-    -- (x eq y) --> (x (_IEq.eq _dict) y)
-    ifc' = map_stmt (f, Prelude.id, Prelude.id) ifc where
-      set :: S.Set ID_Var
-      set = foldr (\(_,id,_,_) s -> S.insert id s) S.empty ps
-
-      f :: Exp -> Exp
-      f (EVar z id) = if S.member id set then
-                        (ECall z (EField z ["_"++id] id) (EVar z "_dict"))
-                      else
-                        EVar z id
-      f e           = e
-
-adjSClassSInst (SInst  z cls tp  imp)  = SSeq z (SInst' z cls tp (protos imp))
-                                                (addDict (TData False ["_"++cls] []) $ renameID imp)
-
-adjSClassSInst p = p
--}
+addInstCall p = p
 
 -------------------------------------------------------------------------------
 
@@ -221,54 +227,7 @@ remClassInst p = p
 --    [(.,eq,tp1,.),(.,neq,tp2,.)]
 
 protos :: Stmt -> [(Ann, ID_Var, TypeC, Bool)]
-protos (SSeq _ p1 p2)     = (protos p1) ++ (protos p2)
-protos (SVar z id tp ini) = [(z,id,tp,isJust ini)]
-protos p                  = []
-
--------------------------------------------------------------------------------
-
-{--
-
-renameID :: Stmt -> Stmt
-renameID (SSeq z p1 p2)     = SSeq z (renameID p1) (renameID p2)
-renameID (SVar z id tp ini) = SVar z (idtp id tp) tp ini
-renameID p                  = p
-
-idtp id (tp_,ctrs) = if null ctrs then "$" ++ id ++ "$" ++ show' tp_ ++ "$" else id
-
--------------------------------------------------------------------------------
-
--- Each method needs to receive an extra "_dict" argument to access the other
--- methods of the constraint.
---  eq : Int -> Int
---  eq : (_IEq,Int) -> Int
-
-addDict :: Type -> Stmt -> Stmt
-{-
-addDict _    p              = p
--}
-addDict dict (SVar z1 id1 tpc1 (Just (EFunc z2 tp2 par2 p2)))
-                                    = SVar z1 id1 (aux1 dict tpc1)
-                                        (Just $ EFunc z2 (aux1 dict tp2) par2 (aux2 dict p2))
-addDict dict (SVar z id tp Nothing) = SVar z id (aux1 dict tp) Nothing
-addDict dict (SSeq z p1 p2)         = SSeq z (addDict dict p1) (addDict dict p2)
-addDict _    p                      = p
-
-aux1 :: Type -> TypeC -> TypeC
-aux1 dict (TFunc ft inp out, cs) = (TFunc ft (f dict inp) out, cs) where
-  f :: Type -> Type -> Type
-  --f _ tp = tp
-  f dict (TTuple l) = TTuple (dict: l)
-  f dict tp         = TTuple [dict,tp]
-
-aux2 _ x = x
-{-
-aux2 :: Type -> Exp -> Exp
-aux2 dict (EFunc ft inp out, cs) = (TFunc ft (f dict inp) out, cs) where
-  f :: Type -> Type -> Type
-  --f _ tp = tp
-  f dict (TTuple l) = TTuple (dict: l)
-  f dict tp         = TTuple [dict,tp]
--}
-
---}
+protos (SSeq _ p1 p2)        = (protos p1) ++ (protos p2)
+protos (SVar _ ('_':id) _ _) = []   -- ignore dups like _xxx
+protos (SVar z id tp ini)    = [(z,id,tp,isJust ini)]
+protos p                     = []
