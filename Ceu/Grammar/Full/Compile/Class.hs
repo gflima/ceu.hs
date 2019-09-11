@@ -117,9 +117,9 @@ insWrappers (SClass z cls ctrs ifc) = SClass z cls ctrs ifc' where
   ifc' = map_stmt (f, Prelude.id, Prelude.id) ifc
 
   f (SVar z ('_':id) tpc (Just (EFunc z2 tp2 par2 p2))) =
-    SVar z id tpc (Just (EFunc z2 tp2 par2 p2')) where
+    SVar z ('_':id) tpc (Just (EFunc z2 tp2 par2 p2')) where
       p2' = foldr (SSeq z) p2 (map g (filter notme ps)) where
-              notme (_,id',_,_) = id /= ('_':id')
+              notme (_,id',_,_) = id /= id'
 
               g (_,id',_,_) = SVar z id' tpc (Just (EFunc z tp2 par2 p)) where
                                 p = SRet z (ECall z (EField z ['_':cls] id') (insTuple z (EVar z "_dict") par2))
@@ -132,7 +132,7 @@ insWrappers (SInst z cls tpc@(tp,_) imp) = SInst z cls tpc imp' where
   ps   = protos imp
   imp' = map_stmt (f, Prelude.id, Prelude.id) imp
 
-  f (SVar z (c:id) tpc (Just (EFunc z2 tp2 par2 p2))) | c/='_' =
+  f (SVar z id@(c:_) tpc (Just (EFunc z2 tp2 par2 p2))) | c/='_' =
     SVar z id tpc (Just (EFunc z2 tp2 par2 p2')) where
       p2' = foldr (SSeq z) p2 (map g (filter notme ps)) where
               notme (_,id',_,_) = id /= id'
