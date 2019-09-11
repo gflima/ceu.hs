@@ -1,6 +1,12 @@
 - runhaskell -itests/ tests/Spec.hs
 - 9 -- Basic=1, Type=0, Eval=1, Full=0, Parser=0, Run=4, Book=3, Gen=0
 
+- _IEq.eq (_dict,x,y)
+    - (_IEq.eq _dict)(_dict,x,y)
+- insDict em _eq_Int
+- eq -> eq_Int
+    - wrappers, precisa de ids (!)
+
 - Simplificar TypeSys.hs movendo o maximo para Full/Class.hs
     - no fim remClassInst deve realmente remover ambos
 
@@ -562,7 +568,7 @@ data _IEq (eq,neq) for a with (                         // dclClassDicts
 )
 
 func _neq (_dict,x,y) : ((_IEq for a,a,a) -> Int) do    // dupRenImpls, insDict
-    eq = func (x,y) : ((a,a) -> a) do                   // insWrappers
+    eq = func (x,y) : ((a,a) -> Int) do                 // insWrappers
             return _dict.eq(_dict,x,y)
          end
     return 1 - (x eq y)
