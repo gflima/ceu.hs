@@ -53,7 +53,8 @@ compile p =
   map_stmt (Scope.setScope,id,id)       $
   map_stmt (Seq.adjSSeq,id,id)          $
   map_stmt (Class.remClassInst,id,id)   $
-  map_stmt (Class.insWrappers,id,id)     $
+  map_stmt (Class.insDict,id,id)        $
+  map_stmt (Class.insWrappers,id,id)    $
   map_stmt (Class.dupRenImpls,id,id)    $
   map_stmt (Class.dclDicts,id,id)       $
   map_stmt (Class.insConstraint,id,id)  $

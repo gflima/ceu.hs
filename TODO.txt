@@ -1,7 +1,9 @@
 - runhaskell -itests/ tests/Spec.hs
 - 9 -- Basic=1, Type=0, Eval=1, Full=0, Parser=0, Run=4, Book=3, Gen=0
 
-- voltar como SSet/SMatch.ini
+- Simplificar TypeSys.hs movendo o maximo para Full/Class.hs
+    - no fim remClassInst deve realmente remover ambos
+
 - SVar ter inicializacao opcional
     - SMatch ainda vai precisar de isIni?
 
@@ -559,8 +561,8 @@ data _IEq (eq,neq) for a with (                         // dclDicts
     ((_IEq for a, a,a) -> Int),     // neq
 )
 
-func _neq (_dict,x,y) : ((_IEq for a,a,a) -> Int) do    // dupRenImpls
-    eq = func (x,y) : ((Int,Int) -> Int)[1] do          // insAliases
+func _neq (_dict,x,y) : ((_IEq for a,a,a) -> Int) do    // dupRenImpls, insDict
+    eq = func (x,y) : ((a,a) -> a)] do                  // insWrappers
             return _dict.eq(_dict,x,y)
          end
     return 1 - (x eq y)
@@ -568,8 +570,8 @@ end
 
 // INSTANCE
 
-func _eq_Int (_dict,x,y) : ((_IEq for Int,Int,Int) -> Int) do
-    if y matches x then return 1 else return 0 end
+func _neq_Int (x,y) : ((Int,Int) -> Int) do              // dupRenImpls
+    return _neq(_IEq_int,x,y)
 end
 
 func eq_int (x,y) : ((Int,Int) -> Int) do

@@ -155,10 +155,20 @@ rep spc = replicate spc ' '
 
 show_stmt :: Int -> Stmt -> String
 show_stmt spc (SSeq _ p1 p2)              = show_stmt spc p1 ++ "\n" ++ show_stmt spc p2
-show_stmt spc (SClass' _ id _ _)          = rep spc ++ "class " ++ id
+show_stmt spc (SClass' _ id _ _)          = rep spc ++ "constraint " ++ id
+show_stmt spc (SInst'  _ id _ _)          = rep spc ++ "instance " ++ id
 show_stmt spc (SData _ (TData False id _) _ _ _ _) = rep spc ++ "data " ++ intercalate "." id
 show_stmt spc (SVar _ id (tp,_) Nothing)  = rep spc ++ "var " ++ id ++ ": " ++ T.show' tp
 show_stmt spc (SVar _ id (tp,_) (Just e)) = rep spc ++ "var " ++ id ++ ": " ++ T.show' tp ++ " = " ++ show_exp spc e
+show_stmt spc (SIf  _ e t f)              = rep spc ++ "if " ++ show_exp spc e ++ "then\n" ++
+                                                          show_stmt (spc+2) t ++ "\n" ++
+                                            rep spc ++ "else\n" ++
+                                                          show_stmt (spc+2) f ++ "\n"
+show_stmt spc (SMatch _ _ chk exp cses)  = rep spc ++ "match " ++ show_exp spc exp ++ " with\n" ++ (concatMap f cses)
+                                         where
+                                          f (ds,pt,st) = rep (spc+4) ++ show_exp (spc+4) pt ++
+                                                          " { " ++ show_stmt 0 ds ++ " } then\n" ++
+                                                          show_stmt (spc+8) st ++ "\n"
 show_stmt spc (SRet _ e)                  = rep spc ++ "return " ++ show_exp spc e
 show_stmt spc (SNop _)                    = rep spc ++ "nop"
 {-
@@ -169,11 +179,6 @@ show_stmt spc (SMatch _ _ False exp [(_,pt,st)])
 show_stmt spc (SMatch _ _ True  exp ((ds,pt,st):_))
                                        = rep spc ++ "set! " ++ show_exp spc pt ++ " = " ++
                                           show_exp spc exp ++ "\n" ++ show_stmt spc st
-show_stmt spc (SMatch _ _ chk exp cses)  = rep spc ++ "match " ++ show_exp spc exp ++ " with\n" ++ (concatMap f cses)
-                                         where
-                                          f (ds,pt,st) = rep (spc+4) ++ show_exp (spc+4) pt ++
-                                                          " { " ++ show_stmt 0 ds ++ " } then\n" ++
-                                                          show_stmt (spc+8) st ++ "\n"
 -}
 show_stmt _ p = error $ show p
 
@@ -183,8 +188,10 @@ show_exp spc (ETuple _ es)        = "(" ++ intercalate "," (map (show_exp spc) e
 show_exp spc (ECons  _ ["Int",n]) = n
 show_exp spc (ECons  _ id)        = hier2str id
 show_exp spc (EField _ id fld)    = hier2str id ++ "." ++ fld
-show_exp spc (EFunc  _ _ _ p)     = "func" ++ "\n" ++ show_stmt (spc+4) p
+show_exp spc (EFunc  _ _ ps p)    = "func " ++ show_exp spc ps ++ "\n" ++ show_stmt (spc+4) p
 show_exp spc (ECall  _ e1 e2)     = "call" ++ " " ++ show_exp spc e1 ++ " " ++ show_exp spc e2
+show_exp spc (EMatch _ exp pat)   = "match" ++ " " ++ show_exp spc exp ++ " with " ++ show_exp spc pat
+show_exp spc (EExp   _ exp)       = show_exp spc exp
 {-
 show_exp spc (EAny   _)           = "_"
 show_exp spc (EUnit  _)           = "()"
@@ -192,8 +199,6 @@ show_exp spc (EError _ n)         = "error " ++ show n
 show_exp spc (EArg   _)           = "arg"
 show_exp spc (EUpv   _)           = "upv"
 show_exp spc (EFunc  _ _ _ p)     = "func" ++ "\n" ++ show_stmt (spc+4) p
-show_exp spc (EMatch _ exp pat)   = "match" ++ " " ++ show_exp spc exp ++ " with " ++ show_exp spc pat
-show_exp spc (EExp   _ exp)       = show_exp spc exp
 show_exp spc (ERefRef _ exp)      = "ref " ++ show_exp spc exp
 show_exp spc (ERefIni _ exp)      = show_exp spc exp
 show_exp spc (ERefDer _ exp)      = "acc " ++ show_exp spc exp
