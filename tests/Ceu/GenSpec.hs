@@ -24,7 +24,7 @@ spec = do
       it "IEq" $
         (run True $
           unlines [
-            "constraint IEq for a with"          ,
+            "constraint IEq for a with"         ,
             " var eq  : ((a,a) -> Int)"         ,
             " var neq : ((a,a) -> Int)"         ,
             "end"                               ,

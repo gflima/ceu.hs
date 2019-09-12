@@ -15,6 +15,19 @@
 - pool
 - strings e show
 - C runtime
+- pattern match de subtipos na declaracao da fc
+    - data A;
+    - data A.X;
+    - data A.Y;
+    - func f : (A.X a) ...
+    - func f : (A.Y a) ...
+    - implicitamente declara:
+        - func f_X : (A.X a) ...
+        - func f_Y : (A.Y a) ...
+        - func f : (A a) do
+            case a of
+                A.X then return f_X a
+                ...
 
 - match ser obrigatorio com dcls de vars?
 - match ter um campo de INIT/Bool
@@ -559,53 +572,54 @@ return eq (1,2) // f 1
 
 // CONSTRAINT
 
-data _IEq (eq,neq) for a with (                         // dclClassDicts
-    ((_IEq for a, a,a) -> Int),     // eq
-    ((_IEq for a, a,a) -> Int),     // neq
+data $IEq (eq,neq) for a with (                         // dclClassDicts
+    (($IEq for a, a,a) -> Int),     // eq
+    (($IEq for a, a,a) -> Int),     // neq
 )
 
-func _neq (_dict,x,y) : ((_IEq for a,a,a) -> Int) do    // dupRenImpls, insDict
+func $neq ($dict,x,y) : (($IEq for a,a,a) -> Int) do    // dupRenImpls, insDict
     eq = func (x,y) : ((a,a) -> Int) do                 // insWrappers
-            return _dict.eq(_dict,x,y)
+            return $dict.eq($dict,x,y)
          end
     return 1 - (x eq y)
 end
 
 // INSTANCE
 
-func _neq_Int (x,y) : ((Int,Int) -> Int) do             // dupRenImpls
-    return _neq(_IEq_Int,x,y)
+func $neq$Int (x,y) : ((Int,Int) -> Int) do             // dupRenImpls
+    return $neq($IEq$Int,x,y)
 end
 
-func eq_Int (x,y) : ((Int,Int) -> Int) do
-    neq = func (x,y) : ((Int,Int) -> Int) do            // insWrappers
-            return _neq(_IEq_Int,x,y)
-         end
+func eq$Int (x,y) : ((Int,Int) -> Int) do
+    // not needed because neq will be renamed to neq$Int
+    //neq = func (x,y) : ((Int,Int) -> Int) do            // insWrappers
+            //return $neq($IEq$Int,x,y)
+         //end
     if y matches x then return 1 else return 0 end
 end
 
-func _eq_Int (_dict,x,y) : ((_IEq_Int,Int,Int) -> Int) do   // insDict
-    return eq_Int(x,y)                                  // addInstCall
+func $eq$Int ($dict,x,y) : (($IEq$Int,Int,Int) -> Int) do   // insDict
+    return eq$Int(x,y)                                  // addInstCall
 end
 
 // DATA
 
-var _IEq_Int : _IEq for Int = (_eq_Int,neq)
+var $IEq$Int : $IEq for Int = ($eq$Int,neq)
 
 l
 
 // FUNCTION
 
-func f (_dict,x) : ((_IEq for a,Int) -> Int) do
-    return x _dict.eq x
+func f ($dict,x) : (($IEq for a,Int) -> Int) do
+    return x $dict.eq x
 end
 
-var f_Int x : (Int -> Int) do
-    return f (_IEq_Int,x)
+var f$Int x : (Int -> Int) do
+    return f ($IEq$Int,x)
 end
 
 // CALL
 
-return eq_Int(1,2) // f_Int 1
+return $eq$Int(1,2) // f$Int 1
 
 ===============================================================================
