@@ -7,7 +7,7 @@ import Data.Maybe (isJust)
 import Ceu.Grammar.Globals
 import qualified Ceu.Grammar.Constraints as Cs
 import Ceu.Grammar.Ann         (Ann)
-import Ceu.Grammar.Type        (TypeC, show', Type(..))
+import Ceu.Grammar.Type        (TypeC, show', Type(..), FuncType(..))
 import Ceu.Grammar.Full.Full
 
 idtp id tp = "$" ++ id ++ "$" ++ show' tp ++ "$"
@@ -80,14 +80,14 @@ dupRenImpls :: Stmt -> Stmt
 
 dupRenImpls (SClass z id ctrs ifc) = SClass z id ctrs ifc' where
   ifc' = map_stmt (f, Prelude.id, Prelude.id) ifc
-  f (SVar z id tpc (Just imp)) = SSeq z (SVar z id tpc Nothing)
-                                        (SVar z ('$':id) tpc (Just imp))
+  f (SVar z id tpc@(tp,_) p) = SSeq z (SVar z id tpc Nothing) $
+                                      (SVar z (idtp id tp) tpc p)
   f p = p
 
 dupRenImpls (SInst z cls tpc@(tp,_) imp) = SInst z cls tpc imp' where
   imp' = map_stmt (f, Prelude.id, Prelude.id) imp
   f s@(SVar z id tpc' p) = SSeq z (SVar z (    idtp id tp) tpc' p)
-                                  (SVar z ('$':idtp id tp) tpc' p)
+                                  (SVar z ('_':idtp id tp) tpc' p)
   f p = p
 
 dupRenImpls p = p
@@ -118,15 +118,20 @@ insClassWrappers (SClass z cls ctrs ifc) = SClass z cls ctrs ifc' where
   ps   = protos ifc
   ifc' = map_stmt (f, Prelude.id, Prelude.id) ifc
 
-  f (SVar z ('$':id) tpc (Just (EFunc z2 tp2 par2 p2))) =
-    SVar z ('$':id) tpc (Just (EFunc z2 tp2 par2 p2')) where
+  f (SVar z ('$':id) tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2))) =
+     SVar z ('$':id) tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2')) where
       p2' = foldr (SSeq z) p2 (map g (filter notme ps)) where
               notme (_,id',_,_) = id /= id'
 
-              g (_,id',_,_) = SVar z id' tpc (Just (EFunc z tp2 par2 p)) where
+              g (_,id',_,_) = SVar z id' tpc (Just (EFunc z (TFunc FuncNested inp out,cs) (ren par2) p)) where
                                 p = SRet z (ECall z
                                             (ECall z (EField z ['$':cls] id') (EVar z "$dict"))
-                                            (insTuple z (EVar z "$dict") par2))
+                                            (insTuple z (EVar z "dict") (ren par2)))
+
+              -- rename parameters to prevent redeclarations
+              ren (EVar   z id) = EVar z ('$':id)
+              ren (ETuple z l)  = ETuple z (map f l) where
+                                    f (EVar z id) = EVar z ('$':id)
   f p = p
 
   insTuple z e (ETuple _ l)  = ETuple z (e:l)
