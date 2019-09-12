@@ -57,7 +57,7 @@ compile p =
   map_stmt (Class.insDict,id,id)        $
   map_stmt (Class.insWrappers,id,id)    $
   map_stmt (Class.dupRenImpls,id,id)    $
-  map_stmt (Class.dclClassDicts,id,id)       $
+  map_stmt (Class.dclClassDicts,id,id)  $
   map_stmt (Class.insConstraint,id,id)  $
   map_stmt (Func.remSFunc,id,id)        $
   p where

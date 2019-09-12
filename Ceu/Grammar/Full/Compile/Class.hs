@@ -84,7 +84,7 @@ dupRenImpls (SClass z id ctrs ifc) = SClass z id ctrs ifc' where
 
 dupRenImpls (SInst z cls tpc@(tp,_) imp) = SInst z cls tpc imp' where
   imp' = map_stmt (f, Prelude.id, Prelude.id) imp
-  f s@(SVar z id tpc' p) = SSeq z s
+  f s@(SVar z id tpc' p) = SSeq z (SVar z (     id++"_"++show' tp) tpc' p)
                                   (SVar z ("_"++id++"_"++show' tp) tpc' p)
   f p = p
 
@@ -122,7 +122,9 @@ insWrappers (SClass z cls ctrs ifc) = SClass z cls ctrs ifc' where
               notme (_,id',_,_) = id /= id'
 
               g (_,id',_,_) = SVar z id' tpc (Just (EFunc z tp2 par2 p)) where
-                                p = SRet z (ECall z (EField z ['_':cls] id') (insTuple z (EVar z "_dict") par2))
+                                p = SRet z (ECall z
+                                            (ECall z (EField z ['_':cls] id') (EVar z "_dict"))
+                                            (insTuple z (EVar z "_dict") par2))
   f p = p
 
   insTuple z e (ETuple _ l)  = ETuple z (e:l)
@@ -159,19 +161,23 @@ insWrappers p = p
 insDict :: Stmt -> Stmt
 
 insDict (SClass z cls ctrs ifc) = SClass z cls ctrs ifc' where
-  ifc' = map_stmt (f, Prelude.id, Prelude.id) ifc
+  ifc' = map_stmt (f cls, Prelude.id, Prelude.id) ifc
 
 insDict (SInst z cls tpc imp) = SInst z cls tpc imp' where
-  imp' = map_stmt (f, Prelude.id, Prelude.id) imp
+  imp' = map_stmt (f cls, Prelude.id, Prelude.id) imp
 
 insDict p = p
 
-f (SVar z ('_':id) tpc (Just (EFunc z2 (TFunc ft inp  out,cs) par2  p2))) =
-   SVar z ('_':id) tpc (Just (EFunc z2 (TFunc ft inp' out,cs) par2' p2)) where
-  inp'  = insTupleT (TData False ['_':id] []) inp
-  par2' = insTupleE z2 (EVar z "_dict") par2
+f cls (SVar z ('_':id) (TFunc ft1 inp1 out1,cs1)
+        (Just (EFunc z2 (TFunc ft2 inp2 out2,cs2) par2  p2))) = traceShow id $
+  SVar z ('_':id) (TFunc ft1 inp1' out1,cs1)
+    (Just (EFunc z2 (TFunc ft2 inp2' out2,cs2) par2' p2))
+  where
+    inp1'  = insTupleT (TData False ['_':cls] []) inp1
+    inp2'  = insTupleT (TData False ['_':cls] []) inp2
+    par2' = insTupleE z2 (EVar z "_dict") par2
 --f p@(SVar z id tpc (Just (EFunc z2 tp2  par2  p2))) = traceShow id p
-f p = p
+f _ p = p
 
 insTupleT :: Type -> Type -> Type
 insTupleT tp1 (TTuple l2) = TTuple (tp1:l2)

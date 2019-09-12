@@ -1,10 +1,7 @@
 - runhaskell -itests/ tests/Spec.hs
 - 9 -- Basic=1, Type=0, Eval=1, Full=0, Parser=0, Run=4, Book=3, Gen=0
 
-- _IEq.eq (_dict,x,y)
-    - (_IEq.eq _dict)(_dict,x,y)
-- insDict em _eq_Int
-- eq -> eq_Int
+- eq_Int
     - wrappers, precisa de ids (!)
 
 - Simplificar TypeSys.hs movendo o maximo para Full/Class.hs
