@@ -1,6 +1,11 @@
 - runhaskell -itests/ tests/Spec.hs
 - 9 -- Basic=1, Type=0, Eval=1, Full=0, Parser=0, Run=4, Book=3, Gen=0
 
+- questions about class
+    - dict or struct?
+    - when pass method, does it create a closure (to include the dict?)
+    - why no dynamic? fat pointer?
+
 - eq_Int
     - wrappers, precisa de ids (!)
 

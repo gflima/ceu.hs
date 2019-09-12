@@ -62,6 +62,11 @@ ftReq _   (_, _,  _)                    = (FuncNested, Nothing)
 
 hier2str = intercalate "."
 
+showC :: TypeC -> String
+showC (tp,cs) = case toList cs of
+  []          -> show' tp
+  [(var,[c])] -> show' tp ++ " where " ++ var ++ " is " ++ c
+
 show' :: Type -> String
 show' TTop                      = "top"
 show' TBot                      = "bot"

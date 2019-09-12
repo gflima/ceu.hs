@@ -6,7 +6,7 @@ import Data.List                     (intercalate)
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann               (Ann, HasAnn(..), annz)
 import Ceu.Grammar.Constraints as Cs (Map)
-import Ceu.Grammar.Type        as T  (Type(..), TypeC, FuncType, hier2str, show')
+import Ceu.Grammar.Type        as T  (Type(..), TypeC, FuncType, hier2str, show', showC)
 import qualified Ceu.Grammar.Basic as B
 
 -------------------------------------------------------------------------------
@@ -158,8 +158,8 @@ show_stmt spc (SSeq _ p1 p2)              = show_stmt spc p1 ++ "\n" ++ show_stm
 show_stmt spc (SClass' _ id _ _)          = rep spc ++ "constraint " ++ id
 show_stmt spc (SInst'  _ id _ _)          = rep spc ++ "instance " ++ id
 show_stmt spc (SData _ (TData False id _) _ _ _ _) = rep spc ++ "data " ++ intercalate "." id
-show_stmt spc (SVar _ id (tp,_) Nothing)  = rep spc ++ "var " ++ id ++ ": " ++ T.show' tp
-show_stmt spc (SVar _ id (tp,_) (Just e)) = rep spc ++ "var " ++ id ++ ": " ++ T.show' tp ++ " = " ++ show_exp spc e
+show_stmt spc (SVar _ id tpc Nothing)  = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc
+show_stmt spc (SVar _ id tpc (Just e)) = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc ++ " = " ++ show_exp spc e
 show_stmt spc (SIf  _ e t f)              = rep spc ++ "if " ++ show_exp spc e ++ "then\n" ++
                                                           show_stmt (spc+2) t ++ "\n" ++
                                             rep spc ++ "else\n" ++
