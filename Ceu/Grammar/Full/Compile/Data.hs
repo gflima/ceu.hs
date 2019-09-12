@@ -89,7 +89,7 @@ addAccs p = p
 
 faccs :: Ann -> Maybe [ID_Var] -> (Type,Type,Cs.Map) -> Stmt -> Stmt
 faccs z nms (tpD@(TData False hr _),st,cs) p = accs where
-  (accs,_) = foldr f (p, 1) (g st)
+  (accs,_) = foldr f (p, len st) (g st)
 
   hr_str = hier2str hr
 
@@ -98,8 +98,11 @@ faccs z nms (tpD@(TData False hr _),st,cs) p = accs where
   g TUnit      = []
   g tp         = [tp]
 
+  len (TTuple l) = length l
+  len _          = 1
+
   f :: Type -> (Stmt,Int) -> (Stmt,Int)
-  f tp (p,idx) = (SVar'' z id (TFunc FuncGlobal tpD tp,cs) (Just body) (nm p), idx+1)
+  f tp (p,idx) = (SVar'' z id (TFunc FuncGlobal tpD tp,cs) (Just body) (nm p), idx-1)
                  where
                   id = hr_str ++ "._" ++ show idx
 
@@ -110,9 +113,6 @@ faccs z nms (tpD@(TData False hr _),st,cs) p = accs where
                   ret  = ECall z (ECons z hr) (bool (ETuple z repl) (repl!!0) (len st == 1))
                   repl = take (idx-1) anys ++ [EVar z "_ret"] ++ drop idx anys
                   anys = replicate (len st) (EAny z)
-
-                  len (TTuple l) = length l
-                  len _          = 1
 
                   nm p = case nms of
                           Nothing -> p
