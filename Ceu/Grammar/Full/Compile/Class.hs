@@ -12,6 +12,24 @@ import Ceu.Grammar.Full.Full
 
 idtp id tp = "$" ++ id ++ "$" ++ show' tp ++ "$"
 
+insTupleT :: Type -> Type -> Type
+insTupleT tp1 (TTuple l2) = TTuple (tp1:l2)
+insTupleT tp1 tp2         = TTuple [tp1,tp2]
+
+-------------------------------------------------------------------------------
+
+-- convert from sequence of declarations to list of prototypes:
+--    constraint IEq for a with (eq:tp1, neq:tp2)
+-- becomes
+--    [(.,eq,tp1,.),(.,neq,tp2,.)]
+
+protos :: Stmt -> [(Ann, ID_Var, TypeC, Bool)]
+protos (SSeq _ p1 p2)        = (protos p1) ++ (protos p2)
+protos (SVar _ ('$':id) _ _) = []   -- ignore dups like _xxx
+protos (SVar z id tp ini)    = [(z,id,tp,isJust ini)]
+protos p                     = []
+
+-------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
 -- Insert constraint in each nested method in outer contraint/instance.
@@ -60,7 +78,9 @@ dclClassDicts cls@(SClass z id _ ifc) = SSeq z dict cls
     tpd  = TData False ['$':id] []
     dict = SData z tpd (Just $ "$dict":pars) tps Cs.cz False where
             pars = map (\(_,id,_,_)->id) ps
-            tps  = TTuple (tpd : map (\(_,_,(tp,_),_)->tp) ps)
+            tps  = TTuple (tpd : map f ps) where
+                    f (_,_,(TFunc ft inp out,_),_) = TFunc ft inp' out where
+                                                      inp' = insTupleT (TData False ['$':id] []) inp
 
 dclClassDicts p = p
 
@@ -188,10 +208,6 @@ f cls (SVar z ('$':id) (TFunc ft1 inp1 out1,cs1)
 --f p@(SVar z id tpc (Just (EFunc z2 tp2  par2  p2))) = traceShow id p
 f _ p = p
 
-insTupleT :: Type -> Type -> Type
-insTupleT tp1 (TTuple l2) = TTuple (tp1:l2)
-insTupleT tp1 tp2         = TTuple [tp1,tp2]
-
 insTupleE z e1 (ETuple _ l2) = ETuple z (e1:l2)
 insTupleE z e1 e2            = ETuple z [e1,e2]
 
@@ -232,17 +248,3 @@ remClassInst :: Stmt -> Stmt
 remClassInst (SClass z id ctrs ifc) = SSeq z (SClass' z id  ctrs (protos ifc)) ifc
 remClassInst (SInst  z cls tp  imp) = SSeq z (SInst'  z cls tp   (protos imp)) imp
 remClassInst p = p
-
--------------------------------------------------------------------------------
--------------------------------------------------------------------------------
-
--- convert from sequence of declarations to list of prototypes:
---    constraint IEq for a with (eq:tp1, neq:tp2)
--- becomes
---    [(.,eq,tp1,.),(.,neq,tp2,.)]
-
-protos :: Stmt -> [(Ann, ID_Var, TypeC, Bool)]
-protos (SSeq _ p1 p2)        = (protos p1) ++ (protos p2)
-protos (SVar _ ('$':id) _ _) = []   -- ignore dups like _xxx
-protos (SVar z id tp ini)    = [(z,id,tp,isJust ini)]
-protos p                     = []

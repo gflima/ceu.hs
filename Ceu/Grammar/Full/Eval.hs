@@ -43,7 +43,7 @@ prelude z p =
            p)))))))))))))))
 
 compile :: Stmt -> Stmt
-compile p =
+compile p = --traceStmt $
   map_stmt (Scope.remSScope,id,id)      $
   map_stmt (Match.remSSetSIf,id,id)     $
   map_stmt (Match.remIni,id,id)         $
