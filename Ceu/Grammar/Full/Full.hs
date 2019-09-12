@@ -163,12 +163,13 @@ show_stmt spc (SData'' _ (TData False id _) _ tp _ _ p) = rep spc ++ "data " ++ 
 show_stmt spc (SVar _ id tpc Nothing)  = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc
 show_stmt spc (SVar _ id tpc (Just e)) = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc ++ " = " ++ show_exp spc e
 show_stmt spc (SVar'' _ id tpc Nothing  p) = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc ++ "\n" ++ show_stmt spc p
-show_stmt spc (SVar'' _ id tpc (Just e) p) = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc ++ " = " ++ show_exp spc e ++ "\n" ++ show_stmt spc p
+--show_stmt spc (SVar'' _ id tpc (Just e) p) = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc ++ " = " ++ show_exp spc e ++ "\n" ++ show_stmt spc p
 show_stmt spc (SIf  _ e t f)              = rep spc ++ "if " ++ show_exp spc e ++ "then\n" ++
                                                           show_stmt (spc+2) t ++ "\n" ++
                                             rep spc ++ "else\n" ++
                                                           show_stmt (spc+2) f ++ "\n"
-show_stmt spc (SMatch _ _ chk exp cses)  = rep spc ++ "match " ++ show_exp spc exp ++ " with\n" ++ (concatMap f cses)
+show_stmt spc (SMatch _ True _ exp [(SNop _,var,p)]) = rep spc ++ "init " ++ show_exp spc var ++ " = " ++ show_exp spc exp ++ "\n" ++ show_stmt spc p
+show_stmt spc (SMatch _ _ _ exp cses)  = rep spc ++ "match " ++ show_exp spc exp ++ " with\n" ++ (concatMap f cses)
                                          where
                                           f (ds,pt,st) = rep (spc+4) ++ show_exp (spc+4) pt ++
                                                           " { " ++ show_stmt 0 ds ++ " } then\n" ++
