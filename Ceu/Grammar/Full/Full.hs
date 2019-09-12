@@ -155,11 +155,15 @@ rep spc = replicate spc ' '
 
 show_stmt :: Int -> Stmt -> String
 show_stmt spc (SSeq _ p1 p2)              = show_stmt spc p1 ++ "\n" ++ show_stmt spc p2
-show_stmt spc (SClass' _ id _ _)          = rep spc ++ "constraint " ++ id
+show_stmt spc (SClass'  _ id _ _)         = rep spc ++ "constraint " ++ id
+show_stmt spc (SClass'' _ id _ _ p)       = rep spc ++ "constraint " ++ id ++ "\n" ++ show_stmt spc p
 show_stmt spc (SInst'  _ id _ _)          = rep spc ++ "instance " ++ id
-show_stmt spc (SData _ (TData False id _) _ _ _ _) = rep spc ++ "data " ++ intercalate "." id
+show_stmt spc (SData   _ (TData False id _) _ tp _ _  ) = rep spc ++ "data " ++ intercalate "." id ++ T.show' tp
+show_stmt spc (SData'' _ (TData False id _) _ tp _ _ p) = rep spc ++ "data " ++ intercalate "." id ++ T.show' tp ++ "\n" ++ show_stmt spc p
 show_stmt spc (SVar _ id tpc Nothing)  = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc
 show_stmt spc (SVar _ id tpc (Just e)) = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc ++ " = " ++ show_exp spc e
+show_stmt spc (SVar'' _ id tpc Nothing  p) = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc ++ "\n" ++ show_stmt spc p
+show_stmt spc (SVar'' _ id tpc (Just e) p) = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc ++ " = " ++ show_exp spc e ++ "\n" ++ show_stmt spc p
 show_stmt spc (SIf  _ e t f)              = rep spc ++ "if " ++ show_exp spc e ++ "then\n" ++
                                                           show_stmt (spc+2) t ++ "\n" ++
                                             rep spc ++ "else\n" ++
@@ -189,14 +193,15 @@ show_exp spc (ECons  _ ["Int",n]) = n
 show_exp spc (ECons  _ id)        = hier2str id
 show_exp spc (EField _ id fld)    = hier2str id ++ "." ++ fld
 show_exp spc (EFunc  _ _ ps p)    = "func " ++ show_exp spc ps ++ "\n" ++ show_stmt (spc+4) p
+show_exp spc (EFunc' _ _    p)    = "func " ++                    "\n" ++ show_stmt (spc+4) p
 show_exp spc (ECall  _ e1 e2)     = "call" ++ " " ++ show_exp spc e1 ++ " " ++ show_exp spc e2
 show_exp spc (EMatch _ exp pat)   = "match" ++ " " ++ show_exp spc exp ++ " with " ++ show_exp spc pat
 show_exp spc (EExp   _ exp)       = show_exp spc exp
-{-
+show_exp spc (EArg   _)           = "arg"
 show_exp spc (EAny   _)           = "_"
+{-
 show_exp spc (EUnit  _)           = "()"
 show_exp spc (EError _ n)         = "error " ++ show n
-show_exp spc (EArg   _)           = "arg"
 show_exp spc (EUpv   _)           = "upv"
 show_exp spc (EFunc  _ _ _ p)     = "func" ++ "\n" ++ show_stmt (spc+4) p
 show_exp spc (ERefRef _ exp)      = "ref " ++ show_exp spc exp

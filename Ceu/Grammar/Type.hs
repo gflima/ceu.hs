@@ -77,7 +77,9 @@ show' (TData  ref hier [] )     = ref2str ref ++ hier2str hier
 show' (TData  ref hier [x])     = "(" ++ ref2str ref ++ hier2str hier ++ " of " ++ show' x ++ ")"
 show' (TData  ref hier ofs)     = "(" ++ ref2str ref ++ hier2str hier ++ " of " ++ "(" ++ intercalate "," (map show' ofs) ++ ")" ++ ")"
 --show' (TFunc  False (FuncClosure _) inp out) = "new (" ++ show' inp ++ " -> " ++ show' out ++ ")"
-show' (TFunc  _ inp out)        = "(" ++ show' inp ++ " -> " ++ show' out ++ ")"
+show' (TFunc  ft inp out)       = "(" ++ show' inp ++ " -> " ++ show' out ++ ")" ++ (f ft) where
+                                    f (FuncClosure _) = "[]"
+                                    f _               = ""
 show' (TTuple tps)              = "(" ++ intercalate "," (map show' tps) ++ ")"
 
 ref2str True  = "ref "

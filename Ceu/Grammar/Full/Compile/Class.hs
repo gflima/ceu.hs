@@ -126,7 +126,7 @@ insClassWrappers (SClass z cls ctrs ifc) = SClass z cls ctrs ifc' where
               g (_,id',_,_) = SVar z id' tpc (Just (EFunc z (TFunc FuncNested inp out,cs) (ren par2) p)) where
                                 p = SRet z (ECall z
                                             (ECall z (EField z ['$':cls] id') (EVar z "$dict"))
-                                            (insTuple z (EVar z "dict") (ren par2)))
+                                            (insTuple z (EVar z "$dict") (ren par2)))
 
               -- rename parameters to prevent redeclarations
               ren (EVar   z id) = EVar z ('$':id)
@@ -229,8 +229,8 @@ addInstCall p = p
 --    instance  IEq for Int(eq,neq) ; eq ; neq
 
 remClassInst :: Stmt -> Stmt
-remClassInst (SClass z id ctrs ifc) = traceStmt $ SSeq z (SClass' z id  ctrs (protos ifc)) ifc
-remClassInst (SInst  z cls tp  imp) = traceStmt $ SSeq z (SInst'  z cls tp   (protos imp)) imp
+remClassInst (SClass z id ctrs ifc) = SSeq z (SClass' z id  ctrs (protos ifc)) ifc
+remClassInst (SInst  z cls tp  imp) = SSeq z (SInst'  z cls tp   (protos imp)) imp
 remClassInst p = p
 
 -------------------------------------------------------------------------------

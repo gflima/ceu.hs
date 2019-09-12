@@ -547,6 +547,7 @@ expr' _ envs (EFunc z tpc@(TFunc ft inp out,cs) upv@(EUnit _) p) = (es++esf, ft_
                                                 [toError z "not enough memory : more closures than slots"]
             (FuncClosure _,_)             -> ([toError z "unexpected dimension: function is not a closure"], ft')
             --(_,FuncClosure _)           -> ([toError z "expected `new`: function is a closure"], ft')
+            (FuncNested, FuncClosure _)   -> ([], FuncNested)
             (FuncUnknown,FuncClosure _)   -> ([], FuncNested)
             (FuncUnknown,_)               -> ([], ft')
             --_ -> error $ show (ft,ft')
@@ -653,7 +654,8 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n
               (id, tpc, lnr, [])
             else
               case find pred (concat envs) of            -- find instance
-                Just (SVar _ _ tpc@(tp,ctrs) _) ->
+                Just (SVar _ k tpc@(tp,ctrs) _) -> (id, tpc, lnr, [])
+{-
                   if null ctrs then
                     (idtp id tp, tpc, lnr, [])
                   else
@@ -661,6 +663,7 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n
                       (id, (TAny,cz), lnr, err)
                     else
                       (id, tpc, lnr, [])
+-}
                 Nothing -> (id, (TAny,cz), lnr, err)
               where
                 pred :: Stmt -> Bool

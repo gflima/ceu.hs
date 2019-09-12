@@ -739,7 +739,7 @@ spec = do
           (EFunc (annz {typec = (TFunc FuncGlobal (TTuple [TData False ["A"] [],TData False ["A"] []]) TUnit,cz)}) (TFunc FuncGlobal (TTuple [TData False ["A"] [],TData False ["A"] []]) TUnit,cz) (EUnit annz) (SRet annz (EError annz 99)))
           (SCall annz
             (ECall (annz {typec = (TUnit,cz)})
-              (EVar (annz {typec = (TFunc FuncGlobal (TTuple [TData False ["A"] [],TData False ["A"] []]) TUnit,cz)}) "$fff$((A,A) -> ())$")
+              (EVar (annz {typec = (TFunc FuncGlobal (TTuple [TData False ["A"] [],TData False ["A"] []]) TUnit,cz)}) "fff")
               (ETuple
                 (annz {typec = (TTuple [TData False ["A"] [],TData False ["A"] []],cz)}) [ECons (annz {typec = (TData False ["A"] [],cz)}) ["A"],ECons (annz {typec = (TData False ["A"] [],cz)}) ["A"]])))
           (SRet annz (EError annz 99))))))
