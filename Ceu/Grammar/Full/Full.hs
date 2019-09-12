@@ -59,9 +59,11 @@ instance HasAnn Exp where
 
 data Stmt
   = SClass    Ann ID_Class Cs.Map Stmt             -- new class declaration
-  | SClass'   Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] -- interface w/ body
+  | SClass'   Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt -- interface w/ body
+  | SClass''  Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] -- interface w/ body
   | SInst     Ann ID_Class TypeC Stmt              -- new class instance
-  | SInst'    Ann ID_Class TypeC [(Ann,ID_Var,TypeC,Bool)] -- new class instance
+  | SInst'    Ann ID_Class TypeC [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class instance
+  | SInst''   Ann ID_Class TypeC [(Ann,ID_Var,TypeC,Bool)] -- new class instance
   | SData     Ann Type (Maybe [ID_Var]) Type Cs.Map Bool      -- new type declaration
   | SVar      Ann ID_Var TypeC (Maybe Exp)         -- (z id tp ini)   -- variable declaration
   | SFunc     Ann ID_Var TypeC Exp Stmt            -- function declaration
@@ -75,10 +77,10 @@ data Stmt
   | SNop      Ann                                  -- nop as in basic Grammar
   | SRet      Ann Exp
   -- declarations w/ scope
-  | SClass''  Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt
-  | SInst''   Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt
-  | SData''   Ann Type (Maybe [ID_Var]) Type Cs.Map Bool Stmt
-  | SVar''    Ann ID_Var TypeC (Maybe Exp) Stmt
+  | SClassS   Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt
+  | SInstS    Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt
+  | SDataS    Ann Type (Maybe [ID_Var]) Type Cs.Map Bool Stmt
+  | SVarS     Ann ID_Var TypeC (Maybe Exp) Stmt
   deriving (Eq, Show)
 
 sSeq a b = SSeq annz a b
@@ -96,36 +98,38 @@ instance HasAnn Stmt where
     getAnn (SScope    z _)         = z
     getAnn (SNop      z)           = z
     getAnn (SRet      z _)         = z
-    getAnn (SData''   z _ _ _ _ _ _) = z
-    getAnn (SVar''    z _ _ _ _)   = z
+    getAnn (SDataS    z _ _ _ _ _ _) = z
+    getAnn (SVarS     z _ _ _ _)   = z
 
 toBasicStmt :: Stmt -> B.Stmt
-toBasicStmt (SClass'' z id  cs ifc p) = B.SClass z id  cs ifc (toBasicStmt p)
-toBasicStmt (SInst''  z cls tp imp p) = B.SInst  z cls tp imp (toBasicStmt p)
-toBasicStmt (SData''  z tp nms st cs abs p) = B.SData z tp nms st cs abs (toBasicStmt p)
-toBasicStmt (SVar''   z var tp Nothing p) = B.SVar   z var tp (toBasicStmt p)
-toBasicStmt (SMatch   z ini chk exp cses) = B.SMatch z ini chk (toBasicExp exp)
+toBasicStmt (SClassS z id  cs ifc p) = B.SClass z id  cs ifc (toBasicStmt p)
+toBasicStmt (SInstS  z cls tp imp p) = B.SInst  z cls tp imp (toBasicStmt p)
+toBasicStmt (SDataS  z tp nms st cs abs p) = B.SData z tp nms st cs abs (toBasicStmt p)
+toBasicStmt (SVarS   z var tp Nothing p) = B.SVar   z var tp (toBasicStmt p)
+toBasicStmt (SMatch  z ini chk exp cses) = B.SMatch z ini chk (toBasicExp exp)
                                               (map (\(ds,pt,st) -> (toBasicStmt ds, toBasicExp pt, toBasicStmt st)) cses)
-toBasicStmt (SCall   z e)             = B.SCall z (toBasicExp e)
-toBasicStmt (SSeq     z p1 p2)        = B.SSeq   z (toBasicStmt p1) (toBasicStmt p2)
-toBasicStmt (SLoop    z p)            = B.SLoop  z (toBasicStmt p)
-toBasicStmt (SNop     z)              = B.SNop   z
-toBasicStmt (SRet     z exp)          = B.SRet   z (toBasicExp exp)
-toBasicStmt p                         = error $ "toBasicStmt: unexpected statement: " ++ (show p)
+toBasicStmt (SCall   z e)            = B.SCall z (toBasicExp e)
+toBasicStmt (SSeq    z p1 p2)        = B.SSeq   z (toBasicStmt p1) (toBasicStmt p2)
+toBasicStmt (SLoop   z p)            = B.SLoop  z (toBasicStmt p)
+toBasicStmt (SNop    z)              = B.SNop   z
+toBasicStmt (SRet    z exp)          = B.SRet   z (toBasicExp exp)
+toBasicStmt p                        = error $ "toBasicStmt: unexpected statement: " ++ (show p)
 
 -------------------------------------------------------------------------------
 
 map_stmt :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Stmt -> Stmt
-map_stmt f@(fs,_,_)  (SClass z id  cs p)            = fs (SClass   z id  cs (map_stmt f p))
-map_stmt f@(fs,_,_)  (SClass' z id cs ifc)          = fs (SClass'  z id cs ifc)
-map_stmt f@(fs,_,_)  (SClass'' z id cs ifc p)       = fs (SClass'' z id cs ifc (map_stmt f p))
-map_stmt f@(fs,_,ft) (SInst  z cls tp p)            = fs (SInst    z cls (ft tp) (map_stmt f p))
-map_stmt f@(fs,_,ft) (SInst' z cls tp ifc)          = fs (SInst'   z cls (ft tp) ifc)
-map_stmt f@(fs,_,ft) (SInst'' z cls tp ifc p)       = fs (SInst''  z cls (ft tp) ifc (map_stmt f p))
-map_stmt f@(fs,_,ft) (SData  z tp nms st cs abs)    = fs (SData    z tp nms st cs abs)
-map_stmt f@(fs,_,ft) (SData'' z tp nms st cs abs p) = fs (SData''  z tp nms st cs abs (map_stmt f p))
-map_stmt f@(fs,_,ft) (SVar   z id tp ini)           = fs (SVar     z id (ft tp) (fmap (map_exp f) ini))
-map_stmt f@(fs,_,ft) (SVar'' z id tp ini p)         = fs (SVar''   z id (ft tp) (fmap (map_exp f) ini) (map_stmt f p))
+map_stmt f@(fs,_,_)  (SClass   z id  cs p)           = fs (SClass   z id  cs (map_stmt f p))
+map_stmt f@(fs,_,_)  (SClass'  z id cs pts bdy)      = fs (SClass'  z id cs pts (map_stmt f bdy))
+map_stmt f@(fs,_,_)  (SClass'' z id cs pts)          = fs (SClass'' z id cs pts)
+map_stmt f@(fs,_,_)  (SClassS  z id cs pts p)        = fs (SClassS  z id cs pts (map_stmt f p))
+map_stmt f@(fs,_,ft) (SInst    z cls tp p)           = fs (SInst    z cls (ft tp) (map_stmt f p))
+map_stmt f@(fs,_,ft) (SInst'   z cls tp pts bdy)     = fs (SInst'   z cls (ft tp) pts (map_stmt f bdy))
+map_stmt f@(fs,_,ft) (SInst''  z cls tp pts)         = fs (SInst''  z cls (ft tp) pts)
+map_stmt f@(fs,_,ft) (SInstS   z cls tp pts p)       = fs (SInstS   z cls (ft tp) pts (map_stmt f p))
+map_stmt f@(fs,_,ft) (SData    z tp nms st cs abs)   = fs (SData    z tp nms st cs abs)
+map_stmt f@(fs,_,ft) (SDataS   z tp nms st cs abs p) = fs (SDataS   z tp nms st cs abs (map_stmt f p))
+map_stmt f@(fs,_,ft) (SVar     z id tp ini)          = fs (SVar     z id (ft tp) (fmap (map_exp f) ini))
+map_stmt f@(fs,_,ft) (SVarS    z id tp ini p)        = fs (SVarS    z id (ft tp) (fmap (map_exp f) ini) (map_stmt f p))
 map_stmt f@(fs,_,ft) (SFunc  z id tp ps bd)         = fs (SFunc    z id (ft tp) (map_exp f ps) (map_stmt f bd))
 map_stmt f@(fs,_,_)  (SMatch z ini chk exp cses)    = fs (SMatch   z ini chk (map_exp f exp)
                                                         (map (\(ds,pt,st) -> (map_stmt f ds, map_exp f pt, map_stmt f st)) cses))
@@ -155,15 +159,16 @@ rep spc = replicate spc ' '
 
 show_stmt :: Int -> Stmt -> String
 show_stmt spc (SSeq _ p1 p2)              = show_stmt spc p1 ++ "\n" ++ show_stmt spc p2
-show_stmt spc (SClass'  _ id _ _)         = rep spc ++ "constraint " ++ id
-show_stmt spc (SClass'' _ id _ _ p)       = rep spc ++ "constraint " ++ id ++ "\n" ++ show_stmt spc p
-show_stmt spc (SInst'  _ id _ _)          = rep spc ++ "instance " ++ id
+show_stmt spc (SClass'  _ id _ _ bdy)     = rep spc ++ "constraint " ++ id ++ "\n" ++ show_stmt spc bdy
+show_stmt spc (SClass'' _ id _ _)         = rep spc ++ "constraint " ++ id
+show_stmt spc (SInst'  _ id _ _ bdy)      = rep spc ++ "instance " ++ id ++ "\n" ++ show_stmt spc bdy
+show_stmt spc (SInst'' _ id _ _)          = rep spc ++ "instance " ++ id
 show_stmt spc (SData   _ (TData False id _) _ tp _ _  ) = rep spc ++ "data " ++ intercalate "." id ++ T.show' tp
-show_stmt spc (SData'' _ (TData False id _) _ tp _ _ p) = rep spc ++ "data " ++ intercalate "." id ++ T.show' tp ++ "\n" ++ show_stmt spc p
+show_stmt spc (SDataS  _ (TData False id _) _ tp _ _ p) = rep spc ++ "data " ++ intercalate "." id ++ T.show' tp ++ "\n" ++ show_stmt spc p
 show_stmt spc (SVar _ id tpc Nothing)  = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc
 show_stmt spc (SVar _ id tpc (Just e)) = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc ++ " = " ++ show_exp spc e
-show_stmt spc (SVar'' _ id tpc Nothing  p) = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc ++ "\n" ++ show_stmt spc p
---show_stmt spc (SVar'' _ id tpc (Just e) p) = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc ++ " = " ++ show_exp spc e ++ "\n" ++ show_stmt spc p
+show_stmt spc (SVarS  _ id tpc Nothing  p) = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc ++ "\n" ++ show_stmt spc p
+--show_stmt spc (SVarS  _ id tpc (Just e) p) = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc ++ " = " ++ show_exp spc e ++ "\n" ++ show_stmt spc p
 show_stmt spc (SIf  _ e t f)              = rep spc ++ "if " ++ show_exp spc e ++ "then\n" ++
                                                           show_stmt (spc+2) t ++ "\n" ++
                                             rep spc ++ "else\n" ++

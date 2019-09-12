@@ -58,6 +58,7 @@ compile p = --traceStmt $
   map_stmt (Class.insClassWrappers,id,id) $
   map_stmt (Class.dupRenImpls,id,id)    $
   map_stmt (Class.dclClassDicts,id,id)  $
+  map_stmt (Class.addProtos,id,id)      $
   map_stmt (Class.insConstraint,id,id)  $
   map_stmt (Func.remSFunc,id,id)        $
   p where

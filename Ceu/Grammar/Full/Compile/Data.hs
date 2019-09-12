@@ -26,13 +26,13 @@ import Ceu.Grammar.Full.Full
 -------------------------------------------------------------------------------
 
 expHier :: [Stmt] -> Stmt -> Stmt
-expHier ds (SClass'' z id  cs ifc p) = SClass'' z id  cs ifc (expHier ds p)
-expHier ds (SInst''  z cls tp imp p) = SInst''  z cls tp imp (expHier ds p)
-expHier ds (SData''  z tp nms st cs abs p) = SData'' z tp' nms' st' cs' abs (expHier (d':ds) p)
+expHier ds (SClassS  z id  cs ifc p) = SClassS z id  cs ifc (expHier ds p)
+expHier ds (SInstS   z cls tp imp p) = SInstS  z cls tp imp (expHier ds p)
+expHier ds (SDataS   z tp nms st cs abs p) = SDataS z tp' nms' st' cs' abs (expHier (d':ds) p)
                                              where
                                               (tp',nms',st',cs') = fdata ds (tp,nms,st,cs)
-                                              d' = SData'' z tp' nms' st' cs' abs p
-expHier ds (SVar''   z var tp ini p) = SVar''   z var tp (fmap (expr ds) ini) (expHier ds p)
+                                              d' = SDataS z tp' nms' st' cs' abs p
+expHier ds (SVarS    z var tp ini p) = SVarS   z var tp (fmap (expr ds) ini) (expHier ds p)
 expHier ds (SMatch   z ini chk exp cses) = SMatch  z ini chk (expr ds exp)
                                              (map (\(xs,pt,st) -> (expHier ds xs, expr ds pt, expHier ds st)) cses)
 expHier ds (SCall    z exp)          = SCall    z (expr ds exp)
@@ -54,9 +54,9 @@ expr _  e                        = e
 fdata :: [Stmt] -> (Type, Maybe [String], Type, Cs.Map) -> (Type, Maybe [String], Type, Cs.Map)
 fdata ds (tp@(TData False id ofs), nms, st, cs) = case getSuper id of
   Nothing  -> (tp,nms,st,cs)
-  Just sup -> case find (\(SData'' _ (TData False id' _) _ _ _ _ _) -> id'==sup) ds of
+  Just sup -> case find (\(SDataS _ (TData False id' _) _ _ _ _ _) -> id'==sup) ds of
                 Nothing -> (tp,nms,st,cs)
-                Just (SData'' _ (TData False _ ofs') nms' st' cs' _ _) ->
+                Just (SDataS _ (TData False _ ofs') nms' st' cs' _ _) ->
                   case any (\v2 -> elem v2 ofs) ofs' of
                     True  -> error $ "TODO: repeated variables"
                     False -> (TData False id (ofs' ++ ofs), ret, cat st' st, Cs.union cs' cs)
@@ -78,7 +78,7 @@ fdata ds (tp@(TData False id ofs), nms, st, cs) = case getSuper id of
 -------------------------------------------------------------------------------
 
 addAccs :: Stmt -> Stmt
-addAccs (SData''  z tp nms st cs abs p) = SData'' z tp nms st cs abs (faccs z nms (tp,st,cs) p)
+addAccs (SDataS  z tp nms st cs abs p) = SDataS z tp nms st cs abs (faccs z nms (tp,st,cs) p)
 addAccs p = p
 
 -------------------------------------------------------------------------------
@@ -102,12 +102,12 @@ faccs z nms (tpD@(TData False hr _),st,cs) p = accs where
   len _          = 1
 
   f :: Type -> (Stmt,Int) -> (Stmt,Int)
-  f tp (p,idx) = (SVar'' z id (TFunc FuncGlobal tpD tp,cs) (Just body) (nm p), idx-1)
+  f tp (p,idx) = (SVarS z id (TFunc FuncGlobal tpD tp,cs) (Just body) (nm p), idx-1)
                  where
                   id = hr_str ++ "._" ++ show idx
 
                   body = EFunc z (TFunc FuncGlobal tpD tp,cs) (EAny z)
-                          (SVar'' z "_ret" (tp,cs) Nothing -- (Just $ EArg z) (SRet z (EVar z "_ret")))
+                          (SVarS z "_ret" (tp,cs) Nothing -- (Just $ EArg z) (SRet z (EVar z "_ret")))
                             (SMatch z True False (EArg z) [(SNop z, ret, SRet z (EVar z "_ret"))]))
 
                   ret  = ECall z (ECons z hr) (bool (ETuple z repl) (repl!!0) (len st == 1))
@@ -116,7 +116,7 @@ faccs z nms (tpD@(TData False hr _),st,cs) p = accs where
 
                   nm p = case nms of
                           Nothing -> p
-                          Just l  -> SVar'' z idm (TFunc FuncGlobal tpD tp,cs) (Just body) p
+                          Just l  -> SVarS z idm (TFunc FuncGlobal tpD tp,cs) (Just body) p
                                      where
                                       idm = hr_str ++ "." ++ (l!!(idx-1))
                                       body = EFunc z (TFunc FuncGlobal tpD tp,cs) (EAny z)
