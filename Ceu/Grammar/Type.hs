@@ -85,6 +85,13 @@ show' (TTuple tps)              = "(" ++ intercalate "," (map show' tps) ++ ")"
 ref2str True  = "ref "
 ref2str False = ""
 
+toTTuple :: Type -> Type
+toTTuple tp@(TTuple _) = tp
+toTTuple tp            = TTuple [tp]
+
+insTTuple :: Type -> Type -> Type
+insTTuple tp (TTuple tup) = TTuple (tp:tup)
+
 -------------------------------------------------------------------------------
 
 {-

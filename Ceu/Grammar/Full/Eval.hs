@@ -1,5 +1,7 @@
 module Ceu.Grammar.Full.Eval where
 
+import qualified Data.Map as Map
+
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann          (Ann, getAnn)
 import Ceu.Grammar.Constraints  (cz)
@@ -44,24 +46,24 @@ prelude z p =
 
 compile :: Stmt -> Stmt
 compile p = traceStmt $
-  map_stmt (Scope.remSScope,id,id)      $
-  map_stmt (Match.remSSetSIf,id,id)     $
-  map_stmt (Match.remIni,id,id)         $
-  map_stmt (id,Func.remEFuncPar,id)     $
-  map_stmt (Data.addAccs,id,id)         $
-  Data.expHier []                       $
-  map_stmt (Scope.setScope,id,id)       $
-  map_stmt (Seq.adjSSeq,id,id)          $
-  map_stmt (Class.remClassInst,id,id)   $
-  --map_stmt (Class.addInstMissing,id,id) $
-  map_stmt (Class.addInstCall,id,id)    $
-  map_stmt (Class.insDict,id,id)        $
-  map_stmt (Class.insClassWrappers,id,id) $
-  map_stmt (Class.dupRenImpls,id,id)    $
-  map_stmt (Class.dclClassDicts,id,id)  $
-  map_stmt (Class.addProtos,id,id)      $
-  map_stmt (Class.insConstraint,id,id)  $
-  map_stmt (Func.remSFunc,id,id)        $
+  map_stmt (f2 Scope.remSScope,id,id)        Map.empty $
+  map_stmt (f2 Match.remSSetSIf,id,id)       Map.empty $
+  map_stmt (f2 Match.remIni,id,id)           Map.empty $
+  map_stmt (id2,Func.remEFuncPar,id)         Map.empty $
+  map_stmt (f2 Data.addAccs,id,id)           Map.empty $
+  Data.expHier []                                      $
+  map_stmt (Class.addInstMissing,id,id)      Map.empty $
+  map_stmt (f2 Scope.setScope,id,id)         Map.empty $
+  map_stmt (f2 Seq.adjSSeq,id,id)            Map.empty $
+  map_stmt (f2 Class.remClassInst,id,id)     Map.empty $
+  map_stmt (f2 Class.addInstCall,id,id)      Map.empty $
+  map_stmt (f2 Class.insDict,id,id)          Map.empty $
+  map_stmt (f2 Class.insClassWrappers,id,id) Map.empty $
+  map_stmt (f2 Class.dupRenImpls,id,id)      Map.empty $
+  map_stmt (f2 Class.dclClassDicts,id,id)    Map.empty $
+  map_stmt (f2 Class.addProtos,id,id)        Map.empty $
+  map_stmt (f2 Class.insConstraint,id,id)    Map.empty $
+  map_stmt (f2 Func.remSFunc,id,id)          Map.empty $
   p where
 
 compile' :: Stmt -> (Errors, B.Stmt)

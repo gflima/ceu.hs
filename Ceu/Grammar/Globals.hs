@@ -9,6 +9,9 @@ type ID_Class     = String
 type ID_Data      = String
 type ID_Data_Hier = [ID_Data]
 
+id2 _ x = x
+f2 f _ x  = f x
+
 -- All possible combinations between members of each group:
 --    G1        G2        G3
 -- [ [1,10], [2,20,200], [3], ... ]
