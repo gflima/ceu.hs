@@ -198,8 +198,8 @@ insTupleE z e1 e2            = ETuple z [e1,e2]
 
 -------------------------------------------------------------------------------
 
--- For each existing implementation (constraint or instance), insert dict
--- parameters for all constraint methods.
+-- For each existing implementation, insert dict parameters for all constraint
+-- methods.
 --
 --    instance of IEq for Int (...,eq(x,y))
 --
@@ -219,6 +219,34 @@ addInstCall (SInst' z cls tpc pts imp) = SInst' z cls tpc pts imp' where
   remTuple x = x
 
 addInstCall p = p
+
+-------------------------------------------------------------------------------
+
+-- For each missing implementation, add dummy implementation that calls
+-- constraint default.
+--
+--    instance of IEq for Int (eq(x,y))
+--
+--    func $neq$Int$ (x,y) return _$neq$($IEq$Int$,x,y)
+
+{-
+addInstMissing :: [Stmt] -> Stmt -> Stmt
+
+addInstMissing clss (SInst' z cls tpc pts imp) = SInst' z cls tpc pts imp' where
+  case Map.lookup cls clss of
+    Just x -> Map.difference x pts
+  imp' = map_stmt (f, Prelude.id, Prelude.id) imp where
+    f (SVar z ('_':id) tpc (Just (EFunc z2 tp2 par2 _))) =
+       SVar z ('_':id) tpc (Just (EFunc z2 tp2 par2 p2)) where
+      p2 = SRet z (ECall z (EVar z id) (remTuple par2))
+    f p = p
+
+  remTuple (ETuple _ [EVar _ "$dict", y])  = y
+  remTuple (ETuple z (EVar _ "$dict" : l)) = ETuple z l
+  remTuple x = x
+
+addInstMissing p = p
+-}
 
 -------------------------------------------------------------------------------
 

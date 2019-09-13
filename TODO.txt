@@ -591,15 +591,11 @@ end
 
 // INSTANCE
 
-func $neq$Int (x,y) : ((Int,Int) -> Int) do             // dupRenImpls
-    return $neq($IEq$Int,x,y)
+func $neq$Int (x,y) : ((Int,Int) -> Int) do             // addInstMissing
+    return _$neq$($IEq$Int,x,y)
 end
 
 func $eq$Int$ (x,y) : ((Int,Int) -> Int) do
-    // not needed because neq will be renamed to neq$Int
-    //neq = func (x,y) : ((Int,Int) -> Int) do            // insWrappers
-            //return $neq($IEq$Int,x,y)
-         //end
     if y matches x then return 1 else return 0 end
 end
 

@@ -43,7 +43,7 @@ prelude z p =
            p)))))))))))))))
 
 compile :: Stmt -> Stmt
-compile p = --traceStmt $
+compile p = traceStmt $
   map_stmt (Scope.remSScope,id,id)      $
   map_stmt (Match.remSSetSIf,id,id)     $
   map_stmt (Match.remIni,id,id)         $
@@ -53,6 +53,7 @@ compile p = --traceStmt $
   map_stmt (Scope.setScope,id,id)       $
   map_stmt (Seq.adjSSeq,id,id)          $
   map_stmt (Class.remClassInst,id,id)   $
+  --map_stmt (Class.addInstMissing,id,id) $
   map_stmt (Class.addInstCall,id,id)    $
   map_stmt (Class.insDict,id,id)        $
   map_stmt (Class.insClassWrappers,id,id) $
