@@ -161,8 +161,10 @@ show_stmt :: Int -> Stmt -> String
 show_stmt spc (SSeq _ p1 p2)              = show_stmt spc p1 ++ "\n" ++ show_stmt spc p2
 show_stmt spc (SClass'  _ id _ _ bdy)     = rep spc ++ "constraint " ++ id ++ "\n" ++ show_stmt spc bdy
 show_stmt spc (SClass'' _ id _ _)         = rep spc ++ "constraint " ++ id
+show_stmt spc (SClassS  _ id _ _ p)       = rep spc ++ "constraint " ++ id ++ "\n" ++ show_stmt spc p
 show_stmt spc (SInst'  _ id _ _ bdy)      = rep spc ++ "instance " ++ id ++ "\n" ++ show_stmt spc bdy
 show_stmt spc (SInst'' _ id _ _)          = rep spc ++ "instance " ++ id
+show_stmt spc (SInstS  _ id _ _ p)        = rep spc ++ "instance " ++ id ++ "\n" ++ show_stmt spc p
 show_stmt spc (SData   _ (TData False id _) _ tp _ _  ) = rep spc ++ "data " ++ intercalate "." id ++ T.show' tp
 show_stmt spc (SDataS  _ (TData False id _) _ tp _ _ p) = rep spc ++ "data " ++ intercalate "." id ++ T.show' tp ++ "\n" ++ show_stmt spc p
 show_stmt spc (SVar _ id tpc Nothing)  = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc

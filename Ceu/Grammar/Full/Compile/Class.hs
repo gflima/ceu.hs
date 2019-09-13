@@ -61,7 +61,7 @@ addProtos p = p
 
 protos :: Stmt -> [(Ann, ID_Var, TypeC, Bool)]
 protos (SSeq _ p1 p2)        = (protos p1) ++ (protos p2)
-protos (SVar z id tp ini)    = [(z,traceShowId id,tp,isJust ini)]
+protos (SVar z id tp ini)    = [(z,id,tp,isJust ini)]
 protos p                     = []
 
 -------------------------------------------------------------------------------
@@ -98,18 +98,20 @@ dclClassDicts p = p
 --
 --    constraint IEq(eq,neq(...))
 --    func neq (x,y)            // keep just the declaration
---    func _neq (x,y) do        // rename for the actual implementation
+--    func $neq$ (x,y) do       // dummy id to typecheck
+--    func _$neq$ (x,y) do      // actual implementation (will receive $dict)
 --
 --    instance of IEq for Int (eq)
---    func eq_Int (x,y)         // wrapper to call _neq_Int with $dict
---    func _eq_Int (x,y)        // actual impl. with $dict
+--    func $eq$Int$ (x,y)       // wrapper to call _$neq$Int$ with $dict
+--    func _$eq$Int$ (x,y)      // actual implementation (will receive $dict)
 
 dupRenImpls :: Stmt -> Stmt
 
 dupRenImpls (SClass' z id ctrs pts ifc) = SClass' z id ctrs pts ifc' where
   ifc' = map_stmt (f, Prelude.id, Prelude.id) ifc
   f (SVar z id tpc@(tp,_) p) = SSeq z (SVar z id tpc Nothing) $
-                                      (SVar z (idtp id tp) tpc p)
+                               SSeq z (SVar z (    idtp id tp) tpc p)
+                                      (SVar z ('_':idtp id tp) tpc p)
   f p = p
 
 dupRenImpls (SInst' z cls tpc@(tp,_) pts imp) = SInst' z cls tpc pts imp' where
@@ -127,7 +129,7 @@ dupRenImpls p = p
 --
 --    constraint  IEq         (eq,neq(...))
 --
---    func $neq$ (x,y) do
+--    func _$neq$ (x,y) do  // will receive $dict
 --      eq = func (x,y) do return $dict.eq($dict,x,y) end
 --      ... -- one for each other method
 --      ... -- original default implementation
@@ -138,8 +140,8 @@ insClassWrappers :: Stmt -> Stmt
 insClassWrappers (SClass' z cls ctrs pts ifc) = SClass' z cls ctrs pts ifc' where
   ifc' = map_stmt (f, Prelude.id, Prelude.id) ifc
 
-  f (SVar z ('$':id) tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2))) =
-     SVar z ('$':id) tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2')) where
+  f (SVar z ('_':id) tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2))) =
+     SVar z ('_':id) tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2')) where
       p2' = foldr (SSeq z) p2 (map g (filter notme pts)) where
               notme (_,id',_,_) = id /= id'
 
@@ -157,23 +159,6 @@ insClassWrappers (SClass' z cls ctrs pts ifc) = SClass' z cls ctrs pts ifc' wher
   insTuple z e (ETuple _ l)  = ETuple z (e:l)
   insTuple z e f             = ETuple z [e,f]
 
-{-
-insWrappers (SInst z cls tpc@(tp,_) imp) = SInst z cls tpc imp' where
-  ps   = protos imp
-  imp' = map_stmt (f, Prelude.id, Prelude.id) imp
-
-  f (SVar z id@(c:_) tpc (Just (EFunc z2 tp2 par2 p2))) | c/='$' =
-    SVar z id tpc (Just (EFunc z2 tp2 par2 p2')) where
-      p2' = foldr (SSeq z) p2 (map g (filter notme ps)) where
-              notme (_,id',_,_) = id /= id'
-              g (_,id',_,_) = SVar z id' tpc (Just (EFunc z tp2 par2 p)) where
-                                p = SRet z (ECall z (EVar z ('$':id')) (insTuple z (EVar z ("_"++cls++"_"++show' tp)) par2))
-  f p = p
-
-  insTuple z e (ETuple _ l)  = ETuple z (e:l)
-  insTuple z e f             = ETuple z [e,f]
--}
-
 insClassWrappers p = p
 
 -------------------------------------------------------------------------------
@@ -184,8 +169,8 @@ insClassWrappers p = p
 --    constraint  IEq         (...,neq(x,y))
 --    instance of IEq for Int (...,eq(x,y))
 --
---    func _neq ($dict,x,y)
---    func _eq_Int ($dict,x,y)
+--    func _$neq$ ($dict,x,y)
+--    func _$eq$Int$ ($dict,x,y)
 
 insDict :: Stmt -> Stmt
 
@@ -197,9 +182,9 @@ insDict (SInst' z cls tpc pts imp) = SInst' z cls tpc pts imp' where
 
 insDict p = p
 
-f cls (SVar z ('$':id) (TFunc ft1 inp1 out1,cs1)
+f cls (SVar z ('_':id) (TFunc ft1 inp1 out1,cs1)
         (Just (EFunc z2 (TFunc ft2 inp2 out2,cs2) par2  p2))) =
-  SVar z ('$':id) (TFunc ft1 inp1' out1,cs1)
+  SVar z ('_':id) (TFunc ft1 inp1' out1,cs1)
     (Just (EFunc z2 (TFunc ft2 inp2' out2,cs2) par2' p2))
   where
     inp1'  = insTupleT (TData False ['$':cls] []) inp1
@@ -218,19 +203,20 @@ insTupleE z e1 e2            = ETuple z [e1,e2]
 --
 --    instance of IEq for Int (...,eq(x,y))
 --
---    func _eq_Int ($dict,x,y) return eq_Int(x,y)
+--    func _$eq$Int$ ($dict,x,y) return $eq$Int$(x,y)
 
 addInstCall :: Stmt -> Stmt
 
 addInstCall (SInst' z cls tpc pts imp) = SInst' z cls tpc pts imp' where
   imp' = map_stmt (f, Prelude.id, Prelude.id) imp where
-    f (SVar z ('$':id) tpc (Just (EFunc z2 tp2 par2 _))) =
-       SVar z ('$':id) tpc (Just (EFunc z2 tp2 par2 p2)) where
+    f (SVar z ('_':id) tpc (Just (EFunc z2 tp2 par2 _))) =
+       SVar z ('_':id) tpc (Just (EFunc z2 tp2 par2 p2)) where
       p2 = SRet z (ECall z (EVar z id) (remTuple par2))
     f p = p
 
   remTuple (ETuple _ [EVar _ "$dict", y])  = y
   remTuple (ETuple z (EVar _ "$dict" : l)) = ETuple z l
+  remTuple x = x
 
 addInstCall p = p
 

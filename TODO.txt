@@ -595,7 +595,7 @@ func $neq$Int (x,y) : ((Int,Int) -> Int) do             // dupRenImpls
     return $neq($IEq$Int,x,y)
 end
 
-func eq$Int (x,y) : ((Int,Int) -> Int) do
+func $eq$Int$ (x,y) : ((Int,Int) -> Int) do
     // not needed because neq will be renamed to neq$Int
     //neq = func (x,y) : ((Int,Int) -> Int) do            // insWrappers
             //return $neq($IEq$Int,x,y)
@@ -603,8 +603,8 @@ func eq$Int (x,y) : ((Int,Int) -> Int) do
     if y matches x then return 1 else return 0 end
 end
 
-func $eq$Int ($dict,x,y) : (($IEq$Int,Int,Int) -> Int) do   // insDict
-    return eq$Int(x,y)                                  // addInstCall
+func _$eq$Int$ ($dict,x,y) : (($IEq$Int,Int,Int) -> Int) do   // insDict
+    return $eq$Int$(x,y)                                  // addInstCall
 end
 
 // DATA
