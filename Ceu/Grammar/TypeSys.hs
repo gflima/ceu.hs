@@ -223,12 +223,10 @@ stmt envs tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ft, fts, p'') 
             Nothing -> (p2, es1++ex++ey++ez) where
 
               hcls   = class2table (concat envs) k where
-                        class2table :: [Stmt] -> Stmt -> Map.Map ID_Var (Ann,ID_Var,TypeC,Bool)
+                        class2table :: [Stmt] -> Stmt -> Protos
                         class2table envs cls = Map.unions $ map f1 (supers envs cls)
                           where
-                            f1 (SClass _ _ _ ifc _) = f2 ifc
-                            f2 :: [(Ann,ID_Var,TypeC,Bool)] -> Map.Map ID_Var (Ann,ID_Var,TypeC,Bool)
-                            f2 ifc = Map.fromList $ map (\s@(_,id,_,_) -> (id,s)) ifc
+                            f1 (SClass _ _ _ ifc _) = ifc
 
                             supers :: [Stmt] -> Stmt -> [Stmt]
                             supers envs s@(SClass z _ ctrs ifc _) = s :
@@ -240,8 +238,8 @@ stmt envs tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ft, fts, p'') 
                                 otherwise   -> error "TODO: multiple vars, multiple constraints"
 
               hinst  = inst2table  (concat envs) s where
-                        inst2table :: [Stmt] -> Stmt -> Map.Map ID_Var (Ann,ID_Var,TypeC,Bool)
-                        inst2table envs (SInst z cls tpc imp _) = Map.union (f2 imp) sups where
+                        inst2table :: [Stmt] -> Stmt -> Protos
+                        inst2table envs (SInst z cls tpc imp _) = Map.union imp sups where
                           sups =
                             case find (isClass cls) envs of
                               Just (SClass z _ ctrs _ _) ->
@@ -256,9 +254,6 @@ stmt envs tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ft, fts, p'') 
                             where
                               pred (SInst  _ x y _ _) = (x==sup && y==tpc)
                               pred _ = False
-
-                          f2 :: [(Ann,ID_Var,TypeC,Bool)] -> Map.Map ID_Var (Ann,ID_Var,TypeC,Bool)
-                          f2 ifc = Map.fromList $ map (\s@(_,id,_,_) -> (id,s)) ifc
 
               ---------------------------------------------------------------------
 

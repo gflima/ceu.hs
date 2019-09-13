@@ -1,12 +1,13 @@
 module Ceu.Grammar.Full.Compile.Class where
 
 import Debug.Trace
-import qualified Data.Set as S
+import qualified Data.Map as Map
 import Data.Maybe (isJust)
 
 import Ceu.Grammar.Globals
 import qualified Ceu.Grammar.Constraints as Cs
 import Ceu.Grammar.Ann         (Ann)
+import Ceu.Grammar.Basic       (Protos)
 import Ceu.Grammar.Type        (TypeC, show', Type(..), FuncType(..))
 import Ceu.Grammar.Full.Full
 
@@ -59,10 +60,10 @@ addProtos p = p
 -- becomes
 --    [(.,eq,tp1,.),(.,neq,tp2,.)]
 
-protos :: Stmt -> [(Ann, ID_Var, TypeC, Bool)]
-protos (SSeq _ p1 p2)        = (protos p1) ++ (protos p2)
-protos (SVar z id tp ini)    = [(z,id,tp,isJust ini)]
-protos p                     = []
+protos :: Stmt -> Protos
+protos (SSeq _ p1 p2)     = Map.union (protos p1) (protos p2)
+protos (SVar z id tp ini) = Map.singleton id (z,id,tp,isJust ini)
+protos p                  = Map.empty
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
@@ -85,8 +86,9 @@ dclClassDicts cls@(SClass' z id _ pts ifc) = SSeq z dict cls
   where
     tpd  = TData False ['$':id] []
     dict = SData z tpd (Just $ "$dict":pars) tps Cs.cz False where
-            pars = map (\(_,id,_,_)->id) pts
-            tps  = TTuple (tpd : map f pts) where
+            pts' = Map.elems pts
+            pars = map (\(_,id,_,_)->id) pts'
+            tps  = TTuple (tpd : map f pts') where
                     f (_,_,(TFunc ft inp out,_),_) = TFunc ft inp' out where
                                                       inp' = insTupleT (TData False ['$':id] []) inp
 
@@ -142,7 +144,7 @@ insClassWrappers (SClass' z cls ctrs pts ifc) = SClass' z cls ctrs pts ifc' wher
 
   f (SVar z ('_':id) tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2))) =
      SVar z ('_':id) tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2')) where
-      p2' = foldr (SSeq z) p2 (map g (filter notme pts)) where
+      p2' = foldr (SSeq z) p2 (map g (filter notme (Map.elems pts))) where
               notme (_,id',_,_) = id /= id'
 
               g (_,id',_,_) = SVar z id' tpc (Just (EFunc z (TFunc FuncNested inp out,cs) (ren par2) p)) where

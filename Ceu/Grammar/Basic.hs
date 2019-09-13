@@ -2,6 +2,7 @@ module Ceu.Grammar.Basic where
 
 import Data.Bool                      (bool)
 import Data.List                      (intercalate)
+import qualified Data.Map as Map
 
 import Ceu.Trace
 import Ceu.Grammar.Globals
@@ -51,9 +52,11 @@ instance HasAnn Exp where
 
 -------------------------------------------------------------------------------
 
+type Protos = Map.Map ID_Var (Ann,ID_Var,TypeC,Bool)
+
 data Stmt
-    = SClass  Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt -- new constraint declaration
-    | SInst   Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt -- new constraint instance
+    = SClass  Ann ID_Class Cs.Map Protos Stmt  -- new constraint declaration
+    | SInst   Ann ID_Class TypeC  Protos Stmt  -- new constraint instance
     | SData   Ann Type (Maybe [String]) Type Cs.Map Bool Stmt  -- new type declaration
     | SVar    Ann ID_Var TypeC Stmt            -- variable declaration
     | SMatch  Ann Bool Bool Exp [(Stmt,Exp,Stmt)]   -- match/assignment/if statement
@@ -139,9 +142,9 @@ show_exp spc e                    = error $ show e
 
 map_stmt :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Stmt -> Stmt
 map_stmt f@(fs,_,ft) (SClass z id ctr ifc p)     = fs (SClass z id ctr ifc' (map_stmt f p))
-                                                    where ifc' = map (\(x,y,tp,z)->(x,y,ft tp,z)) ifc
+                                                    where ifc' = Map.map (\(x,y,tp,z)->(x,y,ft tp,z)) ifc
 map_stmt f@(fs,_,ft) (SInst  z cls tp imp p)     = fs (SInst  z cls tp imp' (map_stmt f p))
-                                                    where imp' = map (\(x,y,tp,z)->(x,y,ft tp,z)) imp
+                                                    where imp' = Map.map (\(x,y,tp,z)->(x,y,ft tp,z)) imp
 map_stmt f@(fs,_,ft) (SData  z tdat nms flds ctrs abs p) = fs (SData z tdat nms flds ctrs abs (map_stmt f p))
 map_stmt f@(fs,_,ft) (SVar   z id tp p)          = fs (SVar   z id (ft tp) (map_stmt f p))
 map_stmt f@(fs,_,_)  (SMatch z ini b exp cses)   = fs (SMatch z ini b (map_exp f exp) (map (\(ds,pt,st) -> (map_stmt f ds, map_exp f pt, map_stmt f st)) cses))

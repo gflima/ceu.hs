@@ -59,12 +59,12 @@ instance HasAnn Exp where
 
 data Stmt
   = SClass    Ann ID_Class Cs.Map Stmt             -- new class declaration
-  | SClass'   Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt -- interface w/ body
-  | SClass''  Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] -- interface w/ body
+  | SClass'   Ann ID_Class Cs.Map B.Protos Stmt    -- interface w/ body
+  | SClass''  Ann ID_Class Cs.Map B.Protos         -- interface w/ body
   | SInst     Ann ID_Class TypeC Stmt              -- new class instance
-  | SInst'    Ann ID_Class TypeC [(Ann,ID_Var,TypeC,Bool)] Stmt -- new class instance
-  | SInst''   Ann ID_Class TypeC [(Ann,ID_Var,TypeC,Bool)] -- new class instance
-  | SData     Ann Type (Maybe [ID_Var]) Type Cs.Map Bool      -- new type declaration
+  | SInst'    Ann ID_Class TypeC B.Protos Stmt     -- new class instance
+  | SInst''   Ann ID_Class TypeC B.Protos          -- new class instance
+  | SData     Ann Type (Maybe [ID_Var]) Type Cs.Map Bool -- new type declaration
   | SVar      Ann ID_Var TypeC (Maybe Exp)         -- (z id tp ini)   -- variable declaration
   | SFunc     Ann ID_Var TypeC Exp Stmt            -- function declaration
   | SMatch    Ann Bool Bool Exp [(Stmt,Exp,Stmt)]  -- match
@@ -77,8 +77,8 @@ data Stmt
   | SNop      Ann                                  -- nop as in basic Grammar
   | SRet      Ann Exp
   -- declarations w/ scope
-  | SClassS   Ann ID_Class Cs.Map [(Ann,ID_Var,TypeC,Bool)] Stmt
-  | SInstS    Ann ID_Class TypeC  [(Ann,ID_Var,TypeC,Bool)] Stmt
+  | SClassS   Ann ID_Class Cs.Map B.Protos Stmt
+  | SInstS    Ann ID_Class TypeC  B.Protos Stmt
   | SDataS    Ann Type (Maybe [ID_Var]) Type Cs.Map Bool Stmt
   | SVarS     Ann ID_Var TypeC (Maybe Exp) Stmt
   deriving (Eq, Show)
