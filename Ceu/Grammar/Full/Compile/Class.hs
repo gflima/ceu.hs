@@ -222,7 +222,7 @@ addInstCall p = p
 --
 --    var $IEq$Int$ : $IEq$
 --    ... // body
---    $IEq$Int$ = ($IEq$Int$, _$eq$Int$, _$neq$Int$)
+--    $IEq$Int$ = (_$eq$Int$, _$neq$Int$)
 
 addInstDicts :: Stmt -> Stmt
 
@@ -238,6 +238,26 @@ addInstDicts p = p
 
 -------------------------------------------------------------------------------
 
+-- Unite all protos from Class/Inst.
+--
+--    constraint  IEq         (eq,neq)
+--    instance of IEq for Int (eq)
+--
+--    instance of IEq for Int (eq(True),neq(False))
+
+uniInstProtos :: Clss -> Stmt -> Stmt
+
+uniInstProtos clss (SInstS z cls tpc@(tp,_) pts bdy) =
+  SInstS z cls tpc pts' bdy where
+    pts' = case Map.lookup cls clss of
+            Just x -> Map.union pts $ Map.map noIni $ Map.difference x pts where
+                        noIni (z,id,tpc,_) = (z,id,tpc,False)
+            _ -> error $ show (cls, clss)
+
+uniInstProtos _ p = p
+
+-------------------------------------------------------------------------------
+
 -- For each missing implementation, add dummy implementation that calls
 -- constraint default.
 --
@@ -245,30 +265,29 @@ addInstDicts p = p
 --
 --    func $neq$Int$ (x,y) return _$neq$($IEq$Int$,x,y)
 
-addInstMissing :: Clss -> Stmt -> Stmt
+addInstMissing :: Stmt -> Stmt
 
-addInstMissing clss (SInstS z cls tpc@(tp,_) pts (SVarS z2 id2 tp2 Nothing bdy)) =
+addInstMissing (SInstS z cls tpc@(tp,_) pts (SVarS z2 id2 tp2 Nothing bdy)) =
   SInstS z cls tpc pts (SVarS z2 id2 tp2 Nothing bdy') where
-    bdy' = case Map.lookup cls clss of
-            Just x -> foldr ($) bdy $ map f $ Map.elems $ Map.difference x pts where
-                        f :: (Ann,ID_Var,TypeC,Bool) -> (Stmt -> Stmt)
-                        f (z2,id2,tpc2@(tp2,_),True) = SVarS z2 (idtp id2 tp) tpc2' (Just (EFunc z2 tpc2' par1 p)) where
-                          tp2' = instantiate [("a",tp)] tp2  -- TODO: a is fixed
-                          (TFunc _ inp2' _) = tp2'
-                          tpc2' = (tp2',Cs.cz)
+    bdy' = foldr ($) bdy $ map g $ Map.elems $ Map.filter f pts where
+            f (_,_,_,ini) = not ini   -- only methods w/o implementation
 
-                          p = SRet z2 (ECall z2 (EVar z2 ('_':idtp id2 tp2)) par2)
+            g :: (Ann,ID_Var,TypeC,Bool) -> (Stmt -> Stmt)
+            g (z2,id2,tpc2@(tp2,_),False) = SVarS z2 (idtp id2 tp) tpc2' (Just (EFunc z2 tpc2' par1 p)) where
+              tp2' = instantiate [("a",tp)] tp2  -- TODO: a is fixed
+              (TFunc _ inp2' _) = tp2'
+              tpc2' = (tp2',Cs.cz)
 
-                          par1 = listToExp $ map (EVar z2) $ par
-                          par2 = listToExp $ map (EVar z2) $ (("$"++cls++"$"++show' tp++"$") :) $ par
-                          par  = map ('$':) $ map show $ lns $ len $ toTTuple inp2' where
-                                  len (TTuple l) = length l
-                                  lns n = take n lns' where
-                                            lns' = 1 : map (+1) lns'
+              p = SRet z2 (ECall z2 (EVar z2 ('_':idtp id2 tp2)) par2)
 
-            _ -> error $ show (cls, clss)
+              par1 = listToExp $ map (EVar z2) $ par
+              par2 = listToExp $ map (EVar z2) $ (("$"++cls++"$"++show' tp++"$") :) $ par
+              par  = map ('$':) $ map show $ lns $ len $ toTTuple inp2' where
+                      len (TTuple l) = length l
+                      lns n = take n lns' where
+                                lns' = 1 : map (+1) lns'
 
-addInstMissing _ p = p
+addInstMissing p = p
 
 -------------------------------------------------------------------------------
 
