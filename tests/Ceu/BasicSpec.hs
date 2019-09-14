@@ -2,6 +2,7 @@ module Ceu.BasicSpec (main, spec) where
 
 import Debug.Trace
 import Test.Hspec
+import qualified Data.Map as Map
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Ann          (annz, Ann(..))
@@ -293,10 +294,10 @@ spec = do
     it "Int ; X a ; inst X Int ; return fff 1" $
       (fst $ TypeSys.go $ Simplify.go
         (SData annz int Nothing TUnit cz False
-        (SClass annz "X" (cv "a") [(annz,"fff",(TFunc FuncGlobal (TVar False "a") (int),cvc ("a","X")),False)]
+        (SClass annz "X" (cv "a") (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TVar False "a") (int),cvc ("a","X")),False))
             (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") (int),cvc ("a","X"))
         (SInst annz "X" (int,cz)
-            [(annz,"fff",(TFunc FuncGlobal (int) (int),cz),True)]
+            (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (int) (int),cz),True))
             (SVar annz "fff" (TFunc FuncGlobal (int) (int),cz)
             (mmm annz False
               (EVar annz "fff")
@@ -568,23 +569,23 @@ spec = do
   describe "typeclass:" $ do
     it "X.f ; X.f" $
       (fst $ TypeSys.go
-        (SClass annz "X" (cv "a") []
-        (SClass annz "X" (cv "a") []
+        (SClass annz "X" (cv "a") Map.empty
+        (SClass annz "X" (cv "a") Map.empty
         (SNop annz))))
       `shouldBe` ["constraint 'X' is already declared"]
 
     it "X.f ; Y.f" $
       (fst $ TypeSys.go
-        (SClass annz "X" (cv "a") []
+        (SClass annz "X" (cv "a") Map.empty
         (SVar annz "f" (TFunc FuncGlobal (TVar False "a") TUnit,cvc ("a","X"))
-        (SClass annz "Y" (cv "a") []
+        (SClass annz "Y" (cv "a") Map.empty
         (SVar annz "f" (TFunc FuncGlobal (TVar False "a") TUnit,cvc ("a","Y"))
         (SNop annz))))))
       `shouldBe` ["variable 'f' is already declared"]
 
     it "X.f ; f" $
       (fst $ TypeSys.go
-        (SClass annz "X" (cv "a") []
+        (SClass annz "X" (cv "a") Map.empty
         (SVar annz "f" (TFunc FuncGlobal (TVar False "a") TUnit, cvc ("a","X"))
         (SVar annz "f" (TFunc FuncGlobal (TVar False "a") TUnit,cz)
         (SNop annz)))))
@@ -592,7 +593,7 @@ spec = do
 
     it "~Bool ; Equalable ; (==)" $
       TypeSys.go
-        (SClass annz "Equalable" (cv "a") []
+        (SClass annz "Equalable" (cv "a") Map.empty
         (SVar annz "==" (TFunc FuncGlobal (TTuple [(TVar False "a"),(TVar False "a")]) (bool),cz)
         (SNop annz)))
       `shouldBe` (["data 'Bool' is not declared"],(SVar annz "==" (TFunc FuncGlobal (TTuple [TVar False "a",TVar False "a"]) (bool),cz) (SNop annz)))
@@ -600,7 +601,7 @@ spec = do
     it "Bool ; Equalable ; (==)" $
       TypeSys.go
         (SData annz bool Nothing TUnit cz True
-        (SClass annz "Equalable" (cv "a") []
+        (SClass annz "Equalable" (cv "a") Map.empty
         (SVar annz "==" (TFunc FuncGlobal (TTuple [(TVar False "a"),(TVar False "a")]) (bool),cz)
         (SNop annz))))
       `shouldBe` ([],SData annz bool Nothing TUnit cz True (SVar annz "==" (TFunc FuncGlobal (TTuple [TVar False "a",TVar False "a"]) (bool),cz) (SNop annz)))
@@ -608,7 +609,7 @@ spec = do
     it "Bool ; Equalable ; (==)" $
       TypeSys.go
         (SData annz bool Nothing TUnit cz True
-        (SClass annz "Equalable" (cv "a") []
+        (SClass annz "Equalable" (cv "a") Map.empty
         (SVar annz "==" (TFunc FuncGlobal (TTuple [(TVar False "a"),(TVar False "a")]) (bool), cvc ("a","Equalable"))
         (SNop annz))))
       `shouldBe` ([],SData annz bool Nothing TUnit cz True (SNop annz))
@@ -616,15 +617,15 @@ spec = do
     it "A ; Xable ; inst ; inst" $
       (fst $ TypeSys.go
         (SData annz (TData False ["A"] []) Nothing TUnit cz False
-        (SClass annz "Xable" (cv "a") [(annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False)]
+        (SClass annz "Xable" (cv "a") (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False))
         (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") TUnit,cz)
         (SInst annz "Xable" (TData False ["A"] [],cz)
-          [(annz, "fff", (TFunc FuncGlobal (TData False ["A"] []) TUnit,cz), True)]
+          (Map.singleton "fff" (annz, "fff", (TFunc FuncGlobal (TData False ["A"] []) TUnit,cz), True))
           (func "$fff$(A -> ())$" (TFunc FuncGlobal (TData False ["A"] []) TUnit,cz)
             (SSeq annz
               (SNop annz)
               (SInst annz "Xable" (TData False ["A"] [],cz)
-                [(annz,"fff",(TFunc FuncGlobal (TData False ["A"] []) TUnit,cz),True)]
+                (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TData False ["A"] []) TUnit,cz),True))
                 (SVar annz "$fff$(A -> ())$" (TFunc FuncGlobal (TData False ["A"] []) TUnit,cz)
                 (SSeq annz
                   (SNop annz)
@@ -635,9 +636,9 @@ spec = do
     it "A ; Xable a ; inst Xable A ; ()/=Int" $
       (fst $ TypeSys.go
         (SData annz (TData False ["A"] []) Nothing TUnit cz False
-        (SClass annz "Xable" (cv "a") [(annz,"fff1",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False)]
+        (SClass annz "Xable" (cv "a") (Map.singleton "fff1" (annz,"fff1",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False))
         (SVar annz "fff1" (TFunc FuncGlobal (TVar False "a") TUnit,cz)
-        (SInst annz "Xable" (TData False ["A"] [],cz) []
+        (SInst annz "Xable" (TData False ["A"] [],cz) Map.empty
           (SSeq annz
             (SNop annz)
             (SNop annz)))))))
@@ -646,10 +647,10 @@ spec = do
     it "A ; Xable a ; inst Xable A ; ()/=Int" $
       (fst $ TypeSys.go
         (SData annz (TData False ["A"] []) Nothing TUnit cz False
-        (SClass annz "Xable" (cv "a") [(annz,"fff1",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False)]
+        (SClass annz "Xable" (cv "a") (Map.singleton "fff1" (annz,"fff1",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False))
         (SVar annz "fff1" (TFunc FuncGlobal (TVar False "a") TUnit,cz)
         (SInst annz "Xable" (TData False ["A"] [],cz)
-          [(annz,"fff2",(TFunc FuncGlobal (TData False ["A"] []) TUnit,cz),True)]
+          (Map.singleton "fff2" (annz,"fff2",(TFunc FuncGlobal (TData False ["A"] []) TUnit,cz),True))
           (func "fff2" (TFunc FuncGlobal (TData False ["A"] []) TUnit,cz)
             (SSeq annz
               (SNop annz)
@@ -659,9 +660,9 @@ spec = do
     it "A ; Xable a ; inst Xable A ; ()/=Int" $
       (fst $ TypeSys.go
         (SData annz (TData False ["A"] []) Nothing TUnit cz False
-        (SClass annz "Xable" (cv "a") [(annz,"fff1",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False)]
+        (SClass annz "Xable" (cv "a") (Map.singleton "fff1" (annz,"fff1",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False))
         (SVar annz "fff1" (TFunc FuncGlobal (TVar False "a") TUnit,cz)
-        (SInst annz "Xable" (TData False ["A"] [],cz) []
+        (SInst annz "Xable" (TData False ["A"] [],cz) Map.empty
           (SSeq annz
             (SNop annz)
             (SNop annz)))))))
@@ -671,10 +672,10 @@ spec = do
       (fst $ TypeSys.go
         (SData annz int Nothing TUnit cz False
         (SData annz (TData False ["A"] []) Nothing TUnit cz False
-        (SClass annz "Xable" (cv "a") [(annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False)]
+        (SClass annz "Xable" (cv "a") (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False))
         (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") TUnit,cz)
         (SInst annz "Xable" (TData False ["A"] [],cz)
-          [(annz,"fff",(TFunc FuncGlobal (TData False ["A"] []) (int),cz),True)]
+          (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TData False ["A"] []) (int),cz),True))
           (func "$fff$(A -> ())$" (TFunc FuncGlobal (TData False ["A"] []) (int),cz)
             (SSeq annz
               (SNop annz)
@@ -685,10 +686,10 @@ spec = do
       (fst $ TypeSys.go
         (SData annz int Nothing TUnit cz False
         (SData annz (TData False ["A"] []) Nothing TUnit cz False
-        (SClass annz "Xable" (cv "a") [(annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False)]
+        (SClass annz "Xable" (cv "a") (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False))
         (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") TUnit,cz)
         (SInst annz "X" (TData False ["A"] [],cz)
-          [(annz,"fff",(TFunc FuncGlobal (int) TUnit,cz),True)]
+          (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (int) TUnit,cz),True))
           (func "$fff$(Int -> ())$" (TFunc FuncGlobal (int) TUnit,cz)
             (SSeq annz
               (SNop annz)
@@ -699,10 +700,10 @@ spec = do
       (fst $ TypeSys.go
         (SData annz int Nothing TUnit cz False
         (SData annz (TData False ["A"] []) Nothing TUnit cz False
-        (SClass annz "Xable" (cv "a") [(annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False)]
+        (SClass annz "Xable" (cv "a") (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False))
           (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") TUnit,cz)        -- a
         (SInst annz "Xable" (TData False ["A"] [],cz)                          -- A
-          [(annz, "fff", (TFunc FuncGlobal (int) TUnit,cz), True)]
+          (Map.singleton "fff" (annz, "fff", (TFunc FuncGlobal (int) TUnit,cz), True))
           (func "$fff$(Int -> ())$" (TFunc FuncGlobal (int) TUnit,cz)  -- Int
             (SSeq annz
               (SNop annz)
@@ -712,10 +713,10 @@ spec = do
     it "A ; Xable.fff(a) ; inst Xable A ; fff(A)" $
       (fst $ TypeSys.go
         (SData annz (TData False ["A"] []) Nothing TUnit cz False
-        (SClass annz "Xable" (cv "a") [(annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False)]
+        (SClass annz "Xable" (cv "a") (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False))
         (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") TUnit,cz)
         (SInst annz "Xable" (TData False ["A"] [],cz)
-          [(annz,"fff",(TFunc FuncGlobal (TData False ["A"] []) TUnit,cz),True)]
+          (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TData False ["A"] []) TUnit,cz),True))
           (func "$fff$(A -> ())$" (TFunc FuncGlobal (TData False ["A"] []) TUnit,cz)
             (SSeq annz
               (SNop annz)
@@ -725,10 +726,10 @@ spec = do
     it "A ; Xable.fff(a) ; SInst Xable (A,A) ; fff(A,A)" $
       TypeSys.go
         (SData annz (TData False ["A"] []) Nothing TUnit cz False
-        (SClass annz "Xable" (cv "a") [(annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False)]
+        (SClass annz "Xable" (cv "a") (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False))
         (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") TUnit, cvc ("a","Xable"))
         (SInst annz "Xable" (TTuple [TData False ["A"] [], TData False ["A"] []],cz)
-          [(annz, "fff", (TFunc FuncGlobal (TTuple [TData False ["A"] [], TData False ["A"] []]) TUnit,cz), True)]
+          (Map.singleton "fff" (annz, "fff", (TFunc FuncGlobal (TTuple [TData False ["A"] [], TData False ["A"] []]) TUnit,cz), True))
           (func "$fff$((A,A) -> ())$" (TFunc FuncGlobal (TTuple [TData False ["A"] [], TData False ["A"] []]) TUnit,cz)
             (SCall annz (ECall annz (EVar annz "fff") (ETuple annz [(ECons annz ["A"]),(ECons annz ["A"])]))))))))
       `shouldBe` ([],
@@ -748,10 +749,10 @@ spec = do
       (fst $ TypeSys.go
         (SData annz int Nothing TUnit cz False
         (SData annz (TData False ["A"] []) Nothing TUnit cz False
-        (SClass annz "Xable" (cv "a") [(annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit, cvc ("a","Xable")),False)]
+        (SClass annz "Xable" (cv "a") (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit, cvc ("a","Xable")),False))
         (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") TUnit, cvc ("a","Xable"))
         (SInst annz "Xable" (TData False ["A"] [],cz)
-          [(annz, "fff", (TFunc FuncGlobal (TData False ["A"] []) TUnit,cz), True)]
+          (Map.singleton "fff" (annz, "fff", (TFunc FuncGlobal (TData False ["A"] []) TUnit,cz), True))
           (func "$fff$(A -> ())$" (TFunc FuncGlobal (TData False ["A"] []) TUnit,cz)
             (SSeq annz
               (SNop annz)
@@ -763,7 +764,7 @@ spec = do
       (fst $ TypeSys.go
         (SData annz int Nothing TUnit cz False
         (SData annz bool Nothing TUnit cz False
-        (SClass annz "Equalable" (cv "a") [(annz,"eq",(TFunc FuncGlobal (TTuple [(TVar False "a"),(TVar False "a")]) (bool),cz),False)]
+        (SClass annz "Equalable" (cv "a") (Map.singleton "eq" (annz,"eq",(TFunc FuncGlobal (TTuple [(TVar False "a"),(TVar False "a")]) (bool),cz),False))
         (SVar annz "eq" (TFunc FuncGlobal (TTuple [(TVar False "a"),(TVar False "a")]) (bool),cz)
         (SCall annz (ECall annz (EVar annz "eq") (ETuple annz [(ECons annz ["Bool"]),(ECons annz ["Int","1"])]))))))))
       `shouldBe` ["types do not match : expected '((Bool,Int) -> ?)' : found '((a,a) -> Bool)'",
@@ -773,15 +774,15 @@ spec = do
       (fst $ TypeSys.go
         (SData annz int Nothing TUnit cz False
         (SData annz bool Nothing TUnit cz False
-        (SClass annz "Xable" (cv "a") [(annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False)]
+        (SClass annz "Xable" (cv "a") (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False))
         (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") TUnit,cz)
         (SInst annz "Xable" (bool,cz)
-          [(annz, "fff", (TFunc FuncGlobal (bool) TUnit,cz), True)]
+          (Map.singleton "fff" (annz, "fff", (TFunc FuncGlobal (bool) TUnit,cz), True))
           (func "$fff$(Bool -> ())$" (TFunc FuncGlobal (bool) TUnit,cz)
             (SSeq annz
               (SNop annz)
               (SInst annz "Xable" (int,cz)
-                [(annz, "fff", (TFunc FuncGlobal (int) TUnit,cz), True)]
+                (Map.singleton "fff" (annz, "fff", (TFunc FuncGlobal (int) TUnit,cz), True))
                 (func "$fff$(Int -> ())$" (TFunc FuncGlobal (int) TUnit,cz)
                   (SSeq annz
                     (SNop annz)
@@ -794,10 +795,10 @@ spec = do
       (fst $ TypeSys.go
         (SData annz (TData False ["A"] []) Nothing TUnit cz True
         (SData annz (TData False ["A","B"] []) Nothing TUnit cz False
-        (SClass annz "Xable" (cv "a") [(annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False)]
+        (SClass annz "Xable" (cv "a") (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False))
         (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") TUnit,cz)
         (SInst annz "Xable" (TData False ["A"] [],cz)
-          [(annz, "fff", (TFunc FuncGlobal (TData False ["A"] []) TUnit,cz), True)]
+          (Map.singleton "fff" (annz, "fff", (TFunc FuncGlobal (TData False ["A"] []) TUnit,cz), True))
           (func "$fff$(A -> ())$" (TFunc FuncGlobal (TData False ["A"] []) TUnit,cz)
             (SSeq annz
               (SNop annz)
@@ -808,15 +809,15 @@ spec = do
       (fst $ TypeSys.go
         (SData annz (TData False ["A"] []) Nothing TUnit cz True
         (SData annz (TData False ["A","B"] []) Nothing TUnit cz False
-        (SClass annz "Xable" (cv "a") [(annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False)]
+        (SClass annz "Xable" (cv "a") (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False))
         (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") TUnit,cz)
         (SInst annz "Xable" (TData False ["A"] [],cz)
-          [(annz, "fff", (TFunc FuncGlobal (TData False ["A"] []) TUnit,cz), True)]
+          (Map.singleton "fff" (annz, "fff", (TFunc FuncGlobal (TData False ["A"] []) TUnit,cz), True))
           (func "$fff$(A -> ())$" (TFunc FuncGlobal (TData False ["A"] []) TUnit,cz)
             (SSeq annz
               (SNop annz)
               (SInst annz "Xable" (TData False ["A","B"] [],cz)
-                [(annz, "fff", (TFunc FuncGlobal (TData False ["A","B"] []) TUnit,cz), True)]
+                (Map.singleton "fff" (annz, "fff", (TFunc FuncGlobal (TData False ["A","B"] []) TUnit,cz), True))
                 (func "$fff$((A,B) -> ())$" (TFunc FuncGlobal (TData False ["A","B"] []) TUnit,cz)
                   (SSeq annz
                     (SNop annz)
@@ -827,15 +828,15 @@ spec = do
       (fst $ TypeSys.go
         (SData annz (TData False ["A"] []) Nothing TUnit cz False
         (SData annz (TData False ["A","B"] []) Nothing TUnit cz False
-        (SClass annz "Xable" (cv "a") [(annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False)]
+        (SClass annz "Xable" (cv "a") (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False))
         (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") TUnit,cz)
         (SInst annz "Xable" (TData False ["A","B"] [],cz)
-          [(annz, "fff", (TFunc FuncGlobal (TData False ["A","B"] []) TUnit,cz), True)]
+          (Map.singleton "fff" (annz, "fff", (TFunc FuncGlobal (TData False ["A","B"] []) TUnit,cz), True))
           (func "$fff$((A,B) -> ())$" (TFunc FuncGlobal (TData False ["A","B"] []) TUnit,cz)
             (SSeq annz
               (SNop annz)
               (SInst annz "Xable" (TData False ["A"] [],cz)
-                [(annz, "fff", (TFunc FuncGlobal (TData False ["A"] []) TUnit,cz), True)]
+                (Map.singleton "fff" (annz, "fff", (TFunc FuncGlobal (TData False ["A"] []) TUnit,cz), True))
                 (func "$fff$(A -> ())$" (TFunc FuncGlobal (TData False ["A"] []) TUnit,cz)
                   (SSeq annz
                     (SNop annz)
@@ -847,10 +848,10 @@ spec = do
     it "B ; X.f:()->b ; inst B.f:()->B ; f()" $
       (fst $ TypeSys.go
         (SData annz (TData False ["B"] []) Nothing TUnit cz False
-        (SClass annz "X" (cv "b") [(annz,"fff",(TFunc FuncGlobal TUnit (TVar False "b"),cz),False)]
+        (SClass annz "X" (cv "b") (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal TUnit (TVar False "b"),cz),False))
         (SVar annz "fff" (TFunc FuncGlobal TUnit (TVar False "b"),cz)
         (SInst annz "X" (TData False ["B"] [],cz)
-          [(annz, "fff", (TFunc FuncGlobal TUnit (TData False ["B"] []),cz), True)]
+          (Map.singleton "fff" (annz, "fff", (TFunc FuncGlobal TUnit (TData False ["B"] []),cz), True))
           (func "$fff$(() -> B)$" (TFunc FuncGlobal TUnit (TData False ["B"] []),cz)
             (SSeq annz
               (SNop annz)
@@ -860,10 +861,10 @@ spec = do
     it "B ; X.f:a->b ; inst B.f:a->B ; f()" $
       (fst $ TypeSys.go
         (SData annz (TData False ["B"] []) Nothing TUnit cz False
-        (SClass annz "X" (cv "b") [(annz,"fff",(TFunc FuncGlobal (TVar False "a") (TVar False "b"),cz),False)]
+        (SClass annz "X" (cv "b") (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TVar False "a") (TVar False "b"),cz),False))
         (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") (TVar False "b"),cz)
         (SInst annz "X" (TData False ["B"] [],cz)
-          [(annz, "fff", (TFunc FuncGlobal (TVar False "a") (TData False ["B"] []),cz), True)]
+          (Map.singleton "fff" (annz, "fff", (TFunc FuncGlobal (TVar False "a") (TData False ["B"] []),cz), True))
           (func "$fff$(a -> B)$" (TFunc FuncGlobal (TVar False "a") (TData False ["B"] []),cz)
             (SSeq annz
               (SNop annz)
@@ -874,15 +875,15 @@ spec = do
       (fst $ TypeSys.go
         (SData annz (TData False ["B1"] []) Nothing TUnit cz False
         (SData annz (TData False ["B2"] []) Nothing TUnit cz False
-        (SClass annz "X" (cv "b") [(annz,"fff",(TFunc FuncGlobal (TVar False "a") (TVar False "b"),cz),False)]
+        (SClass annz "X" (cv "b") (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TVar False "a") (TVar False "b"),cz),False))
         (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") (TVar False "b"),cz)
         (SInst annz "X" (TData False ["B1"] [],cz)
-          [(annz, "fff", (TFunc FuncGlobal (TVar False "a") (TData False ["B1"] []),cz), True)]
+          (Map.singleton "fff" (annz, "fff", (TFunc FuncGlobal (TVar False "a") (TData False ["B1"] []),cz), True))
           (func "$fff$(a -> B)$" (TFunc FuncGlobal (TVar False "a") (TData False ["B1"] []),cz)
             (SSeq annz
               (SNop annz)
               (SInst annz "X" (TData False ["B2"] [],cz)
-                [(annz, "fff", (TFunc FuncGlobal (TVar False "a") (TData False ["B2"] []),cz), True)]
+                (Map.singleton "fff" (annz, "fff", (TFunc FuncGlobal (TVar False "a") (TData False ["B2"] []),cz), True))
                 (func "$fff$(a -> B2)$" (TFunc FuncGlobal (TVar False "a") (TData False ["B2"] []),cz)
                   (SSeq annz
                     (SNop annz)
@@ -894,15 +895,15 @@ spec = do
       (fst $ TypeSys.go
         (SData annz (TData False ["B1"] []) Nothing TUnit cz False
         (SData annz (TData False ["B2"] []) Nothing TUnit cz False
-        (SClass annz "X" (cv "b") [(annz,"fff",(TFunc FuncGlobal (TVar False "a") (TVar False "b"),cz),False)]
+        (SClass annz "X" (cv "b") (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TVar False "a") (TVar False "b"),cz),False))
         (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") (TVar False "b"),cz)
         (SInst annz "X" (TData False ["B1"] [],cz)
-          [(annz, "fff", (TFunc FuncGlobal (TVar False "a") (TData False ["B1"] []),cz), True)]
+          (Map.singleton "fff" (annz, "fff", (TFunc FuncGlobal (TVar False "a") (TData False ["B1"] []),cz), True))
           (func "$fff$(a -> B1)$" (TFunc FuncGlobal (TVar False "a") (TData False ["B1"] []),cz)
             (SSeq annz
               (SNop annz)
               (SInst annz "X" (TData False ["B2"] [],cz)
-                [(annz, "fff", (TFunc FuncGlobal (TVar False "a") (TData False ["B2"] []),cz), True)]
+                (Map.singleton "fff" (annz, "fff", (TFunc FuncGlobal (TVar False "a") (TData False ["B2"] []),cz), True))
                 (func "$fff$(a -> B2)$" (TFunc FuncGlobal (TVar False "a") (TData False ["B2"] []),cz)
                   (SSeq annz
                     (SNop annz)
@@ -915,15 +916,15 @@ spec = do
       (fst $ TypeSys.go
         (SData annz (TData False ["B1"] []) Nothing TUnit cz False
         (SData annz (TData False ["B2"] []) Nothing TUnit cz False
-        (SClass annz "X" (cv "b") [(annz,"fff",(TFunc FuncGlobal (TVar False "a") (TVar False "b"),cz),False)]
+        (SClass annz "X" (cv "b") (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TVar False "a") (TVar False "b"),cz),False))
         (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") (TVar False "b"),cz)
         (SInst annz "X" (TData False ["B1"] [],cz)
-          [(annz, "fff", (TFunc FuncGlobal (TVar False "a") (TData False ["B1"] []),cz), True)]
+          (Map.singleton "fff" (annz, "fff", (TFunc FuncGlobal (TVar False "a") (TData False ["B1"] []),cz), True))
           (func "$fff$(a -> B1)$" (TFunc FuncGlobal (TVar False "a") (TData False ["B1"] []),cz)
             (SSeq annz
               (SNop annz)
               (SInst annz "X" (TData False ["B2"] [],cz)
-                [(annz, "fff", (TFunc FuncGlobal (TVar False "a") (TData False ["B2"] []),cz), True)]
+                (Map.singleton "fff" (annz, "fff", (TFunc FuncGlobal (TVar False "a") (TData False ["B2"] []),cz), True))
                 (func "$fff$(a -> B2)$" (TFunc FuncGlobal (TVar False "a") (TData False ["B2"] []),cz)
                   (SSeq annz
                     (SNop annz)

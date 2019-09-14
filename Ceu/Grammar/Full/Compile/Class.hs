@@ -8,10 +8,11 @@ import Ceu.Grammar.Globals
 import qualified Ceu.Grammar.Constraints as Cs
 import Ceu.Grammar.Ann         (Ann)
 import Ceu.Grammar.Basic       (Protos)
-import Ceu.Grammar.Type        (TypeC, show', Type(..), FuncType(..), toTTuple, insTTuple)
+import Ceu.Grammar.Type        (TypeC, show', Type(..), FuncType(..), toTTuple, insTTuple, instantiate)
 import Ceu.Grammar.Full.Full
 
-idtp id tp = "$" ++ id ++ "$" ++ show' tp ++ "$"
+dollar id = "$" ++ id ++ "$"
+idtp id tp = dollar $ id ++ "$" ++ show' tp
 
 -------------------------------------------------------------------------------
 
@@ -73,20 +74,20 @@ protos p                  = Map.empty
 -- method of the same name in the constraint (IEq.eq):
 --    contraint IEq(eq,neq)
 --
---    data      _IEq(eq,neq)
+--    data      $IEq(eq,neq)
 --    contraint IEq(eq,neq)
 
 dclClassDicts :: Stmt -> Stmt
 
 dclClassDicts cls@(SClass' z id _ pts ifc) = SSeq z dict cls
   where
-    tpd  = TData False ['$':id] []
+    tpd  = TData False [dollar id] []
     dict = SData z tpd (Just $ "$dict":pars) tps Cs.cz False where
             pts' = Map.elems pts
             pars = map (\(_,id,_,_)->id) pts'
             tps  = TTuple (tpd : map f pts') where
                     f (_,_,(TFunc ft inp out,_),_) = TFunc ft inp' out where
-                                                      inp' = insTTuple (TData False ['$':id] []) (toTTuple inp)
+                                                      inp' = insTTuple (TData False [dollar id] []) (toTTuple inp)
 
 dclClassDicts p = p
 
@@ -145,7 +146,7 @@ insClassWrappers (SClass' z cls ctrs pts ifc) = SClass' z cls ctrs pts ifc' wher
 
               g (_,id',_,_) = SVar z id' tpc (Just (EFunc z (TFunc FuncNested inp out,cs) (ren par2) p)) where
                                 p = SRet z (ECall z
-                                            (ECall z (EField z ['$':cls] id') (EVar z "$dict"))
+                                            (ECall z (EField z [dollar cls] id') (EVar z "$dict"))
                                             (insETuple (EVar z "$dict") (toETuple $ ren par2)))
 
               -- rename parameters to prevent redeclarations
@@ -182,8 +183,8 @@ f cls (SVar z ('_':id) (TFunc ft1 inp1 out1,cs1)
   SVar z ('_':id) (TFunc ft1 inp1' out1,cs1)
     (Just (EFunc z2 (TFunc ft2 inp2' out2,cs2) par2' p2))
   where
-    inp1' = insTTuple (TData False ['$':cls] []) (toTTuple inp1)
-    inp2' = insTTuple (TData False ['$':cls] []) (toTTuple inp2)
+    inp1' = insTTuple (TData False [dollar cls] []) (toTTuple inp1)
+    inp2' = insTTuple (TData False [dollar cls] []) (toTTuple inp2)
     par2' = insETuple (EVar z "$dict") (toETuple par2)
 --f p@(SVar z id tpc (Just (EFunc z2 tp2  par2  p2))) = traceShow id p
 f _ p = p
@@ -214,6 +215,29 @@ addInstCall p = p
 
 -------------------------------------------------------------------------------
 
+-- For each instance, add its dictionary.
+-- First the dict declaration, then the instance body, then the dict assignment.
+--
+--    instance of IEq for Int (eq(x,y))
+--
+--    var $IEq$Int$ : $IEq$
+--    ... // body
+--    $IEq$Int$ = ($IEq$Int$, _$eq$Int$, _$neq$Int$)
+
+addInstDicts :: Stmt -> Stmt
+
+addInstDicts (SInst' z cls tpc@(tp,_) pts imp) = SInst' z cls tpc pts imp' where
+  imp' = SSeq z
+          (SVar z dict (TData False [dollar cls] [],Cs.cz) Nothing)
+         (SSeq z
+          imp
+          (SSet z True False (EVar z dict) (EArg z)))
+  dict = dollar $ cls ++ "$" ++ show' tp
+
+addInstDicts p = p
+
+-------------------------------------------------------------------------------
+
 -- For each missing implementation, add dummy implementation that calls
 -- constraint default.
 --
@@ -223,21 +247,26 @@ addInstCall p = p
 
 addInstMissing :: Clss -> Stmt -> Stmt
 
-addInstMissing clss (SInstS z cls tpc@(tp,_) pts imp) = SInstS z cls tpc pts imp' where
-  imp' = case Map.lookup cls clss of
-          Just x -> foldr ($) imp $ map f $ Map.elems $ Map.difference x pts where
-                      f :: (Ann,ID_Var,TypeC,Bool) -> (Stmt -> Stmt)
-                      f (z2,id2,tpc2@(tp2,_),True) = SVarS z2 (idtp id2 tp) tpc2 (Just (EFunc z2 tpc2 par1 p)) where
-                        p = SRet z2 (ECall z2 (EVar z2 ('_':idtp id2 tp2)) par2)
+addInstMissing clss (SInstS z cls tpc@(tp,_) pts (SVarS z2 id2 tp2 Nothing bdy)) =
+  SInstS z cls tpc pts (SVarS z2 id2 tp2 Nothing bdy') where
+    bdy' = case Map.lookup cls clss of
+            Just x -> foldr ($) bdy $ map f $ Map.elems $ Map.difference x pts where
+                        f :: (Ann,ID_Var,TypeC,Bool) -> (Stmt -> Stmt)
+                        f (z2,id2,tpc2@(tp2,_),True) = SVarS z2 (idtp id2 tp) tpc2' (Just (EFunc z2 tpc2' par1 p)) where
+                          tp2' = instantiate [("a",tp)] tp2  -- TODO: a is fixed
+                          (TFunc _ inp2' _) = tp2'
+                          tpc2' = (tp2',Cs.cz)
 
-                        par1 = listToExp $ map (EVar z2) $ par
-                        par2 = listToExp $ map (EVar z2) $ (("$"++cls++"$"++show' tp++"$") :) $ par
-                        par  = map ('$':) $ map show $ lns $ len $ toTTuple tp2 where
-                                len (TTuple l) = length l
-                                lns n = take n lns' where
-                                          lns' = 1 : map (+1) lns'
+                          p = SRet z2 (ECall z2 (EVar z2 ('_':idtp id2 tp2)) par2)
 
-          _ -> error $ show (cls, clss)
+                          par1 = listToExp $ map (EVar z2) $ par
+                          par2 = listToExp $ map (EVar z2) $ (("$"++cls++"$"++show' tp++"$") :) $ par
+                          par  = map ('$':) $ map show $ lns $ len $ toTTuple inp2' where
+                                  len (TTuple l) = length l
+                                  lns n = take n lns' where
+                                            lns' = 1 : map (+1) lns'
+
+            _ -> error $ show (cls, clss)
 
 addInstMissing _ p = p
 

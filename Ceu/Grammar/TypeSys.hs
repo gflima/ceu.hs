@@ -36,9 +36,9 @@ idtp id tp = "$" ++ id ++ "$" ++ T.show' tp ++ "$"
 
 go :: Stmt -> (Errors, Stmt)
 go p = (es,p') where
-        (es,_,_,p') = stmt [[]] (TAny,cz) p
+        --(es,_,_,p') = stmt [[]] (TAny,cz) p
         --(es,_,_,p') = f $ stmt [[]] (TVar False "?",cz) p where f (e,x,y,s) = traceShow s (e,x,y,s)
-        --(es,_,_,p') = f $ stmt [[]] (TVar False "?",cz) p where f (e,x,y,s) = traceShow (show_stmt 0 s) (e,x,y,s)
+        (es,_,_,p') = f $ stmt [[]] (TVar False "?",cz) p where f (e,x,y,s) = traceShow (show_stmt 0 s) (e,x,y,s)
 
 -------------------------------------------------------------------------------
 
@@ -195,6 +195,8 @@ getErrsTypesDeclared z envs tp = concatMap f (T.getDs tp) where
                                                     -- nested closures inside me
 stmt :: Envs -> TypeC -> Stmt -> (Errors, FT_Ups, [FuncType], Stmt)
 
+stmt envs tpr s@(SClass z id ctrs ifc p) = stmt (envsAdd envs s) tpr p
+{-
 stmt envs tpr s@(SClass z id ctrs ifc p) = (esMe ++ esExts ++ es, ft, fts, p') where
   esMe    = errDeclared z Nothing "constraint" id (concat envs)
   esExts  = case Cs.toList ctrs of
@@ -204,7 +206,10 @@ stmt envs tpr s@(SClass z id ctrs ifc p) = (esMe ++ esExts ++ es, ft, fts, p') w
                   Just _  -> []
               otherwise  -> error "TODO: multiple vars"
   (es,ft,fts,p') = stmt (envsAdd envs s) tpr p
+-}
 
+stmt envs tpr s@(SInst z cls itpc pts p) = stmt (envsAdd envs s) tpr p
+{-
 stmt envs tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ft, fts, p'') where
   (esP, ft, fts, p'') = stmt (envsAdd envs s) tpr p'
   (p', es)  =
@@ -369,6 +374,7 @@ stmt envs tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ft, fts, p'') 
             isSameInst _                        = False
 
         otherwise  -> error "TODO: multiple vars"
+-}
 
 stmt envs tpr s@(SData z tpD@(TData False hr _) nms st cz abs p) =
   (es_dcl ++ (errDeclared z Nothing "data" (T.hier2str hr) (concat envs)) ++ es,
@@ -631,7 +637,7 @@ expr' _ envs (ETuple z exps) = (es, ft, fts, ETuple z{typec=(tps',cz)} exps') wh
                                 ft    = foldr ftMin (FuncUnknown,Nothing) $ map snd4 rets
                                 fts   = concatMap trd4 rets
 
-expr' (rel,txpc@(txp,cxp)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n), [], toDer $ EVar z{typec=tpc} id') where    -- EVar x
+expr' (rel,txpc@(txp,cxp)) envs (EVar z id@(cid:_)) = (es, ftReq (length envs) (id,ref,n), [], toDer $ EVar z{typec=tpc} id') where    -- EVar x
   (id', tpc, (ref,n), es)
     | (id == "_INPUT") = (id, (TData False ["Int"] [],cz), (False,0), [])
     | otherwise        =
@@ -642,7 +648,7 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n
           Nothing -> (id, (TAny,cz), (False,0),
                       map (toError z) $ fromLeft $ relatesC rel txpc (last (map snd xs')))
           Just (lnr, tpc@(_,ctrs)) ->
-            if ctrs == cz then
+            if ctrs==cz || cid=='_' then  -- _default_method
               (id, tpc, lnr, [])
             else
               case find pred (concat envs) of            -- find instance

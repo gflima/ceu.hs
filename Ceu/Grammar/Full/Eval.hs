@@ -56,6 +56,7 @@ compile p = traceStmt $
   map_stmt (f2 Scope.setScope,id,id)         Map.empty $
   map_stmt (f2 Seq.adjSSeq,id,id)            Map.empty $
   map_stmt (f2 Class.remClassInst,id,id)     Map.empty $
+  map_stmt (f2 Class.addInstDicts,id,id)     Map.empty $
   map_stmt (f2 Class.addInstCall,id,id)      Map.empty $
   map_stmt (f2 Class.insDict,id,id)          Map.empty $
   map_stmt (f2 Class.insClassWrappers,id,id) Map.empty $

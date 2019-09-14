@@ -11,7 +11,7 @@ import Control.Exception
 import Test.Hspec
 import Text.Printf
 import Debug.Trace
-import qualified Data.Set as Set
+import qualified Data.Map as Map
 
 int  = TData False ["Int"]  []
 bool = TData False ["Bool"] []
@@ -430,10 +430,10 @@ spec = do
         go
           (B.SData annz int Nothing TUnit cz False
           (B.SClass annz "X" (cv "a")
-            [(annz,"f3",(TFunc FuncGlobal (TVar False "a") (int),cvc ("a","X")),False)]
+            (Map.singleton "f3" (annz,"f3",(TFunc FuncGlobal (TVar False "a") (int),cvc ("a","X")),False))
           (B.SVar annz "f3" (TFunc FuncGlobal (TVar False "a") (int),cvc ("a","X"))
           (B.SInst annz "X" (int,cz)
-            [(annz,"f3",(TFunc FuncGlobal (int) (int),cz),True)]
+            (Map.singleton "f3" (annz,"f3",(TFunc FuncGlobal (int) (int),cz),True))
             (B.SVar annz "$f3$(Int -> Int)$" (TFunc FuncGlobal (int) (int),cz)
             (mmmOne annz False
               (B.EVar annz "$f3$(Int -> Int)$")
@@ -451,10 +451,10 @@ spec = do
           (B.SVar annz "+" (TFunc FuncGlobal (TTuple [int, int]) (int),cz)
           (B.SData annz bool Nothing TUnit cz False
           (B.SClass annz "X" (cv "a")
-            [(annz,"f2",(TFunc FuncGlobal (TVar False "a") (int),cvc ("a","X")),False)]
+            (Map.singleton "f2" (annz,"f2",(TFunc FuncGlobal (TVar False "a") (int),cvc ("a","X")),False))
           (B.SVar annz "f2" (TFunc FuncGlobal (TVar False "a") (int),cvc ("a","X"))
           (B.SInst annz "X" (bool,cz)
-            [(annz,"f2",(TFunc FuncGlobal (bool) (int),cz),True)]
+            (Map.singleton "f2" (annz,"f2",(TFunc FuncGlobal (bool) (int),cz),True))
             (B.SVar annz "$f2$(Bool -> Int)$" (TFunc FuncGlobal (bool) (int),cz)
             (mmmOne annz False
               (B.EVar annz "$f2$(Bool -> Int)$")
@@ -463,7 +463,7 @@ spec = do
               (B.SSeq annz
                 (B.SNop annz)
                 (B.SInst annz "X" (int,cz)
-                  [(annz,"f2",(TFunc FuncGlobal (int) (int),cz),True)]
+                  (Map.singleton "f2" (annz,"f2",(TFunc FuncGlobal (int) (int),cz),True))
                   (B.SVar annz "$f2$(Int -> Int)$" (TFunc FuncGlobal (int) (int),cz)
                   (mmmOne annz False
                     (B.EVar annz "$f2$(Int -> Int)$")
@@ -491,10 +491,10 @@ spec = do
           (B.SVar annz "+" (TFunc FuncGlobal (TTuple [int, int]) (int),cz)
           (B.SData annz bool Nothing TUnit cz False
           (B.SClass annz "X" (cv "a")
-            [(annz,"f4",(TFunc FuncGlobal (TVar False "a") (int),cvc ("a","X")),False)]
+            (Map.singleton "f4" (annz,"f4",(TFunc FuncGlobal (TVar False "a") (int),cvc ("a","X")),False))
           (B.SVar annz "f4" (TFunc FuncGlobal (TVar False "a") (int),cvc ("a","X"))
           (B.SInst annz "X" (int,cz)
-            [(annz,"f4",(TFunc FuncGlobal (int) (int),cz),True)]
+            (Map.singleton "f4" (annz,"f4",(TFunc FuncGlobal (int) (int),cz),True))
             (B.SVar annz "$f4$(Int -> Int)$" (TFunc FuncGlobal (int) (int),cz)
             (mmmOne annz False
               (B.EVar annz "$f4$(Int -> Int)$")
@@ -506,7 +506,7 @@ spec = do
                 (B.SSeq annz
                   (B.SNop annz)
                   (B.SInst annz "X" (bool,cz)
-                    [(annz,"f4",(TFunc FuncGlobal (bool) (int),cz),True)]
+                    (Map.singleton "f4" (annz,"f4",(TFunc FuncGlobal (bool) (int),cz),True))
                     (B.SVar annz "$f4$(Bool -> Int)$" (TFunc FuncGlobal (bool) (int),cz)
                     (mmmOne annz False
                       (B.EVar annz "$f4$(Bool -> Int)$")
