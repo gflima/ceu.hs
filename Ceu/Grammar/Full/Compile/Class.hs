@@ -11,7 +11,6 @@ import Ceu.Grammar.Basic       (Proto,Protos)
 import Ceu.Grammar.Type        (TypeC, show', Type(..), FuncType(..), toTTuple, insTTuple, instantiate, listToType)
 import Ceu.Grammar.Full.Full
 
-dollar id = "$" ++ id ++ "$"
 idtp id tp = dollar $ id ++ "$" ++ show' tp
 
 -------------------------------------------------------------------------------

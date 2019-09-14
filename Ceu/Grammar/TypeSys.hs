@@ -36,9 +36,9 @@ idtp id tp = "$" ++ id ++ "$" ++ T.show' tp ++ "$"
 
 go :: Stmt -> (Errors, Stmt)
 go p = (es,p') where
-        (es,_,_,p') = stmt [[]] (TAny,cz) p
+        --(es,_,_,p') = stmt [[]] (TAny,cz) p
         --(es,_,_,p') = f $ stmt [[]] (TVar False "?",cz) p where f (e,x,y,s) = traceShow s (e,x,y,s)
-        --(es,_,_,p') = f $ stmt [[]] (TVar False "?",cz) p where f (e,x,y,s) = traceShow (show_stmt 0 s) (e,x,y,s)
+        (es,_,_,p') = f $ stmt [[]] (TVar False "?",cz) p where f (e,x,y,s) = traceShow (show_stmt 0 s) (e,x,y,s)
 
 -------------------------------------------------------------------------------
 
@@ -656,7 +656,7 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id@(cid:_)) = (es, ftReq (length envs) (
               (id, tpc, lnr, [])
             else
               case find pred (concat envs) of            -- find instance
-                Just (SVar _ k tpc@(tp,ctrs) _) -> (id, tpc, lnr, [])
+                Just (SVar _ k tpc@(tp,ctrs) _) -> (traceShowId k, tpc, lnr, [])
 {-
                   if null ctrs then
                     (idtp id tp, tpc, lnr, [])
@@ -669,7 +669,7 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id@(cid:_)) = (es, ftReq (length envs) (
                 Nothing -> (id, (TAny,cz), lnr, err)
               where
                 pred :: Stmt -> Bool
-                pred (SVar _ k tpc@(tp,_) _) = ("$"++id++"$"==k || idtp id tp==k) && (isRight $ relatesC SUP txpc tpc)
+                pred (SVar _ k tpc@(tp,_) _) = (dollar id `isPrefixOf` k) && (isRight $ relatesC SUP txpc tpc)
                 pred _                       = False
 
                 err = [toError z $ "variable '" ++ id ++
