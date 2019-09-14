@@ -45,7 +45,7 @@ prelude z p =
            p)))))))))))))))
 
 compile :: Stmt -> Stmt
-compile p = --traceStmt $
+compile p = traceStmt $
   map_stmt' (f2 Scope.remSScope,id,id)        $
   map_stmt' (f2 Match.remSSetSIf,id,id)       $
   map_stmt' (f2 Match.remIni,id,id)           $
@@ -53,11 +53,11 @@ compile p = --traceStmt $
   map_stmt' (f2 Data.addAccs,id,id)           $
   Data.expHier []                             $
   map_stmt' (f2 Class.addInstMissing,id,id)   $
+  map_stmt' (f2 Class.addInstDicts,id,id)     $   -- uses SSeq / uses (STodo SInst-*)
   map_stmt' (Class.uniInstProtos,id,id)       $   -- uses scope (clss)
   map_stmt' (f2 Scope.setScope,id,id)         $
   map_stmt' (f2 Seq.adjSSeq,id,id)            $   -- no more SSeq
-  map_stmt' (f2 Class.remClassInst,id,id)     $
-  map_stmt' (f2 Class.addInstDicts,id,id)     $   -- uses SSeq / uses Inst delim
+  map_stmt' (f2 Class.remClassInst,id,id)     $   -- adds (STodo SInst-INI/END)
   map_stmt' (f2 Class.addInstCall,id,id)      $
   map_stmt' (f2 Class.insDict,id,id)          $
   map_stmt' (f2 Class.insClassWrappers,id,id) $

@@ -78,6 +78,7 @@ data Stmt
   | SInst''   Ann ID_Class TypeC B.Protos          -- new class instance
   | SData     Ann Type (Maybe [ID_Var]) Type Cs.Map Bool -- new type declaration
   | SVar      Ann ID_Var TypeC (Maybe Exp)         -- (z id tp ini)   -- variable declaration
+  | STodo     Ann String
   | SFunc     Ann ID_Var TypeC Exp Stmt            -- function declaration
   | SMatch    Ann Bool Bool Exp [(Stmt,Exp,Stmt)]  -- match
   | SSet      Ann Bool Bool Exp Exp                -- assignment statement
@@ -93,6 +94,7 @@ data Stmt
   | SInstS    Ann ID_Class TypeC  B.Protos Stmt
   | SDataS    Ann Type (Maybe [ID_Var]) Type Cs.Map Bool Stmt
   | SVarS     Ann ID_Var TypeC (Maybe Exp) Stmt
+  | STodoS    Ann String Stmt
   deriving (Eq, Show)
 
 sSeq a b = SSeq annz a b
@@ -146,6 +148,8 @@ map_stmt f@(fs,_,ft) clss   (SData    z tp nms st cs abs)   = fs clss (SData    
 map_stmt f@(fs,_,ft) clss   (SDataS   z tp nms st cs abs p) = fs clss (SDataS   z tp nms st cs abs (map_stmt f clss p))
 map_stmt f@(fs,_,ft) clss   (SVar     z id tp ini)          = fs clss (SVar     z id (ft tp) (fmap (map_exp f clss) ini))
 map_stmt f@(fs,_,ft) clss   (SVarS    z id tp ini p)        = fs clss (SVarS    z id (ft tp) (fmap (map_exp f clss) ini) (map_stmt f clss p))
+map_stmt f@(fs,_,ft) clss   (STodo    z v)                  = fs clss (STodo    z v)
+map_stmt f@(fs,_,ft) clss   (STodoS   z v p)                = fs clss (STodoS   z v (map_stmt f clss p))
 map_stmt f@(fs,_,ft) clss   (SFunc  z id tp ps bd)          = fs clss (SFunc    z id (ft tp) (map_exp f clss ps) (map_stmt f clss bd))
 map_stmt f@(fs,_,_)  clss   (SMatch z ini chk exp cses)     = fs clss (SMatch   z ini chk (map_exp f clss exp)
                                                               (map (\(ds,pt,st) -> (map_stmt f clss ds, map_exp f clss pt, map_stmt f clss st)) cses))
@@ -186,7 +190,7 @@ show_stmt spc (SDataS  _ (TData False id _) _ tp _ _ p) = rep spc ++ "data " ++ 
 show_stmt spc (SVar _ id tpc Nothing)  = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc
 show_stmt spc (SVar _ id tpc (Just e)) = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc ++ " = " ++ show_exp spc e
 show_stmt spc (SVarS  _ id tpc Nothing  p) = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc ++ "\n" ++ show_stmt spc p
---show_stmt spc (SVarS  _ id tpc (Just e) p) = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc ++ " = " ++ show_exp spc e ++ "\n" ++ show_stmt spc p
+show_stmt spc (SVarS  _ id tpc (Just e) p) = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc ++ " = " ++ show_exp spc e ++ "\n" ++ show_stmt spc p
 show_stmt spc (SIf  _ e t f)              = rep spc ++ "if " ++ show_exp spc e ++ "then\n" ++
                                                           show_stmt (spc+2) t ++ "\n" ++
                                             rep spc ++ "else\n" ++

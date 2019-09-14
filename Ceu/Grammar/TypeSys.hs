@@ -345,7 +345,7 @@ stmt envs tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ft, fts, p'') 
               -- Prototype all HCLS as HINST signatures (not declared yet) before
               -- the implementations appear to prevent "undeclared" errors.
               p2 = foldr ($) p1 (concatMap inst' fs) where
-                    inst' :: (Ann,ID_Var,TypeC,Bool) -> [Stmt -> Stmt]
+                    inst' :: Proto -> [Stmt -> Stmt]
                     inst' (_,id,(tp,_),_) = map inst itps where
                       inst :: Type -> (Stmt -> Stmt)
                       inst itp = SVar z (idtp id tp') (tp',cz) where
@@ -669,7 +669,7 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id@(cid:_)) = (es, ftReq (length envs) (
                 Nothing -> (id, (TAny,cz), lnr, err)
               where
                 pred :: Stmt -> Bool
-                pred (SVar _ k tpc@(tp,_) _) = (idtp id tp == k) && (isRight $ relatesC SUP txpc tpc)
+                pred (SVar _ k tpc@(tp,_) _) = ("$"++id++"$"==k || idtp id tp==k) && (isRight $ relatesC SUP txpc tpc)
                 pred _                       = False
 
                 err = [toError z $ "variable '" ++ id ++

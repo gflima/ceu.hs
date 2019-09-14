@@ -7,8 +7,8 @@ import Data.Maybe (isJust)
 import Ceu.Grammar.Globals
 import qualified Ceu.Grammar.Constraints as Cs
 import Ceu.Grammar.Ann         (Ann)
-import Ceu.Grammar.Basic       (Protos)
-import Ceu.Grammar.Type        (TypeC, show', Type(..), FuncType(..), toTTuple, insTTuple, instantiate)
+import Ceu.Grammar.Basic       (Proto,Protos)
+import Ceu.Grammar.Type        (TypeC, show', Type(..), FuncType(..), toTTuple, insTTuple, instantiate, listToType)
 import Ceu.Grammar.Full.Full
 
 dollar id = "$" ++ id ++ "$"
@@ -79,10 +79,10 @@ dclClassDicts :: Stmt -> Stmt
 dclClassDicts cls@(SClass' z id _ pts ifc) = SSeq z dict cls
   where
     tpd  = TData False [dollar id] []
-    dict = SData z tpd (Just $ "$dict":pars) tps Cs.cz False where
+    dict = SData z tpd (Just pars) tps Cs.cz False where
             pts' = Map.elems pts
             pars = map (\(_,id,_,_)->id) pts'
-            tps  = TTuple (tpd : map f pts') where
+            tps  = listToType (map f pts') where
                     f (_,_,(TFunc ft inp out,_),_) = TFunc ft inp' out where
                                                       inp' = insTTuple (TData False [dollar id] []) (toTTuple inp)
 
@@ -106,8 +106,8 @@ dupRenImpls :: Stmt -> Stmt
 dupRenImpls (SClass' z id ctrs pts ifc) = SClass' z id ctrs pts ifc' where
   ifc' = map_stmt (f2 f, Prelude.id, Prelude.id) Map.empty ifc
   f (SVar z id tpc@(tp,_) p) = SSeq z (SVar z id tpc Nothing) $
-                               SSeq z (SVar z (    idtp id tp) tpc p)
-                                      (SVar z ('_':idtp id tp) tpc p)
+                               SSeq z (SVar z (    dollar id) tpc p)
+                                      (SVar z ('_':dollar id) tpc p)
   f p = p
 
 dupRenImpls (SInst' z cls tpc@(tp,_) pts imp) = SInst' z cls tpc pts imp' where
@@ -212,32 +212,6 @@ addInstCall p = p
 
 -------------------------------------------------------------------------------
 
--- For each instance, add its dictionary.
--- First the dict declaration, then the instance body, then the dict assignment.
---
---    instance of IEq for Int (eq(x,y))
---
---    var $IEq$Int$ : $IEq$
---    ... // body
---    $IEq$Int$ = $IEq$(_$eq$Int$, _$neq$Int$)
-
-addInstDicts :: Stmt -> Stmt
-
-addInstDicts (SInst' z cls tpc@(tp,_) pts imp) = SInst' z cls tpc pts imp' where
-  dict = dollar $ cls ++ "$" ++ show' tp
-  imp' = SSeq z
-          (SVar z dict (TData False [dollar cls] [],Cs.cz) Nothing)
-         (SSeq z
-          imp
-          (SSet z True False
-            (EVar z dict)
-            (ECall z (ECons z [dollar cls]) (listToExp $ map f $ Map.elems pts))))
-  f (z,id,_,_) = EVar z ('_' : dollar (id++"$"++show' tp))
-
-addInstDicts p = p
-
--------------------------------------------------------------------------------
-
 -- Remove contraint/inst from the program (split actual dcls/impls from their
 -- abstract prototypes).
 --    contraint IEq        (eq,neq)
@@ -248,7 +222,9 @@ addInstDicts p = p
 
 remClassInst :: Stmt -> Stmt
 remClassInst (SClass' z id ctrs pts ifc) = SSeq z (SClass'' z id  ctrs pts) ifc
-remClassInst (SInst'  z cls tp  pts imp) = SSeq z (SInst''  z cls tp   pts) imp
+remClassInst (SInst'  z cls tp  pts imp) = SSeq z (SInst''  z cls tp   pts)
+                                            (SSeq z (STodo z "SInst-INI")
+                                            (SSeq z imp (STodo z "SInst-END")))
 remClassInst p = p
 
 -------------------------------------------------------------------------------
@@ -273,6 +249,39 @@ uniInstProtos _ p = p
 
 -------------------------------------------------------------------------------
 
+-- For each instance, add its dictionary.
+-- First the dict declaration, then the instance body, then the dict assignment.
+--
+--    instance of IEq for Int (eq(x,y))
+--
+--    var $IEq$Int$ : $IEq$
+--    ... // body
+--    $IEq$Int$ = $IEq$(_$eq$Int$, _$neq$Int$)
+
+addInstDicts :: Stmt -> Stmt
+
+addInstDicts (SInstS z cls tpc@(tp,_) pts bdy) = SInstS z cls tpc pts bdy' where
+  bdy' = map_stmt' (f2 f, Prelude.id, Prelude.id) bdy
+
+  dict = dollar $ cls ++ "$" ++ show' tp
+
+  f :: Stmt -> Stmt
+  f (STodoS z "SInst-INI" p) = SVarS z dict (TData False [dollar cls] [],Cs.cz) Nothing p
+  f (STodoS z "SInst-END" p) = SSeq z
+                                (SSet z True False
+                                  (EVar z dict)
+                                  (ECall z (ECons z [dollar cls]) (listToExp $ map g $ Map.elems pts)))
+                                p
+  f p = p
+
+  g :: Proto -> Exp
+  g (z,id,_,False) = EVar z ('_' : dollar id)
+  g (z,id,_,True)  = EVar z ('_' : dollar (id++"$"++show' tp))
+
+addInstDicts p = p
+
+-------------------------------------------------------------------------------
+
 -- For each missing implementation, add dummy implementation that calls
 -- constraint default.
 --
@@ -287,13 +296,13 @@ addInstMissing (SInstS z cls tpc@(tp,_) pts (SVarS z2 id2 tp2 Nothing bdy)) =
     bdy' = foldr ($) bdy $ map g $ Map.elems $ Map.filter f pts where
             f (_,_,_,ini) = not ini   -- only methods w/o implementation
 
-            g :: (Ann,ID_Var,TypeC,Bool) -> (Stmt -> Stmt)
+            g :: Proto -> (Stmt -> Stmt)
             g (z2,id2,tpc2@(tp2,_),False) = SVarS z2 (idtp id2 tp) tpc2' (Just (EFunc z2 tpc2' par1 p)) where
               tp2' = instantiate [("a",tp)] tp2  -- TODO: a is fixed
               (TFunc _ inp2' _) = tp2'
               tpc2' = (tp2',Cs.cz)
 
-              p = SRet z2 (ECall z2 (EVar z2 ('_':idtp id2 tp2)) par2)
+              p = SRet z2 (ECall z2 (EVar z2 ('_':dollar id2)) par2)
 
               par1 = listToExp $ map (EVar z2) $ par
               par2 = listToExp $ map (EVar z2) $ (("$"++cls++"$"++show' tp++"$") :) $ par

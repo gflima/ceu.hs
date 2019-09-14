@@ -92,6 +92,10 @@ toTTuple tp            = TTuple [tp]
 insTTuple :: Type -> Type -> Type
 insTTuple tp (TTuple tup) = TTuple (tp:tup)
 
+listToType :: [Type] -> Type
+listToType [e]   = e
+listToType (e:l) = TTuple (e:l)
+
 -------------------------------------------------------------------------------
 
 {-
