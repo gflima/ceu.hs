@@ -94,8 +94,8 @@ isVar   _   _                    = False
 rep spc = replicate spc ' '
 
 show_stmt :: Int -> Stmt -> String
---show_stmt spc (SClass _ (id,_) _ _ p) = rep spc ++ "class "  ++ id ++ "\n" ++ show_stmt spc p
---show_stmt spc (SInst  _ (id,_) _ p)   = rep spc ++ "inst "   ++ id ++ "\n" ++ show_stmt spc p
+show_stmt spc (SClass _ id _ _ p) = rep spc ++ "class "  ++ id ++ "\n" ++ show_stmt spc p
+show_stmt spc (SInst  _ id _ _ p) = rep spc ++ "inst "   ++ id ++ "\n" ++ show_stmt spc p
 show_stmt spc (SData _ (TData False id _) _ _ _ _ p) = rep spc ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
 show_stmt spc (SVar _ id (tp,_) p)     = rep spc ++ "var "    ++ id ++ ": " ++ T.show' tp ++ "\n" ++ show_stmt spc p
 show_stmt spc (SCall _ e)              = rep spc ++ "call " ++ show_exp spc e
@@ -125,6 +125,7 @@ show_exp spc (EUnit  _)           = "()"
 show_exp spc (EError _ n)         = "error " ++ show n
 show_exp spc (ECons  _ ["Int",n]) = n
 show_exp spc (ECons  _ id)        = hier2str id
+show_exp spc (EField _ id fld)    = hier2str id ++ "." ++ fld
 show_exp spc (EVar   _ id)        = id
 show_exp spc (EArg   _)           = "arg"
 show_exp spc (EUpv   _)           = "upv"
@@ -136,7 +137,7 @@ show_exp spc (EExp   _ exp)       = show_exp spc exp
 show_exp spc (ERefRef _ exp)      = "ref " ++ show_exp spc exp
 show_exp spc (ERefIni _ exp)      = show_exp spc exp
 show_exp spc (ERefDer _ exp)      = "acc " ++ show_exp spc exp
-show_exp spc e                    = error $ show e
+--show_exp spc e                    = error $ show e
 
 -------------------------------------------------------------------------------
 

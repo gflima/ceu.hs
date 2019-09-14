@@ -36,9 +36,9 @@ idtp id tp = "$" ++ id ++ "$" ++ T.show' tp ++ "$"
 
 go :: Stmt -> (Errors, Stmt)
 go p = (es,p') where
-        (es,_,_,p') = stmt [[]] (TAny,cz) p
+        --(es,_,_,p') = stmt [[]] (TAny,cz) p
         --(es,_,_,p') = f $ stmt [[]] (TVar False "?",cz) p where f (e,x,y,s) = traceShow s (e,x,y,s)
-        --(es,_,_,p') = f $ stmt [[]] (TVar False "?",cz) p where f (e,x,y,s) = traceShow (show_stmt 0 s) (e,x,y,s)
+        (es,_,_,p') = f $ stmt [[]] (TVar False "?",cz) p where f (e,x,y,s) = traceShow (show_stmt 0 s) (e,x,y,s)
 
 -------------------------------------------------------------------------------
 
@@ -387,7 +387,7 @@ stmt envs tpr s@(SData z tpD@(TData False hr _) nms st cz abs p) =
                 Nothing  -> []
                 Just sup -> (getErrsTypesDeclared z (concat envs) (TData False sup []))
 
-stmt envs tpr s@(SVar z id tpc@(tp,ctrs) p) = (es_data ++ es_id ++ es, ft, fts, p') where
+stmt envs tpr s@(SVar z id tpc@(tp,ctrs) p) = (es_data ++ es_id ++ es, ft, fts, SVar z id tpc p') where
   es_data = getErrsTypesDeclared z (concat envs) tp
   es_id   = errDeclared z (Just chk) "variable" id (concat envs) where
               chk :: Stmt -> Bool
@@ -395,6 +395,9 @@ stmt envs tpr s@(SVar z id tpc@(tp,ctrs) p) = (es_data ++ es_id ++ es, ft, fts, 
               chk (SVar _ _   tpc'@(TFunc _ _ _,_) _) = (tpc == tpc') -- function prototype
               chk _ = False
 
+  (es,ft,fts,p') = stmt (envsAdd envs s) tpr p
+
+{-
   f p = stmt (envsAdd envs s) tpr p
 
   -- In case of a parametric/generic var with a constraint, instantiate it for
@@ -421,6 +424,7 @@ stmt envs tpr s@(SVar z id tpc@(tp,ctrs) p) = (es_data ++ es_id ++ es, ft, fts, 
 
                     itpss :: [[Type]]
                     itpss = T.sort' $ combos' 1 (concat envs) (map Set.toList $ Map.elems ctrs)
+-}
 
 
 -------------------------------------------------------------------------------
