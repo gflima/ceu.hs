@@ -52,7 +52,8 @@ instance HasAnn Exp where
 
 -------------------------------------------------------------------------------
 
-type Protos = Map.Map ID_Var (Ann,ID_Var,TypeC,Bool)
+type Proto  = (Ann,ID_Var,TypeC,Bool)
+type Protos = Map.Map ID_Var Proto
 
 data Stmt
     = SClass  Ann ID_Class Cs.Map Protos Stmt  -- new constraint declaration
