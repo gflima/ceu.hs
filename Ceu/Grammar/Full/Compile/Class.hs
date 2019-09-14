@@ -63,9 +63,6 @@ protos (SVar z id tp ini) = Map.singleton id (z,id,tp,isJust ini)
 protos p                  = Map.empty
 
 -------------------------------------------------------------------------------
--------------------------------------------------------------------------------
-
--------------------------------------------------------------------------------
 
 -- Declare an associated dictionay for each constraint.
 --
@@ -222,19 +219,37 @@ addInstCall p = p
 --
 --    var $IEq$Int$ : $IEq$
 --    ... // body
---    $IEq$Int$ = (_$eq$Int$, _$neq$Int$)
+--    $IEq$Int$ = $IEq$(_$eq$Int$, _$neq$Int$)
 
 addInstDicts :: Stmt -> Stmt
 
 addInstDicts (SInst' z cls tpc@(tp,_) pts imp) = SInst' z cls tpc pts imp' where
+  dict = dollar $ cls ++ "$" ++ show' tp
   imp' = SSeq z
           (SVar z dict (TData False [dollar cls] [],Cs.cz) Nothing)
          (SSeq z
           imp
-          (SSet z True False (EVar z dict) (EArg z)))
-  dict = dollar $ cls ++ "$" ++ show' tp
+          (SSet z True False
+            (EVar z dict)
+            (ECall z (ECons z [dollar cls]) (listToExp $ map f $ Map.elems pts))))
+  f (z,id,_,_) = EVar z ('_' : dollar (id++"$"++show' tp))
 
 addInstDicts p = p
+
+-------------------------------------------------------------------------------
+
+-- Remove contraint/inst from the program (split actual dcls/impls from their
+-- abstract prototypes).
+--    contraint IEq        (eq,neq)
+--    instance  IEq for Int(eq,neq)
+--
+--    contraint IEq        (eq,neq) ; eq ; neq
+--    instance  IEq for Int(eq,neq) ; eq ; neq
+
+remClassInst :: Stmt -> Stmt
+remClassInst (SClass' z id ctrs pts ifc) = SSeq z (SClass'' z id  ctrs pts) ifc
+remClassInst (SInst'  z cls tp  pts imp) = SSeq z (SInst''  z cls tp   pts) imp
+remClassInst p = p
 
 -------------------------------------------------------------------------------
 
@@ -288,18 +303,3 @@ addInstMissing (SInstS z cls tpc@(tp,_) pts (SVarS z2 id2 tp2 Nothing bdy)) =
                                 lns' = 1 : map (+1) lns'
 
 addInstMissing p = p
-
--------------------------------------------------------------------------------
-
--- Remove contraint/inst from the program (split actual dcls/impls from their
--- abstract prototypes).
---    contraint IEq        (eq,neq)
---    instance  IEq for Int(eq,neq)
---
---    contraint IEq        (eq,neq) ; eq ; neq
---    instance  IEq for Int(eq,neq) ; eq ; neq
-
-remClassInst :: Stmt -> Stmt
-remClassInst (SClass' z id ctrs pts ifc) = SSeq z (SClass'' z id  ctrs pts) ifc
-remClassInst (SInst'  z cls tp  pts imp) = SSeq z (SInst''  z cls tp   pts) imp
-remClassInst p = p
