@@ -131,6 +131,8 @@ toBasicStmt p                        = error $ "toBasicStmt: unexpected statemen
 
 type Clss = Map.Map ID_Class B.Protos
 
+map_stmt' f s = map_stmt f Map.empty s
+
 map_stmt :: (Clss->Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Clss->Stmt -> Stmt
 map_stmt f@(fs,_,_)  clss   (SClass   z id  cs p)           = fs clss (SClass   z id cs (map_stmt f clss p))
 map_stmt f@(fs,_,_)  clss s@(SClass'  z id  cs pts bdy)     = fs clss (SClass'  z id cs pts (map_stmt f (Map.insert id pts clss) bdy))

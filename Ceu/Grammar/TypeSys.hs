@@ -36,9 +36,9 @@ idtp id tp = "$" ++ id ++ "$" ++ T.show' tp ++ "$"
 
 go :: Stmt -> (Errors, Stmt)
 go p = (es,p') where
-        --(es,_,_,p') = stmt [[]] (TAny,cz) p
+        (es,_,_,p') = stmt [[]] (TAny,cz) p
         --(es,_,_,p') = f $ stmt [[]] (TVar False "?",cz) p where f (e,x,y,s) = traceShow s (e,x,y,s)
-        (es,_,_,p') = f $ stmt [[]] (TVar False "?",cz) p where f (e,x,y,s) = traceShow (show_stmt 0 s) (e,x,y,s)
+        --(es,_,_,p') = f $ stmt [[]] (TVar False "?",cz) p where f (e,x,y,s) = traceShow (show_stmt 0 s) (e,x,y,s)
 
 -------------------------------------------------------------------------------
 

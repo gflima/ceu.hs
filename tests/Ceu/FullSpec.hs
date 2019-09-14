@@ -3,7 +3,7 @@ module Ceu.FullSpec (main, spec) where
 import Test.Hspec
 import Text.Printf
 import Debug.Trace
-import Data.Map as M (fromList)
+import Data.Map (fromList, singleton)
 
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Constraints  (cz,cv,cvc)
@@ -41,7 +41,7 @@ spec = do
   describe "EFunc.compile" $ do
 
     it "func id : (a->a) do end" $ do
-      (map_stmt (id,Func.remEFuncPar,id) . map_stmt (Func.remSFunc,id,id))
+      (map_stmt' (id2,Func.remEFuncPar,id) . map_stmt' (f2 Func.remSFunc,id,id))
        (SFunc annz "id" (TFunc FuncGlobal (TVar False "a") (TVar False "a"),cz) (EAny annz) (SNop annz))
       `shouldBe` (SVar annz "id" (TFunc FuncGlobal (TVar False "a") (TVar False "a"),cz)
                   (Just
@@ -51,19 +51,19 @@ spec = do
 
     describe "var:" $ do
       it "var x" $ do
-        (map_stmt (Scope.setScope,id,id)) (SVar annz "x" (TUnit,cz) Nothing)
+        (map_stmt' (f2 Scope.setScope,id,id)) (SVar annz "x" (TUnit,cz) Nothing)
         `shouldBe` (SVarS annz "x" (TUnit,cz) Nothing (SNop annz))
 
       it "var x; (SNop annz)" $ do
-        (map_stmt (Scope.setScope,id,id)) (SSeq annz (SVar annz "x" (TUnit,cz) Nothing) (SNop annz))
+        (map_stmt' (f2 Scope.setScope,id,id)) (SSeq annz (SVar annz "x" (TUnit,cz) Nothing) (SNop annz))
         `shouldBe` (SVarS annz "x" (TUnit,cz) Nothing (SNop annz))
 
       it "var x <- 1 ; (SNop annz)" $ do
-        (map_stmt (Scope.setScope,id,id)) (SSeq annz (SVar annz "x" (int,cz) Nothing) (SSeq annz (SSet annz True False (EVar annz "x") (ECons annz ["Int","1"])) (SNop annz)))
+        (map_stmt' (f2 Scope.setScope,id,id)) (SSeq annz (SVar annz "x" (int,cz) Nothing) (SSeq annz (SSet annz True False (EVar annz "x") (ECons annz ["Int","1"])) (SNop annz)))
         `shouldBe` (SVarS annz "x" (int,cz) Nothing (SSeq annz (SSet annz True False (EVar annz "x") (ECons annz ["Int","1"])) (SNop annz)))
 
       it "scope var x end ; var y" $ do
-        (map_stmt (Scope.remSScope,id,id) . map_stmt (Scope.setScope,id,id)) (SSeq annz (SScope annz (SVar annz "x" (TUnit,cz) Nothing)) (SVar annz "y" (TUnit,cz) Nothing))
+        (map_stmt' (f2 Scope.remSScope,id,id) . map_stmt' (f2 Scope.setScope,id,id)) (SSeq annz (SScope annz (SVar annz "x" (TUnit,cz) Nothing)) (SVar annz "y" (TUnit,cz) Nothing))
         `shouldBe` SSeq annz (SVarS annz "x" (TUnit,cz) Nothing (SNop annz)) (SVarS annz "y" (TUnit,cz) Nothing (SNop annz))
 
       it "scope var x end ; x=1" $ do
@@ -103,7 +103,7 @@ spec = do
                   (SRet annz (ECons annz ["Int","10"]))))
       `shouldBe`
         (SInstS annz "F3able" (int,cz)
-          [(annz,"f3",(TFunc FuncGlobal (TVar False "Int") (int),cz),True)]
+          (singleton "f3" (annz,"f3",(TFunc FuncGlobal (TVar False "Int") (int),cz),True))
         (SVarS annz "$f3$(Int -> Int)$" (TFunc FuncGlobal (TVar False "Int") (int),cz) Nothing
           (set' annz False (EVar annz "$f3$(Int -> Int)$")
             (EFunc' annz (TFunc FuncGlobal (TVar False "Int") (int),cz) (SRet annz (ECons annz ["Int","10"])))
@@ -118,10 +118,10 @@ spec = do
                     (SRet annz (ECons annz ["Int","10"])))))
       `shouldBe`
         (SClassS annz "F3able" (cv "a")
-          [(annz,"f3",(TFunc FuncGlobal (TVar False "a") (int),cvc("a","F3able")),False)]
+          (singleton "f3" (annz,"f3",(TFunc FuncGlobal (TVar False "a") (int),cvc("a","F3able")),False))
         (SVarS annz "f3" (TFunc FuncGlobal (TVar False "a") (int),cvc("a","F3able")) Nothing
         (SInstS annz "F3able" (int,cz)
-          [(annz,"f3",(TFunc FuncGlobal (TVar False "Int") (int),cz),True)]
+          (singleton "f3" (annz,"f3",(TFunc FuncGlobal (TVar False "Int") (int),cz),True))
         (SVarS annz "$f3$(Int -> Int)$" (TFunc FuncGlobal (TVar False "Int") (int),cz) Nothing
             (set' annz False (EVar annz "$f3$(Int -> Int)$") (EFunc' annz (TFunc FuncGlobal (TVar False "Int") (int),cz) (SRet annz (ECons annz ["Int","10"]))) (SNop annz) (SRet annz (EError annz (-2))))))))
 
@@ -136,10 +136,10 @@ spec = do
               (SRet annz (ECall annz (EVar annz "f3") (ECons annz ["Int","10"])))))
       `shouldBe`
         (SClassS annz "F3able" (cv "a")
-          [(annz,"f3",(TFunc FuncGlobal (TVar False "a") (int),cvc("a","F3able")),False)]
+          (singleton "f3" (annz,"f3",(TFunc FuncGlobal (TVar False "a") (int),cvc("a","F3able")),False))
         (SVarS annz "f3" (TFunc FuncGlobal (TVar False "a") (int),cvc("a","F3able")) Nothing
         (SInstS annz "F3able" (int,cz)
-          [(annz,"f3",(TFunc FuncGlobal (TVar False "Int") (int),cz),True)]
+          (singleton "f3" (annz,"f3",(TFunc FuncGlobal (TVar False "Int") (int),cz),True))
         (SVarS annz "$f3$(Int -> Int)$" (TFunc FuncGlobal (TVar False "Int") (int),cz) Nothing
           (SSeq annz
             (set' annz False (EVar annz "$f3$(Int -> Int)$") (EFunc' annz (TFunc FuncGlobal (TVar False "Int") (int),cz) (SRet annz (ECons annz ["Int","10"])))
@@ -167,14 +167,14 @@ spec = do
                 (SRet annz (ECall annz (EVar annz "f3") (ECons annz ["Int","10"])))))
       `shouldBe`
         (SClassS annz "F3able" (cv "a")
-          [(annz,"f3",(TFunc FuncGlobal (TVar False "a") (int),cvc("a","F3able")),False)]
+          (singleton "f3" (annz,"f3",(TFunc FuncGlobal (TVar False "a") (int),cvc("a","F3able")),False))
         (SVarS annz "f3" (TFunc FuncGlobal (TVar False "a") (int),cvc("a","F3able")) Nothing
         (SSeq annz
         (SNop annz)
         (SSeq annz
         (SNop annz)
         (SInstS annz "F3able" (int,cz)
-          [(annz,"f3",(TFunc FuncGlobal (TVar False "Int") (int),cz),True)]
+          (singleton "f3" (annz,"f3",(TFunc FuncGlobal (TVar False "Int") (int),cz),True))
           (SVarS annz "$f3$(Int -> Int)$" (TFunc FuncGlobal (TVar False "Int") (int),cz) Nothing
           (SSeq annz
             (set' annz False (EVar annz "$f3$(Int -> Int)$")
@@ -192,11 +192,11 @@ spec = do
             (SRet annz (ECall annz (EVar annz "f3") (ECons annz ["Int","10"]))))))))))
 
     it "Xxx.Yyy" $
-      compile (SSeq annz (SData annz int                            Nothing TUnit (M.fromList []) False)
-              (SSeq annz (SData annz (TData False ["Xxx"]       []) Nothing int   (M.fromList []) True)
-              (SSeq annz (SData annz (TData False ["Xxx","Yyy"] []) Nothing int   (M.fromList []) False)
+      compile (SSeq annz (SData annz int                            Nothing TUnit (fromList []) False)
+              (SSeq annz (SData annz (TData False ["Xxx"]       []) Nothing int   (fromList []) True)
+              (SSeq annz (SData annz (TData False ["Xxx","Yyy"] []) Nothing int   (fromList []) False)
               (SSeq annz
-              (SSeq annz (SVar annz "y" (TData False ["Xxx","Yyy"] [],M.fromList []) Nothing)
+              (SSeq annz (SVar annz "y" (TData False ["Xxx","Yyy"] [],fromList []) Nothing)
                         (SNop annz))
                         (SSet annz True False (EVar annz "y") (ECall annz (ECons annz ["Xxx","Yyy"]) (ETuple annz [ECons annz ["Int","1"],ECons annz ["Int","2"]])))))))
       `shouldBe`
