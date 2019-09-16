@@ -21,7 +21,7 @@ spec = do
 
     describe "constraint:" $ do
 
-      it "IEq" $
+      it "XXX: IEq" $
         (run True $
           unlines [
             "constraint IEq for a with"         ,
@@ -32,7 +32,7 @@ spec = do
           ])
         `shouldBe` Right (EData ["Int","1"] EUnit)
 
-      it "IEq + default" $
+      it "XXX: IEq + default" $
         (run True $
           unlines [
             "constraint IEq for a with"         ,
@@ -59,7 +59,7 @@ spec = do
           ])
         `shouldBe` Right (EData ["Int","1"] EUnit)
 
-      it "IEq + default + Int + f" $
+      it "XXX: IEq + default + Int + f" $
         (run True $
           unlines [
             "constraint IEq for a with"          ,

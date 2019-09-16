@@ -78,6 +78,7 @@ data Stmt
   | SInst''   Ann ID_Class TypeC B.Protos          -- new class instance
   | SData     Ann Type (Maybe [ID_Var]) Type Cs.Map Bool -- new type declaration
   | SVar      Ann ID_Var TypeC (Maybe Exp)         -- (z id tp ini)   -- variable declaration
+  | SVar'     Ann ID_Var Generic TypeC (Maybe Exp) -- (z id tp ini)   -- variable declaration
   | STodo     Ann String
   | SFunc     Ann ID_Var TypeC Exp Stmt            -- function declaration
   | SMatch    Ann Bool Bool Exp [(Stmt,Exp,Stmt)]  -- match
@@ -100,12 +101,16 @@ data Stmt
 sSeq a b = SSeq annz a b
 infixr 1 `sSeq`
 
+data Generic = GNone | GClass | GInst | GFunc
+  deriving (Show,Eq)
+
 instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
     getAnn (SClass    z _ _ _)     = z
     getAnn (SInst     z _ _ _)     = z
     getAnn (SData     z _ _ _ _ _) = z
     getAnn (SVar      z _ _ _)     = z
+    getAnn (SVar'     z _ _ _ _)   = z
     getAnn (SFunc     z _ _ _ _)   = z
     getAnn (SSeq      z _ _  )     = z
     getAnn (SLoop     z _)         = z
@@ -147,6 +152,7 @@ map_stmt f@(fs,_,ft) clss   (SInstS   z cls tp pts p)       = fs clss (SInstS   
 map_stmt f@(fs,_,ft) clss   (SData    z tp nms st cs abs)   = fs clss (SData    z tp nms st cs abs)
 map_stmt f@(fs,_,ft) clss   (SDataS   z tp nms st cs abs p) = fs clss (SDataS   z tp nms st cs abs (map_stmt f clss p))
 map_stmt f@(fs,_,ft) clss   (SVar     z id tp ini)          = fs clss (SVar     z id (ft tp) (fmap (map_exp f clss) ini))
+map_stmt f@(fs,_,ft) clss   (SVar'    z id gen tp ini)      = fs clss (SVar'    z id gen (ft tp) (fmap (map_exp f clss) ini))
 map_stmt f@(fs,_,ft) clss   (SVarS    z id tp ini p)        = fs clss (SVarS    z id (ft tp) (fmap (map_exp f clss) ini) (map_stmt f clss p))
 map_stmt f@(fs,_,ft) clss   (STodo    z v)                  = fs clss (STodo    z v)
 map_stmt f@(fs,_,ft) clss   (STodoS   z v p)                = fs clss (STodoS   z v (map_stmt f clss p))

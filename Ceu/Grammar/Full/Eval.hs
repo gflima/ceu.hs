@@ -45,7 +45,7 @@ prelude z p =
            p)))))))))))))))
 
 compile :: Stmt -> Stmt
-compile p = traceStmt $
+compile p = --traceStmt $
   map_stmt' (f2 Scope.remSScope,id,id)        $
   map_stmt' (f2 Match.remSSetSIf,id,id)       $
   map_stmt' (f2 Match.remIni,id,id)           $
@@ -65,6 +65,7 @@ compile p = traceStmt $
   map_stmt' (f2 Class.dclClassDicts,id,id)    $
   map_stmt' (f2 Class.addProtos,id,id)        $
   map_stmt' (f2 Class.insConstraint,id,id)    $
+  map_stmt' (f2 Class.setGeneric,id,id)       $
   map_stmt' (f2 Func.remSFunc,id,id)          $
   p where
 

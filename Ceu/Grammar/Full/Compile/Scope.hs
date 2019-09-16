@@ -19,7 +19,7 @@ setScope :: Stmt -> Stmt
 setScope (SClass'' z id  cs ifc)       = SClassS z id  cs  ifc       (SNop z)
 setScope (SInst''  z cls tp imp)       = SInstS  z cls tp  imp       (SNop z)
 setScope (SData    z tp nms st cs abs) = SDataS  z tp  nms st cs abs (SNop z)
-setScope (SVar     z var tp ini)       = SVarS   z var tp  ini       (SNop z)
+setScope (SVar'    z var _ tp ini)     = SVarS   z var tp  ini       (SNop z)
 setScope (STodo    z str)              = STodoS  z str               (SNop z)
 
 setScope (SSeq _ (SClassS z id  cs ifc       (SNop _)) p2) = SClassS z id  cs  ifc       p2

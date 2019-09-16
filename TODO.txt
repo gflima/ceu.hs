@@ -584,7 +584,7 @@ data $IEq (eq,neq) for a with (                         // dclClassDicts
     (($IEq for a, a,a) -> Int),     // neq
 )
 
-func $neq ($dict,x,y) : (($IEq for a,a,a) -> Int) do    // dupRenImpls, insDict
+func $neq$ ($dict,x,y) : (($IEq for a,a,a) -> Int) do    // dupRenImpls, insDict
     eq = func (x,y) : ((a,a) -> Int) do                 // insWrappers
             return $dict.eq($dict,x,y)
          end
@@ -613,16 +613,19 @@ l
 
 // FUNCTION
 
-func f ($dict,x) : (($IEq for a,Int) -> Int) do
-    return x $dict.eq x
+func $f$ ($dict,x) : (($IEq for a,Int) -> Int) do
+    eq = func (x,y) : ((a,a) -> Int) do                 // insWrappers
+            return $dict.eq($dict,x,y)
+         end
+    return x eq x
 end
 
-var f$Int x : (Int -> Int) do
-    return f ($IEq$Int,x)
+var $f$Int$ x : (Int -> Int) do
+    return $f$ ($IEq$Int,x)
 end
 
 // CALL
 
-return $eq$Int(1,2) // f$Int 1
+return $eq$Int(1,2) // $f$Int$ 1
 
 ===============================================================================
