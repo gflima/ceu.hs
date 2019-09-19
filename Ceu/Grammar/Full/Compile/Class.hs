@@ -15,6 +15,29 @@ idtp id tp = dollar $ id ++ "$" ++ show' tp
 
 -------------------------------------------------------------------------------
 
+-- Insert constraint in each nested method in outer contraint/instance.
+--
+--    contraint IEq        (eq,neq)
+--
+--    contraint IEq        (eq where a is IEq,neq where a is IEq)
+
+insConstraint :: Stmt -> Stmt
+
+insConstraint (SClass z cls cs ifc) =
+   case Cs.toList cs of
+    [(var,_)]  -> SClass z cls cs ifc' where
+                    ifc' = map_stmt (f2 f, Prelude.id, Prelude.id) Map.empty ifc
+                    f (SVar z id (tp',cs') ini) = SVar z id (tp', Cs.insert (var,cls) cs') ini
+                    f p = p
+    otherwise  -> error "TODO: multiple vars"
+
+insConstraint p = p
+
+-------------------------------------------------------------------------------
+
+-- Add list of prototypes.
+--
+--
 -- Set type of generic var.
 --
 --    contraint IEq        (eq,neq)
@@ -25,64 +48,27 @@ idtp id tp = dollar $ id ++ "$" ++ show' tp
 --    instance  IEq for Int(eq/GInst,  neq/GInstc)
 --    func f/GFunc
 
-setGeneric :: Stmt -> Stmt
+addProtosGen :: Stmt -> Stmt
 
-setGeneric (SClass z cls cs ifc) = SClass z cls cs ifc'
+addProtosGen (SClass z cls cs ifc) = SClass' z cls cs pts ifc'
   where
+    pts  = protos ifc
     ifc' = map_stmt (f2 f, Prelude.id, Prelude.id) Map.empty ifc where
-            f (SVar' z id GNone tpc ini) = SVar' z id GClass tpc ini
+            f (SVar' z id _ tpc ini) = SVar' z id (GClass cls cs pts) tpc ini
             f p = p
 
-setGeneric (SInst z cls tpc imp) = SInst z cls tpc imp'
+addProtosGen (SInst z cls tpc@(tp,_) imp) = SInst' z cls tpc (protos imp) imp'
   where
     imp' = map_stmt (f2 f, Prelude.id, Prelude.id) Map.empty imp where
-            f (SVar' z id GNone tpc' ini) = SVar' z id GInst tpc' ini
+            f (SVar' z id _ tpc' ini) = SVar' z id (GInst cls tp) tpc' ini
             f p = p
 
-setGeneric (SVar z id tpc@(_,ctrs) ini) = SVar' z id gen tpc ini
+addProtosGen (SVar z id tpc@(_,ctrs) ini) = SVar' z id gen tpc ini
   where
     gen = if Map.null ctrs then GNone
                            else GFunc
 
-setGeneric p = p
-
--------------------------------------------------------------------------------
-
--- Insert constraint in each nested method in outer contraint/instance.
---
---    contraint IEq        (eq,neq)
---    instance  IEq for Int(eq,neq)
---
---    contraint IEq        (eq where a is IEq,neq where a is IEq)
---    instance  IEq for Int(eq where a is IEq,neq where a is IEq)
-
-insConstraint :: Stmt -> Stmt
-
-insConstraint (SClass z cls cs ifc) =
-  case Cs.toList cs of
-    [(var,_)]  -> SClass z cls cs ifc' where
-                    ifc' = map_stmt (f2 f, Prelude.id, Prelude.id) Map.empty ifc
-                    f (SVar' z id gen (tp',cs') ini) = SVar' z id gen (tp', Cs.insert (var,cls) cs') ini
-                    f p = p
-    otherwise  -> error "TODO: multiple vars"
-
-insConstraint (SInst z cls tpc@(_,cs) imp) = SInst z cls tpc imp'
-  where
-    imp' = map_stmt (f2 f, Prelude.id, Prelude.id) Map.empty imp
-    f (SVar' z id gen (tp',cs') ini) = SVar' z id gen (tp', Cs.union cs cs') ini
-    f p = p
-
-insConstraint p = p
-
--------------------------------------------------------------------------------
-
--- Add list of prototypes.
---
-
-addProtos :: Stmt -> Stmt
-addProtos (SClass z cls cs  ifc) = SClass' z cls cs  (protos ifc) ifc
-addProtos (SInst  z cls tpc imp) = SInst'  z cls tpc (protos imp) imp
-addProtos p = p
+addProtosGen p = p
 
 -- convert from sequence of declarations to list of prototypes:
 --    constraint IEq for a with (eq:tp1, neq:tp2)
@@ -126,7 +112,6 @@ dclClassDicts p = p
 --
 --    constraint IEq(eq,neq(...))
 --    func neq (x,y)            // keep just the declaration
---    func $neq$ (x,y) do       // dummy id to typecheck
 --    func _$neq$ (x,y) do      // actual implementation (will receive $dict)
 --
 --    instance of IEq for Int (eq)
@@ -135,31 +120,13 @@ dclClassDicts p = p
 
 dupRenImpls :: Stmt -> Stmt
 
-{-
-dupRenImpls (SVar' z id GClass tpc@(tp,_) ini) =
-  SSeq z (SVar' z id GClass tpc Nothing) $
-    --SSeq z (SVar' z (    dollar id) gen tpc ini)
-    (SVar' z ('_':dollar id) GClass tpc ini)
--}
+dupRenImpls (SVar' z id gen@(GClass _ _ _) tpc@(tp,_) ini) =
+  SSeq z (SVar' z id gen tpc Nothing) $
+    (SVar' z ('_':dollar id) gen tpc ini)
 
-dupRenImpls (SClass' z id ctrs pts ifc) = SClass' z id ctrs pts ifc' where
-  ifc' = map_stmt (f2 f, Prelude.id, Prelude.id) Map.empty ifc
-  f (SVar' z id gen tpc@(tp,_) ini) = SSeq z (SVar' z id gen tpc Nothing) $
-                                        --SSeq z (SVar' z (    dollar id) gen tpc ini)
-                                        (SVar' z ('_':dollar id) gen tpc ini)
-  f p = p
-
-dupRenImpls (SInst' z cls tpc@(tp,_) pts imp) = SInst' z cls tpc pts imp' where
-  imp' = map_stmt (f2 f, Prelude.id, Prelude.id) Map.empty imp
-  f s@(SVar' z id gen tpc' ini) = SSeq z (SVar' z (    idtp id tp) gen tpc' ini)
-                                         (SVar' z ('_':idtp id tp) gen tpc' ini)
-  f p = p
-
-{-
-dupRenImpls (SVar' z id (GInst tp) tpc ini) =
-  SSeq z (SVar' z (    idtp id tp) (GInst tp) tpc ini)
-         (SVar' z ('_':idtp id tp) (GInst tp) tpc ini)
--}
+dupRenImpls s@(SVar' z id gen@(GInst _ itp) tpc' ini) =
+  SSeq z (SVar' z (    idtp id itp) gen tpc' ini)
+         (SVar' z ('_':idtp id itp) gen tpc' ini)
 
 dupRenImpls p = p
 
@@ -178,24 +145,20 @@ dupRenImpls p = p
 
 insClassWrappers :: Stmt -> Stmt
 
-insClassWrappers (SClass' z cls ctrs pts ifc) = SClass' z cls ctrs pts ifc' where
-  ifc' = map_stmt (f2 f, Prelude.id, Prelude.id) Map.empty ifc
+insClassWrappers (SVar' z ('_':id) gen@(GClass cls _ pts) tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2))) =
+  SVar' z ('_':id) gen tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2')) where
+    p2' = foldr (SSeq z) p2 (map g (filter notme (Map.elems pts))) where
+            notme (_,id',_,_) = id /= id'
 
-  f (SVar' z ('_':id) gen tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2))) =
-     SVar' z ('_':id) gen tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2')) where
-      p2' = foldr (SSeq z) p2 (map g (filter notme (Map.elems pts))) where
-              notme (_,id',_,_) = id /= id'
+            g (_,id',_,_) = SVar' z (dollar id') gen tpc (Just (EFunc z (TFunc FuncNested inp out,cs) (ren par2) p)) where
+                              p = SRet z (ECall z
+                                          (ECall z (EField z [dollar cls] id') (EVar z "$dict"))
+                                          (insETuple (EVar z "$dict") (toETuple $ ren par2)))
 
-              g (_,id',_,_) = SVar' z (dollar id') gen tpc (Just (EFunc z (TFunc FuncNested inp out,cs) (ren par2) p)) where
-                                p = SRet z (ECall z
-                                            (ECall z (EField z [dollar cls] id') (EVar z "$dict"))
-                                            (insETuple (EVar z "$dict") (toETuple $ ren par2)))
-
-              -- rename parameters to prevent redeclarations
-              ren (EVar   z id) = EVar z ('$':id)
-              ren (ETuple z l)  = ETuple z (map f l) where
-                                    f (EVar z id) = EVar z ('$':id)
-  f p = p
+            -- rename parameters to prevent redeclarations
+            ren (EVar   z id) = EVar z ('$':id)
+            ren (ETuple z l)  = ETuple z (map f l) where
+                                  f (EVar z id) = EVar z ('$':id)
 
 insClassWrappers p = p
 
@@ -212,15 +175,9 @@ insClassWrappers p = p
 
 insDict :: Stmt -> Stmt
 
-insDict (SClass' z cls ctrs pts ifc) = SClass' z cls ctrs pts ifc' where
-  ifc' = map_stmt (f2 $ f cls, Prelude.id, Prelude.id) Map.empty ifc
+insDict s@(SVar' _ _ GNone _ _) = s
 
-insDict (SInst' z cls tpc pts imp) = SInst' z cls tpc pts imp' where
-  imp' = map_stmt (f2 $ f cls, Prelude.id, Prelude.id) Map.empty imp
-
-insDict p = p
-
-f cls (SVar' z ('_':id) gen (TFunc ft1 inp1 out1,cs1)
+insDict (SVar' z ('_':id) gen (TFunc ft1 inp1 out1,cs1)
         (Just (EFunc z2 (TFunc ft2 inp2 out2,cs2) par2  p2))) =
   SVar' z ('_':id) gen (TFunc ft1 inp1' out1,cs1)
     (Just (EFunc z2 (TFunc ft2 inp2' out2,cs2) par2' p2))
@@ -228,8 +185,11 @@ f cls (SVar' z ('_':id) gen (TFunc ft1 inp1 out1,cs1)
     inp1' = insTTuple (TData False [dollar cls] []) (toTTuple inp1)
     inp2' = insTTuple (TData False [dollar cls] []) (toTTuple inp2)
     par2' = insETuple (EVar z "$dict") (toETuple par2)
---f p@(SVar' z id tpc (Just (EFunc z2 tp2  par2  p2))) = traceShow id p
-f _ p = p
+    cls = case gen of
+            GClass cls _ _ -> cls
+            GInst  cls _   -> cls
+
+insDict p = p
 
 -------------------------------------------------------------------------------
 
@@ -242,24 +202,13 @@ f _ p = p
 
 addInstCall :: Stmt -> Stmt
 
-addInstCall (SInst' z cls tpc pts imp) = SInst' z cls tpc pts imp' where
-  imp' = map_stmt (f2 f, Prelude.id, Prelude.id) Map.empty imp where
-    f (SVar' z ('_':id) gen tpc (Just (EFunc z2 tp2 par2 _))) =
-       SVar' z ('_':id) gen tpc (Just (EFunc z2 tp2 par2 p2)) where
-      p2 = SRet z (ECall z (EVar z id) (remTuple par2))
-    f p = p
+addInstCall (SVar' z ('_':id) gen@(GInst _ _) tpc (Just (EFunc z2 tp2 par2 _))) =
+  SVar' z ('_':id) gen tpc (Just (EFunc z2 tp2 par2 p2)) where
+    p2 = SRet z (ECall z (EVar z id) (remTuple par2))
 
-  remTuple (ETuple _ [EVar _ "$dict", y])  = y
-  remTuple (ETuple z (EVar _ "$dict" : l)) = ETuple z l
-  remTuple x = x
-
-addInstCall s@(SVar' z id gen (tp,cs) ini) =
-  if null cs then
-    traceShow ("null",id) s
-  else
-    traceShow ("some",id) s
-{-
--}
+    remTuple (ETuple _ [EVar _ "$dict", y])  = y
+    remTuple (ETuple z (EVar _ "$dict" : l)) = ETuple z l
+    remTuple x = x
 
 addInstCall p = p
 

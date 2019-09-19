@@ -63,9 +63,8 @@ compile p = --traceStmt $
   map_stmt' (f2 Class.insClassWrappers,id,id) $
   map_stmt' (f2 Class.dupRenImpls,id,id)      $
   map_stmt' (f2 Class.dclClassDicts,id,id)    $
-  map_stmt' (f2 Class.addProtos,id,id)        $
+  map_stmt' (f2 Class.addProtosGen,id,id)     $
   map_stmt' (f2 Class.insConstraint,id,id)    $
-  map_stmt' (f2 Class.setGeneric,id,id)       $
   map_stmt' (f2 Func.remSFunc,id,id)          $
   p where
 
