@@ -101,7 +101,7 @@ data Stmt
 sSeq a b = SSeq annz a b
 infixr 1 `sSeq`
 
-data Generic = GNone | GClass ID_Class Cs.Map B.Protos | GInst ID_Class Type | GFunc
+data Generic = GNone | GClass ID_Class Cs.Map B.Protos | GInst ID_Class Type | GFunc [Type]
   deriving (Show,Eq)
 
 instance HasAnn Stmt where

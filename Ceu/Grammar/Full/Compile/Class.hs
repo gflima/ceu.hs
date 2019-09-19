@@ -66,7 +66,7 @@ addProtosGen (SInst z cls tpc@(tp,_) imp) = SInst' z cls tpc (protos imp) imp'
 addProtosGen (SVar z id tpc@(_,ctrs) ini) = SVar' z id gen tpc ini
   where
     gen = if Map.null ctrs then GNone
-                           else GFunc
+                           else GFunc []
 
 addProtosGen p = p
 
@@ -117,6 +117,10 @@ dclClassDicts p = p
 --    instance of IEq for Int (eq)
 --    func $eq$Int$ (x,y)       // wrapper to call _$neq$Int$ with $dict
 --    func _$eq$Int$ (x,y)      // actual implementation (will receive $dict)
+--
+--    func f x : (a -> Int) where a is IEq
+--    func $f$Int$ (x)
+--    func _$f$Int$ (x)
 
 dupRenImpls :: Stmt -> Stmt
 
@@ -127,6 +131,11 @@ dupRenImpls (SVar' z id gen@(GClass _ _ _) tpc@(tp,_) ini) =
 dupRenImpls s@(SVar' z id gen@(GInst _ itp) tpc' ini) =
   SSeq z (SVar' z (    idtp id itp) gen tpc' ini)
          (SVar' z ('_':idtp id itp) gen tpc' ini)
+
+dupRenImpls s@(SVar' z id gen@(GFunc itps) tpc' ini) = foldr f (SNop z) itps
+  where
+    f itp p = SSeq z (SVar' z (    idtp id itp) gen tpc' ini) $
+              SSeq z (SVar' z ('_':idtp id itp) gen tpc' ini) p
 
 dupRenImpls p = p
 
