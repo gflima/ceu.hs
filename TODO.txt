@@ -613,15 +613,15 @@ l
 
 // FUNCTION
 
-func $f$ ($dict,x) : (($IEq for a,Int) -> Int) do
+func _$f$ ($dict,x) : (($IEq for a,Int) -> Int) do
     eq = func (x,y) : ((a,a) -> Int) do                 // insWrappers
             return $dict.eq($dict,x,y)
          end
     return x eq x
 end
 
-var $f$Int$ x : (Int -> Int) do
-    return $f$ ($IEq$Int,x)
+var $f$Int$ x : (Int -> Int) do                         // addGenCall
+    return _$f$ ($IEq$Int,x)
 end
 
 // CALL

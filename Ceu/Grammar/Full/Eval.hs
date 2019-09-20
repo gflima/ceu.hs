@@ -53,6 +53,8 @@ compile p = traceStmt $
   map_stmt' (f2 Data.addAccs,id,id)           $
   Data.expHier []                             $
   map_stmt' (f2 Scope.remSVarSGen,id,id)      $
+--
+  map_stmt' (f2 Class.addGenCall,id,id)       $
   map_stmt' (f2 Class.addInstMissing,id,id)   $
   map_stmt' (f2 Class.addInstDicts,id,id)     $   -- uses SSeq / uses (STodo SInst-*)
   map_stmt' (Class.uniInstProtos,id,id)       $   -- uses scope (clss)

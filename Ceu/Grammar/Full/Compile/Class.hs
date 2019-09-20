@@ -353,7 +353,7 @@ uniInstProtos env (SInstS z cls tpc@(tp,_) pts bdy) =
     pts' = case find f env of
             Just (SClassS _ _ _ x _) -> Map.union pts $ Map.map noIni $ Map.difference x pts where
                                           noIni (z,id,tpc,_) = (z,id,tpc,False)
-            _ -> error $ show (cls, env)
+            --_ -> error $ show (cls, env)
            where
             f (SClassS _ cls' _ _ _) = (cls == cls')
             f _                      = False
@@ -425,3 +425,25 @@ addInstMissing (SInstS z cls tpc@(tp,_) pts (SVarS z2 id2 gen2 tp2 Nothing bdy))
                                 lns' = 1 : map (+1) lns'
 
 addInstMissing p = p
+
+-------------------------------------------------------------------------------
+
+-- For each missing implementation, add dummy implementation that calls
+-- constraint default.
+--
+--    var $f$Int$ x : (Int -> Int);
+
+--    var $f$Int$ x : (Int -> Int) do
+--      return _$f$($IEq$Int,...)
+--    end
+
+addGenCall :: Stmt -> Stmt
+
+addGenCall (SVarS z ('$':id) gen@(GFunc _ _) tpc Nothing p) =
+   SVarS z ('$':id) gen tpc (Just (EFunc z tpc (EUnit z) bdy)) p where
+    bdy = SRet z (ECall z (EVar z id) (EUnit z))
+  --dict = dollar $ cls ++ "$" ++ show' tp
+                              --(ECall z (EField z [dollar cls] id') (EVar z "$dict"))
+                              --(insETuple (EVar z "$dict") (toETuple $ expand inp)))
+
+addGenCall p = p
