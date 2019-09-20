@@ -60,7 +60,7 @@ compile p = --traceStmt $
   map_stmt' (f2 Class.addInstCall,id,id)      $
   map_stmt' (f2 Class.insDict,id,id)          $
   map_stmt' (f2 Class.insClassWrappers,id,id) $
-  map_stmt' (f2 Class.dupRenImpls,id,id)      $
+  map_stmt' (Class.dupRenImpls,id,id)         $
 --
   map_stmt' (f2 Scope.setScope,id,id)         $
   map_stmt' (f2 Seq.adjSSeq,id,id)            $   -- no more SSeq

@@ -136,28 +136,39 @@ remClassInst p = p
 --    func _$eq$Int$ (x,y)      // actual implementation (will receive $dict)
 --
 --    func f x : (a -> Int) where a is IEq
+--    func f (x)
 --    func $f$Int$ (x)
 --    func _$f$Int$ (x)
 
-dupRenImpls :: Stmt -> Stmt
+dupRenImpls :: ClassInst -> Stmt -> Stmt
 
-dupRenImpls (SVarS z id gen@(GClass _ _ _) tpc@(tp,_) ini p) =
+dupRenImpls _ (SVarS z id gen@(GClass _ _ _) tpc@(tp,_) ini p) =
   SVarS z id gen tpc Nothing $
     SVarS z ('_':dollar id) gen tpc ini $
       p
 
-dupRenImpls (SVarS z id gen@(GInst _ itp) tpc' ini p) =
+dupRenImpls _ (SVarS z id gen@(GInst _ itp) tpc' ini p) =
   SVarS z (idtp id itp) gen tpc' ini $
     SVarS z ('_':idtp id itp) gen tpc' ini $
       p
 
-dupRenImpls (SVarS z id gen@(GFunc itps) tpc' ini p) = foldr f p itps
+dupRenImpls ids (SVarS z id gen@(GFunc itps) tpc ini p) = foldr f p itps
   where
-    f itp p = SVarS z (idtp id itp) gen tpc' ini $
-                SVarS z ('_':idtp id itp) gen tpc' ini $
-                  p
+    f itp p = SVarS z (traceShowId id) gen tpc ini $
+                SVarS z (idtp id itp) gen tpc ini $
+                  SVarS z ('_':idtp id itp) gen tpc ini $
+                    p
 
-dupRenImpls p = p
+dupRenImpls _ p = p
+
+{-
+uniInstProtos ids (SInstS z cls tpc@(tp,_) pts bdy) =
+  SInstS z cls tpc pts' bdy where
+    pts' = case Map.lookup cls ids of
+            Just x -> Map.union pts $ Map.map noIni $ Map.difference x pts where
+                        noIni (z,id,tpc,_) = (z,id,tpc,False)
+            _ -> error $ show (cls, ids)
+-}
 
 -------------------------------------------------------------------------------
 
@@ -252,14 +263,14 @@ addInstCall p = p
 --
 --    instance of IEq for Int (eq(True),neq(False))
 
-uniInstProtos :: Clss -> Stmt -> Stmt
+uniInstProtos :: ClassInst -> Stmt -> Stmt
 
-uniInstProtos clss (SInstS z cls tpc@(tp,_) pts bdy) =
+uniInstProtos ids (SInstS z cls tpc@(tp,_) pts bdy) =
   SInstS z cls tpc pts' bdy where
-    pts' = case Map.lookup cls clss of
+    pts' = case Map.lookup (cls,Nothing) ids of
             Just x -> Map.union pts $ Map.map noIni $ Map.difference x pts where
                         noIni (z,id,tpc,_) = (z,id,tpc,False)
-            _ -> error $ show (cls, clss)
+            _ -> error $ show (cls, ids)
 
 uniInstProtos _ p = p
 

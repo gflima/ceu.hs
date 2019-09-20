@@ -138,46 +138,46 @@ toBasicStmt p                        = error $ "toBasicStmt: unexpected statemen
 
 -------------------------------------------------------------------------------
 
-type Clss = Map.Map ID_Class B.Protos
+type ClassInst = Map.Map (ID_Class, Maybe TypeC) B.Protos
 
 map_stmt' f s = map_stmt f Map.empty s
 
-map_stmt :: (Clss->Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Clss->Stmt -> Stmt
-map_stmt f@(fs,_,_)  clss   (SClass   z id  cs p)           = fs clss (SClass   z id cs (map_stmt f clss p))
-map_stmt f@(fs,_,_)  clss s@(SClass'  z id  cs pts bdy)     = fs clss (SClass'  z id cs pts (map_stmt f (Map.insert id pts clss) bdy))
-map_stmt f@(fs,_,_)  clss   (SClass'' z id  cs pts)         = fs clss (SClass'' z id cs pts)
-map_stmt f@(fs,_,_)  clss s@(SClassS  z id  cs pts p)       = fs clss (SClassS  z id cs pts (map_stmt f (Map.insert id pts clss) p))
-map_stmt f@(fs,_,ft) clss   (SInst    z cls tp p)           = fs clss (SInst    z cls (ft tp) (map_stmt f clss p))
-map_stmt f@(fs,_,ft) clss   (SInst'   z cls tp pts bdy)     = fs clss (SInst'   z cls (ft tp) pts (map_stmt f clss bdy))
-map_stmt f@(fs,_,ft) clss   (SInst''  z cls tp pts)         = fs clss (SInst''  z cls (ft tp) pts)
-map_stmt f@(fs,_,ft) clss   (SInstS   z cls tp pts p)       = fs clss (SInstS   z cls (ft tp) pts (map_stmt f clss p))
-map_stmt f@(fs,_,ft) clss   (SData    z tp nms st cs abs)   = fs clss (SData    z tp nms st cs abs)
-map_stmt f@(fs,_,ft) clss   (SDataS   z tp nms st cs abs p) = fs clss (SDataS   z tp nms st cs abs (map_stmt f clss p))
-map_stmt f@(fs,_,ft) clss   (SVar     z id tp ini)          = fs clss (SVar     z id (ft tp) (fmap (map_exp f clss) ini))
-map_stmt f@(fs,_,ft) clss   (SVar'    z id gen tp ini)      = fs clss (SVar'    z id gen (ft tp) (fmap (map_exp f clss) ini))
-map_stmt f@(fs,_,ft) clss   (SVarS    z id gen tp ini p)    = fs clss (SVarS    z id gen (ft tp) (fmap (map_exp f clss) ini) (map_stmt f clss p))
-map_stmt f@(fs,_,ft) clss   (SVarS'   z id     tp ini p)    = fs clss (SVarS'   z id     (ft tp) (fmap (map_exp f clss) ini) (map_stmt f clss p))
-map_stmt f@(fs,_,ft) clss   (STodo    z v)                  = fs clss (STodo    z v)
-map_stmt f@(fs,_,ft) clss   (STodoS   z v p)                = fs clss (STodoS   z v (map_stmt f clss p))
-map_stmt f@(fs,_,ft) clss   (SFunc  z id tp ps bd)          = fs clss (SFunc    z id (ft tp) (map_exp f clss ps) (map_stmt f clss bd))
-map_stmt f@(fs,_,_)  clss   (SMatch z ini chk exp cses)     = fs clss (SMatch   z ini chk (map_exp f clss exp)
-                                                              (map (\(ds,pt,st) -> (map_stmt f clss ds, map_exp f clss pt, map_stmt f clss st)) cses))
-map_stmt f@(fs,_,_)  clss   (SSet   z ini b loc exp)        = fs clss (SSet   z ini b loc (map_exp f clss exp))
-map_stmt f@(fs,_,_)  clss   (SCall  z exp)                  = fs clss (SCall  z (map_exp f clss exp))
-map_stmt f@(fs,_,_)  clss   (SIf    z exp p1 p2)            = fs clss (SIf    z (map_exp f clss exp) (map_stmt f clss p1) (map_stmt f clss p2))
-map_stmt f@(fs,_,_)  clss   (SSeq   z p1 p2)                = fs clss (SSeq   z (map_stmt f clss p1) (map_stmt f clss p2))
-map_stmt f@(fs,_,_)  clss   (SLoop  z p)                    = fs clss (SLoop  z (map_stmt f clss p))
-map_stmt f@(fs,_,_)  clss   (SScope z p)                    = fs clss (SScope z (map_stmt f clss p))
-map_stmt f@(fs,_,_)  clss   (SRet   z exp)                  = fs clss (SRet   z (map_exp f clss exp))
-map_stmt f@(fs,_,_)  clss   (SNop   z)                      = fs clss (SNop   z)
+map_stmt :: (ClassInst->Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> ClassInst->Stmt -> Stmt
+map_stmt f@(fs,_,_)  ids   (SClass   z id  cs p)           = fs ids (SClass   z id cs (map_stmt f ids p))
+map_stmt f@(fs,_,_)  ids s@(SClass'  z id  cs pts bdy)     = fs ids (SClass'  z id cs pts (map_stmt f (Map.insert (id,Nothing) pts ids) bdy))
+map_stmt f@(fs,_,_)  ids   (SClass'' z id  cs pts)         = fs ids (SClass'' z id cs pts)
+map_stmt f@(fs,_,_)  ids s@(SClassS  z id  cs pts p)       = fs ids (SClassS  z id cs pts (map_stmt f (Map.insert (id,Nothing) pts ids) p))
+map_stmt f@(fs,_,ft) ids   (SInst    z cls tpc p)          = fs ids (SInst    z cls (ft tpc) (map_stmt f ids p))
+map_stmt f@(fs,_,ft) ids s@(SInst'   z cls tpc pts bdy)    = fs ids (SInst'   z cls (ft tpc) pts (map_stmt f (Map.insert (cls, Just tpc) pts ids) bdy))
+map_stmt f@(fs,_,ft) ids   (SInst''  z cls tpc pts)        = fs ids (SInst''  z cls (ft tpc) pts)
+map_stmt f@(fs,_,ft) ids s@(SInstS   z cls tpc pts p)      = fs ids (SInstS   z cls (ft tpc) pts (map_stmt f (Map.insert (cls,Just tpc) pts ids) p))
+map_stmt f@(fs,_,ft) ids   (SData    z tp nms st cs abs)   = fs ids (SData    z tp nms st cs abs)
+map_stmt f@(fs,_,ft) ids   (SDataS   z tp nms st cs abs p) = fs ids (SDataS   z tp nms st cs abs (map_stmt f ids p))
+map_stmt f@(fs,_,ft) ids   (SVar     z id tp ini)          = fs ids (SVar     z id (ft tp) (fmap (map_exp f ids) ini))
+map_stmt f@(fs,_,ft) ids   (SVar'    z id gen tp ini)      = fs ids (SVar'    z id gen (ft tp) (fmap (map_exp f ids) ini))
+map_stmt f@(fs,_,ft) ids   (SVarS    z id gen tp ini p)    = fs ids (SVarS    z id gen (ft tp) (fmap (map_exp f ids) ini) (map_stmt f ids p))
+map_stmt f@(fs,_,ft) ids   (SVarS'   z id     tp ini p)    = fs ids (SVarS'   z id     (ft tp) (fmap (map_exp f ids) ini) (map_stmt f ids p))
+map_stmt f@(fs,_,ft) ids   (STodo    z v)                  = fs ids (STodo    z v)
+map_stmt f@(fs,_,ft) ids   (STodoS   z v p)                = fs ids (STodoS   z v (map_stmt f ids p))
+map_stmt f@(fs,_,ft) ids   (SFunc  z id tp ps bd)          = fs ids (SFunc    z id (ft tp) (map_exp f ids ps) (map_stmt f ids bd))
+map_stmt f@(fs,_,_)  ids   (SMatch z ini chk exp cses)     = fs ids (SMatch   z ini chk (map_exp f ids exp)
+                                                              (map (\(ds,pt,st) -> (map_stmt f ids ds, map_exp f ids pt, map_stmt f ids st)) cses))
+map_stmt f@(fs,_,_)  ids   (SSet   z ini b loc exp)        = fs ids (SSet   z ini b loc (map_exp f ids exp))
+map_stmt f@(fs,_,_)  ids   (SCall  z exp)                  = fs ids (SCall  z (map_exp f ids exp))
+map_stmt f@(fs,_,_)  ids   (SIf    z exp p1 p2)            = fs ids (SIf    z (map_exp f ids exp) (map_stmt f ids p1) (map_stmt f ids p2))
+map_stmt f@(fs,_,_)  ids   (SSeq   z p1 p2)                = fs ids (SSeq   z (map_stmt f ids p1) (map_stmt f ids p2))
+map_stmt f@(fs,_,_)  ids   (SLoop  z p)                    = fs ids (SLoop  z (map_stmt f ids p))
+map_stmt f@(fs,_,_)  ids   (SScope z p)                    = fs ids (SScope z (map_stmt f ids p))
+map_stmt f@(fs,_,_)  ids   (SRet   z exp)                  = fs ids (SRet   z (map_exp f ids exp))
+map_stmt f@(fs,_,_)  ids   (SNop   z)                      = fs ids (SNop   z)
 
-map_exp :: (Clss->Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Clss->Exp -> Exp
-map_exp f@(_,fe,_)  clss (ECons  z id)       = fe (ECons  z id)
-map_exp f@(_,fe,_)  clss (ETuple z es)       = fe (ETuple z (map (map_exp f clss) es))
-map_exp f@(_,fe,ft) clss (EFunc  z tp ps bd) = fe (EFunc  z (ft tp) (map_exp f clss ps) (map_stmt f clss bd))
-map_exp f@(_,fe,ft) clss (EFunc' z tp bd)    = fe (EFunc' z (ft tp) (map_stmt f clss bd))
-map_exp f@(_,fe,_)  clss (ECall  z e1 e2)    = fe (ECall  z (map_exp f clss e1) (map_exp f clss e2))
-map_exp f@(_,fe,_)  clss exp                 = fe exp
+map_exp :: (ClassInst->Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> ClassInst->Exp -> Exp
+map_exp f@(_,fe,_)  ids (ECons  z id)       = fe (ECons  z id)
+map_exp f@(_,fe,_)  ids (ETuple z es)       = fe (ETuple z (map (map_exp f ids) es))
+map_exp f@(_,fe,ft) ids (EFunc  z tp ps bd) = fe (EFunc  z (ft tp) (map_exp f ids ps) (map_stmt f ids bd))
+map_exp f@(_,fe,ft) ids (EFunc' z tp bd)    = fe (EFunc' z (ft tp) (map_stmt f ids bd))
+map_exp f@(_,fe,_)  ids (ECall  z e1 e2)    = fe (ECall  z (map_exp f ids e1) (map_exp f ids e2))
+map_exp f@(_,fe,_)  ids exp                 = fe exp
 
 -------------------------------------------------------------------------------
 
