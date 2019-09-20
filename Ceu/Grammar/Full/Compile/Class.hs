@@ -252,39 +252,26 @@ dupRenImpls p = p
 
 insGenWrappers :: Stmt -> Stmt
 
-insGenWrappers (SVarS z ('_':id) gen@(GClass cls _ pts) tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2)) p) =
-  SVarS z ('_':id) gen tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2')) p where
-    p2' = foldr ($) p2 (map g (filter notme (Map.elems pts))) where
-            notme (_,id',_,_) = id /= id'
-
-            g (_,id',_,_) = SVarS z (dollar id') gen tpc (Just (EFunc z (TFunc FuncNested inp out,cs) (ren par2) q)) where
-                              q = SRet z (ECall z
-                                          (ECall z (EField z [dollar cls] id') (EVar z "$dict"))
-                                          (insETuple (EVar z "$dict") (toETuple $ ren par2)))
-
-            -- rename parameters to prevent redeclarations
-            ren (EVar   z id) = EVar z ('$':id)
-            ren (ETuple z l)  = ETuple z (map f l) where
-                                  f (EVar z id) = EVar z ('$':id)
-
-{-
-insGenWrappers (SVarS z ('_':id) gen@(GFunc cls _ pts) tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2)) p) =
-  SVarS z ('_':id) gen tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2')) p where
-    p2' = foldr ($) p2 (map g (filter notme (Map.elems pts))) where
-            notme (_,id',_,_) = id /= id'
-
-            g (_,id',_,_) = SVarS z (dollar id') gen tpc (Just (EFunc z (TFunc FuncNested inp out,cs) (ren par2) q)) where
-                              q = SRet z (ECall z
-                                          (ECall z (EField z [dollar cls] id') (EVar z "$dict"))
-                                          (insETuple (EVar z "$dict") (toETuple $ ren par2)))
-
-            -- rename parameters to prevent redeclarations
-            ren (EVar   z id) = EVar z ('$':id)
-            ren (ETuple z l)  = ETuple z (map f l) where
-                                  f (EVar z id) = EVar z ('$':id)
--}
-
+insGenWrappers s@(SVarS z ('_':id) (GClass cls _ pts)                _ (Just _) _) = insGW (cls,pts) s
+insGenWrappers s@(SVarS z ('_':id) (GFunc [SClassS _ cls _ pts _] _) _ (Just _) _) = insGW (cls,pts) s
 insGenWrappers p = p
+
+insGW (cls,pts)
+      (SVarS z ('_':id) gen tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2)) p) =
+  SVarS z ('_':id) gen tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2')) p where
+    p2' = foldr ($) p2 (map g (filter notme (Map.elems pts))) where
+            notme (_,id',_,_) = id /= id'
+
+            g (_,id',_,_) = SVarS z (dollar id') gen tpc
+                              (Just (EFunc z (TFunc FuncNested inp out,cs) (ren par2) q)) where
+                              q = SRet z (ECall z
+                                          (ECall z (EField z [dollar cls] id') (EVar z "$dict"))
+                                          (insETuple (EVar z "$dict") (toETuple $ ren par2)))
+
+            -- rename parameters to prevent redeclarations
+            ren (EVar   z id) = EVar z ('$':id)
+            ren (ETuple z l)  = ETuple z (map f l) where
+                                  f (EVar z id) = EVar z ('$':id)
 
 -------------------------------------------------------------------------------
 
