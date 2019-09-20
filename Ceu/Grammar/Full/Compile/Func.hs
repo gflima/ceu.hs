@@ -1,7 +1,6 @@
 module Ceu.Grammar.Full.Compile.Func where
 
 import Debug.Trace
-import qualified Data.Map as Map
 
 import Ceu.Grammar.Ann               (Ann)
 import Ceu.Grammar.Globals
@@ -19,8 +18,8 @@ remSFunc :: Stmt -> Stmt
 remSFunc (SFunc z k tp@(tp_,ctrs) par imp) = SVar z k tp (Just $ EFunc z tp par' imp')
   where
     (par',imp') = if ctrs == Cs.cz then (par,imp) else
-                    (map_exp  (id2,Prelude.id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) Map.empty par
-                    ,map_stmt (id2,Prelude.id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) Map.empty imp)
+                    (map_exp  (id2,Prelude.id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) [] par
+                    ,map_stmt (id2,Prelude.id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) [] imp)
 
 remSFunc p = p
 

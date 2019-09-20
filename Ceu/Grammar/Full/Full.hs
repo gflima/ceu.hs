@@ -102,7 +102,7 @@ data Stmt
 sSeq a b = SSeq annz a b
 infixr 1 `sSeq`
 
-data Generic = GNone | GClass ID_Class Cs.Map B.Protos | GInst ID_Class Type | GFunc [Type]
+data Generic = GNone | GClass ID_Class Cs.Map B.Protos | GInst ID_Class Type | GFunc ID_Class [TypeC]
   deriving (Show,Eq)
 
 instance HasAnn Stmt where
@@ -138,46 +138,44 @@ toBasicStmt p                        = error $ "toBasicStmt: unexpected statemen
 
 -------------------------------------------------------------------------------
 
-type ClassInst = Map.Map (ID_Class, Maybe TypeC) B.Protos
+map_stmt' f s = map_stmt f [] s
 
-map_stmt' f s = map_stmt f Map.empty s
+map_stmt :: ([Stmt]->Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> [Stmt]->Stmt -> Stmt
+map_stmt f@(fs,_,_)  env   (SClass   z id  cs p)           = fs env (SClass   z id cs (map_stmt f env p))
+map_stmt f@(fs,_,_)  env s@(SClass'  z id  cs pts bdy)     = fs env (SClass'  z id cs pts (map_stmt f (s:env) bdy))
+map_stmt f@(fs,_,_)  env   (SClass'' z id  cs pts)         = fs env (SClass'' z id cs pts)
+map_stmt f@(fs,_,_)  env s@(SClassS  z id  cs pts p)       = fs env (SClassS  z id cs pts (map_stmt f (s:env) p))
+map_stmt f@(fs,_,ft) env   (SInst    z cls tpc p)          = fs env (SInst    z cls (ft tpc) (map_stmt f env p))
+map_stmt f@(fs,_,ft) env s@(SInst'   z cls tpc pts bdy)    = fs env (SInst'   z cls (ft tpc) pts (map_stmt f (s:env) bdy))
+map_stmt f@(fs,_,ft) env   (SInst''  z cls tpc pts)        = fs env (SInst''  z cls (ft tpc) pts)
+map_stmt f@(fs,_,ft) env s@(SInstS   z cls tpc pts p)      = fs env (SInstS   z cls (ft tpc) pts (map_stmt f (s:env) p))
+map_stmt f@(fs,_,ft) env   (SData    z tp nms st cs abs)   = fs env (SData    z tp nms st cs abs)
+map_stmt f@(fs,_,ft) env   (SDataS   z tp nms st cs abs p) = fs env (SDataS   z tp nms st cs abs (map_stmt f env p))
+map_stmt f@(fs,_,ft) env   (SVar     z id tp ini)          = fs env (SVar     z id (ft tp) (fmap (map_exp f env) ini))
+map_stmt f@(fs,_,ft) env   (SVar'    z id gen tp ini)      = fs env (SVar'    z id gen (ft tp) (fmap (map_exp f env) ini))
+map_stmt f@(fs,_,ft) env   (SVarS    z id gen tp ini p)    = fs env (SVarS    z id gen (ft tp) (fmap (map_exp f env) ini) (map_stmt f env p))
+map_stmt f@(fs,_,ft) env   (SVarS'   z id     tp ini p)    = fs env (SVarS'   z id     (ft tp) (fmap (map_exp f env) ini) (map_stmt f env p))
+map_stmt f@(fs,_,ft) env   (STodo    z v)                  = fs env (STodo    z v)
+map_stmt f@(fs,_,ft) env   (STodoS   z v p)                = fs env (STodoS   z v (map_stmt f env p))
+map_stmt f@(fs,_,ft) env   (SFunc  z id tp ps bd)          = fs env (SFunc    z id (ft tp) (map_exp f env ps) (map_stmt f env bd))
+map_stmt f@(fs,_,_)  env   (SMatch z ini chk exp cses)     = fs env (SMatch   z ini chk (map_exp f env exp)
+                                                              (map (\(ds,pt,st) -> (map_stmt f env ds, map_exp f env pt, map_stmt f env st)) cses))
+map_stmt f@(fs,_,_)  env   (SSet   z ini b loc exp)        = fs env (SSet   z ini b loc (map_exp f env exp))
+map_stmt f@(fs,_,_)  env   (SCall  z exp)                  = fs env (SCall  z (map_exp f env exp))
+map_stmt f@(fs,_,_)  env   (SIf    z exp p1 p2)            = fs env (SIf    z (map_exp f env exp) (map_stmt f env p1) (map_stmt f env p2))
+map_stmt f@(fs,_,_)  env   (SSeq   z p1 p2)                = fs env (SSeq   z (map_stmt f env p1) (map_stmt f env p2))
+map_stmt f@(fs,_,_)  env   (SLoop  z p)                    = fs env (SLoop  z (map_stmt f env p))
+map_stmt f@(fs,_,_)  env   (SScope z p)                    = fs env (SScope z (map_stmt f env p))
+map_stmt f@(fs,_,_)  env   (SRet   z exp)                  = fs env (SRet   z (map_exp f env exp))
+map_stmt f@(fs,_,_)  env   (SNop   z)                      = fs env (SNop   z)
 
-map_stmt :: (ClassInst->Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> ClassInst->Stmt -> Stmt
-map_stmt f@(fs,_,_)  ids   (SClass   z id  cs p)           = fs ids (SClass   z id cs (map_stmt f ids p))
-map_stmt f@(fs,_,_)  ids s@(SClass'  z id  cs pts bdy)     = fs ids (SClass'  z id cs pts (map_stmt f (Map.insert (id,Nothing) pts ids) bdy))
-map_stmt f@(fs,_,_)  ids   (SClass'' z id  cs pts)         = fs ids (SClass'' z id cs pts)
-map_stmt f@(fs,_,_)  ids s@(SClassS  z id  cs pts p)       = fs ids (SClassS  z id cs pts (map_stmt f (Map.insert (id,Nothing) pts ids) p))
-map_stmt f@(fs,_,ft) ids   (SInst    z cls tpc p)          = fs ids (SInst    z cls (ft tpc) (map_stmt f ids p))
-map_stmt f@(fs,_,ft) ids s@(SInst'   z cls tpc pts bdy)    = fs ids (SInst'   z cls (ft tpc) pts (map_stmt f (Map.insert (cls, Just tpc) pts ids) bdy))
-map_stmt f@(fs,_,ft) ids   (SInst''  z cls tpc pts)        = fs ids (SInst''  z cls (ft tpc) pts)
-map_stmt f@(fs,_,ft) ids s@(SInstS   z cls tpc pts p)      = fs ids (SInstS   z cls (ft tpc) pts (map_stmt f (Map.insert (cls,Just tpc) pts ids) p))
-map_stmt f@(fs,_,ft) ids   (SData    z tp nms st cs abs)   = fs ids (SData    z tp nms st cs abs)
-map_stmt f@(fs,_,ft) ids   (SDataS   z tp nms st cs abs p) = fs ids (SDataS   z tp nms st cs abs (map_stmt f ids p))
-map_stmt f@(fs,_,ft) ids   (SVar     z id tp ini)          = fs ids (SVar     z id (ft tp) (fmap (map_exp f ids) ini))
-map_stmt f@(fs,_,ft) ids   (SVar'    z id gen tp ini)      = fs ids (SVar'    z id gen (ft tp) (fmap (map_exp f ids) ini))
-map_stmt f@(fs,_,ft) ids   (SVarS    z id gen tp ini p)    = fs ids (SVarS    z id gen (ft tp) (fmap (map_exp f ids) ini) (map_stmt f ids p))
-map_stmt f@(fs,_,ft) ids   (SVarS'   z id     tp ini p)    = fs ids (SVarS'   z id     (ft tp) (fmap (map_exp f ids) ini) (map_stmt f ids p))
-map_stmt f@(fs,_,ft) ids   (STodo    z v)                  = fs ids (STodo    z v)
-map_stmt f@(fs,_,ft) ids   (STodoS   z v p)                = fs ids (STodoS   z v (map_stmt f ids p))
-map_stmt f@(fs,_,ft) ids   (SFunc  z id tp ps bd)          = fs ids (SFunc    z id (ft tp) (map_exp f ids ps) (map_stmt f ids bd))
-map_stmt f@(fs,_,_)  ids   (SMatch z ini chk exp cses)     = fs ids (SMatch   z ini chk (map_exp f ids exp)
-                                                              (map (\(ds,pt,st) -> (map_stmt f ids ds, map_exp f ids pt, map_stmt f ids st)) cses))
-map_stmt f@(fs,_,_)  ids   (SSet   z ini b loc exp)        = fs ids (SSet   z ini b loc (map_exp f ids exp))
-map_stmt f@(fs,_,_)  ids   (SCall  z exp)                  = fs ids (SCall  z (map_exp f ids exp))
-map_stmt f@(fs,_,_)  ids   (SIf    z exp p1 p2)            = fs ids (SIf    z (map_exp f ids exp) (map_stmt f ids p1) (map_stmt f ids p2))
-map_stmt f@(fs,_,_)  ids   (SSeq   z p1 p2)                = fs ids (SSeq   z (map_stmt f ids p1) (map_stmt f ids p2))
-map_stmt f@(fs,_,_)  ids   (SLoop  z p)                    = fs ids (SLoop  z (map_stmt f ids p))
-map_stmt f@(fs,_,_)  ids   (SScope z p)                    = fs ids (SScope z (map_stmt f ids p))
-map_stmt f@(fs,_,_)  ids   (SRet   z exp)                  = fs ids (SRet   z (map_exp f ids exp))
-map_stmt f@(fs,_,_)  ids   (SNop   z)                      = fs ids (SNop   z)
-
-map_exp :: (ClassInst->Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> ClassInst->Exp -> Exp
-map_exp f@(_,fe,_)  ids (ECons  z id)       = fe (ECons  z id)
-map_exp f@(_,fe,_)  ids (ETuple z es)       = fe (ETuple z (map (map_exp f ids) es))
-map_exp f@(_,fe,ft) ids (EFunc  z tp ps bd) = fe (EFunc  z (ft tp) (map_exp f ids ps) (map_stmt f ids bd))
-map_exp f@(_,fe,ft) ids (EFunc' z tp bd)    = fe (EFunc' z (ft tp) (map_stmt f ids bd))
-map_exp f@(_,fe,_)  ids (ECall  z e1 e2)    = fe (ECall  z (map_exp f ids e1) (map_exp f ids e2))
-map_exp f@(_,fe,_)  ids exp                 = fe exp
+map_exp :: ([Stmt]->Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> [Stmt]->Exp -> Exp
+map_exp f@(_,fe,_)  env (ECons  z id)       = fe (ECons  z id)
+map_exp f@(_,fe,_)  env (ETuple z es)       = fe (ETuple z (map (map_exp f env) es))
+map_exp f@(_,fe,ft) env (EFunc  z tp ps bd) = fe (EFunc  z (ft tp) (map_exp f env ps) (map_stmt f env bd))
+map_exp f@(_,fe,ft) env (EFunc' z tp bd)    = fe (EFunc' z (ft tp) (map_stmt f env bd))
+map_exp f@(_,fe,_)  env (ECall  z e1 e2)    = fe (ECall  z (map_exp f env e1) (map_exp f env e2))
+map_exp f@(_,fe,_)  env exp                 = fe exp
 
 -------------------------------------------------------------------------------
 

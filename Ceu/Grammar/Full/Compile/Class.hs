@@ -3,12 +3,13 @@ module Ceu.Grammar.Full.Compile.Class where
 import Debug.Trace
 import qualified Data.Map as Map
 import Data.Maybe (isJust)
+import Data.List  (find)
 
 import Ceu.Grammar.Globals
 import qualified Ceu.Grammar.Constraints as Cs
 import Ceu.Grammar.Ann         (Ann)
 import Ceu.Grammar.Basic       (Proto,Protos)
-import Ceu.Grammar.Type        (TypeC, show', Type(..), FuncType(..), toTTuple, insTTuple, instantiate, listToType)
+import Ceu.Grammar.Type        (TypeC, show', sort', Type(..), FuncType(..), toTTuple, insTTuple, instantiate, listToType)
 import Ceu.Grammar.Full.Full
 
 idtp id tp = dollar $ id ++ "$" ++ show' tp
@@ -26,7 +27,7 @@ insConstraint :: Stmt -> Stmt
 insConstraint (SClass z cls cs ifc) =
    case Cs.toList cs of
     [(var,_)]  -> SClass z cls cs ifc' where
-                    ifc' = map_stmt (f2 f, Prelude.id, Prelude.id) Map.empty ifc
+                    ifc' = map_stmt (f2 f, Prelude.id, Prelude.id) [] ifc
                     f (SVar z id (tp',cs') ini) = SVar z id (tp', Cs.insert (var,cls) cs') ini
                     f p = p
     otherwise  -> error "TODO: multiple vars"
@@ -53,20 +54,20 @@ addProtosGen :: Stmt -> Stmt
 addProtosGen (SClass z cls cs ifc) = SClass' z cls cs pts ifc'
   where
     pts  = protos ifc
-    ifc' = map_stmt (f2 f, Prelude.id, Prelude.id) Map.empty ifc where
+    ifc' = map_stmt (f2 f, Prelude.id, Prelude.id) [] ifc where
             f (SVar' z id _ tpc ini) = SVar' z id (GClass cls cs pts) tpc ini
             f p = p
 
 addProtosGen (SInst z cls tpc@(tp,_) imp) = SInst' z cls tpc (protos imp) imp'
   where
-    imp' = map_stmt (f2 f, Prelude.id, Prelude.id) Map.empty imp where
+    imp' = map_stmt (f2 f, Prelude.id, Prelude.id) [] imp where
             f (SVar' z id _ tpc' ini) = SVar' z id (GInst cls tp) tpc' ini
             f p = p
 
-addProtosGen (SVar z id tpc@(_,ctrs) ini) = SVar' z id gen tpc ini
+addProtosGen (SVar z id tpc@(_,cs) ini) = SVar' z id gen tpc ini
   where
-    gen = if Map.null ctrs then GNone
-                           else GFunc []
+    gen = if Map.null cs then GNone
+                         else GFunc "" []
 
 addProtosGen p = p
 
@@ -125,6 +126,61 @@ remClassInst p = p
 
 -------------------------------------------------------------------------------
 
+-- Populate GFunc with Class and Instances.
+--
+--    constraint  IEq         (eq,neq)
+--    instance of IEq for Int (eq)
+--
+--    instance of IEq for Int (eq(True),neq(False))
+
+{-
+popGFunc :: ClassInst -> Stmt -> Stmt
+
+popGFunc env (SVarS z id (GFunc _ _) tpc@(_,cs) ini p) = traceShow itps $
+  SVarS z id (GFunc cls itps) tpc ini p where
+    cls = ""
+
+    itps :: [TypeC]
+    itps = traceShow (sort' $ combos' 1 env (map Set.toList $ Map.elems cs)) []
+
+{-
+    pts' = case Map.lookup (cls,Nothing) env of
+            Just x -> Map.union pts $ Map.map noIni $ Map.difference x pts where
+                        noIni (z,id,tpc,_) = (z,id,tpc,False)
+            _ -> error $ show (cls, env)
+-}
+
+    -- [ [Ia], [Ib], ... ]
+    -- [ [A1,A2,...], [B1,B2,...], ... ]
+    -- [ [A1,B1,...], [A1,B2,...], ... ]
+    combos' :: Int -> ClassInst -> [[ID_Class]] -> [[Type]]
+    combos' lvl envs clss = combos insts where
+      insts :: [[Type]]
+      insts = map h clss
+        where
+          h :: [ID_Class] -> [Type]
+          h [cls] = concatMap h $ map g $ Map.filter f envs where
+            f :: Stmt -> Bool
+            f (SInst _ cls' (_,ctrs') _ _) = (cls == cls') && (lvl>0 || null ctrs')
+            f _                            = False
+
+            g :: Stmt -> TypeC
+            g (SInst _ _ tpc _ _) = tpc  -- types to instantiate
+
+            -- expand types with constraints to multiple types
+            -- TODO: currently refuse another level of constraints
+            -- Int    -> [Int]
+            -- X of a -> [X of Int, ...]
+            h :: TypeC -> [Type]
+            h tpc@(tp, ctrs) = if null ctrs then [tp] else insts where
+              tpss  = combos' (lvl-1) envs (map Set.toList $ Map.elems ctrs)
+              insts = map (flip instantiate tp) $ map (zip (Map.keys ctrs)) tpss
+
+popGFunc _ p = p
+-}
+
+-------------------------------------------------------------------------------
+
 -- Duplicate and rename implementation methods from xxx to _xxx.
 --
 --    constraint IEq(eq,neq(...))
@@ -140,35 +196,28 @@ remClassInst p = p
 --    func $f$Int$ (x)
 --    func _$f$Int$ (x)
 
-dupRenImpls :: ClassInst -> Stmt -> Stmt
+dupRenImpls :: Stmt -> Stmt
 
-dupRenImpls _ (SVarS z id gen@(GClass _ _ _) tpc@(tp,_) ini p) =
+dupRenImpls (SVarS z id gen@(GClass _ _ _) tpc@(tp,_) ini p) =
   SVarS z id gen tpc Nothing $
     SVarS z ('_':dollar id) gen tpc ini $
       p
 
-dupRenImpls _ (SVarS z id gen@(GInst _ itp) tpc' ini p) =
+dupRenImpls (SVarS z id gen@(GInst _ itp) tpc' ini p) =
   SVarS z (idtp id itp) gen tpc' ini $
     SVarS z ('_':idtp id itp) gen tpc' ini $
       p
 
-dupRenImpls ids (SVarS z id gen@(GFunc itps) tpc ini p) = foldr f p itps
-  where
-    f itp p = SVarS z (traceShowId id) gen tpc ini $
-                SVarS z (idtp id itp) gen tpc ini $
-                  SVarS z ('_':idtp id itp) gen tpc ini $
-                    p
-
-dupRenImpls _ p = p
-
 {-
-uniInstProtos ids (SInstS z cls tpc@(tp,_) pts bdy) =
-  SInstS z cls tpc pts' bdy where
-    pts' = case Map.lookup cls ids of
-            Just x -> Map.union pts $ Map.map noIni $ Map.difference x pts where
-                        noIni (z,id,tpc,_) = (z,id,tpc,False)
-            _ -> error $ show (cls, ids)
+dupRenImpls env (SVarS z id gen@(GFunc itpcs) tpc ini p) = foldr f p itpcs
+  where
+    f itpc@(itp,_) p = SVarS z (traceShowId id) gen tpc ini $
+                        SVarS z (idtp id itp) gen tpc ini $
+                          SVarS z ('_':idtp id itp) gen tpc ini $
+                            p
 -}
+
+dupRenImpls p = p
 
 -------------------------------------------------------------------------------
 
@@ -263,14 +312,17 @@ addInstCall p = p
 --
 --    instance of IEq for Int (eq(True),neq(False))
 
-uniInstProtos :: ClassInst -> Stmt -> Stmt
+uniInstProtos :: [Stmt] -> Stmt -> Stmt
 
-uniInstProtos ids (SInstS z cls tpc@(tp,_) pts bdy) =
+uniInstProtos env (SInstS z cls tpc@(tp,_) pts bdy) =
   SInstS z cls tpc pts' bdy where
-    pts' = case Map.lookup (cls,Nothing) ids of
-            Just x -> Map.union pts $ Map.map noIni $ Map.difference x pts where
-                        noIni (z,id,tpc,_) = (z,id,tpc,False)
-            _ -> error $ show (cls, ids)
+    pts' = case find f env of
+            Just (SClassS _ _ _ x _) -> Map.union pts $ Map.map noIni $ Map.difference x pts where
+                                          noIni (z,id,tpc,_) = (z,id,tpc,False)
+            _ -> error $ show (cls, env)
+           where
+            f (SClassS _ cls' _ _ _) = (cls == cls')
+            f _                      = False
 
 uniInstProtos _ p = p
 
