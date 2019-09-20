@@ -169,6 +169,8 @@ map_stmt f@(fs,_,_)  env   (SScope z p)                    = fs env (SScope z (m
 map_stmt f@(fs,_,_)  env   (SRet   z exp)                  = fs env (SRet   z (map_exp f env exp))
 map_stmt f@(fs,_,_)  env   (SNop   z)                      = fs env (SNop   z)
 
+map_exp' f s = map_exp f [] s
+
 map_exp :: ([Stmt]->Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> [Stmt]->Exp -> Exp
 map_exp f@(_,fe,_)  env (ECons  z id)       = fe (ECons  z id)
 map_exp f@(_,fe,_)  env (ETuple z es)       = fe (ETuple z (map (map_exp f env) es))

@@ -197,7 +197,7 @@ popGFunc _ p = p
 --
 --    func f x : (a -> Int) where a is IEq
 --    func f (x)                // declaration
---    func _$f$ (x)             // will receive $dict
+--    func _$f$ (x)             // will receive $dict // remove constraints from types
 --    func $f$Int$ (x)          // wrapper to call _$f$ with $IEq$Int$
 
 dupRenImpls :: Stmt -> Stmt
@@ -216,9 +216,13 @@ dupRenImpls (SVarS z id gen@(GFunc _ [[itp]]) tpc ini p) = f itp p
   where
     f :: Type -> Stmt -> Stmt
     f itp p = SVarS z id gen tpc Nothing $
-                SVarS z ('_':dollar id) gen tpc ini $
+                SVarS z ('_':dollar id) gen tpc (fmap remCtrs ini) $
                   SVarS z (idtp id itp) gen tpc Nothing $
                     p
+
+    -- remove constraints since we already receive the actual $dict
+    remCtrs :: Exp -> Exp
+    remCtrs e = map_exp' (f2 Prelude.id, Prelude.id, (\(tp,_) -> (tp,Cs.cz))) e
 
 {-
 wrap :: [(ID_Var,Type)] -> Stmt -> Stmt -> Stmt
@@ -257,21 +261,28 @@ insGenWrappers s@(SVarS z ('_':id) (GFunc [SClassS _ cls _ pts _] _) _ (Just _) 
 insGenWrappers p = p
 
 insGW (cls,pts)
-      (SVarS z ('_':id) gen tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2)) p) =
-  SVarS z ('_':id) gen tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2')) p where
+      (SVarS z ('_':id) gen tpc (Just (EFunc z2 ft2 par2 p2)) p) =
+  SVarS z ('_':id) gen tpc (Just (EFunc z2 ft2 par2 p2')) p where
     p2' = foldr ($) p2 (map g (filter notme (Map.elems pts))) where
             notme (_,id',_,_) = id /= id'
 
-            g (_,id',_,_) = SVarS z (dollar id') gen tpc
-                              (Just (EFunc z (TFunc FuncNested inp out,cs) (ren par2) q)) where
-                              q = SRet z (ECall z
-                                          (ECall z (EField z [dollar cls] id') (EVar z "$dict"))
-                                          (insETuple (EVar z "$dict") (toETuple $ ren par2)))
+            g (_,id',(tp@(TFunc _ inp _),_),_) =
+              SVarS z (dollar id') gen (tp,Cs.cz) -- remove cs
+                (Just (EFunc z (tp,Cs.cz) (expand inp) q)) where
+                  q = SRet z (ECall z
+                              (ECall z (EField z [dollar cls] id') (EVar z "$dict"))
+                              (insETuple (EVar z "$dict") (toETuple $ expand inp)))
 
-            -- rename parameters to prevent redeclarations
-            ren (EVar   z id) = EVar z ('$':id)
-            ren (ETuple z l)  = ETuple z (map f l) where
-                                  f (EVar z id) = EVar z ('$':id)
+            -- expand inputs:
+            -- ($1,$2) = EArg
+            -- call f ($dict,$1,$2)
+            expand (TTuple l) = ETuple z $
+                                  map (\v->EVar z v) $
+                                    take (length l) $
+                                      map (\v->'$':show v) $
+                                        incs where
+                                          incs  = 1 : map (+1) incs
+            expand _ = EVar z ("$1")
 
 -------------------------------------------------------------------------------
 
