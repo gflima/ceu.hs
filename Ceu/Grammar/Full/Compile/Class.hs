@@ -137,14 +137,23 @@ remClassInst p = p
 popGFunc :: [Stmt] -> Stmt -> Stmt
 
 popGFunc env (SVarS z id (GFunc _ _) tpc@(_,cs) ini p) =
-  SVarS z id (GFunc clss itpss) tpc ini p where
-    clsss :: [[ID_Class]]
-    clsss = map Set.toList $ Map.elems cs
+  SVarS z id (GFunc stmts itpss) tpc ini p where
+    idss :: [[ID_Class]]
+    idss = map Set.toList $ Map.elems cs where
 
-    [clss] = clsss
+    stmtss :: [[Stmt]]
+    stmtss = map (map getCls) $ map Set.toList $ Map.elems cs where
+              getCls cls = case find f env of
+                            Just s -> s
+                            -- TODO: Nothing
+                           where
+                            f (SClassS _ id _ _ _) = id == cls
+                            f _ = False
+
+    [stmts] = stmtss
 
     itpss :: [[Type]]
-    itpss = sort' $ combos' 1 env clsss
+    itpss = sort' $ combos' 1 env idss
 
     -- [ [Ia], [Ib], ... ]
     -- [ [A1,A2,...], [B1,B2,...], ... ]
@@ -305,7 +314,7 @@ insDict (SVarS z ('_':id) gen (TFunc ft1 inp1 out1,cs1)
     cls = case gen of
             GClass cls _ _ -> cls
             GInst  cls _   -> cls
-            GFunc  [cls] _ -> cls
+            GFunc  [SClassS _ cls _ _ _] _ -> cls
 
 insDict p = p
 
