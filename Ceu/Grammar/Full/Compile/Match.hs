@@ -19,7 +19,7 @@ remSSetSIf p = p
 
 remIni :: Stmt -> Stmt
 
-remIni (SVarS z var tp ini p) = SVarS z var tp Nothing $
+remIni (SVarS' z var tp ini p) = SVarS' z var tp Nothing $
   case (ini,p) of
     (Nothing,_)      -> p
     (Just e, SNop _) -> SSet z True False (EVar z var) e

@@ -108,6 +108,23 @@ dclClassDicts p = p
 
 -------------------------------------------------------------------------------
 
+-- Remove contraint/inst from the program (split actual dcls/impls from their
+-- abstract prototypes).
+--    contraint IEq        (eq,neq)
+--    instance  IEq for Int(eq,neq)
+--
+--    contraint IEq        (eq,neq) ; eq ; neq
+--    instance  IEq for Int(eq,neq) ; eq ; neq
+
+remClassInst :: Stmt -> Stmt
+remClassInst (SClass' z id  ctrs pts ifc) = SSeq z (SClass'' z id  ctrs pts) ifc
+remClassInst (SInst'  z cls tpc  pts imp) = SSeq z (SInst''  z cls tpc  pts)
+                                            (SSeq z (STodo z "SInst-INI")
+                                            (SSeq z imp (STodo z "SInst-END")))
+remClassInst p = p
+
+-------------------------------------------------------------------------------
+
 -- Duplicate and rename implementation methods from xxx to _xxx.
 --
 --    constraint IEq(eq,neq(...))
@@ -124,18 +141,21 @@ dclClassDicts p = p
 
 dupRenImpls :: Stmt -> Stmt
 
-dupRenImpls (SVar' z id gen@(GClass _ _ _) tpc@(tp,_) ini) =
-  SSeq z (SVar' z id gen tpc Nothing) $
-    (SVar' z ('_':dollar id) gen tpc ini)
+dupRenImpls (SVarS z id gen@(GClass _ _ _) tpc@(tp,_) ini p) =
+  SVarS z id gen tpc Nothing $
+    SVarS z ('_':dollar id) gen tpc ini $
+      p
 
-dupRenImpls s@(SVar' z id gen@(GInst _ itp) tpc' ini) =
-  SSeq z (SVar' z (    idtp id itp) gen tpc' ini)
-         (SVar' z ('_':idtp id itp) gen tpc' ini)
+dupRenImpls (SVarS z id gen@(GInst _ itp) tpc' ini p) =
+  SVarS z (idtp id itp) gen tpc' ini $
+    SVarS z ('_':idtp id itp) gen tpc' ini $
+      p
 
-dupRenImpls s@(SVar' z id gen@(GFunc itps) tpc' ini) = foldr f (SNop z) itps
+dupRenImpls (SVarS z id gen@(GFunc itps) tpc' ini p) = foldr f p itps
   where
-    f itp p = SSeq z (SVar' z (    idtp id itp) gen tpc' ini) $
-              SSeq z (SVar' z ('_':idtp id itp) gen tpc' ini) p
+    f itp p = SVarS z (idtp id itp) gen tpc' ini $
+                SVarS z ('_':idtp id itp) gen tpc' ini $
+                  p
 
 dupRenImpls p = p
 
@@ -154,13 +174,13 @@ dupRenImpls p = p
 
 insClassWrappers :: Stmt -> Stmt
 
-insClassWrappers (SVar' z ('_':id) gen@(GClass cls _ pts) tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2))) =
-  SVar' z ('_':id) gen tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2')) where
-    p2' = foldr (SSeq z) p2 (map g (filter notme (Map.elems pts))) where
+insClassWrappers (SVarS z ('_':id) gen@(GClass cls _ pts) tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2)) p) =
+  SVarS z ('_':id) gen tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2')) p where
+    p2' = foldr ($) p2 (map g (filter notme (Map.elems pts))) where
             notme (_,id',_,_) = id /= id'
 
-            g (_,id',_,_) = SVar' z (dollar id') gen tpc (Just (EFunc z (TFunc FuncNested inp out,cs) (ren par2) p)) where
-                              p = SRet z (ECall z
+            g (_,id',_,_) = SVarS z (dollar id') gen tpc (Just (EFunc z (TFunc FuncNested inp out,cs) (ren par2) q)) where
+                              q = SRet z (ECall z
                                           (ECall z (EField z [dollar cls] id') (EVar z "$dict"))
                                           (insETuple (EVar z "$dict") (toETuple $ ren par2)))
 
@@ -184,12 +204,14 @@ insClassWrappers p = p
 
 insDict :: Stmt -> Stmt
 
-insDict s@(SVar' _ _ GNone _ _) = s
+insDict s@(SVarS _ _ GNone _ _ _) = s
 
-insDict (SVar' z ('_':id) gen (TFunc ft1 inp1 out1,cs1)
-        (Just (EFunc z2 (TFunc ft2 inp2 out2,cs2) par2  p2))) =
-  SVar' z ('_':id) gen (TFunc ft1 inp1' out1,cs1)
+insDict (SVarS z ('_':id) gen (TFunc ft1 inp1 out1,cs1)
+          (Just (EFunc z2 (TFunc ft2 inp2 out2,cs2) par2  p2))
+          p) =
+  SVarS z ('_':id) gen (TFunc ft1 inp1' out1,cs1)
     (Just (EFunc z2 (TFunc ft2 inp2' out2,cs2) par2' p2))
+    p
   where
     inp1' = insTTuple (TData False [dollar cls] []) (toTTuple inp1)
     inp2' = insTTuple (TData False [dollar cls] []) (toTTuple inp2)
@@ -211,8 +233,8 @@ insDict p = p
 
 addInstCall :: Stmt -> Stmt
 
-addInstCall (SVar' z ('_':id) gen@(GInst _ _) tpc (Just (EFunc z2 tp2 par2 _))) =
-  SVar' z ('_':id) gen tpc (Just (EFunc z2 tp2 par2 p2)) where
+addInstCall (SVarS z ('_':id) gen@(GInst _ _) tpc (Just (EFunc z2 tp2 par2 _)) p) =
+  SVarS z ('_':id) gen tpc (Just (EFunc z2 tp2 par2 p2)) p where
     p2 = SRet z (ECall z (EVar z id) (remTuple par2))
 
     remTuple (ETuple _ [EVar _ "$dict", y])  = y
@@ -220,23 +242,6 @@ addInstCall (SVar' z ('_':id) gen@(GInst _ _) tpc (Just (EFunc z2 tp2 par2 _))) 
     remTuple x = x
 
 addInstCall p = p
-
--------------------------------------------------------------------------------
-
--- Remove contraint/inst from the program (split actual dcls/impls from their
--- abstract prototypes).
---    contraint IEq        (eq,neq)
---    instance  IEq for Int(eq,neq)
---
---    contraint IEq        (eq,neq) ; eq ; neq
---    instance  IEq for Int(eq,neq) ; eq ; neq
-
-remClassInst :: Stmt -> Stmt
-remClassInst (SClass' z id  ctrs pts ifc) = SSeq z (SClass'' z id  ctrs pts) ifc
-remClassInst (SInst'  z cls tpc  pts imp) = SSeq z (SInst''  z cls tpc  pts)
-                                            (SSeq z (STodo z "SInst-INI")
-                                            (SSeq z imp (STodo z "SInst-END")))
-remClassInst p = p
 
 -------------------------------------------------------------------------------
 
@@ -277,7 +282,7 @@ addInstDicts (SInstS z cls tpc@(tp,_) pts bdy) = SInstS z cls tpc pts bdy' where
   dict = dollar $ cls ++ "$" ++ show' tp
 
   f :: Stmt -> Stmt
-  f (STodoS z "SInst-INI" p) = SVarS z dict (TData False [dollar cls] [],Cs.cz) Nothing p
+  f (STodoS z "SInst-INI" p) = SVarS z dict GNone (TData False [dollar cls] [],Cs.cz) Nothing p
   f (STodoS z "SInst-END" p) = SSeq z
                                 (SSet z True False
                                   (EVar z dict)
@@ -302,13 +307,13 @@ addInstDicts p = p
 
 addInstMissing :: Stmt -> Stmt
 
-addInstMissing (SInstS z cls tpc@(tp,_) pts (SVarS z2 id2 tp2 Nothing bdy)) =
-  SInstS z cls tpc pts (SVarS z2 id2 tp2 Nothing bdy') where
+addInstMissing (SInstS z cls tpc@(tp,_) pts (SVarS z2 id2 gen2 tp2 Nothing bdy)) =
+  SInstS z cls tpc pts (SVarS z2 id2 gen2 tp2 Nothing bdy') where
     bdy' = foldr ($) bdy $ map g $ Map.elems $ Map.filter f pts where
             f (_,_,_,ini) = not ini   -- only methods w/o implementation
 
             g :: Proto -> (Stmt -> Stmt)
-            g (z2,id2,tpc2@(tp2,_),False) = SVarS z2 (idtp id2 tp) tpc2' (Just (EFunc z2 tpc2' par1 p)) where
+            g (z2,id2,tpc2@(tp2,_),False) = SVarS z2 (idtp id2 tp) gen2 tpc2' (Just (EFunc z2 tpc2' par1 p)) where
               tp2' = instantiate [("a",tp)] tp2  -- TODO: a is fixed
               (TFunc _ inp2' _) = tp2'
               tpc2' = (tp2',Cs.cz)
