@@ -2,6 +2,7 @@ module Ceu.Grammar.Full.Compile.Class where
 
 import Debug.Trace
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import Data.Maybe (isJust)
 import Data.List  (find)
 
@@ -67,7 +68,7 @@ addProtosGen (SInst z cls tpc@(tp,_) imp) = SInst' z cls tpc (protos imp) imp'
 addProtosGen (SVar z id tpc@(_,cs) ini) = SVar' z id gen tpc ini
   where
     gen = if Map.null cs then GNone
-                         else GFunc "" []
+                         else GFunc [] []
 
 addProtosGen p = p
 
@@ -133,39 +134,34 @@ remClassInst p = p
 --
 --    instance of IEq for Int (eq(True),neq(False))
 
-{-
-popGFunc :: ClassInst -> Stmt -> Stmt
+popGFunc :: [Stmt] -> Stmt -> Stmt
 
-popGFunc env (SVarS z id (GFunc _ _) tpc@(_,cs) ini p) = traceShow itps $
-  SVarS z id (GFunc cls itps) tpc ini p where
-    cls = ""
+popGFunc env (SVarS z id (GFunc _ _) tpc@(_,cs) ini p) =
+  SVarS z id (GFunc clss itpss) tpc ini p where
+    clsss :: [[ID_Class]]
+    clsss = map Set.toList $ Map.elems cs
 
-    itps :: [TypeC]
-    itps = traceShow (sort' $ combos' 1 env (map Set.toList $ Map.elems cs)) []
+    [clss] = clsss
 
-{-
-    pts' = case Map.lookup (cls,Nothing) env of
-            Just x -> Map.union pts $ Map.map noIni $ Map.difference x pts where
-                        noIni (z,id,tpc,_) = (z,id,tpc,False)
-            _ -> error $ show (cls, env)
--}
+    itpss :: [[Type]]
+    itpss = sort' $ combos' 1 env clsss
 
     -- [ [Ia], [Ib], ... ]
     -- [ [A1,A2,...], [B1,B2,...], ... ]
     -- [ [A1,B1,...], [A1,B2,...], ... ]
-    combos' :: Int -> ClassInst -> [[ID_Class]] -> [[Type]]
-    combos' lvl envs clss = combos insts where
+    combos' :: Int -> [Stmt] -> [[ID_Class]] -> [[Type]]
+    combos' lvl env clss = combos insts where
       insts :: [[Type]]
       insts = map h clss
         where
           h :: [ID_Class] -> [Type]
-          h [cls] = concatMap h $ map g $ Map.filter f envs where
+          h [cls] = concatMap h $ map g $ filter f env where
             f :: Stmt -> Bool
-            f (SInst _ cls' (_,ctrs') _ _) = (cls == cls') && (lvl>0 || null ctrs')
-            f _                            = False
+            f (SInstS _ cls' (_,ctrs') _ _) = (cls == cls') && (lvl>0 || null ctrs')
+            f _                             = False
 
             g :: Stmt -> TypeC
-            g (SInst _ _ tpc _ _) = tpc  -- types to instantiate
+            g (SInstS _ _ tpc _ _) = tpc  -- types to instantiate
 
             -- expand types with constraints to multiple types
             -- TODO: currently refuse another level of constraints
@@ -173,11 +169,10 @@ popGFunc env (SVarS z id (GFunc _ _) tpc@(_,cs) ini p) = traceShow itps $
             -- X of a -> [X of Int, ...]
             h :: TypeC -> [Type]
             h tpc@(tp, ctrs) = if null ctrs then [tp] else insts where
-              tpss  = combos' (lvl-1) envs (map Set.toList $ Map.elems ctrs)
+              tpss  = combos' (lvl-1) env (map Set.toList $ Map.elems ctrs)
               insts = map (flip instantiate tp) $ map (zip (Map.keys ctrs)) tpss
 
 popGFunc _ p = p
--}
 
 -------------------------------------------------------------------------------
 
@@ -188,13 +183,13 @@ popGFunc _ p = p
 --    func _$neq$ (x,y) do      // actual implementation (will receive $dict)
 --
 --    instance of IEq for Int (eq)
---    func $eq$Int$ (x,y)       // wrapper to call _$neq$Int$ with $dict
 --    func _$eq$Int$ (x,y)      // actual implementation (will receive $dict)
+--    func $eq$Int$ (x,y)       // wrapper to call _$eq$Int$ with $dict
 --
 --    func f x : (a -> Int) where a is IEq
---    func f (x)
---    func $f$Int$ (x)
---    func _$f$Int$ (x)
+--    func f (x)                // declaration
+--    func _$f$ (x)             // will receive $dict
+--    func $f$Int$ (x)          // wrapper to call _$f$ with $IEq$Int$
 
 dupRenImpls :: Stmt -> Stmt
 
@@ -208,13 +203,27 @@ dupRenImpls (SVarS z id gen@(GInst _ itp) tpc' ini p) =
     SVarS z ('_':idtp id itp) gen tpc' ini $
       p
 
-{-
-dupRenImpls env (SVarS z id gen@(GFunc itpcs) tpc ini p) = foldr f p itpcs
+dupRenImpls (SVarS z id gen@(GFunc _ [[itp]]) tpc ini p) = f itp p
   where
-    f itpc@(itp,_) p = SVarS z (traceShowId id) gen tpc ini $
-                        SVarS z (idtp id itp) gen tpc ini $
-                          SVarS z ('_':idtp id itp) gen tpc ini $
-                            p
+    f :: Type -> Stmt -> Stmt
+    f itp p = SVarS z id gen tpc Nothing $
+                SVarS z ('_':dollar id) gen tpc ini $
+                  SVarS z (idtp id itp) gen tpc Nothing $
+                    p
+
+{-
+wrap :: [(ID_Var,Type)] -> Stmt -> Stmt -> Stmt
+wrap insts (SVar z1 id1 (tp,_) (SSeq z2 (SMatch z3 True False body [(ds,EVar z4 id2,p)]) _)) acc | id1==id2 =
+  SVar z1 id' (tp',cz)
+    (SSeq z2
+      (SMatch z3 True False body' [(ds,EVar z4 id',p)])
+      acc)
+  where
+    id'   = idtp id1 tp'
+    tp'   = T.instantiate insts tp
+    body' = map_exp (Prelude.id,Prelude.id,ftp) body
+      where
+        ftp (tp,_) = (T.instantiate insts tp,cz)
 -}
 
 dupRenImpls p = p
@@ -232,9 +241,9 @@ dupRenImpls p = p
 --      ... -- original default implementation
 --    end
 
-insClassWrappers :: Stmt -> Stmt
+insGenWrappers :: Stmt -> Stmt
 
-insClassWrappers (SVarS z ('_':id) gen@(GClass cls _ pts) tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2)) p) =
+insGenWrappers (SVarS z ('_':id) gen@(GClass cls _ pts) tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2)) p) =
   SVarS z ('_':id) gen tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2')) p where
     p2' = foldr ($) p2 (map g (filter notme (Map.elems pts))) where
             notme (_,id',_,_) = id /= id'
@@ -249,7 +258,24 @@ insClassWrappers (SVarS z ('_':id) gen@(GClass cls _ pts) tpc (Just (EFunc z2 (T
             ren (ETuple z l)  = ETuple z (map f l) where
                                   f (EVar z id) = EVar z ('$':id)
 
-insClassWrappers p = p
+{-
+insGenWrappers (SVarS z ('_':id) gen@(GFunc cls _ pts) tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2)) p) =
+  SVarS z ('_':id) gen tpc (Just (EFunc z2 (TFunc ft inp out,cs) par2 p2')) p where
+    p2' = foldr ($) p2 (map g (filter notme (Map.elems pts))) where
+            notme (_,id',_,_) = id /= id'
+
+            g (_,id',_,_) = SVarS z (dollar id') gen tpc (Just (EFunc z (TFunc FuncNested inp out,cs) (ren par2) q)) where
+                              q = SRet z (ECall z
+                                          (ECall z (EField z [dollar cls] id') (EVar z "$dict"))
+                                          (insETuple (EVar z "$dict") (toETuple $ ren par2)))
+
+            -- rename parameters to prevent redeclarations
+            ren (EVar   z id) = EVar z ('$':id)
+            ren (ETuple z l)  = ETuple z (map f l) where
+                                  f (EVar z id) = EVar z ('$':id)
+-}
+
+insGenWrappers p = p
 
 -------------------------------------------------------------------------------
 
@@ -279,6 +305,7 @@ insDict (SVarS z ('_':id) gen (TFunc ft1 inp1 out1,cs1)
     cls = case gen of
             GClass cls _ _ -> cls
             GInst  cls _   -> cls
+            GFunc  [cls] _ -> cls
 
 insDict p = p
 
