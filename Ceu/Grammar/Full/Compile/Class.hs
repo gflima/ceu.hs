@@ -67,7 +67,7 @@ addProtosGen (SInst z cls tpc@(tp,_) imp) = SInst' z cls tpc (protos imp) imp'
 addProtosGen (SVar z id tpc@(_,cs) ini) = SVar' z id gen tpc ini
   where
     gen = if Map.null cs then GNone
-                         else GFunc [] []
+                         else GFunc []
 
 addProtosGen p = p
 
@@ -130,8 +130,8 @@ remClassInst p = p
 
 popGFunc :: [Stmt] -> Stmt -> Stmt
 
-popGFunc env (SVarS z id (GFunc _ _) tpc@(_,cs) ini p) =
-  SVarS z id (GFunc stmts itpss) tpc ini p where
+popGFunc env (SVarS z id (GFunc _) tpc@(_,cs) ini p) =
+  SVarS z id (GFunc $ zip stmts itpss) tpc ini p where
     idss :: [[ID_Class]]
     idss = map Set.toList $ Map.elems cs where
 
@@ -206,7 +206,7 @@ dupRenImpls (SVarS z id gen@(GInst _ itp) tpc' ini p) =
     SVarS z ('_':idtp id itp) gen tpc' ini $
       p
 
-dupRenImpls (SVarS z id gen@(GFunc _ [[itp]]) tpc@(tp,_) ini p) = f itp p
+dupRenImpls (SVarS z id gen@(GFunc [(_,[itp])]) tpc@(tp,_) ini p) = f itp p
   where
     f :: Type -> Stmt -> Stmt
     f itp p = SVarS z id gen tpc Nothing $
@@ -238,7 +238,7 @@ dupRenImpls p = p
 insGenWrappers :: Stmt -> Stmt
 
 insGenWrappers s@(SVarS z ('_':id) (GClass cls _ pts)                _ (Just _) _) = insGW (cls,pts) s
-insGenWrappers s@(SVarS z ('_':id) (GFunc [SClassS _ cls _ pts _] _) _ (Just _) _) = insGW (cls,pts) s
+insGenWrappers s@(SVarS z ('_':id) (GFunc [(SClassS _ cls _ pts _,_)]) _ (Just _) _) = insGW (cls,pts) s
 insGenWrappers p = p
 
 insGW (cls,pts)
@@ -293,7 +293,7 @@ insDict (SVarS z ('_':id) gen (TFunc ft1 inp1 out1,cs1)
     cls = case gen of
             GClass cls _ _ -> cls
             GInst  cls _   -> cls
-            GFunc  [SClassS _ cls _ _ _] _ -> cls
+            GFunc  [(SClassS _ cls _ _ _,_)] -> cls
 
 insDict p = p
 
@@ -404,7 +404,7 @@ addInstances (SInstS z cls tpc@(tp,_) pts (SVarS z2 id2 gen2 tp2 Nothing bdy)) =
               par_dcl  = listToExp $ map (EVar z2) $ fpar inp2'
               par_call = listToExp $ map (EVar z2) $ (("$"++cls++"$"++show' tp++"$") :) $ fpar inp2'
 
-addInstances (SVarS z ('$':id) gen@(GFunc [SClassS _ cls _ _ _] [[tp]]) tpc@(TFunc _ inp _,_) Nothing p) = traceShow gen $
+addInstances (SVarS z ('$':id) gen@(GFunc [(SClassS _ cls _ _ _, [tp])]) tpc@(TFunc _ inp _,_) Nothing p) =
    SVarS z ('$':id) gen tpc (Just (EFunc z tpc par_dcl bdy)) p where
     par_dcl  = listToExp $ map (EVar z) $ fpar inp
     par_call = listToExp $ map (EVar z) $ (id :) $ fpar inp where
