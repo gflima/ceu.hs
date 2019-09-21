@@ -25,3 +25,7 @@ combos l = foldr g [[]] l where
 
     h :: a -> [[a]] -> [[a]]
     h v combos = map (\combo -> v:combo) combos
+
+splitOn :: Eq a => a -> [a] -> [[a]]
+splitOn d [] = []
+splitOn d s = x : splitOn d (drop 1 y) where (x,y) = span (/= d) s

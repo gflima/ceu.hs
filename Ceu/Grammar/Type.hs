@@ -191,10 +191,6 @@ getSuper :: ID_Data_Hier -> Maybe ID_Data_Hier
 getSuper [_]  = Nothing
 getSuper hier = Just $ (init hier)
 
-splitOn :: Eq a => a -> [a] -> [[a]]
-splitOn d [] = []
-splitOn d s = x : splitOn d (drop 1 y) where (x,y) = span (/= d) s
-
 -------------------------------------------------------------------------------
 
 -- list: list with instantiated pairs (var,Type)
