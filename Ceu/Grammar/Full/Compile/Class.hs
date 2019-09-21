@@ -67,7 +67,7 @@ addProtosGen (SInst z cls tpc@(tp,_) imp) = SInst' z cls tpc (protos imp) imp'
 addProtosGen (SVar z id tpc@(_,cs) ini) = SVar' z id gen tpc ini
   where
     gen = if Map.null cs then GNone
-                         else GFunc []
+                         else GFunc [] []
 
 addProtosGen p = p
 
@@ -126,14 +126,54 @@ remClassInst p = p
 
 -------------------------------------------------------------------------------
 
--- Populate GFunc with Class and Instances.
+-- Duplicate and rename implementation methods from xxx to _xxx.
+--
+--    constraint IEq(eq,neq(...))
+--    func neq (x,y)            // keep just the declaration
+--    func _$neq$ (x,y) do      // actual implementation (will receive $dict)
+--
+--    instance of IEq for Int (eq)
+--    func _$eq$Int$ (x,y)      // actual implementation (will receive $dict)
+--    func $eq$Int$ (x,y)       // wrapper to call _$eq$Int$ with $dict
+--
+--    func f x : (a -> Int) where a is IEq
+--    func f (x)                // declaration
+--    func _$f$ (x)             // will receive $dict // remove constraints from types
+--    func $f$Int$ (x)          // wrapper to call _$f$ with $IEq$Int$
+--    func $f$Bool$ (x)         // wrapper to call _$f$ with $IEq$Bool$
+--    ...
 
-popGFunc :: [Stmt] -> Stmt -> Stmt
+dupRenImpls :: [Stmt] -> Stmt -> Stmt
 
-popGFunc env (SVarS z id (GFunc _) tpc@(_,cs) ini p) =
-  SVarS z id (GFunc $ zip stmts itpss) tpc ini p where
+dupRenImpls _ (SVarS z id gen@(GClass _ _ _) tpc@(tp,_) ini p) =
+  SVarS z id gen tpc Nothing $
+    SVarS z ('_':dollar id) gen tpc ini $
+      p
+
+dupRenImpls _ (SVarS z id gen@(GInst _ itp) tpc' ini p) =
+  SVarS z (idtp id itp) gen tpc' ini $
+    SVarS z ('_':idtp id itp) gen tpc' ini $
+      p
+
+dupRenImpls env (SVarS z id gen@(GFunc [] []) tpc@(tp,cs) ini p) =
+  SVarS z id gen tpc Nothing $
+    SVarS z ('_':dollar id) (GFunc stmts []) tpc (fmap remCtrs ini) $
+      foldr f p $ zip stmtss itpss
+  where
+    -- remove constraints since we already receive the actual $dict
+    remCtrs :: Exp -> Exp
+    remCtrs e = map_exp' (f2 Prelude.id, Prelude.id, (\(tp,_) -> (tp,Cs.cz))) e
+
+    ---------------------------------------------------------------------------
+
+    -- one F for each instance
+
+    f :: ([Stmt],[Type]) -> Stmt -> Stmt
+    f (x,[itp]) p = SVarS z (idtp id itp) (GFunc x [itp]) (tp',Cs.cz) Nothing p where
+                        tp' = instantiate [("a",itp)] tp
+
     idss :: [[ID_Class]]
-    idss = map Set.toList $ Map.elems cs where
+    idss = map Set.toList $ Map.elems cs
 
     stmtss :: [[Stmt]]
     stmtss = map (map getCls) $ map Set.toList $ Map.elems cs where
@@ -144,6 +184,7 @@ popGFunc env (SVarS z id (GFunc _) tpc@(_,cs) ini p) =
                             f (SClassS _ id _ _ _) = id == cls
                             f _ = False
 
+    -- TODO: single dict
     [stmts] = stmtss
 
     itpss :: [[Type]]
@@ -175,52 +216,7 @@ popGFunc env (SVarS z id (GFunc _) tpc@(_,cs) ini p) =
               tpss  = combos' (lvl-1) env (map Set.toList $ Map.elems ctrs)
               insts = map (flip instantiate tp) $ map (zip (Map.keys ctrs)) tpss
 
-popGFunc _ p = p
-
--------------------------------------------------------------------------------
-
--- Duplicate and rename implementation methods from xxx to _xxx.
---
---    constraint IEq(eq,neq(...))
---    func neq (x,y)            // keep just the declaration
---    func _$neq$ (x,y) do      // actual implementation (will receive $dict)
---
---    instance of IEq for Int (eq)
---    func _$eq$Int$ (x,y)      // actual implementation (will receive $dict)
---    func $eq$Int$ (x,y)       // wrapper to call _$eq$Int$ with $dict
---
---    func f x : (a -> Int) where a is IEq
---    func f (x)                // declaration
---    func _$f$ (x)             // will receive $dict // remove constraints from types
---    func $f$Int$ (x)          // wrapper to call _$f$ with $IEq$Int$
-
-dupRenImpls :: Stmt -> Stmt
-
-dupRenImpls (SVarS z id gen@(GClass _ _ _) tpc@(tp,_) ini p) =
-  SVarS z id gen tpc Nothing $
-    SVarS z ('_':dollar id) gen tpc ini $
-      p
-
-dupRenImpls (SVarS z id gen@(GInst _ itp) tpc' ini p) =
-  SVarS z (idtp id itp) gen tpc' ini $
-    SVarS z ('_':idtp id itp) gen tpc' ini $
-      p
-
-dupRenImpls (SVarS z id gen@(GFunc [(_,[itp])]) tpc@(tp,_) ini p) = f itp p
-  where
-    f :: Type -> Stmt -> Stmt
-    f itp p = SVarS z id gen tpc Nothing $
-                SVarS z ('_':dollar id) gen tpc (fmap remCtrs ini) $
-                  SVarS z (idtp id itp) gen (tp',Cs.cz) Nothing $
-                    p
-
-    tp' = instantiate [("a",itp)] tp
-
-    -- remove constraints since we already receive the actual $dict
-    remCtrs :: Exp -> Exp
-    remCtrs e = map_exp' (f2 Prelude.id, Prelude.id, (\(tp,_) -> (tp,Cs.cz))) e
-
-dupRenImpls p = p
+dupRenImpls _ p = p
 
 -------------------------------------------------------------------------------
 
@@ -238,7 +234,7 @@ dupRenImpls p = p
 insGenWrappers :: Stmt -> Stmt
 
 insGenWrappers s@(SVarS z ('_':id) (GClass cls _ pts)                _ (Just _) _) = insGW (cls,pts) s
-insGenWrappers s@(SVarS z ('_':id) (GFunc [(SClassS _ cls _ pts _,_)]) _ (Just _) _) = insGW (cls,pts) s
+insGenWrappers s@(SVarS z ('_':id) (GFunc [SClassS _ cls _ pts _] _) _ (Just _) _) = insGW (cls,pts) s
 insGenWrappers p = p
 
 insGW (cls,pts)
@@ -293,7 +289,7 @@ insDict (SVarS z ('_':id) gen (TFunc ft1 inp1 out1,cs1)
     cls = case gen of
             GClass cls _ _ -> cls
             GInst  cls _   -> cls
-            GFunc  [(SClassS _ cls _ _ _,_)] -> cls
+            GFunc  [SClassS _ cls _ _ _] _ -> cls
 
 insDict p = p
 
@@ -404,7 +400,7 @@ addInstances (SInstS z cls tpc@(tp,_) pts (SVarS z2 id2 gen2 tp2 Nothing bdy)) =
               par_dcl  = listToExp $ map (EVar z2) $ fpar inp2'
               par_call = listToExp $ map (EVar z2) $ (("$"++cls++"$"++show' tp++"$") :) $ fpar inp2'
 
-addInstances (SVarS z ('$':id) gen@(GFunc [(SClassS _ cls _ _ _, [tp])]) tpc@(TFunc _ inp _,_) Nothing p) =
+addInstances (SVarS z ('$':id) gen@(GFunc [SClassS _ cls _ _ _] [tp]) tpc@(TFunc _ inp _,_) Nothing p) =
    SVarS z ('$':id) gen tpc (Just (EFunc z tpc par_dcl bdy)) p where
     par_dcl  = listToExp $ map (EVar z) $ fpar inp
     par_call = listToExp $ map (EVar z) $ (id :) $ fpar inp where
