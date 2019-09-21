@@ -386,9 +386,9 @@ addInstDicts p = p
 --    func $neq$Int$ (x,y) return _$neq$($IEq$Int$,x,y)
 --    func $f$Int$   (x)   return _$f$($IEq$Int,x)
 
-addDummies :: Stmt -> Stmt
+addInstances :: Stmt -> Stmt
 
-addDummies (SInstS z cls tpc@(tp,_) pts (SVarS z2 id2 gen2 tp2 Nothing bdy)) =
+addInstances (SInstS z cls tpc@(tp,_) pts (SVarS z2 id2 gen2 tp2 Nothing bdy)) =
   SInstS z cls tpc pts (SVarS z2 id2 gen2 tp2 Nothing bdy') where
     bdy' = foldr ($) bdy $ map g $ Map.elems $ Map.filter f pts where
             f (_,_,_,ini) = not ini   -- only methods w/o implementation
@@ -404,7 +404,7 @@ addDummies (SInstS z cls tpc@(tp,_) pts (SVarS z2 id2 gen2 tp2 Nothing bdy)) =
               par_dcl  = listToExp $ map (EVar z2) $ fpar inp2'
               par_call = listToExp $ map (EVar z2) $ (("$"++cls++"$"++show' tp++"$") :) $ fpar inp2'
 
-addDummies (SVarS z ('$':id) gen@(GFunc [SClassS _ cls _ _ _] [[tp]]) tpc@(TFunc _ inp _,_) Nothing p) = traceShow gen $
+addInstances (SVarS z ('$':id) gen@(GFunc [SClassS _ cls _ _ _] [[tp]]) tpc@(TFunc _ inp _,_) Nothing p) = traceShow gen $
    SVarS z ('$':id) gen tpc (Just (EFunc z tpc par_dcl bdy)) p where
     par_dcl  = listToExp $ map (EVar z) $ fpar inp
     par_call = listToExp $ map (EVar z) $ (id :) $ fpar inp where
@@ -412,7 +412,7 @@ addDummies (SVarS z ('$':id) gen@(GFunc [SClassS _ cls _ _ _] [[tp]]) tpc@(TFunc
     bdy  = SRet z (ECall z (EVar z id') par_call) where
             id' = '_' : dollar (head $ splitOn '$' id)
 
-addDummies p = p
+addInstances p = p
 
 fpar inp = map ('$':) $ map show $ lns $ len $ toTTuple inp where
             len (TTuple l) = length l
