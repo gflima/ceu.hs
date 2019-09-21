@@ -19,9 +19,9 @@ idtp id tp = dollar $ id ++ "$" ++ show' tp
 
 -- Insert constraint in each nested method in outer contraint/instance.
 --
---    contraint IEq        (eq,neq)
+--    contraint IEq (eq,neq)
 --
---    contraint IEq        (eq where a is IEq,neq where a is IEq)
+--    contraint IEq (eq where a is IEq,neq where a is IEq)
 
 insConstraint :: Stmt -> Stmt
 
@@ -38,7 +38,6 @@ insConstraint p = p
 -------------------------------------------------------------------------------
 
 -- Add list of prototypes.
---
 --
 -- Set type of generic var.
 --
@@ -128,11 +127,6 @@ remClassInst p = p
 -------------------------------------------------------------------------------
 
 -- Populate GFunc with Class and Instances.
---
---    constraint  IEq         (eq,neq)
---    instance of IEq for Int (eq)
---
---    instance of IEq for Int (eq(True),neq(False))
 
 popGFunc :: [Stmt] -> Stmt -> Stmt
 
@@ -212,32 +206,19 @@ dupRenImpls (SVarS z id gen@(GInst _ itp) tpc' ini p) =
     SVarS z ('_':idtp id itp) gen tpc' ini $
       p
 
-dupRenImpls (SVarS z id gen@(GFunc _ [[itp]]) tpc ini p) = f itp p
+dupRenImpls (SVarS z id gen@(GFunc _ [[itp]]) tpc@(tp,_) ini p) = f itp p
   where
     f :: Type -> Stmt -> Stmt
     f itp p = SVarS z id gen tpc Nothing $
                 SVarS z ('_':dollar id) gen tpc (fmap remCtrs ini) $
-                  SVarS z (idtp id itp) gen tpc Nothing $
+                  SVarS z (idtp id itp) gen (tp',Cs.cz) Nothing $
                     p
+
+    tp' = instantiate [("a",itp)] tp
 
     -- remove constraints since we already receive the actual $dict
     remCtrs :: Exp -> Exp
     remCtrs e = map_exp' (f2 Prelude.id, Prelude.id, (\(tp,_) -> (tp,Cs.cz))) e
-
-{-
-wrap :: [(ID_Var,Type)] -> Stmt -> Stmt -> Stmt
-wrap insts (SVar z1 id1 (tp,_) (SSeq z2 (SMatch z3 True False body [(ds,EVar z4 id2,p)]) _)) acc | id1==id2 =
-  SVar z1 id' (tp',cz)
-    (SSeq z2
-      (SMatch z3 True False body' [(ds,EVar z4 id',p)])
-      acc)
-  where
-    id'   = idtp id1 tp'
-    tp'   = T.instantiate insts tp
-    body' = map_exp (Prelude.id,Prelude.id,ftp) body
-      where
-        ftp (tp,_) = (T.instantiate insts tp,cz)
--}
 
 dupRenImpls p = p
 
@@ -397,53 +378,43 @@ addInstDicts p = p
 
 -- For each missing implementation, add dummy implementation that calls
 -- constraint default.
+-- For each instance of generic function, add call to generic function.
 --
 --    instance of IEq for Int (eq(x,y))
+--    var $f$Int$ x : (Int -> Int);
 --
 --    func $neq$Int$ (x,y) return _$neq$($IEq$Int$,x,y)
+--    func $f$Int$   (x)   return _$f$($IEq$Int,x)
 
-addInstMissing :: Stmt -> Stmt
+addDummies :: Stmt -> Stmt
 
-addInstMissing (SInstS z cls tpc@(tp,_) pts (SVarS z2 id2 gen2 tp2 Nothing bdy)) =
+addDummies (SInstS z cls tpc@(tp,_) pts (SVarS z2 id2 gen2 tp2 Nothing bdy)) =
   SInstS z cls tpc pts (SVarS z2 id2 gen2 tp2 Nothing bdy') where
     bdy' = foldr ($) bdy $ map g $ Map.elems $ Map.filter f pts where
             f (_,_,_,ini) = not ini   -- only methods w/o implementation
 
             g :: Proto -> (Stmt -> Stmt)
-            g (z2,id2,tpc2@(tp2,_),False) = SVarS z2 (idtp id2 tp) gen2 tpc2' (Just (EFunc z2 tpc2' par1 p)) where
+            g (z2,id2,tpc2@(tp2,_),False) = SVarS z2 (idtp id2 tp) gen2 tpc2' (Just (EFunc z2 tpc2' par_dcl p)) where
               tp2' = instantiate [("a",tp)] tp2  -- TODO: a is fixed
               (TFunc _ inp2' _) = tp2'
               tpc2' = (tp2',Cs.cz)
 
-              p = SRet z2 (ECall z2 (EVar z2 ('_':dollar id2)) par2)
+              p = SRet z2 (ECall z2 (EVar z2 ('_':dollar id2)) par_call)
 
-              par1 = listToExp $ map (EVar z2) $ par
-              par2 = listToExp $ map (EVar z2) $ (("$"++cls++"$"++show' tp++"$") :) $ par
-              par  = map ('$':) $ map show $ lns $ len $ toTTuple inp2' where
-                      len (TTuple l) = length l
-                      lns n = take n lns' where
-                                lns' = 1 : map (+1) lns'
+              par_dcl  = listToExp $ map (EVar z2) $ fpar inp2'
+              par_call = listToExp $ map (EVar z2) $ (("$"++cls++"$"++show' tp++"$") :) $ fpar inp2'
 
-addInstMissing p = p
+addDummies (SVarS z ('$':id) gen@(GFunc [SClassS _ cls _ _ _] [[tp]]) tpc@(TFunc _ inp _,_) Nothing p) = traceShow gen $
+   SVarS z ('$':id) gen tpc (Just (EFunc z tpc par_dcl bdy)) p where
+    par_dcl  = listToExp $ map (EVar z) $ fpar inp
+    par_call = listToExp $ map (EVar z) $ (id :) $ fpar inp where
+                id = dollar $ cls++"$"++show' tp
+    bdy  = SRet z (ECall z (EVar z id') par_call) where
+            id' = '_' : dollar (head $ splitOn '$' id)
 
--------------------------------------------------------------------------------
+addDummies p = p
 
--- For each missing implementation, add dummy implementation that calls
--- constraint default.
---
---    var $f$Int$ x : (Int -> Int);
-
---    var $f$Int$ x : (Int -> Int) do
---      return _$f$($IEq$Int,...)
---    end
-
-addGenCall :: Stmt -> Stmt
-
-addGenCall (SVarS z ('$':id) gen@(GFunc _ _) tpc Nothing p) =
-   SVarS z ('$':id) gen tpc (Just (EFunc z tpc (EUnit z) bdy)) p where
-    bdy = SRet z (ECall z (EVar z id) (EUnit z))
-  --dict = dollar $ cls ++ "$" ++ show' tp
-                              --(ECall z (EField z [dollar cls] id') (EVar z "$dict"))
-                              --(insETuple (EVar z "$dict") (toETuple $ expand inp)))
-
-addGenCall p = p
+fpar inp = map ('$':) $ map show $ lns $ len $ toTTuple inp where
+            len (TTuple l) = length l
+            lns n = take n lns' where
+                      lns' = 1 : map (+1) lns'

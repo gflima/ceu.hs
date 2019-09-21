@@ -238,8 +238,8 @@ show_exp spc (EMatch _ exp pat)   = "match" ++ " " ++ show_exp spc exp ++ " with
 show_exp spc (EExp   _ exp)       = show_exp spc exp
 show_exp spc (EArg   _)           = "arg"
 show_exp spc (EAny   _)           = "_"
-{-
 show_exp spc (EUnit  _)           = "()"
+{-
 show_exp spc (EError _ n)         = "error " ++ show n
 show_exp spc (EUpv   _)           = "upv"
 show_exp spc (EFunc  _ _ _ p)     = "func" ++ "\n" ++ show_stmt (spc+4) p
