@@ -23,9 +23,9 @@ idtp id tp = dollar $ id ++ "$" ++ show' tp
 --
 --    contraint IEq (eq where a is IEq,neq where a is IEq)
 
-insConstraint :: Stmt -> Stmt
+insConstraints :: Stmt -> Stmt
 
-insConstraint (SClass z cls cs ifc) =
+insConstraints (SClass z cls cs ifc) =
    case Cs.toList cs of
     [(var,_)]  -> SClass z cls cs ifc' where
                     ifc' = map_stmt (f2 f, Prelude.id, Prelude.id) [] ifc
@@ -33,7 +33,7 @@ insConstraint (SClass z cls cs ifc) =
                     f p = p
     otherwise  -> error "TODO: multiple vars"
 
-insConstraint p = p
+insConstraints p = p
 
 -------------------------------------------------------------------------------
 
