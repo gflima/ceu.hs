@@ -43,6 +43,7 @@ inlCI p (SNop z)                           = p
 inlCI p q = error $ show q
 
 -------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 
 -- Insert constraint in each nested method in outer contraint/instance.
 --
@@ -50,16 +51,16 @@ inlCI p q = error $ show q
 --
 --    contraint IEq (eq where a is IEq,neq where a is IEq)
 
-insClassCs :: Stmt -> Stmt
+addClassCs :: Stmt -> Stmt
 
-insClassCs (SClassS z cls cs ifc p) =
+addClassCs (SClassS z cls cs ifc p) =
    case Cs.toList cs of
     [(var,_)]  -> SClassS z cls cs ifc' p where
                     ifc' = map_stmt (id2, Prelude.id, f) [] ifc
                     f (tp,cs) = (tp, Cs.insert (var,cls) cs)
     otherwise  -> error "TODO: multiple vars"
 
-insClassCs p = p
+addClassCs p = p
 
 -------------------------------------------------------------------------------
 
@@ -100,6 +101,7 @@ setGen' (SVarS z id tpc@(_,cs) ini p) | Map.null cs = SVarSG z id GNone tpc ini 
 setGen' p = p
 
 -------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 
 withEnvS :: [Stmt] -> Stmt -> Stmt
 
@@ -134,9 +136,9 @@ withEnvE env exp                 = exp
 --      ... -- original default implementation
 --    end
 
-insGGenWrappers :: [Stmt] -> Exp -> Exp
+addGGenWrappers :: [Stmt] -> Exp -> Exp
 
-insGGenWrappers env (EFunc z tpc@(tp,cs) par p) = EFunc z tpc par p' where
+addGGenWrappers env (EFunc z tpc@(tp,cs) par p) = EFunc z tpc par p' where
   p'  = cls2wrappers p cls
   cls = case Cs.toList cs of
           [(_,[cls])] -> case find f env of     -- TODO: more css
@@ -170,6 +172,30 @@ insGGenWrappers env (EFunc z tpc@(tp,cs) par p) = EFunc z tpc par p' where
 
 -------------------------------------------------------------------------------
 
+-- Unite all protos from Class/Inst.
+--
+--    constraint  IEq         (eq,neq)
+--    instance of IEq for Int (eq)
+--
+--    instance of IEq for Int (eq(True),neq(False))
+
+addInstMissing :: [Stmt] -> Stmt -> Stmt
+
+addInstMissing env (SInstS z cls tpc@(tp,_) pts bdy) =
+  SInstS z cls tpc pts' bdy where
+    pts' = case find f env of
+            Just (SClassS _ _ _ x _) -> Map.union pts $ Map.map noIni $ Map.difference x pts where
+                                          noIni (z,id,tpc,_) = (z,id,tpc,False)
+            --_ -> error $ show (cls, env)
+           where
+            f (SClassS _ cls' _ _ _) = (cls == cls')
+            f _                      = False
+
+addInstMissing _ p = p
+
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+
 -- For each existing implementation (constraint or instance), insert dict
 -- parameters for all constraint methods.
 --
@@ -179,9 +205,9 @@ insGGenWrappers env (EFunc z tpc@(tp,cs) par p) = EFunc z tpc par p' where
 --    func _$neq$ ($dict,x,y)
 --    func _$eq$Int$ ($dict,x,y)
 
-insGGenDict :: Stmt -> Stmt
+addGGenDict :: Stmt -> Stmt
 
-insGGenDict (SVarSG z id GGen (TFunc ft1 inp1 out1,cs1)
+addGGenDict (SVarSG z id GGen (TFunc ft1 inp1 out1,cs1)
               (Just (EFunc z2 (TFunc ft2 inp2 out2,cs2) par2 p2))
               p) =
   SVarSG z id GGen (TFunc ft1 inp1' out1,cs1)
@@ -193,8 +219,9 @@ insGGenDict (SVarSG z id GGen (TFunc ft1 inp1 out1,cs1)
     par2' = insETuple (EVar z "$dict") (toETuple par2)
     [(_,[cls])] = Cs.toList cs1 -- TODO: more css
 
-insGGenDict p = p
+addGGenDict p = p
 
+-------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
 -- Declare an associated dictionay for each constraint.
@@ -223,52 +250,6 @@ dclClassDicts cls@(SClassS z id _ _ _) =
 dclClassDicts p = p
 
 {-
--------------------------------------------------------------------------------
-
--- Add list of prototypes.
---
--- Set type of generic var.
---
---    contraint IEq        (eq,neq)
---    instance  IEq for Int(eq,neq)
---    func f : (a -> Int) where a is IEq
---
---    contraint IEq        (eq/GClass, neq/GClass)
---    instance  IEq for Int(eq/GInst,  neq/GInstc)
---    func f/GFunc
-
-addProtosGen :: Stmt -> Stmt
-
-addProtosGen (SClass z cls cs ifc) = SClass' z cls cs pts ifc'
-  where
-    pts  = protos ifc
-    ifc' = map_stmt (f2 f, Prelude.id, Prelude.id) [] ifc where
-            f (SVar' z id _ tpc ini) = SVar' z id (GClass cls cs pts) tpc ini
-            f p = p
-
-addProtosGen (SInst z cls tpc@(tp,_) imp) = SInst' z cls tpc (protos imp) imp'
-  where
-    imp' = map_stmt (f2 f, Prelude.id, Prelude.id) [] imp where
-            f (SVar' z id _ tpc' ini) = SVar' z id (GInst cls tp) tpc' ini
-            f p = p
-
-addProtosGen (SVar z id tpc@(_,cs) ini) = SVar' z id gen tpc ini
-  where
-    gen = if Map.null cs then GNone
-                         else GFunc [] []
-
-addProtosGen p = p
-
--- convert from sequence of declarations to list of prototypes:
---    constraint IEq for a with (eq:tp1, neq:tp2)
--- becomes
---    [(.,eq,tp1,.),(.,neq,tp2,.)]
-
-protos :: Stmt -> Protos
-protos (SSeq _ p1 p2)           = Map.union (protos p1) (protos p2)
-protos (SVar' z id gen tpc ini) = Map.singleton id (z,id,tpc,isJust ini)
-protos p                        = Map.empty
-
 -------------------------------------------------------------------------------
 
 -- Remove contraint/inst from the program (split actual dcls/impls from their
@@ -400,29 +381,6 @@ addInstCall (SVarS z ('_':id) gen@(GInst _ _) tpc (Just (EFunc z2 tp2 par2 _)) p
     remTuple x = x
 
 addInstCall p = p
-
--------------------------------------------------------------------------------
-
--- Unite all protos from Class/Inst.
---
---    constraint  IEq         (eq,neq)
---    instance of IEq for Int (eq)
---
---    instance of IEq for Int (eq(True),neq(False))
-
-uniInstProtos :: [Stmt] -> Stmt -> Stmt
-
-uniInstProtos env (SInstS z cls tpc@(tp,_) pts bdy) =
-  SInstS z cls tpc pts' bdy where
-    pts' = case find f env of
-            Just (SClassS _ _ _ x _) -> Map.union pts $ Map.map noIni $ Map.difference x pts where
-                                          noIni (z,id,tpc,_) = (z,id,tpc,False)
-            --_ -> error $ show (cls, env)
-           where
-            f (SClassS _ cls' _ _ _) = (cls == cls')
-            f _                      = False
-
-uniInstProtos _ p = p
 
 -------------------------------------------------------------------------------
 
