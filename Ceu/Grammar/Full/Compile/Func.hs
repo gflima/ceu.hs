@@ -38,7 +38,7 @@ remEFuncPar (EFunc z tpc@(TFunc _ inp _,cs) par imp) = EFunc' z tpc imp'
         aux :: Ann -> Exp -> Type -> [Stmt->Stmt]
         aux z (EAny   _)     _           = []
         aux z (EUnit  _)     TUnit       = []
-        aux z (EVar   _ var) tp_         = [SVarS' z var (tp_,ctrs) Nothing]
+        aux z (EVar   _ var) tp_         = [SVarSG z var GNone (tp_,ctrs) Nothing]
         aux z (ETuple _ [])  (TTuple []) = []
         aux z (ETuple _ [])  _           = error "arity mismatch"
         aux z (ETuple _ _)   (TTuple []) = error "arity mismatch"

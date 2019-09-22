@@ -14,12 +14,6 @@ remSScope p = p
 
 -------------------------------------------------------------------------------
 
-remSVarSGen :: Stmt -> Stmt
-remSVarSGen (SVarS z var tp ini p) = SVarS' z var tp ini p
-remSVarSGen p = p
-
--------------------------------------------------------------------------------
-
 setScope :: Stmt -> Stmt
 
 setScope (SClass z id  cs ifc)       = SClassS z id  cs  ifc       (SNop z)

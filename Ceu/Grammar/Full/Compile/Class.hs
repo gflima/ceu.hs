@@ -25,15 +25,76 @@ idtp id tp = dollar $ id ++ "$" ++ show' tp
 
 insConstraints :: Stmt -> Stmt
 
-insConstraints (SClass z cls cs ifc) =
+insConstraints (SClassS z cls cs ifc p) =
    case Cs.toList cs of
-    [(var,_)]  -> SClass z cls cs ifc' where
+    [(var,_)]  -> SClassS z cls cs ifc' p where
                     ifc' = map_stmt (f2 f, Prelude.id, Prelude.id) [] ifc
                     f (SVar z id (tp',cs') ini) = SVar z id (tp', Cs.insert (var,cls) cs') ini
                     f p = p
     otherwise  -> error "TODO: multiple vars"
 
 insConstraints p = p
+
+-------------------------------------------------------------------------------
+
+toGenS :: [Stmt] -> Stmt -> Stmt
+
+toGenS env s@(SClassS z id  cs  ifc       p) = SClassS z id  cs  (toGenC env ifc)     (toGenS (s:env) p)
+toGenS env s@(SInstS  z cls tpc imp       p) = SInstS  z cls tpc (toGenI env tpc imp) (toGenS (s:env) p)
+toGenS env s@(SVarS   z id  tpc ini       p) = toGenF env s
+toGenS env   (SDataS  z tp  nms st cs abs p) = SDataS  z tp  nms st cs abs (toGenS env p)
+toGenS env   (SMatch  z ini chk exp cses)    = SMatch  z ini chk (toGenE env exp) (map f cses) where
+                                                f (ds,pt,st) = (toGenS env ds, toGenE env pt, toGenS env st)
+toGenS env   (SIf     z exp p1 p2)           = SIf     z (toGenE env exp) (toGenS env p1) (toGenS env p2)
+toGenS env   (SSeq    z p1 p2)               = SSeq    z (toGenS env p1) (toGenS env p2)
+toGenS env   (SLoop   z p)                   = SLoop   z (toGenS env p)
+toGenS env   p                               = p
+
+toGenE :: [Stmt] -> Exp -> Exp
+toGenE env (ETuple z es)       = ETuple z (map (toGenE env) es)
+toGenE env (EFunc  z tp ps bd) = EFunc  z tp (toGenE env ps) (toGenS env bd)
+toGenE env (ECall  z e1 e2)    = ECall  z (toGenE env e1) (toGenE env e2)
+toGenE env exp                 = exp
+
+toGenC :: [Stmt] -> Stmt -> Stmt
+toGenC env (SVarS z id tpc ini p) =
+  SVarSG z id GDcl tpc Nothing $ case ini of
+    Nothing -> p
+    Just _  -> SVarSG z ('_':dollar id) GRaw tpc (fmap (toGenE env) ini) $
+                toGenC env p
+
+toGenI :: [Stmt] -> TypeC -> Stmt -> Stmt
+toGenI env (itp,_) (SVarS z id tpc (Just ini) p) =
+  SVarSG z id GDcl tpc Nothing $
+    SVarSG z ('_':idtp id itp) GRaw tpc (Just $ toGenE env ini) $
+      SVarSG z (idtp id itp) GInst tpc Nothing $
+        toGenC env p
+
+toGenF :: [Stmt] -> Stmt -> Stmt
+toGenF env (SVarS z id tpc@(_,cs) ini p) | Map.null cs =
+  SVarSG z id GNone tpc (fmap (toGenE env) ini) (toGenS env p)
+toGenF env (SVarS z id tpc (Just ini) p) =
+  SVarSG z id GDcl tpc Nothing $
+    --SVarSG z ('_':idtp id itp) GRaw tpc ini $
+      --SVarSG z (idtp id itp) GInst tpc ini $
+        toGenS env p
+
+{-
+
+    (gen,p') = if Map.null cs then (GNone,Prelude.id) else GFunc [] []
+dupRenImpls _ (SVarS z id gen@(GInst _ itp) tpc' ini p) =
+  SVarS z (idtp id itp) gen tpc' ini $
+    SVarS z ('_':idtp id itp) gen tpc' ini $
+      p
+
+dupRenImpls env (SVarS z id gen@(GFunc [] []) tpc@(tp,cs) ini p) =
+  SVarS z id gen tpc Nothing $
+    SVarS z ('_':dollar id) (GFunc stmts []) tpc (fmap remCtrs ini) $
+      foldr f p $ zip stmtss itpss
+  where
+    -- remove constraints since we already receive the actual $dict
+    remCtrs :: Exp -> Exp
+    remCtrs e = map_exp' (f2 Prelude.id, Prelude.id, (\(tp,_) -> (tp,Cs.cz))) e
 
 -------------------------------------------------------------------------------
 
@@ -143,7 +204,6 @@ remClassInst p = p
 --    func $f$Bool$ (x)         // wrapper to call _$f$ with $IEq$Bool$
 --    ...
 
-{-
 dupRenImpls :: [Stmt] -> Stmt -> Stmt
 
 dupRenImpls _ (SVarS z id gen@(GClass _ _ _) tpc@(tp,_) ini p) =

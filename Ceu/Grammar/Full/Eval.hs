@@ -46,13 +46,11 @@ prelude z p =
 
 compile :: Stmt -> Stmt
 compile p = traceStmt $
-  map_stmt' (f2 Scope.remSScope,id,id)        $
   map_stmt' (f2 Match.remSSetSIf,id,id)       $
   map_stmt' (f2 Match.remIni,id,id)           $
   map_stmt' (id2,Func.remEFuncPar,id)         $
   map_stmt' (f2 Data.addAccs,id,id)           $
   Data.expHier []                             $
-  map_stmt' (f2 Scope.remSVarSGen,id,id)      $
 --
 {-
   map_stmt' (f2 Class.addInstances,id,id)     $
@@ -67,9 +65,11 @@ compile p = traceStmt $
   map_stmt' (f2 Class.remClassInst,id,id)     $   -- adds (STodo SInst-INI/END)
   map_stmt' (f2 Class.dclClassDicts,id,id)    $
   map_stmt' (f2 Class.addProtosGen,id,id)     $
-  map_stmt' (f2 Class.insConstraints,id,id)   $
 -}
+  Class.toGenS []                             $
+  map_stmt' (f2 Class.insConstraints,id,id)   $
 --
+  map_stmt' (f2 Scope.remSScope,id,id)        $
   map_stmt' (f2 Scope.setScope,id,id)         $
   map_stmt' (f2 Seq.adjSSeq,id,id)            $   -- no more SSeq
   map_stmt' (f2 Func.remSFunc,id,id)          $
