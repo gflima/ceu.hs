@@ -59,9 +59,11 @@ toGenE env exp                 = exp
 toGenC :: [Stmt] -> Stmt -> Stmt
 toGenC env (SVarS z id tpc ini p) =
   SVarSG z id GDcl tpc Nothing $ case ini of
-    Nothing -> p
+    Nothing -> toGenC env p
     Just _  -> SVarSG z ('_':dollar id) GRaw tpc (fmap (toGenE env) ini) $
                 toGenC env p
+toGenC _ s@(SNop _) = s
+--toGenC _ p = error $ show p
 
 toGenI :: [Stmt] -> TypeC -> Stmt -> Stmt
 toGenI env (itp,_) (SVarS z id tpc (Just ini) p) =
@@ -69,6 +71,7 @@ toGenI env (itp,_) (SVarS z id tpc (Just ini) p) =
     SVarSG z ('_':idtp id itp) GRaw tpc (Just $ toGenE env ini) $
       SVarSG z (idtp id itp) GInst tpc Nothing $
         toGenC env p
+toGenI _ _ s@(SNop _) = s
 
 toGenF :: [Stmt] -> Stmt -> Stmt
 toGenF env (SVarS z id tpc@(_,cs) ini p) | Map.null cs =
@@ -95,7 +98,29 @@ dupRenImpls env (SVarS z id gen@(GFunc [] []) tpc@(tp,cs) ini p) =
     -- remove constraints since we already receive the actual $dict
     remCtrs :: Exp -> Exp
     remCtrs e = map_exp' (f2 Prelude.id, Prelude.id, (\(tp,_) -> (tp,Cs.cz))) e
+-}
 
+-------------------------------------------------------------------------------
+
+-- Remove contraint/inst from the program (split actual dcls/impls from their
+-- abstract prototypes).
+--    contraint IEq        (eq,neq)
+--    instance  IEq for Int(eq,neq)
+--
+--    contraint IEq        (eq,neq) ; eq ; neq
+--    instance  IEq for Int(eq,neq) ; eq ; neq
+
+inlClassInst :: Stmt -> Stmt
+inlClassInst (SClassS z id  cs  ifc p) = SClassS z id  cs  ifc $ fICI p ifc
+inlClassInst (SInstS  z cls tpc imp p) = SInstS  z cls tpc imp $ fICI p imp
+inlClassInst p = p
+
+fICI p (SVarSG z id gen tpc ini (SNop _)) = SVarSG z id gen tpc ini p
+fICI p (SVarSG z id gen tpc ini q)        = SVarSG z id gen tpc ini (fICI p q)
+fICI p (SNop z)                           = p
+fICI p q = error $ show q
+
+{-
 -------------------------------------------------------------------------------
 
 -- Add list of prototypes.

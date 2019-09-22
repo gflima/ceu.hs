@@ -139,13 +139,13 @@ map_stmt' f s = map_stmt f [] s
 
 map_stmt :: ([Stmt]->Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> [Stmt]->Stmt -> Stmt
 map_stmt f@(fs,_,_)  env   (SClass   z id  cs p)           = fs env (SClass   z id cs (map_stmt f env p))
-map_stmt f@(fs,_,_)  env s@(SClass'  z id  cs pts bdy)     = fs env (SClass'  z id cs pts (map_stmt f (s:env) bdy))
-map_stmt f@(fs,_,_)  env   (SClass'' z id  cs pts)         = fs env (SClass'' z id cs pts)
-map_stmt f@(fs,_,_)  env s@(SClassS  z id  cs pts p)       = fs env (SClassS  z id cs pts (map_stmt f (s:env) p))
+--map_stmt f@(fs,_,_)  env s@(SClass'  z id  cs ifc p)       = fs env (SClass'  z id cs (map_stmt f env ifc) (map_stmt f (s:env) p))
+--map_stmt f@(fs,_,_)  env   (SClass'' z id  cs ifc)         = fs env (SClass'' z id cs (map_stmt f env ifc))
+map_stmt f@(fs,_,_)  env s@(SClassS  z id  cs ifc p)       = fs env (SClassS  z id cs (map_stmt f env ifc) (map_stmt f (s:env) p))
 map_stmt f@(fs,_,ft) env   (SInst    z cls tpc p)          = fs env (SInst    z cls (ft tpc) (map_stmt f env p))
-map_stmt f@(fs,_,ft) env s@(SInst'   z cls tpc pts bdy)    = fs env (SInst'   z cls (ft tpc) pts (map_stmt f (s:env) bdy))
-map_stmt f@(fs,_,ft) env   (SInst''  z cls tpc pts)        = fs env (SInst''  z cls (ft tpc) pts)
-map_stmt f@(fs,_,ft) env s@(SInstS   z cls tpc pts p)      = fs env (SInstS   z cls (ft tpc) pts (map_stmt f (s:env) p))
+--map_stmt f@(fs,_,ft) env s@(SInst'   z cls tpc imp p)      = fs env (SInst'   z cls (ft tpc) (map_stmt f env imp) (map_stmt f (s:env) p))
+--map_stmt f@(fs,_,ft) env   (SInst''  z cls tpc imp)        = fs env (SInst''  z cls (ft tpc) (map_stmt f env imp))
+map_stmt f@(fs,_,ft) env s@(SInstS   z cls tpc imp p)      = fs env (SInstS   z cls (ft tpc) (map_stmt f env imp) (map_stmt f (s:env) p))
 map_stmt f@(fs,_,ft) env   (SData    z tp nms st cs abs)   = fs env (SData    z tp nms st cs abs)
 map_stmt f@(fs,_,ft) env   (SDataS   z tp nms st cs abs p) = fs env (SDataS   z tp nms st cs abs (map_stmt f env p))
 map_stmt f@(fs,_,ft) env   (SVar     z id tp ini)          = fs env (SVar     z id (ft tp) (fmap (map_exp f env) ini))
@@ -184,10 +184,10 @@ rep spc = replicate spc ' '
 
 show_stmt :: Int -> Stmt -> String
 show_stmt spc (SSeq _ p1 p2)              = show_stmt spc p1 ++ "\n" ++ show_stmt spc p2
-show_stmt spc (SClass'  _ id _ _ bdy)     = rep spc ++ "constraint " ++ id ++ "\n" ++ show_stmt spc bdy
+show_stmt spc (SClass'  _ id _ _ p)       = rep spc ++ "constraint " ++ id ++ "\n" ++ show_stmt spc p
 show_stmt spc (SClass'' _ id _ _)         = rep spc ++ "constraint " ++ id
 show_stmt spc (SClassS  _ id _ _ p)       = rep spc ++ "constraint " ++ id ++ "\n" ++ show_stmt spc p
-show_stmt spc (SInst'  _ id _ _ bdy)      = rep spc ++ "instance " ++ id ++ "\n" ++ show_stmt spc bdy
+show_stmt spc (SInst'  _ id _ _ p)        = rep spc ++ "instance " ++ id ++ "\n" ++ show_stmt spc p
 show_stmt spc (SInst'' _ id _ _)          = rep spc ++ "instance " ++ id
 show_stmt spc (SInstS  _ id _ _ p)        = rep spc ++ "instance " ++ id ++ "\n" ++ show_stmt spc p
 show_stmt spc (SData   _ (TData False id _) _ tp _ _  ) = rep spc ++ "data " ++ intercalate "." id ++ T.show' tp

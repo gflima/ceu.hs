@@ -62,10 +62,10 @@ compile p = traceStmt $
   map_stmt' (f2 Class.insGenWrappers,id,id)   $
   map_stmt' (Class.dupRenImpls,id,id)         $
 --
-  map_stmt' (f2 Class.remClassInst,id,id)     $   -- adds (STodo SInst-INI/END)
   map_stmt' (f2 Class.dclClassDicts,id,id)    $
   map_stmt' (f2 Class.addProtosGen,id,id)     $
 -}
+  map_stmt' (f2 Class.inlClassInst,id,id)     $ --traceShowId $
   Class.toGenS []                             $
   map_stmt' (f2 Class.insConstraints,id,id)   $
 --
