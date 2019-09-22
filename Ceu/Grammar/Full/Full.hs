@@ -71,11 +71,7 @@ instance HasAnn Exp where
 
 data Stmt
   = SClass    Ann ID_Class Cs.Map Stmt             -- new class declaration
-  | SClass'   Ann ID_Class Cs.Map B.Protos Stmt    -- interface w/ body
-  | SClass''  Ann ID_Class Cs.Map B.Protos         -- interface w/ body
   | SInst     Ann ID_Class TypeC Stmt              -- new class instance
-  | SInst'    Ann ID_Class TypeC B.Protos Stmt     -- new class instance
-  | SInst''   Ann ID_Class TypeC B.Protos          -- new class instance
   | SData     Ann Type (Maybe [ID_Var]) Type Cs.Map Bool -- new type declaration
   | SVar      Ann ID_Var TypeC (Maybe Exp)         -- (z id tp ini)   -- variable declaration
   | STodo     Ann String
@@ -93,16 +89,13 @@ data Stmt
   | SClassS   Ann ID_Class Cs.Map Stmt Stmt
   | SInstS    Ann ID_Class TypeC  Stmt Stmt
   | SDataS    Ann Type (Maybe [ID_Var]) Type Cs.Map Bool Stmt
-  | SVarS     Ann ID_Var     TypeC (Maybe Exp) Stmt
-  | SVarSG    Ann ID_Var Gen TypeC (Maybe Exp) Stmt
+  | SVarS     Ann ID_Var       TypeC (Maybe Exp) Stmt
+  | SVarSG    Ann ID_Var B.Gen TypeC (Maybe Exp) Stmt
   | STodoS    Ann String Stmt
   deriving (Eq, Show)
 
 sSeq a b = SSeq annz a b
 infixr 1 `sSeq`
-
-data Gen = GNone | GDcl | GRaw | GInst -- ID_Class Cs.Map B.Protos | GInst ID_Class Type | GFunc [Stmt] [Type]
-  deriving (Show,Eq)
 
 instance HasAnn Stmt where
     --getAnn :: Stmt -> Ann
@@ -120,10 +113,10 @@ instance HasAnn Stmt where
     getAnn (SVarS     z _ _ _ _)   = z
 
 toBasicStmt :: Stmt -> B.Stmt
-toBasicStmt (SClassS z id  cs ifc p) = B.SClass z id  cs (toBasicStmt ifc) (toBasicStmt p)
-toBasicStmt (SInstS  z cls tp imp p) = B.SInst  z cls tp (toBasicStmt imp) (toBasicStmt p)
+toBasicStmt (SClassS z id  cs ifc p) = B.SClass z id  cs (B.SNop z) (toBasicStmt p)
+toBasicStmt (SInstS  z cls tp imp p) = B.SInst  z cls tp (B.SNop z) (toBasicStmt p)
 toBasicStmt (SDataS  z tp nms st cs abs p) = B.SData z tp nms st cs abs (toBasicStmt p)
-toBasicStmt (SVarSG  z var _ tp Nothing p) = B.SVar  z var tp (toBasicStmt p)
+toBasicStmt (SVarSG  z var gen tp Nothing p) = B.SVar  z var gen tp (toBasicStmt p)
 toBasicStmt (SMatch  z ini chk exp cses) = B.SMatch z ini chk (toBasicExp exp)
                                               (map (\(ds,pt,st) -> (toBasicStmt ds, toBasicExp pt, toBasicStmt st)) cses)
 toBasicStmt (SCall   z e)            = B.SCall z (toBasicExp e)
@@ -184,11 +177,7 @@ rep spc = replicate spc ' '
 
 show_stmt :: Int -> Stmt -> String
 show_stmt spc (SSeq _ p1 p2)              = show_stmt spc p1 ++ "\n" ++ show_stmt spc p2
-show_stmt spc (SClass'  _ id _ _ p)       = rep spc ++ "constraint " ++ id ++ "\n" ++ show_stmt spc p
-show_stmt spc (SClass'' _ id _ _)         = rep spc ++ "constraint " ++ id
 show_stmt spc (SClassS  _ id _ _ p)       = rep spc ++ "constraint " ++ id ++ "\n" ++ show_stmt spc p
-show_stmt spc (SInst'  _ id _ _ p)        = rep spc ++ "instance " ++ id ++ "\n" ++ show_stmt spc p
-show_stmt spc (SInst'' _ id _ _)          = rep spc ++ "instance " ++ id
 show_stmt spc (SInstS  _ id _ _ p)        = rep spc ++ "instance " ++ id ++ "\n" ++ show_stmt spc p
 show_stmt spc (SData   _ (TData False id _) _ tp _ _  ) = rep spc ++ "data " ++ intercalate "." id ++ T.show' tp
 show_stmt spc (SDataS  _ (TData False id _) _ tp _ _ p) = rep spc ++ "data " ++ intercalate "." id ++ T.show' tp ++ "\n" ++ show_stmt spc p

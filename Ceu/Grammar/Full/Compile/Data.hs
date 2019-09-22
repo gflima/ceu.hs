@@ -9,6 +9,7 @@ import Ceu.Grammar.Ann
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Type               (Type(..),TypeC,instantiate,getSuper,hier2str,FuncType(..))
 import Ceu.Grammar.Constraints as Cs
+import Ceu.Grammar.Basic              (Gen(..))
 import Ceu.Grammar.Full.Full
 
 -- Instantiates variable declarations of TData with their complete types:

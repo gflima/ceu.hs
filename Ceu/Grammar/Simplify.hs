@@ -28,10 +28,10 @@ stmt (SData z tdat nms flds ctrs abs p) =
     otherwise -> SData z tdat nms flds ctrs abs p'
   where p' = stmt p
 
-stmt (SVar z id tp p) =
+stmt (SVar z id gen tp p) =
   case p' of
     --SNop z'    -> SNop z'
-    _ -> SVar z id tp p'
+    _ -> SVar z id gen tp p'
   where p' = stmt p
 
 stmt (SMatch z ini b exp cses) = SMatch z ini b (expr exp)
