@@ -58,16 +58,15 @@ compile p = traceStmt $
   map_stmt' (Class.uniInstProtos,id,id)       $   -- uses scope (clss)
 --
   map_stmt' (f2 Class.addInstCall,id,id)      $
-  map_stmt' (f2 Class.insDict,id,id)          $
   map_stmt' (f2 Class.insGenWrappers,id,id)   $
   map_stmt' (Class.dupRenImpls,id,id)         $
 --
-  map_stmt' (f2 Class.dclClassDicts,id,id)    $
   map_stmt' (f2 Class.addProtosGen,id,id)     $
 -}
+  map_stmt' (f2 Class.dclClassDicts,id,id)    $
   map_stmt' (f2 Class.inlClassInst,id,id)     $
-  --map_stmt' (f2 Class.insGRawWrappers,id,id)  $
-  --Class.toGenS []                             $
+  map_stmt' (f2 Class.insGGenDict,id,id)      $
+  Class.withEnvS []                           $
   map_stmt' (f2 Class.setGen',id,id)          $
   map_stmt' (f2 Class.setGen,id,id)           $
   map_stmt' (f2 Class.insClassCs,id,id)       $

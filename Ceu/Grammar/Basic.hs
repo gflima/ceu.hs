@@ -67,7 +67,7 @@ data Stmt
 
 -------------------------------------------------------------------------------
 
-data Gen = GNone | GDcl | GRaw | GInst
+data Gen = GNone | GDcl | GGen|GOne | GCall
   deriving (Show,Eq)
 
 data EnvType = EnvGlobal | EnvNonLocal | EnvLocal
