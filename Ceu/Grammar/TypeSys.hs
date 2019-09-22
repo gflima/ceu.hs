@@ -630,7 +630,7 @@ expr' (rel,txp) envs (ECons z hr) = (es1++es2, (FuncGlobal,Nothing), [], ECons z
 
     (es2,tpc2) = case relatesC SUP txp tpc1 of
       Left es      -> (map (toError z) es,tpc1)
-      Right (tp,_) -> ([],(tp,ctrs)) where (_,ctrs)=tpc1
+      Right (tp,_) -> ([],(tp,cs)) where (_,cs)=tpc1
 
 expr' _ envs (ETuple z exps) = (es, ft, fts, ETuple z{typec=(tps',cz)} exps') where
                                 rets :: [(Errors,FT_Ups,[FuncType],Exp)]
@@ -648,24 +648,14 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id@(cid:_)) = (es, ftReq (length envs) (
       -- find in top-level envs | id : a
       case findVars z id envs of
         Left  es -> (id, (TAny,cz), (False,0), es)
-        Right xs -> case find f xs' of
+        Right xs -> case find f xs of
           Nothing -> (id, (TAny,cz), (False,0),
-                      map (toError z) $ fromLeft $ relatesC rel txpc (last (map snd xs')))
-          Just (lnr, tpc@(_,ctrs)) ->
-            if ctrs==cz || cid=='_' then  -- _default_method
-              traceShowId (id, tpc, lnr, [])
-            else
+                      map (toError z) $ fromLeft $ relatesC rel txpc (last (map (getTpc.snd) xs)))
+                        where getTpc (SVar _ _ _ tpc _) = tpc
+          Just (lnr, SVar _ _ GNone tpc _)        -> (id, tpc, lnr, [])
+          Just (lnr, SVar _ _ _     tpc@(_,cs) _) ->
               case find pred (concat envs) of            -- find instance
-                Just (SVar _ k _ tpc@(tp,ctrs) _) -> (k, tpc, lnr, [])
-{-
-                  if null ctrs then
-                    (idtp id tp, tpc, lnr, [])
-                  else
-                    if null cxp then
-                      (id, (TAny,cz), lnr, err)
-                    else
-                      (id, tpc, lnr, [])
--}
+                Just (SVar _ k _ tpc@(tp,cs) _) -> (k, tpc, lnr, [])
                 Nothing -> (id, (TAny,cz), lnr, err)
               where
                 pred :: Stmt -> Bool
@@ -676,11 +666,10 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id@(cid:_)) = (es, ftReq (length envs) (
                        "' has no associated instance for '" ++
                        T.show' txp ++ "'"]
           where
-            xs' = map (\(lnr, SVar _ _ _ tpc _) -> (lnr, tpc)) xs
-            f (_, tpc) = isRight $ relatesC rel txpc (toDer tpc) where
-                          -- accept ref variables in non-ref context
-                          toDer tpc = if not (T.isRefableRefC tpc) then tpc else
-                                        T.toDerC tpc
+            f (_, SVar _ _ _ tpc _) =
+              isRight $ relatesC rel txpc (toDer tpc) where
+                -- accept ref variables in non-ref context
+                toDer tpc = if not (T.isRefableRefC tpc) then tpc else T.toDerC tpc
 
   toDer exp = if not (T.isRefableRefC tpc) then exp else
                 ERefDer z{typec=T.toDerC tpc} exp
