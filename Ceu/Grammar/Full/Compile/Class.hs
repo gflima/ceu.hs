@@ -143,6 +143,7 @@ remClassInst p = p
 --    func $f$Bool$ (x)         // wrapper to call _$f$ with $IEq$Bool$
 --    ...
 
+{-
 dupRenImpls :: [Stmt] -> Stmt -> Stmt
 
 dupRenImpls _ (SVarS z id gen@(GClass _ _ _) tpc@(tp,_) ini p) =
@@ -414,3 +415,4 @@ fpar inp = map ('$':) $ map show $ lns $ len $ toTTuple inp where
             len (TTuple l) = length l
             lns n = take n lns' where
                       lns' = 1 : map (+1) lns'
+-}

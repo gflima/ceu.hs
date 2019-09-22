@@ -54,6 +54,7 @@ compile p = traceStmt $
   Data.expHier []                             $
   map_stmt' (f2 Scope.remSVarSGen,id,id)      $
 --
+{-
   map_stmt' (f2 Class.addInstances,id,id)     $
   map_stmt' (f2 Class.addInstDicts,id,id)     $   -- uses SSeq / uses (STodo SInst-*)
   map_stmt' (Class.uniInstProtos,id,id)       $   -- uses scope (clss)
@@ -62,15 +63,15 @@ compile p = traceStmt $
   map_stmt' (f2 Class.insDict,id,id)          $
   map_stmt' (f2 Class.insGenWrappers,id,id)   $
   map_stmt' (Class.dupRenImpls,id,id)         $
-  --map_stmt' (Class.popGFunc,id,id)            $
---
-  map_stmt' (f2 Scope.setScope,id,id)         $
-  map_stmt' (f2 Seq.adjSSeq,id,id)            $   -- no more SSeq
 --
   map_stmt' (f2 Class.remClassInst,id,id)     $   -- adds (STodo SInst-INI/END)
   map_stmt' (f2 Class.dclClassDicts,id,id)    $
   map_stmt' (f2 Class.addProtosGen,id,id)     $
   map_stmt' (f2 Class.insConstraints,id,id)   $
+-}
+--
+  map_stmt' (f2 Scope.setScope,id,id)         $
+  map_stmt' (f2 Seq.adjSSeq,id,id)            $   -- no more SSeq
   map_stmt' (f2 Func.remSFunc,id,id)          $
   p where
 
