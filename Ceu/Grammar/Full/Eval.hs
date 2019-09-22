@@ -50,7 +50,7 @@ compile p = traceStmt $
   map_stmt' (f2 Match.remIni,id,id)           $
   map_stmt' (id2,Func.remEFuncPar,id)         $
   map_stmt' (f2 Data.addAccs,id,id)           $
-  Data.expHier []                             $
+  Data.expHier []                             $ --traceShowId $
 --
 {-
   map_stmt' (f2 Class.addInstances,id,id)     $
@@ -65,9 +65,12 @@ compile p = traceStmt $
   map_stmt' (f2 Class.dclClassDicts,id,id)    $
   map_stmt' (f2 Class.addProtosGen,id,id)     $
 -}
-  map_stmt' (f2 Class.inlClassInst,id,id)     $ --traceShowId $
-  Class.toGenS []                             $
-  map_stmt' (f2 Class.insConstraints,id,id)   $
+  map_stmt' (f2 Class.inlClassInst,id,id)     $
+  --map_stmt' (f2 Class.insGRawWrappers,id,id)  $
+  --Class.toGenS []                             $
+  map_stmt' (f2 Class.setGen',id,id)          $
+  map_stmt' (f2 Class.setGen,id,id)           $
+  map_stmt' (f2 Class.insClassCs,id,id)       $
 --
   map_stmt' (f2 Scope.remSScope,id,id)        $
   map_stmt' (f2 Scope.setScope,id,id)         $

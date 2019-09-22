@@ -9,11 +9,31 @@ import Data.List  (find)
 import Ceu.Grammar.Globals
 import qualified Ceu.Grammar.Constraints as Cs
 import Ceu.Grammar.Ann         (Ann)
-import Ceu.Grammar.Basic       (Proto,Protos)
+import Ceu.Grammar.Basic       (Gen(..))
 import Ceu.Grammar.Type        (TypeC, show', sort', Type(..), FuncType(..), toTTuple, insTTuple, instantiate, listToType)
 import Ceu.Grammar.Full.Full
 
 idtp id tp = dollar $ id ++ "$" ++ show' tp
+
+-------------------------------------------------------------------------------
+
+-- Remove contraint/inst from the program (split actual dcls/impls from their
+-- abstract prototypes).
+--    contraint IEq        (eq,neq)
+--    instance  IEq for Int(eq,neq)
+--
+--    contraint IEq        (eq,neq) ; eq ; neq
+--    instance  IEq for Int(eq,neq) ; eq ; neq
+
+inlClassInst :: Stmt -> Stmt
+inlClassInst (SClassS z id  cs  ifc p) = SClassS z id  cs  ifc $ inlCI p ifc
+inlClassInst (SInstS  z cls tpc imp p) = SInstS  z cls tpc imp $ inlCI p imp
+inlClassInst p = p
+
+inlCI p (SVarSG z id gen tpc ini (SNop _)) = SVarSG z id gen tpc ini p
+inlCI p (SVarSG z id gen tpc ini q)        = SVarSG z id gen tpc ini (inlCI p q)
+inlCI p (SNop z)                           = p
+inlCI p q = error $ show q
 
 -------------------------------------------------------------------------------
 
@@ -23,24 +43,62 @@ idtp id tp = dollar $ id ++ "$" ++ show' tp
 --
 --    contraint IEq (eq where a is IEq,neq where a is IEq)
 
-insConstraints :: Stmt -> Stmt
+insClassCs :: Stmt -> Stmt
 
-insConstraints (SClassS z cls cs ifc p) =
+insClassCs (SClassS z cls cs ifc p) =
    case Cs.toList cs of
     [(var,_)]  -> SClassS z cls cs ifc' p where
-                    ifc' = map_stmt (f2 f, Prelude.id, Prelude.id) [] ifc
-                    f (SVar z id (tp',cs') ini) = SVar z id (tp', Cs.insert (var,cls) cs') ini
-                    f p = p
+                    ifc' = map_stmt (id2, Prelude.id, f) [] ifc
+                    f (tp,cs) = (tp, Cs.insert (var,cls) cs)
     otherwise  -> error "TODO: multiple vars"
 
-insConstraints p = p
+insClassCs p = p
 
 -------------------------------------------------------------------------------
 
+-- Set type of generic var.
+--
+--    contraint IEq        (eq,neq)
+--    instance  IEq for Int(eq,neq)
+--    func f : (a -> Int) where a is IEq
+--
+--    contraint IEq        (eq/GDcl, neq/GClass)
+--    instance  IEq for Int(eq/GInst,  neq/GInstc)
+--    func f/GFunc
+
+setGen :: Stmt -> Stmt
+setGen (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
+  where
+    f :: Stmt -> Stmt
+    f (SVarS z id tpc Nothing    p) = SVarSG z id GDcl tpc Nothing $
+                                        f p
+    f (SVarS z id tpc (Just ini) p) = SVarSG z id GDcl tpc Nothing $
+                                        SVarSG z ('_':dollar id) GRaw tpc (Just ini) $
+                                          f p
+    f s@(SNop _) = s
+setGen (SInstS z cls tpc@(itp,_) imp p) = SInstS z cls tpc (f imp) p
+  where
+    f :: Stmt -> Stmt
+    f (SVarS z id tpc (Just ini) p) = SVarSG z ('_':idtp id itp) GRaw tpc (Just ini) $
+                                        SVarSG z (idtp id itp) GInst tpc Nothing $
+                                          f p
+    f s@(SNop _) = s
+setGen p = p
+
+setGen' :: Stmt -> Stmt
+setGen' (SVarS z id tpc@(_,cs) ini p) | Map.null cs = SVarSG z id GNone tpc ini p
+                                      | otherwise   = SVarSG z id GDcl tpc Nothing $
+                                                        --SVarSG z ('_':idtp id itp) GRaw tpc ini $
+                                                        p
+setGen' p = p
+
+-------------------------------------------------------------------------------
+
+{-
 toGenS :: [Stmt] -> Stmt -> Stmt
 
-toGenS env s@(SClassS z id  cs  ifc       p) = SClassS z id  cs  (toGenC env ifc)     (toGenS (s:env) p)
-toGenS env s@(SInstS  z cls tpc imp       p) = SInstS  z cls tpc (toGenI env tpc imp) (toGenS (s:env) p)
+toGenS env s@(SClassS z id  cs  ifc       p) = SClassS z id  cs  (toGenC (s:env) ifc)     (toGenS (s:env) p)
+toGenS env s@(SInstS  z cls tpc imp       p) = SInstS  z cls tpc (toGenI (s:env) tpc imp) (toGenS (s:env) p)
 toGenS env s@(SVarS   z id  tpc ini       p) = toGenF env s
 toGenS env   (SDataS  z tp  nms st cs abs p) = SDataS  z tp  nms st cs abs (toGenS env p)
 toGenS env   (SMatch  z ini chk exp cses)    = SMatch  z ini chk (toGenE env exp) (map f cses) where
@@ -57,20 +115,21 @@ toGenE env (ECall  z e1 e2)    = ECall  z (toGenE env e1) (toGenE env e2)
 toGenE env exp                 = exp
 
 toGenC :: [Stmt] -> Stmt -> Stmt
-toGenC env (SVarS z id tpc ini p) =
-  SVarSG z id GDcl tpc Nothing $ case ini of
-    Nothing -> toGenC env p
-    Just _  -> SVarSG z ('_':dollar id) GRaw tpc (fmap (toGenE env) ini) $
-                toGenC env p
+toGenC env (SVarS z id tpc Nothing p) =
+  SVarSG z id GDcl tpc Nothing $
+    toGenC env p
+toGenC env (SVarS z id tpc (Just ini) p) =
+  SVarSG z id GDcl tpc Nothing $
+    SVarSG z ('_':dollar id) GRaw tpc (Just $ insGRawWrappers env $ toGenE env ini) $
+      toGenC env p
 toGenC _ s@(SNop _) = s
 --toGenC _ p = error $ show p
 
 toGenI :: [Stmt] -> TypeC -> Stmt -> Stmt
 toGenI env (itp,_) (SVarS z id tpc (Just ini) p) =
-  SVarSG z id GDcl tpc Nothing $
-    SVarSG z ('_':idtp id itp) GRaw tpc (Just $ toGenE env ini) $
-      SVarSG z (idtp id itp) GInst tpc Nothing $
-        toGenC env p
+  SVarSG z ('_':idtp id itp) GRaw tpc (Just $ toGenE env ini) $
+    SVarSG z (idtp id itp) GInst tpc Nothing $
+      toGenC env p
 toGenI _ _ s@(SNop _) = s
 
 toGenF :: [Stmt] -> Stmt -> Stmt
@@ -81,8 +140,6 @@ toGenF env (SVarS z id tpc (Just ini) p) =
     --SVarSG z ('_':idtp id itp) GRaw tpc ini $
       --SVarSG z (idtp id itp) GInst tpc ini $
         toGenS env p
-
-{-
 
     (gen,p') = if Map.null cs then (GNone,Prelude.id) else GFunc [] []
 dupRenImpls _ (SVarS z id gen@(GInst _ itp) tpc' ini p) =
@@ -98,27 +155,60 @@ dupRenImpls env (SVarS z id gen@(GFunc [] []) tpc@(tp,cs) ini p) =
     -- remove constraints since we already receive the actual $dict
     remCtrs :: Exp -> Exp
     remCtrs e = map_exp' (f2 Prelude.id, Prelude.id, (\(tp,_) -> (tp,Cs.cz))) e
--}
 
 -------------------------------------------------------------------------------
 
--- Remove contraint/inst from the program (split actual dcls/impls from their
--- abstract prototypes).
---    contraint IEq        (eq,neq)
---    instance  IEq for Int(eq,neq)
+-- For each existing constraint/default or instance implementation, insert dict
+-- wrappers for all other constraint methods.
 --
---    contraint IEq        (eq,neq) ; eq ; neq
---    instance  IEq for Int(eq,neq) ; eq ; neq
+--    constraint  IEq         (eq,neq(...))
+--
+--    func _$neq$ (x,y) do  // will receive $dict
+--      $eq$ = func (x,y) do return $dict.eq($dict,x,y) end
+--      ... -- one for each other method
+--      ... -- original default implementation
+--    end
 
-inlClassInst :: Stmt -> Stmt
-inlClassInst (SClassS z id  cs  ifc p) = SClassS z id  cs  ifc $ fICI p ifc
-inlClassInst (SInstS  z cls tpc imp p) = SInstS  z cls tpc imp $ fICI p imp
-inlClassInst p = p
+insGRawWrappers :: [Stmt] -> Exp -> Exp
 
-fICI p (SVarSG z id gen tpc ini (SNop _)) = SVarSG z id gen tpc ini p
-fICI p (SVarSG z id gen tpc ini q)        = SVarSG z id gen tpc ini (fICI p q)
-fICI p (SNop z)                           = p
-fICI p q = error $ show q
+insGRawWrappers env (EFunc z tpc@(tp,cs) par p) = EFunc z tpc par p' where
+  p'  = cls2wrappers p cls
+  cls = case traceShow tpc $ Cs.toList cs of
+          [(_,[cls])] -> case find f env of     -- TODO: more css
+                          Just s -> s           -- TODO: Nothing
+                         where
+                          f (SClassS _ id _ _ _) = id == cls
+                          f _ = False
+
+  cls2wrappers :: Stmt -> Stmt -> Stmt
+  cls2wrappers p s@(SClassS _ cls _ ifc _) =
+    foldr ($) p (map f $ toList s) where
+      f :: Stmt -> (Stmt -> Stmt)
+      f (SVarS _ id (TFunc _ inp _,_) _ _) =      -- not yet SVarSG
+        SVarS z (dollar id) (tp,Cs.cz) $          -- remove cs
+          Just (EFunc z (tp,Cs.cz) (expand inp) body)
+        where
+          body = SRet z (ECall z
+                        (ECall z (EField z [dollar cls] id) (EVar z "$dict"))
+                        (insETuple (EVar z "$dict") (toETuple $ expand inp)))
+
+      -- expand inputs:
+      -- ($1,$2) = EArg
+      -- call f ($dict,$1,$2)
+      expand (TTuple l) = ETuple z $
+                            map (\v->EVar z v) $
+                              take (length l) $
+                                map (\v->'$':show v) $
+                                  incs where
+                                    incs  = 1 : map (+1) incs
+      expand _ = EVar z ("$1")
+
+toList :: Stmt -> [Stmt]
+toList (SClassS _ _ _ ifc _) = f ifc where
+  f :: Stmt -> [Stmt]
+  f s@(SVarS _ _ _ _ p) = s : f p           -- not yet SVarSG
+  f   (SNop   _)        = []
+-}
 
 {-
 -------------------------------------------------------------------------------
@@ -303,49 +393,6 @@ dupRenImpls env (SVarS z id gen@(GFunc [] []) tpc@(tp,cs) ini p) =
               insts = map (flip instantiate tp) $ map (zip (Map.keys ctrs)) tpss
 
 dupRenImpls _ p = p
-
--------------------------------------------------------------------------------
-
--- For each existing constraint/default or instance implementation, insert dict
--- wrappers for all other constraint methods.
---
---    constraint  IEq         (eq,neq(...))
---
---    func _$neq$ (x,y) do  // will receive $dict
---      $eq$ = func (x,y) do return $dict.eq($dict,x,y) end
---      ... -- one for each other method
---      ... -- original default implementation
---    end
-
-insGenWrappers :: Stmt -> Stmt
-
-insGenWrappers s@(SVarS z ('_':id) (GClass cls _ pts)                _ (Just _) _) = insGW (cls,pts) s
-insGenWrappers s@(SVarS z ('_':id) (GFunc [SClassS _ cls _ pts _] _) _ (Just _) _) = insGW (cls,pts) s
-insGenWrappers p = p
-
-insGW (cls,pts)
-      (SVarS z ('_':id) gen tpc (Just (EFunc z2 ft2 par2 p2)) p) =
-  SVarS z ('_':id) gen tpc (Just (EFunc z2 ft2 par2 p2')) p where
-    p2' = foldr ($) p2 (map g (filter notme (Map.elems pts))) where
-            notme (_,id',_,_) = id /= id'
-
-            g (_,id',(tp@(TFunc _ inp _),_),_) =
-              SVarS z (dollar id') gen (tp,Cs.cz) -- remove cs
-                (Just (EFunc z (tp,Cs.cz) (expand inp) q)) where
-                  q = SRet z (ECall z
-                              (ECall z (EField z [dollar cls] id') (EVar z "$dict"))
-                              (insETuple (EVar z "$dict") (toETuple $ expand inp)))
-
-            -- expand inputs:
-            -- ($1,$2) = EArg
-            -- call f ($dict,$1,$2)
-            expand (TTuple l) = ETuple z $
-                                  map (\v->EVar z v) $
-                                    take (length l) $
-                                      map (\v->'$':show v) $
-                                        incs where
-                                          incs  = 1 : map (+1) incs
-            expand _ = EVar z ("$1")
 
 -------------------------------------------------------------------------------
 
