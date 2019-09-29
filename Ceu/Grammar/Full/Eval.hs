@@ -53,7 +53,6 @@ compile p = traceStmt $
   Data.expHier []                             $ --traceShowId $
 --
 {-
-  map_stmt' (f2 Class.addInstDicts,id,id)     $   -- uses SSeq / uses (STodo SInst-*)
   map_stmt' (Class.uniInstProtos,id,id)       $   -- uses scope (clss)
 --
   map_stmt' (f2 Class.addInstCall,id,id)      $
@@ -64,6 +63,7 @@ compile p = traceStmt $
 -}
   map_stmt' (f2 Class.dclClassDicts,id,id)    $
   map_stmt' (f2 Class.inlClassInst,id,id)     $
+    -- addInstDicts
   map_stmt' (f2 Class.addGGenDict,id,id)      $
   Class.withEnvS []                           $
     -- addGGenWrappers
