@@ -92,7 +92,7 @@ setGen' p = p
 withEnvS :: [Stmt] -> Stmt -> Stmt
 
 withEnvS env s@(SClassS z id  cs   ifc       p) = SClassS z id  cs  (withEnvS (s:env) ifc) (withEnvS (s:env) p)
-withEnvS env s@(SInstS  z cls tpc  imp       p) = addInstMissing env $ addClassToInst env $ SInstS  z cls tpc (withEnvS (s:env) imp) (withEnvS (s:env) p)
+withEnvS env s@(SInstS  z cls tpc  imp       p) = addClassToInst env $ SInstS  z cls tpc (withEnvS (s:env) imp) (withEnvS (s:env) p)
 withEnvS env   (SDataS  z tp  nms  st cs abs p) = SDataS  z tp  nms st cs abs              (withEnvS env p)
 withEnvS env   (SMatch  z ini chk  exp cses)    = SMatch  z ini chk (withEnvE env exp) (map f cses) where
                                                     f (ds,pt,st) = (withEnvS env ds, withEnvE env pt, withEnvS env st)
@@ -169,6 +169,7 @@ addGGenWrappers env (EFunc z tpc@(tp,cs) par p) = EFunc z tpc par p' where
       expand _ = EVar z ("$1")
 
 -------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 
 -- Add missing constraint methods to instance.
 --
@@ -188,18 +189,12 @@ addGGenWrappers env (EFunc z tpc@(tp,cs) par p) = EFunc z tpc par p' where
 --
 --    func $f$Int$   (x)   return _$f$($IEq$Int,x)
 
-addInstMissing :: [Stmt] -> Stmt -> Stmt
+addInstMissing :: Stmt -> Stmt
 
-addInstMissing env (SInstSC z (cls,ifc) tpc@(tp,_) imp p) =
+addInstMissing (SInstSC z (cls,ifc) tpc@(tp,_) imp p) =
   SInstSC z (cls,ifc) tpc imp' p where
     dif  = Set.difference (Set.fromList $ map toName $ toGDcls' ifc) (Set.fromList $ map toName $ toGDcls' imp)
-    scls = case find f env of     -- TODO: more css
-            Just s -> s          -- TODO: Nothing
-            where
-              f (SClassS _ id _ _ _) = id == cls
-              f _ = False
-
-    imp' = foldr ($) imp $ map g (filter f $ toGDcls scls) where
+    imp' = foldr ($) imp $ map g (filter f $ toGDcls' ifc) where
             f (SVarSG _ id _ _ _ _) = elem id dif
 
             g :: Stmt -> (Stmt -> Stmt)
@@ -239,7 +234,7 @@ addInstMissing env (SInstSC z (cls,ifc) tpc@(tp,_) imp p) =
   addInstances p = p
   -}
 
-addInstMissing _ p = p
+addInstMissing p = p
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
