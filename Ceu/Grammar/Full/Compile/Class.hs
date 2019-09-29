@@ -274,25 +274,38 @@ addGGenDict p = p
 --
 --    contraint IEq        (eq,neq) ; eq ; neq
 --    instance  IEq for Int(eq,neq) ; eq ; neq
+--
+-- For each instance, add its dictionary.
+-- First the dict declaration, then the instance body, then the dict assignment.
+--
+--    instance of IEq for Int (eq(x,y))
+--
+--    var $IEq$Int$ : $IEq$
+--    ... // body
+--    $IEq$Int$ = $IEq$(_$eq$Int$, _$neq$Int$)
 
 inlClassInst :: Stmt -> Stmt
-inlClassInst (SClassS z id  cs         ifc p) = SClassS z id  cs  ifc $ inlCI p ifc
-inlClassInst (SInstSC z cls tpc@(tp,_) imp p) = SInstSC z cls tpc imp $ inlCI (addDictIni p) (addDictDcl imp)
+inlClassInst (SClassS z id        cs         ifc p) = SClassS z id        cs  ifc $ inlCI p ifc
+inlClassInst (SInstSC z (cls,ifc) tpc@(tp,_) imp p) = SInstSC z (cls,ifc) tpc imp $ inlCI (addDictIni p) (addDictDcl imp)
   where
-    dict = dollar $ fst cls ++ "$" ++ show' tp
-    addDictDcl imp = SVarSG z dict GNone (TData False [dollar $ fst cls] [],Cs.cz) Nothing imp
-    addDictIni p   = p
-{-
+    dict = dollar $ cls ++ "$" ++ show' tp
+    addDictDcl imp = SVarSG z dict GNone (TData False [dollar cls] [],Cs.cz) Nothing imp
     addDictIni p   = SSeq z
                       (SSet z True False
                         (EVar z dict)
-                        (ECall z (ECons z [dollar cls]) (listToExp $ map g $ Map.elems imp)))
+                        (ECall z (ECons z [dollar cls]) (traceShowId $ listToExp $ map toEVar $ map isDcl $ map toName $ toGDcls' ifc)))
                       p
                      where
-                      g :: Proto -> Exp
-                      g (z,id,_,False) = EVar z ('_' : dollar id)
-                      g (z,id,_,True)  = EVar z ('_' : dollar (id++"$"++show' tp))
--}
+                      toEVar :: (Bool,ID_Var) -> Exp
+                      toEVar (True,  id) = EVar z ('_' : dollar id)
+                      toEVar (False, id) = EVar z ('_' : dollar (id++"$"++show' tp))
+
+                      isDcl :: ID_Var -> (Bool,ID_Var)
+                      isDcl id = (f id, id) where
+                                  f :: ID_Var -> Bool
+                                  f id = elem id $
+                                          Set.difference (Set.fromList $ map toName $ toGDcls' ifc)
+                                                         (Set.fromList $ map toName $ toGDcls' imp)
 
 -------------------------------------------------------------------------------
 
