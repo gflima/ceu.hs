@@ -16,13 +16,13 @@ import Ceu.Grammar.Full.Full
 idtp id tp = dollar $ id ++ "$" ++ show' tp
 
 toGDcls :: Stmt -> [Stmt]
-toGDcls (SClassS _ _ _ ifc _) = toGDs ifc
-toGDcls (SInstS  _ _ _ imp _) = toGDs imp
+toGDcls (SClassS _ _ _ ifc _) = toGDcls' ifc
+toGDcls (SInstS  _ _ _ imp _) = toGDcls' imp
 
-toGDs :: Stmt -> [Stmt]
-toGDs s@(SVarSG _ _ GDcl _ _ p) = s : toGDs p
-toGDs s@(SVarSG _ _ _    _ _ p) = toGDs p
-toGDs   (SNop   _)              = []
+toGDcls' :: Stmt -> [Stmt]
+toGDcls' s@(SVarSG _ _ GDcl _ _ p) = s : toGDcls' p
+toGDcls' s@(SVarSG _ _ _    _ _ p) = toGDcls' p
+toGDcls'   (SNop   _)              = []
 
 toName :: Stmt -> ID_Var
 toName (SVarSG _ id _ _ _ _) = id
@@ -92,7 +92,7 @@ setGen' p = p
 withEnvS :: [Stmt] -> Stmt -> Stmt
 
 withEnvS env s@(SClassS z id  cs   ifc       p) = SClassS z id  cs  (withEnvS (s:env) ifc) (withEnvS (s:env) p)
-withEnvS env s@(SInstS  z cls tpc  imp       p) = addInstMissing env $ SInstS  z cls tpc (withEnvS (s:env) imp) (withEnvS (s:env) p)
+withEnvS env s@(SInstS  z cls tpc  imp       p) = addInstMissing env $ addClassToInst env $ SInstS  z cls tpc (withEnvS (s:env) imp) (withEnvS (s:env) p)
 withEnvS env   (SDataS  z tp  nms  st cs abs p) = SDataS  z tp  nms st cs abs              (withEnvS env p)
 withEnvS env   (SMatch  z ini chk  exp cses)    = SMatch  z ini chk (withEnvE env exp) (map f cses) where
                                                     f (ds,pt,st) = (withEnvS env ds, withEnvE env pt, withEnvS env st)
@@ -111,10 +111,22 @@ withEnvE env exp                 = exp
 
 -------------------------------------------------------------------------------
 
+addClassToInst :: [Stmt] -> Stmt -> Stmt
+addClassToInst env s@(SInstS z cls tpc@(tp,_) imp p) = SInstSC z (cls,ifc) tpc imp p
+  where
+    ifc = case find f env of                  -- TODO: more css
+            Just (SClassS _ _ _ ifc _) -> ifc -- TODO: Nothing
+            where
+              f (SClassS _ id _ _ _) = id == cls
+              f _ = False
+addClassToInst _ p = p
+
+-------------------------------------------------------------------------------
+
 -- For each existing constraint/default or instance implementation, insert dict
 -- wrappers for all other constraint methods.
 --
---    constraint  IEq         (eq,neq(...))
+--    constraint  IEq (eq,neq(...))
 --
 --    func _$neq$ (x,y) do  // will receive $dict
 --      $eq$ = func (x,y) do return $dict.eq($dict,x,y) end
@@ -178,16 +190,16 @@ addGGenWrappers env (EFunc z tpc@(tp,cs) par p) = EFunc z tpc par p' where
 
 addInstMissing :: [Stmt] -> Stmt -> Stmt
 
-addInstMissing env s@(SInstS z cls tpc@(tp,_) pts bdy) =
-  SInstS z cls tpc pts' bdy where
-    dif  = Set.difference (Set.fromList $ map toName $ toGDcls scls) (Set.fromList $ map toName $ toGDcls s)
+addInstMissing env (SInstSC z (cls,ifc) tpc@(tp,_) imp p) =
+  SInstSC z (cls,ifc) tpc imp' p where
+    dif  = Set.difference (Set.fromList $ map toName $ toGDcls' ifc) (Set.fromList $ map toName $ toGDcls' imp)
     scls = case find f env of     -- TODO: more css
             Just s -> s          -- TODO: Nothing
             where
               f (SClassS _ id _ _ _) = id == cls
               f _ = False
 
-    pts' = foldr ($) pts $ map g (filter f $ toGDcls scls) where
+    imp' = foldr ($) imp $ map g (filter f $ toGDcls scls) where
             f (SVarSG _ id _ _ _ _) = elem id dif
 
             g :: Stmt -> (Stmt -> Stmt)
@@ -270,10 +282,10 @@ addGGenDict p = p
 
 inlClassInst :: Stmt -> Stmt
 inlClassInst (SClassS z id  cs         ifc p) = SClassS z id  cs  ifc $ inlCI p ifc
-inlClassInst (SInstS  z cls tpc@(tp,_) imp p) = SInstS  z cls tpc imp $ inlCI (addDictIni p) (addDictDcl imp)
+inlClassInst (SInstSC z cls tpc@(tp,_) imp p) = SInstSC z cls tpc imp $ inlCI (addDictIni p) (addDictDcl imp)
   where
-    dict = dollar $ cls ++ "$" ++ show' tp
-    addDictDcl imp = SVarSG z dict GNone (TData False [dollar cls] [],Cs.cz) Nothing imp
+    dict = dollar $ fst cls ++ "$" ++ show' tp
+    addDictDcl imp = SVarSG z dict GNone (TData False [dollar $ fst cls] [],Cs.cz) Nothing imp
     addDictIni p   = p
 {-
     addDictIni p   = SSeq z
