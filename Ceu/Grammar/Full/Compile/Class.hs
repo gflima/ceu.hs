@@ -265,9 +265,9 @@ repGGenInsts env (SVarSG z id GDcl tpc@(tp,cs) Nothing p) =
 --
 --    func $f$Int$   (x)   return _$f$($IEq$Int,x)
 
-addInstMissing :: Stmt -> Stmt
+addInstGCalls :: Stmt -> Stmt
 
-addInstMissing (SInstSC z (cls,ifc) tpc@(tp,_) imp p) =
+addInstGCalls (SInstSC z (cls,ifc) tpc@(tp,_) imp p) =
   SInstSC z (cls,ifc) tpc imp' p where
     dif  = Set.difference (Set.fromList $ map toName $ toGDcls' ifc) (Set.fromList $ map toName $ toGDcls' imp)
     imp' = foldr ($) imp $ map g (filter f $ toGDcls' ifc) where
@@ -276,11 +276,21 @@ addInstMissing (SInstSC z (cls,ifc) tpc@(tp,_) imp p) =
             g :: Stmt -> (Stmt -> Stmt)
             g (SNop _) = Prelude.id
             g (SVarSG z2 id2 gen2 tpc2@(tp2,_) _ _) =
-              SVarSG z2 (idtp id2 tp) GCall tpc2' (Just (EFunc z2 tpc2' par_dcl p)) where
+              SVarSG z2 (idtp id2 tp) GCall tpc2' Nothing where
                 tp2' = instantiate [("a",tp)] tp2  -- TODO: a is fixed
                 (TFunc _ inp2' _) = tp2'
                 tpc2' = (tp2',Cs.cz)
 
+addInstGCalls p = p
+
+-------------------------------------------------------------------------------
+
+addGCallBody (SVarSG z id GGen (TFunc ft1 inp1 out1,cs1)
+              (Just (EFunc z2 (TFunc ft2 inp2 out2,cs2) par2 p2))
+              p) =
+addGCallBody
+
+(Just (EFunc z2 tpc2' par_dcl p))
                 p = SRet z2 (ECall z2 (EVar z2 ('_':dollar id2)) par_call)
 
                 par_dcl  = listToExp $ map (EVar z2) $ fpar inp2'
@@ -309,8 +319,6 @@ addInstMissing (SInstSC z (cls,ifc) tpc@(tp,_) imp p) =
 
   addInstances p = p
   -}
-
-addInstMissing p = p
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
