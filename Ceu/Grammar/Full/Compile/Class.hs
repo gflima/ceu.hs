@@ -74,7 +74,7 @@ setGen (SInstS z cls tpc@(itp,_) imp p) = SInstS z cls tpc (f imp) p
     f :: Stmt -> Stmt
     f (SVarS z id tpc (Just ini) p) = SVarSG z id GDcl tpc Nothing $
                                         SVarSG z ('_':idtp id itp) (GOne cls) tpc (Just ini) $
-                                          SVarSG z (idtp id itp) GCall tpc Nothing $
+                                          SVarSG z (idtp id itp) (GCall cls itp) tpc Nothing $
                                             f p
     f s@(SNop _) = s
 setGen p = p
@@ -197,8 +197,9 @@ repGGenInsts env (SVarSG z id GDcl tpc@(tp,cs) Nothing p) =
     -- one F for each instance
 
     f :: ([Stmt],[Type]) -> Stmt -> Stmt
-    f (x,[itp]) p = SVarSG z (idtp id itp) GCall (tp',Cs.cz) Nothing p where
-                        tp' = instantiate [("a",itp)] tp
+    f ([SClassS _ cls _ _ _],[itp]) p =
+      SVarSG z (idtp id itp) (GCall cls itp) (tp',Cs.cz) Nothing p where
+        tp' = instantiate [("a",itp)] tp
 
     idss :: [[ID_Class]]
     idss = map Set.toList $ Map.elems cs
@@ -262,12 +263,10 @@ repGGenInsts env (SVarSG z id GDcl tpc@(tp,cs) Nothing p) =
 --
 --    instance of IEq for Int (eq(x,y))
 --    var $f$Int$ x : (Int -> Int);
---
---    func $f$Int$   (x)   return _$f$($IEq$Int,x)
 
 addInstGCalls :: Stmt -> Stmt
 
-addInstGCalls (SInstSC z (cls,ifc) tpc@(tp,_) imp p) =
+addInstGCalls (SInstSC z (cls,ifc) tpc@(itp,_) imp p) =
   SInstSC z (cls,ifc) tpc imp' p where
     dif  = Set.difference (Set.fromList $ map toName $ toGDcls' ifc) (Set.fromList $ map toName $ toGDcls' imp)
     imp' = foldr ($) imp $ map g (filter f $ toGDcls' ifc) where
@@ -276,8 +275,8 @@ addInstGCalls (SInstSC z (cls,ifc) tpc@(tp,_) imp p) =
             g :: Stmt -> (Stmt -> Stmt)
             g (SNop _) = Prelude.id
             g (SVarSG z2 id2 gen2 tpc2@(tp2,_) _ _) =
-              SVarSG z2 (idtp id2 tp) GCall tpc2' Nothing where
-                tp2' = instantiate [("a",tp)] tp2  -- TODO: a is fixed
+              SVarSG z2 (idtp id2 itp) (GCall cls itp) tpc2' Nothing where
+                tp2' = instantiate [("a",itp)] tp2  -- TODO: a is fixed
                 (TFunc _ inp2' _) = tp2'
                 tpc2' = (tp2',Cs.cz)
 
@@ -285,23 +284,25 @@ addInstGCalls p = p
 
 -------------------------------------------------------------------------------
 
-addGCallBody (SVarSG z id GGen (TFunc ft1 inp1 out1,cs1)
-              (Just (EFunc z2 (TFunc ft2 inp2 out2,cs2) par2 p2))
-              p) =
-addGCallBody
+--    func $f$Int$ (x) return _$f$($IEq$Int,x)
 
-(Just (EFunc z2 tpc2' par_dcl p))
-                p = SRet z2 (ECall z2 (EVar z2 ('_':dollar id2)) par_call)
+addGCallBody (SVarSG z id (GCall cls itp) tpc@(TFunc ft inp out,cs) Nothing p) =
+  SVarSG z id (GCall cls itp) tpc (Just (EFunc z tpc par_dcl bdy)) p where
+    bdy = SRet z (ECall z (EVar z ('_':id)) par_call)
 
-                par_dcl  = listToExp $ map (EVar z2) $ fpar inp2'
-                par_call = listToExp $ map (EVar z2) $ (("$"++cls++"$"++show' tp++"$") :) $ fpar inp2'
+    par_dcl  = listToExp $ map (EVar z) $ fpar inp
+    par_call = listToExp $ map (EVar z) $ (("$"++cls++"$"++show' itp++"$") :) $ fpar inp
 
-                fpar inp = map ('$':) $ map show $ lns $ len $ toTTuple inp where
-                            len (TTuple l) = length l
-                            lns n = take n lns' where
-                                      lns' = 1 : map (+1) lns'
+    fpar inp = map ('$':) $ map show $ lns $ len $ toTTuple inp where
+                len (TTuple l) = length l
+                lns n = take n lns' where
+                          lns' = 1 : map (+1) lns'
+
+
+addGCallBody p = p
 
   {-
+(Just (EFunc z2 tpc2' par_dcl p))
   addInstances :: Stmt -> Stmt
 
   addInstances (SInstS z cls tpc@(tp,_) pts (SVarS z2 id2 gen2 tp2 Nothing bdy)) =

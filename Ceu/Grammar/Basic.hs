@@ -67,7 +67,7 @@ data Stmt
 
 -------------------------------------------------------------------------------
 
-data Gen = GNone | GDcl | GGen | GOne ID_Class | GCall
+data Gen = GNone | GDcl | GGen | GOne ID_Class | GCall ID_Class Type
   deriving (Show,Eq)
 
 data EnvType = EnvGlobal | EnvNonLocal | EnvLocal

@@ -65,7 +65,8 @@ compile p = traceStmt $
   map_stmt' (f2 Class.inlClassInst,id,id)     $
     -- addInstDicts
   map_stmt' (f2 Class.addGenDict,id,id)       $
-  map_stmt' (f2 Class.addInstMissing,id,id)   $
+  map_stmt' (f2 Class.addGCallBody,id,id)     $
+  map_stmt' (f2 Class.addInstGCalls,id,id)    $
   Class.withEnvS []                           $
     -- addClassToInst
     -- addGGenWrappers
