@@ -26,7 +26,7 @@ remSFunc p = p
 
 -------------------------------------------------------------------------------
 
-remEFuncPar :: Exp -> Exp   -- EFunc -> (SSeq,SSet)
+remEFuncPar :: Exp -> Exp
 
 remEFuncPar (EFunc z tpc@(TFunc _ inp _,cs) par imp) = EFunc' z tpc imp'
   where

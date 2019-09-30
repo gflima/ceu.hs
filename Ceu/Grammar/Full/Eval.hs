@@ -69,6 +69,7 @@ compile p = traceStmt $
   Class.withEnvS []                           $
     -- addClassToInst
     -- addGGenWrappers
+    -- repGGenInsts
   map_stmt' (f2 Class.setGen',id,id)          $
   map_stmt' (f2 Class.setGen,id,id)           $
   map_stmt' (f2 Class.addClassCs,id,id)       $

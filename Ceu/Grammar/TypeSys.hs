@@ -652,7 +652,7 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id@(cid:_)) = (es, ftReq (length envs) (
           Nothing -> (id, (TAny,cz), (False,0),
                       map (toError z) $ fromLeft $ relatesC rel txpc (last (map (getTpc.snd) xs)))
                         where getTpc (SVar _ _ _ tpc _) = tpc
-          Just (lnr, SVar _ _ GNone tpc _)        -> (id, tpc, lnr, [])
+          Just (lnr, SVar _ _ GNone tpc _)    -> (id, tpc, lnr, [])
           Just (lnr, SVar _ _ _ tpc@(_,cs) _) ->
             if cid == '_' then
               (id, tpc, lnr, [])  -- direct access to _$...$

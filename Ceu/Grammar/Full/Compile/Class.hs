@@ -82,7 +82,7 @@ setGen p = p
 setGen' :: Stmt -> Stmt
 setGen' (SVarS z id tpc@(_,cs) ini p) | Map.null cs = SVarSG z id GNone tpc ini p
                                       | otherwise   = SVarSG z id GDcl tpc Nothing $
-                                                        --SVarSG z ('_':idtp id itp) GRaw tpc ini $
+                                                        SVarSG z ('_':dollar id) GGen tpc ini $
                                                         p
 setGen' p = p
 
@@ -99,8 +99,12 @@ withEnvS env   (SMatch  z ini chk  exp cses)    = SMatch  z ini chk (withEnvE en
 withEnvS env   (SIf     z exp p1 p2)            = SIf     z (withEnvE env exp) (withEnvS env p1) (withEnvS env p2)
 withEnvS env   (SSeq    z p1 p2)                = SSeq    z (withEnvS env p1) (withEnvS env p2)
 withEnvS env   (SLoop   z p)                    = SLoop   z (withEnvS env p)
-withEnvS env   (SVarSG  z id  GGen tpc (Just ini) p) = SVarSG z id GGen tpc (Just $ addGGenWrappers env $ withEnvE env ini) (withEnvS env p)
-withEnvS env   (SVarSG  z id  gen  tpc ini        p) = SVarSG z id gen  tpc (fmap (withEnvE env) ini) (withEnvS env p)
+withEnvS env   (SVarSG  z id  GGen tpc (Just ini) p) =
+  SVarSG z id GGen tpc (Just $ addGGenWrappers env $ withEnvE env ini) (withEnvS env p)
+withEnvS env   (SVarSG  z id  GDcl tpc Nothing    p) =
+  repGGenInsts env $ SVarSG z id GDcl tpc Nothing (withEnvS env p)
+withEnvS env   (SVarSG  z id  gen  tpc ini        p) =
+  SVarSG z id gen  tpc (fmap (withEnvE env) ini) (withEnvS env p)
 withEnvS env   p                               = p
 
 withEnvE :: [Stmt] -> Exp -> Exp
@@ -149,7 +153,7 @@ addGGenWrappers env (EFunc z tpc@(tp,cs) par p) = EFunc z tpc par p' where
   cls2wrappers p s@(SClassS _ cls _ ifc _) =
     foldr ($) p (map f $ toGDcls s) where
       f :: Stmt -> (Stmt -> Stmt)
-      f (SVarSG _ id GDcl (TFunc _ inp _,_) _ _) =
+      f (SVarSG _ id GDcl (tp@(TFunc _ inp _),_) _ _) =
         SVarSG z (dollar id) GNone (tp,Cs.cz) $          -- remove cs
           Just (EFunc z (tp,Cs.cz) (expand inp) body)
         where
@@ -167,6 +171,78 @@ addGGenWrappers env (EFunc z tpc@(tp,cs) par p) = EFunc z tpc par p' where
                                   incs where
                                     incs  = 1 : map (+1) incs
       expand _ = EVar z ("$1")
+
+-------------------------------------------------------------------------------
+
+-- Create one copy for each instance of constraint.
+--
+--    func f x : (a -> Int) where a is IEq
+--    func f (x)                // declaration
+--    func _$f$ (x)             // will receive $dict // remove constraints from types
+--    func $f$Int$ (x)          // wrapper to call _$f$ with $IEq$Int$
+--    func $f$Bool$ (x)         // wrapper to call _$f$ with $IEq$Bool$
+--    ...
+
+repGGenInsts :: [Stmt] -> Stmt -> Stmt
+repGGenInsts env (SVarSG z id GDcl tpc@(tp,cs) Nothing p) =
+  SVarSG z id GDcl tpc Nothing $
+    foldr f p $ zip stmtss itpss
+  where
+    -- remove constraints since we already receive the actual $dict
+    remCtrs :: Exp -> Exp
+    remCtrs e = map_exp' (f2 Prelude.id, Prelude.id, (\(tp,_) -> (tp,Cs.cz))) e
+
+    ---------------------------------------------------------------------------
+
+    -- one F for each instance
+
+    f :: ([Stmt],[Type]) -> Stmt -> Stmt
+    f (x,[itp]) p = SVarSG z (idtp id itp) GCall (tp',Cs.cz) Nothing p where
+                        tp' = instantiate [("a",itp)] tp
+
+    idss :: [[ID_Class]]
+    idss = map Set.toList $ Map.elems cs
+
+    stmtss :: [[Stmt]]
+    stmtss = map (map getCls) $ map Set.toList $ Map.elems cs where
+              getCls cls = case find f env of
+                            Just s -> s
+                            -- TODO: Nothing
+                           where
+                            f (SClassS _ id _ _ _) = id == cls
+                            f _ = False
+
+    -- TODO: single dict
+    [stmts] = stmtss
+
+    itpss :: [[Type]]
+    itpss = sort' $ combos' 1 env idss
+
+    -- [ [Ia], [Ib], ... ]
+    -- [ [A1,A2,...], [B1,B2,...], ... ]
+    -- [ [A1,B1,...], [A1,B2,...], ... ]
+    combos' :: Int -> [Stmt] -> [[ID_Class]] -> [[Type]]
+    combos' lvl env clss = combos insts where
+      insts :: [[Type]]
+      insts = map h clss
+        where
+          h :: [ID_Class] -> [Type]
+          h [cls] = concatMap h $ map g $ filter f env where
+            f :: Stmt -> Bool
+            f (SInstS _ cls' (_,ctrs') _ _) = (cls == cls') && (lvl>0 || null ctrs')
+            f _                             = False
+
+            g :: Stmt -> TypeC
+            g (SInstS _ _ tpc _ _) = tpc  -- types to instantiate
+
+            -- expand types with constraints to multiple types
+            -- TODO: currently refuse another level of constraints
+            -- Int    -> [Int]
+            -- X of a -> [X of Int, ...]
+            h :: TypeC -> [Type]
+            h tpc@(tp, ctrs) = if null ctrs then [tp] else insts where
+              tpss  = combos' (lvl-1) env (map Set.toList $ Map.elems ctrs)
+              insts = map (flip instantiate tp) $ map (zip (Map.keys ctrs)) tpss
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
@@ -200,7 +276,7 @@ addInstMissing (SInstSC z (cls,ifc) tpc@(tp,_) imp p) =
             g :: Stmt -> (Stmt -> Stmt)
             g (SNop _) = Prelude.id
             g (SVarSG z2 id2 gen2 tpc2@(tp2,_) _ _) =
-              SVarSG z2 (idtp id2 tp) gen2 tpc2' (Just (EFunc z2 tpc2' par_dcl p)) where
+              SVarSG z2 (idtp id2 tp) GCall tpc2' (Just (EFunc z2 tpc2' par_dcl p)) where
                 tp2' = instantiate [("a",tp)] tp2  -- TODO: a is fixed
                 (TFunc _ inp2' _) = tp2'
                 tpc2' = (tp2',Cs.cz)
@@ -304,7 +380,7 @@ inlClassInst (SInstSC z (cls,ifc) tpc@(tp,_) imp p) = SInstSC z (cls,ifc) tpc im
     addDictIni p   = SSeq z
                       (SSet z True False
                         (EVar z dict)
-                        (ECall z (ECons z [dollar cls]) (traceShowId $ listToExp $ map toEVar $ map isDcl $ map toName $ toGDcls' ifc)))
+                        (ECall z (ECons z [dollar cls]) (listToExp $ map toEVar $ map isDcl $ map toName $ toGDcls' ifc)))
                       p
                      where
                       toEVar :: (Bool,ID_Var) -> Exp
@@ -398,13 +474,6 @@ remClassInst p = p
 --    func _$eq$Int$ (x,y)      // actual implementation (will receive $dict)
 --    func $eq$Int$ (x,y)       // wrapper to call _$eq$Int$ with $dict
 --
---    func f x : (a -> Int) where a is IEq
---    func f (x)                // declaration
---    func _$f$ (x)             // will receive $dict // remove constraints from types
---    func $f$Int$ (x)          // wrapper to call _$f$ with $IEq$Int$
---    func $f$Bool$ (x)         // wrapper to call _$f$ with $IEq$Bool$
---    ...
-
 dupRenImpls :: [Stmt] -> Stmt -> Stmt
 
 dupRenImpls _ (SVarS z id gen@(GClass _ _ _) tpc@(tp,_) ini p) =
@@ -416,67 +485,6 @@ dupRenImpls _ (SVarS z id gen@(GInst _ itp) tpc' ini p) =
   SVarS z (idtp id itp) gen tpc' ini $
     SVarS z ('_':idtp id itp) gen tpc' ini $
       p
-
-dupRenImpls env (SVarS z id gen@(GFunc [] []) tpc@(tp,cs) ini p) =
-  SVarS z id gen tpc Nothing $
-    SVarS z ('_':dollar id) (GFunc stmts []) tpc (fmap remCtrs ini) $
-      foldr f p $ zip stmtss itpss
-  where
-    -- remove constraints since we already receive the actual $dict
-    remCtrs :: Exp -> Exp
-    remCtrs e = map_exp' (f2 Prelude.id, Prelude.id, (\(tp,_) -> (tp,Cs.cz))) e
-
-    ---------------------------------------------------------------------------
-
-    -- one F for each instance
-
-    f :: ([Stmt],[Type]) -> Stmt -> Stmt
-    f (x,[itp]) p = SVarS z (idtp id itp) (GFunc x [itp]) (tp',Cs.cz) Nothing p where
-                        tp' = instantiate [("a",itp)] tp
-
-    idss :: [[ID_Class]]
-    idss = map Set.toList $ Map.elems cs
-
-    stmtss :: [[Stmt]]
-    stmtss = map (map getCls) $ map Set.toList $ Map.elems cs where
-              getCls cls = case find f env of
-                            Just s -> s
-                            -- TODO: Nothing
-                           where
-                            f (SClassS _ id _ _ _) = id == cls
-                            f _ = False
-
-    -- TODO: single dict
-    [stmts] = stmtss
-
-    itpss :: [[Type]]
-    itpss = sort' $ combos' 1 env idss
-
-    -- [ [Ia], [Ib], ... ]
-    -- [ [A1,A2,...], [B1,B2,...], ... ]
-    -- [ [A1,B1,...], [A1,B2,...], ... ]
-    combos' :: Int -> [Stmt] -> [[ID_Class]] -> [[Type]]
-    combos' lvl env clss = combos insts where
-      insts :: [[Type]]
-      insts = map h clss
-        where
-          h :: [ID_Class] -> [Type]
-          h [cls] = concatMap h $ map g $ filter f env where
-            f :: Stmt -> Bool
-            f (SInstS _ cls' (_,ctrs') _ _) = (cls == cls') && (lvl>0 || null ctrs')
-            f _                             = False
-
-            g :: Stmt -> TypeC
-            g (SInstS _ _ tpc _ _) = tpc  -- types to instantiate
-
-            -- expand types with constraints to multiple types
-            -- TODO: currently refuse another level of constraints
-            -- Int    -> [Int]
-            -- X of a -> [X of Int, ...]
-            h :: TypeC -> [Type]
-            h tpc@(tp, ctrs) = if null ctrs then [tp] else insts where
-              tpss  = combos' (lvl-1) env (map Set.toList $ Map.elems ctrs)
-              insts = map (flip instantiate tp) $ map (zip (Map.keys ctrs)) tpss
 
 dupRenImpls _ p = p
 
