@@ -73,7 +73,7 @@ setGen (SInstS z cls tpc@(itp,_) imp p) = SInstS z cls tpc (f imp) p
   where
     f :: Stmt -> Stmt
     f (SVarS z id tpc (Just ini) p) = SVarSG z id GDcl tpc Nothing $
-                                        SVarSG z ('_':idtp id itp) GOne tpc (Just ini) $
+                                        SVarSG z ('_':idtp id itp) (GOne cls) tpc (Just ini) $
                                           SVarSG z (idtp id itp) GCall tpc Nothing $
                                             f p
     f s@(SNop _) = s
@@ -248,9 +248,9 @@ addInstMissing p = p
 --    func _$neq$ ($dict,x,y)
 --    func _$eq$Int$ ($dict,x,y)
 
-addGGenDict :: Stmt -> Stmt
+addGenDict :: Stmt -> Stmt
 
-addGGenDict (SVarSG z id GGen (TFunc ft1 inp1 out1,cs1)
+addGenDict (SVarSG z id GGen (TFunc ft1 inp1 out1,cs1)
               (Just (EFunc z2 (TFunc ft2 inp2 out2,cs2) par2 p2))
               p) =
   SVarSG z id GGen (TFunc ft1 inp1' out1,cs1)
@@ -262,7 +262,18 @@ addGGenDict (SVarSG z id GGen (TFunc ft1 inp1 out1,cs1)
     par2' = insETuple (EVar z "$dict") (toETuple par2)
     [(_,[cls])] = Cs.toList cs1 -- TODO: more css
 
-addGGenDict p = p
+addGenDict (SVarSG z id (GOne cls) (TFunc ft1 inp1 out1,cs1)
+              (Just (EFunc z2 (TFunc ft2 inp2 out2,cs2) par2 p2))
+              p) =
+  SVarSG z id (GOne cls) (TFunc ft1 inp1' out1,cs1)
+    (Just (EFunc z2 (TFunc ft2 inp2' out2,cs2) par2' p2))
+    p
+  where
+    inp1' = insTTuple (TData False [dollar cls] []) (toTTuple inp1)
+    inp2' = insTTuple (TData False [dollar cls] []) (toTTuple inp2)
+    par2' = insETuple (EVar z "$dict") (toETuple par2)
+
+addGenDict p = p
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------

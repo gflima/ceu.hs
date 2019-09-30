@@ -64,7 +64,7 @@ compile p = traceStmt $
   map_stmt' (f2 Class.dclClassDicts,id,id)    $
   map_stmt' (f2 Class.inlClassInst,id,id)     $
     -- addInstDicts
-  map_stmt' (f2 Class.addGGenDict,id,id)      $
+  map_stmt' (f2 Class.addGenDict,id,id)       $
   map_stmt' (f2 Class.addInstMissing,id,id)   $
   Class.withEnvS []                           $
     -- addClassToInst

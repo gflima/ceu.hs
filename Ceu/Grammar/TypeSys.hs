@@ -653,7 +653,10 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id@(cid:_)) = (es, ftReq (length envs) (
                       map (toError z) $ fromLeft $ relatesC rel txpc (last (map (getTpc.snd) xs)))
                         where getTpc (SVar _ _ _ tpc _) = tpc
           Just (lnr, SVar _ _ GNone tpc _)        -> (id, tpc, lnr, [])
-          Just (lnr, SVar _ _ _     tpc@(_,cs) _) ->
+          Just (lnr, SVar _ _ _ tpc@(_,cs) _) ->
+            if cid == '_' then
+              (id, tpc, lnr, [])  -- direct access to _$...$
+            else
               case find pred (concat envs) of            -- find instance
                 Just (SVar _ k _ tpc@(tp,cs) _) -> (k, tpc, lnr, [])
                 Nothing -> (id, (TAny,cz), lnr, err)

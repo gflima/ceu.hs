@@ -59,7 +59,7 @@ spec = do
           ])
         `shouldBe` Right (EData ["Int","1"] EUnit)
 
-      it "XXX: IEq + default + Int + f" $
+      it "XXX-4: IEq + default + Int + f" $
         (run True $
           unlines [
             "constraint IEq for a with"          ,
