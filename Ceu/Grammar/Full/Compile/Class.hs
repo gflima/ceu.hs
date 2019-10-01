@@ -384,10 +384,10 @@ addGenDict p = p
 --    $IEq$Int$ = $IEq$(_$eq$Int$, _$neq$Int$)
 
 inlClassInst :: Stmt -> Stmt
-inlClassInst (SClassS z id             cs         ifc p) = SClassS z id             cs  ifc $ inlCI False p ifc
-inlClassInst (SInstSC z (cls,ifc,gens) tpc@(tp,_) imp p) = SInstSC z (cls,ifc,gens) tpc imp $ inlCI True  (addDictIni p) (addDictDcl imp)
+inlClassInst (SClassS z id             cs  ifc p) = SClassS z id             cs  ifc $ inlCI False p ifc
+inlClassInst (SInstSC z (cls,ifc,gens) tpc imp p) = SInstSC z (cls,ifc,gens) tpc imp $ inlCI True  (addDictIni p) (addDictDcl imp)
   where
-    dict = dollar $ cls ++ "$" ++ T.show' tp
+    dict = dollar $ cls ++ "$" ++ T.showC tpc
     addDictDcl imp = SVarSG z dict GNone (T.TData False [dollar cls] [],Cs.cz) Nothing imp
     addDictIni p   = SSeq z
                       (SSet z True False
@@ -397,7 +397,7 @@ inlClassInst (SInstSC z (cls,ifc,gens) tpc@(tp,_) imp p) = SInstSC z (cls,ifc,ge
                      where
                       toEVar :: (Bool,ID_Var) -> Exp
                       toEVar (True,  id) = EVar z ('_' : dollar id)
-                      toEVar (False, id) = EVar z ('_' : dollar (id++"$"++T.show' tp))
+                      toEVar (False, id) = EVar z ('_' : dollar (id++"$"++T.showC tpc))
 
                       isDcl :: ID_Var -> (Bool,ID_Var)
                       isDcl id = (f id, id) where
