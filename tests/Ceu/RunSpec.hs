@@ -600,7 +600,7 @@ spec = do
             "var addc : (Int -> (Int -> Int)) = curry (add)",
             "return (addc 10) 2"
            ])
-        `shouldBe` Left "(line 6, column 16):\ntypes do not match : expected '(b -> c)' : found '(b -> c)'\n"
+        `shouldBe` Left "(line 6, column 16):\ntypes do not match : expected '(b -> c)[]' : found '(b -> c)[]'\n"
 
       it "curry-1" $            -- pg 13
         (run True $
@@ -1162,7 +1162,7 @@ $f3$(Int -> Int)$ 10                       // EVar
            ])
         `shouldBe` Right (EData ["Bool","False"] EUnit)
 
-      it "IOrd extends IEq" $
+      it "XXX: IOrd extends IEq" $
         (run True $
           unlines [
             "interface IEq for a with",

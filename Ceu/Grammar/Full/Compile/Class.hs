@@ -26,6 +26,11 @@ toGDcls'   (SNop   _)              = []
 toName :: Stmt -> ID_Var
 toName (SVarSG _ id _ _ _ _) = id
 
+itpc2itp :: TypeC -> Type
+itpc2itp (itp,cs) = case Cs.toList cs of
+                      []          -> itp
+                      [(_,[cls])] -> TData False [cls] [] -- TODO: not really a TData
+
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
@@ -37,12 +42,22 @@ toName (SVarSG _ id _ _ _ _) = id
 
 addClassCs :: Stmt -> Stmt
 
-addClassCs (SClassS z cls cs ifc p) =
-   case Cs.toList cs of
-    [(var,_)]  -> SClassS z cls cs ifc' p where
-                    ifc' = map_stmt (id2, Prelude.id, f) [] ifc
-                    f (tp,cs) = (tp, Cs.insert (var,cls) cs)
-    otherwise  -> error "TODO: multiple vars"
+addClassCs (SClassS z cls cs ifc p) = SClassS z cls cs ifc' p
+  where
+    ifc' = case Cs.toList cs of
+            [(var,_)] -> map_stmt (id2, Prelude.id, f) [] ifc where
+                          f (tp,cs) = (tp, Cs.insert (var,cls) cs)
+            otherwise -> error "TODO: multiple vars"
+
+addClassCs s@(SInstS z cls tpc@(_,cs) imp p) = SInstS z cls tpc imp' p
+  where
+    imp' = case Cs.toList cs of
+            []        -> imp
+            [(var,_)] -> map_stmt (id2, Prelude.id, f) [] imp where
+                          f (tp,cs) = (tp, Cs.insert (var,cls) cs)
+            otherwise -> error "TODO: multiple vars"
+{-
+-}
 
 addClassCs p = p
 
@@ -68,13 +83,15 @@ setGen (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
                                         SVarSG z id GDcl tpc Nothing $
                                           f p
     f s@(SNop _) = s
-setGen (SInstS z cls tpc@(itp,_) imp p) = SInstS z cls tpc (f imp) p
+setGen (SInstS z cls tpc1 imp p) = SInstS z cls tpc1 (f imp) p
   where
     f :: Stmt -> Stmt
-    f (SVarS z id tpc (Just ini) p) = SVarSG z ('_':idtp id itp) (GOne cls) tpc (Just ini) $
-                                        SVarSG z id GDcl tpc Nothing $
-                                          SVarSG z id (GCall cls itp True) tpc Nothing $
+    f (SVarS z id tpc2 (Just ini) p) = SVarSG z ('_':idtp id itp1') (GOne cls) tpc2 (Just ini) $
+                                        SVarSG z id GDcl tpc2 Nothing $
+                                          SVarSG z id (GCall cls itp1' True) tpc2 Nothing $
                                             f p
+                                      where
+                                        itp1' = itpc2itp tpc1
     f s@(SNop _) = s
 setGen p = p
 
@@ -115,7 +132,7 @@ withEnvE env exp                 = exp
 -------------------------------------------------------------------------------
 
 addClassGensToInst :: [Stmt] -> Stmt -> Stmt
-addClassGensToInst env s@(SInstS z cls tpc@(tp,_) imp p) = SInstSC z (cls,ifc,gens) tpc imp p
+addClassGensToInst env s@(SInstS z cls tpc imp p) = SInstSC z (cls,ifc,gens) tpc imp p
   where
     ifc = case find f env of                  -- TODO: more css
             Just (SClassS _ _ _ ifc _) -> ifc -- TODO: Nothing
@@ -144,7 +161,7 @@ addClassGensToInst _ p = p
 
 addGGenWrappers :: [Stmt] -> Exp -> Exp
 
-addGGenWrappers env (EFunc z tpc@(tp,cs) par p) = EFunc z tpc par p' where
+addGGenWrappers env (EFunc z tpc@(_,cs) par p) = EFunc z tpc par p' where
   p'  = cls2wrappers p cls
   cls = case Cs.toList cs of
           [(_,[cls])] -> case find f env of     -- TODO: more css
@@ -262,7 +279,7 @@ repGGenInsts env (SVarSG z id GDcl tpc@(tp,cs) Nothing p) =
 
 addInstGCalls :: Stmt -> Stmt
 
-addInstGCalls (SInstSC z (cls,ifc,gens) tpc@(itp,_) imp p) =
+addInstGCalls (SInstSC z (cls,ifc,gens) tpc imp p) =
   SInstSC z (cls,ifc,gens) tpc imp' p where
     dif  = Set.difference (Set.fromList $ map toName $ toGDcls' ifc) (Set.fromList $ map toName $ toGDcls' imp)
 
@@ -273,10 +290,12 @@ addInstGCalls (SInstSC z (cls,ifc,gens) tpc@(itp,_) imp p) =
             f :: Stmt -> (Stmt -> Stmt)
             f (SNop _) = Prelude.id
             f (SVarSG z2 id2 gen2 tpc2@(tp2,_) _ _) =
-              SVarSG z2 id2 (GCall cls itp False) tpc2' Nothing where
-                tp2' = instantiate [("a",itp)] tp2  -- TODO: a is fixed
+              SVarSG z2 id2 (GCall cls itp' False) tpc2' Nothing where
+                tp2' = instantiate [("a",itp')] tp2  -- TODO: a is fixed
                 (TFunc _ inp2' _) = tp2'
                 tpc2' = (tp2',Cs.cz)
+
+    itp' = itpc2itp tpc
 
 addInstGCalls p = p
 
@@ -392,8 +411,8 @@ addGenDict p = p
 --    $IEq$Int$ = $IEq$(_$eq$Int$, _$neq$Int$)
 
 inlClassInst :: Stmt -> Stmt
-inlClassInst (SClassS z id             cs         ifc p) = SClassS z id             cs  ifc $ inlCI p ifc
-inlClassInst (SInstSC z (cls,ifc,gens) tpc@(tp,_) imp p) = SInstSC z (cls,ifc,gens) tpc imp $ inlCI (addDictIni p) (addDictDcl imp)
+inlClassInst (SClassS z id             cs         ifc p) = SClassS z id             cs  ifc $ inlCI False p ifc
+inlClassInst (SInstSC z (cls,ifc,gens) tpc@(tp,_) imp p) = SInstSC z (cls,ifc,gens) tpc imp $ inlCI True  (addDictIni p) (addDictDcl imp)
   where
     dict = dollar $ cls ++ "$" ++ show' tp
     addDictDcl imp = SVarSG z dict GNone (TData False [dollar cls] [],Cs.cz) Nothing imp
@@ -414,23 +433,16 @@ inlClassInst (SInstSC z (cls,ifc,gens) tpc@(tp,_) imp p) = SInstSC z (cls,ifc,ge
                                           Set.difference (Set.fromList $ map toName $ toGDcls' ifc)
                                                          (Set.fromList $ map toName $ toGDcls' imp)
 
--------------------------------------------------------------------------------
-
--- For each implementation, add its dictionary.
--- First the dict declaration, then the implementation body, then the dict assignment.
---
---    implementation of IEq for Int (eq(x,y))
---
---    var $IEq$Int$ : $IEq$
---    ... // body
---    $IEq$Int$ = $IEq$(_$eq$Int$, _$neq$Int$)
-
 inlClassInst p = p
 
-inlCI p (SVarSG z id gen tpc ini (SNop _)) = SVarSG z id gen tpc ini p
-inlCI p (SVarSG z id gen tpc ini q)        = SVarSG z id gen tpc ini (inlCI p q)
-inlCI p (SNop z)                           = p
-inlCI p q = error $ show q
+-- skip Instance GDcl to prevent multiple declarations
+inlCI True p (SVarSG _ _ GDcl _ _ (SNop _)) = p
+inlCI True p (SVarSG _ _ GDcl _ _ q)        = inlCI True p q
+
+inlCI _ p (SVarSG z id gen tpc ini (SNop _)) = SVarSG z id gen tpc ini p
+inlCI b p (SVarSG z id gen tpc ini q)        = SVarSG z id gen tpc ini (inlCI b p q)
+inlCI _ p (SNop z)                           = p
+--inlCI _ p q = error $ show q
 
 
 -------------------------------------------------------------------------------

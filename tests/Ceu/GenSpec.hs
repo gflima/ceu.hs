@@ -97,7 +97,37 @@ spec = do
            ])
         `shouldBe` Right (EData ["Int","1"] EUnit)
 
-      it "XXX: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
+      it "XXX-0: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
+        (run True $
+          unlines [
+            "interface IEq for a with"          ,
+            " var eq  : ((a,a) -> Int)"         ,
+            " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
+            "end"                               ,
+            "implementation of IEq for Int with" ,
+            " func eq (x,y) : ((Int,Int) -> Int) do",
+            "   if y matches x then return 1 else return 0 end"                  ,
+            " end"                              ,
+            "end"                               ,
+            "interface IXx for a with"          ,
+            " var f : (a -> Int)"               ,
+            "end"                               ,
+            "data Dd",
+            "implementation of IXx for Dd with" ,
+            " func f (x) : (Dd -> Int) do"    ,
+            "   return 1"                       ,
+            " end"                              ,
+            "end"                               ,
+            "implementation of IEq for a where a is IXx with" ,
+            " func eq (x,y) : ((a,a) -> Int) do" ,
+            "   return ((f x) eq (f y))",
+            " end"                              ,
+            "end"                               ,
+            "return (eq(Dd,Dd))"
+          ])
+        `shouldBe` Right (EData ["Int","4"] EUnit)
+
+      it "XXX-1: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
         (run True $
           unlines [
             "interface IEq for a with"          ,
@@ -130,6 +160,56 @@ spec = do
             " end"                              ,
             "end"                               ,
             "return (eq(Dd,Dd)) + (eq(Ee,Ee))"
+          ])
+        `shouldBe` Right (EData ["Int","4"] EUnit)
+
+      it "XXX-2: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
+        (run True $
+          unlines [
+            "interface IEq for a with"          ,
+            " var eq  : ((a,a) -> Int)"         ,
+            " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
+            "end"                               ,
+            "implementation of IEq for Int with" ,
+            " func eq (x,y) : ((Int,Int) -> Int) do",
+            "   if y matches x then return 1 else return 0 end"                  ,
+            " end"                              ,
+            "end"                               ,
+            "interface IXx for a with"          ,
+            " var f : (a -> Int)"               ,
+            "end"                               ,
+            "interface IYy for a with"          ,
+            " var g : (a -> Int)"               ,
+            "end"                               ,
+            "data Dd",
+            "implementation of IXx for Dd with" ,
+            " func f (x) : (Dd -> Int) do"    ,
+            "   return 1"                       ,
+            " end"                              ,
+            "end"                               ,
+            "data Ee",
+            "implementation of IXx for Ee with" ,
+            " func f (x) : (Ee -> Int) do"    ,
+            "   return 0"                       ,
+            " end"                              ,
+            "end"                               ,
+            "data Ff",
+            "implementation of IYy for Ff with" ,
+            " func g (x) : (Ff -> Int) do"    ,
+            "   return 0"                       ,
+            " end"                              ,
+            "end"                               ,
+            "implementation of IEq for a where a is IXx with" ,
+            " func eq (x,y) : ((a,a) -> Int) do" ,
+            "   return ((f x) eq (f y)) + (1 eq 1)",
+            " end"                              ,
+            "end"                               ,
+            "implementation of IEq for a where a is IYy with" ,
+            " func eq (x,y) : ((a,a) -> Int) do" ,
+            "   return ((g x) eq (g y)) + (1 eq 1)",
+            " end"                              ,
+            "end"                               ,
+            "return ((eq(Dd,Dd)) + (eq(Ee,Ee))) + (eq(Ff,Ff))"
           ])
         `shouldBe` Right (EData ["Int","4"] EUnit)
 
@@ -243,7 +323,7 @@ return (((f 10) + (g 10)) + (f (X (10,20)))) + (g (X (10,20)))
 |])
         `shouldBe` Right (EData ["Int","80"] EUnit)
 
-      it "IAa / X a a / Int" $
+      it "YYY: IAa / X a a / Int" $
         (run True $ [r|
 interface IAa for a with
   var f : (a -> Int)
