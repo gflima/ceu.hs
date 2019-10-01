@@ -9,10 +9,10 @@ import Ceu.Trace
 import Ceu.Grammar.Globals
 import qualified Ceu.Grammar.Constraints as Cs
 import Ceu.Grammar.Ann         (Ann)
-import Ceu.Grammar.Type        (TypeC, show', sort', Type(..), FuncType(..), toTTuple, insTTuple, instantiate, listToType)
+import Ceu.Grammar.Type        (TypeC, show', showC, sort', Type(..), FuncType(..), toTTuple, insTTuple, instantiateC, instantiate, listToType)
 import Ceu.Grammar.Full.Full
 
-idtp id tp = dollar $ id ++ "$" ++ show' tp
+idtpc id tpc = dollar $ id ++ "$" ++ showC tpc
 
 toGDcls :: Stmt -> [Stmt]
 toGDcls (SClassS _ _ _ ifc _) = toGDcls' ifc
@@ -25,11 +25,6 @@ toGDcls'   (SNop   _)              = []
 
 toName :: Stmt -> ID_Var
 toName (SVarSG _ id _ _ _ _) = id
-
-itpc2itp :: TypeC -> Type
-itpc2itp (itp,cs) = case Cs.toList cs of
-                      []          -> itp
-                      [(_,[cls])] -> TData False [cls] [] -- TODO: not really a TData
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
@@ -83,15 +78,13 @@ setGen (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
                                         SVarSG z id GDcl tpc Nothing $
                                           f p
     f s@(SNop _) = s
-setGen (SInstS z cls tpc1 imp p) = SInstS z cls tpc1 (f imp) p
+setGen (SInstS z cls itpc imp p) = SInstS z cls itpc (f imp) p
   where
     f :: Stmt -> Stmt
-    f (SVarS z id tpc2 (Just ini) p) = SVarSG z ('_':idtp id itp1') (GOne cls) tpc2 (Just ini) $
-                                        SVarSG z id GDcl tpc2 Nothing $
-                                          SVarSG z id (GCall cls itp1' True) tpc2 Nothing $
+    f (SVarS z id tpc (Just ini) p) = SVarSG z ('_':idtpc id itpc) (GOne cls) tpc (Just ini) $
+                                        SVarSG z id GDcl tpc Nothing $
+                                          SVarSG z id (GCall cls itpc True) tpc Nothing $
                                             f p
-                                      where
-                                        itp1' = itpc2itp tpc1
     f s@(SNop _) = s
 setGen p = p
 
@@ -207,7 +200,7 @@ addGGenWrappers env (EFunc z tpc@(_,cs) par p) = EFunc z tpc par p' where
 repGGenInsts :: [Stmt] -> Stmt -> Stmt
 repGGenInsts env (SVarSG z id GDcl tpc@(tp,cs) Nothing p) =
   SVarSG z id GDcl tpc Nothing $
-    foldr f p $ zip stmtss itpss
+    foldr f p $ zip stmtss itpcss
   where
     -- remove interfaces since we already receive the actual $dict
     remCtrs :: Exp -> Exp
@@ -217,10 +210,10 @@ repGGenInsts env (SVarSG z id GDcl tpc@(tp,cs) Nothing p) =
 
     -- one F for each implementation
 
-    f :: ([Stmt],[Type]) -> Stmt -> Stmt
-    f ([SClassS _ cls _ _ _],[itp]) p =
-      SVarSG z id (GCall cls itp False) (tp',Cs.cz) Nothing p where
-        tp' = instantiate [("a",itp)] tp
+    f :: ([Stmt],[TypeC]) -> Stmt -> Stmt
+    f ([SClassS _ cls _ _ _],[itpc]) p =
+      SVarSG z id (GCall cls itpc False) tpc' Nothing p where
+        tpc' = instantiateC [("a",itpc)] tp
 
     idss :: [[ID_Class]]
     idss = map Set.toList $ Map.elems cs
@@ -237,22 +230,23 @@ repGGenInsts env (SVarSG z id GDcl tpc@(tp,cs) Nothing p) =
     -- TODO: single dict
     [stmts] = stmtss
 
-    itpss :: [[Type]]
-    itpss = sort' $ combos' 1 env idss
+    itpcss :: [[TypeC]]
+    --itpcss = sort' $ combos' 1 env idss
+    itpcss = combos' 1 env idss
 
     -- [ [Ia], [Ib], ... ]
     -- [ [A1,A2,...], [B1,B2,...], ... ]
     -- [ [A1,B1,...], [A1,B2,...], ... ]
-    combos' :: Int -> [Stmt] -> [[ID_Class]] -> [[Type]]
+    combos' :: Int -> [Stmt] -> [[ID_Class]] -> [[TypeC]]
     combos' lvl env clss = combos insts where
-      insts :: [[Type]]
+      insts :: [[TypeC]]
       insts = map h clss
         where
-          h :: [ID_Class] -> [Type]
+          h :: [ID_Class] -> [TypeC]
           h [cls] = concatMap h $ map g $ filter f env where
             f :: Stmt -> Bool
-            f (SInstS _ cls' (_,ctrs') _ _) = (cls == cls') && (lvl>0 || null ctrs')
-            f _                             = False
+            f (SInstS _ cls' (_,cs') _ _) = (cls == cls') && (lvl>0 || null cs')
+            f _                           = False
 
             g :: Stmt -> TypeC
             g (SInstS _ _ tpc _ _) = tpc  -- types to instantiate
@@ -261,10 +255,12 @@ repGGenInsts env (SVarSG z id GDcl tpc@(tp,cs) Nothing p) =
             -- TODO: currently refuse another level of interfaces
             -- Int    -> [Int]
             -- X of a -> [X of Int, ...]
-            h :: TypeC -> [Type]
-            h tpc@(tp, ctrs) = if null ctrs then [tp] else insts where
-              tpss  = combos' (lvl-1) env (map Set.toList $ Map.elems ctrs)
-              insts = map (flip instantiate tp) $ map (zip (Map.keys ctrs)) tpss
+            h :: TypeC -> [TypeC]
+            h tpc@(tp,cs) = if null cs then [tpc] else insts where
+              tpcss :: [[TypeC]]
+              tpcss = combos' (lvl-1) env (map Set.toList $ Map.elems cs)
+              insts :: [TypeC]
+              insts = map (flip instantiateC tp) $ map (zip (Map.keys cs)) tpcss
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
@@ -279,8 +275,8 @@ repGGenInsts env (SVarSG z id GDcl tpc@(tp,cs) Nothing p) =
 
 addInstGCalls :: Stmt -> Stmt
 
-addInstGCalls (SInstSC z (cls,ifc,gens) tpc imp p) =
-  SInstSC z (cls,ifc,gens) tpc imp' p where
+addInstGCalls (SInstSC z (cls,ifc,gens) itpc imp p) =
+  SInstSC z (cls,ifc,gens) itpc imp' p where
     dif  = Set.difference (Set.fromList $ map toName $ toGDcls' ifc) (Set.fromList $ map toName $ toGDcls' imp)
 
     all  = gens ++ filter f (toGDcls' ifc) where
@@ -290,12 +286,9 @@ addInstGCalls (SInstSC z (cls,ifc,gens) tpc imp p) =
             f :: Stmt -> (Stmt -> Stmt)
             f (SNop _) = Prelude.id
             f (SVarSG z2 id2 gen2 tpc2@(tp2,_) _ _) =
-              SVarSG z2 id2 (GCall cls itp' False) tpc2' Nothing where
-                tp2' = instantiate [("a",itp')] tp2  -- TODO: a is fixed
-                (TFunc _ inp2' _) = tp2'
-                tpc2' = (tp2',Cs.cz)
-
-    itp' = itpc2itp tpc
+              SVarSG z2 id2 (GCall cls itpc False) tpc2' Nothing where
+                tpc2' = instantiateC [("a",itpc)] tp2  -- TODO: a is fixed
+                (TFunc _ inp2' _, _) = tpc2'
 
 addInstGCalls p = p
 
@@ -312,16 +305,16 @@ addInstGCalls p = p
 --    func $neq$Int$ (x,y) return _$neq$($IEq$Int$,x,y)
 --    func $f$Int$ (x) return _$f$($IEq$Int,x)
 
-addGCallBody (SVarSG z id (GCall cls itp has) tpc@(TFunc ft inp out,cs) Nothing p) =
-  SVarSG z (idtp id itp) (GCall cls itp has) tpc (Just (EFunc z tpc par_dcl bdy)) p where
+addGCallBody (SVarSG z id (GCall cls itpc has) tpc@(TFunc ft inp out,cs) Nothing p) =
+  SVarSG z (idtpc id itpc) (GCall cls itpc has) tpc (Just (EFunc z tpc par_dcl bdy)) p where
     bdy = SRet z (ECall z (EVar z id') par_call) where
             id' = if has then
-                    '_' : idtp id itp
+                    '_' : idtpc id itpc
                   else
                     '_' : dollar id
 
     par_dcl  = listToExp $ map (EVar z) $ fpar inp
-    par_call = listToExp $ map (EVar z) $ (("$"++cls++"$"++show' itp++"$") :) $ fpar inp
+    par_call = listToExp $ map (EVar z) $ (("$"++cls++"$"++showC itpc++"$") :) $ fpar inp
 
     fpar inp = map ('$':) $ map show $ lns $ len $ toTTuple inp where
                 len (TTuple l) = length l
@@ -472,72 +465,3 @@ dclClassDicts cls@(SClassS z id _ _ _) =
                 inp' = insTTuple (TData False [dollar id] []) (toTTuple inp)
 
 dclClassDicts p = p
-
--------------------------------------------------------------------------------
--------------------------------------------------------------------------------
-
-{-
--------------------------------------------------------------------------------
-
--- Remove contraint/inst from the program (split actual dcls/impls from their
--- abstract prototypes).
---    contraint IEq        (eq,neq)
---    implementation  IEq for Int(eq,neq)
---
---    contraint IEq        (eq,neq) ; eq ; neq
---    implementation  IEq for Int(eq,neq) ; eq ; neq
-
-remClassInst :: Stmt -> Stmt
-remClassInst (SClass' z id  ctrs pts ifc) = SSeq z (SClass'' z id  ctrs pts) ifc
-remClassInst (SInst'  z cls tpc  pts imp) = SSeq z (SInst''  z cls tpc  pts)
-                                            (SSeq z (STodo z "SInst-INI")
-                                            (SSeq z imp (STodo z "SInst-END")))
-remClassInst p = p
-
--------------------------------------------------------------------------------
-
--- Duplicate and rename implementation methods from xxx to _xxx.
---
---    interface IEq(eq,neq(...))
---    func neq (x,y)            // keep just the declaration
---    func _$neq$ (x,y) do      // actual implementation (will receive $dict)
---
---    implementation of IEq for Int (eq)
---    func _$eq$Int$ (x,y)      // actual implementation (will receive $dict)
---    func $eq$Int$ (x,y)       // wrapper to call _$eq$Int$ with $dict
---
-dupRenImpls :: [Stmt] -> Stmt -> Stmt
-
-dupRenImpls _ (SVarS z id gen@(GClass _ _ _) tpc@(tp,_) ini p) =
-  SVarS z id gen tpc Nothing $
-    SVarS z ('_':dollar id) gen tpc ini $
-      p
-
-dupRenImpls _ (SVarS z id gen@(GInst _ itp) tpc' ini p) =
-  SVarS z (idtp id itp) gen tpc' ini $
-    SVarS z ('_':idtp id itp) gen tpc' ini $
-      p
-
-dupRenImpls _ p = p
-
--------------------------------------------------------------------------------
-
--- For each existing implementation, insert dict parameters for all interface
--- methods.
---
---    implementation of IEq for Int (...,eq(x,y))
---
---    func _$eq$Int$ ($dict,x,y) return $eq$Int$(x,y)
-
-addInstCall :: Stmt -> Stmt
-
-addInstCall (SVarS z ('_':id) gen@(GInst _ _) tpc (Just (EFunc z2 tp2 par2 _)) p) =
-  SVarS z ('_':id) gen tpc (Just (EFunc z2 tp2 par2 p2)) p where
-    p2 = SRet z (ECall z (EVar z id) (remTuple par2))
-
-    remTuple (ETuple _ [EVar _ "$dict", y])  = y
-    remTuple (ETuple z (EVar _ "$dict" : l)) = ETuple z l
-    remTuple x = x
-
-addInstCall p = p
--}

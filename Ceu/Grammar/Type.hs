@@ -209,6 +209,12 @@ instantiate vars (TFunc  ft inp out)        = TFunc  ft (instantiate vars inp) (
 instantiate vars (TTuple tps)               = TTuple $ map (instantiate vars) tps
 --instantiate _ tp = error $ show tp
 
+instantiateC :: [(ID_Var,TypeC)] -> Type -> TypeC
+instantiateC vars tp = (instantiate (zip ids tps) tp, cs) where
+                        (ids,tpcs) = unzip vars
+                        (tps,css)  = unzip tpcs
+                        cs = foldr union cz css
+
 -------------------------------------------------------------------------------
 
 isRelC :: Relation -> TypeC -> TypeC -> Bool
