@@ -88,7 +88,7 @@ data Stmt
   -- declarations w/ scope
   | SClassS   Ann ID_Class        Cs.Map Stmt Stmt
   | SInstS    Ann ID_Class        TypeC  Stmt Stmt
-  | SInstSC   Ann (ID_Class,Stmt) TypeC  Stmt Stmt
+  | SInstSC   Ann (ID_Class,Stmt,[Stmt]) TypeC  Stmt Stmt
   | SDataS    Ann Type (Maybe [ID_Var]) Type Cs.Map Bool Stmt
   | SVarS     Ann ID_Var       TypeC (Maybe Exp) Stmt
   | SVarSG    Ann ID_Var B.Gen TypeC (Maybe Exp) Stmt
@@ -115,7 +115,7 @@ instance HasAnn Stmt where
 
 toBasicStmt :: Stmt -> B.Stmt
 toBasicStmt (SClassS z id  cs ifc p) = B.SClass z id  cs (B.SNop z) (toBasicStmt p)
-toBasicStmt (SInstSC z (cls,_) tp imp p) = B.SInst  z cls tp (B.SNop z) (toBasicStmt p)
+toBasicStmt (SInstSC z (cls,_,_) tp imp p) = B.SInst  z cls tp (B.SNop z) (toBasicStmt p)
 toBasicStmt (SDataS  z tp nms st cs abs p) = B.SData z tp nms st cs abs (toBasicStmt p)
 toBasicStmt (SVarSG  z var gen tp Nothing p) = B.SVar  z var gen tp (toBasicStmt p)
 toBasicStmt (SMatch  z ini chk exp cses) = B.SMatch z ini chk (toBasicExp exp)
@@ -140,7 +140,7 @@ map_stmt f@(fs,_,ft) env   (SInst    z cls tpc p)          = fs env (SInst    z 
 --map_stmt f@(fs,_,ft) env s@(SInst'   z cls tpc imp p)      = fs env (SInst'   z cls (ft tpc) (map_stmt f env imp) (map_stmt f (s:env) p))
 --map_stmt f@(fs,_,ft) env   (SInst''  z cls tpc imp)        = fs env (SInst''  z cls (ft tpc) (map_stmt f env imp))
 map_stmt f@(fs,_,ft) env s@(SInstS   z cls tpc imp p)      = fs env (SInstS   z cls (ft tpc) (map_stmt f env imp) (map_stmt f (s:env) p))
-map_stmt f@(fs,_,ft) env s@(SInstSC  z (cls,ifc) tpc imp p) = fs env (SInstSC  z (cls,map_stmt f env ifc) (ft tpc) (map_stmt f env imp) (map_stmt f (s:env) p))
+map_stmt f@(fs,_,ft) env s@(SInstSC  z (cls,ifc,gens) tpc imp p) = fs env (SInstSC  z (cls,map_stmt f env ifc, map (map_stmt f env) gens) (ft tpc) (map_stmt f env imp) (map_stmt f (s:env) p))
 map_stmt f@(fs,_,ft) env   (SData    z tp nms st cs abs)   = fs env (SData    z tp nms st cs abs)
 map_stmt f@(fs,_,ft) env   (SDataS   z tp nms st cs abs p) = fs env (SDataS   z tp nms st cs abs (map_stmt f env p))
 map_stmt f@(fs,_,ft) env   (SVar     z id tp ini)          = fs env (SVar     z id (ft tp) (fmap (map_exp f env) ini))
@@ -181,7 +181,7 @@ show_stmt :: Int -> Stmt -> String
 show_stmt spc (SSeq _ p1 p2)              = show_stmt spc p1 ++ "\n" ++ show_stmt spc p2
 show_stmt spc (SClassS  _ id _ _ p)       = rep spc ++ "constraint " ++ id ++ "\n" ++ show_stmt spc p
 show_stmt spc (SInstS  _ id _ _ p)        = rep spc ++ "instance " ++ id ++ "\n" ++ show_stmt spc p
-show_stmt spc (SInstSC _ (id,_) _ _ p)    = rep spc ++ "instance " ++ id ++ "\n" ++ show_stmt spc p
+show_stmt spc (SInstSC _ (id,_,_) _ _ p)  = rep spc ++ "instance " ++ id ++ "\n" ++ show_stmt spc p
 show_stmt spc (SData   _ (TData False id _) _ tp _ _  ) = rep spc ++ "data " ++ intercalate "." id ++ T.show' tp
 show_stmt spc (SDataS  _ (TData False id _) _ tp _ _ p) = rep spc ++ "data " ++ intercalate "." id ++ T.show' tp ++ "\n" ++ show_stmt spc p
 show_stmt spc (SVar   _ id tpc Nothing)  = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc

@@ -1,11 +1,11 @@
 module Ceu.Grammar.Full.Compile.Class where
 
-import Debug.Trace
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Maybe (isJust)
 import Data.List  (find)
 
+import Ceu.Trace
 import Ceu.Grammar.Globals
 import qualified Ceu.Grammar.Constraints as Cs
 import Ceu.Grammar.Ann         (Ann)
@@ -92,7 +92,7 @@ setGen' p = p
 withEnvS :: [Stmt] -> Stmt -> Stmt
 
 withEnvS env s@(SClassS z id  cs   ifc       p) = SClassS z id  cs  (withEnvS (s:env) ifc) (withEnvS (s:env) p)
-withEnvS env s@(SInstS  z cls tpc  imp       p) = addClassToInst env $ SInstS  z cls tpc (withEnvS (s:env) imp) (withEnvS (s:env) p)
+withEnvS env s@(SInstS  z cls tpc  imp       p) = addClassGensToInst env $ SInstS z cls tpc (withEnvS (s:env) imp) (withEnvS (s:env) p)
 withEnvS env   (SDataS  z tp  nms  st cs abs p) = SDataS  z tp  nms st cs abs              (withEnvS env p)
 withEnvS env   (SMatch  z ini chk  exp cses)    = SMatch  z ini chk (withEnvE env exp) (map f cses) where
                                                     f (ds,pt,st) = (withEnvS env ds, withEnvE env pt, withEnvS env st)
@@ -101,8 +101,8 @@ withEnvS env   (SSeq    z p1 p2)                = SSeq    z (withEnvS env p1) (w
 withEnvS env   (SLoop   z p)                    = SLoop   z (withEnvS env p)
 withEnvS env   (SVarSG  z id  GGen tpc (Just ini) p) =
   SVarSG z id GGen tpc (Just $ addGGenWrappers env $ withEnvE env ini) (withEnvS env p)
-withEnvS env   (SVarSG  z id  GDcl tpc Nothing    p) =
-  repGGenInsts env $ SVarSG z id GDcl tpc Nothing (withEnvS env p)
+withEnvS env s@(SVarSG  z id  GDcl tpc Nothing    p) =
+  repGGenInsts env $ SVarSG z id GDcl tpc Nothing (withEnvS (s:env) p)
 withEnvS env   (SVarSG  z id  gen  tpc ini        p) =
   SVarSG z id gen  tpc (fmap (withEnvE env) ini) (withEnvS env p)
 withEnvS env   p                               = p
@@ -115,15 +115,20 @@ withEnvE env exp                 = exp
 
 -------------------------------------------------------------------------------
 
-addClassToInst :: [Stmt] -> Stmt -> Stmt
-addClassToInst env s@(SInstS z cls tpc@(tp,_) imp p) = SInstSC z (cls,ifc) tpc imp p
+addClassGensToInst :: [Stmt] -> Stmt -> Stmt
+addClassGensToInst env s@(SInstS z cls tpc@(tp,_) imp p) = SInstSC z (cls,ifc,gens) tpc imp p
   where
     ifc = case find f env of                  -- TODO: more css
             Just (SClassS _ _ _ ifc _) -> ifc -- TODO: Nothing
             where
               f (SClassS _ id _ _ _) = id == cls
               f _ = False
-addClassToInst _ p = p
+    gens = filter f env where
+            f (SVarSG _ id GDcl (_,cs) _ _) = (cls == cls') where
+                                                cls' = case Cs.toList cs of
+                                                  [(_,[cls])] -> cls
+            f _ = False
+addClassGensToInst _ p = p
 
 -------------------------------------------------------------------------------
 
@@ -248,24 +253,27 @@ repGGenInsts env (SVarSG z id GDcl tpc@(tp,cs) Nothing p) =
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
--- Add missing constraint methods to instance.
+-- Add missing constraint methods and generic functions to instance.
 --
 --    constraint  IEq         (eq,neq)
+--    func f (x) where x is IEq
 --    instance of IEq for Int (eq)
 --
---    instance of IEq for Int (eq(Just),neq(Nothing))
+--    instance of IEq for Int (eq(Just),neq(Nothing),f(Nothing))
 
 addInstGCalls :: Stmt -> Stmt
 
-addInstGCalls (SInstSC z (cls,ifc) tpc@(itp,_) imp p) =
-  SInstSC z (cls,ifc) tpc imp' p where
+addInstGCalls (SInstSC z (cls,ifc,gens) tpc@(itp,_) imp p) =
+  SInstSC z (cls,ifc,gens) tpc imp' p where
     dif  = Set.difference (Set.fromList $ map toName $ toGDcls' ifc) (Set.fromList $ map toName $ toGDcls' imp)
-    imp' = foldr ($) imp $ map g (filter f $ toGDcls' ifc) where
+
+    all  = gens ++ filter f (toGDcls' ifc) where
             f (SVarSG _ id _ _ _ _) = elem id dif
 
-            g :: Stmt -> (Stmt -> Stmt)
-            g (SNop _) = Prelude.id
-            g (SVarSG z2 id2 gen2 tpc2@(tp2,_) _ _) =
+    imp' = foldr ($) imp (map f all) where
+            f :: Stmt -> (Stmt -> Stmt)
+            f (SNop _) = Prelude.id
+            f (SVarSG z2 id2 gen2 tpc2@(tp2,_) _ _) =
               SVarSG z2 id2 (GCall cls itp False) tpc2' Nothing where
                 tp2' = instantiate [("a",itp)] tp2  -- TODO: a is fixed
                 (TFunc _ inp2' _) = tp2'
@@ -385,8 +393,8 @@ addGenDict p = p
 --    $IEq$Int$ = $IEq$(_$eq$Int$, _$neq$Int$)
 
 inlClassInst :: Stmt -> Stmt
-inlClassInst (SClassS z id        cs         ifc p) = SClassS z id        cs  ifc $ inlCI p ifc
-inlClassInst (SInstSC z (cls,ifc) tpc@(tp,_) imp p) = SInstSC z (cls,ifc) tpc imp $ inlCI (addDictIni p) (addDictDcl imp)
+inlClassInst (SClassS z id             cs         ifc p) = SClassS z id             cs  ifc $ inlCI p ifc
+inlClassInst (SInstSC z (cls,ifc,gens) tpc@(tp,_) imp p) = SInstSC z (cls,ifc,gens) tpc imp $ inlCI (addDictIni p) (addDictDcl imp)
   where
     dict = dollar $ cls ++ "$" ++ show' tp
     addDictDcl imp = SVarSG z dict GNone (TData False [dollar cls] [],Cs.cz) Nothing imp
