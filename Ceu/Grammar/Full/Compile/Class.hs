@@ -74,7 +74,7 @@ setGen (SInstS z cls tpc@(itp,_) imp p) = SInstS z cls tpc (f imp) p
     f :: Stmt -> Stmt
     f (SVarS z id tpc (Just ini) p) = SVarSG z id GDcl tpc Nothing $
                                         SVarSG z ('_':idtp id itp) (GOne cls) tpc (Just ini) $
-                                          SVarSG z (idtp id itp) (GCall cls itp) tpc Nothing $
+                                          SVarSG z id (GCall cls itp True) tpc Nothing $
                                             f p
     f s@(SNop _) = s
 setGen p = p
@@ -198,7 +198,7 @@ repGGenInsts env (SVarSG z id GDcl tpc@(tp,cs) Nothing p) =
 
     f :: ([Stmt],[Type]) -> Stmt -> Stmt
     f ([SClassS _ cls _ _ _],[itp]) p =
-      SVarSG z (idtp id itp) (GCall cls itp) (tp',Cs.cz) Nothing p where
+      SVarSG z id (GCall cls itp False) (tp',Cs.cz) Nothing p where
         tp' = instantiate [("a",itp)] tp
 
     idss :: [[ID_Class]]
@@ -250,19 +250,10 @@ repGGenInsts env (SVarSG z id GDcl tpc@(tp,cs) Nothing p) =
 
 -- Add missing constraint methods to instance.
 --
--- For each missing implementation, add dummy implementation that calls
--- constraint default.
---
 --    constraint  IEq         (eq,neq)
 --    instance of IEq for Int (eq)
 --
 --    instance of IEq for Int (eq(Just),neq(Nothing))
---    func $neq$Int$ (x,y) return _$neq$($IEq$Int$,x,y)
---
--- For each instance of generic function, add call to generic function.
---
---    instance of IEq for Int (eq(x,y))
---    var $f$Int$ x : (Int -> Int);
 
 addInstGCalls :: Stmt -> Stmt
 
@@ -275,7 +266,7 @@ addInstGCalls (SInstSC z (cls,ifc) tpc@(itp,_) imp p) =
             g :: Stmt -> (Stmt -> Stmt)
             g (SNop _) = Prelude.id
             g (SVarSG z2 id2 gen2 tpc2@(tp2,_) _ _) =
-              SVarSG z2 (idtp id2 itp) (GCall cls itp) tpc2' Nothing where
+              SVarSG z2 id2 (GCall cls itp False) tpc2' Nothing where
                 tp2' = instantiate [("a",itp)] tp2  -- TODO: a is fixed
                 (TFunc _ inp2' _) = tp2'
                 tpc2' = (tp2',Cs.cz)
@@ -284,11 +275,24 @@ addInstGCalls p = p
 
 -------------------------------------------------------------------------------
 
+-- For each missing implementation, add dummy implementation that calls
+-- constraint default.
+--
+-- For each instance of generic function, add call to generic function.
+--
+--    instance of IEq for Int (eq(x,y))
+--    var $f$Int$ x : (Int -> Int);
+--
+--    func $neq$Int$ (x,y) return _$neq$($IEq$Int$,x,y)
 --    func $f$Int$ (x) return _$f$($IEq$Int,x)
 
-addGCallBody (SVarSG z id (GCall cls itp) tpc@(TFunc ft inp out,cs) Nothing p) =
-  SVarSG z id (GCall cls itp) tpc (Just (EFunc z tpc par_dcl bdy)) p where
-    bdy = SRet z (ECall z (EVar z ('_':id)) par_call)
+addGCallBody (SVarSG z id (GCall cls itp has) tpc@(TFunc ft inp out,cs) Nothing p) =
+  SVarSG z (idtp id itp) (GCall cls itp has) tpc (Just (EFunc z tpc par_dcl bdy)) p where
+    bdy = SRet z (ECall z (EVar z id') par_call) where
+            id' = if has then
+                    '_' : idtp id itp
+                  else
+                    '_' : dollar id
 
     par_dcl  = listToExp $ map (EVar z) $ fpar inp
     par_call = listToExp $ map (EVar z) $ (("$"++cls++"$"++show' itp++"$") :) $ fpar inp

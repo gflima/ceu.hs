@@ -67,7 +67,7 @@ data Stmt
 
 -------------------------------------------------------------------------------
 
-data Gen = GNone | GDcl | GGen | GOne ID_Class | GCall ID_Class Type
+data Gen = GNone | GDcl | GGen | GOne ID_Class | GCall ID_Class Type Bool
   deriving (Show,Eq)
 
 data EnvType = EnvGlobal | EnvNonLocal | EnvLocal
