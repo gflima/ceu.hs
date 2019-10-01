@@ -65,15 +65,15 @@ setGen (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
     f :: Stmt -> Stmt
     f (SVarS z id tpc Nothing    p) = SVarSG z id GDcl tpc Nothing $
                                         f p
-    f (SVarS z id tpc (Just ini) p) = SVarSG z id GDcl tpc Nothing $
-                                        SVarSG z ('_':dollar id) GGen tpc (Just ini) $
+    f (SVarS z id tpc (Just ini) p) = SVarSG z ('_':dollar id) GGen tpc (Just ini) $
+                                        SVarSG z id GDcl tpc Nothing $
                                           f p
     f s@(SNop _) = s
 setGen (SInstS z cls tpc@(itp,_) imp p) = SInstS z cls tpc (f imp) p
   where
     f :: Stmt -> Stmt
-    f (SVarS z id tpc (Just ini) p) = SVarSG z id GDcl tpc Nothing $
-                                        SVarSG z ('_':idtp id itp) (GOne cls) tpc (Just ini) $
+    f (SVarS z id tpc (Just ini) p) = SVarSG z ('_':idtp id itp) (GOne cls) tpc (Just ini) $
+                                        SVarSG z id GDcl tpc Nothing $
                                           SVarSG z id (GCall cls itp True) tpc Nothing $
                                             f p
     f s@(SNop _) = s
@@ -81,9 +81,9 @@ setGen p = p
 
 setGen' :: Stmt -> Stmt
 setGen' (SVarS z id tpc@(_,cs) ini p) | Map.null cs = SVarSG z id GNone tpc ini p
-                                      | otherwise   = SVarSG z id GDcl tpc Nothing $
-                                                        SVarSG z ('_':dollar id) GGen tpc ini $
-                                                        p
+                                      | otherwise   = SVarSG z ('_':dollar id) GGen tpc ini $
+                                                        SVarSG z id GDcl tpc Nothing $
+                                                          p
 setGen' p = p
 
 -------------------------------------------------------------------------------
