@@ -564,7 +564,7 @@ expr' _ envs (EFunc z tpc@(TFunc ft inp out,cs) upv@(EUnit _) p) = (es++esf, ft_
                         attr ids  = SMatch z True False (EUpv z) [(SNop z,ETuple z $ map (EVar z) ids,SNop z)]
 
                         dcls :: [ID_Var] -> Stmt -> Stmt
-                        dcls ids acc = foldr (\id -> (SVar z id GNone (getTP id))) acc ids
+                        dcls ids acc = foldr (\id -> (SVar z id False (getTP id))) acc ids
 
                         getTP :: ID_Var -> TypeC
                         getTP id = case findVars z id envs of
@@ -652,11 +652,8 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id@(cid:_)) = (es, ftReq (length envs) (
           Nothing -> (id, (TAny,cz), (False,0),
                       map (toError z) $ fromLeft $ relatesC rel txpc (last (map (getTpc.snd) xs)))
                         where getTpc (SVar _ _ _ tpc _) = tpc
-          Just (lnr, SVar _ _ GNone tpc _)    -> (id, tpc, lnr, [])
-          Just (lnr, SVar _ _ _ tpc@(_,cs) _) ->
-            if cid == '_' then
-              (id, tpc, lnr, [])  -- direct access to _$...$
-            else
+          Just (lnr, SVar _ _ False tpc _) -> (id, tpc, lnr, [])
+          Just (lnr, SVar _ _ True  _   _) ->
               case find pred (concat envs) of            -- find instance
                 Just (SVar _ k _ tpc@(tp,cs) _) -> (k, tpc, lnr, [])
                 Nothing -> (id, (TAny,cz), lnr, err)

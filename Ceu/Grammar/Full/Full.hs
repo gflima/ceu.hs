@@ -90,10 +90,13 @@ data Stmt
   | SInstS    Ann ID_Class        TypeC  Stmt Stmt
   | SInstSC   Ann (ID_Class,Stmt,[Stmt]) TypeC  Stmt Stmt
   | SDataS    Ann Type (Maybe [ID_Var]) Type Cs.Map Bool Stmt
-  | SVarS     Ann ID_Var       TypeC (Maybe Exp) Stmt
-  | SVarSG    Ann ID_Var B.Gen TypeC (Maybe Exp) Stmt
+  | SVarS     Ann ID_Var     TypeC (Maybe Exp) Stmt
+  | SVarSG    Ann ID_Var Gen TypeC (Maybe Exp) Stmt
   | STodoS    Ann String Stmt
   deriving (Eq, Show)
+
+data Gen = GNone | GDcl | GGen | GOne ID_Class | GCall ID_Class Type Bool
+  deriving (Show,Eq)
 
 sSeq a b = SSeq annz a b
 infixr 1 `sSeq`
@@ -117,7 +120,8 @@ toBasicStmt :: Stmt -> B.Stmt
 toBasicStmt (SClassS z id  cs ifc p) = B.SClass z id  cs (B.SNop z) (toBasicStmt p)
 toBasicStmt (SInstSC z (cls,_,_) tp imp p) = B.SInst  z cls tp (B.SNop z) (toBasicStmt p)
 toBasicStmt (SDataS  z tp nms st cs abs p) = B.SData z tp nms st cs abs (toBasicStmt p)
-toBasicStmt (SVarSG  z var gen tp Nothing p) = B.SVar  z var gen tp (toBasicStmt p)
+toBasicStmt (SVarSG  z var GDcl tp Nothing p) = B.SVar  z var True  tp (toBasicStmt p)
+toBasicStmt (SVarSG  z var _    tp Nothing p) = B.SVar  z var False tp (toBasicStmt p)
 toBasicStmt (SMatch  z ini chk exp cses) = B.SMatch z ini chk (toBasicExp exp)
                                               (map (\(ds,pt,st) -> (toBasicStmt ds, toBasicExp pt, toBasicStmt st)) cses)
 toBasicStmt (SCall   z e)            = B.SCall z (toBasicExp e)

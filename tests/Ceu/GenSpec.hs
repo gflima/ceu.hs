@@ -21,7 +21,7 @@ spec = do
 
     describe "interface:" $ do
 
-      it "IEq" $
+      it "XXX: IEq" $
         (run True $
           unlines [
             "interface IEq for a with"         ,
@@ -32,7 +32,7 @@ spec = do
           ])
         `shouldBe` Right (EData ["Int","1"] EUnit)
 
-      it "IEq + default" $
+      it "XXX: IEq + default" $
         (run True $
           unlines [
             "interface IEq for a with"         ,
@@ -43,7 +43,7 @@ spec = do
           ])
         `shouldBe` Right (EData ["Int","1"] EUnit)
 
-      it "IEq + default + Int" $
+      it "XXX: IEq + default + Int" $
         (run True $
           unlines [
             "interface IEq for a with"          ,
@@ -59,7 +59,7 @@ spec = do
           ])
         `shouldBe` Right (EData ["Int","1"] EUnit)
 
-      it "IEq + default + Int + f" $
+      it "XXX: IEq + default + Int + f" $
         (run True $
           unlines [
             "interface IEq for a with"          ,
@@ -78,7 +78,7 @@ spec = do
            ])
         `shouldBe` Right (EData ["Int","1"] EUnit)
 
-      it "IEq + default + f + Int" $
+      it "XXX: IEq + default + f + Int" $
         (run True $
           unlines [
             "interface IEq for a with"          ,
@@ -97,7 +97,7 @@ spec = do
            ])
         `shouldBe` Right (EData ["Int","1"] EUnit)
 
-      it "IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
+      it "XXX: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
         (run True $
           unlines [
             "interface IEq for a with"          ,

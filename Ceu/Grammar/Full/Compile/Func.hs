@@ -4,7 +4,6 @@ import Debug.Trace
 
 import Ceu.Grammar.Ann               (Ann)
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Basic             (Gen(GNone))
 import Ceu.Grammar.Full.Full
 import qualified Ceu.Grammar.Constraints as Cs
 import Ceu.Grammar.Type

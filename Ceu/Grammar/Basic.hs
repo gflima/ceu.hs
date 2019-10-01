@@ -56,7 +56,7 @@ data Stmt
     = SClass  Ann ID_Class Cs.Map Stmt Stmt  -- new constraint declaration
     | SInst   Ann ID_Class TypeC  Stmt Stmt  -- new constraint instance
     | SData   Ann Type (Maybe [String]) Type Cs.Map Bool Stmt  -- new type declaration
-    | SVar    Ann ID_Var Gen TypeC Stmt            -- variable declaration
+    | SVar    Ann ID_Var Bool TypeC Stmt            -- variable declaration
     | SMatch  Ann Bool Bool Exp [(Stmt,Exp,Stmt)]   -- match/assignment/if statement
     | SCall   Ann Exp                          -- call function
     | SSeq    Ann Stmt Stmt                    -- sequence
@@ -66,9 +66,6 @@ data Stmt
     deriving (Eq, Show)
 
 -------------------------------------------------------------------------------
-
-data Gen = GNone | GDcl | GGen | GOne ID_Class | GCall ID_Class Type Bool
-  deriving (Show,Eq)
 
 data EnvType = EnvGlobal | EnvNonLocal | EnvLocal
   deriving Show
