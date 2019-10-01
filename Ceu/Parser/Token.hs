@@ -16,7 +16,7 @@ keywords = [
     "abstract",
     "call",
     "case",
-    "constraint",
+    "interface",
     "data",
     "do",
     "else",
@@ -28,7 +28,7 @@ keywords = [
     "func",
     "if",
     "is",
-    "instance",
+    "implementation",
     "loop",
     "match",
     "match!",
@@ -95,7 +95,7 @@ tk_class :: Parser String    -- Int, Int_0   // I, II, int, _Int
 tk_class = do
     fst <- char 'I'
     snd <- satisfy isUpper
-    rst <- many $ (digit <|> letter <|> char '_' <?> "constraint identifier")
+    rst <- many $ (digit <|> letter <|> char '_' <?> "interface identifier")
     --guard $ not $ null $ filter (\c -> isLower c) rst
     when (all isUpper rst) $ unexpected "uppercase identifier"
     s

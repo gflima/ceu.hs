@@ -216,7 +216,7 @@ spec = do
                 `shouldBe` Left "(line 1, column 2):\nunexpected end of input"
             it "III" $
                 parse tk_class "III"
-                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting constraint identifier"
+                `shouldBe` Left "(line 1, column 4):\nunexpected uppercase identifier\nexpecting interface identifier"
 
         describe "tk_key:" $ do
             it "do" $
@@ -652,7 +652,7 @@ end
                 ])
               `shouldBe` Right (SSeq annz (SData annz (TData False ["Aa"] []) Nothing int cz False) (SSeq annz (SData annz (TData False ["Aa","Bb"] []) Nothing TUnit cz False) (SSeq annz (SSeq annz (SSeq annz (SVar annz "b" (TData False ["Aa","Bb"] [],cz) Nothing) (SNop annz)) (SSet annz True False (EVar annz "b") (ECall annz (ECons annz ["Aa","Bb"]) (ECons annz ["Int","1"])))) (SSeq annz (SSeq annz (SSeq annz (SVar annz "a" (TData False ["Aa"] [],cz) Nothing) (SNop annz)) (SSet annz True False (EVar annz "a") (EVar annz "b"))) (SSeq annz (SSeq annz (SSeq annz (SVar annz "v" (int,cz) Nothing) (SNop annz)) (SNop annz)) (SSeq annz (SSet annz False False (ECall annz (ECons annz ["Aa"]) (EVar annz "v")) (EVar annz "b")) (SRet annz (EVar annz "v"))))))))
 
-        describe "data - constraint:" $ do
+        describe "data - interface:" $ do
 
             it "EUnit a/IEq" $
               parse' stmt "data EUnit for a with a where a is IEq"
@@ -678,15 +678,15 @@ end
               parse' stmt "data Either for (a,b) ; data Either.Left  with a ; data Either.Right with b"
               `shouldBe` Right (SSeq annz (SData annz (TData False ["Either"] [TVar False "a",TVar False "b"]) Nothing TUnit (M.fromList []) False) (SSeq annz (SData annz (TData False ["Either","Left"] []) Nothing (TVar False "a") (M.fromList []) False) (SData annz (TData False ["Either","Right"] []) Nothing (TVar False "b") (M.fromList []) False)))
 
-        describe "constraint:" $ do
+        describe "interface:" $ do
 
           it "Int ; IF3able a ; inst IF3able Int ; return f3 1" $
             (parse stmt $
               unlines [
-                "constraint IF3able for a with"  ,
+                "interface IF3able for a with"  ,
                 " var f3 : (a -> Int)"          ,
                 "end"                           ,
-                "instance of (IF3able for Int) with" ,
+                "implementation of (IF3able for Int) with" ,
                 " func f3 (v) : (a -> Int) do"  ,
                 "   return v"                   ,
                 " end"                          ,
@@ -709,19 +709,19 @@ end
           it "IOrd extends IEq" $
             (parse' stmt $
               unlines [
-                "constraint (IEq for a) with",
+                "interface (IEq for a) with",
                 "   func == : ((a,a) -> Bool)",
                 "end",
                 "",
-                "constraint (IOrd for a) where (a is IEq) with",
+                "interface (IOrd for a) where (a is IEq) with",
                 "   func >= : ((a,a) -> Bool)",
                 "end",
                 "",
-                "instance of IEq for Bool with",
+                "implementation of IEq for Bool with",
                 "   func == (x,y) : ((a,a) -> Bool) do return Bool.True end",
                 "end",
                 "",
-                "instance of (IOrd for Bool) with",
+                "implementation of (IOrd for Bool) with",
                 "   func >= (x,y) : ((a,a) -> Bool) do return Bool.True end",
                 "end",
                 "",
@@ -749,7 +749,7 @@ end
           it "IFable f ; g a is IFable" $
             (parse' stmt $
               unlines [
-                "constraint IFable for a with",
+                "interface IFable for a with",
                 "   func f : (a -> Bool)",
                 "end",
                 "",

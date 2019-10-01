@@ -127,7 +127,7 @@ stmt_error = do
 stmt_class :: Parser Stmt
 stmt_class = do
   pos  <- pos2src <$> getPosition
-  void <- try $ tk_key "constraint"
+  void <- try $ tk_key "interface"
   par  <- optionMaybe $ try $ tk_sym "("
   cls  <- tk_class
   void <- tk_key "for"
@@ -141,14 +141,14 @@ stmt_class = do
                         []                       -> cv var
                         [(var',sup)] | var==var' -> cvc (var,sup)
                                      | otherwise -> error "TODO: multiple variables"
-                        otherwise                -> error "TODO: multiple constraints"
+                        otherwise                -> error "TODO: multiple interfaces"
             in
               SClass annz{source=pos} cls ctrs ifc where
 
 stmt_inst :: Parser Stmt
 stmt_inst = do
   pos  <- pos2src <$> getPosition
-  void <- try $ tk_key "instance"
+  void <- try $ tk_key "implementation"
   void <- tk_key "of"
   par  <- optionMaybe $ try $ tk_sym "("
   cls  <- tk_class

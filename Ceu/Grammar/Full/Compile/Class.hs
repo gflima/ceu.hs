@@ -30,7 +30,7 @@ toName (SVarSG _ id _ _ _ _) = id
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
--- Insert constraint in each nested method in outer contraint/instance.
+-- Insert interface in each nested method in outer contraint/implementation.
 --
 --    contraint IEq (eq,neq)
 --
@@ -52,11 +52,11 @@ addClassCs p = p
 -- Set type of generic var.
 --
 --    contraint IEq        (eq,neq)
---    instance  IEq for Int(eq,neq)
+--    implementation  IEq for Int(eq,neq)
 --    func f : (a -> Int) where a is IEq
 --
 --    contraint IEq        (eq/GDcl, neq/GClass)
---    instance  IEq for Int(eq/GInst,  neq/GInstc)
+--    implementation  IEq for Int(eq/GInst,  neq/GInstc)
 --    func f/GFunc
 
 setGen :: Stmt -> Stmt
@@ -132,10 +132,10 @@ addClassGensToInst _ p = p
 
 -------------------------------------------------------------------------------
 
--- For each existing constraint/default or instance implementation, insert dict
--- wrappers for all other constraint methods.
+-- For each existing interface/default or implementation implementation, insert dict
+-- wrappers for all other interface methods.
 --
---    constraint  IEq (eq,neq(...))
+--    interface  IEq (eq,neq(...))
 --
 --    func _$neq$ (x,y) do  // will receive $dict
 --      $eq$ = func (x,y) do return $dict.eq($dict,x,y) end
@@ -179,11 +179,11 @@ addGGenWrappers env (EFunc z tpc@(tp,cs) par p) = EFunc z tpc par p' where
 
 -------------------------------------------------------------------------------
 
--- Create one copy for each instance of constraint.
+-- Create one copy for each implementation of interface.
 --
 --    func f x : (a -> Int) where a is IEq
 --    func f (x)                // declaration
---    func _$f$ (x)             // will receive $dict // remove constraints from types
+--    func _$f$ (x)             // will receive $dict // remove interfaces from types
 --    func $f$Int$ (x)          // wrapper to call _$f$ with $IEq$Int$
 --    func $f$Bool$ (x)         // wrapper to call _$f$ with $IEq$Bool$
 --    ...
@@ -193,13 +193,13 @@ repGGenInsts env (SVarSG z id GDcl tpc@(tp,cs) Nothing p) =
   SVarSG z id GDcl tpc Nothing $
     foldr f p $ zip stmtss itpss
   where
-    -- remove constraints since we already receive the actual $dict
+    -- remove interfaces since we already receive the actual $dict
     remCtrs :: Exp -> Exp
     remCtrs e = map_exp' (f2 Prelude.id, Prelude.id, (\(tp,_) -> (tp,Cs.cz))) e
 
     ---------------------------------------------------------------------------
 
-    -- one F for each instance
+    -- one F for each implementation
 
     f :: ([Stmt],[Type]) -> Stmt -> Stmt
     f ([SClassS _ cls _ _ _],[itp]) p =
@@ -241,8 +241,8 @@ repGGenInsts env (SVarSG z id GDcl tpc@(tp,cs) Nothing p) =
             g :: Stmt -> TypeC
             g (SInstS _ _ tpc _ _) = tpc  -- types to instantiate
 
-            -- expand types with constraints to multiple types
-            -- TODO: currently refuse another level of constraints
+            -- expand types with interfaces to multiple types
+            -- TODO: currently refuse another level of interfaces
             -- Int    -> [Int]
             -- X of a -> [X of Int, ...]
             h :: TypeC -> [Type]
@@ -253,13 +253,13 @@ repGGenInsts env (SVarSG z id GDcl tpc@(tp,cs) Nothing p) =
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
--- Add missing constraint methods and generic functions to instance.
+-- Add missing interface methods and generic functions to implementation.
 --
---    constraint  IEq         (eq,neq)
+--    interface  IEq         (eq,neq)
 --    func f (x) where x is IEq
---    instance of IEq for Int (eq)
+--    implementation of IEq for Int (eq)
 --
---    instance of IEq for Int (eq(Just),neq(Nothing),f(Nothing))
+--    implementation of IEq for Int (eq(Just),neq(Nothing),f(Nothing))
 
 addInstGCalls :: Stmt -> Stmt
 
@@ -284,11 +284,11 @@ addInstGCalls p = p
 -------------------------------------------------------------------------------
 
 -- For each missing implementation, add dummy implementation that calls
--- constraint default.
+-- interface default.
 --
--- For each instance of generic function, add call to generic function.
+-- For each implementation of generic function, add call to generic function.
 --
---    instance of IEq for Int (eq(x,y))
+--    implementation of IEq for Int (eq(x,y))
 --    var $f$Int$ x : (Int -> Int);
 --
 --    func $neq$Int$ (x,y) return _$neq$($IEq$Int$,x,y)
@@ -336,11 +336,11 @@ addGCallBody p = p
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
--- For each existing implementation (constraint or instance), insert dict
--- parameters for all constraint methods.
+-- For each existing implementation (interface or implementation), insert dict
+-- parameters for all interface methods.
 --
---    constraint  IEq         (...,neq(x,y))
---    instance of IEq for Int (...,eq(x,y))
+--    interface  IEq         (...,neq(x,y))
+--    implementation of IEq for Int (...,eq(x,y))
 --
 --    func _$neq$ ($dict,x,y)
 --    func _$eq$Int$ ($dict,x,y)
@@ -378,15 +378,15 @@ addGenDict p = p
 -- Remove contraint/inst from the program (split actual dcls/impls from their
 -- abstract prototypes).
 --    contraint IEq        (eq,neq)
---    instance  IEq for Int(eq,neq)
+--    implementation  IEq for Int(eq,neq)
 --
 --    contraint IEq        (eq,neq) ; eq ; neq
---    instance  IEq for Int(eq,neq) ; eq ; neq
+--    implementation  IEq for Int(eq,neq) ; eq ; neq
 --
--- For each instance, add its dictionary.
--- First the dict declaration, then the instance body, then the dict assignment.
+-- For each implementation, add its dictionary.
+-- First the dict declaration, then the implementation body, then the dict assignment.
 --
---    instance of IEq for Int (eq(x,y))
+--    implementation of IEq for Int (eq(x,y))
 --
 --    var $IEq$Int$ : $IEq$
 --    ... // body
@@ -417,10 +417,10 @@ inlClassInst (SInstSC z (cls,ifc,gens) tpc@(tp,_) imp p) = SInstSC z (cls,ifc,ge
 
 -------------------------------------------------------------------------------
 
--- For each instance, add its dictionary.
--- First the dict declaration, then the instance body, then the dict assignment.
+-- For each implementation, add its dictionary.
+-- First the dict declaration, then the implementation body, then the dict assignment.
 --
---    instance of IEq for Int (eq(x,y))
+--    implementation of IEq for Int (eq(x,y))
 --
 --    var $IEq$Int$ : $IEq$
 --    ... // body
@@ -437,11 +437,11 @@ inlCI p q = error $ show q
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
--- Declare an associated dictionay for each constraint.
+-- Declare an associated dictionay for each interface.
 --
--- Each constraint (IEq(eq,neq)) has an associated "dict" (_IEq(eq,neq))
+-- Each interface (IEq(eq,neq)) has an associated "dict" (_IEq(eq,neq))
 -- (actually a static struct) in which each field (_IEq.eq) corresponds to a
--- method of the same name in the constraint (IEq.eq):
+-- method of the same name in the interface (IEq.eq):
 --    contraint IEq(eq,neq)
 --
 --    data      $IEq(eq,neq)
@@ -471,10 +471,10 @@ dclClassDicts p = p
 -- Remove contraint/inst from the program (split actual dcls/impls from their
 -- abstract prototypes).
 --    contraint IEq        (eq,neq)
---    instance  IEq for Int(eq,neq)
+--    implementation  IEq for Int(eq,neq)
 --
 --    contraint IEq        (eq,neq) ; eq ; neq
---    instance  IEq for Int(eq,neq) ; eq ; neq
+--    implementation  IEq for Int(eq,neq) ; eq ; neq
 
 remClassInst :: Stmt -> Stmt
 remClassInst (SClass' z id  ctrs pts ifc) = SSeq z (SClass'' z id  ctrs pts) ifc
@@ -487,11 +487,11 @@ remClassInst p = p
 
 -- Duplicate and rename implementation methods from xxx to _xxx.
 --
---    constraint IEq(eq,neq(...))
+--    interface IEq(eq,neq(...))
 --    func neq (x,y)            // keep just the declaration
 --    func _$neq$ (x,y) do      // actual implementation (will receive $dict)
 --
---    instance of IEq for Int (eq)
+--    implementation of IEq for Int (eq)
 --    func _$eq$Int$ (x,y)      // actual implementation (will receive $dict)
 --    func $eq$Int$ (x,y)       // wrapper to call _$eq$Int$ with $dict
 --
@@ -511,10 +511,10 @@ dupRenImpls _ p = p
 
 -------------------------------------------------------------------------------
 
--- For each existing implementation, insert dict parameters for all constraint
+-- For each existing implementation, insert dict parameters for all interface
 -- methods.
 --
---    instance of IEq for Int (...,eq(x,y))
+--    implementation of IEq for Int (...,eq(x,y))
 --
 --    func _$eq$Int$ ($dict,x,y) return $eq$Int$(x,y)
 
