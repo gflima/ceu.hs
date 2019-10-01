@@ -9,10 +9,10 @@ import Ceu.Trace
 import Ceu.Grammar.Globals
 import qualified Ceu.Grammar.Constraints as Cs
 import Ceu.Grammar.Ann         (Ann)
-import Ceu.Grammar.Type        (TypeC, show', showC, sort', Type(..), FuncType(..), toTTuple, insTTuple, instantiateC, instantiate, listToType)
+import qualified Ceu.Grammar.Type as T
 import Ceu.Grammar.Full.Full
 
-idtpc id tpc = dollar $ id ++ "$" ++ showC tpc
+idtpc id tpc = dollar $ id ++ "$" ++ T.showC tpc
 
 toGDcls :: Stmt -> [Stmt]
 toGDcls (SClassS _ _ _ ifc _) = toGDcls' ifc
@@ -167,7 +167,7 @@ addGGenWrappers env (EFunc z tpc@(_,cs) par p) = EFunc z tpc par p' where
   cls2wrappers p s@(SClassS _ cls _ ifc _) =
     foldr ($) p (map f $ toGDcls s) where
       f :: Stmt -> (Stmt -> Stmt)
-      f (SVarSG _ id GDcl (tp@(TFunc _ inp _),_) _ _) =
+      f (SVarSG _ id GDcl (tp@(T.TFunc _ inp _),_) _ _) =
         SVarSG z (dollar id) GNone (tp,Cs.cz) $          -- remove cs
           Just (EFunc z (tp,Cs.cz) (expand inp) body)
         where
@@ -178,12 +178,12 @@ addGGenWrappers env (EFunc z tpc@(_,cs) par p) = EFunc z tpc par p' where
       -- expand inputs:
       -- ($1,$2) = EArg
       -- call f ($dict,$1,$2)
-      expand (TTuple l) = ETuple z $
-                            map (\v->EVar z v) $
-                              take (length l) $
-                                map (\v->'$':show v) $
-                                  incs where
-                                    incs  = 1 : map (+1) incs
+      expand (T.TTuple l) = ETuple z $
+                              map (\v->EVar z v) $
+                                take (length l) $
+                                  map (\v->'$':show v) $
+                                    incs where
+                                      incs  = 1 : map (+1) incs
       expand _ = EVar z ("$1")
 
 -------------------------------------------------------------------------------
@@ -210,10 +210,10 @@ repGGenInsts env (SVarSG z id GDcl tpc@(tp,cs) Nothing p) =
 
     -- one F for each implementation
 
-    f :: ([Stmt],[TypeC]) -> Stmt -> Stmt
+    f :: ([Stmt],[T.TypeC]) -> Stmt -> Stmt
     f ([SClassS _ cls _ _ _],[itpc]) p =
       SVarSG z id (GCall cls itpc False) tpc' Nothing p where
-        tpc' = instantiateC [("a",itpc)] tp
+        tpc' = T.instantiateC [("a",itpc)] tp
 
     idss :: [[ID_Class]]
     idss = map Set.toList $ Map.elems cs
@@ -230,37 +230,37 @@ repGGenInsts env (SVarSG z id GDcl tpc@(tp,cs) Nothing p) =
     -- TODO: single dict
     [stmts] = stmtss
 
-    itpcss :: [[TypeC]]
-    --itpcss = sort' $ combos' 1 env idss
+    itpcss :: [[T.TypeC]]
+    --itpcss = T.sort' $ combos' 1 env idss
     itpcss = combos' 1 env idss
 
     -- [ [Ia], [Ib], ... ]
     -- [ [A1,A2,...], [B1,B2,...], ... ]
     -- [ [A1,B1,...], [A1,B2,...], ... ]
-    combos' :: Int -> [Stmt] -> [[ID_Class]] -> [[TypeC]]
+    combos' :: Int -> [Stmt] -> [[ID_Class]] -> [[T.TypeC]]
     combos' lvl env clss = combos insts where
-      insts :: [[TypeC]]
+      insts :: [[T.TypeC]]
       insts = map h clss
         where
-          h :: [ID_Class] -> [TypeC]
+          h :: [ID_Class] -> [T.TypeC]
           h [cls] = concatMap h $ map g $ filter f env where
             f :: Stmt -> Bool
             f (SInstS _ cls' (_,cs') _ _) = (cls == cls') && (lvl>0 || null cs')
             f _                           = False
 
-            g :: Stmt -> TypeC
+            g :: Stmt -> T.TypeC
             g (SInstS _ _ tpc _ _) = tpc  -- types to instantiate
 
             -- expand types with interfaces to multiple types
             -- TODO: currently refuse another level of interfaces
             -- Int    -> [Int]
             -- X of a -> [X of Int, ...]
-            h :: TypeC -> [TypeC]
+            h :: T.TypeC -> [T.TypeC]
             h tpc@(tp,cs) = if null cs then [tpc] else insts where
-              tpcss :: [[TypeC]]
+              tpcss :: [[T.TypeC]]
               tpcss = combos' (lvl-1) env (map Set.toList $ Map.elems cs)
-              insts :: [TypeC]
-              insts = map (flip instantiateC tp) $ map (zip (Map.keys cs)) tpcss
+              insts :: [T.TypeC]
+              insts = map (flip T.instantiateC tp) $ map (zip (Map.keys cs)) tpcss
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
@@ -287,8 +287,8 @@ addInstGCalls (SInstSC z (cls,ifc,gens) itpc imp p) =
             f (SNop _) = Prelude.id
             f (SVarSG z2 id2 gen2 tpc2@(tp2,_) _ _) =
               SVarSG z2 id2 (GCall cls itpc False) tpc2' Nothing where
-                tpc2' = instantiateC [("a",itpc)] tp2  -- TODO: a is fixed
-                (TFunc _ inp2' _, _) = tpc2'
+                tpc2' = T.instantiateC [("a",itpc)] tp2  -- TODO: a is fixed
+                (T.TFunc _ inp2' _, _) = tpc2'
 
 addInstGCalls p = p
 
@@ -305,7 +305,7 @@ addInstGCalls p = p
 --    func $neq$Int$ (x,y) return _$neq$($IEq$Int$,x,y)
 --    func $f$Int$ (x) return _$f$($IEq$Int,x)
 
-addGCallBody (SVarSG z id (GCall cls itpc has) tpc@(TFunc ft inp out,cs) Nothing p) =
+addGCallBody (SVarSG z id (GCall cls itpc has) tpc@(T.TFunc ft inp out,cs) Nothing p) =
   SVarSG z (idtpc id itpc) (GCall cls itpc has) tpc (Just (EFunc z tpc par_dcl bdy)) p where
     bdy = SRet z (ECall z (EVar z id') par_call) where
             id' = if has then
@@ -314,35 +314,15 @@ addGCallBody (SVarSG z id (GCall cls itpc has) tpc@(TFunc ft inp out,cs) Nothing
                     '_' : dollar id
 
     par_dcl  = listToExp $ map (EVar z) $ fpar inp
-    par_call = listToExp $ map (EVar z) $ (("$"++cls++"$"++showC itpc++"$") :) $ fpar inp
+    par_call = listToExp $ map (EVar z) $ (("$"++cls++"$"++T.showC itpc++"$") :) $ fpar inp
 
-    fpar inp = map ('$':) $ map show $ lns $ len $ toTTuple inp where
-                len (TTuple l) = length l
+    fpar inp = map ('$':) $ map show $ lns $ len $ T.toTTuple inp where
+                len (T.TTuple l) = length l
                 lns n = take n lns' where
                           lns' = 1 : map (+1) lns'
 
 
 addGCallBody p = p
-
-  {-
-(Just (EFunc z2 tpc2' par_dcl p))
-  addInstances :: Stmt -> Stmt
-
-  addInstances (SInstS z cls tpc@(tp,_) pts (SVarS z2 id2 gen2 tp2 Nothing bdy)) =
-    SInstS z cls tpc pts (SVarS z2 id2 gen2 tp2 Nothing bdy') where
-      bdy' = foldr ($) bdy $ map g $ Map.elems $ Map.filter f pts where
-              f (_,_,_,ini) = not ini   -- only methods w/o implementation
-
-  addInstances (SVarS z ('$':id) gen@(GFunc [SClassS _ cls _ _ _] [tp]) tpc@(TFunc _ inp _,_) Nothing p) =
-     SVarS z ('$':id) gen tpc (Just (EFunc z tpc par_dcl bdy)) p where
-      par_dcl  = listToExp $ map (EVar z) $ fpar inp
-      par_call = listToExp $ map (EVar z) $ (id :) $ fpar inp where
-                  id = dollar $ cls++"$"++show' tp
-      bdy  = SRet z (ECall z (EVar z id') par_call) where
-              id' = '_' : dollar (head $ splitOn '$' id)
-
-  addInstances p = p
-  -}
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
@@ -358,27 +338,27 @@ addGCallBody p = p
 
 addGenDict :: Stmt -> Stmt
 
-addGenDict (SVarSG z id GGen (TFunc ft1 inp1 out1,cs1)
-              (Just (EFunc z2 (TFunc ft2 inp2 out2,cs2) par2 p2))
+addGenDict (SVarSG z id GGen (T.TFunc ft1 inp1 out1,cs1)
+              (Just (EFunc z2 (T.TFunc ft2 inp2 out2,cs2) par2 p2))
               p) =
-  SVarSG z id GGen (TFunc ft1 inp1' out1,cs1)
-    (Just (EFunc z2 (TFunc ft2 inp2' out2,cs2) par2' p2))
+  SVarSG z id GGen (T.TFunc ft1 inp1' out1,cs1)
+    (Just (EFunc z2 (T.TFunc ft2 inp2' out2,cs2) par2' p2))
     p
   where
-    inp1' = insTTuple (TData False [dollar cls] []) (toTTuple inp1)
-    inp2' = insTTuple (TData False [dollar cls] []) (toTTuple inp2)
+    inp1' = T.insTTuple (T.TData False [dollar cls] []) (T.toTTuple inp1)
+    inp2' = T.insTTuple (T.TData False [dollar cls] []) (T.toTTuple inp2)
     par2' = insETuple (EVar z "$dict") (toETuple par2)
     [(_,[cls])] = Cs.toList cs1 -- TODO: more css
 
-addGenDict (SVarSG z id (GOne cls) (TFunc ft1 inp1 out1,cs1)
-              (Just (EFunc z2 (TFunc ft2 inp2 out2,cs2) par2 p2))
+addGenDict (SVarSG z id (GOne cls) (T.TFunc ft1 inp1 out1,cs1)
+              (Just (EFunc z2 (T.TFunc ft2 inp2 out2,cs2) par2 p2))
               p) =
-  SVarSG z id (GOne cls) (TFunc ft1 inp1' out1,cs1)
-    (Just (EFunc z2 (TFunc ft2 inp2' out2,cs2) par2' p2))
+  SVarSG z id (GOne cls) (T.TFunc ft1 inp1' out1,cs1)
+    (Just (EFunc z2 (T.TFunc ft2 inp2' out2,cs2) par2' p2))
     p
   where
-    inp1' = insTTuple (TData False [dollar cls] []) (toTTuple inp1)
-    inp2' = insTTuple (TData False [dollar cls] []) (toTTuple inp2)
+    inp1' = T.insTTuple (T.TData False [dollar cls] []) (T.toTTuple inp1)
+    inp2' = T.insTTuple (T.TData False [dollar cls] []) (T.toTTuple inp2)
     par2' = insETuple (EVar z "$dict") (toETuple par2)
 
 addGenDict p = p
@@ -407,8 +387,8 @@ inlClassInst :: Stmt -> Stmt
 inlClassInst (SClassS z id             cs         ifc p) = SClassS z id             cs  ifc $ inlCI False p ifc
 inlClassInst (SInstSC z (cls,ifc,gens) tpc@(tp,_) imp p) = SInstSC z (cls,ifc,gens) tpc imp $ inlCI True  (addDictIni p) (addDictDcl imp)
   where
-    dict = dollar $ cls ++ "$" ++ show' tp
-    addDictDcl imp = SVarSG z dict GNone (TData False [dollar cls] [],Cs.cz) Nothing imp
+    dict = dollar $ cls ++ "$" ++ T.show' tp
+    addDictDcl imp = SVarSG z dict GNone (T.TData False [dollar cls] [],Cs.cz) Nothing imp
     addDictIni p   = SSeq z
                       (SSet z True False
                         (EVar z dict)
@@ -417,7 +397,7 @@ inlClassInst (SInstSC z (cls,ifc,gens) tpc@(tp,_) imp p) = SInstSC z (cls,ifc,ge
                      where
                       toEVar :: (Bool,ID_Var) -> Exp
                       toEVar (True,  id) = EVar z ('_' : dollar id)
-                      toEVar (False, id) = EVar z ('_' : dollar (id++"$"++show' tp))
+                      toEVar (False, id) = EVar z ('_' : dollar (id++"$"++T.show' tp))
 
                       isDcl :: ID_Var -> (Bool,ID_Var)
                       isDcl id = (f id, id) where
@@ -454,14 +434,14 @@ inlCI _ p (SNop z)                           = p
 dclClassDicts :: Stmt -> Stmt
 
 dclClassDicts cls@(SClassS z id _ _ _) =
-  SDataS z (TData False [dollar id] []) (Just pars) tps Cs.cz False cls
+  SDataS z (T.TData False [dollar id] []) (Just pars) tps Cs.cz False cls
   where
     dcls = toGDcls cls
     pars = map f dcls where
             f (SVarSG _ id GDcl _ _ _) = id
-    tps  = listToType (map f dcls) where
-            f (SVarSG _ _ GDcl (TFunc ft inp out,_) _ _) =
-              TFunc ft inp' out where
-                inp' = insTTuple (TData False [dollar id] []) (toTTuple inp)
+    tps  = T.listToType (map f dcls) where
+            f (SVarSG _ _ GDcl (T.TFunc ft inp out,_) _ _) =
+              T.TFunc ft inp' out where
+                inp' = T.insTTuple (T.TData False [dollar id] []) (T.toTTuple inp)
 
 dclClassDicts p = p
