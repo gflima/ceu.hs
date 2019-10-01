@@ -275,7 +275,7 @@ relates rel tp1 tp2 =
               ["type variance does not match : '" ++ show' subest ++
                "' should be supertype of '" ++ show' supest ++ "'"]
             else
-              ["ambiguous instances for '" ++ var ++ "' : " ++
+              ["ambiguous implementations for '" ++ var ++ "' : " ++
                intercalate ", " (map (quote.show'.gettp) l)]
           )
 

@@ -206,8 +206,8 @@ show_stmt spc (SMatch _ _ _ exp cses)  = rep spc ++ "match " ++ show_exp spc exp
                                                           show_stmt (spc+8) st ++ "\n"
 show_stmt spc (SRet _ e)                  = rep spc ++ "return " ++ show_exp spc e
 show_stmt spc (SNop _)                    = rep spc ++ "nop"
+show_stmt spc (SCall _ e)                 = rep spc ++ "call " ++ show_exp spc e
 {-
-show_stmt spc (SCall _ e)              = rep spc ++ "call " ++ show_exp spc e
 show_stmt spc (SMatch _ _ False exp [(_,pt,st)])
                                        = rep spc ++ "set " ++ show_exp spc pt ++ " = " ++
                                           show_exp spc exp ++ "\n" ++ show_stmt spc st
@@ -231,11 +231,11 @@ show_exp spc (EExp   _ exp)       = show_exp spc exp
 show_exp spc (EArg   _)           = "arg"
 show_exp spc (EAny   _)           = "_"
 show_exp spc (EUnit  _)           = "()"
+show_exp spc (ERef   _ exp)       = "ref " ++ show_exp spc exp
 {-
 show_exp spc (EError _ n)         = "error " ++ show n
 show_exp spc (EUpv   _)           = "upv"
 show_exp spc (EFunc  _ _ _ p)     = "func" ++ "\n" ++ show_stmt (spc+4) p
-show_exp spc (ERefRef _ exp)      = "ref " ++ show_exp spc exp
 show_exp spc (ERefIni _ exp)      = show_exp spc exp
 show_exp spc (ERefDer _ exp)      = "acc " ++ show_exp spc exp
 -}

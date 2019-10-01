@@ -94,8 +94,8 @@ combos' lvl envs clss = combos insts where
         g :: Stmt -> TypeC
         g (SInst _ _ tpc _ _) = tpc  -- types to instantiate
 
-        -- expand types with constraints to multiple types
-        -- TODO: currently refuse another level of constraints
+        -- expand types with interfaces to multiple types
+        -- TODO: currently refuse another level of interfaces
         -- Int    -> [Int]
         -- X of a -> [X of Int, ...]
         h :: TypeC -> [Type]
@@ -198,11 +198,11 @@ stmt :: Envs -> TypeC -> Stmt -> (Errors, FT_Ups, [FuncType], Stmt)
 stmt envs tpr s@(SClass z id ctrs ifc p) = stmt (envsAdd envs s) tpr p
 {-
 stmt envs tpr s@(SClass z id ctrs ifc p) = (esMe ++ esExts ++ es, ft, fts, p') where
-  esMe    = errDeclared z Nothing "constraint" id (concat envs)
+  esMe    = errDeclared z Nothing "interface" id (concat envs)
   esExts  = case Cs.toList ctrs of
               [(_,sups)] -> concatMap f sups where
                 f sup = case find (isClass sup) (concat envs) of
-                  Nothing -> [toError z $ "constraint '" ++ sup ++ "' is not declared"]
+                  Nothing -> [toError z $ "interface '" ++ sup ++ "' is not declared"]
                   Just _  -> []
               otherwise  -> error "TODO: multiple vars"
   (es,ft,fts,p') = stmt (envsAdd envs s) tpr p
@@ -215,16 +215,16 @@ stmt envs tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ft, fts, p'') 
   (p', es)  =
     case find (isClass cls) (concat envs) of
       -- class is not declared
-      Nothing -> (p, [toError z $ "constraint '" ++ cls ++ "' is not declared"])
+      Nothing -> (p, [toError z $ "interface '" ++ cls ++ "' is not declared"])
 
       -- class is declared
       Just k@(SClass _ _ ctrs ifc _) -> case Cs.toList ctrs of
         [(clss_var,sups)] ->
           case find isSameInst (concat envs) of
-            -- instance is already declared
-            Just _  -> (p, [toError z $ "instance '" ++ cls ++ " (" ++ intercalate "," [T.show' itp] ++ ")' is already declared"])
+            -- implementation is already declared
+            Just _  -> (p, [toError z $ "implementation '" ++ cls ++ " (" ++ intercalate "," [T.show' itp] ++ ")' is already declared"])
 
-            -- instance is not declared
+            -- implementation is not declared
             Nothing -> (p2, es1++ex++ey++ez) where
 
               hcls   = class2table (concat envs) k where
@@ -240,7 +240,7 @@ stmt envs tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ft, fts, p'') 
                                                 Just x    -> supers envs x
                                                 otherwise -> []
                                 [(_,[])]    -> []
-                                otherwise   -> error "TODO: multiple vars, multiple constraints"
+                                otherwise   -> error "TODO: multiple vars, multiple interfaces"
 
               hinst  = inst2table  (concat envs) s where
                         inst2table :: [Stmt] -> Stmt -> Protos
@@ -263,13 +263,13 @@ stmt envs tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ft, fts, p'') 
               ---------------------------------------------------------------------
 
               -- check extends
-              --  constraint      (Eq  for a)
-              --  instance (Eq  for Bool)                  <-- so Bool must implement Eq
-              --  constraint      (Ord for a) extends (Eq for a)  <-- but Ord extends Eq
-              --  instance (Ord for Bool)                  <-- Bool implements Ord
+              --  interface      (Eq  for a)
+              --  implementation (Eq  for Bool)                  <-- so Bool must implement Eq
+              --  interface      (Ord for a) extends (Eq for a)  <-- but Ord extends Eq
+              --  implementation (Ord for Bool)                  <-- Bool implements Ord
               es1 = concatMap f sups where
                 f sup = case find (isInstOf sup xxx) (concat envs) of
-                  Nothing -> [toError z $ "instance '" ++ sup ++ " for " ++
+                  Nothing -> [toError z $ "implementation '" ++ sup ++ " for " ++
                               (T.show' itp) ++ "' is not declared"]
                   Just _  -> []
                 isInstOf x y (SInst _ x' y' _ _) = (x'==x && y' `T.isSupOfC` y)
@@ -279,12 +279,12 @@ stmt envs tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ft, fts, p'') 
 
               -- funcs in cls (w/o default impl) not in inst
               ex = concatMap f $ Map.keys $ Map.difference (Map.filter g hcls) hinst where
-                      f id = [toError z $ "missing instance of '" ++ id ++ "'"]
+                      f id = [toError z $ "missing implementation of '" ++ id ++ "'"]
                       g (_,_,_,impl) = not impl
 
               -- funcs in inst not in cls
               ey = concatMap f $ Map.keys $ Map.difference hinst hcls where
-                      f id = [toError z $ "unexpected instance of '" ++ id ++ "'"]
+                      f id = [toError z $ "unexpected implementation of '" ++ id ++ "'"]
 
               -- funcs in both: check sigs // check impls
               ez = concat $ Map.elems $ Map.intersectionWith f hcls hinst where
@@ -299,34 +299,34 @@ stmt envs tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ft, fts, p'') 
                                 [toError z $ "types do not match : expected '" ++
                                   (T.show' itp) ++ "' : found '" ++
                                   (T.show' tp') ++ "'"]
-                        ++ (bool [toError z2 $ "missing instance of '" ++ id2 ++ "'"] [] impl)
+                        ++ (bool [toError z2 $ "missing implementation of '" ++ id2 ++ "'"] [] impl)
 
               ---------------------------------------------------------------------
 
-              -- Take each generic function with CLS constraint and instantiate
+              -- Take each generic function with CLS interface and instantiate
               -- it with HINST type.
               -- Either from default implementations in HCLS or from generic
               -- functions:
-              --    constraint IEq for a with
+              --    interface IEq for a with
               --      var eq  : ((a,a) -> Int)
               --      func neq (x,y) : ((a,a) -> Int) do ... eq(a,a) ... end              -- THIS
               --    end
               --    func f x : (a -> Int) where a implements IEq do ... eq(a,a) ... end   -- THIS
-              --    instance of IEq for Int with
+              --    implementation of IEq for Int with
               --      func eq (x,y) : ((Int,Int) -> Int) do ... end
               --    end
               -- <to>
               --    $neq$Int$ ...
               --    $f$Int$ ...
               -- HINST does not have `neq`, so we will copy it from HCLS,
-              -- instantiate with the instance type, changing all HCLS
+              -- instantiate with the implementation type, changing all HCLS
               -- with HINST type.
               p1 = foldr ($) p (concatMap wrap'' fs) where
                 wrap'' :: Stmt -> [Stmt -> Stmt]
                 wrap'' f@(SVar _ _ _ (_,ctrs) _) = map wrap' itpss where
                   itpss :: [[Type]] -- only combos with new itp (others are already instantiated)
                   itpss = T.sort' $ combos' 1 (s:(concat envs)) (map Set.toList $ Map.elems $ ctrs)
-                                     -- include this instance "s"
+                                     -- include this implementation "s"
                   --itpss = filter (\l -> elem itp l) $ combos' 1 (s:envs) (map Set.toList $ Map.elems ctrs)
                   wrap' :: [Type] -> (Stmt -> Stmt)
                   wrap' itps = wrap (zip (Map.keys ctrs) itps) f
@@ -358,7 +358,7 @@ stmt envs tpr s@(SInst z cls xxx@(itp,ictrs) imp p) = (es ++ esP, ft, fts, p'') 
                         tp' = T.instantiate [(clss_var,itp)] tp
 
                     -- follow concrete types from generic/constrained implementations:
-                    --    instance of IEq for a where a implements IXx
+                    --    implementation of IEq for a where a implements IXx
                     itps :: [Type]
                     itps = map f $ combos (map g $ map Set.toList $ Map.elems ictrs) where
                       f :: [Type] -> Type
@@ -400,8 +400,8 @@ stmt envs tpr s@(SVar z id gen tpc@(tp,ctrs) p) = (es_data ++ es_id ++ es, ft, f
 {-
   f p = stmt (envsAdd envs s) tpr p
 
-  -- In case of a parametric/generic var with a constraint, instantiate it for
-  -- each instance of the constraint:
+  -- In case of a parametric/generic var with a interface, instantiate it for
+  -- each implementation of the interface:
   --    f :: (a -> T) where a implements I
   -- <to>
   --    $f$X$
@@ -654,7 +654,7 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id@(cid:_)) = (es, ftReq (length envs) (
                         where getTpc (SVar _ _ _ tpc _) = tpc
           Just (lnr, SVar _ _ False tpc _) -> (id, tpc, lnr, [])
           Just (lnr, SVar _ _ True  _   _) ->
-              case find pred (concat envs) of            -- find instance
+              case find pred (concat envs) of            -- find implementation
                 Just (SVar _ k _ tpc@(tp,cs) _) -> (k, tpc, lnr, [])
                 Nothing -> (id, (TAny,cz), lnr, err)
               where
@@ -663,7 +663,7 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id@(cid:_)) = (es, ftReq (length envs) (
                 pred _                  = False
 
                 err = [toError z $ "variable '" ++ id ++
-                       "' has no associated instance for '" ++
+                       "' has no associated implementation for '" ++
                        T.show' txp ++ "'"]
           where
             f (_, SVar _ _ _ tpc _) =

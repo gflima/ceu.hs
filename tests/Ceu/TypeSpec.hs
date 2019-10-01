@@ -82,7 +82,7 @@ spec = do
 
     it "(a -> a) > (Int -> ())" $
       relates SUP (TFunc FuncGlobal (TVar False "a") (TVar False "a")) (TFunc FuncGlobal (int) TUnit)
-      `shouldBe` Left ["types do not match : expected '(a -> a)' : found '(Int -> ())'","ambiguous instances for 'a' : 'Int', '()'"]
+      `shouldBe` Left ["types do not match : expected '(a -> a)' : found '(Int -> ())'","ambiguous implementations for 'a' : 'Int', '()'"]
 
     it "(a,b) > (Int,())" $
       relates SUP (TTuple [(TVar False "a"),(TVar False "b")]) (TTuple [(int),TUnit])
@@ -134,7 +134,7 @@ spec = do
              TUnit)
       (TFunc FuncGlobal (TTuple [TData False ["Y"] [], TData False ["X","A"] []])
              TUnit)
-      `shouldBe` Left ["types do not match : expected '((a,a) -> ())' : found '((Y,X.A) -> ())'","ambiguous instances for 'a' : 'Y', 'X.A'"]
+      `shouldBe` Left ["types do not match : expected '((a,a) -> ())' : found '((Y,X.A) -> ())'","ambiguous implementations for 'a' : 'Y', 'X.A'"]
 
     it "((a,a)->(a,a)) SUP ((X,X.A)->(X.A,X.A.B)" $
       relates SUP
@@ -170,7 +170,7 @@ spec = do
       relates SUP
       (TFunc FuncGlobal TUnit (TTuple [TData False ["X","Bool","True"] [], TData False ["X","Bool","False"] []]))
       (TFunc FuncGlobal TUnit (TTuple [TVar False "a",                 TVar False "a"]))
-      `shouldBe` Left ["types do not match : expected '(() -> (X.Bool.True,X.Bool.False))' : found '(() -> (a,a))'","ambiguous instances for 'a' : 'X.Bool.True', 'X.Bool.False'"]
+      `shouldBe` Left ["types do not match : expected '(() -> (X.Bool.True,X.Bool.False))' : found '(() -> (a,a))'","ambiguous implementations for 'a' : 'X.Bool.True', 'X.Bool.False'"]
 
     it "(True,False)->(True,False) SUP (a,a)->(a,a)" $
       relates SUP
@@ -178,7 +178,7 @@ spec = do
              (TTuple [TData False ["X","Bool","True"] [], TData False ["X","Bool","False"] []]))
       (TFunc FuncGlobal (TTuple [TVar False "a", TVar False "a"])
              (TTuple [TVar False "a", TVar False "a"]))
-      `shouldBe` Left ["types do not match : expected '((X.Bool.True,X.Bool.False) -> (X.Bool.True,X.Bool.False))' : found '((a,a) -> (a,a))'","ambiguous instances for 'a' : 'X.Bool.True', 'X.Bool.False', 'X.Bool.True', 'X.Bool.False'"]
+      `shouldBe` Left ["types do not match : expected '((X.Bool.True,X.Bool.False) -> (X.Bool.True,X.Bool.False))' : found '((a,a) -> (a,a))'","ambiguous implementations for 'a' : 'X.Bool.True', 'X.Bool.False', 'X.Bool.True', 'X.Bool.False'"]
 
     it "(True,False)->top SUP (a,a)->a" $
       relates SUP
