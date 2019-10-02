@@ -33,8 +33,10 @@ toName (SVarSG _ id _ _ _ _) = id
 -- Do not recurse into bodies with map_stmt.
 --
 --    contraint IEq (eq,neq)
---
 --    contraint IEq (eq where a is IEq,neq where a is IEq)
+--
+--    instance of IEq for a where a is IXx
+--    func eq (x,y) : ((a,a) -> Int where a is IXx)
 
 addClassCs :: Stmt -> Stmt
 
@@ -45,6 +47,16 @@ addClassCs (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
     f (SVarS z id tpc ini p) = SVarS z id (g tpc) ini (f p) where
                                 g (tp,cs) = (tp, Cs.insert (var,cls) cs)
     f s@(SNop _) = s
+
+addClassCs (SInstS z cls itpc@(_,cs) imp p) = SInstS z cls itpc imp' p
+  where
+    imp' = case Cs.toList cs of
+            []        -> imp
+            [(var,_)] -> f imp where
+              f :: Stmt -> Stmt
+              f (SVarS z id tpc ini p) = SVarS z id (g tpc) ini (f p) where
+                                          g (tp,cs) = (tp, Cs.insert (var,cls) cs)
+              f s@(SNop _) = s
 
 addClassCs p = p
 
