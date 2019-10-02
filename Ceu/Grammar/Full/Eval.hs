@@ -44,14 +44,22 @@ prelude z p =
     (SSeq z (SVar  z "rem"    (TFunc FuncGlobal (TTuple [int, int]) int,              cz) Nothing)
            p)))))))))))))))
 
-compile :: Stmt -> Stmt
+cat0 :: (Stmt -> Stmt) -> (Errors,Stmt) -> (Errors,Stmt)
+cat0 f (es1,p1) = (es1,p2) where
+                    p2 = f p1
+
+catE :: (Stmt -> (Errors,Stmt)) -> (Errors,Stmt) -> (Errors,Stmt)
+catE f (es1,p1) = (es1++es2,p2) where
+                    (es2,p2) = f p1
+
+compile :: Stmt -> (Errors,Stmt)
 compile p = --traceStmt $
-  map_stmt' (f2 Match.remSSetSIf,id,id)       $
-  map_stmt' (f2 Match.remIni,id,id)           $
-  map_stmt' (id2,Func.remEFuncPar,id)         $
+  cat0 (map_stmt' (f2 Match.remSSetSIf,id,id))      $
+  cat0 (map_stmt' (f2 Match.remIni,id,id))          $
+  cat0 (map_stmt' (id2,Func.remEFuncPar,id))        $
   --traceShowId $
-  map_stmt' (f2 Data.addAccs,id,id)           $
-  Data.expHier []                             $ --traceShowId $
+  cat0 (map_stmt' (f2 Data.addAccs,id,id))          $
+  cat0 (Data.expHier [])                            $ --traceShowId $
 --
 {-
   map_stmt' (Class.uniInstProtos,id,id)       $   -- uses scope (clss)
@@ -62,30 +70,30 @@ compile p = --traceStmt $
 --
   map_stmt' (f2 Class.addProtosGen,id,id)     $
 -}
-  map_stmt' (f2 Class.dclClassDicts,id,id)    $
-  map_stmt' (f2 Class.inlClassInst,id,id)     $
+  cat0 (map_stmt' (f2 Class.dclClassDicts,id,id))   $
+  cat0 (map_stmt' (f2 Class.inlClassInst,id,id))    $
     -- addInstDicts
-  map_stmt' (f2 Class.addGenDict,id,id)       $
-  map_stmt' (f2 Class.addGCallBody,id,id)     $
-  map_stmt' (f2 Class.addInstGCalls,id,id)    $
-  Class.withEnvS []                           $
+  cat0 (map_stmt' (f2 Class.addGenDict,id,id))      $
+  cat0 (map_stmt' (f2 Class.addGCallBody,id,id))    $
+  cat0 (map_stmt' (f2 Class.addInstGCalls,id,id))   $
+  catE (Class.withEnvS [])                          $
     -- addClassToInst
     -- addGGenWrappers
     -- repGGenInsts
-  map_stmt' (f2 Class.setGen',id,id)          $
-  map_stmt' (f2 Class.setGen,id,id)           $
-  map_stmt' (f2 Class.addClassCs,id,id)       $
+  cat0 (map_stmt' (f2 Class.setGen',id,id))         $
+  cat0 (map_stmt' (f2 Class.setGen,id,id))          $
+  cat0 (map_stmt' (f2 Class.addClassCs,id,id))      $
 --
-  map_stmt' (f2 Scope.remSScope,id,id)        $
-  map_stmt' (f2 Scope.setScope,id,id)         $
-  map_stmt' (f2 Seq.adjSSeq,id,id)            $   -- no more SSeq
-  map_stmt' (f2 Func.remSFunc,id,id)          $
-  p where
+  cat0 (map_stmt' (f2 Scope.remSScope,id,id))       $
+  cat0 (map_stmt' (f2 Scope.setScope,id,id))        $
+  cat0 (map_stmt' (f2 Seq.adjSSeq,id,id))           $   -- no more SSeq
+  cat0 (map_stmt' (f2 Func.remSFunc,id,id))         $
+    ([],p)
 
 compile' :: Stmt -> (Errors, B.Stmt)
-compile' p = (es4, p4)
+compile' p = (es1++es4, p4)
   where
-    p1       = compile p
+    (es1,p1) = compile p
     p2       = toBasicStmt p1
     p3       = S.go p2
     (es4,p4) = T.go p3

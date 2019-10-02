@@ -1182,21 +1182,6 @@ $f3$(Int -> Int)$ 10                       // EVar
         --`shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated implementation for data '((Bool,Bool) -> ?)' in class 'IEq'\n"
         `shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 9, column 1):\nmissing implementation of '==='\n"
 
-      it "IOrd extends IEq" $
-        (run True $
-          unlines [
-            "interface IOrd for a where (a is IEq) with",
-            "   func =>= : ((a,a) -> Bool)",
-            "end",
-            "",
-            "implementation of (IOrd for Bool) with",
-            "   func =>= (x,y) : ((Bool,Bool) -> Bool) do return x end",
-            "end",
-            "",
-            "return (Bool.True) =>= (Bool.False)"
-          ])
-        `shouldBe` Left "(line 1, column 1):\ninterface 'IEq' is not declared\n(line 5, column 1):\nimplementation 'IEq for Bool' is not declared\n"
-
       it "IOrd embeds IEq" $
         (run True $
           unlines [

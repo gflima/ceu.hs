@@ -8,7 +8,7 @@ import Data.List  (find)
 import Ceu.Trace
 import Ceu.Grammar.Globals
 import qualified Ceu.Grammar.Constraints as Cs
-import Ceu.Grammar.Ann         (Ann)
+import Ceu.Grammar.Ann         (Ann, toError)
 import qualified Ceu.Grammar.Type as T
 import Ceu.Grammar.Full.Full
 
@@ -106,29 +106,59 @@ setGen' p = p
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
-withEnvS :: [Stmt] -> Stmt -> Stmt
+withEnvS :: [Stmt] -> Stmt -> (Errors,Stmt)
 
-withEnvS env s@(SClassS z id  cs   ifc       p) = SClassS z id  cs  (withEnvS (s:env) ifc) (withEnvS (s:env) p)
-withEnvS env s@(SInstS  z cls tpc  imp       p) = addClassGensToInst env $ SInstS z cls tpc (withEnvS (s:env) imp) (withEnvS (s:env) p)
-withEnvS env   (SDataS  z tp  nms  st cs abs p) = SDataS  z tp  nms st cs abs              (withEnvS env p)
-withEnvS env   (SMatch  z ini chk  exp cses)    = SMatch  z ini chk (withEnvE env exp) (map f cses) where
-                                                    f (ds,pt,st) = (withEnvS env ds, withEnvE env pt, withEnvS env st)
-withEnvS env   (SIf     z exp p1 p2)            = SIf     z (withEnvE env exp) (withEnvS env p1) (withEnvS env p2)
-withEnvS env   (SSeq    z p1 p2)                = SSeq    z (withEnvS env p1) (withEnvS env p2)
-withEnvS env   (SLoop   z p)                    = SLoop   z (withEnvS env p)
+withEnvS env s@(SClassS z id  cs   ifc       p) = (es, SClassS z id  cs  (snd $ withEnvS (s:env) ifc) (snd $ withEnvS (s:env) p))
+                                                  where
+                                                    es = chkClassSupsDeclared env z cs
+withEnvS env s@(SInstS  z cls tpc  imp       p) = ([], addClassGensToInst env $ SInstS z cls tpc (snd $ withEnvS (s:env) imp) (snd $ withEnvS (s:env) p))
+withEnvS env   (SDataS  z tp  nms  st cs abs p) = ([], SDataS  z tp  nms st cs abs              (snd $ withEnvS env p))
+withEnvS env   (SMatch  z ini chk  exp cses)    = ([], SMatch  z ini chk (withEnvE env exp) (map f cses)) where
+                                                    f (ds,pt,st) = (snd $ withEnvS env ds, withEnvE env pt, snd $ withEnvS env st)
+withEnvS env   (SIf     z exp p1 p2)            = ([], SIf     z (withEnvE env exp) (snd $ withEnvS env p1) (snd $ withEnvS env p2))
+withEnvS env   (SSeq    z p1 p2)                = ([], SSeq    z (snd $ withEnvS env p1) (snd $ withEnvS env p2))
+withEnvS env   (SLoop   z p)                    = ([], SLoop   z (snd $ withEnvS env p))
 withEnvS env   (SVarSG  z id  (GGen cs) tpc (Just ini) p) =
-  SVarSG z id (GGen cs) tpc (Just $ addGGenWrappers cs env $ withEnvE env ini) (withEnvS env p)
+  ([], SVarSG z id (GGen cs) tpc (Just $ addGGenWrappers cs env $ withEnvE env ini) (snd $ withEnvS env p))
 withEnvS env s@(SVarSG  z id  GDcl tpc Nothing    p) =
-  repGGenInsts env $ SVarSG z id GDcl tpc Nothing (withEnvS (s:env) p)
+  ([], repGGenInsts env $ SVarSG z id GDcl tpc Nothing (snd $ withEnvS (s:env) p))
 withEnvS env   (SVarSG  z id  gen  tpc ini        p) =
-  SVarSG z id gen  tpc (fmap (withEnvE env) ini) (withEnvS env p)
-withEnvS env   p                               = p
+  ([], SVarSG z id gen  tpc (fmap (withEnvE env) ini) (snd $ withEnvS env p))
+withEnvS env   p                               = ([], p)
 
 withEnvE :: [Stmt] -> Exp -> Exp
 withEnvE env (ETuple z es)       = ETuple z (map (withEnvE env) es)
-withEnvE env (EFunc  z tp ps bd) = EFunc  z tp (withEnvE env ps) (withEnvS env bd)
+withEnvE env (EFunc  z tp ps bd) = EFunc  z tp (withEnvE env ps) (snd $ withEnvS env bd)
 withEnvE env (ECall  z e1 e2)    = ECall  z (withEnvE env e1) (withEnvE env e2)
 withEnvE env exp                 = exp
+
+-------------------------------------------------------------------------------
+
+chkClassSupsDeclared :: [Stmt] -> Ann -> Cs.Map -> Errors
+chkClassSupsDeclared env z cs =
+  case Cs.toList cs of
+    [(_,sups)] -> concatMap f sups where
+      f sup = case find (isClass sup) env of
+        Nothing -> [toError z $ "interface '" ++ sup ++ "' is not declared"]
+        Just _  -> []
+      isClass id1 (SClassS _ id2 _ _ _) = (id1 == id2)
+      isClass _   _                     = False
+    otherwise  -> error "TODO: multiple vars"
+
+{-
+              -- check extends
+              --  interface      (Eq  for a)
+              --  implementation (Eq  for Bool)                  <-- so Bool must implement Eq
+              --  interface      (Ord for a) extends (Eq for a)  <-- but Ord extends Eq
+              --  implementation (Ord for Bool)                  <-- Bool implements Ord
+              es1 = concatMap f sups where
+                f sup = case find (isInstOf sup xxx) (concat envs) of
+                  Nothing -> [toError z $ "implementation '" ++ sup ++ " for " ++
+                              (T.show' itp) ++ "' is not declared"]
+                  Just _  -> []
+                isInstOf x y (SInst _ x' y' _ _) = (x'==x && y' `T.isSupOfC` y)
+                isInstOf _ _ _                   = False
+-}
 
 -------------------------------------------------------------------------------
 

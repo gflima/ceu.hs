@@ -132,6 +132,7 @@ toBasicStmt p                        = error $ "toBasicStmt: unexpected statemen
 
 -------------------------------------------------------------------------------
 
+map_stmt' :: ([Stmt]->Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Stmt -> Stmt
 map_stmt' f s = map_stmt f [] s
 
 map_stmt :: ([Stmt]->Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> [Stmt]->Stmt -> Stmt

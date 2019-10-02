@@ -99,6 +99,42 @@ spec = do
              ])
           `shouldBe` Right (EData ["Int","1"] EUnit)
 
+      describe "extends:" $ do
+
+        it "XXX: IOrd extends IEq" $
+          (run True $
+            unlines [
+              "interface IOrd for a where (a is IEq) with",
+              "   func =>= : ((a,a) -> Bool)",
+              "end",
+              "",
+              "implementation of (IOrd for Bool) with",
+              "   func =>= (x,y) : ((Bool,Bool) -> Bool) do return x end",
+              "end",
+              "",
+              "return (Bool.True) =>= (Bool.False)"
+            ])
+          `shouldBe` Left "(line 1, column 1):\ninterface 'IEq' is not declared\n(line 5, column 1):\nimplementation 'IEq for Bool' is not declared\n"
+
+        it "IOrd extends IEq" $
+          (run True $
+            unlines [
+              "interface IEq for a with",
+              "   func === : ((a,a) -> Bool)",
+              "end",
+              "",
+              "interface (IOrd for a) where (a is IEq) with",
+              "   func =>= : ((a,a) -> Bool)",
+              "end",
+              "",
+              "implementation of (IOrd for Bool) with",
+              "   func =>= (x,y) : ((Bool,Bool) -> Bool) do return x === y end",
+              "end",
+              "",
+              "return (Bool.True) =>= (Bool.False)"
+            ])
+          `shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 9, column 1):\nmissing implementation of '==='\n"
+
       describe "gen-inst:" $ do
 
         it "IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
