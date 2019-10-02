@@ -108,29 +108,70 @@ setGen' p = p
 
 withEnvS :: [Stmt] -> Stmt -> (Errors,Stmt)
 
-withEnvS env s@(SClassS z id  cs   ifc       p) = (es, SClassS z id  cs  (snd $ withEnvS (s:env) ifc) (snd $ withEnvS (s:env) p))
-                                                  where
-                                                    es = chkClassSupsDeclared env z cs
-withEnvS env s@(SInstS  z cls tpc  imp       p) = ([], addClassGensToInst env $ SInstS z cls tpc (snd $ withEnvS (s:env) imp) (snd $ withEnvS (s:env) p))
-withEnvS env   (SDataS  z tp  nms  st cs abs p) = ([], SDataS  z tp  nms st cs abs              (snd $ withEnvS env p))
-withEnvS env   (SMatch  z ini chk  exp cses)    = ([], SMatch  z ini chk (withEnvE env exp) (map f cses)) where
-                                                    f (ds,pt,st) = (snd $ withEnvS env ds, withEnvE env pt, snd $ withEnvS env st)
-withEnvS env   (SIf     z exp p1 p2)            = ([], SIf     z (withEnvE env exp) (snd $ withEnvS env p1) (snd $ withEnvS env p2))
-withEnvS env   (SSeq    z p1 p2)                = ([], SSeq    z (snd $ withEnvS env p1) (snd $ withEnvS env p2))
-withEnvS env   (SLoop   z p)                    = ([], SLoop   z (snd $ withEnvS env p))
-withEnvS env   (SVarSG  z id  (GGen cs) tpc (Just ini) p) =
-  ([], SVarSG z id (GGen cs) tpc (Just $ addGGenWrappers cs env $ withEnvE env ini) (snd $ withEnvS env p))
-withEnvS env s@(SVarSG  z id  GDcl tpc Nothing    p) =
-  ([], repGGenInsts env $ SVarSG z id GDcl tpc Nothing (snd $ withEnvS (s:env) p))
-withEnvS env   (SVarSG  z id  gen  tpc ini        p) =
-  ([], SVarSG z id gen  tpc (fmap (withEnvE env) ini) (snd $ withEnvS env p))
-withEnvS env   p                               = ([], p)
+withEnvS env s@(SClassS z id cs ifc p) = (es1++es2++es3, SClassS z id cs ifc' p') where
+                                            es1        = chkClassSupsDeclared env z cs
+                                            (es2,ifc') = withEnvS (s:env) ifc
+                                            (es3,p')   = withEnvS (s:env) p
 
-withEnvE :: [Stmt] -> Exp -> Exp
-withEnvE env (ETuple z es)       = ETuple z (map (withEnvE env) es)
-withEnvE env (EFunc  z tp ps bd) = EFunc  z tp (withEnvE env ps) (snd $ withEnvS env bd)
-withEnvE env (ECall  z e1 e2)    = ECall  z (withEnvE env e1) (withEnvE env e2)
-withEnvE env exp                 = exp
+withEnvS env s@(SInstS z cls tpc imp p) = (es1++es2, addClassGensToInst env $ SInstS z cls tpc imp' p') where
+                                            (es1,imp') = withEnvS (s:env) imp
+                                            (es2,p')   = withEnvS (s:env) p
+
+withEnvS env (SDataS z tp nms st cs abs p) = (es, SDataS z tp nms st cs abs p') where
+                                              (es,p') = withEnvS env p
+
+withEnvS env (SMatch z ini chk exp cses) = (es1 ++ concat ess, SMatch z ini chk exp' cses')
+  where
+    (es1,exp') = withEnvE env exp
+    (ess,cses') = unzip $ map f cses
+    f (ds,pt,st) = (es1++es2++es3, (ds', pt', st')) where
+                    (es1,ds') = withEnvS env ds
+                    (es2,pt') = withEnvE env pt
+                    (es3,st') = withEnvS env st
+
+withEnvS env (SIf z exp p1 p2) = (es1++es2++es3, SIf z exp' p1' p2') where
+                                  (es1,exp') = withEnvE env exp
+                                  (es2,p1')  = withEnvS env p1
+                                  (es3,p2')  = withEnvS env p2
+
+withEnvS env (SSeq z p1 p2) = (es1++es2, SSeq z p1' p2') where
+                                (es1,p1') = withEnvS env p1
+                                (es2,p2') = withEnvS env p2
+
+withEnvS env (SLoop z p) = (es, SLoop z p') where
+                            (es,p') = withEnvS env p
+
+withEnvS env (SVarSG z id  (GGen cs) tpc (Just ini) p) =
+  (es1++es2, SVarSG z id (GGen cs) tpc (Just $ addGGenWrappers cs env ini') p')
+  where
+    (es1,ini') = withEnvE env ini
+    (es2,p')   = withEnvS env p
+
+
+withEnvS env s@(SVarSG z id GDcl tpc Nothing p) =
+  (es, repGGenInsts env $ SVarSG z id GDcl tpc Nothing p')
+  where
+    (es,p') = withEnvS (s:env) p
+
+withEnvS env (SVarSG z id gen tpc ini p) =
+  (es1++es2, SVarSG z id gen tpc ini' p')
+  where
+    (es1,ini') = case ini of
+                  Nothing -> ([], Nothing)
+                  Just x  -> (i, Just j) where (i,j) = withEnvE env x
+    (es2,p')   = withEnvS env p
+
+withEnvS env p = ([], p)
+
+-------------------------------------------------------------------------------
+
+TODO
+
+withEnvE :: [Stmt] -> Exp -> (Errors,Exp)
+withEnvE env (ETuple z es)       = ([], ETuple z (map (snd . withEnvE env) es))
+withEnvE env (EFunc  z tp ps bd) = ([], EFunc  z tp (snd $ withEnvE env ps) (snd $ withEnvS env bd))
+withEnvE env (ECall  z e1 e2)    = ([], ECall  z (snd $ withEnvE env e1) (snd $ withEnvE env e2))
+withEnvE env exp                 = ([], exp)
 
 -------------------------------------------------------------------------------
 
@@ -141,11 +182,13 @@ chkClassSupsDeclared env z cs =
       f sup = case find (isClass sup) env of
         Nothing -> [toError z $ "interface '" ++ sup ++ "' is not declared"]
         Just _  -> []
-      isClass id1 (SClassS _ id2 _ _ _) = (id1 == id2)
+      isClass id1 (SClassS _ id2 _ _ _) = traceShowX (id1,id2) (id1 == id2)
       isClass _   _                     = False
     otherwise  -> error "TODO: multiple vars"
 
 {-
+chkClassSupsDeclared :: [Stmt] -> Ann -> Cs.Map -> Errors
+chkInstSupsDeclared env ... =
               -- check extends
               --  interface      (Eq  for a)
               --  implementation (Eq  for Bool)                  <-- so Bool must implement Eq

@@ -114,7 +114,7 @@ spec = do
               "",
               "return (Bool.True) =>= (Bool.False)"
             ])
-          `shouldBe` Left "(line 1, column 1):\ninterface 'IEq' is not declared\n(line 5, column 1):\nimplementation 'IEq for Bool' is not declared\n"
+          `shouldBe` Left "(line 1, column 1):\ninterface 'IEq' is not declared\n"
 
         it "IOrd extends IEq" $
           (run True $
