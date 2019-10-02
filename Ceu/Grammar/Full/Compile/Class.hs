@@ -64,27 +64,31 @@ setGen :: Stmt -> Stmt
 setGen (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
   where
     f :: Stmt -> Stmt
-    f (SVarS z id tpc Nothing    p) = SVarSG z id GDcl tpc Nothing $
-                                        f p
-    f (SVarS z id tpc (Just ini) p) = SVarSG z ('_':dollar id) GGen tpc (Just ini) $
-                                        SVarSG z id GDcl tpc Nothing $
-                                          f p
+    f (SVarS z id tpc         Nothing    p) = SVarSG z id GDcl tpc Nothing $
+                                                f p
+    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_':dollar id) (GGen cs) (tp,Cs.cz) (Just ini) $
+                                                SVarSG z id GDcl tpc Nothing $
+                                                  f p
     f s@(SNop _) = s
 setGen (SInstS z cls itpc imp p) = SInstS z cls itpc (f imp) p
   where
     f :: Stmt -> Stmt
-    f (SVarS z id tpc (Just ini) p) = SVarSG z ('_':idtpc id itpc) (GOne cls) tpc (Just ini) $
-                                        SVarSG z id GDcl tpc Nothing $
-                                          SVarSG z id (GCall cls itpc True) tpc Nothing $
-                                            f p
+    f (SVarS z id tpc@(tp,_) (Just ini) p) = SVarSG z ('_':idtpc id itpc) (GOne cls) (tp,Cs.cz) (Just ini) $
+                                              SVarSG z id GDcl tpc Nothing $
+                                                SVarSG z id (GCall cls itpc True) (tp,Cs.cz) Nothing $
+                                                  f p
     f s@(SNop _) = s
 setGen p = p
 
 setGen' :: Stmt -> Stmt
-setGen' (SVarS z id tpc@(_,cs) ini p) | Map.null cs = SVarSG z id GNone tpc ini p
-                                      | otherwise   = SVarSG z ('_':dollar id) GGen tpc ini $
+setGen' (SVarS z id tpc@(tp,cs) ini p) | Map.null cs = SVarSG z id GNone tpc ini p
+                                       | otherwise   = SVarSG z ('_':dollar id) (GGen cs) (tp,Cs.cz) (remCs ini) $
                                                         SVarSG z id GDcl tpc Nothing $
                                                           p
+  where
+    remCs :: Maybe Exp -> Maybe Exp
+    remCs (Just (EFunc z (tp,_) ps bd)) = Just (EFunc z (tp,Cs.cz) ps bd)
+
 setGen' p = p
 
 -------------------------------------------------------------------------------
@@ -100,8 +104,8 @@ withEnvS env   (SMatch  z ini chk  exp cses)    = SMatch  z ini chk (withEnvE en
 withEnvS env   (SIf     z exp p1 p2)            = SIf     z (withEnvE env exp) (withEnvS env p1) (withEnvS env p2)
 withEnvS env   (SSeq    z p1 p2)                = SSeq    z (withEnvS env p1) (withEnvS env p2)
 withEnvS env   (SLoop   z p)                    = SLoop   z (withEnvS env p)
-withEnvS env   (SVarSG  z id  GGen tpc (Just ini) p) =
-  SVarSG z id GGen tpc (Just $ addGGenWrappers (snd tpc) env $ withEnvE env ini) (withEnvS env p)
+withEnvS env   (SVarSG  z id  (GGen cs) tpc (Just ini) p) =
+  SVarSG z id (GGen cs) tpc (Just $ addGGenWrappers cs env $ withEnvE env ini) (withEnvS env p)
 withEnvS env s@(SVarSG  z id  GDcl tpc Nothing    p) =
   repGGenInsts env $ SVarSG z id GDcl tpc Nothing (withEnvS (s:env) p)
 withEnvS env   (SVarSG  z id  gen  tpc ini        p) =
@@ -194,12 +198,6 @@ repGGenInsts env (SVarSG z id GDcl tpc@(tp,cs) Nothing p) =
   SVarSG z id GDcl tpc Nothing $
     foldr f p $ zip stmtss itpcss
   where
-    -- remove interfaces since we already receive the actual $dict
-    remCtrs :: Exp -> Exp
-    remCtrs e = map_exp' (f2 Prelude.id, Prelude.id, (\(tp,_) -> (tp,Cs.cz))) e
-
-    ---------------------------------------------------------------------------
-
     -- one F for each implementation
 
     f :: ([Stmt],[T.TypeC]) -> Stmt -> Stmt
@@ -297,8 +295,8 @@ addInstGCalls p = p
 --    func $neq$Int$ (x,y) return _$neq$($IEq$Int$,x,y)
 --    func $f$Int$ (x) return _$f$($IEq$Int,x)
 
-addGCallBody (SVarSG z id (GCall cls itpc has) tpc@(T.TFunc ft inp out,cs) Nothing p) =
-  SVarSG z (idtpc id itpc) (GCall cls itpc has) tpc (Just (EFunc z tpc par_dcl bdy)) p where
+addGCallBody (SVarSG z id (GCall cls itpc has) (tp@(T.TFunc ft inp out),cs) Nothing p) =
+  SVarSG z (idtpc id itpc) (GCall cls itpc has) (tp,Cs.cz) (Just (EFunc z (tp,Cs.cz) par_dcl bdy)) p where
     bdy = SRet z (ECall z (EVar z id') par_call) where
             id' = if has then
                     '_' : idtpc id itpc
@@ -330,17 +328,17 @@ addGCallBody p = p
 
 addGenDict :: Stmt -> Stmt
 
-addGenDict (SVarSG z id GGen (T.TFunc ft1 inp1 out1,cs1)
+addGenDict (SVarSG z id (GGen cs) (T.TFunc ft1 inp1 out1,cs1)
               (Just (EFunc z2 (T.TFunc ft2 inp2 out2,cs2) par2 p2))
               p) =
-  SVarSG z id GGen (T.TFunc ft1 inp1' out1,cs1)
+  SVarSG z id (GGen cs) (T.TFunc ft1 inp1' out1,cs1)
     (Just (EFunc z2 (T.TFunc ft2 inp2' out2,cs2) par2' p2))
     p
   where
     inp1' = T.insTTuple (T.TData False [dollar cls] []) (T.toTTuple inp1)
     inp2' = T.insTTuple (T.TData False [dollar cls] []) (T.toTTuple inp2)
     par2' = insETuple (EVar z "$dict") (toETuple par2)
-    [(_,[cls])] = Cs.toList cs1 -- TODO: more css
+    [(_,[cls])] = Cs.toList cs -- TODO: more css
 
 addGenDict (SVarSG z id (GOne cls) (T.TFunc ft1 inp1 out1,cs1)
               (Just (EFunc z2 (T.TFunc ft2 inp2 out2,cs2) par2 p2))

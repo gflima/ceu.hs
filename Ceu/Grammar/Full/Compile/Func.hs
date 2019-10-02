@@ -15,11 +15,11 @@ import qualified Ceu.Grammar.Full.Compile.Match as Match
 
 remSFunc :: Stmt -> Stmt
 
-remSFunc (SFunc z k tp@(tp_,ctrs) par imp) = SVar z k tp (Just $ EFunc z tp par' imp')
+remSFunc (SFunc z k tp@(tp_,cs) par imp) = SVar z k tp (Just $ EFunc z tp par' imp')
   where
-    (par',imp') = if ctrs == Cs.cz then (par,imp) else
-                    (map_exp  (id2,Prelude.id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) [] par
-                    ,map_stmt (id2,Prelude.id,\(tp_,ctrs')->(tp_, Cs.union ctrs ctrs')) [] imp)
+    (par',imp') = if cs == Cs.cz then (par,imp) else
+                    (map_exp  (id2,Prelude.id,\(tp_,cs')->(tp_, Cs.union cs cs')) [] par
+                    ,map_stmt (id2,Prelude.id,\(tp_,cs')->(tp_, Cs.union cs cs')) [] imp)
 
 remSFunc p = p
 
@@ -33,12 +33,12 @@ remEFuncPar (EFunc z tpc@(TFunc _ inp _,cs) par imp) = EFunc' z tpc imp'
                   seq = (SSeq z (SSet z True False par (EArg z)) imp)
 
     toStmts :: Ann -> Exp -> TypeC -> [Stmt->Stmt]
-    toStmts src loc (tp_,ctrs) = aux src loc tp_
+    toStmts src loc (tp_,cs) = aux src loc tp_
       where
         aux :: Ann -> Exp -> Type -> [Stmt->Stmt]
         aux z (EAny   _)     _           = []
         aux z (EUnit  _)     TUnit       = []
-        aux z (EVar   _ var) tp_         = [SVarSG z var GNone (tp_,ctrs) Nothing]
+        aux z (EVar   _ var) tp_         = [SVarSG z var GNone (tp_,cs) Nothing]
         aux z (ETuple _ [])  (TTuple []) = []
         aux z (ETuple _ [])  _           = error "arity mismatch"
         aux z (ETuple _ _)   (TTuple []) = error "arity mismatch"
