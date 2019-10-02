@@ -30,6 +30,7 @@ toName (SVarSG _ id _ _ _ _) = id
 -------------------------------------------------------------------------------
 
 -- Insert interface in each nested method in outer contraint/implementation.
+-- Do not recurse into bodies with map_stmt.
 --
 --    contraint IEq (eq,neq)
 --
@@ -37,22 +38,13 @@ toName (SVarSG _ id _ _ _ _) = id
 
 addClassCs :: Stmt -> Stmt
 
-addClassCs (SClassS z cls cs ifc p) = SClassS z cls cs ifc' p
+addClassCs (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
   where
-    ifc' = case Cs.toList cs of
-            [(var,_)] -> map_stmt (id2, Prelude.id, f) [] ifc where
-                          f (tp,cs) = (tp, Cs.insert (var,cls) cs)
-            otherwise -> error "TODO: multiple vars"
-
-addClassCs s@(SInstS z cls tpc@(_,cs) imp p) = SInstS z cls tpc imp' p
-  where
-    imp' = case Cs.toList cs of
-            []        -> imp
-            [(var,_)] -> map_stmt (id2, Prelude.id, f) [] imp where
-                          f (tp,cs) = (tp, Cs.insert (var,cls) cs)
-            otherwise -> error "TODO: multiple vars"
-{-
--}
+    [(var,_)] = Cs.toList cs
+    f :: Stmt -> Stmt
+    f (SVarS z id tpc ini p) = SVarS z id (g tpc) ini (f p) where
+                                g (tp,cs) = (tp, Cs.insert (var,cls) cs)
+    f s@(SNop _) = s
 
 addClassCs p = p
 
@@ -109,7 +101,7 @@ withEnvS env   (SIf     z exp p1 p2)            = SIf     z (withEnvE env exp) (
 withEnvS env   (SSeq    z p1 p2)                = SSeq    z (withEnvS env p1) (withEnvS env p2)
 withEnvS env   (SLoop   z p)                    = SLoop   z (withEnvS env p)
 withEnvS env   (SVarSG  z id  GGen tpc (Just ini) p) =
-  SVarSG z id GGen tpc (Just $ addGGenWrappers env $ withEnvE env ini) (withEnvS env p)
+  SVarSG z id GGen tpc (Just $ addGGenWrappers (snd tpc) env $ withEnvE env ini) (withEnvS env p)
 withEnvS env s@(SVarSG  z id  GDcl tpc Nothing    p) =
   repGGenInsts env $ SVarSG z id GDcl tpc Nothing (withEnvS (s:env) p)
 withEnvS env   (SVarSG  z id  gen  tpc ini        p) =
@@ -152,9 +144,9 @@ addClassGensToInst _ p = p
 --      ... -- original default implementation
 --    end
 
-addGGenWrappers :: [Stmt] -> Exp -> Exp
+addGGenWrappers :: Cs.Map -> [Stmt] -> Exp -> Exp
 
-addGGenWrappers env (EFunc z tpc@(_,cs) par p) = EFunc z tpc par p' where
+addGGenWrappers cs env (EFunc z tpc par p) = EFunc z tpc par p' where
   p'  = cls2wrappers p cls
   cls = case Cs.toList cs of
           [(_,[cls])] -> case find f env of     -- TODO: more css

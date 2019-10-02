@@ -392,7 +392,7 @@ expr' _ envs (ETuple z exps) = (es, ft, fts, ETuple z{typec=(tps',cz)} exps') wh
                                 ft    = foldr ftMin (FuncUnknown,Nothing) $ map snd4 rets
                                 fts   = concatMap trd4 rets
 
-expr' (rel,txpc@(txp,cxp)) envs (EVar z id@(cid:_)) = (es, ftReq (length envs) (id,ref,n), [], toDer $ EVar z{typec=tpc} (traceShowX "====" id')) where    -- EVar x
+expr' (rel,txpc@(txp,cxp)) envs (EVar z id@(cid:_)) = (es, ftReq (length envs) (id,ref,n), [], toDer $ EVar z{typec=tpc} id') where    -- EVar x
   (id', tpc, (ref,n), es)
     | (id == "_INPUT") = (id, (TData False ["Int"] [],cz), (False,0), [])
     | otherwise        =
@@ -404,9 +404,9 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id@(cid:_)) = (es, ftReq (length envs) (
                       map (toError z) $ fromLeft $ relatesC rel txpc (last (map (getTpc.snd) xs)))
                         where getTpc (SVar _ _ _ tpc _) = tpc
           Just (lnr, SVar _ _ False tpc _) -> (id, tpc, lnr, [])
-          --Just (lnr, SVar _ _ _  tpc@(_,cs)   _) ->
-              --if cs == Map.empty then (id, tpc, lnr, []) else
-          Just (lnr, SVar _ _ True _ _) ->
+          Just (lnr, SVar _ _ _  tpc@(_,cs)   _) ->
+              if cs == Map.empty then (id, tpc, lnr, []) else
+          --Just (lnr, SVar _ _ True _ _) ->
               case find pred (concat envs) of            -- find implementation
                 Just (SVar _ k _ tpc@(tp,cs) _) -> (k, tpc, lnr, [])
                 Nothing -> (id, (TAny,cz), lnr, err)

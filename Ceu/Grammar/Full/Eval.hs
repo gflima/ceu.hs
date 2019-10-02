@@ -45,7 +45,7 @@ prelude z p =
            p)))))))))))))))
 
 compile :: Stmt -> Stmt
-compile p = traceStmt $
+compile p = --traceStmt $
   map_stmt' (f2 Match.remSSetSIf,id,id)       $
   map_stmt' (f2 Match.remIni,id,id)           $
   map_stmt' (id2,Func.remEFuncPar,id)         $
@@ -71,6 +71,7 @@ compile p = traceStmt $
     -- addClassToInst
     -- addGGenWrappers
     -- repGGenInsts
+  --traceStmt $
   map_stmt' (f2 Class.setGen',id,id)          $
   map_stmt' (f2 Class.setGen,id,id)           $
   map_stmt' (f2 Class.addClassCs,id,id)       $

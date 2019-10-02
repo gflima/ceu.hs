@@ -15,13 +15,13 @@ cvc :: Pair -> Map
 cvc (var,cls) = Map.singleton var $ Set.singleton cls
 
 toList :: Map -> [(ID_Var,[ID_Class])]
-toList ctrs = map (\(x,y) -> (x,Set.toList y)) $ Map.toList ctrs
+toList cs = map (\(x,y) -> (x,Set.toList y)) $ Map.toList cs
 
 insert :: Pair -> Map -> Map
-insert (var',cls') ctrs = Map.insertWith Set.union var' (Set.singleton cls') ctrs
+insert (var',cls') cs = Map.insertWith Set.union var' (Set.singleton cls') cs
 
 hasClass :: ID_Class -> Map -> Bool
-hasClass cls ctrs = any (Set.member cls) (Map.elems ctrs)
+hasClass cls cs = any (Set.member cls) (Map.elems cs)
 
 union :: Map -> Map -> Map
-union ctrs1 ctrs2 = Map.unionWith Set.union ctrs1 ctrs2
+union cs1 cs2 = Map.unionWith Set.union cs1 cs2
