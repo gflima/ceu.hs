@@ -95,7 +95,7 @@ data Stmt
   | STodoS    Ann String Stmt
   deriving (Eq, Show)
 
-data Gen = GNone | GDcl | GGen | GOne ID_Class | GCall ID_Class TypeC Bool
+data Gen = GNone | GDcl | GGen Cs.Map | GOne ID_Class | GCall ID_Class TypeC Bool
   deriving (Show,Eq)
 
 sSeq a b = SSeq annz a b
@@ -120,8 +120,7 @@ toBasicStmt :: Stmt -> B.Stmt
 toBasicStmt (SClassS z id  cs ifc p) = B.SClass z id  cs (B.SNop z) (toBasicStmt p)
 toBasicStmt (SInstSC z (cls,_,_) tp imp p) = B.SInst  z cls tp (B.SNop z) (toBasicStmt p)
 toBasicStmt (SDataS  z tp nms st cs abs p) = B.SData z tp nms st cs abs (toBasicStmt p)
-toBasicStmt (SVarSG  z var GDcl tp Nothing p) = B.SVar  z var True  tp (toBasicStmt p)
-toBasicStmt (SVarSG  z var _    tp Nothing p) = B.SVar  z var False tp (toBasicStmt p)
+toBasicStmt (SVarSG  z var _ tp Nothing p) = B.SVar  z var tp (toBasicStmt p)
 toBasicStmt (SMatch  z ini chk exp cses) = B.SMatch z ini chk (toBasicExp exp)
                                               (map (\(ds,pt,st) -> (toBasicStmt ds, toBasicExp pt, toBasicStmt st)) cses)
 toBasicStmt (SCall   z e)            = B.SCall z (toBasicExp e)
@@ -198,6 +197,7 @@ show_stmt spc (SIf  _ e t f)              = rep spc ++ "if " ++ show_exp spc e +
                                                           show_stmt (spc+2) t ++ "\n" ++
                                             rep spc ++ "else\n" ++
                                                           show_stmt (spc+2) f ++ "\n"
+show_stmt spc (SSet _ _ _ var exp)        = rep spc ++ "set " ++ show_exp spc var ++ " = " ++ show_exp spc exp
 show_stmt spc (SMatch _ True _ exp [(SNop _,var,p)]) = rep spc ++ "init " ++ show_exp spc var ++ " = " ++ show_exp spc exp ++ "\n" ++ show_stmt spc p
 show_stmt spc (SMatch _ _ _ exp cses)  = rep spc ++ "match " ++ show_exp spc exp ++ " with\n" ++ (concatMap f cses)
                                          where

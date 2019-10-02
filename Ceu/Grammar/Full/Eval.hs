@@ -49,6 +49,7 @@ compile p = --traceStmt $
   map_stmt' (f2 Match.remSSetSIf,id,id)       $
   map_stmt' (f2 Match.remIni,id,id)           $
   map_stmt' (id2,Func.remEFuncPar,id)         $
+  --traceShowId $
   map_stmt' (f2 Data.addAccs,id,id)           $
   Data.expHier []                             $ --traceShowId $
 --
@@ -71,7 +72,6 @@ compile p = --traceStmt $
     -- addClassToInst
     -- addGGenWrappers
     -- repGGenInsts
-  --traceStmt $
   map_stmt' (f2 Class.setGen',id,id)          $
   map_stmt' (f2 Class.setGen,id,id)           $
   map_stmt' (f2 Class.addClassCs,id,id)       $

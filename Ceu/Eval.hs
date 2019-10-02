@@ -74,7 +74,7 @@ fromExp (B.ERefIni _ e)   = ERefIni (fromExp e)
 
 fromStmt :: B.Stmt -> Stmt
 fromStmt (B.SData   _ _ _ _ _ _ p)   = fromStmt p
-fromStmt (B.SVar    _ id _ _ p)      = SVar id (fromStmt p)
+fromStmt (B.SVar    _ id _ p)        = SVar id (fromStmt p)
 fromStmt (B.SCall   _ e)             = SCall (fromExp e)
 fromStmt (B.SSeq    _ p1 p2)         = SSeq (fromStmt p1) (fromStmt p2)
 fromStmt (B.SLoop   _ p)             = SLoop' (fromStmt p) (fromStmt p)

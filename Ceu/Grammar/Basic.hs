@@ -56,7 +56,7 @@ data Stmt
     = SClass  Ann ID_Class Cs.Map Stmt Stmt  -- new constraint declaration
     | SInst   Ann ID_Class TypeC  Stmt Stmt  -- new constraint instance
     | SData   Ann Type (Maybe [String]) Type Cs.Map Bool Stmt  -- new type declaration
-    | SVar    Ann ID_Var Bool TypeC Stmt            -- variable declaration
+    | SVar    Ann ID_Var TypeC Stmt          -- variable declaration
     | SMatch  Ann Bool Bool Exp [(Stmt,Exp,Stmt)]   -- match/assignment/if statement
     | SCall   Ann Exp                          -- call function
     | SSeq    Ann Stmt Stmt                    -- sequence
@@ -84,8 +84,8 @@ isData  hr1 (SData  _ (TData False hr2 _) _ _ _ _ _) = (hr1' == hier2str hr2) wh
                                                         hr1' = bool hr1 "Int" (take 4 hr1 == "Int.")
 isData  _   _                                        = False
 
-isVar   id1 (SVar   _ id2 _ _ _) = (id1 == id2)
-isVar   _   _                    = False
+isVar   id1 (SVar   _ id2 _ _) = (id1 == id2)
+isVar   _   _                  = False
 
 -------------------------------------------------------------------------------
 
@@ -95,7 +95,7 @@ show_stmt :: Int -> Stmt -> String
 show_stmt spc (SClass _ id _ _ p) = rep spc ++ "class "  ++ id ++ "\n" ++ show_stmt spc p
 show_stmt spc (SInst  _ id _ _ p) = rep spc ++ "inst "   ++ id ++ "\n" ++ show_stmt spc p
 show_stmt spc (SData _ (TData False id _) _ _ _ _ p) = rep spc ++ "data "   ++ intercalate "." id ++ "\n" ++ show_stmt spc p
-show_stmt spc (SVar _ id _ (tp,_) p)   = rep spc ++ "var "    ++ id ++ ": " ++ T.show' tp ++ "\n" ++ show_stmt spc p
+show_stmt spc (SVar _ id (tp,_) p)     = rep spc ++ "var "    ++ id ++ ": " ++ T.show' tp ++ "\n" ++ show_stmt spc p
 show_stmt spc (SCall _ e)              = rep spc ++ "call " ++ show_exp spc e
 show_stmt spc (SRet _ e)               = rep spc ++ "return " ++ show_exp spc e
 show_stmt spc (SSeq _ p1 p2)           = show_stmt spc p1 ++ "\n" ++ show_stmt spc p2
@@ -143,7 +143,7 @@ map_stmt :: (Stmt->Stmt, Exp->Exp, TypeC->TypeC) -> Stmt -> Stmt
 map_stmt f@(fs,_,ft) (SClass z id ctr ifc p)     = fs (SClass z id ctr (map_stmt f ifc) (map_stmt f p))
 map_stmt f@(fs,_,ft) (SInst  z cls tp imp p)     = fs (SInst  z cls tp (map_stmt f imp) (map_stmt f p))
 map_stmt f@(fs,_,ft) (SData  z tdat nms flds ctrs abs p) = fs (SData z tdat nms flds ctrs abs (map_stmt f p))
-map_stmt f@(fs,_,ft) (SVar   z id gen tp p)      = fs (SVar   z id gen (ft tp) (map_stmt f p))
+map_stmt f@(fs,_,ft) (SVar   z id tp p)          = fs (SVar   z id (ft tp) (map_stmt f p))
 map_stmt f@(fs,_,_)  (SMatch z ini b exp cses)   = fs (SMatch z ini b (map_exp f exp) (map (\(ds,pt,st) -> (map_stmt f ds, map_exp f pt, map_stmt f st)) cses))
 map_stmt f@(fs,_,_)  (SCall z exp)               = fs (SCall z (map_exp f exp))
 map_stmt f@(fs,_,_)  (SSeq   z p1 p2)            = fs (SSeq   z (map_stmt f p1) (map_stmt f p2))
@@ -196,7 +196,7 @@ instance HasAnn Stmt where
     getAnn (SClass z _ _ _ _)   = z
     getAnn (SInst  z _ _ _ _)   = z
     getAnn (SData  z _ _ _ _ _ _) = z
-    getAnn (SVar   z _ _ _ _)   = z
+    getAnn (SVar   z _ _ _)     = z
     getAnn (SMatch z _ _ _ _)   = z
     getAnn (SCall z _)          = z
     getAnn (SSeq   z _ _)       = z
