@@ -48,20 +48,18 @@ addClassCs (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
                                 g (tp,cs) = (tp, Cs.insert (var,cls) cs)
     f s@(SNop _) = s
 
-addClassCs (SInstS z cls itpc@(_,cs) imp p) = SInstS z cls itpc imp' p
+addClassCs (SInstS z cls itpc@(_,cs) imp p) = SInstS z cls itpc (f imp) p
   where
-    imp' =
-      case Cs.toList cs of
-        []           -> imp
-        [(var,clss)] -> f imp where
-          f :: Stmt -> Stmt
-          f (SVarS z id tpc ini p) =
-            SVarS z id (g tpc) ini (f p) where
-              g :: T.TypeC -> T.TypeC
-              g (tp,cs) = (tp, foldr h cs clss) where
-                            h :: ID_Class -> Cs.Map -> Cs.Map
-                            h cls cs = Cs.insert (var,cls) cs
-          f s@(SNop _) = s
+    f :: Stmt -> Stmt
+    f (SVarS z id tpc ini p) =
+      SVarS z id (g tpc) ini (f p) where
+        g :: T.TypeC -> T.TypeC
+        g (tp1,cs1) = (tp1, foldr h cs1 (Cs.toList cs)) where
+                        h :: (ID_Var,[ID_Class]) -> Cs.Map -> Cs.Map
+                        h (var,clss) cs = foldr i cs clss where
+                          i :: ID_Class -> Cs.Map -> Cs.Map
+                          i cls cs = Cs.insert (var,cls) cs
+    f s@(SNop _) = s
 
 addClassCs p = p
 
