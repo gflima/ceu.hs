@@ -63,10 +63,12 @@ instance HasAnn Exp where
     getAnn (EField z _ _) = z
     getAnn (EVar   z _)   = z
     getAnn (EArg   z)     = z
+    getAnn (EAny   z)     = z
     getAnn (EUnit  z)     = z
     getAnn (ETuple z _)   = z
     getAnn (EFunc' z _ _) = z
     getAnn (ECall  z _ _) = z
+    --getAnn x = error $ show x
 
 -------------------------------------------------------------------------------
 
@@ -118,11 +120,11 @@ instance HasAnn Stmt where
     getAnn (SVarS     z _ _ _ _)   = z
 
 toBasicStmt :: Stmt -> B.Stmt
-toBasicStmt (SClassS z id  cs ifc p) = B.SClass z id  cs (B.SNop z) (toBasicStmt p)
-toBasicStmt (SInstSC z (cls,_,_) tp imp p) = B.SInst  z cls tp (B.SNop z) (toBasicStmt p)
+toBasicStmt (SClassS z id  cs ifc p)       = toBasicStmt p
+toBasicStmt (SInstSC z (cls,_,_) tp imp p) = toBasicStmt p
 toBasicStmt (SDataS  z tp nms st cs abs p) = B.SData z tp nms st cs abs (toBasicStmt p)
 toBasicStmt (SVarSG  z var _ tp Nothing p) = B.SVar  z var tp (toBasicStmt p)
-toBasicStmt (SMatch  z ini chk exp cses) = B.SMatch z ini chk (toBasicExp exp)
+toBasicStmt (SMatch  z ini chk exp cses)   = B.SMatch z ini chk (toBasicExp exp)
                                               (map (\(ds,pt,st) -> (toBasicStmt ds, toBasicExp pt, toBasicStmt st)) cses)
 toBasicStmt (SCall   z e)            = B.SCall z (toBasicExp e)
 toBasicStmt (SSeq    z p1 p2)        = B.SSeq   z (toBasicStmt p1) (toBasicStmt p2)

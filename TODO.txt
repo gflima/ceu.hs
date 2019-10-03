@@ -1,6 +1,6 @@
 - runhaskell -itests/ tests/Spec.hs
 - 9 -- Basic=1, Type=0, Eval=1, Full=0, Parser=0, Run=4, Book=3, Gen=0
-                                                      6             21
+             0       0       1                 0      6             21
 
 - Talvez nao precise de GGen|GNone no Basic, basta ver se fc possui ctrs
     - multiple ctrs ja aparecem qd implementacao é para tipo que tem ctr

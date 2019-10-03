@@ -119,12 +119,8 @@ errDeclared z chk str id envs =
     if (take 1 id == "_") || (take 1 id == "$") then [] else    -- nested _ret, __and (par/and)
         case find (isAny id) envs of
             Nothing                    -> []
-            Just s@(SVar _ _ (_,cs) _) ->
-              if chk' s then [] else
-                case find (isInst (\id -> Cs.hasClass id cs)) envs of
-                  Just _                 -> []
-                  Nothing                -> err
-            Just _                       -> err
+            Just s@(SVar _ _ (_,cs) _) -> if chk' s then [] else err
+            Just _                      -> err
         where
           err = [toError z $ str ++ " '" ++ id ++ "' is already declared"]
 
@@ -132,11 +128,8 @@ errDeclared z chk str id envs =
             Nothing -> const False
             Just f  -> f
 
-          isInst  f (SInst  _ id _ _ _)   = f id
-          isInst  _  _                    = False
-
           isAny :: String -> Stmt -> Bool
-          isAny id s = isClass id s || isData id s || isVar id s
+          isAny id s = isData id s || isVar id s
 
 getErrsTypesDeclared :: Ann -> [Stmt] -> Type -> Errors
 getErrsTypesDeclared z envs tp = concatMap f (T.getDs tp) where
@@ -153,9 +146,6 @@ getErrsTypesDeclared z envs tp = concatMap f (T.getDs tp) where
                                           -- am I a global, nested or closure?
                                                     -- nested closures inside me
 stmt :: Envs -> TypeC -> Stmt -> (Errors, FT_Ups, [FuncType], Stmt)
-
-stmt envs tpr s@(SClass z id cs   ifc p) = stmt (envsAdd envs s) tpr p
-stmt envs tpr s@(SInst z cls itpc pts p) = stmt (envsAdd envs s) tpr p
 
 stmt envs tpr s@(SData z tpD@(TData False hr _) nms st cz abs p) =
   (es_dcl ++ (errDeclared z Nothing "data" (T.hier2str hr) (concat envs)) ++ es,

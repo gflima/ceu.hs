@@ -145,6 +145,31 @@ spec = do
           --`shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 9, column 1):\nmissing implementation of '==='\n"
           `shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated implementation for '((Bool,Bool) -> Bool)'\n"
 
+        it "IOrd extends IEq" $
+          (run True $
+            unlines [
+              "interface IEq for a with",
+              "   func === : ((a,a) -> Bool)",
+              "end",
+              "",
+              "interface (IOrd for a) where (a is IEq) with",
+              "   func =>= : ((a,a) -> Bool)",
+              "end",
+              "",
+              "implementation of IEq for Bool with" ,
+              " func === (x,y) : ((Bool,Bool) -> Bool) do",
+              "   return Bool.True"                  ,
+              " end"                              ,
+              "end"                               ,
+              "",
+              "implementation of (IOrd for Bool) with",
+              "   func =>= (x,y) : ((Bool,Bool) -> Bool) do return x === y end",
+              "end",
+              "",
+              "return (Bool.True) =>= (Bool.False)"
+            ])
+          `shouldBe` Right (EData ["Bool","True"] EUnit)
+
         it "implementation for extends of (a,b)" $
           (run True $
             unlines [

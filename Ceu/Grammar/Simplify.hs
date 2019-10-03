@@ -10,18 +10,6 @@ go p = stmt p
 
 stmt :: Stmt -> Stmt
 
-stmt (SClass z id tp ifc p) =
-  case p' of
-    SNop z'   -> SNop z'
-    otherwise -> SClass z id tp ifc p'
-  where p' = stmt p
-
-stmt (SInst z cls tp imp p) =
-  case p' of
-    SNop z'   -> SNop z'
-    otherwise -> SInst z cls tp imp p'
-  where p' = stmt p
-
 stmt (SData z tdat nms flds ctrs abs p) =
   case p' of
     SNop z'   -> SNop z'
