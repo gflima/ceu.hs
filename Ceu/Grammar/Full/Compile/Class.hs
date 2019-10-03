@@ -111,15 +111,19 @@ setGen' p = p
 
 withEnvS :: [Stmt] -> Stmt -> (Errors,Stmt)
 
-withEnvS env s@(SClassS z id cs ifc p) = (es1++es2++es3, SClassS z id cs ifc' p') where
-                                            es1        = chkClassSupsDeclared env z cs
-                                            (es2,ifc') = withEnvS (s:env) ifc
-                                            (es3,p')   = withEnvS (s:env) p
+withEnvS env s@(SClassS z id cs ifc p) = (es1++es2++es3++es4, SClassS z id cs ifc' p') where
+                                            es1        = chkClass env z id
+                                            es2        = chkClassSupsDeclared env z cs
+                                            (es3,ifc') = withEnvS (s:env) ifc
+                                            (es4,p')   = withEnvS (s:env) p
 
-withEnvS env s@(SInstS z cls tpc imp p) = (es1++es2++es3, addClassGensToInst env $ SInstS z cls tpc imp' p') where
-                                            es1        = chkInstSupsDeclared env z (cls,tpc)
-                                            (es2,imp') = withEnvS (s:env) imp
-                                            (es3,p')   = withEnvS (s:env) p
+withEnvS env s@(SInstS z cls tpc imp p) = (es1++es2++es3++es4++es5,
+                                           addClassGensToInst env $ SInstS z cls tpc imp' p') where
+                                            es1        = chkInstClass env z cls
+                                            es2        = chkInstDeclared env z (cls,tpc)
+                                            es3        = chkInstSupsDeclared env z (cls,tpc)
+                                            (es4,imp') = withEnvS (s:env) imp
+                                            (es5,p')   = withEnvS (s:env) p
 
 withEnvS env (SDataS z tp nms st cs abs p) = (es, SDataS z tp nms st cs abs p') where
                                               (es,p') = withEnvS env p
@@ -186,6 +190,12 @@ withEnvE env exp                 = ([], exp)
 
 -------------------------------------------------------------------------------
 
+chkClass :: [Stmt] -> Ann -> ID_Class -> Errors
+chkClass env z cls =
+  case find (isClass cls) env of
+    Nothing -> []
+    Just _  -> [toError z $ "interface '" ++ cls ++ "' is already declared"]
+
 chkClassSupsDeclared :: [Stmt] -> Ann -> Cs.Map -> Errors
 chkClassSupsDeclared env z cs =
   case Cs.toList cs of
@@ -195,6 +205,21 @@ chkClassSupsDeclared env z cs =
         Just _  -> []
     otherwise  -> error "TODO: multiple vars"
 
+chkInstClass :: [Stmt] -> Ann -> ID_Class -> Errors
+chkInstClass env z cls =
+  case find (isClass cls) env of
+    Nothing -> [toError z $ "interface '" ++ cls ++ "' is not declared"]
+    Just _  -> []
+
+chkInstDeclared :: [Stmt] -> Ann -> (ID_Class,T.TypeC) -> Errors
+chkInstDeclared env z (cls,itpc) =
+  case find f env of
+    Nothing -> []
+    Just _  -> [toError z $ "implementation of '" ++ cls ++ "' for '" ++ T.showC itpc ++ "' is already declared"]
+  where
+    f (SInstS _ id tpc _ _) = (cls==id && itpc==tpc)
+    f _ = False
+
 -- check extends
 --  interface      (Eq  for a)
 --  implementation (Eq  for Bool)                  <-- so Bool must implement Eq
@@ -203,7 +228,7 @@ chkClassSupsDeclared env z cs =
 chkInstSupsDeclared :: [Stmt] -> Ann -> (ID_Class,T.TypeC) -> Errors
 chkInstSupsDeclared env z (cls,itpc) =
   case find (isClass cls) env of
-    Nothing -> error "TODO" -- cls is not declared
+    Nothing                   -> []   -- cls is not declared (checked before)
     Just (SClassS _ _ cs _ _) ->
       case Cs.toList cs of
         [(_,sups)] -> concatMap f sups where
@@ -224,11 +249,12 @@ isClass _   _                     = False
 addClassGensToInst :: [Stmt] -> Stmt -> Stmt
 addClassGensToInst env s@(SInstS z cls tpc imp p) = SInstSC z (cls,ifc,gens) tpc imp p
   where
-    ifc = case find f env of                  -- TODO: more css
-            Just (SClassS _ _ _ ifc _) -> ifc -- TODO: Nothing
-            where
-              f (SClassS _ id _ _ _) = id == cls
-              f _ = False
+    ifc = case find f env of
+            Nothing                    -> SNop z -- class is not declared (checked before)
+            Just (SClassS _ _ _ ifc _) -> ifc
+          where
+            f (SClassS _ id _ _ _) = id == cls
+            f _ = False
     gens = filter f env where
             f (SVarSG _ id GDcl (_,cs) _ _) = (cls == cls') where
                                                 cls' = case Cs.toList cs of

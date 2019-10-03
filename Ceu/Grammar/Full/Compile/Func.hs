@@ -45,7 +45,7 @@ remEFuncPar (EFunc z tpc@(TFunc _ inp _,cs) par imp) = EFunc' z tpc imp'
         aux z (ETuple _ (v1:vs1))
                 (TTuple (v2:vs2))        = (aux z v1 v2) ++ (aux z (ETuple z vs1) (TTuple vs2))
         aux z (ETuple _ _)  _            = error "arity mismatch"
-        aux z loc           tp           = error $ show (z,loc,tp)
+        --aux z loc           tp           = error $ show (loc,tp)
 
     tmp p = case par of
               (EAny _) -> imp

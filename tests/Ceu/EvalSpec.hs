@@ -429,11 +429,7 @@ spec = do
       it "Int ; X a ; inst X Int ; return f3 1" $
         go
           (B.SData annz int Nothing TUnit cz False
-          (B.SClass annz "X" (cv "a")
-            (Map.singleton "f3" (annz,"f3",(TFunc FuncGlobal (TVar False "a") (int),cvc ("a","X")),False))
           (B.SVar annz "f3" (TFunc FuncGlobal (TVar False "a") (int),cvc ("a","X"))
-          (B.SInst annz "X" (int,cz)
-            (Map.singleton "f3" (annz,"f3",(TFunc FuncGlobal (int) (int),cz),True))
             (B.SVar annz "$f3$(Int -> Int)$" (TFunc FuncGlobal (int) (int),cz)
             (mmmOne annz False
               (B.EVar annz "$f3$(Int -> Int)$")
@@ -442,7 +438,7 @@ spec = do
               (B.SSeq annz
                 (B.SNop annz)
                 (B.SRet annz (B.ECall annz (B.EVar annz "f3") (B.ECons annz ["Int","1"]))))
-              (B.SNop annz)))))))
+              (B.SNop annz)))))
         `shouldBe` (EData ["Int","1"] EUnit)
 
       it "Int ; Bool ; X a ; inst X Bool/Int ; return f2 1" $
@@ -450,11 +446,7 @@ spec = do
           (B.SData annz int Nothing TUnit cz False
           (B.SVar annz "+" (TFunc FuncGlobal (TTuple [int, int]) (int),cz)
           (B.SData annz bool Nothing TUnit cz False
-          (B.SClass annz "X" (cv "a")
-            (Map.singleton "f2" (annz,"f2",(TFunc FuncGlobal (TVar False "a") (int),cvc ("a","X")),False))
           (B.SVar annz "f2" (TFunc FuncGlobal (TVar False "a") (int),cvc ("a","X"))
-          (B.SInst annz "X" (bool,cz)
-            (Map.singleton "f2" (annz,"f2",(TFunc FuncGlobal (bool) (int),cz),True))
             (B.SVar annz "$f2$(Bool -> Int)$" (TFunc FuncGlobal (bool) (int),cz)
             (mmmOne annz False
               (B.EVar annz "$f2$(Bool -> Int)$")
@@ -462,8 +454,6 @@ spec = do
                 (B.SRet annz (B.ECons annz ["Int","0"])))
               (B.SSeq annz
                 (B.SNop annz)
-                (B.SInst annz "X" (int,cz)
-                  (Map.singleton "f2" (annz,"f2",(TFunc FuncGlobal (int) (int),cz),True))
                   (B.SVar annz "$f2$(Int -> Int)$" (TFunc FuncGlobal (int) (int),cz)
                   (mmmOne annz False
                     (B.EVar annz "$f2$(Int -> Int)$")
@@ -480,9 +470,9 @@ spec = do
                         (B.SRet annz (B.EVar annz "ret"))
                         (B.SRet annz (B.EError annz 99))))
                     )
-                    (B.SNop annz))))
+                    (B.SNop annz)))
                     )
-                    (B.SNop annz)))))))))
+                    (B.SNop annz)))))))
         `shouldBe` (EData ["Int","2"] EUnit)
 
       it "Int ; Bool ; X a ; inst X Bool/Int ; return f4 1" $
@@ -490,11 +480,7 @@ spec = do
           (B.SData annz int Nothing TUnit cz False
           (B.SVar annz "+" (TFunc FuncGlobal (TTuple [int, int]) (int),cz)
           (B.SData annz bool Nothing TUnit cz False
-          (B.SClass annz "X" (cv "a")
-            (Map.singleton "f4" (annz,"f4",(TFunc FuncGlobal (TVar False "a") (int),cvc ("a","X")),False))
           (B.SVar annz "f4" (TFunc FuncGlobal (TVar False "a") (int),cvc ("a","X"))
-          (B.SInst annz "X" (int,cz)
-            (Map.singleton "f4" (annz,"f4",(TFunc FuncGlobal (int) (int),cz),True))
             (B.SVar annz "$f4$(Int -> Int)$" (TFunc FuncGlobal (int) (int),cz)
             (mmmOne annz False
               (B.EVar annz "$f4$(Int -> Int)$")
@@ -505,8 +491,6 @@ spec = do
                     (B.ETuple annz [B.EArg annz, B.ECons annz ["Int","1"]]))))
                 (B.SSeq annz
                   (B.SNop annz)
-                  (B.SInst annz "X" (bool,cz)
-                    (Map.singleton "f4" (annz,"f4",(TFunc FuncGlobal (bool) (int),cz),True))
                     (B.SVar annz "$f4$(Bool -> Int)$" (TFunc FuncGlobal (bool) (int),cz)
                     (mmmOne annz False
                       (B.EVar annz "$f4$(Bool -> Int)$")
@@ -516,9 +500,9 @@ spec = do
                         (B.SNop annz)
                         (B.SRet annz (B.ECall annz (B.EVar annz "f4") (B.ECons annz ["Int","1"])))
                       )
-                      (B.SNop annz))))
+                      (B.SNop annz)))
                 )
-                (B.SNop annz)))))))))
+                (B.SNop annz)))))))
         `shouldBe` (EData ["Int","2"] EUnit)
 
     describe "misc" $ do
