@@ -165,12 +165,19 @@ withEnvS env p = ([], p)
 
 -------------------------------------------------------------------------------
 
-TODO
-
 withEnvE :: [Stmt] -> Exp -> (Errors,Exp)
-withEnvE env (ETuple z es)       = ([], ETuple z (map (snd . withEnvE env) es))
-withEnvE env (EFunc  z tp ps bd) = ([], EFunc  z tp (snd $ withEnvE env ps) (snd $ withEnvS env bd))
-withEnvE env (ECall  z e1 e2)    = ([], ECall  z (snd $ withEnvE env e1) (snd $ withEnvE env e2))
+
+withEnvE env (ETuple z exps)     = (concat ess, ETuple z ss) where
+                                    (ess,ss) = unzip $ map (withEnvE env) exps
+
+withEnvE env (EFunc  z tp ps bd) = (es1++es2, EFunc z tp ps' bd') where
+                                    (es1,ps') = withEnvE env ps
+                                    (es2,bd') = withEnvS env bd
+
+withEnvE env (ECall  z e1 e2)    = (es1++es2, ECall z e1' e2') where
+                                    (es1,e1') = withEnvE env e1
+                                    (es2,e2') = withEnvE env e2
+
 withEnvE env exp                 = ([], exp)
 
 -------------------------------------------------------------------------------
