@@ -90,8 +90,13 @@ compile p = --cat0 traceStmt $
   cat0 (map_stmt' (f2 Func.remSFunc,id,id))         $
     ([],p)
 
+rmdups :: (Eq a) => [a] -> [a]
+rmdups [] = []
+rmdups [x] = [x]
+rmdups (x:xs) = x : [ k  | k <- rmdups(xs), k /= x ]
+
 compile' :: Stmt -> (Errors, B.Stmt)
-compile' p = (es1++es4, p4)
+compile' p = (rmdups (es1++es4), p4)
   where
     (es1,p1) = compile p
     p2       = toBasicStmt p1
