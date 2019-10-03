@@ -114,9 +114,9 @@ spec = do
               "",
               "return (Bool.True) =>= (Bool.False)"
             ])
-          `shouldBe` Left "(line 1, column 1):\ninterface 'IEq' is not declared\n"
+          `shouldBe` Left "(line 1, column 1):\ninterface 'IEq' is not declared\n(line 5, column 1):\nimplementation 'IEq for Bool' is not declared\n"
 
-        it "XXX: IOrd extends IEq" $
+        it "IOrd extends IEq" $
           (run True $
             unlines [
               "interface IEq for a with",
@@ -135,6 +135,17 @@ spec = do
             ])
           --`shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 9, column 1):\nmissing implementation of '==='\n"
           `shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated implementation for '((Bool,Bool) -> Bool)'\n"
+
+        it "XXX: implementation for extends of (a,b)" $
+          (run True $
+            unlines [
+              "interface IFa for a with end",
+              --"implementation of IFa for (a,b) where (a,b) is (IFa,IFa) with end",
+              "interface IFb for a where (a is IFa) with end",
+              "implementation of IFb for (a,b) where (a is IFb, b is IFb) with end",
+              "return Bool.True"
+             ])
+          `shouldBe` Left "(line 3, column 1):\nimplementation 'IFa for (a,b)' is not declared\n"
 
       describe "gen-inst:" $ do
 

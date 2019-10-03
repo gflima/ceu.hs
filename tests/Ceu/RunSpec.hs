@@ -1442,17 +1442,6 @@ $f3$(Int -> Int)$ 10                       // EVar
         (run True $
           unlines [
             "interface IFa for a with end",
-            --"implementation of IFa for (a,b) where (a,b) is (IFa,IFa) with end",
-            "interface IFb for a where (a is IFa) with end",
-            "implementation of IFb for (a,b) where (a is IFb, b is IFb) with end",
-            "return Bool.True"
-           ])
-        `shouldBe` Left "(line 3, column 1):\nimplementation 'IFa for (a,b)' is not declared\n"
-
-      it "implementation for extends of (a,b)" $
-        (run True $
-          unlines [
-            "interface IFa for a with end",
             "implementation of IFa for (c,d) where (c is IFa, d is IFa) with end",
             "interface IFb for e where (e is IFa) with end",
             "implementation of IFb for (m,n) where (m is IFb, n is IFb) with end",

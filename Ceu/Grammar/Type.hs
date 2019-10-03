@@ -64,8 +64,9 @@ hier2str = intercalate "."
 
 showC :: TypeC -> String
 showC (tp,cs) = case toList cs of
-  []          -> show' tp
-  [(var,[c])] -> show' tp ++ " where " ++ var ++ " is " ++ c
+  [] -> show' tp
+  l  -> show' tp ++ " where (" ++ intercalate "," (map f l) ++ ")" where
+          f (var,[c]) = var ++ " is " ++ c
 
 show' :: Type -> String
 show' TTop                      = "top"
