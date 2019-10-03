@@ -54,9 +54,9 @@ findVars z id (env:envs) =
     getRef (SVar _ _ tpc _) = T.isRefC tpc
 
 findVars' :: Ann -> ID_Var -> [Stmt] -> Either (Bool,Errors) [Stmt]
-findVars' z id envs =
-  case filter f envs of
-    [] -> Left (False, [toError z $ "variable '" ++ id ++ "' is not declared"])
+findVars' z id@(cid:_) envs =
+  case filter f envs of   -- ignore errors from '_' special identifiers
+    [] -> Left (False, bool [toError z $ "variable '" ++ id ++ "' is not declared"] [] (cid=='_'))
     xs -> Right xs
   where
     f (SVar _ id' tpc' _) = id==id'

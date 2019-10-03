@@ -120,14 +120,15 @@ withEnvS env s@(SClassS z id cs ifc p) = (es1++es2++es3++es4, SClassS z id cs if
                                             (es3,ifc') = withEnvS (s:env) ifc
                                             (es4,p')   = withEnvS (s:env) p
 
-withEnvS env s@(SInstS z cls tpc imp p) = (es1++es2++es3++es4++es5++es6,
+withEnvS env s@(SInstS z cls tpc imp p) = (es1++es2++es3++es4++es5++es6++es7,
                                            addClassGensToInst env $ SInstS z cls tpc imp' p') where
                                             es1        = chkInstClass        env z cls
                                             es2        = chkInstDeclared     env z (cls,tpc)
                                             es3        = chkInstMissing      env z (cls,imp)
-                                            es4        = chkInstSupsDeclared env z (cls,tpc)
-                                            (es5,imp') = withEnvS (s:env) imp
-                                            (es6,p')   = withEnvS (s:env) p
+                                            es4        = chkInstUnexpected   env z (cls,imp)
+                                            es5        = chkInstSupsDeclared env z (cls,tpc)
+                                            (es6,imp') = withEnvS (s:env) imp
+                                            (es7,p')   = withEnvS (s:env) p
 
 withEnvS env (SDataS z tp nms st cs abs p) = (es, SDataS z tp nms st cs abs p') where
                                               (es,p') = withEnvS env p
@@ -250,6 +251,16 @@ chkInstMissing env z (cls,imp) = concatMap toErr $ Set.toList $
                                                  (Set.fromList $ map toName $ toGDcls imp)
   where
     toErr id = [toError z $ "missing implementation of '" ++ id ++ "'"]
+    ifc = case find (isClass cls) env of
+            Nothing                    -> []   -- cls is not declared (checked before)
+            Just (SClassS _ _ _ ifc _) -> toGDcls ifc
+
+chkInstUnexpected :: [Stmt] -> Ann -> (ID_Class,Stmt) -> Errors
+chkInstUnexpected env z (cls,imp) = concatMap toErr $ Set.toList $
+                                  Set.difference (Set.fromList $ map toName $ toGDcls imp)
+                                                 (Set.fromList $ map toName ifc)
+  where
+    toErr id = [toError z $ "unexpected implementation of '" ++ id ++ "'"]
     ifc = case find (isClass cls) env of
             Nothing                    -> []   -- cls is not declared (checked before)
             Just (SClassS _ _ _ ifc _) -> toGDcls ifc
