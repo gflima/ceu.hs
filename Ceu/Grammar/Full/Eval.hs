@@ -53,7 +53,7 @@ catE f (es1,p1) = (es1++es2,p2) where
                     (es2,p2) = f p1
 
 compile :: Stmt -> (Errors,Stmt)
-compile p = --traceStmt $
+compile p = --cat0 traceStmt $
   cat0 (map_stmt' (f2 Match.remSSetSIf,id,id))      $
   cat0 (map_stmt' (f2 Match.remIni,id,id))          $
   cat0 (map_stmt' (id2,Func.remEFuncPar,id))        $

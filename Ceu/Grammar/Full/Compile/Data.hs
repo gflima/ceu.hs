@@ -1,6 +1,6 @@
 module Ceu.Grammar.Full.Compile.Data where
 
-import Debug.Trace
+--import Debug.Trace
 import Data.List (find)
 import Data.Bool (bool)
 

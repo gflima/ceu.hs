@@ -480,11 +480,7 @@ inlClassInst (SInstSC z (cls,ifc,gens) tpc imp p) = SInstSC z (cls,ifc,gens) tpc
   where
     dict = dollar $ cls ++ "$" ++ T.showC tpc
     addDictDcl imp = SVarSG z dict GNone (T.TData False [dollar cls] [],Cs.cz) Nothing imp
-    addDictIni p   = SSeq z
-                      (SSet z True False
-                        (EVar z dict)
-                        (ECall z (ECons z [dollar cls]) (listToExp $ map toEVar $ map isDcl $ map toName $ toGDcls' ifc)))
-                      p
+    addDictIni p   = SSeq z (SSet z True False (EVar z dict) cons) p
                      where
                       toEVar :: (Bool,ID_Var) -> Exp
                       toEVar (True,  id) = EVar z ('_' : dollar id)
@@ -496,6 +492,10 @@ inlClassInst (SInstSC z (cls,ifc,gens) tpc imp p) = SInstSC z (cls,ifc,gens) tpc
                                   f id = elem id $
                                           Set.difference (Set.fromList $ map toName $ toGDcls' ifc)
                                                          (Set.fromList $ map toName $ toGDcls' imp)
+
+                      cons = case map toEVar $ map isDcl $ map toName $ toGDcls' ifc of
+                              [] -> ECons z [dollar cls]
+                              x  -> ECall z (ECons z [dollar cls]) $ listToExp x
 
 inlClassInst p = p
 

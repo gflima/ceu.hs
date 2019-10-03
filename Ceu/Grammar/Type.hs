@@ -94,8 +94,10 @@ insTTuple :: Type -> Type -> Type
 insTTuple tp (TTuple tup) = TTuple (tp:tup)
 
 listToType :: [Type] -> Type
+listToType []    = TUnit
 listToType [e]   = e
 listToType (e:l) = TTuple (e:l)
+--listToType x = error $ show x
 
 -------------------------------------------------------------------------------
 

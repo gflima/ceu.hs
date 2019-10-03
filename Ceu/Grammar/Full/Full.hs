@@ -37,6 +37,7 @@ insETuple :: Exp -> Exp -> Exp
 insETuple exp (ETuple z tup) = ETuple z (exp:tup)
 
 listToExp :: [Exp] -> Exp
+--listToExp []    = EUnit annz
 listToExp [e]   = e
 listToExp (e:l) = ETuple (getAnn e) (e:l)
 
