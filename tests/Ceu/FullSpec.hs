@@ -183,18 +183,18 @@ spec = do
               (Just (EFunc annz (TFunc FuncGlobal (TData False ["A"] []) TUnit,cz) (EVar annz "x") (SRet annz (EError annz 99)))))))))
       `shouldBe` ["implementation of 'Xable' for 'A' is already declared"]
 
-{-
     it "A ; Xable a ; inst Xable A ; ()/=Int" $
-      (fst $ TypeSys.go
-        (SData annz (TData False ["A"] []) Nothing TUnit cz False
-        (SClass annz "Xable" (cv "a") (Map.singleton "fff1" (annz,"fff1",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False))
-        (SVar annz "fff1" (TFunc FuncGlobal (TVar False "a") TUnit,cz)
-        (SInst annz "Xable" (TData False ["A"] [],cz) Map.empty
-          (SSeq annz
-            (SNop annz)
-            (SNop annz)))))))
-      `shouldBe` ["missing instance of 'fff1'"]
+      (fst.compile')
+        (SSeq annz
+          (SData annz (TData False ["A"] []) Nothing TUnit cz False)
+        (SSeq annz
+          (SClass annz "Xable" (cv "a")
+            (SVar annz "fff1" (TFunc FuncGlobal (TVar False "a") TUnit,cz) Nothing))
+          (SInst annz "Xable" (TData False ["A"] [],cz)
+            (SNop annz))))
+      `shouldBe` ["missing implementation of 'fff1'"]
 
+{-
     it "A ; Xable a ; inst Xable A ; ()/=Int" $
       (fst $ TypeSys.go
         (SData annz (TData False ["A"] []) Nothing TUnit cz False
@@ -206,7 +206,7 @@ spec = do
             (SSeq annz
               (SNop annz)
               (SNop annz))))))))
-      `shouldBe` ["missing instance of 'fff1'","unexpected instance of 'fff2'"]
+      `shouldBe` ["missing implementation of 'fff1'","unexpected implementation of 'fff2'"]
 
     it "A ; Xable a ; inst Xable A ; ()/=Int" $
       (fst $ TypeSys.go
@@ -217,7 +217,7 @@ spec = do
           (SSeq annz
             (SNop annz)
             (SNop annz)))))))
-      `shouldBe` ["missing instance of 'fff1'"]
+      `shouldBe` ["missing implementation of 'fff1'"]
 
     it "A ; Xable a ; inst Xable A ; ()/=Int" $
       (fst $ TypeSys.go
@@ -287,7 +287,7 @@ spec = do
               (SNop annz)
               (SCall annz (ECall annz (EVar annz "fff") (ECons annz ["Int","1"])))))))))))
       --`shouldBe` ["types do not match : expected '(Int.1 -> ?)' : found '(A -> ())'"]
-      `shouldBe` ["variable 'fff' has no associated instance for '(Int -> ?)'"]
+      `shouldBe` ["variable 'fff' has no associated implementation for '(Int -> ?)'"]
 
     it "Int ; Bool ; Equalable a ; eq 1 Bool" $
       (fst $ TypeSys.go
