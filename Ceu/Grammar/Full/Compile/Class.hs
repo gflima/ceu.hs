@@ -113,9 +113,10 @@ withEnvS env s@(SClassS z id cs ifc p) = (es1++es2++es3, SClassS z id cs ifc' p'
                                             (es2,ifc') = withEnvS (s:env) ifc
                                             (es3,p')   = withEnvS (s:env) p
 
-withEnvS env s@(SInstS z cls tpc imp p) = (es1++es2, addClassGensToInst env $ SInstS z cls tpc imp' p') where
-                                            (es1,imp') = withEnvS (s:env) imp
-                                            (es2,p')   = withEnvS (s:env) p
+withEnvS env s@(SInstS z cls tpc imp p) = (es1++es2++es3, addClassGensToInst env $ SInstS z cls tpc imp' p') where
+                                            es1        = chkInstSupsDeclared env z (cls,tpc)
+                                            (es2,imp') = withEnvS (s:env) imp
+                                            (es3,p')   = withEnvS (s:env) p
 
 withEnvS env (SDataS z tp nms st cs abs p) = (es, SDataS z tp nms st cs abs p') where
                                               (es,p') = withEnvS env p
@@ -189,26 +190,31 @@ chkClassSupsDeclared env z cs =
       f sup = case find (isClass sup) env of
         Nothing -> [toError z $ "interface '" ++ sup ++ "' is not declared"]
         Just _  -> []
-      isClass id1 (SClassS _ id2 _ _ _) = traceShowX (id1,id2) (id1 == id2)
-      isClass _   _                     = False
     otherwise  -> error "TODO: multiple vars"
 
-{-
-chkClassSupsDeclared :: [Stmt] -> Ann -> Cs.Map -> Errors
-chkInstSupsDeclared env ... =
-              -- check extends
-              --  interface      (Eq  for a)
-              --  implementation (Eq  for Bool)                  <-- so Bool must implement Eq
-              --  interface      (Ord for a) extends (Eq for a)  <-- but Ord extends Eq
-              --  implementation (Ord for Bool)                  <-- Bool implements Ord
-              es1 = concatMap f sups where
-                f sup = case find (isInstOf sup xxx) (concat envs) of
-                  Nothing -> [toError z $ "implementation '" ++ sup ++ " for " ++
-                              (T.show' itp) ++ "' is not declared"]
-                  Just _  -> []
-                isInstOf x y (SInst _ x' y' _ _) = (x'==x && y' `T.isSupOfC` y)
-                isInstOf _ _ _                   = False
--}
+-- check extends
+--  interface      (Eq  for a)
+--  implementation (Eq  for Bool)                  <-- so Bool must implement Eq
+--  interface      (Ord for a) extends (Eq for a)  <-- but Ord extends Eq
+--  implementation (Ord for Bool)                  <-- Bool implements Ord
+chkInstSupsDeclared :: [Stmt] -> Ann -> (ID_Class,T.TypeC) -> Errors
+chkInstSupsDeclared env z (cls,itpc) =
+  case find (isClass cls) env of
+    Nothing -> error "TODO" -- cls is not declared
+    Just (SClassS _ _ cs _ _) ->
+      case Cs.toList cs of
+        [(_,sups)] -> concatMap f sups where
+          f :: ID_Class -> Errors
+          f sup = case find (isInstOf sup itpc) env of
+            Nothing -> [toError z $ "implementation '" ++ sup ++ " for " ++
+                        (T.showC itpc) ++ "' is not declared"]
+            Just _  -> []
+          isInstOf x y (SInstS _ x' y' _ _) = (x'==x && y' `T.isSupOfC` y)
+          isInstOf _ _ _                    = False
+
+isClass :: ID_Class -> Stmt -> Bool
+isClass id1 (SClassS _ id2 _ _ _) = (id1 == id2)
+isClass _   _                     = False
 
 -------------------------------------------------------------------------------
 

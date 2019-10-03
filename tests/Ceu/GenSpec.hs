@@ -101,7 +101,7 @@ spec = do
 
       describe "extends:" $ do
 
-        it "XXX: IOrd extends IEq" $
+        it "IOrd extends IEq" $
           (run True $
             unlines [
               "interface IOrd for a where (a is IEq) with",
@@ -116,7 +116,7 @@ spec = do
             ])
           `shouldBe` Left "(line 1, column 1):\ninterface 'IEq' is not declared\n"
 
-        it "IOrd extends IEq" $
+        it "XXX: IOrd extends IEq" $
           (run True $
             unlines [
               "interface IEq for a with",
@@ -133,7 +133,8 @@ spec = do
               "",
               "return (Bool.True) =>= (Bool.False)"
             ])
-          `shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 9, column 1):\nmissing implementation of '==='\n"
+          --`shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 9, column 1):\nmissing implementation of '==='\n"
+          `shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated implementation for '((Bool,Bool) -> Bool)'\n"
 
       describe "gen-inst:" $ do
 
