@@ -1,15 +1,8 @@
 - runhaskell -itests/ tests/Spec.hs
 - 9 -- Basic=1, Type=0, Eval=1, Full=0, Parser=0, Run=4, Book=3, Gen=0
-             0       0       1                 0      6             21
+             0       0       1       0         0      6             17
 
-- Talvez nao precise de GGen|GNone no Basic, basta ver se fc possui ctrs
-    - multiple ctrs ja aparecem qd implementacao é para tipo que tem ctr
-
-- remover Class/Inst de Basic?
-
-- usar G* em TypeSys na hora do EVar
-
-- guardar em protos todos e os que nao colocar False
+- Remover erros de data/types com identificadores especiais
 
 - questions about class
     - dict or struct?

@@ -371,7 +371,7 @@ expr' (rel,txp) envs (ECons z hr) = (es1++es2, (FuncGlobal,Nothing), [], ECons z
 
     (es2,tpc2) = case relatesC SUP txp tpc1 of
       Left es      -> (map (toError z) es,tpc1)
-      Right (tp,_) -> ([],(tp,cs)) where (_,cs)=tpc1
+      Right (tpc,_) -> ([],tpc) where (_,cs)=tpc1
 
 expr' _ envs (ETuple z exps) = (es, ft, fts, ETuple z{typec=(tps',cz)} exps') where
                                 rets :: [(Errors,FT_Ups,[FuncType],Exp)]

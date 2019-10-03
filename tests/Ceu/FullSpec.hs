@@ -230,37 +230,38 @@ spec = do
             (SVar annz "fff" (TFunc FuncGlobal (TData False ["A"] []) int,cz)
               (Just (EFunc annz (TFunc FuncGlobal (TData False ["A"] []) int,cz) (EVar annz "x") (SRet annz (EError annz 99)))))))))
       --`shouldBe` ["types do not match : expected '(a -> ())' : found '(A -> Int)'"]
-      `shouldBe` ["types do not match : expected '((($Xable$,A) -> Int) -> $Xable$)' : found '((($Xable$,a) -> ()) -> $Xable$)'"]
+      --`shouldBe` ["types do not match : expected '((($Xable$,A) -> Int) -> $Xable$)' : found '((($Xable$,a) -> ()) -> $Xable$)'"]
+      `shouldBe` ["types do not match : expected '(a -> ())' : found '(A -> Int)'","types do not match : expected '((($Xable$,A) -> Int) -> $Xable$)' : found '((($Xable$,a) -> ()) -> $Xable$)'"]
 
-{-
     it "A ; Xable a ; inst X A" $
-      (fst $ TypeSys.go
-        (SData annz int Nothing TUnit cz False
-        (SData annz (TData False ["A"] []) Nothing TUnit cz False
-        (SClass annz "Xable" (cv "a") (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False))
-        (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") TUnit,cz)
-        (SInst annz "X" (TData False ["A"] [],cz)
-          (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (int) TUnit,cz),True))
-          (func "$fff$(Int -> ())$" (TFunc FuncGlobal (int) TUnit,cz)
-            (SSeq annz
-              (SNop annz)
-              (SNop annz)))))))))
-      `shouldBe` ["constraint 'X' is not declared"]
+      (fst.compile')
+        (SSeq annz
+          (SData annz int Nothing TUnit cz False)
+        (SSeq annz
+          (SData annz (TData False ["A"] []) Nothing TUnit cz False)
+        (SSeq annz
+          (SClass annz "Xable" (cv "a") 
+            (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") TUnit,cz) Nothing))
+          (SInst annz "X" (TData False ["A"] [],cz)
+            (SVar annz "fff" (TFunc FuncGlobal int TUnit,cz)
+              (Just (EFunc annz (TFunc FuncGlobal int TUnit,cz) (EVar annz "x") (SRet annz (EError annz 99)))))))))
+      `shouldBe` ["interface 'X' is not declared","unexpected implementation of 'fff'","data '$X$' is not declared"]
 
     it "A ; Xable a ; inst Xable A ; a/=A" $
-      (fst $ TypeSys.go
-        (SData annz int Nothing TUnit cz False
-        (SData annz (TData False ["A"] []) Nothing TUnit cz False
-        (SClass annz "Xable" (cv "a") (Map.singleton "fff" (annz,"fff",(TFunc FuncGlobal (TVar False "a") TUnit,cz),False))
-          (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") TUnit,cz)        -- a
-        (SInst annz "Xable" (TData False ["A"] [],cz)                          -- A
-          (Map.singleton "fff" (annz, "fff", (TFunc FuncGlobal (int) TUnit,cz), True))
-          (func "$fff$(Int -> ())$" (TFunc FuncGlobal (int) TUnit,cz)  -- Int
-            (SSeq annz
-              (SNop annz)
-              (SNop annz)))))))))
+      (fst.compile')
+        (SSeq annz
+          (SData annz int Nothing TUnit cz False)
+        (SSeq annz
+          (SData annz (TData False ["A"] []) Nothing TUnit cz False)
+        (SSeq annz
+          (SClass annz "Xable" (cv "a")
+            (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") TUnit,cz) Nothing)) -- a
+          (SInst annz "Xable" (TData False ["A"] [],cz)                             -- A
+            (SVar annz "fff" (TFunc FuncGlobal int TUnit,cz)                        -- int
+              (Just (EFunc annz (TFunc FuncGlobal int TUnit,cz) (EVar annz "x") (SRet annz (EError annz 99)))))))))
       `shouldBe` ["types do not match : expected 'A' : found 'Int'"]
 
+{-
     it "A ; Xable.fff(a) ; inst Xable A ; fff(A)" $
       (fst $ TypeSys.go
         (SData annz (TData False ["A"] []) Nothing TUnit cz False

@@ -232,9 +232,11 @@ relatesErrorsC rel (tp1_,_) (tp2_,_) = relatesErrors rel tp1_ tp2_
 relatesErrors :: Relation -> Type -> Type -> Errors
 relatesErrors rel tp1 tp2 = either id (const []) (relates rel tp1 tp2)
 
--- TODO: relates deve levar em consideracao os ctrs (e depende da REL)
-relatesC :: Relation -> TypeC -> TypeC -> Either Errors (Type, [(ID_Var,Type)])
-relatesC rel (tp1_,_) (tp2_,_) = relates rel tp1_ tp2_
+relatesC :: Relation -> TypeC -> TypeC -> Either Errors (TypeC, [(ID_Var,Type)])
+relatesC rel (tp1_,cs1) (tp2_,cs2) = -- | (cs1==cs2) = -- TODO: consider cs (depends on REL)
+  case relates rel tp1_ tp2_ of
+    Left  err        -> Left err
+    Right (tp,pairs) -> Right ((tp,cs1), pairs)
 
 relates :: Relation -> Type -> Type -> Either Errors (Type, [(ID_Var,Type)])
 relates rel tp1 tp2 =
