@@ -257,7 +257,7 @@ step p =  error $ "step: cannot advance : " ++ (show p)
 
 steps :: DescS -> DescE
 steps (vars, SRet' e) = (vars, e)
-steps d               = if (envRead vars "_steps") == (EData ["Int",show 10000] EUnit) then
+steps d               = if (envRead vars "_steps") == (EData ["Int",show 20000] EUnit) then
                           (vars, EError error_terminate)
                         else
                           steps (step d') where

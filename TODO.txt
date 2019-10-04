@@ -1,6 +1,6 @@
 - runhaskell -itests/ tests/Spec.hs
-- 9 -- Basic=1, Type=0, Eval=1, Full=0, Parser=0, Run=4, Book=3, Gen=0
-             0       0       1       1         0      6      19     15
+-  9 -- Basic=1, Type=0, Eval=1, Full=0, Parser=0, Run=4, Book=3, Gen=0
+- 41          0       0       1       1         0      6      18     15
 
 - Remover erros de data/types com identificadores especiais
 
