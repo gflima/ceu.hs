@@ -28,7 +28,7 @@ trd4 (_,_,x,_) = x
 fou4 (_,_,_,x) = x
 
 checkFuncNested :: String -> Exp -> Errors
-checkFuncNested str (EFunc  z (TFunc FuncNested _ _,_) _ _) = [toError z str]
+checkFuncNested str (EFunc  z (TFunc FuncNested _ _,_) _ _) = toErrors z str
 checkFuncNested str (ETuple _ l)                            = concatMap (checkFuncNested str) l
 checkFuncNested _   _                                       = []
 
@@ -52,9 +52,9 @@ findVars z id (env:envs) =
     getRef (SVar _ _ tpc _) = T.isRefC tpc
 
 findVars' :: Ann -> ID_Var -> [Stmt] -> Either (Bool,Errors) [Stmt]
-findVars' z id@(cid:_) envs =
+findVars' z id envs =
   case filter f envs of   -- ignore errors from '_' special identifiers
-    [] -> Left (False, bool [toError z $ "variable '" ++ id ++ "' is not declared"] [] (cid=='_'))
+    [] -> Left (False, toErrors' z id $ "variable '" ++ id ++ "' is not declared")
     xs -> Right xs
   where
     f (SVar _ id' tpc' _) = id==id'
@@ -81,12 +81,12 @@ fPat envs ini (EVar   z id)  =
 
 fPat envs ini (ECons  z h)   = (es, (FuncGlobal,Nothing), tp, ECons z{typec=tp} h) where
                                 (es,tp) = case find (isData $ hier2str h) (concat envs) of
-                                  Nothing -> ([toError z $ "data '" ++ (hier2str h) ++ "' is not declared"],
+                                  Nothing -> (toErrors z $ "data '" ++ (hier2str h) ++ "' is not declared",
                                               (TData False [] [],cz))
                                   Just (SData _ tp _ st cs _ _) -> case tp of
                                     TData False _ ofs -> (es,(tp',cs)) where
                                       tp' = f (TData False (take 1 h) ofs) st
-                                      es  = []-- map (toError z) (relatesErrorsC SUB tp tp')
+                                      es  = []-- map (toErrors z) (relatesErrorsC SUB tp tp')
 
                                       f tdat TUnit = tdat
                                       f tdat st    = TFunc FuncGlobal st tdat
@@ -120,7 +120,7 @@ errDeclared z chk str id envs =
             Just s@(SVar _ _ (_,cs) _) -> if chk' s then [] else err
             Just _                      -> err
         where
-          err = [toError z $ str ++ " '" ++ id ++ "' is already declared"]
+          err = toErrors z $ str ++ " '" ++ id ++ "' is already declared"
 
           chk' = case chk of
             Nothing -> const False
@@ -133,7 +133,7 @@ getErrsTypesDeclared :: Ann -> [Stmt] -> Type -> Errors
 getErrsTypesDeclared z envs tp = concatMap f (T.getDs tp) where
   f :: Type -> Errors
   f (TData _ hier _) = case find (isData id) envs of
-    Nothing                    -> [toError z $ "data '" ++ id ++ "' is not declared"]
+    Nothing                    -> toErrors' z id $ "data '" ++ id ++ "' is not declared"
     Just (SData _ _ _ _ _ _ _) -> [] --relatesErrorsC SUP tp' (tp_,cz)
 -- TODO
     where
@@ -205,9 +205,9 @@ stmt envs tpr (SMatch z ini fce exp cses) = (es', ftMin ft1 ft2, fts1++fts2, SMa
   -- if   1 <- x    // fce=true
   esc = if null esem then
           if fce then
-            bool [] [toError z "match is exhaustive"] ok
+            bool [] (toErrors z "match is exhaustive") ok
           else
-            bool [toError z "match is non exhaustive"]  [] ok
+            bool (toErrors z "match is non exhaustive")  [] ok
         else
           []
 
@@ -220,7 +220,7 @@ stmt envs _   (SCall z exp)  = (ese++esf, ft, fts, SCall z exp') where
                                 (ese,ft,fts,exp') = expr z (SUP, (TAny,cz)) envs exp
                                 esf = case exp' of
                                   ECall _ _ _ -> []
-                                  otherwise  -> [toError z "expected call"]
+                                  otherwise  -> (toErrors z "expected call")
 
 stmt envs tpr (SSeq z p1 p2) = (es1++es2, ftMin ft1 ft2, fts1++fts2, SSeq z p1' p2')
   where
@@ -285,9 +285,9 @@ expr' _ envs (EFunc z tpc@(TFunc ft inp out,cs) upv@(EUnit _) p) = (es++esf, ft_
             (FuncGlobal,   FuncGlobal)    -> ([], ft')
             (FuncClosure x,FuncClosure y) -> (es, ft') where
                                               es = if x >= y then [] else
-                                                [toError z "not enough memory : more closures than slots"]
-            (FuncClosure _,_)             -> ([toError z "unexpected dimension: function is not a closure"], ft')
-            --(_,FuncClosure _)           -> ([toError z "expected `new`: function is a closure"], ft')
+                                                toErrors z "not enough memory : more closures than slots"
+            (FuncClosure _,_)             -> (toErrors z "unexpected dimension: function is not a closure", ft')
+            --(_,FuncClosure _)           -> (toErrors z "expected `new`: function is a closure", ft')
             (FuncNested, FuncClosure _)   -> ([], FuncNested)
             (FuncUnknown,FuncClosure _)   -> ([], FuncNested)
             (FuncUnknown,_)               -> ([], ft')
@@ -330,7 +330,7 @@ expr' _ envs (EMatch z exp pat) = (esp++esem++esc, ftMin ft1 ft2, fts2,
     (ok, esm)           = (ok, map (toError z) esm) where (ok,esm) = matchX (concat envs) [pat'] exp'
     esem                = bool esm ese (null esm)    -- hide ese if esm
     esc = if null esem then
-            bool [] [toError z "match is exhaustive"] ok
+            bool [] (toErrors z "match is exhaustive") ok
           else
             []
 
@@ -339,7 +339,7 @@ expr' _ envs (EField z hr fld) = (es, (FuncGlobal,Nothing), [], EVar z{typec=(TF
     hr_str = T.hier2str hr
 
     (inp,out,cz,es) = case find (isData hr_str) (concat envs) of
-      Nothing -> (TAny,TAny,cz, [toError z $ "data '" ++ hr_str ++ "' is not declared"])
+      Nothing -> (TAny,TAny,cz, toErrors z $ "data '" ++ hr_str ++ "' is not declared")
       Just (SData _ tpc@(TData False _ _) nms (TTuple sts) cz _ _) -> (tpc,out,cz,es) where (out,es) = f nms sts
       Just (SData _ tpc@(TData False _ _) nms st cz _ _)           -> (tpc,out,cz,es) where (out,es) = f nms [st]
 
@@ -347,12 +347,12 @@ expr' _ envs (EField z hr fld) = (es, (FuncGlobal,Nothing), [], EVar z{typec=(TF
       ('_':idx) -> if length sts >= idx' then
                     (sts!!(idx'-1), [])
                    else
-                    (TAny,      [toError z $ "field '" ++ fld ++ "' is not declared"])
+                    (TAny,      toErrors z $ "field '" ++ fld ++ "' is not declared")
                    where
                     idx' = read idx
       otherwise -> case (nms, elemIndex fld (fromJust nms)) of
-                    (Nothing, _)  -> (TAny, [toError z $ "field '" ++ fld ++ "' is not declared"])
-                    (_, Nothing)  -> (TAny, [toError z $ "field '" ++ fld ++ "' is not declared"])
+                    (Nothing, _)  -> (TAny, toErrors z $ "field '" ++ fld ++ "' is not declared")
+                    (_, Nothing)  -> (TAny, toErrors z $ "field '" ++ fld ++ "' is not declared")
                     (_, Just idx) -> (sts!!idx, [])
 
 expr' (rel,txp) envs (ECons z hr) = (es1++es2, (FuncGlobal,Nothing), [], ECons z{typec=tpc2} hr)
@@ -360,8 +360,8 @@ expr' (rel,txp) envs (ECons z hr) = (es1++es2, (FuncGlobal,Nothing), [], ECons z
     hr_str = T.hier2str hr
     (tpc1,es1) = case find (isData hr_str) (concat envs) of
       Nothing                       -> ((TBot,cz),
-                                        [toError z $ "data '" ++ hr_str ++ "' is not declared"])
-      Just (SData _ tdat _ st cs True  _) -> ((f tdat st,cs), [toError z $ "data '" ++ hr_str ++ "' is abstract"])
+                                        toErrors z $ "data '" ++ hr_str ++ "' is not declared")
+      Just (SData _ tdat _ st cs True  _) -> ((f tdat st,cs), toErrors z $ "data '" ++ hr_str ++ "' is abstract")
       Just (SData _ tdat _ st cs False _) -> ((f tdat st,cs), [])
 
     f tdat TUnit = tdat
@@ -403,9 +403,9 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id@(cid:_)) = (es, ftReq (length envs) (
                   pred (SVar _ k tpc _) = (dol id `isPrefixOf` k) && (isRight $ relatesC SUP txpc tpc)
                   pred _                = False
 
-                  err = [toError z $ "variable '" ++ id ++
-                         "' has no associated implementation for '" ++
-                         T.show' txp ++ "'"]
+                  err = toErrors z $ "variable '" ++ id ++
+                          "' has no associated implementation for '" ++
+                          T.show' txp ++ "'"
           where
             f (_, SVar _ _ tpc _) =
               isRight $ relatesC rel txpc (toDer tpc) where

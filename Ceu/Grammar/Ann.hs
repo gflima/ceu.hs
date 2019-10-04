@@ -1,5 +1,6 @@
 module Ceu.Grammar.Ann where
 
+import Data.Bool                (bool)
 import Debug.Trace
 
 import Ceu.Grammar.Globals      (Source, Errors)
@@ -23,7 +24,13 @@ annz = Ann { typec  = (TBot,cz)
            , nn     = (-1)
            }
 
-toError  :: Ann -> String -> String
+toErrors' :: Ann -> String -> String -> [String]
+toErrors' z id msg = bool (toErrors z msg) [] $ elem '$' id
+
+toErrors :: Ann -> String -> [String]
+toErrors z msg = [toError z msg]
+
+toError :: Ann -> String -> String
 toError z msg = src ++ pre ++ msg where
     pre = let nm=name z in if nm=="" then "" else ": "
     src = case source z of
