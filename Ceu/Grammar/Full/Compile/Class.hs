@@ -405,10 +405,10 @@ repGGenInsts env (SVarSG z id (GDcl def) tpc@(tp,cs) Nothing p) =
         tpc' = T.instantiateC [("a",itpc)] tp
 
     idss :: [[ID_Class]]
-    idss = map Set.toList $ Map.elems cs
+    idss = Map.elems cs
 
     stmtss :: [[Stmt]]
-    stmtss = map (map getCls) $ map Set.toList $ Map.elems cs where
+    stmtss = map (map getCls) $ Map.elems cs where
               getCls cls = case List.find f env of
                             Just s -> s
                             -- TODO: Nothing
@@ -449,7 +449,7 @@ repGGenInsts env (SVarSG z id (GDcl def) tpc@(tp,cs) Nothing p) =
         h :: T.TypeC -> [T.TypeC]
         h tpc@(tp,cs) = if null cs then [tpc] else insts where
           tpcss :: [[T.TypeC]]
-          tpcss = combos' (lvl-1) env (map Set.toList $ Map.elems cs)
+          tpcss = combos' (lvl-1) env (Map.elems cs)
           insts :: [T.TypeC]
           insts = map (flip T.instantiateC tp) $ map (zip (Map.keys cs)) tpcss
 

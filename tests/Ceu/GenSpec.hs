@@ -110,7 +110,7 @@ spec = do
 
       describe "extends:" $ do
 
-        it "XXX: IOrd extends IEq" $
+        it "IOrd extends IEq" $
           (run True $
             unlines [
               "interface IOrd for a where (a is IEq) with",

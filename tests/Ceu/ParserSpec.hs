@@ -656,19 +656,19 @@ end
 
             it "EUnit a/IEq" $
               parse' stmt "data EUnit for a with a where a is IEq"
-              `shouldBe` Right (SData annz (TData False ["EUnit"] [TVar False "a"]) Nothing (TVar False "a") (M.fromList [("a",S.fromList ["IEq"])]) False)
+              `shouldBe` Right (SData annz (TData False ["EUnit"] [TVar False "a"]) Nothing (TVar False "a") (M.fromList [("a",["IEq"])]) False)
             it "Pair (a,a)" $
               parse' stmt "data Pair for a with (a,a)"
               `shouldBe` Right (SData annz (TData False ["Pair"] [TVar False "a"]) Nothing (TTuple [TVar False "a",TVar False "a"]) (M.fromList []) False)
             it "Pair (a,a)/IEq" $
               parse' stmt "data Pair for a with (a,a) where (a is IEq)"
-              `shouldBe` Right (SData annz (TData False ["Pair"] [TVar False "a"]) Nothing (TTuple [TVar False "a",TVar False "a"]) (M.fromList [("a",S.fromList ["IEq"])]) False)
+              `shouldBe` Right (SData annz (TData False ["Pair"] [TVar False "a"]) Nothing (TTuple [TVar False "a",TVar False "a"]) (M.fromList [("a",["IEq"])]) False)
             it "Pair (a,b)" $
               parse' stmt "data Pair for (a,b) with (a,b)"
               `shouldBe` Right (SData annz (TData False ["Pair"] [TVar False "a",TVar False "b"]) Nothing (TTuple [TVar False "a",TVar False "b"]) (M.fromList []) False)
             it "Pair (a,b)/IEq" $
               parse' stmt "data Pair for (a,b) with (a,b) where (a is IEq, b is IEq)"
-              `shouldBe` Right (SData annz (TData False ["Pair"] [TVar False "a",TVar False "b"]) Nothing (TTuple [TVar False "a",TVar False "b"]) (M.fromList [("a",S.fromList ["IEq"]),("b",S.fromList ["IEq"])]) False)
+              `shouldBe` Right (SData annz (TData False ["Pair"] [TVar False "a",TVar False "b"]) Nothing (TTuple [TVar False "a",TVar False "b"]) (M.fromList [("a",["IEq"]),("b",["IEq"])]) False)
 
             it "Pair (a,a) ; p1:Pair(Int,Int)" $
               parse' stmt "data Pair for a with (a,a) ; var p1 : Pair of Int"
@@ -744,7 +744,7 @@ end
 
           it "IFable f ; g a is IFable" $
             (parse' stmt $ "var x : a where (a is IFable,b is IFable)") -- (a,b) vs (IFable), arity mismatch
-            `shouldBe` Right (SSeq annz (SSeq annz (SVar annz "x" (TVar False "a",M.fromList [("a",S.fromList ["IFable"]),("b",S.fromList ["IFable"])]) Nothing) (SNop annz)) (SNop annz))
+            `shouldBe` Right (SSeq annz (SSeq annz (SVar annz "x" (TVar False "a",M.fromList [("a",["IFable"]),("b",["IFable"])]) Nothing) (SNop annz)) (SNop annz))
 
           it "IFable f ; g a is IFable" $
             (parse' stmt $
