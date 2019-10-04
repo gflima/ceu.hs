@@ -57,19 +57,8 @@ compile p = --cat0 traceStmt $
   cat0 (map_stmt' (f2 Match.remSSetSIf,id,id))      $
   cat0 (map_stmt' (f2 Match.remIni,id,id))          $
   cat0 (map_stmt' (id2,Func.remEFuncPar,id))        $
-  --traceShowId $
   cat0 (map_stmt' (f2 Data.addAccs,id,id))          $
-  cat0 (Data.expHier [])                            $ --traceShowId $
---
-{-
-  map_stmt' (Class.uniInstProtos,id,id)       $   -- uses scope (clss)
---
-  map_stmt' (f2 Class.addInstCall,id,id)      $
-  map_stmt' (f2 Class.addGenWrappers,id,id)   $
-  map_stmt' (Class.dupRenImpls,id,id)         $
---
-  map_stmt' (f2 Class.addProtosGen,id,id)     $
--}
+  cat0 (Data.expHier [])                            $
   cat0 (map_stmt' (f2 Class.dclClassDicts,id,id))   $
   cat0 (map_stmt' (f2 Class.inlClassInst,id,id))    $
     -- addInstDicts
@@ -86,7 +75,7 @@ compile p = --cat0 traceStmt $
 --
   cat0 (map_stmt' (f2 Scope.remSScope,id,id))       $
   cat0 (map_stmt' (f2 Scope.setScope,id,id))        $
-  cat0 (map_stmt' (f2 Seq.adjSSeq,id,id))           $   -- no more SSeq
+  cat0 (map_stmt' (f2 Seq.adjSSeq,id,id))           $
   cat0 (map_stmt' (f2 Func.remSFunc,id,id))         $
     ([],p)
 

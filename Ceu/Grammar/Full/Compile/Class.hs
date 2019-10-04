@@ -1,10 +1,11 @@
 module Ceu.Grammar.Full.Compile.Class where
 
-import qualified Data.Map as Map
-import qualified Data.Set as Set
 import Data.Maybe (isJust)
-import Data.List  (find)
+import qualified Data.Map  as Map
+import qualified Data.Set  as Set
+import qualified Data.List as List
 
+--import Debug.Trace
 import Ceu.Trace
 import Ceu.Grammar.Globals
 import qualified Ceu.Grammar.Constraints as Cs
@@ -38,17 +39,20 @@ toName (SVarSG _ id _ _ _ _) = id
 --    contraint IEq (eq,neq)
 --    contraint IEq (eq where a is IEq,neq where a is IEq)
 --
---    instance of IEq for a where a is IXx
+--    contraint IOrd a where a is IEq (lt,gt)
+--    contraint IOrd a where a is IEq (lt where a is (IEq,IOrd),...)
+--
+--    instance of IEq a where a is IXx
 --    func eq (x,y) : ((a,a) -> Int where a is IXx)
 
 addClassCs :: Stmt -> Stmt
 
 addClassCs (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
   where
-    [(var,_)] = Cs.toList cs
+    [(var,clss)] = Cs.toList cs
     f :: Stmt -> Stmt
     f (SVarS z id tpc ini p) = SVarS z id (g tpc) ini (f p) where
-                                g (tp,cs) = (tp, Cs.insert (var,cls) cs)
+                                g (tp,cs) = (tp, foldr (\cls cs->Cs.insert (var,cls) cs) cs (cls:clss))
     f s@(SNop _) = s
 
 addClassCs (SInstS z cls itpc@(_,cs) imp p) = SInstS z cls itpc (f imp) p
@@ -198,7 +202,7 @@ withEnvE env exp                 = ([], exp)
 
 chkClass :: [Stmt] -> Ann -> ID_Class -> Errors
 chkClass env z cls =
-  case find (isClass cls) env of
+  case List.find (isClass cls) env of
     Nothing -> []
     Just _  -> [toError z $ "interface '" ++ cls ++ "' is already declared"]
 
@@ -206,20 +210,20 @@ chkClassSupsDeclared :: [Stmt] -> Ann -> Cs.Map -> Errors
 chkClassSupsDeclared env z cs =
   case Cs.toList cs of
     [(_,sups)] -> concatMap f sups where
-      f sup = case find (isClass sup) env of
+      f sup = case List.find (isClass sup) env of
         Nothing -> [toError z $ "interface '" ++ sup ++ "' is not declared"]
         Just _  -> []
     otherwise  -> error "TODO: multiple vars"
 
 chkInstClass :: [Stmt] -> Ann -> ID_Class -> Errors
 chkInstClass env z cls =
-  case find (isClass cls) env of
+  case List.find (isClass cls) env of
     Nothing -> [toError z $ "interface '" ++ cls ++ "' is not declared"]
     Just _  -> []
 
 chkInstDeclared :: [Stmt] -> Ann -> (ID_Class,T.TypeC) -> Errors
 chkInstDeclared env z (cls,itpc) =
-  case find f env of
+  case List.find f env of
     Nothing -> []
     Just _  -> [toError z $ "implementation of '" ++ cls ++ "' for '" ++ T.showC itpc ++ "' is already declared"]
   where
@@ -233,13 +237,13 @@ chkInstDeclared env z (cls,itpc) =
 --  implementation (Ord for Bool)                  <-- Bool implements Ord
 chkInstSupsDeclared :: [Stmt] -> Ann -> (ID_Class,T.TypeC) -> Errors
 chkInstSupsDeclared env z (cls,itpc) =
-  case find (isClass cls) env of
+  case List.find (isClass cls) env of
     Nothing                   -> []   -- cls is not declared (checked before)
     Just (SClassS _ _ cs _ _) ->
       case Cs.toList cs of
         [(_,sups)] -> concatMap f sups where
           f :: ID_Class -> Errors
-          f sup = case find (isInstOf sup itpc) env of
+          f sup = case List.find (isInstOf sup itpc) env of
             Nothing -> [toError z $ "implementation '" ++ sup ++ " for " ++
                         (T.showC itpc) ++ "' is not declared"]
             Just _  -> []
@@ -253,7 +257,7 @@ chkInstMissing env z (cls,imp) = concatMap toErr $ Set.toList $
                                     (Set.fromList $ map toName $ toGDcls imp)
   where
     toErr id = [toError z $ "missing implementation of '" ++ id ++ "'"]
-    ifc = case find (isClass cls) env of
+    ifc = case List.find (isClass cls) env of
             Nothing                    -> []   -- cls is not declared (checked before)
             Just (SClassS _ _ _ ifc _) -> toGDcls ifc
 
@@ -265,7 +269,7 @@ chkInstUnexpected env z (cls,imp) = concatMap toErr $ Set.toList $
                                                      (Set.fromList $ map toName ifc)
   where
     toErr id = [toError z $ "unexpected implementation of '" ++ id ++ "'"]
-    ifc = case find (isClass cls) env of
+    ifc = case List.find (isClass cls) env of
             Nothing                    -> []   -- cls is not declared (checked before)
             Just (SClassS _ _ _ ifc _) -> toGDcls ifc
 
@@ -274,7 +278,7 @@ chkInstSignatures env z (cls,(itp,_),imp) = concat $ Map.elems $
                                               Map.intersectionWith chk (Map.fromList $ map toZIdTpc $ ifc)
                                                                        (Map.fromList $ map toZIdTpc $ toGDcls imp)
   where
-    (var,ifc) = case find (isClass cls) env of
+    (var,ifc) = case List.find (isClass cls) env of
                   Nothing                     -> ("",[])   -- cls is not declared (checked before)
                   Just (SClassS _ _ cs ifc _) -> (var, toGDcls ifc) where
                                                   [(var,_)] = Cs.toList cs
@@ -304,7 +308,7 @@ isClass _   _                     = False
 addClassGensToInst :: [Stmt] -> Stmt -> Stmt
 addClassGensToInst env s@(SInstS z cls tpc imp p) = SInstSC z (cls,ifc,gens) tpc imp p
   where
-    ifc = case find f env of
+    ifc = case List.find f env of
             Nothing                    -> SNop z -- class is not declared (checked before)
             Just (SClassS _ _ _ ifc _) -> ifc
           where
@@ -335,7 +339,7 @@ addGGenWrappers :: Cs.Map -> [Stmt] -> Exp -> Exp
 addGGenWrappers cs env (EFunc z tpc par p) = EFunc z tpc par p' where
   p'  = cls2wrappers p cls
   cls = case Cs.toList cs of
-          [(_,[cls])] -> case find f env of     -- TODO: more css
+          [(_,[cls])] -> case List.find f env of     -- TODO: more css
                           Just s -> s           -- TODO: Nothing
                          where
                           f (SClassS _ id _ _ _) = id == cls
@@ -392,7 +396,7 @@ repGGenInsts env (SVarSG z id (GDcl def) tpc@(tp,cs) Nothing p) =
 
     stmtss :: [[Stmt]]
     stmtss = map (map getCls) $ map Set.toList $ Map.elems cs where
-              getCls cls = case find f env of
+              getCls cls = case List.find f env of
                             Just s -> s
                             -- TODO: Nothing
                            where
@@ -410,29 +414,31 @@ repGGenInsts env (SVarSG z id (GDcl def) tpc@(tp,cs) Nothing p) =
     -- [ [A1,A2,...], [B1,B2,...], ... ]
     -- [ [A1,B1,...], [A1,B2,...], ... ]
     combos' :: Int -> [Stmt] -> [[ID_Class]] -> [[T.TypeC]]
-    combos' lvl env clss = combos insts where
-      insts :: [[T.TypeC]]
-      insts = map h clss
-        where
-          h :: [ID_Class] -> [T.TypeC]
-          h [cls] = concatMap h $ map g $ filter f env where
-            f :: Stmt -> Bool
-            f (SInstS _ cls' (_,cs') _ _) = (cls == cls') && (lvl>0 || null cs')
-            f _                           = False
+    combos' lvl env clsss = combos (map f1 clsss) where
 
-            g :: Stmt -> T.TypeC
-            g (SInstS _ _ tpc _ _) = tpc  -- types to instantiate
+      f1 :: [ID_Class] -> [T.TypeC]
+      f1 clss = foldr1 List.intersect $     -- [B]
+                  map f2 clss               -- [ [A,B], [B], [A,B] ]
 
-            -- expand types with interfaces to multiple types
-            -- TODO: currently refuse another level of interfaces
-            -- Int    -> [Int]
-            -- X of a -> [X of Int, ...]
-            h :: T.TypeC -> [T.TypeC]
-            h tpc@(tp,cs) = if null cs then [tpc] else insts where
-              tpcss :: [[T.TypeC]]
-              tpcss = combos' (lvl-1) env (map Set.toList $ Map.elems cs)
-              insts :: [T.TypeC]
-              insts = map (flip T.instantiateC tp) $ map (zip (Map.keys cs)) tpcss
+      f2 :: ID_Class -> [T.TypeC]
+      f2 cls = concat $ map h $ map g $ filter f env where
+        f :: Stmt -> Bool
+        f (SInstS _ cls' (_,cs') _ _) = (cls == cls') && (lvl>0 || null cs')
+        f _                           = False
+
+        g :: Stmt -> T.TypeC
+        g (SInstS _ _ tpc _ _) = tpc  -- types to instantiate
+
+        -- expand types with interfaces to multiple types
+        -- TODO: currently refuse another level of interfaces
+        -- Int    -> [Int]
+        -- X of a -> [X of Int, ...]
+        h :: T.TypeC -> [T.TypeC]
+        h tpc@(tp,cs) = if null cs then [tpc] else insts where
+          tpcss :: [[T.TypeC]]
+          tpcss = combos' (lvl-1) env (map Set.toList $ Map.elems cs)
+          insts :: [T.TypeC]
+          insts = map (flip T.instantiateC tp) $ map (zip (Map.keys cs)) tpcss
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
