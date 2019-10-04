@@ -378,7 +378,7 @@ addGGenWrappers cs env (EFunc z tpc par p) = EFunc z tpc par p' where
     expand (T.TTuple l) = ETuple z $
                             map (\v->EVar z v) $
                               take (length l) $
-                                map (\v->'$':show v) $
+                                map (\v->dol $ show v) $
                                   incs where
                                     incs  = 1 : map (+1) incs
     expand _ = EVar z ("$1")
@@ -507,9 +507,9 @@ addGCallBody (SVarSG z id (GCall cls itpc has) (tp@(T.TFunc ft inp out),cs) Noth
                     '_' : dol id
 
     par_dcl  = listToExp $ map (EVar z) $ fpar inp
-    par_call = listToExp $ map (EVar z) $ (("$"++cls++"$"++T.showC itpc++"$") :) $ fpar inp
+    par_call = listToExp $ map (EVar z) $ ((dols [cls,T.showC itpc]) :) $ fpar inp
 
-    fpar inp = map ('$':) $ map show $ lns $ len $ T.toTTuple inp where
+    fpar inp = map dol $ map show $ lns $ len $ T.toTTuple inp where
                 len (T.TTuple l) = length l
                 lns n = take n lns' where
                           lns' = 1 : map (+1) lns'

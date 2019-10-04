@@ -108,40 +108,9 @@ spec = do
              ])
           `shouldBe` Right (EData ["Bool","True"] EUnit)
 
-        it "XXX" $         -- pg 33
-          (run True $
-            [r|
-interface IEqualable for a with
-  func eq : ((a,a) -> Bool)
-end
-
-implementation of IEqualable for Int with
-  func eq (x,y) : ((Int,Int) -> Bool) do
-    return x == y
-  end
-end
-
-implementation of IEqualable for Bool with
-  func eq (x,y) : ((Bool,Bool) -> Bool) do
-    call print 111
-    return Bool.True
-  end
-end
-
-interface IOrderable for a where (a is IEqualable) with
-  func lte (x,y) : ((a,a) -> Bool) do return (x eq y) end
-end
-
-implementation of IOrderable for Int with
-end
-
-return 30 lte 25
-|])
-          `shouldBe` Right (EData ["Bool","False"] EUnit)
-
       describe "extends:" $ do
 
-        it "IOrd extends IEq" $
+        it "XXX: IOrd extends IEq" $
           (run True $
             unlines [
               "interface IOrd for a where (a is IEq) with",
@@ -211,6 +180,37 @@ return 30 lte 25
               "return Bool.True"
              ])
           `shouldBe` Left "(line 3, column 1):\nimplementation 'IFa for (a,b) where (a is IFb,b is IFb)' is not declared\n"
+
+        it "YYY" $
+          (run True $
+            [r|
+interface IEqualable for a with
+  func eq : ((a,a) -> Bool)
+end
+
+implementation of IEqualable for Int with
+  func eq (x,y) : ((Int,Int) -> Bool) do
+    return x == y
+  end
+end
+
+implementation of IEqualable for Bool with
+  func eq (x,y) : ((Bool,Bool) -> Bool) do
+    call print 111
+    return Bool.True
+  end
+end
+
+interface IOrderable for a where (a is IEqualable) with
+  func lte (x,y) : ((a,a) -> Bool) do return (x eq y) end
+end
+
+implementation of IOrderable for Int with
+end
+
+return 30 lte 25
+|])
+          `shouldBe` Right (EData ["Bool","False"] EUnit)
 
       describe "gen-inst:" $ do
 
