@@ -95,7 +95,7 @@ setGen (SInstS z cls itpc imp p) = SInstS z cls itpc (f imp) p
     f :: Stmt -> Stmt
     f (SVarS z id tpc@(tp,_) (Just ini) p) = SVarSG z ('_' : dols [id,T.showC itpc]) (GOne [cls]) (tp,Cs.cz) (Just ini) $
                                               SVarSG z id (GDcl True) tpc Nothing $
-                                                SVarSG z id (GCall cls itpc True) (tp,Cs.cz) Nothing $
+                                                SVarSG z id (GCall [cls] itpc True) (tp,Cs.cz) Nothing $
                                                   f p
     f s@(SNop _) = s
 setGen p = p
@@ -168,28 +168,27 @@ withEnvS env s@(SVarSG z id (GDcl def) tpc Nothing p) =
   where
     (es,p') = withEnvS (s:env) p
 
-withEnvS env (SVarSG z id (GOne [cls]) tpc (Just ini) p) =
-  (es1++es2, SVarSG z id (GOne $ clss++[cls]) tpc (Just ini') p')
-  where
-    (es1,ini') = withEnvE env ini
-    (es2,p')   = withEnvS env p
-    clss = getCs env cls where
-            getCs :: [Stmt] -> ID_Class -> [ID_Class]
-            getCs env cls =
-              case List.find (isClass cls) env of
-                Nothing -> []
-                Just (SClassS _ _ cs _ _) ->
-                  case Cs.toList cs of
-                    []         -> []
-                    [(_,sups)] -> [] --sups
-
 withEnvS env (SVarSG z id gen tpc ini p) =
-  (es1++es2, SVarSG z id gen tpc ini' p')
+  (es1++es2, SVarSG z id gen' tpc ini' p')
   where
     (es1,ini') = case ini of
                   Nothing -> ([], Nothing)
                   Just x  -> (i, Just j) where (i,j) = withEnvE env x
     (es2,p')   = withEnvS env p
+
+    gen' = case gen of
+            GOne  [cls]          -> GOne  (getCs env cls ++ [cls])
+            GCall [cls] itpc has -> GCall (getCs env cls ++ [cls]) itpc has
+            GNone                -> GNone
+
+    getCs :: [Stmt] -> ID_Class -> [ID_Class]
+    getCs env cls =
+      case List.find (isClass cls) env of
+        Nothing -> []
+        Just (SClassS _ _ cs _ _) ->
+          case Cs.toList cs of
+            []         -> []
+            [(_,sups)] -> [] --sups
 
 withEnvS env p = ([], p)
 
@@ -403,7 +402,7 @@ repGGenInsts env (SVarSG z id (GDcl def) tpc@(tp,cs) Nothing p) =
 
     f :: ([Stmt],[T.TypeC]) -> Stmt -> Stmt
     f ([SClassS _ cls _ _ _],[itpc]) p =
-      SVarSG z id (GCall cls itpc False) tpc' Nothing p where
+      SVarSG z id (GCall [cls] itpc False) tpc' Nothing p where
         tpc' = T.instantiateC [("a",itpc)] tp
 
     idss :: [[ID_Class]]
@@ -460,7 +459,7 @@ repGGenInsts env (SVarSG z id (GDcl def) tpc@(tp,cs) Nothing p) =
 
 -- Add missing interface methods and generic functions to implementation.
 --
---    interface  IEq         (eq,neq)
+--    interface IEq (eq,neq)
 --    func f (x) where x is IEq
 --    implementation of IEq for Int (eq)
 --
@@ -479,7 +478,7 @@ addInstGCalls (SInstSC z (cls,ifc,gens) itpc imp p) =
             f :: Stmt -> (Stmt -> Stmt)
             f (SNop _) = Prelude.id
             f (SVarSG z2 id2 gen2 tpc2@(tp2,_) _ _) =
-              SVarSG z2 id2 (GCall cls itpc False) tpc2' Nothing where
+              SVarSG z2 id2 (GCall [cls] itpc False) tpc2' Nothing where
                 tpc2' = T.instantiateC [("a",itpc)] tp2  -- TODO: a is fixed
                 (T.TFunc _ inp2' _, _) = tpc2'
 
@@ -498,8 +497,8 @@ addInstGCalls p = p
 --    func $neq$Int$ (x,y) return _$neq$($IEq$Int$,x,y)
 --    func $f$Int$ (x) return _$f$($IEq$Int,x)
 
-addGCallBody (SVarSG z id (GCall cls itpc has) (tp@(T.TFunc ft inp out),cs) Nothing p) =
-  SVarSG z (dols [id,T.showC itpc]) (GCall cls itpc has) (tp,Cs.cz) (Just (EFunc z (tp,Cs.cz) par_dcl bdy)) p where
+addGCallBody (SVarSG z id (GCall [cls] itpc has) (tp@(T.TFunc ft inp out),cs) Nothing p) =
+  SVarSG z (dols [id,T.showC itpc]) (GCall [cls] itpc has) (tp,Cs.cz) (Just (EFunc z (tp,Cs.cz) par_dcl bdy)) p where
     bdy = SRet z (ECall z (EVar z id') par_call) where
             id' = if has then
                     '_' : dols [id,T.showC itpc]
