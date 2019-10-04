@@ -93,7 +93,7 @@ setGen (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
 setGen (SInstS z cls itpc imp p) = SInstS z cls itpc (f imp) p
   where
     f :: Stmt -> Stmt
-    f (SVarS z id tpc@(tp,_) (Just ini) p) = SVarSG z ('_' : dols [id,T.showC itpc]) (GOne cls) (tp,Cs.cz) (Just ini) $
+    f (SVarS z id tpc@(tp,_) (Just ini) p) = SVarSG z ('_' : dols [id,T.showC itpc]) (GOne [cls]) (tp,Cs.cz) (Just ini) $
                                               SVarSG z id (GDcl True) tpc Nothing $
                                                 SVarSG z id (GCall cls itpc True) (tp,Cs.cz) Nothing $
                                                   f p
@@ -163,11 +163,25 @@ withEnvS env (SVarSG z id  (GGen cs) tpc (Just ini) p) =
     (es1,ini') = withEnvE env ini
     (es2,p')   = withEnvS env p
 
-
 withEnvS env s@(SVarSG z id (GDcl def) tpc Nothing p) =
   (es, repGGenInsts env $ SVarSG z id (GDcl def) tpc Nothing p')
   where
     (es,p') = withEnvS (s:env) p
+
+withEnvS env (SVarSG z id (GOne [cls]) tpc (Just ini) p) =
+  (es1++es2, SVarSG z id (GOne $ clss++[cls]) tpc (Just ini') p')
+  where
+    (es1,ini') = withEnvE env ini
+    (es2,p')   = withEnvS env p
+    clss = getCs env cls where
+            getCs :: [Stmt] -> ID_Class -> [ID_Class]
+            getCs env cls =
+              case List.find (isClass cls) env of
+                Nothing -> []
+                Just (SClassS _ _ cs _ _) ->
+                  case Cs.toList cs of
+                    []         -> []
+                    [(_,sups)] -> [] --sups
 
 withEnvS env (SVarSG z id gen tpc ini p) =
   (es1++es2, SVarSG z id gen tpc ini' p')
@@ -346,7 +360,9 @@ addGGenWrappers cs env (EFunc z tpc par p) = EFunc z tpc par p' where
                       g _ = False
 
   cls2wrappers :: Stmt -> [Stmt -> Stmt]
-  cls2wrappers (SClassS _ cls _ ifc _) = map f $ toGDcls ifc where
+  cls2wrappers (SClassS _ cls cs ifc _) = map f $ toGDcls ifc where
+    [(_,clss)] = Cs.toList cs
+
     f :: Stmt -> (Stmt -> Stmt)
     f (SVarSG _ id (GDcl _) (tp@(T.TFunc _ inp _),_) _ _) =
       SVarSG z (dol id) GNone (tp,Cs.cz) $          -- remove cs
@@ -354,7 +370,7 @@ addGGenWrappers cs env (EFunc z tpc par p) = EFunc z tpc par p' where
       where
         body = SRet z (ECall z
                         (ECall z (EField z [dol cls] id) (EVar z $ dols ["dict",cls]))
-                        (insETuple (EVar z $ dols ["dict",cls]) (toETuple $ expand inp)))
+                        (foldr (\cls->insETuple (EVar z $ dols ["dict",cls])) (toETuple $ expand inp) (clss++[cls])))
 
     -- expand inputs:
     -- ($1,$2) = EArg
@@ -524,19 +540,19 @@ addGenDict (SVarSG z id (GGen cs) (T.TFunc ft1 inp1 out1,cs1)
   where
     inp1' = foldr (\cls -> T.insTTuple (T.TData False [dol cls] [])) (T.toTTuple inp1) clss
     inp2' = foldr (\cls -> T.insTTuple (T.TData False [dol cls] [])) (T.toTTuple inp2) clss
-    par2' = foldr (\cls -> insETuple (EVar z $ dols ["dict",cls]))  (toETuple par2)   clss
-    [(_,clss)] = Cs.toList cs -- TODO: more css
+    par2' = foldr (\cls -> insETuple (EVar z $ dols ["dict",cls]))   (toETuple par2)   clss
+    [(_,clss)] = Cs.toList cs
 
-addGenDict (SVarSG z id (GOne cls) (T.TFunc ft1 inp1 out1,cs1)
+addGenDict (SVarSG z id (GOne clss) (T.TFunc ft1 inp1 out1,cs1)
               (Just (EFunc z2 (T.TFunc ft2 inp2 out2,cs2) par2 p2))
               p) =
-  SVarSG z id (GOne cls) (T.TFunc ft1 inp1' out1,cs1)
+  SVarSG z id (GOne clss) (T.TFunc ft1 inp1' out1,cs1)
     (Just (EFunc z2 (T.TFunc ft2 inp2' out2,cs2) par2' p2))
     p
   where
-    inp1' = T.insTTuple (T.TData False [dol cls] []) (T.toTTuple inp1)
-    inp2' = T.insTTuple (T.TData False [dol cls] []) (T.toTTuple inp2)
-    par2' = insETuple (EVar z $ dols ["dict",cls]) (toETuple par2)
+    inp1' = foldr (\cls -> T.insTTuple (T.TData False [dol cls] [])) (T.toTTuple inp1) clss
+    inp2' = foldr (\cls -> T.insTTuple (T.TData False [dol cls] [])) (T.toTTuple inp2) clss
+    par2' = foldr (\cls -> insETuple (EVar z $ dols ["dict",cls]))   (toETuple par2)   clss
 
 addGenDict p = p
 

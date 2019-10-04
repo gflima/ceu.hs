@@ -112,30 +112,30 @@ spec = do
           (run True $
             [r|
 interface IEqualable for a with
-  func === : ((a,a) -> Bool)
+  func eq : ((a,a) -> Bool)
 end
 
 implementation of IEqualable for Int with
-  func === (x,y) : ((Int,Int) -> Bool) do
+  func eq (x,y) : ((Int,Int) -> Bool) do
     return x == y
   end
 end
 
 implementation of IEqualable for Bool with
-  func === (x,y) : ((Bool,Bool) -> Bool) do
+  func eq (x,y) : ((Bool,Bool) -> Bool) do
     call print 111
     return Bool.True
   end
 end
 
 interface IOrderable for a where (a is IEqualable) with
-  func @== (x,y) : ((a,a) -> Bool) do return (x === y) end
+  func lte (x,y) : ((a,a) -> Bool) do return (x eq y) end
 end
 
 implementation of IOrderable for Int with
 end
 
-return 30 @== 25
+return 30 lte 25
 |])
           `shouldBe` Right (EData ["Bool","False"] EUnit)
 
