@@ -33,7 +33,7 @@ getSups env cls =
   case List.find (isClass cls) env of
     Nothing -> []
     Just (SClassS _ _ cs _ _) ->
-      case Cs.toList cs of
+      case cs of
         []         -> []
         [(_,sups)] -> sups
 
@@ -56,7 +56,7 @@ addClassCs :: Stmt -> Stmt
 
 addClassCs (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
   where
-    [(var,sups)] = Cs.toList cs
+    [(var,sups)] = cs
     f :: Stmt -> Stmt
     f (SVarS z id tpc ini p) = SVarS z id (g tpc) ini (f p) where
                                 g (tp,cs) = (tp, foldr (\cls cs->Cs.insert (var,cls) cs) cs (cls:sups))
@@ -68,7 +68,7 @@ addClassCs (SInstS z cls itpc@(_,cs) imp p) = SInstS z cls itpc (f imp) p
     f (SVarS z id tpc ini p) =
       SVarS z id (g tpc) ini (f p) where
         g :: T.TypeC -> T.TypeC
-        g (tp1,cs1) = (tp1, foldr h cs1 (Cs.toList cs)) where
+        g (tp1,cs1) = (tp1, foldr h cs1 cs) where
                         h :: (ID_Var,[ID_Class]) -> Cs.Map -> Cs.Map
                         h (var,clss) cs = foldr i cs clss where
                           i :: ID_Class -> Cs.Map -> Cs.Map
@@ -110,10 +110,10 @@ setGen (SInstS z cls itpc imp p) = SInstS z cls itpc (f imp) p
 setGen p = p
 
 setGen' :: Stmt -> Stmt
-setGen' (SVarS z id tpc@(tp,cs) ini p) | Map.null cs = SVarSG z id GNone tpc ini p
-                                       | otherwise   = SVarSG z ('_':dol id) (GGen cs) (tp,Cs.cz) (remCs ini) $
-                                                        SVarSG z id (GDcl $ isJust ini) tpc Nothing $
-                                                          p
+setGen' (SVarS z id tpc@(tp,[]) ini p) = SVarSG z id GNone tpc ini p
+setGen' (SVarS z id tpc@(tp,cs) ini p) = SVarSG z ('_':dol id) (GGen cs) (tp,Cs.cz) (remCs ini) $
+                                          SVarSG z id (GDcl $ isJust ini) tpc Nothing $
+                                            p
   where
     remCs :: Maybe Exp -> Maybe Exp
     remCs (Just (EFunc z (tp,_) ps bd)) = Just (EFunc z (tp,Cs.cz) ps bd)
@@ -219,7 +219,7 @@ chkClass env z cls =
 
 chkClassSupsDeclared :: [Stmt] -> Ann -> Cs.Map -> Errors
 chkClassSupsDeclared env z cs =
-  case Cs.toList cs of
+  case cs of
     [(_,sups)] -> concatMap f sups where
       f sup = case List.find (isClass sup) env of
         Nothing -> [toError z $ "interface '" ++ sup ++ "' is not declared"]
@@ -251,7 +251,7 @@ chkInstSupsDeclared env z (cls,itpc) =
   case List.find (isClass cls) env of
     Nothing                   -> []   -- cls is not declared (checked before)
     Just (SClassS _ _ cs _ _) ->
-      case Cs.toList cs of
+      case cs of
         [(_,sups)] -> concatMap f sups where
           f :: ID_Class -> Errors
           f sup = case List.find (isInstOf sup itpc) env of
@@ -292,7 +292,7 @@ chkInstSignatures env z (cls,(itp,_),imp) = concat $ Map.elems $
     (var,ifc) = case List.find (isClass cls) env of
                   Nothing                     -> ("",[])   -- cls is not declared (checked before)
                   Just (SClassS _ _ cs ifc _) -> (var, toGDcls ifc) where
-                                                  [(var,_)] = Cs.toList cs
+                                                  [(var,_)] = cs
 
     toZIdTpc :: Stmt -> (ID_Var, (Ann,ID_Var,T.TypeC))
     toZIdTpc (SVarSG z id _ tpc _ _) = (id, (z,id,tpc))
@@ -327,7 +327,7 @@ addClassGensToInst env s@(SInstS z cls tpc imp p) = SInstSC z (cls : getSups env
             f _ = False
     gens = filter f env where
             f (SVarSG _ id (GDcl _) (_,cs) _ _) = (cls == cls') where
-                                                    [(_,[cls'])] = Cs.toList cs
+                                                    [(_,[cls'])] = cs
             f _ = False
 addClassGensToInst _ p = p
 
@@ -349,7 +349,7 @@ addGGenWrappers :: Cs.Map -> [Stmt] -> Exp -> Exp
 addGGenWrappers cs env (EFunc z tpc par p) = EFunc z tpc par p' where
   p' = foldr ($) p (concat $ map cls2wrappers clss')
 
-  [(_,clss)] = Cs.toList cs
+  [(_,clss)] = cs
   clss' = map f clss where
             f cls = case List.find g env of
                       Just s -> s           -- TODO: Nothing
@@ -359,7 +359,7 @@ addGGenWrappers cs env (EFunc z tpc par p) = EFunc z tpc par p' where
 
   cls2wrappers :: Stmt -> [Stmt -> Stmt]
   cls2wrappers (SClassS _ cls cs ifc _) = map f $ toGDcls ifc where
-    [(_,sups)] = Cs.toList cs
+    [(_,sups)] = cs
 
     f :: Stmt -> (Stmt -> Stmt)
     f (SVarSG _ id (GDcl _) (tp@(T.TFunc _ inp _),_) _ _) =
@@ -405,10 +405,10 @@ repGGenInsts env (SVarSG z id (GDcl def) tpc@(tp,cs) Nothing p) =
         tpc' = T.instantiateC [("a",itpc)] tp
 
     idss :: [[ID_Class]]
-    idss = Map.elems cs
+    idss = map snd cs
 
     stmtss :: [[Stmt]]
-    stmtss = map (map getCls) $ Map.elems cs where
+    stmtss = map (map getCls) $ map snd cs where
               getCls cls = case List.find f env of
                             Just s -> s
                             -- TODO: Nothing
@@ -449,9 +449,9 @@ repGGenInsts env (SVarSG z id (GDcl def) tpc@(tp,cs) Nothing p) =
         h :: T.TypeC -> [T.TypeC]
         h tpc@(tp,cs) = if null cs then [tpc] else insts where
           tpcss :: [[T.TypeC]]
-          tpcss = combos' (lvl-1) env (Map.elems cs)
+          tpcss = combos' (lvl-1) env (map snd cs)
           insts :: [T.TypeC]
-          insts = map (flip T.instantiateC tp) $ map (zip (Map.keys cs)) tpcss
+          insts = map (flip T.instantiateC tp) $ map (zip (map fst cs)) tpcss
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
@@ -540,7 +540,7 @@ addGenDict (SVarSG z id (GGen cs) (T.TFunc ft1 inp1 out1,cs1)
     inp1' = foldr (\cls -> T.insTTuple (T.TData False [dol cls] [])) (T.toTTuple inp1) clss
     inp2' = foldr (\cls -> T.insTTuple (T.TData False [dol cls] [])) (T.toTTuple inp2) clss
     par2' = foldr (\cls -> insETuple (EVar z $ dols ["dict",cls]))   (toETuple par2)   clss
-    [(_,clss)] = Cs.toList cs
+    [(_,clss)] = cs
 
 addGenDict (SVarSG z id (GOne clss) (T.TFunc ft1 inp1 out1,cs1)
               (Just (EFunc z2 (T.TFunc ft2 inp2 out2,cs2) par2 p2))
@@ -627,7 +627,7 @@ dclClassDicts :: Stmt -> Stmt
 
 dclClassDicts s@(SClassS z cls cs ifc _) = SDataS z (T.TData False [dol cls] []) (Just pars) tps Cs.cz False s
   where
-    [(_,sups)] = Cs.toList cs
+    [(_,sups)] = cs
     dcls = toGDcls ifc
     pars = map f dcls where
             f (SVarSG _ id (GDcl def) _ _ _) = id

@@ -7,7 +7,7 @@ import Ceu.Trace
 import Ceu.Grammar.Ann                (getAnn, typec, toError)
 import Ceu.Grammar.Globals
 import Ceu.Grammar.Basic
-import Ceu.Grammar.Constraints as Cs  (Pair, cz, toList, hasClass)
+import Ceu.Grammar.Constraints as Cs  (Pair, cz, hasClass)
 import Ceu.Grammar.Type        as T   (Type(..), TypeC, hier2str,
                                        Relation(..), relatesErrorsC)
 

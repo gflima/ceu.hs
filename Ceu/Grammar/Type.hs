@@ -63,7 +63,7 @@ ftReq _   (_, _,  _)                    = (FuncNested, Nothing)
 hier2str = intercalate "."
 
 showC :: TypeC -> String
-showC (tp,cs) = case toList cs of
+showC (tp,cs) = case cs of
   [] -> show' tp
   l  -> show' tp ++ " where (" ++ intercalate "," (map f l) ++ ")" where
           f (var,[cls]) = var ++ " is " ++ cls
@@ -217,7 +217,7 @@ instantiateC :: [(ID_Var,TypeC)] -> Type -> TypeC
 instantiateC vars tp = (instantiate (zip ids tps) tp, cs) where
                         (ids,tpcs) = unzip vars
                         (tps,css)  = unzip tpcs
-                        cs = foldr union cz css
+                        cs = foldr (++) cz css
 
 -------------------------------------------------------------------------------
 

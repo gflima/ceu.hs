@@ -9,7 +9,7 @@ import qualified Data.Set as Set
 
 import Ceu.Trace
 import Ceu.Grammar.Globals
-import Ceu.Grammar.Constraints as Cs  (Pair, cz, toList, hasClass)
+import Ceu.Grammar.Constraints as Cs (cz)
 import Ceu.Grammar.Type        as T
 import Ceu.Grammar.Ann
 import Ceu.Grammar.Basic
@@ -391,21 +391,19 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id@(cid:_)) = (es, ftReq (length envs) (
           Nothing -> (id, (TAny,cz), (False,0),
                       map (toError z) $ fromLeft $ relatesC rel txpc (last (map (getTpc.snd) xs)))
                         where getTpc (SVar _ _ tpc _) = tpc
-          Just (lnr, SVar _ _  tpc@(_,cs)   _) ->
-              if cs == Map.empty then
-                (id, tpc, lnr, [])
-              else
-                case find pred (concat envs) of            -- find implementation
-                  Just (SVar _ k tpc@(tp,cs) _) -> (k, tpc, lnr, [])
-                  Nothing -> (id, (TAny,cz), lnr, err)
-                where
-                  pred :: Stmt -> Bool
-                  pred (SVar _ k tpc _) = (dol id `isPrefixOf` k) && (isRight $ relatesC SUP txpc tpc)
-                  pred _                = False
+          Just (lnr, SVar _ _  tpc@(_,[])   _) -> (id, tpc, lnr, [])
+          Just (lnr, SVar _ _  tpc          _) -> -- generic type
+            case find pred (concat envs) of            -- find implementation
+              Just (SVar _ k tpc@(tp,cs) _) -> (k, tpc, lnr, [])
+              Nothing -> (id, (TAny,cz), lnr, err)
+            where
+              pred :: Stmt -> Bool
+              pred (SVar _ k tpc _) = (dol id `isPrefixOf` k) && (isRight $ relatesC SUP txpc tpc)
+              pred _                = False
 
-                  err = toErrors z $ "variable '" ++ id ++
-                          "' has no associated implementation for '" ++
-                          T.show' txp ++ "'"
+              err = toErrors z $ "variable '" ++ id ++
+                      "' has no associated implementation for '" ++
+                      T.show' txp ++ "'"
           where
             f (_, SVar _ _ tpc _) =
               isRight $ relatesC rel txpc (toDer tpc) where
