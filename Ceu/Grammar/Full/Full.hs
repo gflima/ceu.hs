@@ -91,7 +91,7 @@ data Stmt
   -- declarations w/ scope
   | SClassS   Ann ID_Class        Cs.Map Stmt Stmt
   | SInstS    Ann ID_Class        TypeC  Stmt Stmt
-  | SInstSC   Ann (ID_Class,Stmt,[Stmt]) TypeC  Stmt Stmt
+  | SInstSC   Ann ([ID_Class],Stmt,[Stmt]) TypeC  Stmt Stmt
   | SDataS    Ann Type (Maybe [ID_Var]) Type Cs.Map Bool Stmt
   | SVarS     Ann ID_Var     TypeC (Maybe Exp) Stmt
   | SVarSG    Ann ID_Var Gen TypeC (Maybe Exp) Stmt
@@ -188,7 +188,7 @@ show_stmt :: Int -> Stmt -> String
 show_stmt spc (SSeq _ p1 p2)              = show_stmt spc p1 ++ "\n" ++ show_stmt spc p2
 show_stmt spc (SClassS  _ id _ ifc p)     = rep spc ++ "constraint " ++ id ++ "\n" ++ show_stmt (spc+2) ifc ++ "\n" ++ show_stmt spc p
 show_stmt spc (SInstS   _ id _ imp p)     = rep spc ++ "instance " ++ id ++ "\n" ++ show_stmt (spc+2) imp ++ "\n" ++ show_stmt spc p
-show_stmt spc (SInstSC _ (id,_,_) _ _ p)  = rep spc ++ "instance " ++ id ++ "\n" ++ show_stmt spc p
+show_stmt spc (SInstSC _ ([id],_,_) _ _ p)= rep spc ++ "instance " ++ id ++ "\n" ++ show_stmt spc p
 show_stmt spc (SData   _ (TData False id _) _ tp _ _  ) = rep spc ++ "data " ++ intercalate "." id ++ T.show' tp
 show_stmt spc (SDataS  _ (TData False id _) _ tp _ _ p) = rep spc ++ "data " ++ intercalate "." id ++ T.show' tp ++ "\n" ++ show_stmt spc p
 show_stmt spc (SVar   _ id tpc Nothing)  = rep spc ++ "var " ++ id ++ ": " ++ T.showC tpc
