@@ -33,7 +33,7 @@ remEFuncPar (EFunc z tpc@(TFunc _ inp _,cs) par imp) = EFunc' z tpc imp'
                   seq = (SSeq z (SSet z True False par (EArg z)) imp)
 
     toStmts :: Ann -> Exp -> TypeC -> [Stmt->Stmt]
-    toStmts src loc (tp_,cs) = aux src loc tp_
+    toStmts src loc (tp_,cs) = traceShow (loc,tp_) $ aux src loc tp_
       where
         aux :: Ann -> Exp -> Type -> [Stmt->Stmt]
         aux z (EAny   _)     _           = []

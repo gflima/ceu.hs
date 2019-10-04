@@ -337,36 +337,37 @@ addClassGensToInst _ p = p
 addGGenWrappers :: Cs.Map -> [Stmt] -> Exp -> Exp
 
 addGGenWrappers cs env (EFunc z tpc par p) = EFunc z tpc par p' where
-  p'  = cls2wrappers p cls
-  cls = case Cs.toList cs of
-          [(_,[cls])] -> case List.find f env of     -- TODO: more css
-                          Just s -> s           -- TODO: Nothing
-                         where
-                          f (SClassS _ id _ _ _) = id == cls
-                          f _ = False
+  p' = foldr ($) p (concat $ map cls2wrappers clss')
 
-  cls2wrappers :: Stmt -> Stmt -> Stmt
-  cls2wrappers p (SClassS _ cls _ ifc _) =
-    foldr ($) p (map f $ toGDcls ifc) where
-      f :: Stmt -> (Stmt -> Stmt)
-      f (SVarSG _ id (GDcl _) (tp@(T.TFunc _ inp _),_) _ _) =
-        SVarSG z (dollar id) GNone (tp,Cs.cz) $          -- remove cs
-          Just (EFunc z (tp,Cs.cz) (expand inp) body)
-        where
-          body = SRet z (ECall z
-                        (ECall z (EField z [dollar cls] id) (EVar z "$dict"))
-                        (insETuple (EVar z "$dict") (toETuple $ expand inp)))
+  [(_,clss)] = Cs.toList cs
+  clss' = map f clss where
+            f cls = case List.find g env of
+                      Just s -> s           -- TODO: Nothing
+                    where
+                      g (SClassS _ id _ _ _) = id == cls
+                      g _ = False
 
-      -- expand inputs:
-      -- ($1,$2) = EArg
-      -- call f ($dict,$1,$2)
-      expand (T.TTuple l) = ETuple z $
-                              map (\v->EVar z v) $
-                                take (length l) $
-                                  map (\v->'$':show v) $
-                                    incs where
-                                      incs  = 1 : map (+1) incs
-      expand _ = EVar z ("$1")
+  cls2wrappers :: Stmt -> [Stmt -> Stmt]
+  cls2wrappers (SClassS _ cls _ ifc _) = map f $ toGDcls ifc where
+    f :: Stmt -> (Stmt -> Stmt)
+    f (SVarSG _ id (GDcl _) (tp@(T.TFunc _ inp _),_) _ _) =
+      SVarSG z (dollar id) GNone (tp,Cs.cz) $          -- remove cs
+        Just (EFunc z (tp,Cs.cz) (expand inp) body)
+      where
+        body = SRet z (ECall z
+                      (ECall z (EField z [dollar cls] id) (EVar z $ dollar ("dict$"++cls)))
+                      (insETuple (EVar z $ dollar ("dict$"++cls)) (toETuple $ expand inp)))
+
+    -- expand inputs:
+    -- ($1,$2) = EArg
+    -- call f ($dict,$1,$2)
+    expand (T.TTuple l) = ETuple z $
+                            map (\v->EVar z v) $
+                              take (length l) $
+                                map (\v->'$':show v) $
+                                  incs where
+                                    incs  = 1 : map (+1) incs
+    expand _ = EVar z ("$1")
 
 -------------------------------------------------------------------------------
 
@@ -523,10 +524,10 @@ addGenDict (SVarSG z id (GGen cs) (T.TFunc ft1 inp1 out1,cs1)
     (Just (EFunc z2 (T.TFunc ft2 inp2' out2,cs2) par2' p2))
     p
   where
-    inp1' = T.insTTuple (T.TData False [dollar cls] []) (T.toTTuple inp1)
-    inp2' = T.insTTuple (T.TData False [dollar cls] []) (T.toTTuple inp2)
-    par2' = insETuple (EVar z "$dict") (toETuple par2)
-    [(_,[cls])] = Cs.toList cs -- TODO: more css
+    inp1' = foldr (\cls -> T.insTTuple (T.TData False [dollar cls] [])) (T.toTTuple inp1) clss
+    inp2' = foldr (\cls -> T.insTTuple (T.TData False [dollar cls] [])) (T.toTTuple inp2) clss
+    par2' = foldr (\cls -> insETuple (EVar z $ dollar ("dict$"++cls)))  (toETuple par2)   clss
+    [(_,clss)] = Cs.toList cs -- TODO: more css
 
 addGenDict (SVarSG z id (GOne cls) (T.TFunc ft1 inp1 out1,cs1)
               (Just (EFunc z2 (T.TFunc ft2 inp2 out2,cs2) par2 p2))
@@ -537,7 +538,7 @@ addGenDict (SVarSG z id (GOne cls) (T.TFunc ft1 inp1 out1,cs1)
   where
     inp1' = T.insTTuple (T.TData False [dollar cls] []) (T.toTTuple inp1)
     inp2' = T.insTTuple (T.TData False [dollar cls] []) (T.toTTuple inp2)
-    par2' = insETuple (EVar z "$dict") (toETuple par2)
+    par2' = insETuple (EVar z $ dollar ("dict$"++cls)) (toETuple par2)
 
 addGenDict p = p
 

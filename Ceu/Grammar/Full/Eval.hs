@@ -57,6 +57,7 @@ compile p = --cat0 traceStmt $
   cat0 (map_stmt' (f2 Match.remSSetSIf,id,id))      $
   cat0 (map_stmt' (f2 Match.remIni,id,id))          $
   cat0 (map_stmt' (id2,Func.remEFuncPar,id))        $
+  --cat0 traceStmt $
   cat0 (map_stmt' (f2 Data.addAccs,id,id))          $
   cat0 (Data.expHier [])                            $
   cat0 (map_stmt' (f2 Class.dclClassDicts,id,id))   $
