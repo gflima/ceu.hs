@@ -66,7 +66,8 @@ showC :: TypeC -> String
 showC (tp,cs) = case toList cs of
   [] -> show' tp
   l  -> show' tp ++ " where (" ++ intercalate "," (map f l) ++ ")" where
-          f (var,clss) = var ++ " is (" ++ intercalate "," clss ++ ")"
+          f (var,[cls]) = var ++ " is " ++ cls
+          f (var,clss)  = var ++ " is (" ++ intercalate "," clss ++ ")"
 
 show' :: Type -> String
 show' TTop                      = "top"
