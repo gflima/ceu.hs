@@ -13,8 +13,6 @@ import Ceu.Grammar.Ann         (Ann, toError)
 import qualified Ceu.Grammar.Type as T
 import Ceu.Grammar.Full.Full
 
-idtpc id tpc = dollar $ id ++ "$" ++ T.showC tpc
-
 toGDcls :: Stmt -> [Stmt]
 toGDcls s@(SVarSG _ _ (GDcl _) _ _ p) = s : toGDcls p
 toGDcls s@(SVarSG _ _ _        _ _ p) = toGDcls p
@@ -88,14 +86,14 @@ setGen (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
     f :: Stmt -> Stmt
     f (SVarS z id tpc         Nothing    p) = SVarSG z id (GDcl False) tpc Nothing $
                                                 f p
-    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_':dollar id) (GGen cs) (tp,Cs.cz) (Just ini) $
+    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_':dol id) (GGen cs) (tp,Cs.cz) (Just ini) $
                                                 SVarSG z id (GDcl True) tpc Nothing $
                                                   f p
     f s@(SNop _) = s
 setGen (SInstS z cls itpc imp p) = SInstS z cls itpc (f imp) p
   where
     f :: Stmt -> Stmt
-    f (SVarS z id tpc@(tp,_) (Just ini) p) = SVarSG z ('_':idtpc id itpc) (GOne cls) (tp,Cs.cz) (Just ini) $
+    f (SVarS z id tpc@(tp,_) (Just ini) p) = SVarSG z ('_' : dols [id,T.showC itpc]) (GOne cls) (tp,Cs.cz) (Just ini) $
                                               SVarSG z id (GDcl True) tpc Nothing $
                                                 SVarSG z id (GCall cls itpc True) (tp,Cs.cz) Nothing $
                                                   f p
@@ -104,7 +102,7 @@ setGen p = p
 
 setGen' :: Stmt -> Stmt
 setGen' (SVarS z id tpc@(tp,cs) ini p) | Map.null cs = SVarSG z id GNone tpc ini p
-                                       | otherwise   = SVarSG z ('_':dollar id) (GGen cs) (tp,Cs.cz) (remCs ini) $
+                                       | otherwise   = SVarSG z ('_':dol id) (GGen cs) (tp,Cs.cz) (remCs ini) $
                                                         SVarSG z id (GDcl $ isJust ini) tpc Nothing $
                                                           p
   where
@@ -351,12 +349,12 @@ addGGenWrappers cs env (EFunc z tpc par p) = EFunc z tpc par p' where
   cls2wrappers (SClassS _ cls _ ifc _) = map f $ toGDcls ifc where
     f :: Stmt -> (Stmt -> Stmt)
     f (SVarSG _ id (GDcl _) (tp@(T.TFunc _ inp _),_) _ _) =
-      SVarSG z (dollar id) GNone (tp,Cs.cz) $          -- remove cs
+      SVarSG z (dol id) GNone (tp,Cs.cz) $          -- remove cs
         Just (EFunc z (tp,Cs.cz) (expand inp) body)
       where
         body = SRet z (ECall z
-                      (ECall z (EField z [dollar cls] id) (EVar z $ dollar ("dict$"++cls)))
-                      (insETuple (EVar z $ dollar ("dict$"++cls)) (toETuple $ expand inp)))
+                        (ECall z (EField z [dol cls] id) (EVar z $ dols ["dict",cls]))
+                        (insETuple (EVar z $ dols ["dict",cls]) (toETuple $ expand inp)))
 
     -- expand inputs:
     -- ($1,$2) = EArg
@@ -485,12 +483,12 @@ addInstGCalls p = p
 --    func $f$Int$ (x) return _$f$($IEq$Int,x)
 
 addGCallBody (SVarSG z id (GCall cls itpc has) (tp@(T.TFunc ft inp out),cs) Nothing p) =
-  SVarSG z (idtpc id itpc) (GCall cls itpc has) (tp,Cs.cz) (Just (EFunc z (tp,Cs.cz) par_dcl bdy)) p where
+  SVarSG z (dols [id,T.showC itpc]) (GCall cls itpc has) (tp,Cs.cz) (Just (EFunc z (tp,Cs.cz) par_dcl bdy)) p where
     bdy = SRet z (ECall z (EVar z id') par_call) where
             id' = if has then
-                    '_' : idtpc id itpc
+                    '_' : dols [id,T.showC itpc]
                   else
-                    '_' : dollar id
+                    '_' : dol id
 
     par_dcl  = listToExp $ map (EVar z) $ fpar inp
     par_call = listToExp $ map (EVar z) $ (("$"++cls++"$"++T.showC itpc++"$") :) $ fpar inp
@@ -524,9 +522,9 @@ addGenDict (SVarSG z id (GGen cs) (T.TFunc ft1 inp1 out1,cs1)
     (Just (EFunc z2 (T.TFunc ft2 inp2' out2,cs2) par2' p2))
     p
   where
-    inp1' = foldr (\cls -> T.insTTuple (T.TData False [dollar cls] [])) (T.toTTuple inp1) clss
-    inp2' = foldr (\cls -> T.insTTuple (T.TData False [dollar cls] [])) (T.toTTuple inp2) clss
-    par2' = foldr (\cls -> insETuple (EVar z $ dollar ("dict$"++cls)))  (toETuple par2)   clss
+    inp1' = foldr (\cls -> T.insTTuple (T.TData False [dol cls] [])) (T.toTTuple inp1) clss
+    inp2' = foldr (\cls -> T.insTTuple (T.TData False [dol cls] [])) (T.toTTuple inp2) clss
+    par2' = foldr (\cls -> insETuple (EVar z $ dols ["dict",cls]))  (toETuple par2)   clss
     [(_,clss)] = Cs.toList cs -- TODO: more css
 
 addGenDict (SVarSG z id (GOne cls) (T.TFunc ft1 inp1 out1,cs1)
@@ -536,9 +534,9 @@ addGenDict (SVarSG z id (GOne cls) (T.TFunc ft1 inp1 out1,cs1)
     (Just (EFunc z2 (T.TFunc ft2 inp2' out2,cs2) par2' p2))
     p
   where
-    inp1' = T.insTTuple (T.TData False [dollar cls] []) (T.toTTuple inp1)
-    inp2' = T.insTTuple (T.TData False [dollar cls] []) (T.toTTuple inp2)
-    par2' = insETuple (EVar z $ dollar ("dict$"++cls)) (toETuple par2)
+    inp1' = T.insTTuple (T.TData False [dol cls] []) (T.toTTuple inp1)
+    inp2' = T.insTTuple (T.TData False [dol cls] []) (T.toTTuple inp2)
+    par2' = insETuple (EVar z $ dols ["dict",cls]) (toETuple par2)
 
 addGenDict p = p
 
@@ -566,13 +564,13 @@ inlClassInst :: Stmt -> Stmt
 inlClassInst (SClassS z id             cs  ifc p) = SClassS z id             cs  ifc $ inlCI False p ifc
 inlClassInst (SInstSC z (cls,ifc,gens) tpc imp p) = SInstSC z (cls,ifc,gens) tpc imp $ inlCI True  (addDictIni p) (addDictDcl imp)
   where
-    dict = dollar $ cls ++ "$" ++ T.showC tpc
-    addDictDcl imp = SVarSG z dict GNone (T.TData False [dollar cls] [],Cs.cz) Nothing imp
+    dict = dols [cls,T.showC tpc]
+    addDictDcl imp = SVarSG z dict GNone (T.TData False [dol cls] [],Cs.cz) Nothing imp
     addDictIni p   = SSeq z (SSet z True False (EVar z dict) cons) p
                      where
                       toEVar :: (Bool,ID_Var) -> Exp
-                      toEVar (True,  id) = EVar z ('_' : dollar id)
-                      toEVar (False, id) = EVar z ('_' : dollar (id++"$"++T.showC tpc))
+                      toEVar (True,  id) = EVar z ('_' : dol id)
+                      toEVar (False, id) = EVar z ('_' : dols [id,T.showC tpc])
 
                       isDcl :: ID_Var -> (Bool,ID_Var)
                       isDcl id = (f id, id) where
@@ -582,8 +580,8 @@ inlClassInst (SInstSC z (cls,ifc,gens) tpc imp p) = SInstSC z (cls,ifc,gens) tpc
                                                          (Set.fromList $ map toName $ toGDcls imp)
 
                       cons = case map toEVar $ map isDcl $ map toName $ toGDcls ifc of
-                              [] -> ECons z [dollar cls]
-                              x  -> ECall z (ECons z [dollar cls]) $ listToExp x
+                              [] -> ECons z [dol cls]
+                              x  -> ECall z (ECons z [dol cls]) $ listToExp x
 
 inlClassInst p = p
 
@@ -613,7 +611,7 @@ inlCI _ p (SNop z)                           = p
 dclClassDicts :: Stmt -> Stmt
 
 dclClassDicts cls@(SClassS z id _ ifc _) =
-  SDataS z (T.TData False [dollar id] []) (Just pars) tps Cs.cz False cls
+  SDataS z (T.TData False [dol id] []) (Just pars) tps Cs.cz False cls
   where
     dcls = toGDcls ifc
     pars = map f dcls where
@@ -621,6 +619,6 @@ dclClassDicts cls@(SClassS z id _ ifc _) =
     tps  = T.listToType (map f dcls) where
             f (SVarSG _ _ (GDcl def) (T.TFunc ft inp out,_) _ _) =
               T.TFunc ft inp' out where
-                inp' = T.insTTuple (T.TData False [dollar id] []) (T.toTTuple inp)
+                inp' = T.insTTuple (T.TData False [dol id] []) (T.toTTuple inp)
 
 dclClassDicts p = p

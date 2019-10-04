@@ -32,8 +32,6 @@ checkFuncNested str (EFunc  z (TFunc FuncNested _ _,_) _ _) = [toError z str]
 checkFuncNested str (ETuple _ l)                            = concatMap (checkFuncNested str) l
 checkFuncNested _   _                                       = []
 
-idtp id tp = "$" ++ id ++ "$" ++ T.show' tp ++ "$"
-
 go :: Stmt -> (Errors, Stmt)
 go p = (es,p') where
         (es,_,_,p') = stmt [[]] (TAny,cz) p
@@ -402,7 +400,7 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id@(cid:_)) = (es, ftReq (length envs) (
                   Nothing -> (id, (TAny,cz), lnr, err)
                 where
                   pred :: Stmt -> Bool
-                  pred (SVar _ k tpc _) = (dollar id `isPrefixOf` k) && (isRight $ relatesC SUP txpc tpc)
+                  pred (SVar _ k tpc _) = (dol id `isPrefixOf` k) && (isRight $ relatesC SUP txpc tpc)
                   pred _                = False
 
                   err = [toError z $ "variable '" ++ id ++

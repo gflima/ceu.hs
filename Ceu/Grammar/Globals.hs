@@ -1,5 +1,7 @@
 module Ceu.Grammar.Globals where
 
+import Data.List (intercalate)
+
 type Errors = [String]
 
 type Source = (String, Int, Int)    -- filename, line, column
@@ -12,7 +14,8 @@ type ID_Data_Hier = [ID_Data]
 id2 _ x = x
 f2 f _ x  = f x
 
-dollar id = "$" ++ id ++ "$"
+dol  id  = dols [id]
+dols ids = "$" ++ intercalate "$" ids ++ "$"
 
 -- All possible combinations between members of each group:
 --    G1        G2        G3
