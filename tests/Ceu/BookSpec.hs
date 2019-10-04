@@ -19,7 +19,7 @@ main = hspec spec
 spec :: Spec
 spec = do
 
-    --describe "TODO:" $ do
+  --describe "TODO:" $ do
 
 -------------------------------------------------------------------------------
 
@@ -503,12 +503,12 @@ spec = do
             "   end",
             "end",
             "",
-            "constraint IEqualable for a with",
+            "interface IEqualable for a with",
             "   func ===       : ((a,a) -> Bool)",
             "   func =/= (x,y) : ((a,a) -> Bool) do return not (x === y) end",
             "end",
             "",
-            "instance of IEqualable for Bool with",
+            "implementation of IEqualable for Bool with",
             "   func === (x,y) : ((Bool,Bool) -> Bool) do",
             "     return (x and y) or ((not x) and (not y))",
             "   end",
@@ -533,7 +533,7 @@ spec = do
             "data Xx.Bb",
             "return (Xx.Aa) @<= (Xx.Bb)"
            ])
-        `shouldBe` Left "(line 78, column 16):\nvariable '@<=' has no associated instance for '((Xx.Aa,Xx.Bb) -> ?)'\n"
+        `shouldBe` Left "(line 78, column 16):\nvariable '@<=' has no associated implementation for '((Xx.Aa,Xx.Bb) -> ?)'\n"
 
       it "leap years" $         -- pg 33
         (run True $
@@ -577,7 +577,7 @@ spec = do
             "data Triangle.Equilateral",
             "data Triangle.Scalene",
             "",
-            "instance of IEqualable for Triangle with",
+            "implementation of IEqualable for Triangle with",
             "end",
             "",
             "func analyse (x,y,z) : ((Int,Int,Int) -> Triangle) do",
@@ -616,7 +616,7 @@ spec = do
             "data Triangle.Equilateral",
             "data Triangle.Scalene",
             "",
-            "instance of IEqualable for Triangle with",
+            "implementation of IEqualable for Triangle with",
             "end",
             "",
             "func analyse (x,y,z) : ((Int,Int,Int) -> Triangle) do",
@@ -666,7 +666,7 @@ spec = do
             "data Triangle.Equilateral",
             "data Triangle.Scalene",
             "",
-            "instance of IEqualable for Triangle with",
+            "implementation of IEqualable for Triangle with",
             "end",
             "",
             "func analyse (x,y,z) : ((Int,Int,Int) -> Triangle) do",
@@ -727,7 +727,7 @@ spec = do
             "data Char.Cc",
             "data Char.Dd",
             "",
-            "instance of IEqualable for Char with",
+            "implementation of IEqualable for Char with",
             "end",
             "",
             "func ord c : (Char -> Int) do",
@@ -774,7 +774,7 @@ spec = do
             " end",
             "end",
             "",
-            "instance of IOrderable for Char with",
+            "implementation of IOrderable for Char with",
             "  func @< (x,y) : ((Char,Char) -> Bool) do",
             "    return (ord x) < (ord y)",
             "  end",
@@ -829,7 +829,7 @@ spec = do
       it "enum" $         -- pg 38
         (run True $
           pre ++ unlines [
-            "constraint IEnumerable for a with",
+            "interface IEnumerable for a with",
             "   func toEnum   : (a -> Int)",
             "   func fromEnum : (Int -> a)",
             "end",
@@ -843,9 +843,9 @@ spec = do
             "data Day.Fri",
             "data Day.Sat",
             "",
-            "instance of IEqualable for Day with end",
+            "implementation of IEqualable for Day with end",
             "",
-            "instance of IEnumerable for Day with",
+            "implementation of IEnumerable for Day with",
             "   func toEnum day : (Day -> Int) do",
             "     if day === Day.Sun then",
             "       return 0",
@@ -883,7 +883,7 @@ spec = do
             "   end",
             "end",
             "",
-            "instance of IOrderable for Day with",
+            "implementation of IOrderable for Day with",
             "  func @< (x,y) : ((Day,Day) -> Bool) do",
             "    return (toEnum x) < (toEnum y)",
             "  end",
@@ -913,7 +913,7 @@ spec = do
       it "direction" $         -- pg 41
         (run True $
           pre ++ unlines [
-            "constraint IEnumerable for a with",
+            "interface IEnumerable for a with",
             "   func toEnum   : (a -> Int)",
             "   func fromEnum : (Int -> a)",
             "end",
@@ -924,9 +924,9 @@ spec = do
             "data Dir.L",
             "data Dir.O",
             "",
-            "instance of IEqualable for Dir with end",
+            "implementation of IEqualable for Dir with end",
             "",
-            "instance of IEnumerable for Dir with",
+            "implementation of IEnumerable for Dir with",
             "   func toEnum dir : (Dir -> Int) do",
             "     if dir === Dir.N then",
             "       return 0",
@@ -971,12 +971,12 @@ spec = do
       it "bool enum" $         -- pg 41
         (run True $
           pre ++ unlines [
-            "constraint IEnumerable for a with",
+            "interface IEnumerable for a with",
             "   func toEnum   : (a -> Int)",
             "   func fromEnum : (Int -> a)",
             "end",
             "",
-            "instance of IEnumerable for Bool with",
+            "implementation of IEnumerable for Bool with",
             "   func toEnum bool : (Bool -> Int) do",
             "     if bool === (Bool.False) then",
             "       return 0",
@@ -1106,7 +1106,7 @@ spec = do
       it "roots" $         -- pg 44
         (run True $
           pre ++ unlines [
-            "instance of IEqualable for (Int,Int) with end",
+            "implementation of IEqualable for (Int,Int) with end",
             "func sqrt x : (Int -> Int) do",
             "  if (x === 0) or (x === 1) then",
             "    return x; ",
@@ -1144,7 +1144,7 @@ spec = do
       it "tuples / eq" $         -- pg 45
         (run True $
           pre ++ unlines [
-            "instance of IEqualable for (a,b) with end",
+            "implementation of IEqualable for (a,b) with end",
             "return (((1,1)===(1,1)) and ((1,2)=/=(1,1)))"
            ])
         `shouldBe` Right (EData ["Bool","True"] EUnit)
@@ -1152,8 +1152,8 @@ spec = do
       it "tuples / ord" $         -- pg 45
         (run True $
           pre ++ unlines [
-            "instance of IEqualable for (a,b) with end",
-            "instance of IOrderable for (a,b) where (a is IOrderable,b is IOrderable) with",
+            "implementation of IEqualable for (a,b) with end",
+            "implementation of IOrderable for (a,b) where (a is IOrderable,b is IOrderable) with",
             "   func @< ((i,j),(x,y)) : (((a,b),(a,b)) -> Bool) do",
             "     return (i @< x) or ((i === x) and (j @< y))",
             "   end",
@@ -1166,7 +1166,7 @@ spec = do
         (run True $
           pre ++ unlines [
             "data Triple for (a,b,c) with (a,b,c)",
-            "instance of IEqualable for Triple of (a,b,c) with end",
+            "implementation of IEqualable for Triple of (a,b,c) with end",
             "var t0 : Triple of (Int,Int,Int) = Triple (1,0,3)",
             "var t1 : Triple of (Int,Int,Int) = Triple (1,2,3)",
             "var t2 : Triple of (Int,Int,Int) = Triple (1,2,3)",
@@ -1178,19 +1178,19 @@ spec = do
         (run True $
           pre ++ unlines [
             "data Triple for (a,b,c) with (a,b,c)",
-            "instance of IEqualable for Triple with end",
+            "implementation of IEqualable for Triple with end",
             "var t1 : Triple of (Int,Int,Int)    = Triple (1,2,3)",
             "var t2 : Triple of (Bool,Bool,Bool) = Triple (Bool.True,Bool.False,Bool.True)",
             "return t1 =/= t2"
            ])
         `shouldBe` Left "(line 79, column 11):\ntypes do not match : expected '(((Triple of (Int,Int,Int)),(Triple of (Bool,Bool,Bool))) -> ?)' : found '((a,a) -> Bool)'\n(line 79, column 11):\nambiguous instances for 'a' : '(Triple of (Int,Int,Int))', '(Triple of (Bool,Bool,Bool))'\n"
-        --`shouldBe` Left "(line 79, column 11):\nvariable '=/=' has no associated instance for '(((Triple of (Int,Int,Int)),(Triple of (Bool,Bool,Bool))) -> ?)'\n"
+        --`shouldBe` Left "(line 79, column 11):\nvariable '=/=' has no associated implementation for '(((Triple of (Int,Int,Int)),(Triple of (Bool,Bool,Bool))) -> ?)'\n"
 
       it "Date - age" $         -- pg 45
         (run True $
           pre ++ unlines [
-            "instance of IEqualable for (a,b) with end",
-            "instance of IOrderable for (a,b) where (a is IOrderable,b is IOrderable) with",
+            "implementation of IEqualable for (a,b) with end",
+            "implementation of IOrderable for (a,b) where (a is IOrderable,b is IOrderable) with",
             "   func @< ((i,j),(x,y)) : (((a,b),(a,b)) -> Bool) do",
             "     return (i @< x) or ((i === x) and (j @< y))",
             "   end",
@@ -1279,7 +1279,7 @@ data Either for (a,b)
 data Either.Left  with a
 data Either.Right with b
 
-instance of IEqualable for Either of (a,b) with end
+implementation of IEqualable for Either of (a,b) with end
 
 var l : Either.Left  of (Bool,Int) = Either.Left  Bool.True
 var r : Either.Right of (Bool,Int) = Either.Right 10
@@ -1297,8 +1297,8 @@ data Either for (a,b) is abstract
 data Either.Left  with a
 data Either.Right with b
 
-instance of IEqualable for Either of (a,b) with end
-instance of IOrderable for Either of (a,b) where (a is IOrderable, b is IOrderable) with
+implementation of IEqualable for Either of (a,b) with end
+implementation of IOrderable for Either of (a,b) where (a is IOrderable, b is IOrderable) with
   func @< (x,y) : ((Either of (a,b), Either of (a,b)) -> Bool) do
     match (x,y) with
       case (Either.Left =xl,  Either.Left =yl)  : (a,a) then
@@ -1335,7 +1335,7 @@ return (f_ @<= f) and (((f @< l_) and (l @< r_)) and (r_ @>= r))
 data Coefs with (Int,Int,Int)
 data Roots with (Int,Int)
 
-instance of IEqualable for Roots with end
+implementation of IEqualable for Roots with end
 
 func sqrt x : (Int -> Int) do
   if (x === 0) or (x === 1) then
@@ -1419,7 +1419,7 @@ return (OneTwo.One 10, OneTwo.Two (Pair (10,())))
           pre ++ [r|
 data Angle with Int
 
-instance of IEqualable for Angle with
+implementation of IEqualable for Angle with
   func === (a1,a2) : ((Angle,Angle) -> Bool) do
     var (a1_,a2_) : (Int,Int)
     set (Angle a1_, Angle a2_) = (a1,a2)
@@ -1439,7 +1439,7 @@ return ((Angle 370) === (Angle 10)) and (a1 === a2)
           pre ++ [r|
 data Distance with Int
 
-instance of IEqualable for Distance with
+implementation of IEqualable for Distance with
   func === (d1,d2) : ((Distance,Distance) -> Bool) do
     var (d1_,d2_) : (Int,Int)
     set (Distance d1_, Distance d2_) = (d1,d2)
@@ -1533,7 +1533,7 @@ data Nat
 data Nat.Zero
 data Nat.Succ with Nat
 
-instance of IEqualable for Nat with
+implementation of IEqualable for Nat with
   func === (x,y) : ((Nat,Nat) -> Bool) do
     if x matches Nat.Zero then
       if y matches Nat.Zero then
@@ -1566,7 +1566,7 @@ data Nat
 data Nat.Zero
 data Nat.Succ with Nat
 
-instance of IEqualable for Nat with
+implementation of IEqualable for Nat with
   func === (x,y) : ((Nat,Nat) -> Bool) do
     if x matches Nat.Zero then
       if y matches Nat.Zero then
@@ -1585,7 +1585,7 @@ instance of IEqualable for Nat with
   end
 end
 
-instance of IOrderable for Nat with
+implementation of IOrderable for Nat with
   func @< (x,y) : ((Nat,Nat) -> Bool) do
     if x matches Nat.Zero then
       if y matches Nat.Zero then
@@ -1856,7 +1856,7 @@ return (Integer.Neg (Positive.One), Integer.Zero, Integer.Pos (Positive.Succ (Po
       it "INumeric" $                           -- pg 76
         (run True $
           pre ++ [r|
-constraint INumeric for a where (a is IEqualable) with
+interface INumeric for a where (a is IEqualable) with
   func ++  : ((a,a) -> a)
   func **  : ((a,a) -> a)
   func neg : (a -> a)
@@ -1866,17 +1866,17 @@ constraint INumeric for a where (a is IEqualable) with
   end
 end
 
-constraint IReal for a where (a is INumeric) with // TODO: , a is IOrderable) with
+interface IReal for a where (a is INumeric) with // TODO: , a is IOrderable) with
   //var toRational : (a -> Rational)
 end
 
-constraint IIntegral for a where (a is IReal) with // TODO: , a is IEnumerable) with
+interface IIntegral for a where (a is IReal) with // TODO: , a is IEnumerable) with
   func div       : ((a,a) -> a)
   func mod       : ((a,a) -> a)
   //func toInteger : (a -> Integer)
 end
 
-constraint IFractional for a where (a is INumeric) with
+interface IFractional for a where (a is INumeric) with
   func /- : ((a,a) -> a)
   //var fromRational : (a -> Rational)
 end
@@ -1935,7 +1935,7 @@ return (mkRat (10,2), mkRat (0,1), mkRat (1,-5))
       it "Rational / INumeric / IFractional" $                       -- pg 80
         (run True $
           pre ++ [r|
-constraint INumeric for a where (a is IEqualable) with
+interface INumeric for a where (a is IEqualable) with
   func ++  : ((a,a) -> a)
   func **  : ((a,a) -> a)
   func neg : (a -> a)
@@ -1945,7 +1945,7 @@ constraint INumeric for a where (a is IEqualable) with
   end
 end
 
-constraint IFractional for a where (a is INumeric) with
+interface IFractional for a where (a is INumeric) with
   func /- : ((a,a) -> a)
   //var fromRational : (a -> Rational)
 end
@@ -1988,9 +1988,9 @@ func mkRat (x,y) : ((Int,Int) -> Rational) do
   return Rational (u / d, v / d)
 end
 
-instance of IEqualable for Rational with end
+implementation of IEqualable for Rational with end
 
-instance of INumeric for Rational with
+implementation of INumeric for Rational with
   func ++ (x,y) : ((Rational,Rational) -> Rational) do
     var (x1,x2) : (Int,Int)
     var (y1,y2) : (Int,Int)
@@ -2019,7 +2019,7 @@ instance of INumeric for Rational with
   end
 end
 
-instance of IFractional for Rational with
+implementation of IFractional for Rational with
   func /- (x,y) : ((Rational,Rational) -> Rational) do
     var Rational (x1,x2) : (Int,Int) = x
     var Rational (y1,y2) : (Int,Int) = y
@@ -2089,7 +2089,7 @@ data List for a
 data List.Nil
 data List.Cons with (a, List of a)
 
-instance of IEqualable for List of a where (a is IEqualable) with end
+implementation of IEqualable for List of a where (a is IEqualable) with end
 
 func eq (l1,l2) : ((List of a, List of a) -> Bool) do
   if l1 matches List.Nil then
@@ -2141,9 +2141,9 @@ data List for a
 data List.Nil
 data List.Cons with (a, List of a)
 
-instance of IEqualable for List of a where (a is IEqualable) with end
+implementation of IEqualable for List of a where (a is IEqualable) with end
 
-instance of IOrderable for (List of a) with
+implementation of IOrderable for (List of a) with
   func @< (xs, ys) : ((List of a, List of a) -> Bool) do
     if xs matches List.Nil then
       return Bool.False
@@ -2176,7 +2176,7 @@ data List for a
 data List.Nil
 data List.Cons with (a, List of a)
 
-instance of IEqualable for List of a where (a is IEqualable) with end
+implementation of IEqualable for List of a where (a is IEqualable) with end
 
 func null l : (List of a -> Bool) do
   if l matches List.Nil then
@@ -2232,7 +2232,7 @@ end
 
 return 1
 |])
-        `shouldBe` Left "(line 84, column 15):\nvariable '===' has no associated instance for '(((List.Nil of a),(List of a)) -> Bool)'\n"
+        `shouldBe` Left "(line 84, column 15):\nvariable '===' has no associated implementation for '(((List.Nil of a),(List of a)) -> Bool)'\n"
 
       it "List: Snoc" $                   -- pg 94
         (run True $
@@ -2241,7 +2241,7 @@ data List for a
 data List.Nil
 data List.Cons with (a, List of a)
 
-instance of IEqualable for List of a where (a is IEqualable) with end
+implementation of IEqualable for List of a where (a is IEqualable) with end
 
 func head xs : (List of a -> a) do
   var! List.Cons (x,_) : a = xs
@@ -2472,7 +2472,7 @@ func or (x,y) : ((Bool,Bool)->Bool) do
   end
 end
 
-constraint IEqualable for a with
+interface IEqualable for a with
   func === (x,y) : ((a,a) -> Bool) do
     if y matches x then
       if x matches y then
@@ -2489,32 +2489,32 @@ constraint IEqualable for a with
   end
 end
 
-instance of IEqualable for Int with
+implementation of IEqualable for Int with
   func === (x,y) : ((Int,Int) -> Bool) do
     return x == y
   end
 end
 
-instance of IEqualable for Bool with
+implementation of IEqualable for Bool with
   func === (x,y) : ((Bool,Bool) -> Bool) do
     return (x and y) or ((not x) and (not y))
   end
 end
 
-constraint IOrderable for a where (a is IEqualable) with
+interface IOrderable for a where (a is IEqualable) with
   func @<        : ((a,a) -> Bool)
   func @<= (x,y) : ((a,a) -> Bool) do return (x @< y) or (x === y) end
   func @>  (x,y) : ((a,a) -> Bool) do return not (x @<= y)         end
   func @>= (x,y) : ((a,a) -> Bool) do return (x @> y) or (x === y) end
 end
 
-instance of IOrderable for Int with
+implementation of IOrderable for Int with
   func @< (x,y) : ((Int,Int) -> Bool) do
     return x < y
   end
 end
 
-instance of IOrderable for Bool with
+implementation of IOrderable for Bool with
   func @< (x,y) : ((Bool,Bool) -> Bool) do
     if      (x, y) matches (Bool.False, Bool.False) then return Bool.False
     else/if (x, y) matches (Bool.False, Bool.True)  then return Bool.True
