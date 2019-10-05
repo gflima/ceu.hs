@@ -18,13 +18,6 @@ toGDcls s@(SVarSG _ _ (GDcl _) _ _ p) = s : toGDcls p
 toGDcls s@(SVarSG _ _ _        _ _ p) = toGDcls p
 toGDcls   (SNop   _)              = []
 
-{-
-toGGens :: Stmt -> [Stmt]
-toGGens s@(SVarSG _ _ (GGen _) _ _ p) = s : toGGens p
-toGGens s@(SVarSG _ _ _        _ _ p) = toGGens p
-toGGens   (SNop   _)              = []
--}
-
 toName :: Stmt -> ID_Var
 toName (SVarSG _ id _ _ _ _) = id
 
@@ -90,15 +83,19 @@ addClassCs p = p
 --    func f/GFunc
 
 setGen :: Stmt -> Stmt
+
 setGen (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
   where
     f :: Stmt -> Stmt
     f (SVarS z id tpc         Nothing    p) = SVarSG z id (GDcl False) tpc Nothing $
                                                 f p
-    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_':dol id) (GGen cs) (tp,Cs.cz) (Just ini) $
+    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_':dol id) (GGen clss) (tp,Cs.cz) (Just ini) $
                                                 SVarSG z id (GDcl True) tpc Nothing $
                                                   f p
+                                              where
+                                                [(_,clss)] = cs
     f s@(SNop _) = s
+
 setGen (SInstS z cls itpc imp p) = SInstS z cls itpc (f imp) p
   where
     f :: Stmt -> Stmt
@@ -107,14 +104,18 @@ setGen (SInstS z cls itpc imp p) = SInstS z cls itpc (f imp) p
                                                 SVarSG z id (GCall [cls] itpc True) (tp,Cs.cz) Nothing $
                                                   f p
     f s@(SNop _) = s
+
 setGen p = p
+
+-------------------------------------------------------------------------------
 
 setGen' :: Stmt -> Stmt
 setGen' (SVarS z id tpc@(tp,[]) ini p) = SVarSG z id GNone tpc ini p
-setGen' (SVarS z id tpc@(tp,cs) ini p) = SVarSG z ('_':dol id) (GGen cs) (tp,Cs.cz) (remCs ini) $
+setGen' (SVarS z id tpc@(tp,cs) ini p) = SVarSG z ('_':dol id) (GGen clss) (tp,Cs.cz) (remCs ini) $
                                           SVarSG z id (GDcl $ isJust ini) tpc Nothing $
                                             p
   where
+    [(_,clss)] = cs
     remCs :: Maybe Exp -> Maybe Exp
     remCs (Just (EFunc z (tp,_) ps bd)) = Just (EFunc z (tp,Cs.cz) ps bd)
 
@@ -166,8 +167,8 @@ withEnvS env (SSeq z p1 p2) = (es1++es2, SSeq z p1' p2') where
 withEnvS env (SLoop z p) = (es, SLoop z p') where
                             (es,p') = withEnvS env p
 
-withEnvS env (SVarSG z id  (GGen cs) tpc (Just ini) p) =
-  (es1++es2, SVarSG z id (GGen cs) tpc (Just $ addGGenWrappers cs env ini') p')
+withEnvS env (SVarSG z id (GGen clss) tpc (Just ini) p) =
+  (es1++es2, SVarSG z id (GGen clss) tpc (Just $ addGGenWrappers env clss ini') p')
   where
     (es1,ini') = withEnvE env ini
     (es2,p')   = withEnvS env p
@@ -344,12 +345,11 @@ addClassGensToInst _ p = p
 --      ... -- original default implementation
 --    end
 
-addGGenWrappers :: Cs.Map -> [Stmt] -> Exp -> Exp
+addGGenWrappers :: [Stmt] -> [ID_Class] -> Exp -> Exp
 
-addGGenWrappers cs env (EFunc z tpc par p) = EFunc z tpc par p' where
+addGGenWrappers env clss (EFunc z tpc par p) = EFunc z tpc par p' where
   p' = foldr ($) p (concat $ map cls2wrappers clss')
 
-  [(_,clss)] = cs
   clss' = map f clss where
             f cls = case List.find g env of
                       Just s -> s           -- TODO: Nothing
@@ -530,17 +530,16 @@ addGCallBody p = p
 
 addGenDict :: Stmt -> Stmt
 
-addGenDict (SVarSG z id (GGen cs) (T.TFunc ft1 inp1 out1,cs1)
+addGenDict (SVarSG z id (GGen clss) (T.TFunc ft1 inp1 out1,cs1)
               (Just (EFunc z2 (T.TFunc ft2 inp2 out2,cs2) par2 p2))
               p) =
-  SVarSG z id (GGen cs) (T.TFunc ft1 inp1' out1,cs1)
+  SVarSG z id (GGen clss) (T.TFunc ft1 inp1' out1,cs1)
     (Just (EFunc z2 (T.TFunc ft2 inp2' out2,cs2) par2' p2))
     p
   where
     inp1' = foldr (\cls -> T.insTTuple (T.TData False [dol cls] [])) (T.toTTuple inp1) clss
     inp2' = foldr (\cls -> T.insTTuple (T.TData False [dol cls] [])) (T.toTTuple inp2) clss
     par2' = foldr (\cls -> insETuple (EVar z $ dols ["dict",cls]))   (toETuple par2)   clss
-    [(_,clss)] = cs
 
 addGenDict (SVarSG z id (GOne clss) (T.TFunc ft1 inp1 out1,cs1)
               (Just (EFunc z2 (T.TFunc ft2 inp2 out2,cs2) par2 p2))
