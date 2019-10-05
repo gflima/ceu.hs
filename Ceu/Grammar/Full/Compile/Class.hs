@@ -99,10 +99,14 @@ setGen (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
 setGen (SInstS z cls itpc imp p) = SInstS z cls itpc (f imp) p
   where
     f :: Stmt -> Stmt
-    f (SVarS z id tpc@(tp,_) (Just ini) p) = SVarSG z ('_' : dols [id,T.showC itpc]) (GOne [cls]) (tp,Cs.cz) (Just ini) $
-                                              SVarSG z id (GDcl True) tpc Nothing $
-                                                SVarSG z id (GCall [cls] itpc True) (tp,Cs.cz) Nothing $
-                                                  f p
+    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_' : dols [id,T.showC itpc]) (GOne [cls]) (tp,Cs.cz) (Just ini) $
+                                                SVarSG z id (GDcl True) tpc Nothing $
+                                                  SVarSG z id (GCall [cls] itpc True) (tp,Cs.cz) Nothing $
+                                                    f p
+                                              where
+                                                clss = case cs of
+                                                  []         -> []
+                                                  [(_,clss)] -> clss
     f s@(SNop _) = s
 
 setGen p = p
@@ -173,23 +177,30 @@ withEnvS env (SVarSG z id (GGen clss) tpc (Just ini) p) =
     (es1,ini') = withEnvE env ini
     (es2,p')   = withEnvS env p
 
+withEnvS env (SVarSG z id (GOne [cls]) tpc (Just ini) p) =
+  (es1++es2, SVarSG z id (GGen clss) tpc (Just ini') p')
+  where
+    (es1,ini') = withEnvE env ini
+    (es2,p')   = withEnvS env p
+    clss = cls : getSups env cls
+
 withEnvS env s@(SVarSG z id (GDcl def) tpc Nothing p) =
   (es, repGGenInsts env $ SVarSG z id (GDcl def) tpc Nothing p')
   where
     (es,p') = withEnvS (s:env) p
 
-withEnvS env (SVarSG z id gen tpc ini p) =
-  (es1++es2, SVarSG z id gen' tpc ini' p')
+withEnvS env (SVarSG z id (GCall [cls] itpc has) tpc Nothing p) =
+  (es, SVarSG z id (GCall (cls : getSups env cls) itpc has) tpc Nothing p')
+  where
+    (es,p') = withEnvS env p
+
+withEnvS env (SVarSG z id GNone tpc ini p) =
+  (es1++es2, SVarSG z id GNone tpc ini' p')
   where
     (es1,ini') = case ini of
                   Nothing -> ([], Nothing)
                   Just x  -> (i, Just j) where (i,j) = withEnvE env x
     (es2,p')   = withEnvS env p
-
-    gen' = case gen of
-            GOne  [cls]          -> GOne  (cls : getSups env cls)
-            GCall [cls] itpc has -> GCall (cls : getSups env cls) itpc has
-            GNone                -> GNone
 
 withEnvS env p = ([], p)
 
