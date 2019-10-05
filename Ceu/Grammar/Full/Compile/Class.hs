@@ -89,24 +89,18 @@ setGen (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
     f :: Stmt -> Stmt
     f (SVarS z id tpc         Nothing    p) = SVarSG z id (GDcl False) tpc Nothing $
                                                 f p
-    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_':dol id) (GGen clss) (tp,Cs.cz) (Just ini) $
+    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_':dol id) (GGen []) tpc (Just ini) $
                                                 SVarSG z id (GDcl True) tpc Nothing $
                                                   f p
-                                              where
-                                                [(_,clss)] = cs
     f s@(SNop _) = s
 
 setGen (SInstS z cls itpc imp p) = SInstS z cls itpc (f imp) p
   where
     f :: Stmt -> Stmt
-    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_' : dols [id,T.showC itpc]) (GOne [cls]) (tp,Cs.cz) (Just ini) $
+    f (SVarS z id tpc@(tp,_) (Just ini) p) = SVarSG z ('_' : dols [id,T.showC itpc]) (GOne []) (tp,[("$",[cls])]) (Just ini) $
                                                 SVarSG z id (GDcl True) tpc Nothing $
                                                   SVarSG z id (GCall [cls] itpc True) (tp,Cs.cz) Nothing $
                                                     f p
-                                              where
-                                                clss = case cs of
-                                                  []         -> []
-                                                  [(_,clss)] -> clss
     f s@(SNop _) = s
 
 setGen p = p
@@ -114,12 +108,11 @@ setGen p = p
 -------------------------------------------------------------------------------
 
 setGen' :: Stmt -> Stmt
-setGen' (SVarS z id tpc@(tp,[]) ini p) = SVarSG z id GNone tpc ini p
-setGen' (SVarS z id tpc@(tp,cs) ini p) = SVarSG z ('_':dol id) (GGen clss) (tp,Cs.cz) (remCs ini) $
+setGen' (SVarS z id tpc@(_,[]) ini p) = SVarSG z id GNone tpc ini p
+setGen' (SVarS z id tpc        ini p) = SVarSG z ('_':dol id) (GGen []) tpc (remCs ini) $
                                           SVarSG z id (GDcl $ isJust ini) tpc Nothing $
                                             p
   where
-    [(_,clss)] = cs
     remCs :: Maybe Exp -> Maybe Exp
     remCs (Just (EFunc z (tp,_) ps bd)) = Just (EFunc z (tp,Cs.cz) ps bd)
 
@@ -171,18 +164,20 @@ withEnvS env (SSeq z p1 p2) = (es1++es2, SSeq z p1' p2') where
 withEnvS env (SLoop z p) = (es, SLoop z p') where
                             (es,p') = withEnvS env p
 
-withEnvS env (SVarSG z id (GGen clss) tpc (Just ini) p) =
-  (es1++es2, SVarSG z id (GGen clss) tpc (Just $ addGGenWrappers env clss ini') p')
+withEnvS env (SVarSG z id (GGen []) tpc@(tp,cs) (Just ini) p) =
+  (es1++es2, SVarSG z id (GGen clss) (tp,Cs.cz) (Just $ addGGenWrappers env clss ini') p')
   where
     (es1,ini') = withEnvE env ini
     (es2,p')   = withEnvS env p
+    [(_,clss)] = cs
 
-withEnvS env (SVarSG z id (GOne [cls]) tpc (Just ini) p) =
-  (es1++es2, SVarSG z id (GGen clss) tpc (Just ini') p')
+withEnvS env (SVarSG z id (GOne []) tpc@(tp,cs) (Just ini) p) =
+  (es1++es2, SVarSG z id (GGen clss) (tp,Cs.cz) (Just ini') p')
   where
     (es1,ini') = withEnvE env ini
     (es2,p')   = withEnvS env p
     clss = cls : getSups env cls
+    [(_,[cls])] = cs
 
 withEnvS env s@(SVarSG z id (GDcl def) tpc Nothing p) =
   (es, repGGenInsts env $ SVarSG z id (GDcl def) tpc Nothing p')
