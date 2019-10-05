@@ -45,7 +45,7 @@ spec = do
             ])
           `shouldBe` Right (EData ["Int","1"] EUnit)
 
-        it "IEq + default + Int" $
+        it "XXX-0: IEq + default + Int" $
           (run True $
             unlines [
               "interface IEq for a with"          ,
@@ -181,7 +181,7 @@ spec = do
              ])
           `shouldBe` Left "(line 3, column 1):\nimplementation 'IFa for (a,b) where (a is IFb,b is IFb)' is not declared\n"
 
-        it "IEq/IOrd" $
+        it "XXX-1: IEq/IOrd" $
           (run True $
             [r|
 interface IEqualable for a with

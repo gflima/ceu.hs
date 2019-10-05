@@ -22,13 +22,13 @@ toName :: Stmt -> ID_Var
 toName (SVarSG _ id _ _ _ _) = id
 
 getSups :: [Stmt] -> ID_Class -> [ID_Class]
-getSups env cls =
+getSups env cls = cls :
   case List.find (isClass cls) env of
     Nothing -> []
     Just (SClassS _ _ cs _ _) ->
       case cs of
         []         -> []
-        [(_,sups)] -> sups
+        [(_,sups)] -> foldr (\sup l -> getSups env sup ++ l) [] sups
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
@@ -49,10 +49,10 @@ addClassCs :: Stmt -> Stmt
 
 addClassCs (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
   where
-    [(var,sups)] = cs
+    [(var,_)] = cs
     f :: Stmt -> Stmt
     f (SVarS z id tpc ini p) = SVarS z id (g tpc) ini (f p) where
-                                g (tp,cs) = (tp, foldr (\cls cs->Cs.insert (var,cls) cs) cs (cls:sups))
+                                g (tp,cs) = (tp, foldr (\cls cs->Cs.insert (var,cls) cs) cs [cls])
     f s@(SNop _) = s
 
 addClassCs (SInstS z cls itpc@(_,cs) imp p) = SInstS z cls itpc (f imp) p
@@ -169,14 +169,15 @@ withEnvS env (SVarSG z id (GGen []) tpc@(tp,cs) (Just ini) p) =
   where
     (es1,ini') = withEnvE env ini
     (es2,p')   = withEnvS env p
-    [(_,clss)] = cs
+    clss = getSups env cls
+    [(_,[cls])] = cs
 
 withEnvS env (SVarSG z id (GOne []) tpc@(tp,cs) (Just ini) p) =
   (es1++es2, SVarSG z id (GGen clss) (tp,Cs.cz) (Just ini') p')
   where
     (es1,ini') = withEnvE env ini
     (es2,p')   = withEnvS env p
-    clss = cls : getSups env cls
+    clss = getSups env cls
     [(_,[cls])] = cs
 
 withEnvS env s@(SVarSG z id (GDcl def) tpc Nothing p) =
@@ -185,7 +186,7 @@ withEnvS env s@(SVarSG z id (GDcl def) tpc Nothing p) =
     (es,p') = withEnvS (s:env) p
 
 withEnvS env (SVarSG z id (GCall [cls] itpc has) tpc Nothing p) =
-  (es, SVarSG z id (GCall (cls : getSups env cls) itpc has) tpc Nothing p')
+  (es, SVarSG z id (GCall (getSups env cls) itpc has) tpc Nothing p')
   where
     (es,p') = withEnvS env p
 
@@ -324,7 +325,7 @@ isClass _   _                     = False
 -------------------------------------------------------------------------------
 
 addClassGensToInst :: [Stmt] -> Stmt -> Stmt
-addClassGensToInst env s@(SInstS z cls tpc imp p) = SInstSC z (cls : getSups env cls,ifc,gens) tpc imp p
+addClassGensToInst env s@(SInstS z cls tpc imp p) = SInstSC z (getSups env cls,ifc,gens) tpc imp p
   where
     ifc = case List.find f env of
             Nothing                    -> SNop z -- class is not declared (checked before)
