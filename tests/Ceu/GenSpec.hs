@@ -45,7 +45,7 @@ spec = do
             ])
           `shouldBe` Right (EData ["Int","1"] EUnit)
 
-        it "XXX-0: IEq + default + Int" $
+        it "IEq + default + Int" $
           (run True $
             unlines [
               "interface IEq for a with"          ,
@@ -142,8 +142,8 @@ spec = do
               "",
               "return (Bool.True) =>= (Bool.False)"
             ])
-          --`shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 9, column 1):\nmissing implementation of '==='\n"
-          `shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated implementation for '((Bool,Bool) -> Bool)'\n"
+          --`shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated implementation for '((Bool,Bool) -> Bool)'\n"
+          `shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n"
 
         it "IOrd extends IEq" $
           (run True $
@@ -181,7 +181,7 @@ spec = do
              ])
           `shouldBe` Left "(line 3, column 1):\nimplementation 'IFa for (a,b) where (a is IFb,b is IFb)' is not declared\n"
 
-        it "XXX-1: IEq/IOrd" $
+        it "IEq/IOrd" $
           (run True $
             [r|
 interface IEqualable for a with
@@ -214,7 +214,37 @@ return 30 lte 25
 
       describe "gen-inst:" $ do
 
-        it "IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
+        it "XXX-1: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
+          (run True $
+            unlines [
+              "interface IEq for a with"          ,
+              " var eq  : ((a,a) -> Int)"         ,
+              " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
+              "end"                               ,
+              "implementation of IEq for Int with" ,
+              " func eq (x,y) : ((Int,Int) -> Int) do",
+              "   if y matches x then return 1 else return 0 end"                  ,
+              " end"                              ,
+              "end"                               ,
+              "interface IXx for a with"          ,
+              " var f : (a -> Int)"               ,
+              "end"                               ,
+              "data Dd",
+              "implementation of IXx for Dd with" ,
+              " func f (x) : (Dd -> Int) do"    ,
+              "   return 1"                       ,
+              " end"                              ,
+              "end"                               ,
+              "implementation of IEq for a where a is IXx with" ,
+              " func eq (x,y) : ((a,a) -> Int) do" ,
+              "   return ((f x) eq (f y))",
+              " end"                              ,
+              "end"                               ,
+              "return (eq(Dd,Dd))"
+            ])
+          `shouldBe` Right (EData ["Int","1"] EUnit)
+
+        it "XXX-2: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
           (run True $
             unlines [
               "interface IEq for a with"          ,
@@ -280,7 +310,7 @@ return 30 lte 25
             ])
           `shouldBe` Right (EData ["Int","4"] EUnit)
 
-        it "XXX: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
+        it "IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
           (run True $
             unlines [
               "interface IEq for a with"          ,

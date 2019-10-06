@@ -234,7 +234,7 @@ relatesErrors :: Relation -> Type -> Type -> Errors
 relatesErrors rel tp1 tp2 = either id (const []) (relates rel tp1 tp2)
 
 relatesC :: Relation -> TypeC -> TypeC -> Either Errors (TypeC, [(ID_Var,Type)])
-relatesC rel (tp1_,cs1) (tp2_,cs2) = -- | (cs1==cs2) = -- TODO: consider cs (depends on REL)
+relatesC rel (tp1_,cs1) (tp2_,cs2) = traceShow "222" $ -- | (cs1==cs2) = -- TODO: consider cs (depends on REL)
   case relates rel tp1_ tp2_ of
     Left  err        -> Left err
     Right (tp,pairs) -> Right ((tp,cs1), pairs)

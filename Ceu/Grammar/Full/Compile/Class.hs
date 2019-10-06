@@ -173,7 +173,7 @@ withEnvS env (SVarSG z id (GGen []) tpc@(tp,cs) (Just ini) p) =
     [(_,[cls])] = cs
 
 withEnvS env (SVarSG z id (GOne []) tpc@(tp,cs) (Just ini) p) =
-  (es1++es2, SVarSG z id (GGen clss) (tp,Cs.cz) (Just ini') p')
+  (es1++es2, SVarSG z id (GGen clss) (tp,Cs.cz) (Just $ addGGenWrappers env clss ini') p')
   where
     (es1,ini') = withEnvE env ini
     (es2,p')   = withEnvS env p
@@ -357,9 +357,10 @@ addGGenWrappers :: [Stmt] -> [ID_Class] -> Exp -> Exp
 addGGenWrappers env clss (EFunc z tpc par p) = EFunc z tpc par p' where
   p' = foldr ($) p (concat $ map cls2wrappers clss')
 
-  clss' = map f clss where
+  clss' = concat $ map f clss where
             f cls = case List.find g env of
-                      Just s -> s           -- TODO: Nothing
+                      Nothing -> []
+                      Just s  -> [s]
                     where
                       g (SClassS _ id _ _ _) = id == cls
                       g _ = False
