@@ -58,7 +58,7 @@ addClassCs (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
 addClassCs (SInstS z cls itpc@(_,cs) imp p) = SInstS z cls itpc (f imp) p
   where
     f :: Stmt -> Stmt
-    f (SVarS z id tpc ini p) =
+    f (SVarS z id tpc ini p) = traceShow ("AAA", id, g tpc)
       SVarS z id (g tpc) ini (f p) where
         g :: T.TypeC -> T.TypeC
         g (tp1,cs1) = (tp1, foldr h cs1 cs) where
@@ -97,9 +97,9 @@ setGen (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
 setGen (SInstS z cls itpc imp p) = SInstS z cls itpc (f imp) p
   where
     f :: Stmt -> Stmt
-    f (SVarS z id tpc@(tp,_) (Just ini) p) = SVarSG z ('_' : dols [id,T.showC itpc]) (GOne []) (tp,[("$",[cls])]) (Just ini) $
+    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_' : dols [id,T.showC itpc]) (GOne []) (tp,[("$",[cls])]++cs) (Just ini) $
                                                 SVarSG z id (GDcl True) tpc Nothing $
-                                                  SVarSG z id (GCall [cls] itpc True) (tp,Cs.cz) Nothing $
+                                                  SVarSG z id (GCall [cls] itpc True) tpc Nothing $
                                                     f p
     f s@(SNop _) = s
 
@@ -173,12 +173,14 @@ withEnvS env (SVarSG z id (GGen []) tpc@(tp,cs) (Just ini) p) =
     [(_,[cls])] = cs
 
 withEnvS env (SVarSG z id (GOne []) tpc@(tp,cs) (Just ini) p) =
-  (es1++es2, SVarSG z id (GGen clss) (tp,Cs.cz) (Just $ addGGenWrappers env clss ini') p')
+  (es1++es2, SVarSG z id (GGen clss) (tp,Cs.cz) (Just $ addGGenWrappers env (traceShow ("BBB",id,clss) clss) ini') p')
+  --(es1++es2, SVarSG z id (GGen clss) (tp,Cs.cz) (Just ini') p')
   where
     (es1,ini') = withEnvE env ini
     (es2,p')   = withEnvS env p
-    clss = getSups env cls
-    [(_,[cls])] = cs
+
+    clss :: [ID_Class]
+    clss = concat $ map (getSups env) $ map (\(_,[cls]) -> cls) cs
 
 withEnvS env s@(SVarSG z id (GDcl def) tpc Nothing p) =
   (es, repGGenInsts env $ SVarSG z id (GDcl def) tpc Nothing p')
@@ -505,7 +507,7 @@ addInstGCalls p = p
 --    func $f$Int$ (x) return _$f$($IEq$Int,x)
 
 addGCallBody (SVarSG z id (GCall clss itpc has) (tp@(T.TFunc ft inp out),cs) Nothing p) =
-  SVarSG z (dols [id,T.showC itpc]) (GCall clss itpc has) (tp,Cs.cz) (Just (EFunc z (tp,Cs.cz) par_dcl bdy)) p where
+  SVarSG z (dols [id,T.showC itpc]) (GCall clss itpc has) (tp,cs) (Just (EFunc z (tp,Cs.cz) par_dcl bdy)) p where
     bdy = SRet z (ECall z (EVar z id') par_call) where
             id' = if has then
                     '_' : dols [id,T.showC itpc]

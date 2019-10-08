@@ -214,6 +214,37 @@ return 30 lte 25
 
       describe "gen-inst:" $ do
 
+        it "XXX-0: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
+          (run True $
+            unlines [
+              "interface IEq for a with"          ,
+              " var eq  : ((a,a) -> Int)"         ,
+              " func neq (x,y) : ((a,a) -> Int) do return 1 - (x eq y) end",
+              "end"                               ,
+              "implementation of IEq for Int with" ,
+              " func eq (x,y) : ((Int,Int) -> Int) do",
+              "   if y matches x then return 1 else return 0 end"                  ,
+              " end"                              ,
+              "end"                               ,
+              "interface IXx for a with"          ,
+              " var f : (a -> Int)"               ,
+              "end"                               ,
+              "data Dd",
+              "implementation of IXx for Dd with" ,
+              " func f (x) : (Dd -> Int) do"    ,
+              "   return 1"                       ,
+              " end"                              ,
+              "end"                               ,
+              "implementation of IEq for a where a is IXx with" ,
+              " func eq (x,y) : ((a,a) -> Int) do" ,
+              "   return ((f x) eq (f y))",
+              " end"                              ,
+              "end"                               ,
+              "data Ee",
+              "return (eq(Ee,Ee))"
+            ])
+          `shouldBe` Right (EData ["Int","1"] EUnit)
+
         it "XXX-1: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
           (run True $
             unlines [
