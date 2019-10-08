@@ -392,13 +392,13 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n
                       map (toError z) $ fromLeft $ relatesC rel txpc (last (map (getTpc.snd) xs)))
                         where getTpc (SVar _ _ tpc _) = tpc
           Just (lnr, SVar _ _  tpc@(_,[])   _) -> (id, tpc, lnr, [])
-          Just (lnr, SVar _ _  tpc          _) -> traceShow "OK" $ -- generic type
-            case traceShow "111" $ find pred (concat envs) of            -- find implementation
+          Just (lnr, SVar _ _  tpc          _) -> -- generic type
+            case find pred (concat envs) of            -- find implementation
               Just (SVar _ k tpc@(tp,cs) _) -> (k, tpc, lnr, [])
               Nothing -> (id, (TAny,cz), lnr, err)
             where
               pred :: Stmt -> Bool
-              pred (SVar _ k tpc _) = traceShowX ("ok",id,k) $ (dol (traceShowId id) `isPrefixOf` k) && (isRight $ relatesC SUP txpc tpc)
+              pred (SVar _ k tpc _) = (dol id `isPrefixOf` k) && (isRight $ relatesC SUP txpc tpc)
               pred _                = False
 
               err = toErrors z $ "variable '" ++ id ++
