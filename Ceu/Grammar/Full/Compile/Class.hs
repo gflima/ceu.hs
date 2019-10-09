@@ -58,7 +58,7 @@ addClassCs (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
 addClassCs (SInstS z cls itpc@(_,cs) imp p) = SInstS z cls itpc (f imp) p
   where
     f :: Stmt -> Stmt
-    f (SVarS z id tpc ini p) = traceShow ("AAA", id, g tpc)
+    f (SVarS z id tpc ini p) = --traceShow ("AAA", id, g tpc)
       SVarS z id (g tpc) ini (f p) where
         g :: T.TypeC -> T.TypeC
         g (tp1,cs1) = (tp1, foldr h cs1 cs) where
@@ -173,8 +173,8 @@ withEnvS env (SVarSG z id (GGen []) tpc@(tp,cs) (Just ini) p) =
     [(_,[cls])] = cs
 
 withEnvS env (SVarSG z id (GOne []) tpc@(tp,cs) (Just ini) p) =
-  (es1++es2, SVarSG z id (GGen clss) (tp,Cs.cz) (Just $ addGGenWrappers env (traceShow ("BBB",id,clss) clss) ini') p')
-  --(es1++es2, SVarSG z id (GGen clss) (tp,Cs.cz) (Just ini') p')
+  --(es1++es2, SVarSG z id (GGen clss) (tp,Cs.cz) (Just $ addGGenWrappers env ({-traceShow ("BBB",id,clss)-} clss) ini') p')
+  (es1++es2, SVarSG z id (GGen clss) (tp,Cs.cz) (Just ini') p')
   where
     (es1,ini') = withEnvE env ini
     (es2,p')   = withEnvS env p
