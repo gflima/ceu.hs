@@ -15,10 +15,9 @@ import qualified Ceu.Grammar.Type as T
 import Ceu.Grammar.Full.Full
 
 toGDcls :: Stmt -> [Stmt]
-toGDcls s@(SVarSG _ _ (GCls _) _ _ p) = s : toGDcls p
-toGDcls s@(SVarSG _ _ GIns     _ _ p) = s : toGDcls p
+toGDcls s@(SVarSG _ _ (GDcl _) _ _ p) = s : toGDcls p
 toGDcls s@(SVarSG _ _ _        _ _ p) = toGDcls p
-toGDcls   (SNop   _)              = []
+toGDcls   (SNop   _)                  = []
 
 toName :: Stmt -> ID_Var
 toName (SVarSG _ id _ _ _ _) = id
@@ -89,18 +88,18 @@ setGen :: Stmt -> Stmt
 setGen (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
   where
     f :: Stmt -> Stmt
-    f (SVarS z id tpc         Nothing    p) = SVarSG z id (GCls False) tpc Nothing $
+    f (SVarS z id tpc         Nothing    p) = SVarSG z id (GDcl $ Just False) tpc Nothing $
                                                 f p
-    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_':dol id) (GImp False id []) tpc (Just ini) $
-                                                SVarSG z id (GCls True) tpc Nothing $
+    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_':dol id) (GImp True id []) tpc (Just ini) $
+                                                SVarSG z id (GDcl $ Just True) tpc Nothing $
                                                   f p
     f s@(SNop _) = s
 
 setGen (SInstS z cls itpc imp p) = SInstS z cls itpc (f imp) p
   where
     f :: Stmt -> Stmt
-    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_' : dols [id,T.showC itpc]) (GImp True id []) (tp,[("$",[cls])]) (Just ini) $
-                                                SVarSG z id GIns tpc Nothing $
+    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_' : dols [id,T.showC itpc]) (GImp False id []) (tp,[("$",[cls])]) (Just ini) $
+                                                SVarSG z id (GDcl Nothing) tpc Nothing $
                                                   SVarSG z id (GCall [cls] itpc True) tpc Nothing $
                                                     f p
     f s@(SNop _) = s
@@ -111,8 +110,8 @@ setGen p = p
 
 setGen' :: Stmt -> Stmt
 setGen' (SVarS z id tpc@(_,[]) ini p) = SVarSG z id GNone tpc ini p
-setGen' (SVarS z id tpc        ini p) = SVarSG z ('_':dol id) (GImp False id []) tpc (remCs ini) $
-                                          SVarSG z id (GCls $ isJust ini) tpc Nothing $
+setGen' (SVarS z id tpc        ini p) = SVarSG z ('_':dol id) (GImp True id []) tpc (remCs ini) $
+                                          SVarSG z id (GDcl $ Just $ isJust ini) tpc Nothing $
                                             p
   where
     remCs :: Maybe Exp -> Maybe Exp
@@ -174,15 +173,15 @@ withEnvS env (SVarSG z id (GImp ins xxx []) tpc@(tp,cs) (Just ini) p) =
     clss = getSups env cls
     [(_,[cls])] = cs
 
-    f = bool (addGGenWrappers env clss) Prelude.id ins
+    f = bool Prelude.id (addGGenWrappers env clss) ins
 
-withEnvS env s@(SVarSG z id (GCls def) tpc Nothing p) =
-  (es, repGGenInsts env $ SVarSG z id (GCls def) tpc Nothing p')
+withEnvS env s@(SVarSG z id (GDcl (Just def)) tpc Nothing p) =
+  (es, repGGenInsts env $ SVarSG z id (GDcl $ Just def) tpc Nothing p')
   where
     (es,p') = withEnvS (s:env) p
 
-withEnvS env s@(SVarSG z id GIns tpc Nothing p) =
-  (es, SVarSG z id GIns tpc Nothing p')
+withEnvS env s@(SVarSG z id (GDcl Nothing) tpc Nothing p) =
+  (es, SVarSG z id (GDcl Nothing) tpc Nothing p')
   where
     (es,p') = withEnvS (s:env) p
 
@@ -281,7 +280,7 @@ chkInstMissing env z (cls,imp) = concatMap toErr $ Set.toList $
             Nothing                    -> []   -- cls is not declared (checked before)
             Just (SClassS _ _ _ ifc _) -> toGDcls ifc
 
-    isDef (SVarSG _ _ (GCls def) _ _ _) = (not def)
+    isDef (SVarSG _ _ (GDcl (Just def)) _ _ _) = (not def)
 
 chkInstUnexpected :: [Stmt] -> Ann -> (ID_Class,Stmt) -> Errors
 chkInstUnexpected env z (cls,imp) = concatMap toErr $ Set.toList $
@@ -335,8 +334,8 @@ addClassGensToInst env s@(SInstS z cls tpc imp p) = SInstSC z (getSups env cls,i
             f (SClassS _ id _ _ _) = id == cls
             f _ = False
     gens = filter f env where
-            f (SVarSG _ id (GCls _) (_,cs) _ _) = (cls == cls') where
-                                                    [(_,[cls'])] = cs
+            f (SVarSG _ id (GDcl (Just _)) (_,cs) _ _) = (cls == cls') where
+                                                          [(_,[cls'])] = cs
             f _ = False
 addClassGensToInst _ p = p
 
@@ -371,7 +370,7 @@ addGGenWrappers env clss (EFunc z tpc par p) = EFunc z tpc par p' where
     [(_,sups)] = cs
 
     f :: Stmt -> (Stmt -> Stmt)
-    f (SVarSG _ id (GCls _) (tp@(T.TFunc _ inp _),_) _ _) =
+    f (SVarSG _ id (GDcl (Just _)) (tp@(T.TFunc _ inp _),_) _ _) =
       SVarSG z (dol id) GNone (tp,Cs.cz) $          -- remove cs
         Just (EFunc z (tp,Cs.cz) (expand inp) body)
       where
@@ -597,9 +596,9 @@ inlClassInst (SInstSC z (cls:sups,ifc,gens) tpc imp p) = SInstSC z (cls:sups,ifc
 
 inlClassInst p = p
 
--- skip Instance GCls to prevent multiple declarations
-inlCI p (SVarSG _ _ GIns _ _ (SNop _)) = p
-inlCI p (SVarSG _ _ GIns _ _ q)        = inlCI p q
+-- skip Instance GDcl to prevent multiple declarations
+inlCI p (SVarSG _ _ (GDcl Nothing) _ _ (SNop _)) = p
+inlCI p (SVarSG _ _ (GDcl Nothing) _ _ q)        = inlCI p q
 
 inlCI p (SVarSG z id gen tpc ini (SNop _)) = SVarSG z id gen tpc ini p
 inlCI p (SVarSG z id gen tpc ini q)        = SVarSG z id gen tpc ini (inlCI p q)
@@ -627,9 +626,9 @@ dclClassDicts s@(SClassS z cls cs ifc _) = SDataS z (T.TData False [dol cls] [])
     [(_,sups)] = cs
     dcls = toGDcls ifc
     pars = map f dcls where
-            f (SVarSG _ id (GCls def) _ _ _) = id
+            f (SVarSG _ id (GDcl (Just def)) _ _ _) = id
     tps  = T.listToType (map f dcls) where
-            f (SVarSG _ _ (GCls def) (T.TFunc ft inp out,_) _ _) =
+            f (SVarSG _ _ (GDcl (Just def)) (T.TFunc ft inp out,_) _ _) =
               T.TFunc ft inp' out where
                 inp' = foldr (\cls -> T.insTTuple (T.TData False [dol cls] [])) (T.toTTuple inp) (cls:sups)
 
