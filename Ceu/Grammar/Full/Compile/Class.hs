@@ -90,7 +90,7 @@ setGen (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
     f :: Stmt -> Stmt
     f (SVarS z id tpc         Nothing    p) = SVarSG z id (GDcl $ Just False) tpc Nothing $
                                                 f p
-    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_':dol id) (GImp True id []) tpc (Just ini) $
+    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_':dol id) (GImp True []) tpc (Just ini) $
                                                 SVarSG z id (GDcl $ Just True) tpc Nothing $
                                                   f p
     f s@(SNop _) = s
@@ -98,7 +98,7 @@ setGen (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
 setGen (SInstS z cls itpc imp p) = SInstS z cls itpc (f imp) p
   where
     f :: Stmt -> Stmt
-    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_' : dols [id,T.showC itpc]) (GImp False id []) (tp,[("$",[cls])]) (Just ini) $
+    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_' : dols [id,T.showC itpc]) (GImp False []) (tp,[("$",[cls])]) (Just ini) $
                                                 SVarSG z id (GDcl Nothing) tpc Nothing $
                                                   SVarSG z id (GCall [cls] itpc True) tpc Nothing $
                                                     f p
@@ -110,7 +110,7 @@ setGen p = p
 
 setGen' :: Stmt -> Stmt
 setGen' (SVarS z id tpc@(_,[]) ini p) = SVarSG z id GNone tpc ini p
-setGen' (SVarS z id tpc        ini p) = SVarSG z ('_':dol id) (GImp True id []) tpc (remCs ini) $
+setGen' (SVarS z id tpc        ini p) = SVarSG z ('_':dol id) (GImp True []) tpc (remCs ini) $
                                           SVarSG z id (GDcl $ Just $ isJust ini) tpc Nothing $
                                             p
   where
@@ -165,8 +165,8 @@ withEnvS env (SSeq z p1 p2) = (es1++es2, SSeq z p1' p2') where
 withEnvS env (SLoop z p) = (es, SLoop z p') where
                             (es,p') = withEnvS env p
 
-withEnvS env (SVarSG z id (GImp ins xxx []) tpc@(tp,cs) (Just ini) p) =
-  (es1++es2, SVarSG z id (GImp ins xxx clss) (tp,Cs.cz) (Just $ f ini') p')
+withEnvS env (SVarSG z id (GImp ins []) tpc@(tp,cs) (Just ini) p) =
+  (es1++es2, SVarSG z id (GImp ins clss) (tp,Cs.cz) (Just $ f ini') p')
   where
     (es1,ini') = withEnvE env ini
     (es2,p')   = withEnvS env p
@@ -538,10 +538,10 @@ addGCallBody p = p
 
 addGenDict :: Stmt -> Stmt
 
-addGenDict (SVarSG z id (GImp ins xxx clss) (T.TFunc ft1 inp1 out1,cs1)
+addGenDict (SVarSG z id (GImp ins clss) (T.TFunc ft1 inp1 out1,cs1)
               (Just (EFunc z2 (T.TFunc ft2 inp2 out2,cs2) par2 p2))
               p) =
-  SVarSG z id (GImp ins xxx clss) (T.TFunc ft1 inp1' out1,cs1)
+  SVarSG z id (GImp ins clss) (T.TFunc ft1 inp1' out1,cs1)
     (Just (EFunc z2 (T.TFunc ft2 inp2' out2,cs2) par2' p2))
     p
   where
