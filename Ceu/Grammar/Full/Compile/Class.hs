@@ -1,5 +1,6 @@
 module Ceu.Grammar.Full.Compile.Class where
 
+import Data.Bool (bool)
 import Data.Maybe (isJust)
 import qualified Data.Map  as Map
 import qualified Data.Set  as Set
@@ -90,7 +91,7 @@ setGen (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
     f :: Stmt -> Stmt
     f (SVarS z id tpc         Nothing    p) = SVarSG z id (GCls False) tpc Nothing $
                                                 f p
-    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_':dol id) (GImp id []) tpc (Just ini) $
+    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_':dol id) (GImp False id []) tpc (Just ini) $
                                                 SVarSG z id (GCls True) tpc Nothing $
                                                   f p
     f s@(SNop _) = s
@@ -98,7 +99,7 @@ setGen (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
 setGen (SInstS z cls itpc imp p) = SInstS z cls itpc (f imp) p
   where
     f :: Stmt -> Stmt
-    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_' : dols [id,T.showC itpc]) (GOne id []) (tp,[("$",[cls])]) (Just ini) $
+    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_' : dols [id,T.showC itpc]) (GImp True id []) (tp,[("$",[cls])]) (Just ini) $
                                                 SVarSG z id GIns tpc Nothing $
                                                   SVarSG z id (GCall [cls] itpc True) tpc Nothing $
                                                     f p
@@ -110,7 +111,7 @@ setGen p = p
 
 setGen' :: Stmt -> Stmt
 setGen' (SVarS z id tpc@(_,[]) ini p) = SVarSG z id GNone tpc ini p
-setGen' (SVarS z id tpc        ini p) = SVarSG z ('_':dol id) (GImp id []) tpc (remCs ini) $
+setGen' (SVarS z id tpc        ini p) = SVarSG z ('_':dol id) (GImp False id []) tpc (remCs ini) $
                                           SVarSG z id (GCls $ isJust ini) tpc Nothing $
                                             p
   where
@@ -165,23 +166,15 @@ withEnvS env (SSeq z p1 p2) = (es1++es2, SSeq z p1' p2') where
 withEnvS env (SLoop z p) = (es, SLoop z p') where
                             (es,p') = withEnvS env p
 
-withEnvS env (SVarSG z id (GImp xxx []) tpc@(tp,cs) (Just ini) p) =
-  (es1++es2, SVarSG z id (GImp xxx clss) (tp,Cs.cz) (Just $ addGGenWrappers env clss ini') p')
+withEnvS env (SVarSG z id (GImp ins xxx []) tpc@(tp,cs) (Just ini) p) =
+  (es1++es2, SVarSG z id (GImp ins xxx clss) (tp,Cs.cz) (Just $ f ini') p')
   where
     (es1,ini') = withEnvE env ini
     (es2,p')   = withEnvS env p
     clss = getSups env cls
     [(_,[cls])] = cs
 
-withEnvS env (SVarSG z id (GOne xxx []) tpc@(tp,cs) (Just ini) p) =
-  --(es1++es2, SVarSG z id (GImp clss) (tp,Cs.cz) (Just $ addGGenWrappers env ({-traceShow ("BBB",id,clss)-} clss) ini') p')
-  (es1++es2, SVarSG z id (GImp xxx clss) (tp,Cs.cz) (Just ini') p')
-  where
-    (es1,ini') = withEnvE env ini
-    (es2,p')   = withEnvS env p
-
-    clss :: [ID_Class]
-    clss = concat $ map (getSups env) $ map (\(_,[cls]) -> cls) cs
+    f = bool (addGGenWrappers env clss) Prelude.id ins
 
 withEnvS env s@(SVarSG z id (GCls def) tpc Nothing p) =
   (es, repGGenInsts env $ SVarSG z id (GCls def) tpc Nothing p')
@@ -546,21 +539,10 @@ addGCallBody p = p
 
 addGenDict :: Stmt -> Stmt
 
-addGenDict (SVarSG z id (GImp xxx clss) (T.TFunc ft1 inp1 out1,cs1)
+addGenDict (SVarSG z id (GImp ins xxx clss) (T.TFunc ft1 inp1 out1,cs1)
               (Just (EFunc z2 (T.TFunc ft2 inp2 out2,cs2) par2 p2))
               p) =
-  SVarSG z id (GImp xxx clss) (T.TFunc ft1 inp1' out1,cs1)
-    (Just (EFunc z2 (T.TFunc ft2 inp2' out2,cs2) par2' p2))
-    p
-  where
-    inp1' = foldr (\cls -> T.insTTuple (T.TData False [dol cls] [])) (T.toTTuple inp1) clss
-    inp2' = foldr (\cls -> T.insTTuple (T.TData False [dol cls] [])) (T.toTTuple inp2) clss
-    par2' = foldr (\cls -> insETuple (EVar z $ dols ["dict",cls]))   (toETuple par2)   clss
-
-addGenDict (SVarSG z id (GOne xxx clss) (T.TFunc ft1 inp1 out1,cs1)
-              (Just (EFunc z2 (T.TFunc ft2 inp2 out2,cs2) par2 p2))
-              p) =
-  SVarSG z id (GOne xxx clss) (T.TFunc ft1 inp1' out1,cs1)
+  SVarSG z id (GImp ins xxx clss) (T.TFunc ft1 inp1' out1,cs1)
     (Just (EFunc z2 (T.TFunc ft2 inp2' out2,cs2) par2' p2))
     p
   where

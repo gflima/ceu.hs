@@ -98,7 +98,7 @@ data Stmt
   | STodoS    Ann String Stmt
   deriving (Eq, Show)
 
-data Gen = GNone | GCls Bool | GIns | GImp ID_Var [ID_Class] | GOne ID_Var [ID_Class] | GCall [ID_Class] TypeC Bool
+data Gen = GNone | GCls Bool | GIns | GImp Bool ID_Var [ID_Class] | GCall [ID_Class] TypeC Bool
   deriving (Show,Eq)
 
 sSeq a b = SSeq annz a b
