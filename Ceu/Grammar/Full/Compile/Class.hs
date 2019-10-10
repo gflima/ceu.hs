@@ -61,6 +61,8 @@ addClassCs (SInstS z cls itpc@(_,cs) imp p) = SInstS z cls itpc (f imp) p
     f :: Stmt -> Stmt
     f (SVarS z id tpc ini p) = --traceShow ("AAA", id, g tpc)
       SVarS z id (g tpc) ini (f p) where
+
+        -- insert other constraints (implementation of IEq for a where ...)
         g :: T.TypeC -> T.TypeC
         g (tp1,cs1) = (tp1, foldr h cs1 cs) where
                         h :: (ID_Var,[ID_Class]) -> Cs.Map -> Cs.Map
@@ -98,10 +100,11 @@ setGen (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
 setGen (SInstS z cls itpc imp p) = SInstS z cls itpc (f imp) p
   where
     f :: Stmt -> Stmt
-    f (SVarS z id tpc@(tp,cs) (Just ini) p) = SVarSG z ('_' : dols [id,T.showC itpc]) (GImp False []) (tp,[("$",[cls])]) (Just ini) $
-                                                SVarSG z id (GDcl Nothing) tpc Nothing $
-                                                  SVarSG z id (GCall [cls] itpc True) tpc Nothing $
-                                                    f p
+    f (SVarS z id tpc@(tp,cs) (Just ini) p) =
+      SVarSG z ('_' : dols [id,T.showC itpc]) (GImp False []) (tp,[("$",[cls])]++cs) (Just ini) $
+        SVarSG z id (GDcl Nothing) tpc Nothing $
+          SVarSG z id (GCall [cls] itpc True) tpc Nothing $
+            f p
     f s@(SNop _) = s
 
 setGen p = p
@@ -171,7 +174,7 @@ withEnvS env (SVarSG z id (GImp ins []) tpc@(tp,cs) (Just ini) p) =
     (es1,ini') = withEnvE env ini
     (es2,p')   = withEnvS env p
     clss = getSups env cls
-    [(_,[cls])] = cs
+    ((_,[cls]):_) = cs
 
     f = bool Prelude.id (addGGenWrappers env clss) ins
 
@@ -341,7 +344,7 @@ addClassGensToInst _ p = p
 
 -------------------------------------------------------------------------------
 
--- For each existing interface/default or implementation implementation, insert dict
+-- For each existing interface/default implementation, insert dict
 -- wrappers for all other interface methods.
 --
 --    interface  IEq (eq,neq(...))

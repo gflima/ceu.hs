@@ -1183,7 +1183,7 @@ spec = do
             "var t2 : Triple of (Bool,Bool,Bool) = Triple (Bool.True,Bool.False,Bool.True)",
             "return t1 =/= t2"
            ])
-        `shouldBe` Left "(line 79, column 11):\ntypes do not match : expected '(((Triple of (Int,Int,Int)),(Triple of (Bool,Bool,Bool))) -> ?)' : found '((a,a) -> Bool)'\n(line 79, column 11):\nambiguous instances for 'a' : '(Triple of (Int,Int,Int))', '(Triple of (Bool,Bool,Bool))'\n"
+        `shouldBe` Left "(line 79, column 11):\ntypes do not match : expected '(((Triple of (Int,Int,Int)),(Triple of (Bool,Bool,Bool))) -> ?)' : found '((a,a) -> Bool)'\n(line 79, column 11):\nambiguous implementations for 'a' : '(Triple of (Int,Int,Int))', '(Triple of (Bool,Bool,Bool))'\n"
         --`shouldBe` Left "(line 79, column 11):\nvariable '=/=' has no associated implementation for '(((Triple of (Int,Int,Int)),(Triple of (Bool,Bool,Bool))) -> ?)'\n"
 
       it "Date - age" $         -- pg 45
