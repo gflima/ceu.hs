@@ -142,10 +142,10 @@ spec = do
               "",
               "return (Bool.True) =>= (Bool.False)"
             ])
-          --`shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated implementation for '((Bool,Bool) -> Bool)'\n"
-          `shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n"
+          `shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated implementation for '((Bool,Bool) -> Bool)'\n"
+          --`shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n"
 
-        it "IOrd extends IEq" $
+        it "AAA: IOrd extends IEq" $
           (run True $
             unlines [
               "interface IEq for a with",

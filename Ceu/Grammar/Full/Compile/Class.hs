@@ -103,9 +103,9 @@ setGen (SInstS z cls itpc imp p) = SInstS z cls itpc (f imp) p
     -- In `withEnv` with the class hierarchy we concat with the classes in tpc and all superclasses
     f :: Stmt -> Stmt
     f (SVarS z id tpc (Just ini) p) =
-      SVarSG z ('_' : dols [id,T.showC itpc]) (GImp False [cls]) tpc (Just ini) $
+      SVarSG z ('_' : dols [id,T.showC itpc]) (GImp False [[cls]]) tpc (Just ini) $
         SVarSG z id (GDcl Nothing) tpc Nothing $
-          SVarSG z id (GCall [cls] itpc True) tpc Nothing $
+          SVarSG z id (GCall [[cls]] itpc True) tpc Nothing $
             f p
     f s@(SNop _) = s
 
@@ -176,10 +176,11 @@ withEnvS env (SVarSG z id (GImp def clss) tpc@(tp,cs) (Just ini) p) =
     (es1,ini') = withEnvE env ini
     (es2,p')   = withEnvS env p
 
-    clss' = concat $ map (getSups env) $ clss ++ map (\(_,[cls]) -> cls) cs
+    clss' :: [[ID_Class]]
+    clss' = map (getSups env) $ map head $ clss ++ map (\(_,[cls]) -> [cls]) cs
 
-    f = bool (addGGenWrappers env (tail clss'))  -- skip instance main class type
-             (addGGenWrappers env clss') def
+    f = bool (addGGenWrappers env (concat $ tail clss'))  -- skip instance main class type
+             (addGGenWrappers env (concat clss')) def
 
 withEnvS env s@(SVarSG z id (GDcl (Just def)) tpc Nothing p) =
   (es, repGGenInsts env $ SVarSG z id (GDcl $ Just def) tpc Nothing p')
@@ -191,11 +192,11 @@ withEnvS env s@(SVarSG z id (GDcl Nothing) tpc Nothing p) =
   where
     (es,p') = withEnvS (s:env) p
 
-withEnvS env (SVarSG z id (GCall [cls] itpc has) tpc@(_,cs) Nothing p) =
+withEnvS env (SVarSG z id (GCall [[cls]] itpc has) tpc@(_,cs) Nothing p) =
   (es, SVarSG z id (GCall clss' itpc has) tpc Nothing p')
   where
     (es,p') = withEnvS env p
-    clss' = concat $ map (getSups env) $ [cls] ++ map (\(_,[cls]) -> cls) cs
+    clss' = map (getSups env) $ map head $ [[cls]] ++ map (\(_,[cls]) -> [cls]) cs
 
 withEnvS env (SVarSG z id GNone tpc ini p) =
   (es1++es2, SVarSG z id GNone tpc ini' p')
@@ -416,7 +417,8 @@ repGGenInsts env (SVarSG z id gen@(GDcl (Just _)) tpc@(tp,cs) Nothing p) =
 
     f :: ([Stmt],[T.TypeC]) -> Stmt -> Stmt
     f ([SClassS _ cls _ _ _],[itpc]) p =
-      SVarSG z id (GCall [cls] itpc False) tpc' Nothing p where
+                        -- TODO
+      SVarSG z id (GCall [[cls]] itpc False) tpc' Nothing p where
         tpc' = T.instantiateC [("a",itpc)] tp
 
     idss :: [[ID_Class]]
@@ -492,7 +494,7 @@ addInstGCalls (SInstSC z (clss,ifc,gens) itpc imp p) =
             f :: Stmt -> (Stmt -> Stmt)
             f (SNop _) = Prelude.id
             f (SVarSG z2 id2 gen2 tpc2@(tp2,_) _ _) =
-              SVarSG z2 id2 (GCall clss itpc False) tpc2' Nothing where
+              SVarSG z2 id2 (GCall [clss] itpc False) tpc2' Nothing where
                 tpc2' = T.instantiateC [("a",itpc)] tp2  -- TODO: a is fixed
                 (T.TFunc _ inp2' _, _) = tpc2'
 
@@ -511,17 +513,18 @@ addInstGCalls p = p
 --    func $neq$Int$ (a,x,y) return _$neq$($IEq$Int$,a,x,y)
 --    func $f$Int$ (a,x) return _$f$($IEq$Int,a,x)
 
-addGCallBody (SVarSG z id (GCall clss itpc has) tpc@(T.TFunc ft inp out,cs) Nothing p) =
-  SVarSG z (dols [id,T.showC itpc]) (GCall clss itpc has) (tp',cs) (Just (EFunc z (tp',Cs.cz) par_dcl bdy)) p where
+addGCallBody (SVarSG z id (GCall clss itpc has) (tp@(T.TFunc ft inp out),cs) Nothing p) = traceShow (id,tail clss) $
+  SVarSG z (dols [id,T.showC itpc]) (GCall clss itpc has) (tp,cs) (Just (EFunc z (tp,Cs.cz) par_dcl bdy)) p where
     bdy = SRet z (ECall z (EVar z id') par_call) where
             id' = if has then
                     '_' : dols [id,T.showC itpc]
                   else
                     '_' : dol id
 
-    par_dcl  = listToExp $ map (EVar z) $ fpar inp'
-    par_call = listToExp $ map (EVar z) $ dicts ++ fpar inp' where
-                dicts = map (\cls -> dols [cls,T.showC itpc]) clss
+    par_dcl  = listToExp $ map (EVar z) $ fpar inp
+    par_call = listToExp $ map (EVar z) $ dicts1 ++ dicts2 ++ fpar inp where
+                dicts1 = map (\cls -> dols [cls,T.showC itpc]) (head clss)
+                dicts2 = map (\cls -> dols [cls,T.showC itpc]) (concat $ tail clss)
 
     fpar inp = map dol $ map show $ lns $ len $ T.toTTuple inp where
                 len (T.TTuple l) = length l
@@ -556,9 +559,9 @@ addGenDict (SVarSG z id (GImp def clss) (T.TFunc ft1 inp1 out1,cs1)
     (Just (EFunc z2 (T.TFunc ft2 inp2' out2,cs2) par2' p2))
     p
   where
-    inp1' = foldr (\cls -> T.insTTuple (T.TData False [dol cls] [])) (T.toTTuple inp1) clss
-    inp2' = foldr (\cls -> T.insTTuple (T.TData False [dol cls] [])) (T.toTTuple inp2) clss
-    par2' = foldr (\cls -> insETuple (EVar z $ dols ["dict",cls]))   (toETuple par2)   clss
+    inp1' = foldr (\cls -> T.insTTuple (T.TData False [dol cls] [])) (T.toTTuple inp1) $ concat clss
+    inp2' = foldr (\cls -> T.insTTuple (T.TData False [dol cls] [])) (T.toTTuple inp2) $ concat clss
+    par2' = foldr (\cls -> insETuple (EVar z $ dols ["dict",cls]))   (toETuple par2)   $ concat clss
 
 addGenDict p = p
 
