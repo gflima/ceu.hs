@@ -98,7 +98,10 @@ data Stmt
   | STodoS    Ann String Stmt
   deriving (Eq, Show)
 
-data Gen = GNone | GDcl (Maybe Bool) | GImp Bool [ID_Class] | GCall [ID_Class] TypeC Bool
+data Gen = GNone
+         | GDcl (Maybe Bool)            -- (is instance | is default + has implementation)
+         | GImp Bool [ID_Class]         -- (is default method) [expanded generics with supers]
+         | GCall [ID_Class] TypeC Bool  -- [expanded generics with supers] (specific instance) (has instance)
   deriving (Show,Eq)
 
 sSeq a b = SSeq annz a b
