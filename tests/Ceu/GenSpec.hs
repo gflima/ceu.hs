@@ -142,8 +142,8 @@ spec = do
               "",
               "return (Bool.True) =>= (Bool.False)"
             ])
-          --`shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated implementation for '((Bool,Bool) -> Bool)'\n"
-          `shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n"
+          `shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated implementation for '((Bool,Bool) -> Bool)'\n"
+          --`shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n"
 
         it "IOrd extends IEq" $
           (run True $
@@ -214,7 +214,7 @@ return 30 lte 25
 
       describe "gen-inst:" $ do
 
-        it "XXX-0: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
+        it "TODO (Ee does not impl. IXxx): IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
           (run True $
             unlines [
               "interface IEq for a with"          ,
@@ -245,7 +245,7 @@ return 30 lte 25
             ])
           `shouldBe` Right (EData ["Int","1"] EUnit)
 
-        it "XXX-1: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
+        it "AAA: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
           (run True $
             unlines [
               "interface IEq for a with"          ,
@@ -275,7 +275,7 @@ return 30 lte 25
             ])
           `shouldBe` Right (EData ["Int","1"] EUnit)
 
-        it "XXX-2: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
+        it "IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
           (run True $
             unlines [
               "interface IEq for a with"          ,
@@ -341,7 +341,7 @@ return 30 lte 25
             ])
           `shouldBe` Right (EData ["Int","4"] EUnit)
 
-        it "IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
+        it "XXX-0: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
           (run True $
             unlines [
               "interface IEq for a with"          ,
@@ -365,7 +365,7 @@ return 30 lte 25
             ])
           `shouldBe` Right (EData ["Int","1"] EUnit)
 
-        it "IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
+        it "TODO (dependency inversion): IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
           (run True $
             unlines [
               "interface IEq for a with"          ,
@@ -389,7 +389,7 @@ return 30 lte 25
             ])
           `shouldBe` Right (EData ["Int","1"] EUnit)
 
-        it "IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
+        it "XXX-1: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
           (run True $
             unlines [
               "interface IEq for a with"          ,

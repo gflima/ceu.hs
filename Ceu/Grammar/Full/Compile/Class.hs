@@ -100,8 +100,8 @@ setGen (SClassS z cls cs ifc p) = SClassS z cls cs (f ifc) p
 setGen (SInstS z cls itpc imp p) = SInstS z cls itpc (f imp) p
   where
     f :: Stmt -> Stmt
-    f (SVarS z id tpc@(tp,cs) (Just ini) p) =
-      SVarSG z ('_' : dols [id,T.showC itpc]) (GImp False []) (tp,[("$",[cls])]++cs) (Just ini) $
+    f (SVarS z id tpc (Just ini) p) =
+      SVarSG z ('_' : dols [id,T.showC itpc]) (GImp False [cls]) tpc (Just ini) $
         SVarSG z id (GDcl Nothing) tpc Nothing $
           SVarSG z id (GCall [cls] itpc True) tpc Nothing $
             f p
@@ -168,15 +168,16 @@ withEnvS env (SSeq z p1 p2) = (es1++es2, SSeq z p1' p2') where
 withEnvS env (SLoop z p) = (es, SLoop z p') where
                             (es,p') = withEnvS env p
 
-withEnvS env (SVarSG z id (GImp ins []) tpc@(tp,cs) (Just ini) p) =
-  (es1++es2, SVarSG z id (GImp ins clss) (tp,Cs.cz) (Just $ f ini') p')
+withEnvS env (SVarSG z id (GImp def xxx) tpc@(tp,cs) (Just ini) p) =
+  (es1++es2, SVarSG z id (GImp def clss) (tp,Cs.cz) (Just $ f ini') p')
   where
     (es1,ini') = withEnvE env ini
     (es2,p')   = withEnvS env p
-    clss = getSups env cls
-    ((_,[cls]):_) = cs
 
-    f = bool Prelude.id (addGGenWrappers env clss) ins
+    clss = concat $ map (getSups env) $ xxx ++ map (\(_,[cls]) -> cls) cs
+
+    f = bool (addGGenWrappers env (tail clss))  -- skip instance main class type
+             (addGGenWrappers env clss) def
 
 withEnvS env s@(SVarSG z id (GDcl (Just def)) tpc Nothing p) =
   (es, repGGenInsts env $ SVarSG z id (GDcl $ Just def) tpc Nothing p')
@@ -504,25 +505,29 @@ addInstGCalls p = p
 --    implementation of IEq for Int (eq(x,y))
 --    var $f$Int$ x : (Int -> Int);
 --
---    func $neq$Int$ (x,y) return _$neq$($IEq$Int$,x,y)
---    func $f$Int$ (x) return _$f$($IEq$Int,x)
+--    func $neq$Int$ (a,x,y) return _$neq$($IEq$Int$,a,x,y)
+--    func $f$Int$ (a,x) return _$f$($IEq$Int,a,x)
 
-addGCallBody (SVarSG z id (GCall clss itpc has) (tp@(T.TFunc ft inp out),cs) Nothing p) =
-  SVarSG z (dols [id,T.showC itpc]) (GCall clss itpc has) (tp,cs) (Just (EFunc z (tp,Cs.cz) par_dcl bdy)) p where
+addGCallBody (SVarSG z id (GCall clss itpc has) (T.TFunc ft inp out,cs) Nothing p) =
+  SVarSG z (dols [id,T.showC itpc]) (GCall clss itpc has) (tp',cs) (Just (EFunc z (tp',Cs.cz) par_dcl bdy)) p where
     bdy = SRet z (ECall z (EVar z id') par_call) where
             id' = if has then
                     '_' : dols [id,T.showC itpc]
                   else
                     '_' : dol id
 
-    par_dcl  = listToExp $ map (EVar z) $ fpar inp
-    par_call = listToExp $ map (EVar z) $ dicts ++ fpar inp where
+    par_dcl  = listToExp $ map (EVar z) $ fpar inp'
+    par_call = listToExp $ map (EVar z) $ dicts ++ fpar inp' where
                 dicts = map (\cls -> dols [cls,T.showC itpc]) clss
 
     fpar inp = map dol $ map show $ lns $ len $ T.toTTuple inp where
                 len (T.TTuple l) = length l
                 lns n = take n lns' where
                           lns' = 1 : map (+1) lns'
+
+    tp'  = T.TFunc ft inp' out
+    inp' = T.listToType $ dicts ++ T.typeToList inp where
+            dicts = map (\cls->T.TData False [dol cls] []) $ map (\(_,[cls])->cls) cs
 
 
 addGCallBody p = p
@@ -533,18 +538,18 @@ addGCallBody p = p
 -- For each existing implementation (interface or implementation), insert dict
 -- parameters for all interface methods.
 --
---    interface  IEq         (...,neq(x,y))
+--    interface         IEq         (...,neq(x,y))
 --    implementation of IEq for Int (...,eq(x,y))
 --
---    func _$neq$ ($dict,x,y)
+--    func _$neq$    ($dict,x,y)
 --    func _$eq$Int$ ($dict,x,y)
 
 addGenDict :: Stmt -> Stmt
 
-addGenDict (SVarSG z id (GImp ins clss) (T.TFunc ft1 inp1 out1,cs1)
+addGenDict (SVarSG z id (GImp def clss) (T.TFunc ft1 inp1 out1,cs1)
               (Just (EFunc z2 (T.TFunc ft2 inp2 out2,cs2) par2 p2))
               p) =
-  SVarSG z id (GImp ins clss) (T.TFunc ft1 inp1' out1,cs1)
+  SVarSG z id (GImp def clss) (T.TFunc ft1 inp1' out1,cs1)
     (Just (EFunc z2 (T.TFunc ft2 inp2' out2,cs2) par2' p2))
     p
   where

@@ -394,7 +394,7 @@ expr' (rel,txpc@(txp,cxp)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n
           Just (lnr, SVar _ _  tpc@(_,[])   _) -> (id, tpc, lnr, [])
           Just (lnr, SVar _ _  tpc          _) -> -- generic type
             case find pred (concat envs) of            -- find implementation
-              Just (SVar _ k tpc@(tp,cs) _) -> {-traceShow ("CCC",id,k,tpc,relatesC SUP txpc tpc) $-} (k, tpc, lnr, [])
+              Just (SVar _ k tpc@(tp,cs) _) -> {-traceShow ("CCC",id,txpc,k,tpc) $-} (k, tpc, lnr, [])
               Nothing -> (id, (TAny,cz), lnr, err)
             where
               pred :: Stmt -> Bool

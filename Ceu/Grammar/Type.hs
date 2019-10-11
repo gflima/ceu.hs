@@ -100,6 +100,11 @@ listToType [e]   = e
 listToType (e:l) = TTuple (e:l)
 --listToType x = error $ show x
 
+typeToList :: Type -> [Type]
+typeToList TUnit      = []
+typeToList (TTuple l) = l
+typeToList tp         = [tp]
+
 -------------------------------------------------------------------------------
 
 {-
