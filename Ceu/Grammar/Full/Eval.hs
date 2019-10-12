@@ -69,7 +69,7 @@ compile p = --cat0 traceStmt $
   catE (Class.withEnvS [])                          $
     -- addClassGensToInst
     -- addGGenWrappers
-    -- repGGenInsts
+    -- addGCalls
   cat0 (map_stmt' (f2 Class.setGen',id,id))         $
   cat0 (map_stmt' (f2 Class.setGen,id,id))          $
   cat0 (map_stmt' (f2 Class.addClassCs,id,id))      $

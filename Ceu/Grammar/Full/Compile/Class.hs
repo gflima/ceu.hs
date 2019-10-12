@@ -192,12 +192,13 @@ withEnvS env (SVarSG z id GNone tpc ini p) =
 withEnvS env s@(SVarSG z id gen@(GDcl x) tpc@(_,cs) Nothing p) =
   case x of
     Left False       -> (es, s')
-    Left True        -> (es, repGGenInsts env Nothing             s')
-    Right (cls,itpc) -> (es, repGGenInsts env (Just (clsss,itpc)) s') where
+    Left True        -> (es, addGCalls env []              s')
+    Right (cls,itpc) -> (es, addGCalls env [(clss,[itpc])] s') where
                           clsss :: [[ID_Class]]
                           clsss = map (getSups env) clss where
                                     clss :: [ID_Class]
                                     clss = cls : map (\(_,[cls]) -> cls) cs
+                          clss = head clsss
   where
     s' = SVarSG z id gen tpc Nothing p'
     (es,p') = withEnvS (s:env) p
@@ -404,38 +405,34 @@ addGGenWrappers env clss (EFunc z tpc par p) = EFunc z tpc par p' where
 --    func $f$Bool$ (x)         // wrapper to call _$f$ with $IEq$Bool$
 --    ...
 
-repGGenInsts :: [Stmt] -> Maybe ([[ID_Class]],T.TypeC) -> Stmt -> Stmt
-repGGenInsts env xxx (SVarSG z id gen tpc@(tp,cs) Nothing p) =
+addGCalls :: [Stmt] -> [([ID_Class],[T.TypeC])] -> Stmt -> Stmt
+addGCalls env xxx (SVarSG z id gen tpc@(tp,cs) Nothing p) =
   SVarSG z id gen tpc Nothing $
-    yyy xxx $
-      foldr f p $ zip stmtss itpcss
+    foldr f p $ (map tt xxx) ++ (map ff $ zip clsss itpcss)
   where
-    -- one F for each implementation
+    tt (x,y) = (True, x,y)
+    ff (x,y) = (False,x,y)
 
-    f :: ([Stmt],[T.TypeC]) -> Stmt -> Stmt
-    f ([SClassS _ cls _ _ _],[itpc]) p =
+    -- one F for each implementation
+    f :: (Bool,[ID_Class],[T.TypeC]) -> Stmt -> Stmt
+    f (inst,clss,[itpc]) p =
                          -- TODO
-      SVarSG z id (GCall [[cls]] itpc False) tpc' Nothing p where
-        tpc' = T.instantiateC [("a",itpc)] tp
+      SVarSG z id (GCall [clss] itpc inst) tpc' Nothing p where
+        tpc' = if inst then tpc else
+                T.instantiateC [("a",itpc)] tp
 
     idss :: [[ID_Class]]
     idss = map snd cs
 
-    yyy :: Maybe ([[ID_Class]],T.TypeC) -> (Stmt -> Stmt)
-    yyy Nothing            = Prelude.id
-    yyy (Just (clss,itpc)) = SVarSG z id (GCall clss itpc True) tpc Nothing
-
-    stmtss :: [[Stmt]]
-    stmtss = map (map getCls) idss where
+    clsss :: [[ID_Class]]
+    clsss = map (map $ toID.getCls) idss where
+              toID (SClassS _ cls _ _ _) = cls
               getCls cls = case List.find f env of
                             Just s -> s
                             -- TODO: Nothing
                            where
                             f (SClassS _ id _ _ _) = id == cls
                             f _ = False
-
-    -- TODO: single dict
-    [stmts] = stmtss
 
     itpcss :: [[T.TypeC]]
     --itpcss = T.sort' $ combos' 1 env idss
