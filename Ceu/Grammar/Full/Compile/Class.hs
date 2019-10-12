@@ -406,7 +406,7 @@ addGGenWrappers env clss (EFunc z tpc par p) = EFunc z tpc par p' where
 --    ...
 
 addGCalls :: [Stmt] -> [([ID_Class],[T.TypeC])] -> Stmt -> Stmt
-addGCalls env xxx (SVarSG z id gen tpc@(tp,cs) Nothing p) =
+addGCalls env fromInst (SVarSG z id gen tpc@(tp,cs) Nothing p) =
   SVarSG z id gen tpc Nothing $
     foldr f p $ zip clsss itpcss
   where
@@ -414,10 +414,8 @@ addGCalls env xxx (SVarSG z id gen tpc@(tp,cs) Nothing p) =
     f :: ([ID_Class],[T.TypeC]) -> Stmt -> Stmt
     f (clss,[itpc]) p =
                          -- TODO
-      SVarSG z id (GCall [clss] itpc inst) tpc' Nothing p where
-        tpc' = if inst then tpc else
-                T.instantiateC [("a",itpc)] tp
-        inst = not $ null xxx
+      SVarSG z id (GCall [clss] itpc (not $ null fromInst)) tpc' Nothing p where
+        tpc' = T.instantiateC [("a",itpc)] tp
 
     idss :: [[ID_Class]]
     idss = map snd cs
@@ -431,14 +429,14 @@ addGCalls env xxx (SVarSG z id gen tpc@(tp,cs) Nothing p) =
                            where
                             f (SClassS _ id _ _ _) = id == cls
                             f _ = False
-              ss = case xxx of
+              ss = case fromInst of
                     []        -> []
                     ((x,_):_) -> [x]
 
     itpcss :: [[T.TypeC]]
     --itpcss = T.sort' $ combos' 1 env idss
     itpcss = ss ++ combos' 1 env idss where
-              ss = case xxx of
+              ss = case fromInst of
                     []        -> []
                     ((_,x):_) -> [x]
 

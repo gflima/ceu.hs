@@ -398,33 +398,33 @@ spec = do
           (SCall annz (ECall annz (EVar annz "fff") (EUnit annz))))))
       `shouldBe` []
 
-    it "B ; X.f:a->b ; inst B.f:a->B ; f()" $
+    it "B ; X.f:b->a ; inst B.f:b->B ; f()" $
       (fst.compile')
         (SSeq annz
           (SData annz (TData False ["B"] []) Nothing TUnit cz False)
         (SSeq annz
-          (SClass annz "X" (cv "b")
-            (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") (TVar False "b"),cz) Nothing))
+          (SClass annz "X" (cv "a")
+            (SVar annz "fff" (TFunc FuncGlobal (TVar False "b") (TVar False "a"),cz) Nothing))
         (SSeq annz
           (SInst annz "X" (TData False ["B"] [],cz)
-            (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") (TData False ["B"] []),cz)
-              (Just (EFunc annz (TFunc FuncGlobal (TVar False "a") (TData False ["B"] []),cz) (EVar annz "x") (SRet annz (EError annz 99))))))
+            (SVar annz "fff" (TFunc FuncGlobal (TVar False "b") (TData False ["B"] []),cz)
+              (Just (EFunc annz (TFunc FuncGlobal (TVar False "b") (TData False ["B"] []),cz) (EVar annz "x") (SRet annz (EError annz 99))))))
           (SCall annz (ECall annz (EVar annz "fff") (EUnit annz))))))
       `shouldBe` []
 
-    it "B1 ; B2 ; X.f:a->b ; inst B1.f:a->B1 ; inst B2.f:a->B2 ; f()" $
+    it "B1 ; B2 ; X.f:b->a ; inst B1.f:b->B1 ; inst B2.f:b->B2 ; f()" $
       (fst.compile')
         (SSeq annz
           (SData annz (TData False ["B1"] []) Nothing TUnit cz False)
         (SSeq annz
           (SData annz (TData False ["B2"] []) Nothing TUnit cz False)
         (SSeq annz
-          (SClass annz "X" (cv "b")
-            (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") (TVar False "b"),cz) Nothing))
+          (SClass annz "X" (cv "a")
+            (SVar annz "fff" (TFunc FuncGlobal (TVar False "b") (TVar False "a"),cz) Nothing))
         (SSeq annz
           (SInst annz "X" (TData False ["B1"] [],cz)
-            (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") (TData False ["B1"] []),cz)
-              (Just (EFunc annz (TFunc FuncGlobal (TVar False "a") (TData False ["B1"] []),cz) (EVar annz "x") (SRet annz (EError annz 99))))))
+            (SVar annz "fff" (TFunc FuncGlobal (TVar False "b") (TData False ["B1"] []),cz)
+              (Just (EFunc annz (TFunc FuncGlobal (TVar False "b") (TData False ["B1"] []),cz) (EVar annz "x") (SRet annz (EError annz 99))))))
         (SSeq annz
           (SInst annz "X" (TData False ["B2"] [],cz)
             (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") (TData False ["B2"] []),cz)
@@ -433,19 +433,19 @@ spec = do
                   -- the problem is that SCall accept any return data
       `shouldBe` []
 
-    it "B1 ; B2 ; X.f:a->b ; inst B1.f:a->B1 ; inst B2.f:a->B2 ; b1=f()" $
+    it "B1 ; B2 ; X.f:b->a ; inst B1.f:b->B1 ; inst B2.f:b->B2 ; b1=f()" $
       (fst.compile')
         (SSeq annz
           (SData annz (TData False ["B1"] []) Nothing TUnit cz False)
         (SSeq annz
           (SData annz (TData False ["B2"] []) Nothing TUnit cz False)
         (SSeq annz
-          (SClass annz "X" (cv "b")
-            (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") (TVar False "b"),cz) Nothing))
+          (SClass annz "X" (cv "a")
+            (SVar annz "fff" (TFunc FuncGlobal (TVar False "b") (TVar False "a"),cz) Nothing))
         (SSeq annz
           (SInst annz "X" (TData False ["B1"] [],cz)
-            (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") (TData False ["B1"] []),cz)
-              (Just (EFunc annz (TFunc FuncGlobal (TVar False "a") (TData False ["B1"] []),cz) (EVar annz "x") (SRet annz (EError annz 99))))))
+            (SVar annz "fff" (TFunc FuncGlobal (TVar False "b") (TData False ["B1"] []),cz)
+              (Just (EFunc annz (TFunc FuncGlobal (TVar False "b") (TData False ["B1"] []),cz) (EVar annz "x") (SRet annz (EError annz 99))))))
         (SSeq annz
           (SInst annz "X" (TData False ["B2"] [],cz)
             (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") (TData False ["B2"] []),cz)
@@ -454,23 +454,23 @@ spec = do
             (Just (ECall annz (EVar annz "fff") (EUnit annz)))))))))
       `shouldBe` []
 
-    it "B1 ; B2 ; X.f:a->b ; inst B1.f:a->B1 ; inst B2.f:a->B2 ; b2=f()" $
+    it "B1 ; B2 ; X.f:b->a ; inst B1.f:b->B1 ; inst B2.f:b->B2 ; b2=f()" $
       (fst.compile')
         (SSeq annz
           (SData annz (TData False ["B1"] []) Nothing TUnit cz False)
         (SSeq annz
           (SData annz (TData False ["B2"] []) Nothing TUnit cz False)
         (SSeq annz
-          (SClass annz "X" (cv "b")
-            (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") (TVar False "b"),cz) Nothing))
+          (SClass annz "X" (cv "a")
+            (SVar annz "fff" (TFunc FuncGlobal (TVar False "b") (TVar False "a"),cz) Nothing))
         (SSeq annz
           (SInst annz "X" (TData False ["B1"] [],cz)
-            (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") (TData False ["B1"] []),cz)
-              (Just (EFunc annz (TFunc FuncGlobal (TVar False "a") (TData False ["B1"] []),cz) (EVar annz "x") (SRet annz (EError annz 99))))))
+            (SVar annz "fff" (TFunc FuncGlobal (TVar False "b") (TData False ["B1"] []),cz)
+              (Just (EFunc annz (TFunc FuncGlobal (TVar False "b") (TData False ["B1"] []),cz) (EVar annz "x") (SRet annz (EError annz 99))))))
         (SSeq annz
           (SInst annz "X" (TData False ["B2"] [],cz)
-            (SVar annz "fff" (TFunc FuncGlobal (TVar False "a") (TData False ["B2"] []),cz)
-              (Just (EFunc annz (TFunc FuncGlobal (TVar False "a") (TData False ["B2"] []),cz) (EVar annz "x") (SRet annz (EError annz 99))))))
+            (SVar annz "fff" (TFunc FuncGlobal (TVar False "b") (TData False ["B2"] []),cz)
+              (Just (EFunc annz (TFunc FuncGlobal (TVar False "b") (TData False ["B2"] []),cz) (EVar annz "x") (SRet annz (EError annz 99))))))
           (SVar annz "b2" (TData False ["B2"] [],cz)
             (Just (ECall annz (EVar annz "fff") (EUnit annz)))))))))
       `shouldBe` []
