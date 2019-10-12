@@ -99,9 +99,9 @@ data Stmt
   deriving (Eq, Show)
 
 data Gen = GNone
-         | GDcl (Maybe Bool)              -- (is instance | is default + has implementation)
-         | GImp Bool [[ID_Class]]         -- (is default method) [[expanded generics with supers]]
-         | GCall [[ID_Class]] TypeC Bool  -- [[expanded generics with supers]] (specific instance) (has instance)
+         | GDcl (Either Bool (ID_Class,TypeC)) -- (is default + has implementation | is instance + sups/itpc)
+         | GImp Bool [[ID_Class]]          -- (is default method) [[expanded generics with supers]]
+         | GCall [[ID_Class]] TypeC Bool   -- [[expanded generics with supers]] (specific instance) (has instance)
   deriving (Show,Eq)
 
 sSeq a b = SSeq annz a b

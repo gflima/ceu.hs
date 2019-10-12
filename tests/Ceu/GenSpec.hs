@@ -110,7 +110,7 @@ spec = do
 
       describe "extends:" $ do
 
-        it "IOrd extends IEq" $
+        it "XXX-2: IOrd extends IEq" $
           (run True $
             unlines [
               "interface IOrd for a where (a is IEq) with",
@@ -145,7 +145,7 @@ spec = do
           `shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n(line 10, column 55):\nvariable '===' has no associated implementation for '((Bool,Bool) -> Bool)'\n"
           --`shouldBe` Left "(line 9, column 1):\nimplementation 'IEq for Bool' is not declared\n"
 
-        it "AAA: IOrd extends IEq" $
+        it "IOrd extends IEq" $
           (run True $
             unlines [
               "interface IEq for a with",
