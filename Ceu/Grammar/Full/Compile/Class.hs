@@ -408,24 +408,22 @@ addGGenWrappers env clss (EFunc z tpc par p) = EFunc z tpc par p' where
 addGCalls :: [Stmt] -> [([ID_Class],[T.TypeC])] -> Stmt -> Stmt
 addGCalls env xxx (SVarSG z id gen tpc@(tp,cs) Nothing p) =
   SVarSG z id gen tpc Nothing $
-    foldr f p $ (map tt xxx) ++ (map ff $ zip clsss itpcss)
+    foldr f p $ zip clsss itpcss
   where
-    tt (x,y) = (True, x,y)
-    ff (x,y) = (False,x,y)
-
     -- one F for each implementation
-    f :: (Bool,[ID_Class],[T.TypeC]) -> Stmt -> Stmt
-    f (inst,clss,[itpc]) p =
+    f :: ([ID_Class],[T.TypeC]) -> Stmt -> Stmt
+    f (clss,[itpc]) p =
                          -- TODO
       SVarSG z id (GCall [clss] itpc inst) tpc' Nothing p where
         tpc' = if inst then tpc else
                 T.instantiateC [("a",itpc)] tp
+        inst = not $ null xxx
 
     idss :: [[ID_Class]]
     idss = map snd cs
 
     clsss :: [[ID_Class]]
-    clsss = map (map $ toID.getCls) idss where
+    clsss = ss ++ map (map $ toID.getCls) idss where
               toID (SClassS _ cls _ _ _) = cls
               getCls cls = case List.find f env of
                             Just s -> s
@@ -433,10 +431,17 @@ addGCalls env xxx (SVarSG z id gen tpc@(tp,cs) Nothing p) =
                            where
                             f (SClassS _ id _ _ _) = id == cls
                             f _ = False
+              ss = case xxx of
+                    []        -> []
+                    ((x,_):_) -> [x]
 
     itpcss :: [[T.TypeC]]
     --itpcss = T.sort' $ combos' 1 env idss
-    itpcss = combos' 1 env idss
+    itpcss = ss ++ combos' 1 env idss where
+              ss = case xxx of
+                    []        -> []
+                    ((_,x):_) -> [x]
+
 
     -- [ [Ia], [Ib], ... ]
     -- [ [A1,A2,...], [B1,B2,...], ... ]
@@ -508,8 +513,9 @@ addInstGCalls p = p
 --    implementation of IEq for Int (eq(x,y))
 --    var $f$Int$ x : (Int -> Int);
 --
+--    func $eq$Int$  (a,x,y) return _$eq$Int$($IEq$Int$,a,x,y)
 --    func $neq$Int$ (a,x,y) return _$neq$($IEq$Int$,a,x,y)
---    func $f$Int$ (a,x) return _$f$($IEq$Int,a,x)
+--    func $f$Int$   (a,x)   return _$f$($IEq$Int,a,x)
 
 addGCallBody (SVarSG z id (GCall clss itpc has) (tp@(T.TFunc ft inp out),cs) Nothing p) =
   SVarSG z (dols [id,T.showC itpc]) (GCall clss itpc has) (tp,cs) (Just (EFunc z (tp,Cs.cz) par_dcl bdy)) p where
