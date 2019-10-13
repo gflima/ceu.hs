@@ -408,8 +408,17 @@ addGGenWrappers env clss (EFunc z tpc par p) = EFunc z tpc par p' where
 addGCalls :: [Stmt] -> [([ID_Class],[T.TypeC])] -> Stmt -> Stmt
 addGCalls env fromInst (SVarSG z id gen tpc@(tp,cs) Nothing p) =
   SVarSG z id gen tpc Nothing $
-    foldr f p $ zip clsss itpcss
+    foldr f p $ traceShowId $ zip clsss' itpcss'
   where
+    clsss'  :: [[ID_Class]]
+    itpcss' :: [[T.TypeC]]
+    (clsss',itpcss') =
+      case fromInst of
+        []        -> traceShowId (clsss,itpcss)
+        ((x,y):_) -> case (clsss,itpcss) of
+                      ([],[[]]) -> ([x],[y])
+                      (xs,ys)   -> (map (x++) xs, map (y++) ys)
+
     -- one F for each implementation
     f :: ([ID_Class],[T.TypeC]) -> Stmt -> Stmt
     f (clss,[itpc]) p =
@@ -421,7 +430,7 @@ addGCalls env fromInst (SVarSG z id gen tpc@(tp,cs) Nothing p) =
     idss = map snd cs
 
     clsss :: [[ID_Class]]
-    clsss = ss ++ map (map $ toID.getCls) idss where
+    clsss = map (map $ toID.getCls) idss where
               toID (SClassS _ cls _ _ _) = cls
               getCls cls = case List.find f env of
                             Just s -> s
@@ -429,16 +438,10 @@ addGCalls env fromInst (SVarSG z id gen tpc@(tp,cs) Nothing p) =
                            where
                             f (SClassS _ id _ _ _) = id == cls
                             f _ = False
-              ss = case fromInst of
-                    []        -> []
-                    ((x,_):_) -> [x]
 
     itpcss :: [[T.TypeC]]
     --itpcss = T.sort' $ combos' 1 env idss
-    itpcss = ss ++ combos' 1 env idss where
-              ss = case fromInst of
-                    []        -> []
-                    ((_,x):_) -> [x]
+    itpcss = combos' 1 env idss
 
 
     -- [ [Ia], [Ib], ... ]
