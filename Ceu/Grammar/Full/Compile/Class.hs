@@ -408,14 +408,14 @@ addGGenWrappers env clss (EFunc z tpc par p) = EFunc z tpc par p' where
 addGCalls :: [Stmt] -> [([ID_Class],[T.TypeC])] -> Stmt -> Stmt
 addGCalls env fromInst (SVarSG z id gen tpc@(tp,cs) Nothing p) =
   SVarSG z id gen tpc Nothing $
-    foldr f p $ traceShowId $ zip clsss' itpcss'
+    foldr f p $ zip clsss' itpcss'
   where
     clsss'  :: [[ID_Class]]
     itpcss' :: [[T.TypeC]]
     (clsss',itpcss') =
       case fromInst of
-        []        -> traceShowId (clsss,itpcss)
-        ((x,y):_) -> case (clsss,itpcss) of
+        []        -> (idss,itpcss)
+        ((x,y):_) -> case (idss,itpcss) of
                       ([],[[]]) -> ([x],[y])
                       (xs,ys)   -> (map (x++) xs, map (y++) ys)
 
@@ -425,19 +425,10 @@ addGCalls env fromInst (SVarSG z id gen tpc@(tp,cs) Nothing p) =
                          -- TODO
       SVarSG z id (GCall [clss] itpc (not $ null fromInst)) tpc' Nothing p where
         tpc' = T.instantiateC [("a",itpc)] tp
+    --f (x,y) _ = error $ show (id,tpc,itpc,x,y)
 
     idss :: [[ID_Class]]
     idss = map snd cs
-
-    clsss :: [[ID_Class]]
-    clsss = map (map $ toID.getCls) idss where
-              toID (SClassS _ cls _ _ _) = cls
-              getCls cls = case List.find f env of
-                            Just s -> s
-                            -- TODO: Nothing
-                           where
-                            f (SClassS _ id _ _ _) = id == cls
-                            f _ = False
 
     itpcss :: [[T.TypeC]]
     --itpcss = T.sort' $ combos' 1 env idss
@@ -448,7 +439,7 @@ addGCalls env fromInst (SVarSG z id gen tpc@(tp,cs) Nothing p) =
     -- [ [A1,A2,...], [B1,B2,...], ... ]
     -- [ [A1,B1,...], [A1,B2,...], ... ]
     combos' :: Int -> [Stmt] -> [[ID_Class]] -> [[T.TypeC]]
-    combos' lvl env clsss = combos (map f1 clsss) where
+    combos' lvl env idss = combos (map f1 idss) where
 
       f1 :: [ID_Class] -> [T.TypeC]
       f1 clss = foldr1 List.intersect $     -- [B]
@@ -624,7 +615,6 @@ inlCI p (SVarSG z id gen tpc ini q)        = SVarSG z id gen tpc ini (inlCI p q)
 inlCI p (SNop z)                           = p
 --inlCI _ p q = error $ show q
 
-
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
@@ -652,3 +642,47 @@ dclClassDicts s@(SClassS z cls cs ifc _) = SDataS z (T.TData False [dol cls] [])
                 inp' = foldr (\cls -> T.insTTuple (T.TData False [dol cls] [])) (T.toTTuple inp) (cls:sups)
 
 dclClassDicts p = p
+
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+
+test :: [Stmt] -> T.TypeC -> [[T.TypeC]] --[ ([T.Type],T.TypeC) ]
+test env (tp,cs) = itpcss
+  where
+    idss :: [[ID_Class]]
+    idss = map snd cs
+
+    itpcss :: [[T.TypeC]]
+    --itpcss = T.sort' $ combos' 1 env idss
+    itpcss = combos' 1 env idss
+
+
+    -- [ [Ia], [Ib], ... ]
+    -- [ [A1,A2,...], [B1,B2,...], ... ]
+    -- [ [A1,B1,...], [A1,B2,...], ... ]
+    combos' :: Int -> [Stmt] -> [[ID_Class]] -> [[T.TypeC]]
+    combos' lvl env clsss = combos (map f1 clsss) where
+
+      f1 :: [ID_Class] -> [T.TypeC]
+      f1 ids = foldr1 List.intersect $     -- [B]
+                  map f2 ids               -- [ [A,B], [B], [A,B] ]
+
+      f2 :: ID_Class -> [T.TypeC]
+      f2 cls = concat $ map h $ map g $ filter f env where
+        f :: Stmt -> Bool
+        f (SInstS _ cls' (_,cs') _ _) = (cls == cls') && (lvl>0 || null cs')
+        f _                           = False
+
+        g :: Stmt -> T.TypeC
+        g (SInstS _ _ tpc _ _) = tpc  -- types to instantiate
+
+        -- expand types with interfaces to multiple types
+        -- TODO: currently refuse another level of interfaces
+        -- Int    -> [Int]
+        -- X of a -> [X of Int, ...]
+        h :: T.TypeC -> [T.TypeC]
+        h tpc@(tp,cs) = if null cs then [tpc] else insts where
+          tpcss :: [[T.TypeC]]
+          tpcss = combos' (lvl-1) env (map snd cs)
+          insts :: [T.TypeC]
+          insts = map (flip T.instantiateC tp) $ map (zip (map fst cs)) tpcss
