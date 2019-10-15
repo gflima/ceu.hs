@@ -64,8 +64,8 @@ compile p = --cat0 traceStmt $
   cat0 (map_stmt' (f2 Class.inlClassInst,id,id))    $
     -- addInstDicts
   cat0 (map_stmt' (f2 Class.addGenDict,id,id))      $
-  cat0 (map_stmt' (f2 Class.addGCallBody,id,id))    $
-  cat0 (map_stmt' (f2 Class.addInstGCalls,id,id))   $
+  --cat0 (map_stmt' (f2 Class.addGCallBody,id,id))    $
+  --cat0 (map_stmt' (f2 Class.addInstGCalls,id,id))   $
   catE (Class.withEnvS [])                          $
     -- addClassGensToInst
     -- addGGenWrappers

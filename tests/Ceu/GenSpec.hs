@@ -45,7 +45,7 @@ spec = do
             ])
           `shouldBe` Right (EData ["Int","1"] EUnit)
 
-        it "IEq + default + Int" $
+        it "XXX-0: IEq + default + Int" $
           (run True $
             unlines [
               "interface IEq for a with"          ,
@@ -61,7 +61,7 @@ spec = do
             ])
           `shouldBe` Right (EData ["Int","1"] EUnit)
 
-        it "ZZZ: IEq + default + Int + f" $
+        it "IEq + default + Int + f" $
           (run True $
             unlines [
               "interface IEq for a with"          ,
@@ -110,7 +110,7 @@ spec = do
 
       describe "extends:" $ do
 
-        it "XXX-2: IOrd extends IEq" $
+        it "IOrd extends IEq" $
           (run True $
             unlines [
               "interface IOrd for a where (a is IEq) with",
@@ -341,7 +341,7 @@ return 30 lte 25
             ])
           `shouldBe` Right (EData ["Int","4"] EUnit)
 
-        it "XXX-0: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
+        it "IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
           (run True $
             unlines [
               "interface IEq for a with"          ,
@@ -389,7 +389,7 @@ return 30 lte 25
             ])
           `shouldBe` Right (EData ["Int","1"] EUnit)
 
-        it "XXX-1: IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
+        it "IEq + default + $Int$ + IXx + $Dd$ + $Ee$ + $IXx$" $
           (run True $
             unlines [
               "interface IEq for a with"          ,
