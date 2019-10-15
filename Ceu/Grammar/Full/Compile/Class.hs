@@ -646,43 +646,44 @@ dclClassDicts p = p
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
-test :: [Stmt] -> T.TypeC -> [[T.TypeC]] --[ ([T.Type],T.TypeC) ]
+test :: [Stmt] -> T.TypeC -> [[T.TypeC]] --[ (T.TypeC,[T.Type]) ]
 test env (tp,cs) = itpcss
   where
-    idss :: [[ID_Class]]
-    idss = map snd cs
+    clss :: [[ID_Class]]
+    clss = map snd cs
+
+    vars :: [ID_Var]
+    vars = map fst cs
 
     itpcss :: [[T.TypeC]]
-    --itpcss = T.sort' $ combos' 1 env idss
-    itpcss = combos' 1 env idss
+    itpcss = combos' 1 env clss
 
+-- [ [Ia], [Ibx,Iby], ... ]
+-- [ [A1,A2,...], [B1,B2,...], ... ]
+-- [ [A1,B1,...], [A1,B2,...], ... ]
+combos' :: Int -> [Stmt] -> [[ID_Class]] -> [[T.TypeC]]
+combos' lvl env clsss = combos (map f1 clsss) where
 
-    -- [ [Ia], [Ib], ... ]
-    -- [ [A1,A2,...], [B1,B2,...], ... ]
-    -- [ [A1,B1,...], [A1,B2,...], ... ]
-    combos' :: Int -> [Stmt] -> [[ID_Class]] -> [[T.TypeC]]
-    combos' lvl env clsss = combos (map f1 clsss) where
+  f1 :: [ID_Class] -> [T.TypeC]
+  f1 ids = foldr1 List.intersect $     -- [B]
+              map f2 ids               -- [ [A,B], [B], [A,B] ]
 
-      f1 :: [ID_Class] -> [T.TypeC]
-      f1 ids = foldr1 List.intersect $     -- [B]
-                  map f2 ids               -- [ [A,B], [B], [A,B] ]
+  f2 :: ID_Class -> [T.TypeC]
+  f2 cls = concat $ map h $ map g $ filter f env where
+    f :: Stmt -> Bool
+    f (SInstS _ cls' (_,cs') _ _) = (cls == cls') && (lvl>0 || null cs')
+    f _                           = False
 
-      f2 :: ID_Class -> [T.TypeC]
-      f2 cls = concat $ map h $ map g $ filter f env where
-        f :: Stmt -> Bool
-        f (SInstS _ cls' (_,cs') _ _) = (cls == cls') && (lvl>0 || null cs')
-        f _                           = False
+    g :: Stmt -> T.TypeC
+    g (SInstS _ _ tpc _ _) = tpc  -- types to instantiate
 
-        g :: Stmt -> T.TypeC
-        g (SInstS _ _ tpc _ _) = tpc  -- types to instantiate
-
-        -- expand types with interfaces to multiple types
-        -- TODO: currently refuse another level of interfaces
-        -- Int    -> [Int]
-        -- X of a -> [X of Int, ...]
-        h :: T.TypeC -> [T.TypeC]
-        h tpc@(tp,cs) = if null cs then [tpc] else insts where
-          tpcss :: [[T.TypeC]]
-          tpcss = combos' (lvl-1) env (map snd cs)
-          insts :: [T.TypeC]
-          insts = map (flip T.instantiateC tp) $ map (zip (map fst cs)) tpcss
+    -- expand types with interfaces to multiple types
+    -- TODO: currently refuse another level of interfaces
+    -- Int    -> [Int]
+    -- X of a -> [X of Int, ...]
+    h :: T.TypeC -> [T.TypeC]
+    h tpc@(tp,cs) = if null cs then [tpc] else insts where
+      tpcss :: [[T.TypeC]]
+      tpcss = combos' (lvl-1) env (map snd cs)
+      insts :: [T.TypeC]
+      insts = map (flip T.instantiateC tp) $ map (zip (map fst cs)) tpcss
