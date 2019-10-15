@@ -270,6 +270,18 @@ spec = do
         (TTuple [TVar False "a", (TData False ["X"] [TVar False "a"])])
         `shouldBe` Right (TTuple [TUnit, TData False ["X"] [TUnit]],[("?",TData False ["X"] [TVar False "a"]),("a",TUnit)])
 
+  describe "relatesC" $ do
+    it "XXX" $
+      (relatesC SUP
+        (TFunc FuncUnknown (TTuple [TVar False "a",TVar False "a"]) (TData False ["Int"] []),[])
+        (TFunc FuncUnknown (TTuple [TData False ["Int"] [],TData False ["Int"] []]) (TData False ["Int"] []),[]))
+      `shouldBe` Right ((TUnit,[]), [])
+    it "XXX" $
+      (relatesC SUB
+        (TFunc FuncUnknown (TTuple [TVar False "a",TVar False "a"]) (TData False ["Int"] []),[])
+        (TFunc FuncUnknown (TTuple [TData False ["Int"] [],TData False ["Int"] []]) (TData False ["Int"] []),[]))
+      `shouldBe` Right ((TUnit,[]), [])
+
   describe "isSupOf / isSubOf" $ do
 
     it "(bot -> top) > (bot -> top)" $

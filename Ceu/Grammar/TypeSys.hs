@@ -161,7 +161,10 @@ stmt envs tpr s@(SVar z id tpc@(tp,cs) p) = (es_data ++ es_id ++ es, ft, fts, SV
   es_id   = errDeclared z (Just chk) "variable" id (concat envs) where
               chk :: Stmt -> Bool
               chk (SVar _ id1      (TFunc _ _ _,_) (SMatch _ True False _ [(_,EVar _ id2,_)])) = (id1 /= id2)
-              chk (SVar _ _   tpc'@(TFunc _ _ _,_) _) = (tpc == tpc') -- function prototype
+              chk (SVar _ _   tpc'@(TFunc _ _ _,cs) _)
+                | (tpc == tpc') = True                -- function prototype
+                | (null cs)     = False               -- not generic dcl
+                | otherwise     = isSupOfC tpc' tpc   -- constaint instance
               chk _ = False
 
   (es,ft,fts,p') = stmt (envsAdd envs s) tpr p
@@ -240,30 +243,30 @@ stmt _   _   (SNop z)       = ([], (FuncGlobal,Nothing), [], SNop z)
 -------------------------------------------------------------------------------
 
 expr :: Ann -> (Relation,TypeC) -> Envs -> Exp -> (Errors, FT_Ups, [FuncType], Exp)
-expr z (rel,txp) envs exp = (es1++es2, ft, fts, exp') where
-  --(es1, exp') = expr' (rel,bool (TVar False "?" []) txp (rel/=ANY)) envs exp
-  --(es1, exp') = expr' (rel,bool (TVar False "?" []) txp (rel==SUP)) envs exp
+expr z (rel,xtpc) envs exp = (es1++es2, ft, fts, exp') where
+  --(es1, exp') = expr' (rel,bool (TVar False "?" []) xtpc (rel/=ANY)) envs exp
+  --(es1, exp') = expr' (rel,bool (TVar False "?" []) xtpc (rel==SUP)) envs exp
                            -- only force expected type on SUP
-  (es1, ft, fts, exp') = expr' (rel,txp) envs exp
+  (es1, ft, fts, exp') = expr' (rel,xtpc) envs exp
   es2 = if not.null $ es1 then [] else
-          map (toError z) (relatesErrorsC rel txp (typec $ getAnn exp'))
+          map (toError z) (relatesErrorsC rel xtpc (typec $ getAnn exp'))
 
   -- https://en.wikipedia.org/wiki/Subtyping
   -- SIf S is a subtype of T, the subtyping relation is often written S <: T,
   -- to mean that any term of type S can be safely used in a context where a
   -- term of type T is expected.
-  --    txp = T :> S = exp'.type
+  --    xtpc = T :> S = exp'.type
 
--- TODO: use txp in the cases below:
+-- TODO: use xtpc in the cases below:
 --  * number: decide for float/int/etc
 --  * cons:   ?
 --  * tuple:  instantiate sub exps
 
 expr' :: (Relation,TypeC) -> Envs -> Exp -> (Errors, FT_Ups, [FuncType], Exp)
 
-expr' _       _   (EError  z v)     = ([], (FuncGlobal,Nothing), [], EError  z{typec=(TBot,cz)} v)
-expr' _       _   (EUnit   z)       = ([], (FuncGlobal,Nothing), [], EUnit   z{typec=(TUnit,cz)})
-expr' (_,txp) _   (EArg    z)       = ([], (FuncGlobal,Nothing), [], EArg    z{typec=txp})
+expr' _        _   (EError  z v)     = ([], (FuncGlobal,Nothing), [], EError  z{typec=(TBot,cz)} v)
+expr' _        _   (EUnit   z)       = ([], (FuncGlobal,Nothing), [], EUnit   z{typec=(TUnit,cz)})
+expr' (_,xtpc) _   (EArg    z)       = ([], (FuncGlobal,Nothing), [], EArg    z{typec=xtpc})
 
 expr' _ envs (EFunc z tpc@(TFunc ft inp out,cs) upv@(EUnit _) p) = (es++esf, ft_ups', closes, EFunc z{typec=tpc'} tpc' upv' p'')
   where
@@ -355,7 +358,7 @@ expr' _ envs (EField z hr fld) = (es, (FuncGlobal,Nothing), [], EVar z{typec=(TF
                     (_, Nothing)  -> (TAny, toErrors z $ "field '" ++ fld ++ "' is not declared")
                     (_, Just idx) -> (sts!!idx, [])
 
-expr' (rel,txp) envs (ECons z hr) = (es1++es2, (FuncGlobal,Nothing), [], ECons z{typec=tpc2} hr)
+expr' (rel,xtpc) envs (ECons z hr) = (es1++es2, (FuncGlobal,Nothing), [], ECons z{typec=tpc2} hr)
   where
     hr_str = T.hier2str hr
     (tpc1,es1) = case find (isData hr_str) (concat envs) of
@@ -367,7 +370,7 @@ expr' (rel,txp) envs (ECons z hr) = (es1++es2, (FuncGlobal,Nothing), [], ECons z
     f tdat TUnit = tdat
     f tdat st    = TFunc FuncGlobal st tdat
 
-    (es2,tpc2) = case relatesC SUP txp tpc1 of
+    (es2,tpc2) = case relatesC SUP xtpc tpc1 of
       Left es      -> (map (toError z) es,tpc1)
       Right (tpc,_) -> ([],tpc) where (_,cs)=tpc1
 
@@ -380,33 +383,116 @@ expr' _ envs (ETuple z exps) = (es, ft, fts, ETuple z{typec=(tps',cz)} exps') wh
                                 ft    = foldr ftMin (FuncUnknown,Nothing) $ map snd4 rets
                                 fts   = concatMap trd4 rets
 
-expr' (rel,txpc@(txp,cxp)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n), [], toDer $ EVar z{typec=tpc} id') where    -- EVar x
-  (id', tpc, (ref,n), es)
-    | (id == "_INPUT") = (id, (TData False ["Int"] [],cz), (False,0), [])
+expr' (rel,xtpc@(xtp,xcs)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n), [], toDer ret) where    -- EVar x
+  (ret, (ref,n), es)
+    | (id == "_INPUT") = (EVar z{typec=(TData False ["Int"] [],cz)} id, (False,0), [])
     | otherwise        =
       -- find in top-level envs | id : a
       case findVars z id envs of
-        Left  es -> (id, (TAny,cz), (False,0), es)
+        Left  es -> (EVar z{typec=(TAny,cz)} id, (False,0), es)
         Right xs -> case find f xs of
-          Nothing -> (id, (TAny,cz), (False,0),
-                      map (toError z) $ fromLeft $ relatesC rel txpc (last (map (getTpc.snd) xs)))
+
+          Nothing -> (EVar z{typec=(TAny,cz)} id, (False,0),
+                      map (toError z) $ fromLeft $ relatesC rel xtpc (last (map (getTpc.snd) xs)))
                         where getTpc (SVar _ _ tpc _) = tpc
+
+          Just (lnr, SVar _ _  tpc@(tp,cs) _)
+            | True -> (EVar z{typec=tpc} id, lnr, [])
+            | not (hasVar tp)  -> traceShow ("NO",id,xtpc,tpc) (EVar z{typec=tpc} id, lnr, [])
+            | null cs          -> traceShow ("NI",id,xtpc,tpc) (EVar z{typec=tpc} id, lnr, [])
+            | hasVar xtp       -> traceShow ("GI",id,xtpc,tpc) (gin',  lnr, es1)
+            | not (hasVar xtp) -> traceShow ("GO",id,xtpc,tpc) (gout', lnr, es2)
+            where
+
+              (es1,_,_,gin')  = expr' (rel,xtpc) envs gin
+              (es2,_,_,gout') = expr' (rel,xtpc) envs gout
+
+-- | not (hasVar xtp) && null xcs && not (hasVar tp) &&     (null cs) -> traceShow ("normal  out",id,xtpc,tpc) (EVar z{typec=tpc} id, lnr, [])
+-- |     (hasVar xtp) && null xcs &&     (hasVar tp) &&     (null cs) -> traceShow ("normal  in" ,id,xtpc,tpc) (EVar z{typec=tpc} id, lnr, [])
+-- |     (hasVar xtp) && null xcs &&     (hasVar tp) && not (null cs) -> traceShow ("generic in" ,id,xtpc,tpc) (EVar z{typec=tpc} id, lnr, [])
+-- | not (hasVar xtp) && null xcs && (hasVar tp) && not (null cs) -> traceShow ("generic out",id,xtpc,tpc) (xxx, lnr, [])
+-- | otherwise -> traceShow ("XXX",id,xtpc,tpc) $ error "oi"
+
+              TFunc _ inp  out = tp
+              TFunc _ xinp _   = xtp
+
+              Right (itpc,pairs) = relatesC SUP (xinp,xcs) (inp,cs)
+
+              zz :: [([ID_Class],Type)]
+              zz = zip (map snd cs) (map snd pairs)
+              [([cls],itp)] = zz
+
+
+              -- eq (x,y)
+              -- ($IEq$.eq $dict$)($dict,x,y)
+              gin  = EFunc z
+                      (TFunc FuncNested inp out,[])   -- TODO: inp'
+                      (EUnit z)
+                      (foldr ($)
+                        (SRet z
+                          (ECall z
+                            (ECall z (EField z [dol cls] id) (EVar z $ dols ["dict",cls]))
+                            (listToExp $ map (EVar z) $ (dols ["dict",cls]) : fpar inp)))
+                        (map f $ zip (T.typeToList inp) (fpar inp)))
+
+              -- neq (1,2)
+              -- _$neq$($IEq$Int, 1, 2)
+              gout = EFunc z
+                      (TFunc FuncGlobal inp out,[])   -- TODO: inp'
+                      (EUnit z)
+                      (foldr ($)
+                        (SRet z
+                          (ECall z
+                            (EVar z $ '_':dol id)
+                            (listToExp $ map (EVar z) $ (dols [cls,T.show' itp]) : fpar inp)))
+                        (map f $ zip (T.typeToList inp) (fpar inp)))
+
+              fpar :: Type -> [ID_Var]
+              fpar inp = map dol $ map show $ lns $ length $ T.typeToList inp where
+                          lns n = take n lns' where
+                                    lns' = 1 : map (+1) lns'
+
+              f :: (Type,ID_Var) -> (Stmt -> Stmt)
+              f (tp,id) = SVar z id (tp,[])
+
+{-
+              par_call = listToExp $ map (EVar z) $ (dols [cls,T.show' itp]) : fpar inp where
+                          --dict = map (\([cls],itp) -> dols [cls,T.show' itp]) zz
+                          --dicts1 = map (\cls -> dols [cls,T.showC itpc]) (head clss)
+                          --dicts2 = map (\cls -> dols [cls,T.showC itpc]) (concat $ tail clss)
+
+            tp'  = T.TFunc ft inp' out
+            inp' = T.listToType $ dicts ++ T.typeToList inp where
+                    dicts = map (\cls->T.TData False [dol cls] []) $ map (\(_,[cls])->cls) cs
+-}
+
+              listToExp :: [Exp] -> Exp
+              --listToExp []    = EUnit annz
+              listToExp [e]   = e
+              listToExp (e:l) = ETuple (getAnn e) (e:l)
+
+{-
+              expToList :: Exp -> [Exp]
+              expToList exp@(ETuple _ _) = exp
+              expToList exp              = [exp]
+
           Just (lnr, SVar _ _  tpc@(_,[])   _) -> (id, tpc, lnr, [])
           Just (lnr, SVar _ _  tpc          _) -> -- generic type
             case find pred (concat envs) of            -- find implementation
-              Just (SVar _ k tpc@(tp,cs) _) -> {-traceShow ("CCC",id,txpc,k,tpc) $-} (k, tpc, lnr, [])
+              Just (SVar _ k tpc@(tp,cs) _) -> traceShow ("CCC",id,xtpc,k,tpc) $ (k, tpc, lnr, [])
               Nothing -> (id, (TAny,cz), lnr, err)
             where
               pred :: Stmt -> Bool
-              pred (SVar _ k tpc _) = (dol id `isPrefixOf` k) && (isRight $ relatesC SUP txpc tpc)
+              pred (SVar _ k tpc _) = traceShow ("BBB",id,xtpc,k,tpc) $ (dol id `isPrefixOf` k) && (isRight $ relatesC SUP xtpc tpc)
               pred _                = False
 
               err = toErrors z $ "variable '" ++ id ++
                       "' has no associated implementation for '" ++
-                      T.show' txp ++ "'"
+                      T.show' xtp ++ "'"
+-}
           where
             f (_, SVar _ _ tpc _) =
-              isRight $ relatesC rel txpc (toDer tpc) where
+              isRight $ {-traceShowX ("ZZZ",id,rel,xtpc,tpc) $-} relatesC rel xtpc (toDer tpc) where
                 -- accept ref variables in non-ref context
                 toDer tpc = if not (T.isRefableRefC tpc) then tpc else T.toDerC tpc
 
@@ -422,20 +508,20 @@ expr' (rel,txpC) envs (ERefRef z exp) = (es, ft, fts, ERefRef z{typec=T.toRefC $
                   (EVar    _ id)            -> exp'
                   (ERefDer _ e@(EVar _ id)) -> e
 
-expr' (rel,(txp_,cxp)) envs (ECall z f exp) = (bool ese esf (null ese) ++ esa,
+expr' (rel,(xtp,xcs)) envs (ECall z f exp) = (bool ese esf (null ese) ++ esa,
                                               ftMin ft1 ft2, fts1++fts2,
                                               ECall z{typec=tpc_out} f' exp')
   where
     (ese, ft1, fts1, exp') = expr z (rel, (TAny,cz)) envs exp
-    (esf, ft2, fts2, f')   = expr z (rel, (TFunc FuncUnknown (fst$typec$getAnn$exp') txp_, cxp)) envs f
+    (esf, ft2, fts2, f')   = expr z (rel, (TFunc FuncUnknown (fst$typec$getAnn$exp') xtp, xcs)) envs f
                                       -- TODO: cs of exp'
 
     tpc_out = case typec $ getAnn f' of
       (TFunc _ _ out_,cs) -> (out_,cs)
-      otherwise           -> (txp_,cxp)
+      otherwise           -> (xtp,xcs)
 
     esa = checkFuncNested "cannot pass nested function" exp'
 
-expr' (_,txp) envs (EAny z) = ([], (FuncGlobal,Nothing), [], EAny z{typec=txp})
+expr' (_,xtpc) envs (EAny z) = ([], (FuncGlobal,Nothing), [], EAny z{typec=xtpc})
 
 --expr' _ _ e = error $ show e

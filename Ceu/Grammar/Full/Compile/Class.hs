@@ -360,7 +360,9 @@ addClassGensToInst _ p = p
 --    end
 
 addGGenWrappers :: [Stmt] -> [ID_Class] -> Exp -> Exp
+addGGenWrappers env clss e = e
 
+{-
 addGGenWrappers env clss (EFunc z tpc par p) = EFunc z tpc par p' where
   p' = foldr ($) p (concat $ map cls2wrappers clss')
 
@@ -378,7 +380,7 @@ addGGenWrappers env clss (EFunc z tpc par p) = EFunc z tpc par p' where
 
     f :: Stmt -> (Stmt -> Stmt)
     f (SVarSG _ id (GDcl (Just _)) (tp@(T.TFunc _ inp _),_) _ _) =
-      SVarSG z (dol id) GNone (tp,Cs.cz) $          -- remove cs
+      SVarSG z ({-dol-} id) GNone (tp,Cs.cz) $          -- remove cs
         Just (EFunc z (tp,Cs.cz) (expand inp) body)
       where
         body = SRet z (ECall z
@@ -395,6 +397,7 @@ addGGenWrappers env clss (EFunc z tpc par p) = EFunc z tpc par p' where
                                   incs where
                                     incs  = 1 : map (+1) incs
     expand _ = EVar z ("$1")
+-}
 
 -------------------------------------------------------------------------------
 
