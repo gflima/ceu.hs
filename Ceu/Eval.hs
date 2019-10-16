@@ -69,6 +69,7 @@ fromExp (B.EMatch  _ e p) = EMatch (fromExp e) (fromExp p)
 fromExp (B.ERefRef _ e)   = ERefRef (fromExp e)
 fromExp (B.ERefDer _ e)   = ERefDer (fromExp e)
 fromExp (B.ERefIni _ e)   = ERefIni (fromExp e)
+fromExp x = error $ show x
 
 -------------------------------------------------------------------------------
 
@@ -159,7 +160,7 @@ envEval (vars,e) = case e of
         (ECons id,       e)                             -> (vars'', EData id e)
         (EFunc upv p,    arg)                           -> (vars''', e) where
                                                             (_:_:vars''', e) = steps (("_upv",Just upv):("_arg",Just arg):vars'', p)
-        --(x,y) -> error $ show (x,arg)
+        (x,y) -> error $ show (x,arg)
       where
         (vars',  f')   = envEval (vars,   f)
         (vars'', arg') = envEval (vars', arg)

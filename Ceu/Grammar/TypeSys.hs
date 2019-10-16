@@ -34,9 +34,9 @@ checkFuncNested _   _                                       = []
 
 go :: Stmt -> (Errors, Stmt)
 go p = (es,p') where
-        (es,_,_,p') = stmt [[]] (TAny,cz) p
+        --(es,_,_,p') = stmt [[]] (TAny,cz) p
         --(es,_,_,p') = f $ stmt [[]] (TVar False "?",cz) p where f (e,x,y,s) = traceShow s (e,x,y,s)
-        --(es,_,_,p') = f $ stmt [[]] (TVar False "?",cz) p where f (e,x,y,s) = traceShow (show_stmt 0 s) (e,x,y,s)
+        (es,_,_,p') = f $ stmt [[]] (TVar False "?",cz) p where f (e,x,y,s) = traceShow (show_stmt 0 s) (e,x,y,s)
 
 -------------------------------------------------------------------------------
 
@@ -397,11 +397,11 @@ expr' (rel,xtpc@(xtp,xcs)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n
                         where getTpc (SVar _ _ tpc _) = tpc
 
           Just (lnr, SVar _ _  tpc@(tp,cs) _)
-            | True -> (EVar z{typec=tpc} id, lnr, [])
-            | not (hasVar tp)  -> traceShow ("NO",id,xtpc,tpc) (EVar z{typec=tpc} id, lnr, [])
-            | null cs          -> traceShow ("NI",id,xtpc,tpc) (EVar z{typec=tpc} id, lnr, [])
-            | hasVar xtp       -> traceShow ("GI",id,xtpc,tpc) (gin',  lnr, es1)
-            | not (hasVar xtp) -> traceShow ("GO",id,xtpc,tpc) (gout', lnr, es2)
+            -- | True -> (EVar z{typec=tpc} id, lnr, [])
+            | not (hasVar tp) && not (hasVar xtp)  -> traceShow ("NRM-OUT",id,xtpc,tpc) (EVar z{typec=tpc} id, lnr, [])
+            | null cs          -> traceShow ("NRM-IN",id,xtpc,tpc) (EVar z{typec=tpc} id, lnr, [])
+            | hasVar xtp       -> traceShow ("GEN-IN",id,xtpc,tpc) (gin',  lnr, es1)
+            | not (hasVar xtp) -> traceShow ("GEN-OUT",id,xtpc,tpc) (gout', lnr, es2)
             where
 
               (es1,_,_,gin')  = expr' (rel,xtpc) envs gin
@@ -416,7 +416,7 @@ expr' (rel,xtpc@(xtp,xcs)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n
               TFunc _ inp  out = tp
               TFunc _ xinp _   = xtp
 
-              Right (itpc,pairs) = relatesC SUP (xinp,xcs) (inp,cs)
+              Right (itpc,pairs) = relatesC SUB (xinp,xcs) (inp,cs)
 
               zz :: [([ID_Class],Type)]
               zz = zip (map snd cs) (map snd pairs)

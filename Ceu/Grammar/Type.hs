@@ -105,6 +105,17 @@ typeToList TUnit      = []
 typeToList (TTuple l) = l
 typeToList tp         = [tp]
 
+{-
+-- TODO: remove all but list
+-}
+
+hasVar :: Type -> Bool
+hasVar (TTuple l)         = or $ map hasVar l
+hasVar (TFunc  _ inp out) = hasVar inp || hasVar out
+hasVar (TVar   _ id)      = id /= "?"
+--hasVar TAny               = True
+hasVar _                  = False
+
 -------------------------------------------------------------------------------
 
 {-
@@ -424,6 +435,8 @@ supOf' (TVar True  a1)     sub@(TFunc _ _ _)   = (True,  sub,   [(a1,sub,      S
 supOf' (TVar True  a1)     sub                 = (True,  sub,   [(a1,toDer sub,SUP)])
 supOf' sup                 sub@(TVar False a2) = (True,  sup,   [(a2,sup,      SUB)])
 supOf' sup                 sub@(TVar True  a2) = (True,  sup,   [(a2,toDer sup,SUB)])
+--supOf' sup                 (TVar False a2)     = (False,  sup,  [])
+--supOf' sup                 (TVar True  a2)     = (False,  sup,  [])
 
 supOf' TUnit               TUnit               = (True,  TUnit, [])
 supOf' TUnit               _                   = (False, TUnit, [])
