@@ -294,7 +294,7 @@ expr' _ envs (EFunc z tpc@(TFunc ft inp out,cs) upv@(EUnit _) p) = (es++esf, ft_
             (FuncNested, FuncClosure _)   -> ([], FuncNested)
             (FuncUnknown,FuncClosure _)   -> ([], FuncNested)
             (FuncUnknown,_)               -> ([], ft')
-            --_ -> error $ show (ft,ft')
+            _ -> error $ show (ft,ft')
 
     -- (up1,...,upN) = EUps
     p'' = case ft'' of
@@ -383,7 +383,7 @@ expr' _ envs (ETuple z exps) = (es, ft, fts, ETuple z{typec=(tps',cz)} exps') wh
                                 ft    = foldr ftMin (FuncUnknown,Nothing) $ map snd4 rets
                                 fts   = concatMap trd4 rets
 
-expr' (rel,xtpc@(xtp,xcs)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n), [], toDer ret) where    -- EVar x
+expr' (rel,xtpc@(xtp,xcs)) envs (EVar z id@(cid:_)) = (es, ftReq (length envs) (id,ref,n), [], toDer ret) where    -- EVar x
   (ret, (ref,n), es)
     | (id == "_INPUT") = (EVar z{typec=(TData False ["Int"] [],cz)} id, (False,0), [])
     | otherwise        =
@@ -398,20 +398,18 @@ expr' (rel,xtpc@(xtp,xcs)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n
 
           Just (lnr, SVar _ _  tpc@(tp,cs) _)
             -- | True -> (EVar z{typec=tpc} id, lnr, [])
-            | not (hasVar tp) && not (hasVar xtp)  -> traceShow ("NRM-OUT",id,xtpc,tpc) (EVar z{typec=tpc} id, lnr, [])
-            | null cs          -> traceShow ("NRM-IN",id,xtpc,tpc) (EVar z{typec=tpc} id, lnr, [])
-            | hasVar xtp       -> traceShow ("GEN-IN",id,xtpc,tpc) (gin',  lnr, es1)
-            | not (hasVar xtp) -> traceShow ("GEN-OUT",id,xtpc,tpc) (gout', lnr, es2)
+            | cid=='_' || not (hasVar tp) && not (hasVar xtp)
+              -> traceShow ("NRM-OUT",id,xtpc,tpc) (EVar z{typec=tpc} id, lnr, [])
+            | cid=='$' || hasVar tp && null cs
+              -> traceShow ("NRM-IN",id,xtpc,tpc) (EVar z{typec=tpc} id, lnr, [])
+            | hasVar xtp
+              -> traceShow ("GEN-IN",id,xtpc,tpc) (gin',  lnr, es1)
+            | not (hasVar xtp)
+              -> traceShow ("GEN-OUT",id,xtpc,tpc) (gout', lnr, es2)
             where
 
               (es1,_,_,gin')  = expr' (rel,xtpc) envs gin
               (es2,_,_,gout') = expr' (rel,xtpc) envs gout
-
--- | not (hasVar xtp) && null xcs && not (hasVar tp) &&     (null cs) -> traceShow ("normal  out",id,xtpc,tpc) (EVar z{typec=tpc} id, lnr, [])
--- |     (hasVar xtp) && null xcs &&     (hasVar tp) &&     (null cs) -> traceShow ("normal  in" ,id,xtpc,tpc) (EVar z{typec=tpc} id, lnr, [])
--- |     (hasVar xtp) && null xcs &&     (hasVar tp) && not (null cs) -> traceShow ("generic in" ,id,xtpc,tpc) (EVar z{typec=tpc} id, lnr, [])
--- | not (hasVar xtp) && null xcs && (hasVar tp) && not (null cs) -> traceShow ("generic out",id,xtpc,tpc) (xxx, lnr, [])
--- | otherwise -> traceShow ("XXX",id,xtpc,tpc) $ error "oi"
 
               TFunc _ inp  out = tp
               TFunc _ xinp _   = xtp
@@ -420,7 +418,7 @@ expr' (rel,xtpc@(xtp,xcs)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n
 
               zz :: [([ID_Class],Type)]
               zz = zip (map snd cs) (map snd pairs)
-              [([cls],itp)] = zz
+              [([cls],itp)] = traceShow (id,cs,pairs) zz
 
 
               -- eq (x,y)
@@ -444,7 +442,7 @@ expr' (rel,xtpc@(xtp,xcs)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n
                         (SRet z
                           (ECall z
                             (EVar z $ '_':dol id)
-                            (listToExp $ map (EVar z) $ (dols [cls,T.show' itp]) : fpar inp)))
+                            (listToExp $ map (EVar z) $ ('_' : dols [cls,T.show' itp]) : fpar inp)))
                         (map f $ zip (T.typeToList inp) (fpar inp)))
 
               fpar :: Type -> [ID_Var]
@@ -492,7 +490,7 @@ expr' (rel,xtpc@(xtp,xcs)) envs (EVar z id) = (es, ftReq (length envs) (id,ref,n
 -}
           where
             f (_, SVar _ _ tpc _) =
-              isRight $ {-traceShowX ("ZZZ",id,rel,xtpc,tpc) $-} relatesC rel xtpc (toDer tpc) where
+              isRight $ traceShowX ("ZZZ",id,rel,xtpc,tpc) $ relatesC rel xtpc (toDer tpc) where
                 -- accept ref variables in non-ref context
                 toDer tpc = if not (T.isRefableRefC tpc) then tpc else T.toDerC tpc
 

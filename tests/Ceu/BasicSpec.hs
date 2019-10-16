@@ -168,7 +168,16 @@ spec = do
   checkCheckIt (prelude annz $ mmm annz False (EVar annz "a") (ECall annz (EVar annz "f") (ECons annz ["Int","1"])) (SNop annz) (SNop annz)) ["variable 'a' is not declared","variable 'f' is not declared"]
   checkCheckIt (SVar annz "x" (TTuple [TUnit,TUnit],cz) (mmm annz False (EVar annz "x") (EUnit annz) (SNop annz) (SNop annz)))  ["types do not match : expected '((),())' : found '()'"]
   checkCheckIt (prelude annz (SVar annz "x" (int,cz) (mmm annz False (EVar annz "x") (EUnit annz) (SNop annz) (SNop annz)))) ["types do not match : expected 'Int' : found '()'"]
-  checkCheckIt (prelude annz (SVar annz "identity" (TFunc FuncGlobal (TVar False "a") (TVar False "a"),cz) (SVar annz "a" (int,cz) (mmm annz False (EVar annz "a") (ECall annz (EVar annz "identity") (ECons annz ["Int","1"])) (SNop annz) (SNop annz))))) []
+
+  it "XXX: identity" $
+    (fst $ TypeSys.go
+      (prelude annz (SVar annz "identity" (TFunc FuncGlobal (TVar False "a") (TVar False "a"),cz) (SVar annz "a" (int,cz) (mmm annz False (EVar annz "a") (ECall annz (EVar annz "identity") (ECons annz ["Int","1"])) (SNop annz) (SNop annz))))))
+      `shouldBe` []
+
+  it "XXX: identity-rev" $
+    (fst $ TypeSys.go
+      (prelude annz (SVar annz "identity" (TFunc FuncGlobal int int,cz) (SVar annz "a" (TVar False "a",cz) (mmm annz False (EVar annz "a") (ECall annz (EVar annz "identity") (ECons annz ["Int","1"])) (SNop annz) (SNop annz))))))
+      `shouldBe` []
 
   describe "write" $ do
     it "ret = 1" $
@@ -256,8 +265,9 @@ spec = do
     it "func first :: (a,a)->a ; var a::Int ; a = first((),1)" $
       (fst $ TypeSys.go (prelude annz (SVar annz "first" (TFunc FuncGlobal (TTuple [(TVar False "a"),(TVar False "a")]) (TVar False "a"),cz) (SVar annz "a" (int,cz) (mmm annz False (EVar annz "a") (ECall annz (EVar annz "first") (ETuple annz [(EUnit annz),(ECons annz ["Int","1"])])) (SNop annz) (SNop annz))))))
         `shouldBe`
-      --["types do not match : expected '(a,a)' : found '((),Int)'","ambiguous instances for 'a' : '()', 'Int'"]
-          ["types do not match : expected '(((),Int) -> Int)' : found '((a,a) -> a)'","ambiguous implementations for 'a' : '()', 'Int', 'Int'"]
+          --["types do not match : expected '(a,a)' : found '((),Int)'","ambiguous iplementations for 'a' : '()', 'Int'"]
+          --["types do not match : expected '(((),Int) -> Int)' : found '((a,a) -> a)'","ambiguous implementations for 'a' : '()', 'Int', 'Int'"]
+          ["types do not match : expected '(((),Int) -> Int)' : found '((a,a) -> a)'","ambiguous implementations for 'a' : '()', 'Int'"]
 
 {-
     checkCheckIt (prelude annz (SVar annz "first" (TFunc FuncGlobal (TTuple [(TVar False "a"),(TVar False "a")]) (TVar False "a"),cz) (SVar annz "a" (int,cz) (mmm annz False (EVar annz "a") (ECall annz (EVar annz "first") (ETuple annz [(ECons annz ["Int","1"]),(ECons annz ["Int","1"])])) (SNop annz) (SNop annz))))) []

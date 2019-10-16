@@ -596,7 +596,7 @@ inlClassInst :: Stmt -> Stmt
 inlClassInst (SClassS z cls                 cs  ifc p) = SClassS z cls                 cs  ifc $ inlCI p ifc
 inlClassInst (SInstSC z (cls:sups,ifc,gens) tpc imp p) = SInstSC z (cls:sups,ifc,gens) tpc imp $ inlCI (addDictIni p) (addDictDcl imp)
   where
-    dict = dols [cls,T.showC tpc]
+    dict = '_' : dols [cls,T.showC tpc]
     addDictDcl imp = SVarSG z dict GNone (T.TData False [dol cls] [],Cs.cz) Nothing imp
     addDictIni p   = SSeq z (SSet z True False (EVar z dict) cons) p
                      where
