@@ -5,6 +5,17 @@
 -119          0       2*      4      10         0     23     48      30
 - no gens = 119/703 erros
 
+- volto pra dict_typeclass
+    - refazer relacoes entre tipos
+        - considerar vars/constraints
+            - ir construindo tipo instanciando vars e verificando se as outras batem
+
+- gen-call
+    - gera as funcoes concretas no momento do uso em TypeSys
+- dict_typeclass
+    - usa dicionarios como parametros nas funcoes genericas
+- typesys
+    - gera as funcoes concretas a partir das definicoes abstratas/implementacoes existentes
 
 - remover cs dos clss, eles ja tem no tipo do GGen
 
