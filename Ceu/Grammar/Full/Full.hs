@@ -77,7 +77,6 @@ data Stmt
   | SInst     Ann ID_Class TypeC Stmt              -- new class instance
   | SData     Ann Type (Maybe [ID_Var]) Type Cs.Map Bool -- new type declaration
   | SVar      Ann ID_Var TypeC (Maybe Exp)         -- (z id tp ini)   -- variable declaration
-  | STodo     Ann String
   | SFunc     Ann ID_Var TypeC Exp Stmt            -- function declaration
   | SMatch    Ann Bool Bool Exp [(Stmt,Exp,Stmt)]  -- match
   | SSet      Ann Bool Bool Exp Exp                -- assignment statement
@@ -95,7 +94,6 @@ data Stmt
   | SDataS    Ann Type (Maybe [ID_Var]) Type Cs.Map Bool Stmt
   | SVarS     Ann ID_Var     TypeC (Maybe Exp) Stmt
   | SVarSG    Ann ID_Var Gen TypeC (Maybe Exp) Stmt
-  | STodoS    Ann String Stmt
   deriving (Eq, Show)
 
 data Gen = GNone
@@ -157,8 +155,6 @@ map_stmt f@(fs,_,ft) env   (SDataS   z tp nms st cs abs p) = fs env (SDataS   z 
 map_stmt f@(fs,_,ft) env   (SVar     z id tp ini)          = fs env (SVar     z id (ft tp) (fmap (map_exp f env) ini))
 map_stmt f@(fs,_,ft) env   (SVarS    z id tp ini p)        = fs env (SVarS    z id (ft tp) (fmap (map_exp f env) ini) (map_stmt f env p))
 map_stmt f@(fs,_,ft) env   (SVarSG   z id gen tp ini p)    = fs env (SVarSG   z id gen (ft tp) (fmap (map_exp f env) ini) (map_stmt f env p))
-map_stmt f@(fs,_,ft) env   (STodo    z v)                  = fs env (STodo    z v)
-map_stmt f@(fs,_,ft) env   (STodoS   z v p)                = fs env (STodoS   z v (map_stmt f env p))
 map_stmt f@(fs,_,ft) env   (SFunc  z id tp ps bd)          = fs env (SFunc    z id (ft tp) (map_exp f env ps) (map_stmt f env bd))
 map_stmt f@(fs,_,_)  env   (SMatch z ini chk exp cses)     = fs env (SMatch   z ini chk (map_exp f env exp)
                                                               (map (\(ds,pt,st) -> (map_stmt f env ds, map_exp f env pt, map_stmt f env st)) cses))
