@@ -42,14 +42,15 @@ spec = do
 
   describe "supOf" $ do
     it "? > int" $
-      (TAny,[]) `supOf` (int,[]) `shouldBe` (Just [])
+      (TAny,[]) `supOf` (int,[]) `shouldBe` (Right [])
+    it "Int > ?" $
+      (int,[]) `supOf` (TAny,[]) `shouldBe` (Right [])
+    it "a > Int" $
+      (TVar "a",[]) `supOf` (int,[]) `shouldBe` (Right [("a",int)])
+
 {-
-    it "Int > BOT" $
-      int `supOf` TBot `shouldBe` (True, TBot, [])
     it "BOT > Int" $
       TBot `supOf` int `shouldBe` (False, TBot, [])
-    it "a > Int" $
-      TVar False "a" `supOf` int `shouldBe` (True,  int, [("a",int,SUP)])
     it "a > b" $
       TVar False "a" `supOf` TVar False "b" `shouldBe` (True,TVar False "b",[("a",TVar False "b",SUP),("b",TVar False "a",SUB)])
     it "b > b" $

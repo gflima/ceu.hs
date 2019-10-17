@@ -15,7 +15,8 @@ import Ceu.Grammar.Globals
 
 -------------------------------------------------------------------------------
 
-type Cs = [(ID_Var, [ID_Class])]        -- [(a,[IEq,IOrd,IShow]), (b,[...])]
+type CS_Open  = [(ID_Var, [ID_Class])]  -- [(a,[IEq,IOrd,IShow]), (b,[...])]
+type CS_Close = [(ID_Var, Type_)]       -- [(a,Int), (b,...)]
 
 cz = []
 
@@ -31,7 +32,7 @@ data Type_ = TAny                         -- bot/sup
 
 data Relation = SUP | SUB deriving (Eq, Show)
 
-type Type = (Type_, Cs)
+type Type = (Type_, CS_Open)
 
 -------------------------------------------------------------------------------
 
@@ -67,12 +68,21 @@ _toString (TData ids ofs) = L.intercalate "." ids ++ " of " ++ "(" ++ L.intercal
 -------------------------------------------------------------------------------
 
 -- Is first argument a supertype of second argument?
---  - Nothing                   : no it's not
---  - Just [(a,"Int"),(b,...)]  : all assignments of parametric types
---       SUP     SUB           ASSIGNS [(a,"Int"),(b,...)]
-supOf :: Type -> Type -> Maybe [(ID_Var,Type)]
+--  - Left errors    : errors in CS assignments
+--  - Right CS_Close : assignments of parametric types
+--       SUP     SUB     ASSIGNS
+supOf :: Type -> Type -> Either Errors CS_Close
+supOf sup sub = supOf' (Right []) sup sub
 
-supOf (TAny,_) _ = Just []
+-- Also receives CS_Close being constructed
+supOf' :: Either Errors CS_Close -> Type -> Type -> Either Errors CS_Close
+
+supOf' (Left es) _ _ = Left es
+
+supOf' (Right close) (TVar x,supCs) (subTp,subCs)        = undefined
+
+supOf' close (TAny  ,_) _        = close
+supOf' close _          (TAny,_) = close
 
 {-
 supOf' sup@(TVar False a1) sub@(TVar False a2) = (True,  sub,   [(a1,sub,      SUP),(a2,sup,      SUB)])
